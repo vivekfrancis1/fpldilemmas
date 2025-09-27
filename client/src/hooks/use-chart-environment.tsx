@@ -84,111 +84,92 @@ export function useChartEnvironment(config: ChartEnvironmentConfig = {}) {
     isMobile // Pass mobile state to avoid duplicate hook calls
   })
 
-  // Return stable environment object with all computed values
-  return useMemo(() => {
-    // Determine aspect ratio based on mobile state and preference
-    const getAspectRatio = () => {
-      if (!enableMobileOptimizations) return "aspect-video"
-      
-      if (mobileAspectRatio === "auto") {
-        return "aspect-[4/3] sm:aspect-video" // Default mobile-first approach
-      }
-      
-      switch (mobileAspectRatio) {
-        case "square":
-          return "aspect-square"
-        case "portrait":
-          return "aspect-[3/4] sm:aspect-video"
-        case "landscape":
-          return "aspect-video"
-        default:
-          return "aspect-[4/3] sm:aspect-video"
-      }
+  // SIMPLE APPROACH: Following React Hook guidelines from document
+  // Determine aspect ratio based on mobile state and preference
+  const getAspectRatio = () => {
+    if (!enableMobileOptimizations) return "aspect-video"
+    
+    if (mobileAspectRatio === "auto") {
+      return "aspect-[4/3] sm:aspect-video" // Default mobile-first approach
     }
+    
+    switch (mobileAspectRatio) {
+      case "square":
+        return "aspect-square"
+      case "portrait":
+        return "aspect-[3/4] sm:aspect-video"
+      case "landscape":
+        return "aspect-video"
+      default:
+        return "aspect-[4/3] sm:aspect-video"
+    }
+  }
 
-    return {
-      // Mobile environment
-      mobile: {
-        isMobile,
-        aspectRatio: getAspectRatio(),
-        enableOptimizations: enableMobileOptimizations,
-        showLegend: showMobileLegend
-      },
-      
-      // Gesture environment (available but conditionally used)
-      gestures: enableGestures ? {
-        state: gestureSystem.gestureState,
-        handlers: gestureSystem.gestureHandlers,
-        resetTransform: gestureSystem.resetTransform,
-        currentTransform: gestureSystem.currentTransform
-      } : {
-        state: undefined,
-        handlers: { style: {} },
-        resetTransform: () => {},
-        currentTransform: { scale: 1, translateX: 0, translateY: 0 }
-      },
-      
-      // Performance environment (available but conditionally used)
-      performance: enablePerformanceOptimizations ? {
-        isVisible: performanceSystem.isVisible,
-        shouldSimplify: performanceSystem.shouldSimplify,
-        animationDuration: performanceSystem.animationDuration,
-        maxDataPoints: performanceSystem.maxDataPoints,
-        strokeWidth: performanceSystem.strokeWidth,
-        dotSize: performanceSystem.dotSize,
-        showGrid: performanceSystem.showGrid,
-        enableTooltips: performanceSystem.enableTooltips,
-        enableLegend: performanceSystem.enableLegend,
-        performanceMode: performanceSystem.performanceMode,
-        deviceQuality: performanceSystem.deviceQuality,
-        chartRef: performanceSystem.chartRef
-      } : {
-        isVisible: true,
-        shouldSimplify: false,
-        animationDuration: 300,
-        maxDataPoints: 100,
-        strokeWidth: 2,
-        dotSize: 4,
-        showGrid: true,
-        enableTooltips: true,
-        enableLegend: true,
-        performanceMode: 'high-performance' as const,
-        deviceQuality: 'high' as const,
-        chartRef: () => {}
-      },
-      
-      // Raw access to underlying systems for advanced use cases
-      _internal: {
-        batteryInfo: batteryPerformance.batteryInfo,
-        adaptiveQuality: adaptiveQuality.quality,
-        enableGestures,
-        enablePerformanceOptimizations
-      }
+  // Return stable environment object with all computed values
+  return useMemo(() => ({
+    // Mobile environment
+    mobile: {
+      isMobile,
+      aspectRatio: getAspectRatio(),
+      enableOptimizations: enableMobileOptimizations,
+      showLegend: showMobileLegend
+    },
+    
+    // Gesture environment (available but conditionally used)
+    gestures: enableGestures ? {
+      state: gestureSystem.gestureState,
+      handlers: gestureSystem.gestureHandlers,
+      resetTransform: gestureSystem.resetTransform,
+      currentTransform: gestureSystem.currentTransform
+    } : {
+      state: undefined,
+      handlers: { style: {} },
+      resetTransform: () => {},
+      currentTransform: { scale: 1, translateX: 0, translateY: 0 }
+    },
+    
+    // Performance environment (available but conditionally used)
+    performance: enablePerformanceOptimizations ? {
+      isVisible: performanceSystem.isVisible,
+      shouldSimplify: performanceSystem.shouldSimplify,
+      animationDuration: performanceSystem.animationDuration,
+      maxDataPoints: performanceSystem.maxDataPoints,
+      strokeWidth: performanceSystem.strokeWidth,
+      dotSize: performanceSystem.dotSize,
+      showGrid: performanceSystem.showGrid,
+      enableTooltips: performanceSystem.enableTooltips,
+      enableLegend: performanceSystem.enableLegend,
+      performanceMode: performanceSystem.performanceMode,
+      deviceQuality: performanceSystem.deviceQuality,
+      chartRef: performanceSystem.chartRef
+    } : {
+      isVisible: true,
+      shouldSimplify: false,
+      animationDuration: 300,
+      maxDataPoints: 100,
+      strokeWidth: 2,
+      dotSize: 4,
+      showGrid: true,
+      enableTooltips: true,
+      enableLegend: true,
+      performanceMode: 'high-performance' as const,
+      deviceQuality: 'high' as const,
+      chartRef: () => {}
+    },
+    
+    // Raw access to underlying systems for advanced use cases
+    _internal: {
+      batteryInfo: batteryPerformance.batteryInfo,
+      adaptiveQuality: adaptiveQuality.quality,
+      enableGestures,
+      enablePerformanceOptimizations
     }
-  }, [
+  }), [
+    // ESSENTIAL VALUES ONLY - following document guidelines
     isMobile,
-    mobileAspectRatio,
     enableMobileOptimizations,
     showMobileLegend,
     enableGestures,
-    gestureSystem.gestureState,
-    gestureSystem.gestureHandlers,
-    gestureSystem.resetTransform,
-    gestureSystem.currentTransform,
-    enablePerformanceOptimizations,
-    performanceSystem.isVisible,
-    performanceSystem.shouldSimplify,
-    performanceSystem.animationDuration,
-    performanceSystem.maxDataPoints,
-    performanceSystem.strokeWidth,
-    performanceSystem.dotSize,
-    performanceSystem.showGrid,
-    performanceSystem.enableTooltips,
-    performanceSystem.enableLegend,
-    performanceSystem.performanceMode,
-    performanceSystem.deviceQuality,
-    performanceSystem.chartRef,
-    batteryPerformance.batteryInfo,
-    adaptiveQuality.quality
+    enablePerformanceOptimizations
   ])
 }

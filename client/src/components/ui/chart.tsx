@@ -119,10 +119,15 @@ const ChartContainer = React.forwardRef<
   // Local chart transform state for gesture support
   const [chartTransform, setChartTransform] = React.useState({ scale: 1, translateX: 0, translateY: 0 })
 
-  // Update chart transform when gesture transform changes
+  // STABILITY FIX: Use stable dependency to prevent object reference changes
+  const currentTransform = React.useMemo(() => 
+    chartEnv.gestures.currentTransform, 
+    [chartEnv.gestures.currentTransform.scale, chartEnv.gestures.currentTransform.translateX, chartEnv.gestures.currentTransform.translateY]
+  )
+  
   React.useEffect(() => {
-    setChartTransform(chartEnv.gestures.currentTransform)
-  }, [chartEnv.gestures.currentTransform])
+    setChartTransform(currentTransform)
+  }, [currentTransform])
 
   return (
     <ChartContext.Provider value={{ 
