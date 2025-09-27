@@ -447,18 +447,18 @@ export default function BestWildcardTeam() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-lg p-6 text-white">
-        <div className="flex items-center gap-3 mb-2">
-          <Trophy className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">Best Wildcard Team</h1>
+      {/* Header - Mobile Optimized */}
+      <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-lg p-4 md:p-6 text-white">
+        <div className="flex items-center gap-2 md:gap-3 mb-2">
+          <Trophy className="h-5 w-5 md:h-6 md:w-6" />
+          <h1 className="text-xl md:text-2xl font-bold">Best Wildcard Team</h1>
         </div>
-        <p className="text-green-100">
+        <p className="text-green-100 text-sm md:text-base">
           Optimize your wildcard team considering total points across the next 6 gameweeks
         </p>
         <div className="flex items-center gap-2 mt-2">
-          <Calendar className="h-4 w-4" />
-          <span className="text-sm">{gameweekRange} • {snapshots.length} players analyzed</span>
+          <Calendar className="h-3 w-3 md:h-4 md:w-4" />
+          <span className="text-xs md:text-sm">{gameweekRange} • {snapshots.length} players analyzed</span>
         </div>
       </div>
 
@@ -492,9 +492,9 @@ export default function BestWildcardTeam() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Optimization Mode */}
-          <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
-            <div className="flex items-center justify-between">
+          {/* Optimization Mode - Mobile Optimized */}
+          <div className="space-y-4 p-3 md:p-4 bg-muted/30 rounded-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
               <div className="space-y-1">
                 <Label htmlFor="unlimited-budget" className="text-sm font-medium">
                   {unlimitedBudget ? 'Unlimited Budget (Default)' : 'Budget Optimization Mode'}
@@ -524,15 +524,15 @@ export default function BestWildcardTeam() {
                   min="50"
                   max="200"
                   step="0.1"
-                  className="w-32"
+                  className="w-full sm:w-32"
                   data-testid="input-budget"
                 />
               </div>
             )}
           </div>
 
-          {/* Player Inclusion/Exclusion */}
-          <div className="space-y-4 p-4 bg-muted/20 rounded-lg border">
+          {/* Player Inclusion/Exclusion - Mobile Optimized */}
+          <div className="space-y-4 p-3 md:p-4 bg-muted/20 rounded-lg border">
             <div className="flex items-center gap-2 mb-3">
               <Users className="h-4 w-4" />
               <h3 className="text-sm font-medium">Player Constraints</h3>
@@ -565,7 +565,7 @@ export default function BestWildcardTeam() {
                     Add players to include
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="start">
+                <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search players..." />
                     <CommandList>
@@ -635,7 +635,7 @@ export default function BestWildcardTeam() {
                     Add players to exclude
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="start">
+                <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search players..." />
                     <CommandList>
@@ -717,7 +717,7 @@ export default function BestWildcardTeam() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4">
+              <div className="grid gap-3 md:gap-4">
                 {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((position) => {
                   const positionPlayers = optimalTeam.squad.filter(player => {
                     const pos = player.position;
@@ -730,35 +730,35 @@ export default function BestWildcardTeam() {
 
                   return (
                     <div key={position}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Badge variant="secondary">{position}s ({positionPlayers.length})</Badge>
+                      <div className="flex items-center gap-2 mb-2 md:mb-3">
+                        <Badge variant="secondary" className="text-xs md:text-sm">{position}s ({positionPlayers.length})</Badge>
                       </div>
-                      <div className="grid gap-2">
+                      <div className="grid gap-1 md:gap-2">
                         {positionPlayers.map((player) => {
                           const isStarter = optimalTeam.starting11.some(starter => starter.playerId === player.playerId);
                           return (
                             <div
                               key={player.playerId}
-                              className={`flex items-center justify-between p-3 rounded-lg border ${
+                              className={`flex items-center justify-between p-2 md:p-3 rounded-lg border ${
                                 isStarter ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700' : 'bg-muted/30'
                               }`}
                             >
-                              <div className="flex items-center gap-3">
-                                <div>
-                                  <div className="font-medium flex items-center gap-2">
-                                    {player.playerName}
+                              <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                                <div className="min-w-0 flex-1">
+                                  <div className="font-medium flex items-center gap-1 md:gap-2 text-sm md:text-base">
+                                    <span className="truncate">{player.playerName}</span>
                                     {isStarter && (
-                                      <Badge variant="outline" className="text-xs">Starting XI</Badge>
+                                      <Badge variant="outline" className="text-xs whitespace-nowrap">Starting XI</Badge>
                                     )}
                                   </div>
-                                  <div className="text-sm text-muted-foreground">
+                                  <div className="text-xs md:text-sm text-muted-foreground">
                                     {player.teamName} • {player.position}
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <div className="font-medium">£{player.price}m</div>
-                                <div className="text-sm text-muted-foreground">
+                              <div className="text-right flex-shrink-0">
+                                <div className="font-medium text-sm md:text-base">£{player.price}m</div>
+                                <div className="text-xs md:text-sm text-muted-foreground">
                                   {player.totalProjectedPoints.toFixed(1)} pts
                                 </div>
                               </div>

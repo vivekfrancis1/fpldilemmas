@@ -344,9 +344,9 @@ export default function PlayerGoalsScoredProjections() {
       <div className="fpl-section-spacing">
 
         {/* Controls */}
-        <Card className="mb-6">
-          <CardContent className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <Card className="mb-4 md:mb-6">
+          <CardContent className="p-3 sm:p-4 lg:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4">
               {/* Gameweek Range Filter */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
@@ -416,7 +416,7 @@ export default function PlayerGoalsScoredProjections() {
                 </Select>
               </div>
 
-              <div className="space-y-2 sm:col-span-2">
+              <div className="space-y-2 sm:col-span-2 lg:col-span-1">
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <Search className="h-4 w-4 text-gray-500" />
                   Search
@@ -440,14 +440,16 @@ export default function PlayerGoalsScoredProjections() {
 
         {/* Tab Navigation and Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="goals" className="flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              Goals Scored
+          <TabsList className="grid w-full grid-cols-2 mb-3 md:mb-4">
+            <TabsTrigger value="goals" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <Target className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Goals Scored</span>
+              <span className="sm:hidden">Goals</span>
             </TabsTrigger>
-            <TabsTrigger value="points" className="flex items-center gap-2">
-              <Trophy className="h-4 w-4" />
-              Goal Points
+            <TabsTrigger value="points" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
+              <Trophy className="h-3 w-3 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Goal Points</span>
+              <span className="sm:hidden">Points</span>
             </TabsTrigger>
           </TabsList>
 
@@ -465,11 +467,11 @@ export default function PlayerGoalsScoredProjections() {
                     <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 min-w-[140px] sm:min-w-[180px]">
+                        <th className="px-2 sm:px-4 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 min-w-[120px] sm:min-w-[180px]">
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-auto p-0 font-medium text-gray-500 hover:text-gray-700 hover:bg-transparent"
+                            className="h-auto p-0 font-medium text-gray-500 hover:text-gray-700 hover:bg-transparent text-xs md:text-sm"
                             onClick={() => handleSort("name")}
                             data-testid="sort-player-name"
                           >
@@ -481,7 +483,7 @@ export default function PlayerGoalsScoredProjections() {
                           </Button>
                         </th>
                     {selectedGameweeks.map(gw => (
-                      <th key={gw} className="px-2 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[60px]">
+                      <th key={gw} className="px-1 sm:px-2 md:px-4 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[50px] md:min-w-[60px]">
                         <div className="flex items-center justify-center gap-1" onClick={() => handleSort(`gw${gw}`)}>
                           GW{gw}
                           {sortBy === `gw${gw}` && (

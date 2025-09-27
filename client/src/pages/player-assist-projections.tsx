@@ -16,7 +16,7 @@ import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, typ
 interface PlayerAssistProjection {
   playerId: number;
   playerName: string;
-  teamShort: string;
+  teamShort?: string;
   position: string;
   gameweekProjections: { [gameweek: string]: number };
   totalProjectedAssists: number;
@@ -168,7 +168,7 @@ export default function PlayerAssistProjections() {
       // Search filter
       if (searchTerm) {
         const matchesSearch = player.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            player.teamShort.toLowerCase().includes(searchTerm.toLowerCase());
+                            (player.teamShort?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
         if (!matchesSearch) return false;
       }
       
@@ -196,8 +196,8 @@ export default function PlayerAssistProjections() {
           bValue = b.playerName;
           break;
         case 'team':
-          aValue = a.teamShort;
-          bValue = b.teamShort;
+          aValue = a.teamShort || '';
+          bValue = b.teamShort || '';
           break;
         case 'position':
           aValue = a.position;
