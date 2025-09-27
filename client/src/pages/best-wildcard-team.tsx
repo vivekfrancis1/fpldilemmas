@@ -196,7 +196,39 @@ export default function BestWildcardTeam() {
       return teamCounts;
     };
 
-    // Fill remaining spots with best available players (enforcing 3-players-per-team limit)
+    // Helper function to count attackers (forwards + midfielders) by team
+    const getAttackerCounts = () => {
+      const attackerCounts: { [teamName: string]: number } = {};
+      squad.forEach(player => {
+        const isAttacker = player.position.toLowerCase().includes('midfielder') || 
+                          player.position.toLowerCase().includes('forward') || 
+                          player.position === 'MID' || 
+                          player.position === 'FWD';
+        if (isAttacker) {
+          const teamName = player.teamName || '';
+          attackerCounts[teamName] = (attackerCounts[teamName] || 0) + 1;
+        }
+      });
+      return attackerCounts;
+    };
+
+    // Helper function to count defenders (defenders + goalkeepers) by team
+    const getDefenderCounts = () => {
+      const defenderCounts: { [teamName: string]: number } = {};
+      squad.forEach(player => {
+        const isDefender = player.position.toLowerCase().includes('defender') || 
+                          player.position.toLowerCase().includes('goalkeeper') || 
+                          player.position === 'DEF' || 
+                          player.position === 'GKP';
+        if (isDefender) {
+          const teamName = player.teamName || '';
+          defenderCounts[teamName] = (defenderCounts[teamName] || 0) + 1;
+        }
+      });
+      return defenderCounts;
+    };
+
+    // Fill remaining spots with best available players (enforcing team balance constraints)
     const fillPosition = (position: keyof typeof filteredPlayersByPosition, maxCount: number) => {
       const needed = maxCount - positionCounts[position];
       if (needed > 0) {
@@ -208,11 +240,38 @@ export default function BestWildcardTeam() {
           if (toAdd.length >= needed) break;
           
           const teamCounts = getTeamCounts();
+          const attackerCounts = getAttackerCounts();
+          const defenderCounts = getDefenderCounts();
           const playerTeam = player.teamName || '';
           const currentTeamCount = teamCounts[playerTeam] || 0;
           
-          // Only add player if it doesn't violate the 3-players-per-team constraint
-          if (currentTeamCount < SQUAD_CONSTRAINTS.maxPlayersPerTeam) {
+          // Check all constraints before adding player
+          let canAddPlayer = true;
+          
+          // 1. General team constraint (max 3 players per team)
+          if (currentTeamCount >= SQUAD_CONSTRAINTS.maxPlayersPerTeam) {
+            canAddPlayer = false;
+          }
+          
+          // 2. Attacker constraint (max 2 attackers per team)
+          const isAttacker = player.position.toLowerCase().includes('midfielder') || 
+                            player.position.toLowerCase().includes('forward') || 
+                            player.position === 'MID' || 
+                            player.position === 'FWD';
+          if (isAttacker && (attackerCounts[playerTeam] || 0) >= 2) {
+            canAddPlayer = false;
+          }
+          
+          // 3. Defender constraint (max 2 defenders per team)
+          const isDefender = player.position.toLowerCase().includes('defender') || 
+                            player.position.toLowerCase().includes('goalkeeper') || 
+                            player.position === 'DEF' || 
+                            player.position === 'GKP';
+          if (isDefender && (defenderCounts[playerTeam] || 0) >= 2) {
+            canAddPlayer = false;
+          }
+          
+          if (canAddPlayer) {
             toAdd.push(player);
             squad.push(player);
           }
@@ -290,18 +349,55 @@ export default function BestWildcardTeam() {
           if (p.price >= expensivePlayer.price) return false;
           if (adjustedSquad.some(sq => sq.playerId === p.playerId)) return false;
           
-          // Check team constraint: count current team members (excluding the player being replaced)
+          // Count current team members (excluding the player being replaced)
           const teamCounts: { [teamName: string]: number } = {};
+          const attackerCounts: { [teamName: string]: number } = {};
+          const defenderCounts: { [teamName: string]: number } = {};
+          
           adjustedSquad.forEach(player => {
             if (player.playerId !== expensivePlayer.playerId) {
               const teamName = player.teamName || '';
               teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
+              
+              const isAttacker = player.position.toLowerCase().includes('midfielder') || 
+                                player.position.toLowerCase().includes('forward') || 
+                                player.position === 'MID' || 
+                                player.position === 'FWD';
+              if (isAttacker) {
+                attackerCounts[teamName] = (attackerCounts[teamName] || 0) + 1;
+              }
+              
+              const isDefender = player.position.toLowerCase().includes('defender') || 
+                                player.position.toLowerCase().includes('goalkeeper') || 
+                                player.position === 'DEF' || 
+                                player.position === 'GKP';
+              if (isDefender) {
+                defenderCounts[teamName] = (defenderCounts[teamName] || 0) + 1;
+              }
             }
           });
           
           const replacementTeam = p.teamName || '';
           const currentTeamCount = teamCounts[replacementTeam] || 0;
-          return currentTeamCount < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+          
+          // Check all constraints
+          if (currentTeamCount >= SQUAD_CONSTRAINTS.maxPlayersPerTeam) return false;
+          
+          // Check attacker constraint for attacking positions
+          const isReplacementAttacker = p.position.toLowerCase().includes('midfielder') || 
+                                        p.position.toLowerCase().includes('forward') || 
+                                        p.position === 'MID' || 
+                                        p.position === 'FWD';
+          if (isReplacementAttacker && (attackerCounts[replacementTeam] || 0) >= 2) return false;
+          
+          // Check defender constraint for defensive positions
+          const isReplacementDefender = p.position.toLowerCase().includes('defender') || 
+                                        p.position.toLowerCase().includes('goalkeeper') || 
+                                        p.position === 'DEF' || 
+                                        p.position === 'GKP';
+          if (isReplacementDefender && (defenderCounts[replacementTeam] || 0) >= 2) return false;
+          
+          return true;
         })
         .sort((a, b) => a.price - b.price);
 
@@ -339,18 +435,55 @@ export default function BestWildcardTeam() {
             if (p.price >= expensivePlayer.price) return false;
             if (adjustedSquad.some(sq => sq.playerId === p.playerId)) return false;
             
-            // Check team constraint: count current team members (excluding the player being replaced)
+            // Count current team members (excluding the player being replaced)
             const teamCounts: { [teamName: string]: number } = {};
+            const attackerCounts: { [teamName: string]: number } = {};
+            const defenderCounts: { [teamName: string]: number } = {};
+            
             adjustedSquad.forEach(player => {
               if (player.playerId !== expensivePlayer.playerId) {
                 const teamName = player.teamName || '';
                 teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
+                
+                const isAttacker = player.position.toLowerCase().includes('midfielder') || 
+                                  player.position.toLowerCase().includes('forward') || 
+                                  player.position === 'MID' || 
+                                  player.position === 'FWD';
+                if (isAttacker) {
+                  attackerCounts[teamName] = (attackerCounts[teamName] || 0) + 1;
+                }
+                
+                const isDefender = player.position.toLowerCase().includes('defender') || 
+                                  player.position.toLowerCase().includes('goalkeeper') || 
+                                  player.position === 'DEF' || 
+                                  player.position === 'GKP';
+                if (isDefender) {
+                  defenderCounts[teamName] = (defenderCounts[teamName] || 0) + 1;
+                }
               }
             });
             
             const replacementTeam = p.teamName || '';
             const currentTeamCount = teamCounts[replacementTeam] || 0;
-            return currentTeamCount < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+            
+            // Check all constraints
+            if (currentTeamCount >= SQUAD_CONSTRAINTS.maxPlayersPerTeam) return false;
+            
+            // Check attacker constraint for attacking positions
+            const isReplacementAttacker = p.position.toLowerCase().includes('midfielder') || 
+                                          p.position.toLowerCase().includes('forward') || 
+                                          p.position === 'MID' || 
+                                          p.position === 'FWD';
+            if (isReplacementAttacker && (attackerCounts[replacementTeam] || 0) >= 2) return false;
+            
+            // Check defender constraint for defensive positions
+            const isReplacementDefender = p.position.toLowerCase().includes('defender') || 
+                                          p.position.toLowerCase().includes('goalkeeper') || 
+                                          p.position === 'DEF' || 
+                                          p.position === 'GKP';
+            if (isReplacementDefender && (defenderCounts[replacementTeam] || 0) >= 2) return false;
+            
+            return true;
           })
           .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints); // Best performers first
 
