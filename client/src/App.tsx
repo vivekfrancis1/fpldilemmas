@@ -22,6 +22,7 @@ import PlayerMinutes from "./pages/player-minutes";
 import PlayerCleanSheetPoints from "./pages/player-cleansheet-points";
 import PlayerTotalPoints from "./pages/player-total-points";
 import BestFreehitTeam from "./pages/best-freehit-team";
+import BestWildcardTeam from "./pages/best-wildcard-team";
 import Watchlist from "./pages/watchlist";
 import LiveRank from "./pages/live-rank";
 import MyTeam from "./pages/my-team";
@@ -112,6 +113,7 @@ function Router() {
       </Route>
       <Route path="/player-total-points" component={PlayerTotalPoints} />
       <Route path="/best-freehit-team" component={BestFreehitTeam} />
+      <Route path="/best-wildcard-team" component={BestWildcardTeam} />
       <Route path="/team-goal-projections" component={TeamGoalProjections} />
       <Route path="/team-goals-against-projections" component={TeamGoalsAgainstProjections} />
       <Route path="/team-assist-projections" component={TeamAssistProjections} />
