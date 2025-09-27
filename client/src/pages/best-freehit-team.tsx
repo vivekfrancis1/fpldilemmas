@@ -500,27 +500,23 @@ export default function BestFreehitTeam() {
             </CardContent>
           </Card>
 
-          {/* Full Squad - Simple List */}
+          {/* Bench Players */}
           <Card>
             <CardHeader>
-              <CardTitle>Full Squad (15 players)</CardTitle>
+              <CardTitle>Bench (4 players)</CardTitle>
               <CardDescription>
-                Complete freehit squad with bench players
+                Substitutes in preferred order of priority
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {optimalTeam.squad.map((player, index) => {
-                  const isStarting = optimalTeam.starting11.some(p => p.playerId === player.playerId);
-                  
-                  return (
+                {optimalTeam.squad
+                  .filter(player => !optimalTeam.starting11.some(p => p.playerId === player.playerId))
+                  .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek))
+                  .map((player, index) => (
                     <div
                       key={player.playerId}
-                      className={`flex items-center justify-between p-3 rounded-lg border ${
-                        isStarting 
-                          ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' 
-                          : 'bg-muted/30 border-muted'
-                      }`}
+                      className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 border-muted"
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-medium w-6">{index + 1}.</span>
@@ -536,15 +532,6 @@ export default function BestFreehitTeam() {
                         >
                           {player.position}
                         </Badge>
-                        {isStarting ? (
-                          <Badge variant="default" className="bg-green-600">
-                            Starting
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">
-                            Bench
-                          </Badge>
-                        )}
                         <div className="text-right">
                           <p className="font-medium">
                             {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
@@ -553,8 +540,7 @@ export default function BestFreehitTeam() {
                         </div>
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
               </div>
             </CardContent>
           </Card>
