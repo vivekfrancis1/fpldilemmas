@@ -4,8 +4,7 @@ import * as React from "react"
 import * as RechartsPrimitive from "recharts"
 
 import { cn } from "@/lib/utils"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { useChartGestures, useChartPerformance } from "@/hooks/use-chart-responsive"
+import { useChartEnvironment } from "@/hooks/use-chart-environment"
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const
@@ -99,79 +98,26 @@ const ChartContainer = React.forwardRef<
 >(({ id, className, children, config, mobileAspectRatio = "auto", enableMobileOptimizations = true, showMobileLegend = true, gestureConfig = {}, enableGestures = false, performanceConfig = {}, enablePerformanceOptimizations = true, ...props }, ref) => {
   const uniqueId = React.useId()
   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
-  const isMobile = useIsMobile()
-
-  // Initialize performance optimizations
-  const performanceSettings = useChartPerformance({
-    ...performanceConfig,
-    simplifyOnMobile: enablePerformanceOptimizations && performanceConfig.simplifyOnMobile !== false
+  
+  // UNIFIED HOOK CALL - Always calls ALL chart hooks in same order
+  const chartEnv = useChartEnvironment({
+    mobileAspectRatio,
+    enableMobileOptimizations,
+    showMobileLegend,
+    gestureConfig,
+    enableGestures,
+    performanceConfig,
+    enablePerformanceOptimizations
   })
 
-  // Initialize gesture support - ALWAYS call hooks in same order
+  // Local chart transform state for gesture support
   const [chartTransform, setChartTransform] = React.useState({ scale: 1, translateX: 0, translateY: 0 })
-  
-  // Create stable gesture config to avoid hooks re-ordering - avoid object reference dependency
-  const enablePinch = gestureConfig.enablePinch || false
-  const enablePan = gestureConfig.enablePan || false
-  const enableTap = gestureConfig.enableTap !== false
-  const onPinch = gestureConfig.onPinch
-  const onPan = gestureConfig.onPan
-  const onTap = gestureConfig.onTap
-  
-  const stableGestureConfig = React.useMemo(() => ({
-    enablePinch,
-    enablePan,
-    enableTap,
-    onPinch: (scale: number) => {
-      if (enableGestures && enablePinch && isMobile) {
-        setChartTransform(prev => ({ ...prev, scale }))
-        onPinch?.(scale)
-      }
-    },
-    onPan: (delta: { x: number; y: number }) => {
-      if (enableGestures && enablePan && isMobile) {
-        setChartTransform(prev => ({
-          ...prev,
-          translateX: prev.translateX + delta.x,
-          translateY: prev.translateY + delta.y
-        }))
-        onPan?.(delta)
-      }
-    },
-    onTap: (event: TouchEvent, coordinates: { x: number; y: number }) => {
-      if (enableGestures && enableTap && isMobile) {
-        onTap?.(event, coordinates)
-      }
-    }
-  }), [enableGestures, isMobile, enablePinch, enablePan, enableTap, onPinch, onPan, onTap])
-  
-  // ALWAYS call useChartGestures hook - never conditionally call hooks
-  const { gestureState, gestureHandlers, resetTransform, currentTransform } = useChartGestures(stableGestureConfig)
 
   // Update chart transform when gesture transform changes
   React.useEffect(() => {
-    setChartTransform(currentTransform)
-  }, [currentTransform])
+    setChartTransform(chartEnv.gestures.currentTransform)
+  }, [chartEnv.gestures.currentTransform])
 
-  // Determine aspect ratio based on mobile state and preference
-  const getAspectRatio = () => {
-    if (!enableMobileOptimizations) return "aspect-video"
-    
-    if (mobileAspectRatio === "auto") {
-      return "aspect-[4/3] sm:aspect-video" // Default mobile-first approach
-    }
-    
-    switch (mobileAspectRatio) {
-      case "square":
-        return "aspect-square"
-      case "portrait":
-        return "aspect-[3/4] sm:aspect-video"
-      case "landscape":
-        return "aspect-video"
-      default:
-        return "aspect-[4/3] sm:aspect-video"
-    }
-  }
 
   return (
     <ChartContext.Provider value={{ 
@@ -199,18 +145,18 @@ const ChartContainer = React.forwardRef<
         className={cn(
           "flex justify-center relative",
           // Responsive aspect ratios with mobile optimization
-          getAspectRatio(),
+          chartEnv.mobile.aspectRatio,
           // Enhanced mobile text sizing with better hierarchy
           "text-xs sm:text-sm",
           // Touch-friendly minimum sizes
-          enableMobileOptimizations && "min-h-[200px] sm:min-h-[300px]",
+          chartEnv.mobile.enableOptimizations && "min-h-[200px] sm:min-h-[300px]",
           // Enhanced Recharts styling with mobile optimizations
           "[&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-axis-tick_text]:text-[10px] sm:[&_.recharts-cartesian-axis-tick_text]:text-xs",
           "[&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/30 sm:[&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-border/50",
           "[&_.recharts-curve.recharts-tooltip-cursor]:stroke-border",
           "[&_.recharts-dot[stroke='#fff']]:stroke-transparent [&_.recharts-dot]:cursor-pointer",
           // Larger touch targets on mobile
-          enableMobileOptimizations && "[&_.recharts-dot]:min-w-[24px] [&_.recharts-dot]:min-h-[24px] sm:[&_.recharts-dot]:min-w-[16px] sm:[&_.recharts-dot]:min-h-[16px]",
+          chartEnv.mobile.enableOptimizations && "[&_.recharts-dot]:min-w-[24px] [&_.recharts-dot]:min-h-[24px] sm:[&_.recharts-dot]:min-w-[16px] sm:[&_.recharts-dot]:min-h-[16px]",
           "[&_.recharts-layer]:outline-none",
           "[&_.recharts-polar-grid_[stroke='#ccc']]:stroke-border",
           "[&_.recharts-radial-bar-background-sector]:fill-muted",
@@ -219,7 +165,7 @@ const ChartContainer = React.forwardRef<
           "[&_.recharts-sector[stroke='#fff']]:stroke-transparent [&_.recharts-sector]:outline-none [&_.recharts-sector]:cursor-pointer",
           "[&_.recharts-surface]:outline-none",
           // Enhanced mobile-friendly legend styling
-          showMobileLegend ? [
+          chartEnv.mobile.showLegend ? [
             "[&_.recharts-legend-wrapper]:text-[10px] sm:[&_.recharts-legend-wrapper]:text-xs",
             "[&_.recharts-legend-item]:cursor-pointer [&_.recharts-legend-item]:px-2 [&_.recharts-legend-item]:py-1.5 sm:[&_.recharts-legend-item]:px-1 sm:[&_.recharts-legend-item]:py-0.5",
             "[&_.recharts-legend-item]:min-h-[32px] sm:[&_.recharts-legend-item]:min-h-[24px]", // Touch-friendly legend items
@@ -233,75 +179,75 @@ const ChartContainer = React.forwardRef<
           "[&_.recharts-xAxis_.recharts-cartesian-axis-tick]:text-[10px] sm:[&_.recharts-xAxis_.recharts-cartesian-axis-tick]:text-xs",
           "[&_.recharts-yAxis_.recharts-cartesian-axis-tick]:text-[10px] sm:[&_.recharts-yAxis_.recharts-cartesian-axis-tick]:text-xs",
           // Responsive margins for better mobile display
-          enableMobileOptimizations && "[&_.recharts-wrapper]:!w-full [&_.recharts-wrapper]:!h-full",
+          chartEnv.mobile.enableOptimizations && "[&_.recharts-wrapper]:!w-full [&_.recharts-wrapper]:!h-full",
           // Gesture support classes
-          enableGestures && gestureState.isGesturing && "cursor-grabbing",
-          enableGestures && !gestureState.isGesturing && "cursor-grab",
+          enableGestures && chartEnv.gestures.state?.isGesturing && "cursor-grabbing",
+          enableGestures && !chartEnv.gestures.state?.isGesturing && "cursor-grab",
           className
         )}
         style={{
           ...props.style,
-          ...(enableGestures ? gestureHandlers.style : {}),
+          ...(enableGestures ? chartEnv.gestures.handlers.style : {}),
           // Apply transform for gesture support
           ...(enableGestures && (chartTransform.scale !== 1 || chartTransform.translateX !== 0 || chartTransform.translateY !== 0) && {
             transform: `translate(${chartTransform.translateX}px, ${chartTransform.translateY}px) scale(${chartTransform.scale})`,
             transformOrigin: 'center center',
-            transition: gestureState?.isGesturing ? 'none' : 'transform 0.2s ease-out'
+            transition: chartEnv.gestures.state?.isGesturing ? 'none' : 'transform 0.2s ease-out'
           })
         }}
-        {...(enableGestures && gestureHandlers && {
-          onTouchStart: gestureHandlers.onTouchStart,
-          onTouchMove: gestureHandlers.onTouchMove,
-          onTouchEnd: gestureHandlers.onTouchEnd
+        {...(enableGestures && chartEnv.gestures.handlers && {
+          onTouchStart: chartEnv.gestures.handlers.onTouchStart,
+          onTouchMove: chartEnv.gestures.handlers.onTouchMove,
+          onTouchEnd: chartEnv.gestures.handlers.onTouchEnd
         })}
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        {performanceSettings.isVisible ? (
+        {chartEnv.performance.isVisible ? (
           <RechartsPrimitive.ResponsiveContainer
             width="100%"
             height="100%"
-            minHeight={isMobile && enableMobileOptimizations ? 200 : 300}
-            debounce={performanceSettings.shouldSimplify ? 200 : 50}
-            ref={performanceSettings.chartRef}
+            minHeight={chartEnv.mobile.isMobile && chartEnv.mobile.enableOptimizations ? 200 : 300}
+            debounce={chartEnv.performance.shouldSimplify ? 200 : 50}
+            ref={chartEnv.performance.chartRef}
           >
             {typeof children === 'function' ? children({
-              animationDuration: enablePerformanceOptimizations ? performanceSettings.animationDuration : 300,
-              maxDataPoints: enablePerformanceOptimizations ? performanceSettings.maxDataPoints : 100,
-              strokeWidth: enablePerformanceOptimizations ? performanceSettings.strokeWidth : 2,
-              dotSize: enablePerformanceOptimizations ? performanceSettings.dotSize : 4,
-              showGrid: enablePerformanceOptimizations ? performanceSettings.showGrid : true,
-              enableTooltips: enablePerformanceOptimizations ? performanceSettings.enableTooltips : true,
-              enableLegend: enablePerformanceOptimizations ? performanceSettings.enableLegend : true,
-              shouldSimplify: enablePerformanceOptimizations ? performanceSettings.shouldSimplify : false,
-              isMobile,
-              isLowPerformance: enablePerformanceOptimizations && (performanceSettings.performanceMode === 'power-save' || performanceSettings.deviceQuality === 'low')
+              animationDuration: chartEnv.performance.animationDuration,
+              maxDataPoints: chartEnv.performance.maxDataPoints,
+              strokeWidth: chartEnv.performance.strokeWidth,
+              dotSize: chartEnv.performance.dotSize,
+              showGrid: chartEnv.performance.showGrid,
+              enableTooltips: chartEnv.performance.enableTooltips,
+              enableLegend: chartEnv.performance.enableLegend,
+              shouldSimplify: chartEnv.performance.shouldSimplify,
+              isMobile: chartEnv.mobile.isMobile,
+              isLowPerformance: chartEnv.performance.performanceMode === 'power-save' || chartEnv.performance.deviceQuality === 'low'
             }) : children}
           </RechartsPrimitive.ResponsiveContainer>
         ) : (
           <div 
             className="flex items-center justify-center min-h-[200px]"
             data-testid="chart-loading-skeleton"
-            ref={performanceSettings.chartRef}
+            ref={chartEnv.performance.chartRef}
           >
             <div className="text-muted-foreground text-sm">Loading chart...</div>
           </div>
         )}
         
         {/* Gesture overlay for better touch handling */}
-        {enableGestures && isMobile && (
+        {enableGestures && chartEnv.mobile.isMobile && (
           <div 
             className="absolute inset-0 pointer-events-none z-10"
             data-testid="gesture-overlay"
             style={{
-              background: gestureState.isGesturing ? 'rgba(0,0,0,0.02)' : 'transparent',
+              background: chartEnv.gestures.state?.isGesturing ? 'rgba(0,0,0,0.02)' : 'transparent',
               transition: 'background 0.1s ease'
             }}
           />
         )}
         
         {/* Debug indicator for gestures in development */}
-        {enableGestures && process.env.NODE_ENV === 'development' && gestureState.isGesturing && (
+        {enableGestures && process.env.NODE_ENV === 'development' && chartEnv.gestures.state?.isGesturing && (
           <div className="absolute top-2 right-2 text-xs bg-black/80 text-white px-2 py-1 rounded z-20">
             Scale: {chartTransform.scale.toFixed(2)}
           </div>
