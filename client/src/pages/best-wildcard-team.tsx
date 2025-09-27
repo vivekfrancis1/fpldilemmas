@@ -68,6 +68,22 @@ const SQUAD_CONSTRAINTS: TeamConstraints = {
 };
 
 export default function BestWildcardTeam() {
+  // Fetch bootstrap data to get current gameweek
+  const { data: bootstrapData } = useQuery({
+    queryKey: ['/api/bootstrap-static'],
+    queryFn: async () => {
+      const response = await fetch('/api/bootstrap-static');
+      if (!response.ok) throw new Error('Failed to fetch bootstrap data');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Calculate dynamic gameweek range (next 6 gameweeks)
+  const currentGameweek = bootstrapData?.events.find((event: any) => event.is_current)?.id || 6;
+  const startGameweek = currentGameweek + 1;
+  const endGameweek = Math.min(startGameweek + 5, 38); // Next 6 gameweeks, max GW38
+
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimalTeam, setOptimalTeam] = useState<OptimalTeam | null>(null);
   const [unlimitedBudget, setUnlimitedBudget] = useState<boolean>(true);
@@ -75,17 +91,18 @@ export default function BestWildcardTeam() {
   const [includedPlayers, setIncludedPlayers] = useState<PlayerSnapshot[]>([]);
   const [excludedPlayers, setExcludedPlayers] = useState<PlayerSnapshot[]>([]);
 
-  // Fetch live Player Total Points data (same as Player Total Points page)
+  // Fetch live Player Total Points data (dynamic next 6 gameweeks for wildcard optimization)
   const { data: liveData, isLoading, error } = useQuery({
-    queryKey: ['/api/player-total-points', 6, 11],
+    queryKey: ['/api/player-total-points', startGameweek, endGameweek],
     queryFn: async () => {
-      const response = await fetch('/api/player-total-points?startGameweek=6&endGameweek=11');
+      const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch total points: ${response.statusText}`);
       }
       return response.json();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes for live data
+    enabled: !!bootstrapData, // Only fetch when bootstrap data is available
   });
 
   const snapshots: PlayerSnapshot[] = liveData ? liveData.map((player: any) => ({
@@ -101,10 +118,10 @@ export default function BestWildcardTeam() {
     averageMinutes: 0,
     gameweekBreakdown: player.gameweekProjections || {},
     windowId: '',
-    startGameweek: 6,
-    endGameweek: 11
+    startGameweek: startGameweek,
+    endGameweek: endGameweek
   })) : [];
-  const gameweekRange = 'GW6-11';
+  const gameweekRange = `GW${startGameweek}-${endGameweek}`;
 
   // Get points for specific gameweek
   const getGameweekPoints = (player: PlayerSnapshot, gameweek: number): number => {
@@ -159,7 +176,7 @@ export default function BestWildcardTeam() {
 
   // Helper function to build unlimited budget team with inclusion/exclusion constraints
   const buildUnlimitedTeam = (playersWithPoints: any[], playersByPosition: any) => {
-    console.log('UNLIMITED BUDGET MODE - Top players by total projected points (GW6-11):');
+    console.log(`UNLIMITED BUDGET MODE - Top players by total projected points (${gameweekRange}):`);
     console.log('Included players:', includedPlayers.map(p => p.playerName));
     console.log('Excluded players:', excludedPlayers.map(p => p.playerName));
 
