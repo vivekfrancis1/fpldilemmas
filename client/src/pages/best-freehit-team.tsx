@@ -247,11 +247,17 @@ export default function BestFreehitTeam() {
       }
 
       const team = [
-        squadByPosition.Goalkeeper[0], // Best goalkeeper
+        ...(squadByPosition.Goalkeeper.length > 0 ? [squadByPosition.Goalkeeper[0]] : []), // Best goalkeeper
         ...squadByPosition.Defender.slice(0, formation.def).sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
         ...squadByPosition.Midfielder.slice(0, formation.mid).sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)),
         ...squadByPosition.Forward.slice(0, formation.fwd).sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek))
       ];
+
+      // Ensure exactly 11 players
+      if (team.length !== 11) {
+        console.warn(`Formation ${formation.def}-${formation.mid}-${formation.fwd} resulted in ${team.length} players, skipping`);
+        continue;
+      }
 
       const teamPoints = team.reduce((total, player) => total + getGameweekPoints(player, selectedGameweek), 0);
 
@@ -267,7 +273,14 @@ export default function BestFreehitTeam() {
   // Get formation string
   const getFormation = (starting11: PlayerSnapshot[]): string => {
     const positions = starting11.reduce((acc, player) => {
-      acc[player.position] = (acc[player.position] || 0) + 1;
+      // Normalize position names
+      if (player.position.toLowerCase().includes('defender') || player.position === 'DEF') {
+        acc.Defender = (acc.Defender || 0) + 1;
+      } else if (player.position.toLowerCase().includes('midfielder') || player.position === 'MID') {
+        acc.Midfielder = (acc.Midfielder || 0) + 1;
+      } else if (player.position.toLowerCase().includes('forward') || player.position === 'FWD') {
+        acc.Forward = (acc.Forward || 0) + 1;
+      }
       return acc;
     }, {} as Record<string, number>);
 
