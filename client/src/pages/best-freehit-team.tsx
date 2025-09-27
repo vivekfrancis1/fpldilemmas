@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Star, Trophy, Users, Zap, Shield, Crown } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
@@ -55,6 +58,8 @@ export default function BestFreehitTeam() {
   const [selectedGameweek, setSelectedGameweek] = useState<number>(6);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimalTeam, setOptimalTeam] = useState<OptimalTeam | null>(null);
+  const [unlimitedBudget, setUnlimitedBudget] = useState<boolean>(false);
+  const [budgetConstraint, setBudgetConstraint] = useState<number>(100);
 
   // Fetch Player Total Points snapshots
   const { data: snapshotsData, isLoading, error } = useQuery({
@@ -151,13 +156,20 @@ export default function BestFreehitTeam() {
         throw new Error(`Not enough forwards (need ${SQUAD_CONSTRAINTS.forwards}, found ${playersByPosition.Forward.length})`);
       }
 
-      // Select best squad of 15 players
-      const squad: PlayerSnapshot[] = [
-        ...playersByPosition.Goalkeeper.slice(0, SQUAD_CONSTRAINTS.goalkeepers),
-        ...playersByPosition.Defender.slice(0, SQUAD_CONSTRAINTS.defenders),
-        ...playersByPosition.Midfielder.slice(0, SQUAD_CONSTRAINTS.midfielders),
-        ...playersByPosition.Forward.slice(0, SQUAD_CONSTRAINTS.forwards)
-      ];
+      let squad: PlayerSnapshot[] = [];
+
+      if (unlimitedBudget) {
+        // Unlimited budget: simply pick top players by position based on projected points
+        squad = [
+          ...playersByPosition.Goalkeeper.slice(0, SQUAD_CONSTRAINTS.goalkeepers),
+          ...playersByPosition.Defender.slice(0, SQUAD_CONSTRAINTS.defenders),
+          ...playersByPosition.Midfielder.slice(0, SQUAD_CONSTRAINTS.midfielders),
+          ...playersByPosition.Forward.slice(0, SQUAD_CONSTRAINTS.forwards)
+        ];
+      } else {
+        // Budget-constrained optimization
+        squad = optimizeWithBudgetConstraint(playersByPosition, budgetConstraint);
+      }
 
       console.log('Selected squad size:', squad.length);
 
@@ -214,6 +226,74 @@ export default function BestFreehitTeam() {
     } finally {
       setIsOptimizing(false);
     }
+  };
+
+  // Budget-constrained optimization function
+  const optimizeWithBudgetConstraint = (playersByPosition: any, budget: number): PlayerSnapshot[] => {
+    // Simple greedy approach: pick best value players within budget
+    const allPlayers = [
+      ...playersByPosition.Goalkeeper,
+      ...playersByPosition.Defender,
+      ...playersByPosition.Midfielder,
+      ...playersByPosition.Forward
+    ];
+
+    // Sort by points per million value 
+    const sortedByValue = allPlayers.map(player => ({
+      ...player,
+      valueScore: getGameweekPoints(player, selectedGameweek) / player.price
+    })).sort((a, b) => b.valueScore - a.valueScore);
+
+    const selectedSquad: PlayerSnapshot[] = [];
+    const positionCounts = { Goalkeeper: 0, Defender: 0, Midfielder: 0, Forward: 0 };
+    let totalCost = 0;
+
+    for (const player of sortedByValue) {
+      const position = player.position.toLowerCase().includes('goalkeeper') || player.position === 'GKP' ? 'Goalkeeper' :
+                      player.position.toLowerCase().includes('defender') || player.position === 'DEF' ? 'Defender' :
+                      player.position.toLowerCase().includes('midfielder') || player.position === 'MID' ? 'Midfielder' : 'Forward';
+
+      const maxForPosition = position === 'Goalkeeper' ? SQUAD_CONSTRAINTS.goalkeepers :
+                            position === 'Defender' ? SQUAD_CONSTRAINTS.defenders :
+                            position === 'Midfielder' ? SQUAD_CONSTRAINTS.midfielders :
+                            SQUAD_CONSTRAINTS.forwards;
+
+      if (positionCounts[position] < maxForPosition && 
+          totalCost + player.price <= budget && 
+          selectedSquad.length < 15) {
+        selectedSquad.push(player);
+        positionCounts[position]++;
+        totalCost += player.price;
+      }
+
+      if (selectedSquad.length === 15) break;
+    }
+
+    // If we don't have a full squad, fill with cheapest remaining players
+    if (selectedSquad.length < 15) {
+      const remaining = allPlayers.filter(p => !selectedSquad.some(s => s.playerId === p.playerId))
+        .sort((a, b) => a.price - b.price);
+      
+      for (const player of remaining) {
+        const position = player.position.toLowerCase().includes('goalkeeper') || player.position === 'GKP' ? 'Goalkeeper' :
+                        player.position.toLowerCase().includes('defender') || player.position === 'DEF' ? 'Defender' :
+                        player.position.toLowerCase().includes('midfielder') || player.position === 'MID' ? 'Midfielder' : 'Forward';
+
+        const maxForPosition = position === 'Goalkeeper' ? SQUAD_CONSTRAINTS.goalkeepers :
+                              position === 'Defender' ? SQUAD_CONSTRAINTS.defenders :
+                              position === 'Midfielder' ? SQUAD_CONSTRAINTS.midfielders :
+                              SQUAD_CONSTRAINTS.forwards;
+
+        if (positionCounts[position] < maxForPosition && selectedSquad.length < 15) {
+          selectedSquad.push(player);
+          positionCounts[position]++;
+        }
+
+        if (selectedSquad.length === 15) break;
+      }
+    }
+
+    return selectedSquad;
   };
 
   // Find optimal starting 11 from 15-player squad
@@ -371,6 +451,45 @@ export default function BestFreehitTeam() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Optimization Mode */}
+          <div className="space-y-4 p-4 bg-muted/30 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="unlimited-budget" className="text-sm font-medium">
+                  Unlimited Budget Mode
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {unlimitedBudget ? 'Select top players by projected points (no budget limit)' : 'Optimize team within budget constraints'}
+                </p>
+              </div>
+              <Switch
+                id="unlimited-budget"
+                checked={unlimitedBudget}
+                onCheckedChange={setUnlimitedBudget}
+                data-testid="switch-unlimited-budget"
+              />
+            </div>
+            
+            {!unlimitedBudget && (
+              <div className="space-y-2">
+                <Label htmlFor="budget" className="text-sm font-medium">
+                  Budget Constraint (£m)
+                </Label>
+                <Input
+                  id="budget"
+                  type="number"
+                  value={budgetConstraint}
+                  onChange={(e) => setBudgetConstraint(parseFloat(e.target.value) || 100)}
+                  min="50"
+                  max="200"
+                  step="0.1"
+                  className="w-32"
+                  data-testid="input-budget"
+                />
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
             <div className="space-y-2">
               <label className="text-sm font-medium">Gameweek</label>
@@ -401,7 +520,7 @@ export default function BestFreehitTeam() {
               ) : (
                 <>
                   <Star className="h-4 w-4" />
-                  Optimize Team
+                  {unlimitedBudget ? 'Select Top Players' : 'Optimize Team'}
                 </>
               )}
             </Button>
@@ -423,8 +542,14 @@ export default function BestFreehitTeam() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Trophy className="h-5 w-5 text-yellow-500" />
-                Optimal Team Summary
+                {unlimitedBudget ? 'Top Players Selection' : 'Budget-Optimized Team'}
               </CardTitle>
+              <CardDescription>
+                {unlimitedBudget 
+                  ? 'Best players by projected points with no budget constraints'
+                  : `Optimized within £${budgetConstraint}m budget constraint`
+                }
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
