@@ -28,6 +28,15 @@ interface PlayerSnapshot {
   endGameweek: number;
 }
 
+interface GameweekTeam {
+  gameweek: number;
+  starting11: PlayerSnapshot[];
+  captain: PlayerSnapshot;
+  viceCaptain: PlayerSnapshot;
+  totalPoints: number;
+  gameweekPoints: number;
+}
+
 interface OptimalTeam {
   squad: PlayerSnapshot[];
   starting11: PlayerSnapshot[];
@@ -36,6 +45,7 @@ interface OptimalTeam {
   formation: string;
   totalPoints: number;
   totalValue: number;
+  gameweekBreakdown: GameweekTeam[];
 }
 
 interface TeamConstraints {
@@ -94,6 +104,57 @@ export default function BestWildcardTeam() {
     endGameweek: 11
   })) : [];
   const gameweekRange = 'GW6-11';
+
+  // Get points for specific gameweek
+  const getGameweekPoints = (player: PlayerSnapshot, gameweek: number): number => {
+    return player.gameweekBreakdown[gameweek.toString()] || player.gameweekBreakdown[`gw${gameweek}`] || 0;
+  };
+
+  // Helper function to optimize starting XI for a specific gameweek
+  const optimizeStartingXIForGameweek = (squad: PlayerSnapshot[], gameweek: number): { starting11: PlayerSnapshot[], captain: PlayerSnapshot, viceCaptain: PlayerSnapshot, gameweekPoints: number } => {
+    // Group squad by position
+    const squadByPosition = {
+      Goalkeeper: squad.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP')
+        .sort((a, b) => getGameweekPoints(b, gameweek) - getGameweekPoints(a, gameweek)),
+      Defender: squad.filter(p => p.position.toLowerCase().includes('defender') || p.position === 'DEF')
+        .sort((a, b) => getGameweekPoints(b, gameweek) - getGameweekPoints(a, gameweek)),
+      Midfielder: squad.filter(p => p.position.toLowerCase().includes('midfielder') || p.position === 'MID')
+        .sort((a, b) => getGameweekPoints(b, gameweek) - getGameweekPoints(a, gameweek)),
+      Forward: squad.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD')
+        .sort((a, b) => getGameweekPoints(b, gameweek) - getGameweekPoints(a, gameweek))
+    };
+
+    // Select starting 11 based on best performers for this specific gameweek
+    const starting11 = [
+      squadByPosition.Goalkeeper[0], // 1 GK (best for this gameweek)
+      ...squadByPosition.Defender.slice(0, 4), // 4 DEF (best 4 for this gameweek)
+      ...squadByPosition.Midfielder.slice(0, 5), // 5 MID (best 5 for this gameweek)
+      squadByPosition.Forward[0] // 1 FWD (best for this gameweek)
+    ].filter(Boolean);
+
+    // Captain should be the player with the highest points for this specific gameweek
+    const captain = starting11.reduce((best, player) => 
+      getGameweekPoints(player, gameweek) > getGameweekPoints(best, gameweek) ? player : best
+    );
+
+    // Vice-captain should be the second-highest scoring player for this gameweek
+    const viceCaptain = starting11
+      .filter(player => player.playerId !== captain.playerId)
+      .reduce((best, player) => 
+        getGameweekPoints(player, gameweek) > getGameweekPoints(best, gameweek) ? player : best
+      );
+
+    const gameweekPoints = starting11.reduce((sum, player) => {
+      const playerPoints = getGameweekPoints(player, gameweek);
+      // Double captain points
+      if (player.playerId === captain.playerId) {
+        return sum + (playerPoints * 2);
+      }
+      return sum + playerPoints;
+    }, 0);
+
+    return { starting11, captain, viceCaptain, gameweekPoints };
+  };
 
   // Helper function to build unlimited budget team with inclusion/exclusion constraints
   const buildUnlimitedTeam = (playersWithPoints: any[], playersByPosition: any) => {
@@ -323,40 +384,49 @@ export default function BestWildcardTeam() {
         finalStarting11 = budgetAdjusted.starting11;
       }
 
-      // Captain should be the player with the highest total projected points
-      const captain = finalStarting11.reduce((best, player) => 
+      // Generate gameweek-by-gameweek breakdown
+      const gameweekBreakdown: GameweekTeam[] = [];
+      let totalOptimizedPoints = 0;
+
+      for (let gw = 6; gw <= 11; gw++) {
+        const gameweekOptimization = optimizeStartingXIForGameweek(finalSquad, gw);
+        gameweekBreakdown.push({
+          gameweek: gw,
+          starting11: gameweekOptimization.starting11,
+          captain: gameweekOptimization.captain,
+          viceCaptain: gameweekOptimization.viceCaptain,
+          totalPoints: gameweekOptimization.gameweekPoints, // Points for this specific gameweek
+          gameweekPoints: gameweekOptimization.gameweekPoints
+        });
+        totalOptimizedPoints += gameweekOptimization.gameweekPoints;
+      }
+
+      // For display purposes, also calculate the "overall best" starting XI across all gameweeks
+      const overallCaptain = finalSquad.reduce((best, player) => 
         player.totalProjectedPoints > best.totalProjectedPoints ? player : best
       );
 
-      // Vice-captain should be the second-highest scoring player
-      const viceCaptain = finalStarting11
-        .filter(player => player.playerId !== captain.playerId)
+      const overallViceCaptain = finalSquad
+        .filter(player => player.playerId !== overallCaptain.playerId)
         .reduce((best, player) => 
           player.totalProjectedPoints > best.totalProjectedPoints ? player : best
         );
-
-      const totalPoints = finalStarting11.reduce((sum, player) => {
-        const playerPoints = player.totalProjectedPoints;
-        // Double captain points
-        if (player.playerId === captain.playerId) {
-          return sum + (playerPoints * 2);
-        }
-        return sum + playerPoints;
-      }, 0);
 
       const totalValue = finalSquad.reduce((sum, player) => sum + player.price, 0);
 
       console.log('Selected squad size:', finalSquad.length);
       console.log('Starting 11 size:', finalStarting11.length);
+      console.log('Gameweek-optimized total points:', totalOptimizedPoints);
 
       setOptimalTeam({
         squad: finalSquad,
         starting11: finalStarting11,
-        captain,
-        viceCaptain,
+        captain: overallCaptain,
+        viceCaptain: overallViceCaptain,
         formation: '4-5-1',
-        totalPoints,
-        totalValue
+        totalPoints: totalOptimizedPoints, // Use optimized points from gameweek breakdown
+        totalValue,
+        gameweekBreakdown
       });
 
       console.log('Optimization successful:', {
@@ -742,6 +812,100 @@ export default function BestWildcardTeam() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Gameweek-by-Gameweek Breakdown */}
+          {optimalTeam && optimalTeam.gameweekBreakdown && optimalTeam.gameweekBreakdown.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Gameweek-by-Gameweek Optimization
+                </CardTitle>
+                <CardDescription>
+                  Optimal starting XI and captain for each individual gameweek
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-6">
+                  {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
+                  <div key={gameweekTeam.gameweek} className="border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="text-lg font-semibold px-3 py-1">
+                          GW{gameweekTeam.gameweek}
+                        </Badge>
+                        <div className="text-lg font-semibold">
+                          {gameweekTeam.gameweekPoints.toFixed(1)} points
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Crown className="h-4 w-4 text-yellow-600" />
+                          {gameweekTeam.captain.playerName}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Shield className="h-4 w-4 text-blue-600" />
+                          {gameweekTeam.viceCaptain.playerName}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid gap-2">
+                      {gameweekTeam.starting11.map((player, index) => {
+                        const gameweekPoints = getGameweekPoints(player, gameweekTeam.gameweek);
+                        const isCaptain = player.playerId === gameweekTeam.captain.playerId;
+                        const isViceCaptain = player.playerId === gameweekTeam.viceCaptain.playerId;
+                        
+                        return (
+                          <div
+                            key={player.playerId}
+                            className={`flex items-center justify-between p-2 rounded ${
+                              isCaptain 
+                                ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700'
+                                : isViceCaptain
+                                ? 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700'
+                                : 'bg-muted/30'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="text-xs text-muted-foreground w-6">
+                                {index + 1}.
+                              </div>
+                              <div>
+                                <div className="font-medium flex items-center gap-2">
+                                  {player.playerName}
+                                  {isCaptain && (
+                                    <Crown className="h-3 w-3 text-yellow-600" />
+                                  )}
+                                  {isViceCaptain && (
+                                    <Shield className="h-3 w-3 text-blue-600" />
+                                  )}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {player.teamName} - {player.position}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-medium">
+                                {isCaptain ? (gameweekPoints * 2).toFixed(1) : gameweekPoints.toFixed(1)} pts
+                              </div>
+                              {isCaptain && (
+                                <div className="text-xs text-yellow-600">
+                                  {gameweekPoints.toFixed(1)} × 2 (C)
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          )}
 
           {/* Full Squad */}
           <Card>
