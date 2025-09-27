@@ -145,7 +145,7 @@ export function useAdaptiveChartQuality() {
     assessDeviceCapabilities()
   }, [])
 
-  const getQualityConfig = useMemo(() => {
+  const qualityConfig = useMemo(() => {
     switch (quality) {
       case 'high':
         return {
@@ -180,7 +180,7 @@ export function useAdaptiveChartQuality() {
     }
   }, [quality])
 
-  return { quality, qualityConfig: getQualityConfig }
+  return { quality, qualityConfig }
 }
 
 // Intersection Observer hook for lazy loading charts
@@ -296,7 +296,7 @@ export function useBatteryAwarePerformance() {
     getBatteryInfo()
   }, [])
 
-  const getPerformanceMode = useMemo(() => {
+  const performanceMode = useMemo(() => {
     if (batteryInfo.lowPowerMode) {
       return 'power-save'
     } else if (batteryInfo.level > 0.5 || batteryInfo.charging) {
@@ -306,5 +306,5 @@ export function useBatteryAwarePerformance() {
     }
   }, [batteryInfo])
 
-  return { batteryInfo, performanceMode: getPerformanceMode }
+  return { batteryInfo, performanceMode }
 }

@@ -110,33 +110,40 @@ const ChartContainer = React.forwardRef<
   // Initialize gesture support
   const [chartTransform, setChartTransform] = React.useState({ scale: 1, translateX: 0, translateY: 0 })
   
-  // Create stable gesture config to avoid hooks re-ordering
+  // Create stable gesture config to avoid hooks re-ordering - avoid object reference dependency
+  const enablePinch = gestureConfig.enablePinch || false
+  const enablePan = gestureConfig.enablePan || false
+  const enableTap = gestureConfig.enableTap !== false
+  const onPinch = gestureConfig.onPinch
+  const onPan = gestureConfig.onPan
+  const onTap = gestureConfig.onTap
+  
   const stableGestureConfig = React.useMemo(() => ({
-    enablePinch: gestureConfig.enablePinch || false,
-    enablePan: gestureConfig.enablePan || false,
-    enableTap: gestureConfig.enableTap !== false, // Default to true
+    enablePinch,
+    enablePan,
+    enableTap,
     onPinch: (scale: number) => {
-      if (enableGestures && gestureConfig.enablePinch && isMobile) {
+      if (enableGestures && enablePinch && isMobile) {
         setChartTransform(prev => ({ ...prev, scale }))
-        gestureConfig.onPinch?.(scale)
+        onPinch?.(scale)
       }
     },
     onPan: (delta: { x: number; y: number }) => {
-      if (enableGestures && gestureConfig.enablePan && isMobile) {
+      if (enableGestures && enablePan && isMobile) {
         setChartTransform(prev => ({
           ...prev,
           translateX: prev.translateX + delta.x,
           translateY: prev.translateY + delta.y
         }))
-        gestureConfig.onPan?.(delta)
+        onPan?.(delta)
       }
     },
     onTap: (event: TouchEvent, coordinates: { x: number; y: number }) => {
-      if (enableGestures && gestureConfig.enableTap && isMobile) {
-        gestureConfig.onTap?.(event, coordinates)
+      if (enableGestures && enableTap && isMobile) {
+        onTap?.(event, coordinates)
       }
     }
-  }), [enableGestures, isMobile, gestureConfig])
+  }), [enableGestures, isMobile, enablePinch, enablePan, enableTap, onPinch, onPan, onTap])
   
   const { gestureState, gestureHandlers, resetTransform, currentTransform } = useChartGestures(stableGestureConfig)
 
