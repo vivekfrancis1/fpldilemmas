@@ -58,7 +58,23 @@ const SQUAD_CONSTRAINTS: TeamConstraints = {
 };
 
 export default function BestFreehitTeam() {
-  const [selectedGameweek, setSelectedGameweek] = useState<number>(6);
+  // Fetch bootstrap data to get current gameweek
+  const { data: bootstrapData } = useQuery({
+    queryKey: ['/api/bootstrap-static'],
+    queryFn: async () => {
+      const response = await fetch('/api/bootstrap-static');
+      if (!response.ok) throw new Error('Failed to fetch bootstrap data');
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Calculate dynamic gameweek range (next 6 gameweeks)
+  const currentGameweek = bootstrapData?.events.find((event: any) => event.is_current)?.id || 6;
+  const startGameweek = currentGameweek + 1;
+  const endGameweek = Math.min(startGameweek + 5, 38); // Next 6 gameweeks, max GW38
+
+  const [selectedGameweek, setSelectedGameweek] = useState<number>(startGameweek);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimalTeam, setOptimalTeam] = useState<OptimalTeam | null>(null);
   const [unlimitedBudget, setUnlimitedBudget] = useState<boolean>(true);
@@ -97,15 +113,22 @@ export default function BestFreehitTeam() {
   })) : [];
   const gameweekRange = `GW${selectedGameweek}`;
 
+  // Update selected gameweek when bootstrap data loads
+  useEffect(() => {
+    if (bootstrapData && selectedGameweek < startGameweek) {
+      setSelectedGameweek(startGameweek);
+    }
+  }, [bootstrapData, startGameweek]);
+
   // Clear optimal team when gameweek changes
   useEffect(() => {
     setOptimalTeam(null);
   }, [selectedGameweek]);
 
-  // Get gameweek options (fixed range for freehit optimization)
+  // Get gameweek options (dynamic range for freehit optimization - next 6 gameweeks)
   const getGameweekOptions = () => {
     const options = [];
-    for (let gw = 6; gw <= 11; gw++) {
+    for (let gw = startGameweek; gw <= endGameweek; gw++) {
       options.push(gw);
     }
     return options;
