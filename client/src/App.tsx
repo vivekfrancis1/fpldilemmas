@@ -245,19 +245,19 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
           
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button 
-              onClick={resetErrorBoundary}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              data-testid="button-retry-error"
-            >
-              Try Again
-            </button>
-            
-            <button 
               onClick={handlePageReload}
               className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
               data-testid="button-reload-page"
             >
               Reload Page
+            </button>
+            
+            <button 
+              onClick={resetErrorBoundary}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              data-testid="button-retry-error"
+            >
+              Try Again
             </button>
           </div>
           
