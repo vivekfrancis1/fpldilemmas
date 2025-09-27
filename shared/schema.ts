@@ -1472,3 +1472,52 @@ export type InsertStaticCachedProjection = typeof staticCachedProjections.$infer
 // Types for static player projections
 export type StaticPlayerProjection = typeof staticPlayerProjections.$inferSelect;
 export type InsertStaticPlayerProjection = typeof staticPlayerProjections.$inferInsert;
+
+// Player Total Points Window Tables - Store dynamic 6-gameweek windows with comprehensive data
+export const playerTotalPointsWindows = pgTable("player_total_points_windows", {
+  windowId: varchar("window_id").primaryKey().default(sql`gen_random_uuid()`),
+  startGameweek: integer("start_gameweek").notNull(),
+  endGameweek: integer("end_gameweek").notNull(),
+  season: varchar("season", { length: 10 }).notNull().default("2025/26"),
+  fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
+  recordCount: integer("record_count").default(0),
+  isActive: boolean("is_active").default(true),
+}, (table) => [
+  index("idx_windows_start_gw").on(table.startGameweek),
+  index("idx_windows_active").on(table.isActive),
+  uniqueIndex("idx_windows_unique_range").on(table.startGameweek, table.season),
+]);
+
+export const playerTotalPointsSnapshots = pgTable("player_total_points_snapshots", {
+  windowId: varchar("window_id").references(() => playerTotalPointsWindows.windowId, { onDelete: "cascade" }).notNull(),
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name", { length: 100 }).notNull(),
+  teamName: varchar("team_name", { length: 50 }).notNull(),
+  position: varchar("position", { length: 20 }).notNull(),
+  
+  // Player metadata for the snapshot
+  price: decimal("price", { precision: 5, scale: 2 }).notNull(), // e.g. 7.50
+  ownership: decimal("ownership", { precision: 5, scale: 2 }).notNull(), // e.g. 15.25
+  
+  // Aggregated projection values for the 6-gameweek period
+  totalProjectedPoints: decimal("total_projected_points", { precision: 6, scale: 2 }).notNull().default("0"),
+  averagePointsPerGameweek: decimal("average_points_per_gameweek", { precision: 5, scale: 2 }).notNull().default("0"),
+  averageValue: decimal("average_value", { precision: 5, scale: 2 }).notNull().default("0"), // points per million
+  averageMinutes: decimal("average_minutes", { precision: 5, scale: 2 }).notNull().default("0"),
+  
+  // Gameweek-by-gameweek breakdown stored as JSON
+  gameweekBreakdown: jsonb("gameweek_breakdown").notNull(), // {gw6: {points: 5.2, goals: 0.3, assists: 0.15, ...}, ...}
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.windowId, table.playerId] }),
+  index("idx_snapshots_player_id").on(table.playerId),
+  index("idx_snapshots_total_points").on(table.totalProjectedPoints),
+  index("idx_snapshots_position").on(table.position),
+]);
+
+export type PlayerTotalPointsWindow = typeof playerTotalPointsWindows.$inferSelect;
+export type InsertPlayerTotalPointsWindow = typeof playerTotalPointsWindows.$inferInsert;
+
+export type PlayerTotalPointsSnapshot = typeof playerTotalPointsSnapshots.$inferSelect;
+export type InsertPlayerTotalPointsSnapshot = typeof playerTotalPointsSnapshots.$inferInsert;
