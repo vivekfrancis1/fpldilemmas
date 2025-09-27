@@ -787,14 +787,16 @@ export default function BestFreehitTeam() {
                     >
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-medium w-6">{index + 1}.</span>
-                        {player.playerId === optimalTeam.captain.playerId && (
-                          <Crown className="h-4 w-4 text-yellow-500" />
-                        )}
-                        {player.playerId === optimalTeam.viceCaptain?.playerId && (
-                          <Star className="h-4 w-4 text-blue-500" />
-                        )}
                         <div>
-                          <p className="font-medium">{player.playerName}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{player.playerName}</p>
+                            {player.playerId === optimalTeam.captain.playerId && (
+                              <Crown className="h-4 w-4 text-yellow-500" />
+                            )}
+                            {player.playerId === optimalTeam.viceCaptain?.playerId && (
+                              <Star className="h-4 w-4 text-blue-500" />
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">{player.teamName}</p>
                         </div>
                       </div>
@@ -803,15 +805,17 @@ export default function BestFreehitTeam() {
                           {player.position}
                         </Badge>
                         <div className="text-right">
-                          <p className="font-medium">
-                            {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
+                          <div className="flex items-center gap-1">
+                            <p className="font-medium">
+                              {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
+                            </p>
                             {player.playerId === optimalTeam.captain.playerId && (
-                              <span className="text-yellow-600 ml-1">(C)</span>
+                              <span className="text-yellow-600 font-medium">(C)</span>
                             )}
                             {player.playerId === optimalTeam.viceCaptain?.playerId && (
-                              <span className="text-blue-600 ml-1">(V)</span>
+                              <span className="text-blue-600 font-medium">(V)</span>
                             )}
-                          </p>
+                          </div>
                           <p className="text-sm text-muted-foreground">£{player.price}m</p>
                         </div>
                       </div>
