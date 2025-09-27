@@ -31,6 +31,7 @@ interface OptimalTeam {
   squad: PlayerSnapshot[];
   starting11: PlayerSnapshot[];
   captain: PlayerSnapshot;
+  viceCaptain: PlayerSnapshot;
   formation: string;
   totalPoints: number;
   totalValue: number;
@@ -211,10 +212,12 @@ export default function BestFreehitTeam() {
 
       console.log('Starting 11 size:', starting11.length);
       
-      // Find best captain (highest points in starting 11)
-      const captain = starting11.reduce((best, player) => 
-        getGameweekPoints(player, selectedGameweek) > getGameweekPoints(best, selectedGameweek) ? player : best
+      // Find captain (highest points) and vice captain (second highest points) from starting 11
+      const sortedByPoints = starting11.sort((a, b) => 
+        getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek)
       );
+      const captain = sortedByPoints[0];
+      const viceCaptain = sortedByPoints[1];
 
       // Calculate total points (captain gets double)
       const totalPoints = starting11.reduce((total, player) => {
@@ -240,6 +243,7 @@ export default function BestFreehitTeam() {
         squad,
         starting11,
         captain,
+        viceCaptain,
         formation,
         totalPoints,
         totalValue
@@ -581,7 +585,7 @@ export default function BestFreehitTeam() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Formation</p>
                   <p className="text-2xl font-bold">{optimalTeam.formation}</p>
@@ -589,15 +593,10 @@ export default function BestFreehitTeam() {
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Projected Points</p>
                   <p className="text-2xl font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</p>
-                  <p className="text-xs text-muted-foreground">Starting XI with captain (C) doubled</p>
+                  <p className="text-xs text-muted-foreground">Starting XI with captain doubled</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Team Value</p>
-                  <p className="text-2xl font-bold">£{optimalTeam.totalValue.toFixed(1)}m</p>
-                  <p className="text-xs text-muted-foreground">All 15 players</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Captain (Double Points)</p>
+                  <p className="text-sm text-muted-foreground">Captain (C)</p>
                   <p className="text-lg font-bold flex items-center gap-1">
                     <Crown className="h-4 w-4 text-yellow-500" />
                     {optimalTeam.captain.playerName}
@@ -605,6 +604,31 @@ export default function BestFreehitTeam() {
                   <p className="text-xs text-green-600 font-medium">
                     {getGameweekPoints(optimalTeam.captain, selectedGameweek).toFixed(1)} × 2 = {(getGameweekPoints(optimalTeam.captain, selectedGameweek) * 2).toFixed(1)} pts
                   </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Vice Captain (V)</p>
+                  <p className="text-lg font-bold flex items-center gap-1">
+                    <Star className="h-4 w-4 text-blue-500" />
+                    {optimalTeam.viceCaptain?.playerName || 'TBD'}
+                  </p>
+                  <p className="text-xs text-blue-600 font-medium">
+                    {optimalTeam.viceCaptain ? getGameweekPoints(optimalTeam.viceCaptain, selectedGameweek).toFixed(1) : '0.0'} pts
+                  </p>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Team Value</p>
+                    <p className="text-xl font-bold">£{optimalTeam.totalValue.toFixed(1)}m</p>
+                    <p className="text-xs text-muted-foreground">All 15 players</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Gameweek Range</p>
+                    <p className="text-xl font-bold">GW{selectedGameweek}</p>
+                    <p className="text-xs text-muted-foreground">Single gameweek optimization</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -659,37 +683,37 @@ export default function BestFreehitTeam() {
             </CardContent>
           </Card>
 
-          {/* Bench Players */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Bench (4 players)</CardTitle>
-              <CardDescription>
-                Substitutes in preferred order of priority
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {optimalTeam.squad
-                  .filter(player => !optimalTeam.starting11.some(p => p.playerId === player.playerId))
-                  .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek))
-                  .map((player, index) => (
+          {/* Bench Players - Organized by Position */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Substitute Goalkeeper */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Substitute Goalkeeper</CardTitle>
+                <CardDescription>
+                  Only replaces starting goalkeeper
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const benchGK = optimalTeam.squad
+                    .filter(player => !optimalTeam.starting11.some(p => p.playerId === player.playerId))
+                    .filter(player => player.position.toLowerCase().includes('goalkeeper') || player.position === 'Goalkeeper');
+                  
+                  return benchGK.map(player => (
                     <div
                       key={player.playerId}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 border-muted"
+                      className="flex items-center justify-between p-3 rounded-lg border bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800"
                     >
                       <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium w-6">{index + 1}.</span>
+                        <Shield className="h-4 w-4 text-yellow-600" />
                         <div>
                           <p className="font-medium">{player.playerName}</p>
                           <p className="text-sm text-muted-foreground">{player.teamName}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Badge 
-                          className={getPositionColor(player.position)} 
-                          variant="secondary"
-                        >
-                          {player.position}
+                        <Badge className={getPositionColor(player.position)} variant="secondary">
+                          GK
                         </Badge>
                         <div className="text-right">
                           <p className="font-medium">
@@ -699,10 +723,59 @@ export default function BestFreehitTeam() {
                         </div>
                       </div>
                     </div>
-                  ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ));
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Outfield Substitutes */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Outfield Substitutes (3 players)</CardTitle>
+                <CardDescription>
+                  Substitution priority order (1st, 2nd, 3rd choice)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {optimalTeam.squad
+                    .filter(player => !optimalTeam.starting11.some(p => p.playerId === player.playerId))
+                    .filter(player => !player.position.toLowerCase().includes('goalkeeper') && player.position !== 'Goalkeeper')
+                    .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek))
+                    .map((player, index) => (
+                      <div
+                        key={player.playerId}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm font-bold w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center">
+                            {index + 1}
+                          </span>
+                          <div>
+                            <p className="font-medium">{player.playerName}</p>
+                            <p className="text-sm text-muted-foreground">{player.teamName}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge 
+                            className={getPositionColor(player.position)} 
+                            variant="secondary"
+                          >
+                            {player.position}
+                          </Badge>
+                          <div className="text-right">
+                            <p className="font-medium">
+                              {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
+                            </p>
+                            <p className="text-sm text-muted-foreground">£{player.price}m</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
     </div>
