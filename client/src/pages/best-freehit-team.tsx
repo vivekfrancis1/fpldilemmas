@@ -75,7 +75,7 @@ export default function BestFreehitTeam() {
     staleTime: 5 * 60 * 1000, // 5 minutes for live data
   });
 
-  const snapshots: PlayerSnapshot[] = liveData ? liveData.map(player => ({
+  const snapshots: PlayerSnapshot[] = liveData ? liveData.map((player: any) => ({
     playerId: player.playerId || 0,
     playerName: player.name || player.playerName || '',
     teamName: player.team || '',
@@ -148,7 +148,7 @@ export default function BestFreehitTeam() {
       }
 
       // Get unique positions to debug
-      const uniquePositions = [...new Set(snapshots.map(p => p.position))];
+      const uniquePositions = Array.from(new Set(snapshots.map(p => p.position)));
       console.log('Unique positions in data:', uniquePositions);
 
       // Group by position and sort by selected gameweek points only
@@ -634,51 +634,83 @@ export default function BestFreehitTeam() {
             </CardContent>
           </Card>
 
-          {/* Starting 11 - Simple List */}
+          {/* Starting 11 - Ordered by Position */}
           <Card>
             <CardHeader>
               <CardTitle>Starting XI</CardTitle>
               <CardDescription>
-                Your optimal 11 players for GW{selectedGameweek} (captain gets double points)
+                Your optimal 11 players for GW{selectedGameweek} (ordered by position)
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {optimalTeam.starting11.map((player, index) => (
-                  <div
-                    key={player.playerId}
-                    className={`flex items-center justify-between p-3 rounded-lg border ${
-                      player.playerId === optimalTeam.captain.playerId 
-                        ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800' 
-                        : 'bg-muted/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-medium w-6">{index + 1}.</span>
-                      {player.playerId === optimalTeam.captain.playerId && (
-                        <Crown className="h-4 w-4 text-yellow-500" />
-                      )}
-                      <div>
-                        <p className="font-medium">{player.playerName}</p>
-                        <p className="text-sm text-muted-foreground">{player.teamName}</p>
+                {optimalTeam.starting11
+                  .sort((a, b) => {
+                    // Position order: Goalkeeper -> Defender -> Midfielder -> Forward
+                    const positionOrder: Record<string, number> = {
+                      'Goalkeeper': 1,
+                      'Defender': 2,
+                      'Midfielder': 3,
+                      'Forward': 4,
+                      'GKP': 1,
+                      'DEF': 2,
+                      'MID': 3,
+                      'FWD': 4
+                    };
+                    
+                    const aOrder = positionOrder[a.position] || 5;
+                    const bOrder = positionOrder[b.position] || 5;
+                    
+                    if (aOrder !== bOrder) {
+                      return aOrder - bOrder;
+                    }
+                    
+                    // Within same position, sort by points (highest first)
+                    return getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek);
+                  })
+                  .map((player, index) => (
+                    <div
+                      key={player.playerId}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        player.playerId === optimalTeam.captain.playerId 
+                          ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800' 
+                          : player.playerId === optimalTeam.viceCaptain?.playerId
+                          ? 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800'
+                          : 'bg-muted/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium w-6">{index + 1}.</span>
+                        {player.playerId === optimalTeam.captain.playerId && (
+                          <Crown className="h-4 w-4 text-yellow-500" />
+                        )}
+                        {player.playerId === optimalTeam.viceCaptain?.playerId && (
+                          <Star className="h-4 w-4 text-blue-500" />
+                        )}
+                        <div>
+                          <p className="font-medium">{player.playerName}</p>
+                          <p className="text-sm text-muted-foreground">{player.teamName}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge className={getPositionColor(player.position)} variant="secondary">
+                          {player.position}
+                        </Badge>
+                        <div className="text-right">
+                          <p className="font-medium">
+                            {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
+                            {player.playerId === optimalTeam.captain.playerId && (
+                              <span className="text-yellow-600 ml-1">(C)</span>
+                            )}
+                            {player.playerId === optimalTeam.viceCaptain?.playerId && (
+                              <span className="text-blue-600 ml-1">(V)</span>
+                            )}
+                          </p>
+                          <p className="text-sm text-muted-foreground">£{player.price}m</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Badge className={getPositionColor(player.position)} variant="secondary">
-                        {player.position}
-                      </Badge>
-                      <div className="text-right">
-                        <p className="font-medium">
-                          {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
-                          {player.playerId === optimalTeam.captain.playerId && (
-                            <span className="text-yellow-600 ml-1">(C)</span>
-                          )}
-                        </p>
-                        <p className="text-sm text-muted-foreground">£{player.price}m</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </CardContent>
           </Card>
