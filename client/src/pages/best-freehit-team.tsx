@@ -451,7 +451,7 @@ export default function BestFreehitTeam() {
             </CardContent>
           </Card>
 
-          {/* Starting 11 */}
+          {/* Starting 11 - Simple List */}
           <Card>
             <CardHeader>
               <CardTitle>Starting XI</CardTitle>
@@ -460,63 +460,47 @@ export default function BestFreehitTeam() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map(position => {
-                  const positionPlayers = optimalTeam.starting11.filter(p => p.position === position);
-                  if (positionPlayers.length === 0) return null;
-                  
-                  const PositionIcon = getPositionIcon(position);
-                  
-                  return (
-                    <div key={position} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <PositionIcon className="h-4 w-4" />
-                        <h4 className="font-medium">{position}s ({positionPlayers.length})</h4>
-                      </div>
-                      <div className="grid gap-2">
-                        {positionPlayers.map(player => (
-                          <div
-                            key={player.playerId}
-                            className={`flex items-center justify-between p-3 rounded-lg border ${
-                              player.playerId === optimalTeam.captain.playerId 
-                                ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800' 
-                                : 'bg-muted/50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              {player.playerId === optimalTeam.captain.playerId && (
-                                <Crown className="h-4 w-4 text-yellow-500" />
-                              )}
-                              <div>
-                                <p className="font-medium">{player.playerName}</p>
-                                <p className="text-sm text-muted-foreground">{player.teamName}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Badge className={getPositionColor(player.position)} variant="secondary">
-                                {player.position.slice(0, 3)}
-                              </Badge>
-                              <div className="text-right">
-                                <p className="font-medium">
-                                  {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
-                                  {player.playerId === optimalTeam.captain.playerId && (
-                                    <span className="text-yellow-600 ml-1">(C)</span>
-                                  )}
-                                </p>
-                                <p className="text-sm text-muted-foreground">£{player.price}m</p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+              <div className="space-y-2">
+                {optimalTeam.starting11.map((player, index) => (
+                  <div
+                    key={player.playerId}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                      player.playerId === optimalTeam.captain.playerId 
+                        ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-950 dark:border-yellow-800' 
+                        : 'bg-muted/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium w-6">{index + 1}.</span>
+                      {player.playerId === optimalTeam.captain.playerId && (
+                        <Crown className="h-4 w-4 text-yellow-500" />
+                      )}
+                      <div>
+                        <p className="font-medium">{player.playerName}</p>
+                        <p className="text-sm text-muted-foreground">{player.teamName}</p>
                       </div>
                     </div>
-                  );
-                })}
+                    <div className="flex items-center gap-3">
+                      <Badge className={getPositionColor(player.position)} variant="secondary">
+                        {player.position}
+                      </Badge>
+                      <div className="text-right">
+                        <p className="font-medium">
+                          {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
+                          {player.playerId === optimalTeam.captain.playerId && (
+                            <span className="text-yellow-600 ml-1">(C)</span>
+                          )}
+                        </p>
+                        <p className="text-sm text-muted-foreground">£{player.price}m</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
 
-          {/* Full Squad */}
+          {/* Full Squad - Simple List */}
           <Card>
             <CardHeader>
               <CardTitle>Full Squad (15 players)</CardTitle>
@@ -525,64 +509,48 @@ export default function BestFreehitTeam() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map(position => {
-                  const positionPlayers = optimalTeam.squad.filter(p => p.position === position);
-                  if (positionPlayers.length === 0) return null;
-                  
-                  const PositionIcon = getPositionIcon(position);
+              <div className="space-y-2">
+                {optimalTeam.squad.map((player, index) => {
+                  const isStarting = optimalTeam.starting11.some(p => p.playerId === player.playerId);
                   
                   return (
-                    <div key={position} className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <PositionIcon className="h-4 w-4" />
-                        <h4 className="font-medium">{position}s ({positionPlayers.length})</h4>
+                    <div
+                      key={player.playerId}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        isStarting 
+                          ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' 
+                          : 'bg-muted/30 border-muted'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-medium w-6">{index + 1}.</span>
+                        <div>
+                          <p className="font-medium">{player.playerName}</p>
+                          <p className="text-sm text-muted-foreground">{player.teamName}</p>
+                        </div>
                       </div>
-                      <div className="grid gap-2">
-                        {positionPlayers.map(player => {
-                          const isStarting = optimalTeam.starting11.some(p => p.playerId === player.playerId);
-                          
-                          return (
-                            <div
-                              key={player.playerId}
-                              className={`flex items-center justify-between p-3 rounded-lg border ${
-                                isStarting 
-                                  ? 'bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800' 
-                                  : 'bg-muted/30 border-muted'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div>
-                                  <p className="font-medium">{player.playerName}</p>
-                                  <p className="text-sm text-muted-foreground">{player.teamName}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <Badge 
-                                  className={getPositionColor(player.position)} 
-                                  variant="secondary"
-                                >
-                                  {player.position.slice(0, 3)}
-                                </Badge>
-                                {isStarting ? (
-                                  <Badge variant="default" className="bg-green-600">
-                                    Starting
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline">
-                                    Bench
-                                  </Badge>
-                                )}
-                                <div className="text-right">
-                                  <p className="font-medium">
-                                    {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
-                                  </p>
-                                  <p className="text-sm text-muted-foreground">£{player.price}m</p>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                      <div className="flex items-center gap-3">
+                        <Badge 
+                          className={getPositionColor(player.position)} 
+                          variant="secondary"
+                        >
+                          {player.position}
+                        </Badge>
+                        {isStarting ? (
+                          <Badge variant="default" className="bg-green-600">
+                            Starting
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">
+                            Bench
+                          </Badge>
+                        )}
+                        <div className="text-right">
+                          <p className="font-medium">
+                            {getGameweekPoints(player, selectedGameweek).toFixed(1)} pts
+                          </p>
+                          <p className="text-sm text-muted-foreground">£{player.price}m</p>
+                        </div>
                       </div>
                     </div>
                   );
