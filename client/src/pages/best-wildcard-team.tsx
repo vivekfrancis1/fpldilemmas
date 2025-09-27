@@ -10,6 +10,7 @@ import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus, Calendar } from "luci
 import { Separator } from "@/components/ui/separator";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -433,8 +434,8 @@ export default function BestWildcardTeam() {
         squadSize: finalSquad.length,
         starting11Size: finalStarting11.length,
         formation: '4-5-1',
-        totalPoints,
-        captainName: captain.playerName
+        totalPoints: totalOptimizedPoints,
+        captainName: overallCaptain.playerName
       });
 
     } catch (error) {
@@ -704,19 +705,73 @@ export default function BestWildcardTeam() {
       {/* Results */}
       {optimalTeam && (
         <div className="space-y-6">
-          {/* Team Overview */}
+          {/* Full Squad - First */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Trophy className="h-5 w-5" />
-                Optimal Wildcard Team
+                <Zap className="h-5 w-5" />
+                Full Squad (15 Players)
               </CardTitle>
               <CardDescription>
-                Optimized for maximum points across {gameweekRange}
+                Your complete squad optimized for maximum points across {gameweekRange}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid gap-4">
+                {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((position) => {
+                  const positionPlayers = optimalTeam.squad.filter(player => {
+                    const pos = player.position;
+                    if (position === 'Goalkeeper') return pos.toLowerCase().includes('goalkeeper') || pos === 'GKP';
+                    if (position === 'Defender') return pos.toLowerCase().includes('defender') || pos === 'DEF';
+                    if (position === 'Midfielder') return pos.toLowerCase().includes('midfielder') || pos === 'MID';
+                    if (position === 'Forward') return pos.toLowerCase().includes('forward') || pos === 'FWD';
+                    return false;
+                  });
+
+                  return (
+                    <div key={position}>
+                      <div className="flex items-center gap-2 mb-3">
+                        <Badge variant="secondary">{position}s ({positionPlayers.length})</Badge>
+                      </div>
+                      <div className="grid gap-2">
+                        {positionPlayers.map((player) => {
+                          const isStarter = optimalTeam.starting11.some(starter => starter.playerId === player.playerId);
+                          return (
+                            <div
+                              key={player.playerId}
+                              className={`flex items-center justify-between p-3 rounded-lg border ${
+                                isStarter ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700' : 'bg-muted/30'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div>
+                                  <div className="font-medium flex items-center gap-2">
+                                    {player.playerName}
+                                    {isStarter && (
+                                      <Badge variant="outline" className="text-xs">Starting XI</Badge>
+                                    )}
+                                  </div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {player.teamName} • {player.position}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-medium">£{player.price}m</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {player.totalProjectedPoints.toFixed(1)} pts
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <Separator className="my-4" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</div>
                   <div className="text-sm text-muted-foreground">Total Points</div>
@@ -734,7 +789,21 @@ export default function BestWildcardTeam() {
                   <div className="text-sm text-muted-foreground">Squad Size</div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
+          {/* Starting XI - Second */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Starting XI (Overall Best)
+              </CardTitle>
+              <CardDescription>
+                Best 11 players across all 6 gameweeks with highest total projected points
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               {/* Captain & Vice-Captain */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-700">
@@ -758,18 +827,7 @@ export default function BestWildcardTeam() {
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Starting XI */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Starting XI
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
+              
               <div className="grid gap-2">
                 {optimalTeam.starting11.map((player, index) => (
                   <div
@@ -826,9 +884,18 @@ export default function BestWildcardTeam() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid gap-6">
+                <Tabs defaultValue="6" className="w-full">
+                  <TabsList className="grid w-full grid-cols-6">
+                    {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
+                      <TabsTrigger key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
+                        GW{gameweekTeam.gameweek}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                  
                   {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
-                  <div key={gameweekTeam.gameweek} className="border rounded-lg p-4">
+                    <TabsContent key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
+                      <div className="space-y-4">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <Badge variant="outline" className="text-lg font-semibold px-3 py-1">
@@ -900,81 +967,14 @@ export default function BestWildcardTeam() {
                         );
                       })}
                     </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
+                      </div>
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </CardContent>
           </Card>
           )}
 
-          {/* Full Squad */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5" />
-                Full Squad (15 Players)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
-                {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((position) => {
-                  const positionPlayers = optimalTeam.squad.filter(player => {
-                    const pos = player.position;
-                    if (position === 'Goalkeeper') return pos.toLowerCase().includes('goalkeeper') || pos === 'GKP';
-                    if (position === 'Defender') return pos.toLowerCase().includes('defender') || pos === 'DEF';
-                    if (position === 'Midfielder') return pos.toLowerCase().includes('midfielder') || pos === 'MID';
-                    if (position === 'Forward') return pos.toLowerCase().includes('forward') || pos === 'FWD';
-                    return false;
-                  });
-
-                  return (
-                    <div key={position}>
-                      <div className="flex items-center gap-2 mb-3">
-                        <Badge variant="secondary">{position}s ({positionPlayers.length})</Badge>
-                      </div>
-                      <div className="grid gap-2">
-                        {positionPlayers.map((player) => {
-                          const isStarter = optimalTeam.starting11.some(starter => starter.playerId === player.playerId);
-                          return (
-                            <div
-                              key={player.playerId}
-                              className={`flex items-center justify-between p-3 rounded-lg ${
-                                isStarter ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700' : 'bg-muted/30'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div>
-                                  <div className="font-medium flex items-center gap-2">
-                                    {player.playerName}
-                                    {isStarter && <Badge variant="secondary" className="text-xs">Starting</Badge>}
-                                    {player.playerId === optimalTeam.captain.playerId && (
-                                      <Crown className="h-4 w-4 text-yellow-600" />
-                                    )}
-                                    {player.playerId === optimalTeam.viceCaptain.playerId && (
-                                      <Shield className="h-4 w-4 text-blue-600" />
-                                    )}
-                                  </div>
-                                  <div className="text-sm text-muted-foreground">
-                                    {player.teamName} • {player.ownership.toFixed(1)}% owned
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="font-medium">£{player.price}m</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {player.totalProjectedPoints.toFixed(1)} pts
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       )}
     </div>
