@@ -321,11 +321,25 @@ export function useChartPerformance(config: ChartPerformanceConfig = {}) {
     )
   }, [enableLazyLoading])
 
-  const chartRef = useMemo(() => (element: HTMLElement | null) => {
-    if (!observerRef || !element) return
-
-    observerRef.observe(element)
-    return () => observerRef.unobserve(element)
+  const chartRef = useMemo(() => {
+    let currentElement: HTMLElement | null = null
+    
+    return (element: HTMLElement | null) => {
+      // Cleanup previous element if any
+      if (currentElement && observerRef) {
+        observerRef.unobserve(currentElement)
+      }
+      
+      // Set new element
+      currentElement = element
+      
+      // Observe new element if available
+      if (observerRef && element) {
+        observerRef.observe(element)
+      }
+      
+      // Callback refs should not return anything
+    }
   }, [observerRef])
 
   const getPerformanceProps = () => {
