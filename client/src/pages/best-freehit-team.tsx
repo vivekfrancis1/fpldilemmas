@@ -90,24 +90,65 @@ export default function BestFreehitTeam() {
 
   // Optimize team selection
   const optimizeTeam = async () => {
-    if (snapshots.length === 0) return;
+    if (snapshots.length === 0) {
+      console.error('No snapshots available');
+      return;
+    }
     
     setIsOptimizing(true);
     
     try {
-      // Sort players by gameweek points for selected gameweek
-      const playersWithPoints = snapshots.map(player => ({
-        ...player,
-        gameweekPoints: getGameweekPoints(player, selectedGameweek)
-      })).filter(player => player.gameweekPoints > 0);
+      console.log('Starting optimization for gameweek:', selectedGameweek);
+      console.log('Total snapshots:', snapshots.length);
+      console.log('Sample snapshot:', snapshots[0]);
 
-      // Group by position
+      // Sort players by gameweek points for selected gameweek
+      const playersWithPoints = snapshots.map(player => {
+        const gameweekPoints = getGameweekPoints(player, selectedGameweek);
+        return {
+          ...player,
+          gameweekPoints
+        };
+      }).filter(player => player.gameweekPoints > 0);
+
+      console.log('Players with points:', playersWithPoints.length);
+      
+      if (playersWithPoints.length === 0) {
+        throw new Error(`No players found with points for gameweek ${selectedGameweek}`);
+      }
+
+      // Get unique positions to debug
+      const uniquePositions = [...new Set(snapshots.map(p => p.position))];
+      console.log('Unique positions in data:', uniquePositions);
+
+      // Group by position (using flexible matching)
       const playersByPosition = {
-        Goalkeeper: playersWithPoints.filter(p => p.position === 'Goalkeeper').sort((a, b) => b.gameweekPoints - a.gameweekPoints),
-        Defender: playersWithPoints.filter(p => p.position === 'Defender').sort((a, b) => b.gameweekPoints - a.gameweekPoints),
-        Midfielder: playersWithPoints.filter(p => p.position === 'Midfielder').sort((a, b) => b.gameweekPoints - a.gameweekPoints),
-        Forward: playersWithPoints.filter(p => p.position === 'Forward').sort((a, b) => b.gameweekPoints - a.gameweekPoints)
+        Goalkeeper: playersWithPoints.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP').sort((a, b) => b.gameweekPoints - a.gameweekPoints),
+        Defender: playersWithPoints.filter(p => p.position.toLowerCase().includes('defender') || p.position === 'DEF').sort((a, b) => b.gameweekPoints - a.gameweekPoints),
+        Midfielder: playersWithPoints.filter(p => p.position.toLowerCase().includes('midfielder') || p.position === 'MID').sort((a, b) => b.gameweekPoints - a.gameweekPoints),
+        Forward: playersWithPoints.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD').sort((a, b) => b.gameweekPoints - a.gameweekPoints)
       };
+
+      console.log('Players by position:', {
+        Goalkeeper: playersByPosition.Goalkeeper.length,
+        Defender: playersByPosition.Defender.length,
+        Midfielder: playersByPosition.Midfielder.length,
+        Forward: playersByPosition.Forward.length
+      });
+
+      // Validate we have enough players in each position
+      if (playersByPosition.Goalkeeper.length < SQUAD_CONSTRAINTS.goalkeepers) {
+        throw new Error(`Not enough goalkeepers (need ${SQUAD_CONSTRAINTS.goalkeepers}, found ${playersByPosition.Goalkeeper.length})`);
+      }
+      if (playersByPosition.Defender.length < SQUAD_CONSTRAINTS.defenders) {
+        throw new Error(`Not enough defenders (need ${SQUAD_CONSTRAINTS.defenders}, found ${playersByPosition.Defender.length})`);
+      }
+      if (playersByPosition.Midfielder.length < SQUAD_CONSTRAINTS.midfielders) {
+        throw new Error(`Not enough midfielders (need ${SQUAD_CONSTRAINTS.midfielders}, found ${playersByPosition.Midfielder.length})`);
+      }
+      if (playersByPosition.Forward.length < SQUAD_CONSTRAINTS.forwards) {
+        throw new Error(`Not enough forwards (need ${SQUAD_CONSTRAINTS.forwards}, found ${playersByPosition.Forward.length})`);
+      }
 
       // Select best squad of 15 players
       const squad: PlayerSnapshot[] = [
@@ -117,8 +158,16 @@ export default function BestFreehitTeam() {
         ...playersByPosition.Forward.slice(0, SQUAD_CONSTRAINTS.forwards)
       ];
 
+      console.log('Selected squad size:', squad.length);
+
       // Find optimal starting 11 from squad
       const starting11 = findOptimalStarting11(squad);
+      
+      if (starting11.length === 0) {
+        throw new Error('Failed to select starting 11');
+      }
+
+      console.log('Starting 11 size:', starting11.length);
       
       // Find best captain (highest points in starting 11)
       const captain = starting11.reduce((best, player) => 
@@ -137,6 +186,14 @@ export default function BestFreehitTeam() {
       // Calculate total team value
       const totalValue = squad.reduce((total, player) => total + player.price, 0);
 
+      console.log('Optimization successful:', {
+        squadSize: squad.length,
+        starting11Size: starting11.length,
+        formation,
+        totalPoints,
+        captainName: captain.playerName
+      });
+
       setOptimalTeam({
         squad,
         starting11,
@@ -148,6 +205,11 @@ export default function BestFreehitTeam() {
 
     } catch (error) {
       console.error('Error optimizing team:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        selectedGameweek,
+        snapshotsLength: snapshots.length
+      });
     } finally {
       setIsOptimizing(false);
     }
@@ -156,10 +218,10 @@ export default function BestFreehitTeam() {
   // Find optimal starting 11 from 15-player squad
   const findOptimalStarting11 = (squad: PlayerSnapshot[]): PlayerSnapshot[] => {
     const squadByPosition = {
-      Goalkeeper: squad.filter(p => p.position === 'Goalkeeper'),
-      Defender: squad.filter(p => p.position === 'Defender'),
-      Midfielder: squad.filter(p => p.position === 'Midfielder'),
-      Forward: squad.filter(p => p.position === 'Forward')
+      Goalkeeper: squad.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP'),
+      Defender: squad.filter(p => p.position.toLowerCase().includes('defender') || p.position === 'DEF'),
+      Midfielder: squad.filter(p => p.position.toLowerCase().includes('midfielder') || p.position === 'MID'),
+      Forward: squad.filter(p => p.position.toLowerCase().includes('forward') || p.position === 'FWD')
     };
 
     // Try different formation combinations
