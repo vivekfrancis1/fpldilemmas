@@ -10,9 +10,11 @@ import {
   cachedPlayerMinutesPoints,
   cachedPlayerTotalPoints,
   playerGoalsProjections,
-  playerAssistProjections
+  playerAssistProjections,
+  CURRENT_SEASON
 } from "@shared/schema";
 import { internalFetch } from "./config";
+import { storage } from "./storage";
 
 interface PlayerPointsData {
   playerId: number;
@@ -100,6 +102,9 @@ export class PlayerTotalPointsAggregator {
       }
 
       console.log(`✅ Player Total Points aggregation completed successfully - ${aggregatedData.length} players cached`);
+      
+      // Step 4: Also save to persistent database storage for historical tracking
+      await this.saveToDatabaseStorage(aggregatedData, startGameweek, endGameweek);
       
     } catch (error) {
       console.error("❌ Player Total Points aggregation failed:", error);
@@ -340,6 +345,78 @@ export class PlayerTotalPointsAggregator {
 
       // Add to total points
       player.totalPoints += component.totalPoints || 0;
+    }
+  }
+
+  /**
+   * Save aggregated data to persistent database storage for historical tracking
+   */
+  private async saveToDatabaseStorage(
+    aggregatedData: PlayerPointsData[], 
+    startGameweek: number, 
+    endGameweek: number
+  ): Promise<void> {
+    try {
+      console.log(`💾 Saving Player Total Points to database storage (GW${startGameweek}-${endGameweek})...`);
+      
+      // Step 1: Create or get active window
+      let activeWindow = await storage.getActivePlayerTotalPointsWindow();
+      
+      if (!activeWindow || activeWindow.startGameweek !== startGameweek || activeWindow.endGameweek !== endGameweek) {
+        // Create new window for current gameweek range
+        const windowResponse = await storage.createPlayerTotalPointsWindow(startGameweek, endGameweek, CURRENT_SEASON);
+        activeWindow = {
+          windowId: windowResponse.windowId,
+          startGameweek,
+          endGameweek
+        };
+        console.log(`📊 Created new Player Total Points window: ${activeWindow.windowId}`);
+      } else {
+        console.log(`📊 Using existing active window: ${activeWindow.windowId}`);
+      }
+
+      // Step 2: Fetch current bootstrap data for price and ownership
+      const bootstrapResponse = await internalFetch('api/bootstrap-static');
+      if (!bootstrapResponse.ok) {
+        throw new Error('Failed to fetch bootstrap data for prices and ownership');
+      }
+      const bootstrapData = await bootstrapResponse.json();
+      const playersData = bootstrapData.elements || [];
+      const teamsData = bootstrapData.teams || [];
+
+      // Create lookup maps
+      const playersMap = new Map(playersData.map((p: any) => [p.id, p]));
+      const teamsMap = new Map(teamsData.map((t: any) => [t.id, t]));
+
+      // Step 3: Transform aggregated data into snapshot format
+      const snapshots = aggregatedData.map(player => {
+        const playerBootstrap = playersMap.get(player.playerId);
+        const team = playerBootstrap ? teamsMap.get(playerBootstrap.team) : null;
+
+        return {
+          playerId: player.playerId,
+          playerName: player.playerName,
+          teamName: team?.short_name || player.teamName,
+          position: player.position,
+          price: playerBootstrap ? playerBootstrap.now_cost / 10 : 0, // Convert from tenths
+          ownership: playerBootstrap ? parseFloat(playerBootstrap.selected_by_percent || '0') : 0,
+          totalProjectedPoints: player.totalPoints,
+          averagePointsPerGameweek: player.totalPoints / Math.max(Object.keys(player.gameweekPoints).length, 1),
+          averageValue: playerBootstrap ? 
+            (player.totalPoints / Math.max(playerBootstrap.now_cost / 10, 0.1)) : 0, // Points per million
+          averageMinutes: 60, // Default estimate - could be enhanced with actual minutes data
+          gameweekBreakdown: player.gameweekPoints
+        };
+      });
+
+      // Step 4: Save snapshots to database
+      await storage.savePlayerTotalPointsSnapshots(activeWindow.windowId, snapshots);
+      
+      console.log(`✅ Successfully saved ${snapshots.length} Player Total Points snapshots to database storage`);
+      
+    } catch (error) {
+      console.error("❌ Failed to save Player Total Points to database storage:", error);
+      // Don't throw error to avoid breaking the main aggregation process
     }
   }
 }
