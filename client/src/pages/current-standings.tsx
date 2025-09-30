@@ -238,20 +238,7 @@ export default function CurrentStandings() {
           <p className="fpl-page-subtitle">
             Enhanced Premier League table with detailed statistics from completed matches and official results
           </p>
-          <div className="mt-6 flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium text-gray-700">Venue Filter:</label>
-              <Select value={venue} onValueChange={(value: 'all' | 'home' | 'away') => setVenue(value)}>
-                <SelectTrigger className="w-[140px]" data-testid="select-venue-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" data-testid="option-venue-all">All Matches</SelectItem>
-                  <SelectItem value="home" data-testid="option-venue-home">Home Only</SelectItem>
-                  <SelectItem value="away" data-testid="option-venue-away">Away Only</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="mt-6">
             <Button 
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -290,6 +277,25 @@ export default function CurrentStandings() {
                   </span>
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Venue Filter */}
+        <Card className="mb-6 shadow-md border-0 bg-white">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-semibold text-gray-700">Filter by Venue:</label>
+              <Select value={venue} onValueChange={(value: 'all' | 'home' | 'away') => setVenue(value)}>
+                <SelectTrigger className="w-[160px] bg-white" data-testid="select-venue-filter">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" data-testid="option-venue-all">All Matches</SelectItem>
+                  <SelectItem value="home" data-testid="option-venue-home">Home Only</SelectItem>
+                  <SelectItem value="away" data-testid="option-venue-away">Away Only</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
