@@ -1245,9 +1245,9 @@ export default function TransferPlanner() {
                 </div>
               </div>
 
-              {/* Transfers Available */}
+              {/* Initial Transfers Available */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">Transfers Available</div>
+                <div className="text-sm text-muted-foreground mb-1">Initial Transfers Available</div>
                 <div className="text-2xl font-bold text-purple-600">
                   {calculateTransfersAvailable()}
                 </div>
