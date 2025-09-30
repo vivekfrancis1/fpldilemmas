@@ -927,11 +927,19 @@ export default function TransferPlanner() {
                 </div>
               </div>
 
-              {/* Transfers Left */}
+              {/* Transfers Available */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">Transfers Left</div>
+                <div className="text-sm text-muted-foreground mb-1">Transfers Available</div>
                 <div className="text-2xl font-bold text-purple-600">
-                  {teamData?.transfers ? (teamData.transfers.limit - teamData.transfers.made) : 0}
+                  {teamData?.transfers?.limit || 0}
+                </div>
+              </div>
+
+              {/* Transfers Used */}
+              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-sm text-muted-foreground mb-1">Transfers Used</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {transferredOutPlayers.length}
                 </div>
               </div>
             </div>
