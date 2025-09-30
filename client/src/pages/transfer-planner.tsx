@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -672,6 +672,24 @@ export default function TransferPlanner() {
     return currentBank;
   };
 
+  // Calculate actual transfers used by comparing with original lineup
+  const calculateTransfersUsed = (): number => {
+    if (!teamData?.picks) return 0;
+    
+    // Count how many players in current lineup differ from original lineup
+    let changedPlayers = 0;
+    
+    manualLineup.forEach((currentPick, index) => {
+      const originalPick = teamData.picks[index];
+      // If player ID is different (and not transferred out), it's a change
+      if (currentPick.element !== originalPick.element && !currentPick.is_transferred_out) {
+        changedPlayers++;
+      }
+    });
+    
+    return changedPlayers;
+  };
+
   // Calculate transfers available for a given gameweek
   const calculateTransfersAvailable = (): number => {
     if (!teamData?.transfers || !selectedGameweek || !bootstrapData) return 0;
@@ -690,8 +708,8 @@ export default function TransferPlanner() {
       transfersAvailable += extraGameweeks;
     }
     
-    // Subtract transfers used in the planner
-    transfersAvailable -= completedTransfers.length;
+    // Subtract actual transfers used (net changes from original lineup)
+    transfersAvailable -= calculateTransfersUsed();
     
     // Ensure minimum of 0
     return Math.max(0, transfersAvailable);
@@ -854,6 +872,40 @@ export default function TransferPlanner() {
         description: "All transfers have been undone and your original team has been restored."
       });
     }
+  };
+
+  // Undo a specific transfer and restore the original player
+  const handleUndoTransfer = (position: number) => {
+    if (!teamData?.picks) return;
+    
+    // Find the original player at this position
+    const originalPick = teamData.picks.find(p => p.position === position);
+    if (!originalPick) return;
+    
+    const originalPlayer = getPlayerById(originalPick.element);
+    if (!originalPlayer) return;
+    
+    // Restore the original player at this position
+    setManualLineup(prev => prev.map(p => {
+      if (p.position === position) {
+        return { ...originalPick };
+      }
+      return p;
+    }));
+    
+    // Remove from transferred out list
+    setTransferredOutPlayers(prev => prev.filter(t => t.position !== position));
+    
+    // Remove any completed transfer related to this position
+    const transferOutEntry = transferredOutPlayers.find(t => t.position === position);
+    if (transferOutEntry) {
+      setCompletedTransfers(prev => prev.filter(t => t.outPlayerId !== transferOutEntry.playerId));
+    }
+    
+    toast({
+      title: "Transfer Undone",
+      description: `${originalPlayer.web_name} has been restored to your team`
+    });
   };
 
   // Check if there are empty slots (transferred out players)
@@ -1071,7 +1123,7 @@ export default function TransferPlanner() {
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1">Transfers Used</div>
                 <div className={`text-2xl font-bold ${calculateTransfersAvailable() < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {completedTransfers.length}
+                  {calculateTransfersUsed()}
                 </div>
               </div>
             </div>
@@ -1118,8 +1170,20 @@ export default function TransferPlanner() {
                               </div>
                             </div>
                           </div>
-                          <div className="text-sm text-red-600 font-medium">
-                            Needs Replacement
+                          <div className="flex items-center gap-3">
+                            <div className="text-sm text-red-600 font-medium">
+                              Needs Replacement
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUndoTransfer(pick.position)}
+                              className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                              data-testid={`undo-transfer-${pick.position}`}
+                            >
+                              <RotateCcw className="h-4 w-4 mr-1" />
+                              Undo
+                            </Button>
                           </div>
                         </div>
                       );
@@ -1249,8 +1313,20 @@ export default function TransferPlanner() {
                               </div>
                             </div>
                           </div>
-                          <div className="text-sm text-red-600 font-medium">
-                            Needs Replacement
+                          <div className="flex items-center gap-3">
+                            <div className="text-sm text-red-600 font-medium">
+                              Needs Replacement
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUndoTransfer(pick.position)}
+                              className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                              data-testid={`undo-transfer-bench-${pick.position}`}
+                            >
+                              <RotateCcw className="h-4 w-4 mr-1" />
+                              Undo
+                            </Button>
                           </div>
                         </div>
                       );
