@@ -5,6 +5,7 @@ import { FilterState, SortState, SortableField } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 
 interface PlayerStatsTableProps {
@@ -72,6 +73,7 @@ export default function PlayerStatsTable({
   maxCompareReached = false
 }: PlayerStatsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
+  const [displayMode, setDisplayMode] = useState<'totals' | 'per_match' | 'per_start' | 'per_90'>('totals');
   
   // Check if we're viewing historical data - current season shows defensive contribution fields
   const isHistoricalSeason = season && season !== "2025/26" && season !== "current";
@@ -122,6 +124,29 @@ export default function PlayerStatsTable({
       return 0; // Fallback for historical seasons or when data is unavailable
     }
     return minutesPointsData[playerId.toString()]?.seasonTotal || 0;
+  };
+
+  // Helper function to calculate stat based on display mode
+  const calculateStat = (player: any, value: number): number => {
+    if (displayMode === 'totals') {
+      return value;
+    }
+    
+    const pointsPerGame = parseFloat(player.points_per_game) || 0;
+    const matches = pointsPerGame > 0 ? Math.round(player.total_points / pointsPerGame) : 0;
+    const starts = player.starts || 0;
+    const minutes = player.minutes || 0;
+    
+    if (displayMode === 'per_match') {
+      return matches > 0 ? value / matches : 0;
+    } else if (displayMode === 'per_start') {
+      return starts > 0 ? value / starts : 0;
+    } else if (displayMode === 'per_90') {
+      const games90 = minutes / 90;
+      return games90 > 0 ? value / games90 : 0;
+    }
+    
+    return value;
   };
 
   const filteredAndSortedPlayers = useMemo(() => {
@@ -404,6 +429,17 @@ export default function PlayerStatsTable({
             Player Statistics
           </h3>
           <div className="flex items-center space-x-4">
+            <Select value={displayMode} onValueChange={(value: any) => setDisplayMode(value)}>
+              <SelectTrigger className="w-[180px] h-9" data-testid="select-display-mode">
+                <SelectValue placeholder="Display mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="totals">Totals</SelectItem>
+                <SelectItem value="per_match">Average per match</SelectItem>
+                <SelectItem value="per_start">Average per start</SelectItem>
+                <SelectItem value="per_90">Average per 90 mins</SelectItem>
+              </SelectContent>
+            </Select>
             <span className="text-xs sm:text-sm text-gray-600" data-testid="text-results-count">
               Showing {filteredAndSortedPlayers.length} players
             </span>
@@ -716,14 +752,14 @@ export default function PlayerStatsTable({
                       return pointsPerGame > 0 ? Math.round(player.total_points / pointsPerGame) : 0;
                     })()}
                   </td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-fpl-purple">{player.total_points || 0}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-fpl-purple">{calculateStat(player, player.total_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   {/* Key Performance Stats - immediately after points */}
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{player.goals_scored || 0}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-blue-600">{player.assists || 0}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{player.clean_sheets || 0}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{calculateStat(player, player.goals_scored || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-blue-600">{calculateStat(player, player.assists || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{calculateStat(player, player.clean_sheets || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   {/* Defensive Contribution Fields - positioned after Clean Sheets */}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-orange-600">{player.defensive_contribution || 0}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-orange-600">{calculateStat(player, player.defensive_contribution || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-yellow-600" data-testid={`text-cbit-points-${player.id}`}>
@@ -734,47 +770,47 @@ export default function PlayerStatsTable({
                         if (isCbitPointsError) {
                           return <span className="text-gray-400" title="CBIT points data unavailable">N/A</span>;
                         }
-                        return getCbitPoints(player.id);
+                        return calculateStat(player, getCbitPoints(player.id)).toFixed(displayMode === 'totals' ? 0 : 1);
                       })()}
                     </td>
                   )}
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700 font-semibold">{formatValue(player.value_season || player.value_form || 0, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.points_per_game || player.form || 0, 'decimal')}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700 font-semibold">{calculateStat(player, parseFloat(player.value_season || player.value_form || 0)).toFixed(1)}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, parseFloat(player.points_per_game || player.form || 0)).toFixed(1)}</td>
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.form || 0, 'decimal')}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, parseFloat(player.form || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-purple-700">{formatValue(player.selected_by_percent || 0, 'decimal')}%</td>
                   )}
                   {/* Expected Stats */}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-purple-600">{formatValue(player.expected_goals || 0, 'decimal')}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-purple-600">{calculateStat(player, parseFloat(player.expected_goals || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-blue-600">{formatValue(player.expected_assists || 0, 'decimal')}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-blue-600">{calculateStat(player, parseFloat(player.expected_assists || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-indigo-600">{formatValue(player.expected_goal_involvements || 0, 'decimal')}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-indigo-600">{calculateStat(player, parseFloat(player.expected_goal_involvements || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-red-600">{formatValue(player.expected_goals_conceded || 0, 'decimal')}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-red-600">{calculateStat(player, parseFloat(player.expected_goals_conceded || 0)).toFixed(1)}</td>
                   )}
                   {/* Per-90 Expected Stats */}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-purple-700">{formatValue(player.expected_goals_per_90 || 0, 'decimal')}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-purple-700">{calculateStat(player, player.expected_goals_per_90 || 0).toFixed(2)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-blue-700">{formatValue(player.expected_assists_per_90 || 0, 'decimal')}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-blue-700">{calculateStat(player, player.expected_assists_per_90 || 0).toFixed(2)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-indigo-700">{formatValue(player.expected_goal_involvements_per_90 || 0, 'decimal')}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-indigo-700">{calculateStat(player, player.expected_goal_involvements_per_90 || 0).toFixed(2)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-700">{formatValue(player.expected_goals_conceded_per_90 || 0, 'decimal')}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-700">{calculateStat(player, player.expected_goals_conceded_per_90 || 0).toFixed(2)}</td>
                   )}
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.minutes || 0}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{player.goals_conceded || 0}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.saves || 0}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{displayMode === 'totals' ? (player.minutes || 0) : calculateStat(player, player.minutes || 0).toFixed(0)}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{calculateStat(player, player.goals_conceded || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, player.saves || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-blue-600" data-testid={`text-save-points-${player.id}`}>
                       {(() => {
@@ -788,7 +824,7 @@ export default function PlayerStatsTable({
                         if (isSavePointsError) {
                           return <span className="text-gray-400" title="Save points data unavailable">N/A</span>;
                         }
-                        return getSavePoints(player.id);
+                        return calculateStat(player, getSavePoints(player.id)).toFixed(displayMode === 'totals' ? 0 : 1);
                       })()} 
                     </td>
                   )}
@@ -801,27 +837,27 @@ export default function PlayerStatsTable({
                         if (isMinutesPointsError) {
                           return <span className="text-gray-400" title="Minutes points data unavailable">N/A</span>;
                         }
-                        return getMinutesPoints(player.id);
+                        return calculateStat(player, getMinutesPoints(player.id)).toFixed(displayMode === 'totals' ? 0 : 1);
                       })()}
                     </td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-blue-700">{player.tackles || 0}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-blue-700">{calculateStat(player, player.tackles || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700">{player.recoveries || 0}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700">{calculateStat(player, player.recoveries || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-purple-700">{player.clearances_blocks_interceptions || 0}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-purple-700">{calculateStat(player, player.clearances_blocks_interceptions || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.starts || 0}</td>
                   )}
                   {/* All other data points */}
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.bonus || 0}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.bps || 0}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, player.bonus || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, player.bps || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-fpl-purple">{player.event_points || 0}</td>
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-fpl-purple">{calculateStat(player, player.event_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-600">{(player.transfers_in_event || 0).toLocaleString()}</td>
@@ -845,11 +881,11 @@ export default function PlayerStatsTable({
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-yellow-600">{player.dreamteam_count || 0}</td>
                   )}
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-600">{player.penalties_saved || 0}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{player.penalties_missed || 0}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-yellow-600">{player.yellow_cards || 0}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{player.red_cards || 0}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{player.own_goals || 0}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-600">{calculateStat(player, player.penalties_saved || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{calculateStat(player, player.penalties_missed || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-yellow-600">{calculateStat(player, player.yellow_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{calculateStat(player, player.red_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{calculateStat(player, player.own_goals || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm">
                       <div className="flex items-center justify-center">
