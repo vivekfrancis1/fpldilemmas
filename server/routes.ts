@@ -13873,7 +13873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch player total points projections for the gameweek
       const projectionsResponse = await internalFetch(
-        `/api/player-total-points-projections?startGameweek=${gameweek}&endGameweek=${gameweek}`
+        `/api/player-total-points?startGameweek=${gameweek}&endGameweek=${gameweek}`
       );
       const projections = await projectionsResponse.json();
 
