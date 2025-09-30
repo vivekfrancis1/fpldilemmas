@@ -174,8 +174,33 @@ class GameweekCacheService {
             const gameweekData = playerData.history.find((h: any) => h.round === gameweek);
 
             if (gameweekData) {
-              // Extract fixture information
-              const fixture = playerData.fixtures?.find((f: any) => f.event === gameweek);
+              // FPL API doesn't have was_home in history - derive it from opponent_team
+              // If opponent_team exists, we need to check which team was home
+              // In FPL fixtures: team_h is home, team_a is away
+              // So if player.team is NOT opponent_team, we need to look at fixture to see who was home
+              // Simplified: check if opponent_team value indicates home/away
+              // The gameweekData actually contains fixture ID, let's use that to determine was_home
+              const opponentTeam = gameweekData.opponent_team || null;
+              
+              //  Determine was_home: In FPL, if your team played, you can check the fixture
+              // The logic: get the fixture for this gameweek and check if player.team == team_h
+              let wasHome = false;
+              if (opponentTeam) {
+                // Fetch the fixture to determine home/away
+                // For now, use a simple heuristic: alternate home/away (this is temporary)
+                // Better: fetch actual fixture data
+                const fixtureResponse = await fetch(`${this.FPL_API_BASE}/fixtures/?event=${gameweek}`);
+                if (fixtureResponse.ok) {
+                  const fixtures = await fixtureResponse.json();
+                  const playerFixture = fixtures.find((f: any) => 
+                    (f.team_h === player.team && f.team_a === opponentTeam) || 
+                    (f.team_a === player.team && f.team_h === opponentTeam)
+                  );
+                  if (playerFixture) {
+                    wasHome = playerFixture.team_h === player.team;
+                  }
+                }
+              }
               
               // Insert player gameweek data
               await this.insertPlayerGameweekData({
@@ -201,10 +226,10 @@ class GameweekCacheService {
                 recoveries: gameweekData.recoveries || 0,
                 clearances_blocks_interceptions: gameweekData.clearances_blocks_interceptions || 0,
                 starts: gameweekData.starts || 0,
-                wasHome: fixture?.is_home || false,
-                opponentTeam: fixture?.team_a === player.team ? fixture?.team_h : fixture?.team_a,
-                fixtureId: fixture?.id,
-                kickoffTime: fixture?.kickoff_time ? new Date(fixture.kickoff_time) : null
+                wasHome: wasHome,
+                opponentTeam: opponentTeam,
+                fixtureId: gameweekData.fixture || null,
+                kickoffTime: gameweekData.kickoff_time ? new Date(gameweekData.kickoff_time) : null
               });
 
               processedCount++;
