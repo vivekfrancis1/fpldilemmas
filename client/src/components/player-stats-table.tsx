@@ -500,7 +500,7 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="value_season" label="Value" />
               </th>
-              {displayMode !== 'totals' && (
+              {displayMode === 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="points_per_game" label="Pts/Match" />
                 </th>
@@ -607,24 +607,32 @@ export default function PlayerStatsTable({
                   <SortableHeader field="transfers_out" label="Total Out" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode === 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="value_form" label="Val Form" />
                 </th>
               )}
-              <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="influence" label="Influence" />
-              </th>
-              <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="creativity" label="Creativity" />
-              </th>
-              <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="threat" label="Threat" />
-              </th>
-              <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="ict_index" label="ICT" />
-              </th>
-              {!isHistoricalSeason && (
+              {displayMode === 'totals' && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="influence" label="Influence" />
+                </th>
+              )}
+              {displayMode === 'totals' && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="creativity" label="Creativity" />
+                </th>
+              )}
+              {displayMode === 'totals' && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="threat" label="Threat" />
+                </th>
+              )}
+              {displayMode === 'totals' && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="ict_index" label="ICT" />
+                </th>
+              )}
+              {!isHistoricalSeason && displayMode === 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="dreamteam_count" label="Dream Team" />
                 </th>
@@ -762,7 +770,7 @@ export default function PlayerStatsTable({
                     </td>
                   )}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700 font-semibold">{calculateStat(player, parseFloat(player.value_season || player.value_form || 0)).toFixed(1)}</td>
-                  {displayMode !== 'totals' && (
+                  {displayMode === 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, parseFloat(player.points_per_game || player.form || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && displayMode === 'totals' && (
@@ -847,14 +855,22 @@ export default function PlayerStatsTable({
                   {!isHistoricalSeason && displayMode === 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{(player.transfers_out || 0).toLocaleString()}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode === 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700 font-semibold">{formatValue(player.value_form || 0, 'decimal')}</td>
                   )}
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.influence || 0, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.creativity || 0, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.threat || 0, 'decimal')}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-fpl-purple">{formatValue(player.ict_index || 0, 'decimal')}</td>
-                  {!isHistoricalSeason && (
+                  {displayMode === 'totals' && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.influence || 0, 'decimal')}</td>
+                  )}
+                  {displayMode === 'totals' && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.creativity || 0, 'decimal')}</td>
+                  )}
+                  {displayMode === 'totals' && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{formatValue(player.threat || 0, 'decimal')}</td>
+                  )}
+                  {displayMode === 'totals' && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-fpl-purple">{formatValue(player.ict_index || 0, 'decimal')}</td>
+                  )}
+                  {!isHistoricalSeason && displayMode === 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-yellow-600">{player.dreamteam_count || 0}</td>
                   )}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-600">{calculateStat(player, player.penalties_saved || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
