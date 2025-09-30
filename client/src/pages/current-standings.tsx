@@ -56,6 +56,7 @@ export default function CurrentStandings() {
   const [sortField, setSortField] = useState<SortField>('position');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [venue, setVenue] = useState<'all' | 'home' | 'away'>('all');
+  const [statsView, setStatsView] = useState<'totals' | 'per-game'>('totals');
   const queryClient = useQueryClient();
 
   const { data: standingsData, isLoading, error } = useQuery<CurrentTeamStanding[]>({
@@ -91,7 +92,28 @@ export default function CurrentStandings() {
     }
   };
 
-  const sortedData = [...(standingsData || [])].sort((a, b) => {
+  // Transform data based on stats view (totals vs per-game)
+  const displayData = (standingsData || []).map(team => {
+    if (statsView === 'per-game' && team.played > 0) {
+      return {
+        ...team,
+        cleanSheets: team.cleanSheets / team.played,
+        yellowCards: team.yellowCards / team.played,
+        redCards: team.redCards / team.played,
+        saves: team.saves / team.played,
+        ownGoals: team.ownGoals / team.played,
+        penaltiesSaved: team.penaltiesSaved / team.played,
+        penaltiesMissed: team.penaltiesMissed / team.played,
+        expectedGoalsFor: team.expectedGoalsFor / team.played,
+        expectedGoalsAgainst: team.expectedGoalsAgainst / team.played,
+        tackles: team.tackles / team.played,
+        defensiveActions: team.defensiveActions / team.played,
+      };
+    }
+    return team;
+  });
+
+  const sortedData = [...displayData].sort((a, b) => {
     const aValue = a[sortField];
     const bValue = b[sortField];
     
@@ -176,6 +198,14 @@ export default function CurrentStandings() {
 
   // Use the sorted data without adding multipliers
   const dataWithMultipliers = sortedData || [];
+
+  // Helper function to format stat values based on view mode
+  const formatStat = (value: number) => {
+    if (statsView === 'per-game') {
+      return value.toFixed(2);
+    }
+    return Math.round(value);
+  };
 
   const SortableHeader = ({ field, children, tooltip }: { field: SortField; children: React.ReactNode; tooltip: string }) => (
     <th 
@@ -281,21 +311,35 @@ export default function CurrentStandings() {
           </CardContent>
         </Card>
 
-        {/* Venue Filter */}
+        {/* Filters */}
         <Card className="mb-6 shadow-md border-0 bg-white">
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-semibold text-gray-700">Filter by Venue:</label>
-              <Select value={venue} onValueChange={(value: 'all' | 'home' | 'away') => setVenue(value)}>
-                <SelectTrigger className="w-[160px] bg-white" data-testid="select-venue-filter">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" data-testid="option-venue-all">All Matches</SelectItem>
-                  <SelectItem value="home" data-testid="option-venue-home">Home Only</SelectItem>
-                  <SelectItem value="away" data-testid="option-venue-away">Away Only</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex flex-wrap items-center gap-6">
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-semibold text-gray-700">Filter by Venue:</label>
+                <Select value={venue} onValueChange={(value: 'all' | 'home' | 'away') => setVenue(value)}>
+                  <SelectTrigger className="w-[160px] bg-white" data-testid="select-venue-filter">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" data-testid="option-venue-all">All Matches</SelectItem>
+                    <SelectItem value="home" data-testid="option-venue-home">Home Only</SelectItem>
+                    <SelectItem value="away" data-testid="option-venue-away">Away Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-semibold text-gray-700">Statistics View:</label>
+                <Select value={statsView} onValueChange={(value: 'totals' | 'per-game') => setStatsView(value)}>
+                  <SelectTrigger className="w-[180px] bg-white" data-testid="select-stats-view">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="totals" data-testid="option-stats-totals">Season Totals</SelectItem>
+                    <SelectItem value="per-game" data-testid="option-stats-per-game">Average per Game</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -494,10 +538,10 @@ export default function CurrentStandings() {
                       
                       {/* Expected Goals - After Points */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600" data-testid={`expected-goals-for-${team.shortName}`}>
-                        {team.expectedGoalsFor.toFixed(1)}
+                        {formatStat(team.expectedGoalsFor)}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-indigo-500" data-testid={`expected-goals-against-${team.shortName}`}>
-                        {team.expectedGoalsAgainst.toFixed(1)}
+                        {formatStat(team.expectedGoalsAgainst)}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-purple-600" data-testid={`adjusted-goal-rate-${team.shortName}`}>
                         {team.adjustedGoalRate ? team.adjustedGoalRate.toFixed(2) : '0.00'}
@@ -508,39 +552,39 @@ export default function CurrentStandings() {
                       
                       {/* Defensive Stats - After xGA */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-600" data-testid={`tackles-${team.shortName}`}>
-                        {team.tackles}
+                        {formatStat(team.tackles)}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-500" data-testid={`defensive-actions-${team.shortName}`}>
-                        {team.defensiveActions}
+                        {formatStat(team.defensiveActions)}
                       </td>
                       
                       {/* Clean Sheets */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-blue-600 border-l" data-testid={`clean-sheets-${team.shortName}`}>
-                        {team.cleanSheets}
+                        {formatStat(team.cleanSheets)}
                       </td>
                       
                       {/* Cards */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-yellow-600" data-testid={`yellow-cards-${team.shortName}`}>
-                        {team.yellowCards}
+                        {formatStat(team.yellowCards)}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-red-600" data-testid={`red-cards-${team.shortName}`}>
-                        {team.redCards}
+                        {formatStat(team.redCards)}
                       </td>
                       
                       {/* GK Stats */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-purple-600 border-l" data-testid={`saves-${team.shortName}`}>
-                        {team.saves}
+                        {formatStat(team.saves)}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-green-600" data-testid={`penalties-saved-${team.shortName}`}>
-                        {team.penaltiesSaved}
+                        {formatStat(team.penaltiesSaved)}
                       </td>
                       
                       {/* Other Events */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-orange-600 border-l" data-testid={`own-goals-${team.shortName}`}>
-                        {team.ownGoals}
+                        {formatStat(team.ownGoals)}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-red-500" data-testid={`penalties-missed-${team.shortName}`}>
-                        {team.penaltiesMissed}
+                        {formatStat(team.penaltiesMissed)}
                       </td>
                     </tr>
                   ))}
