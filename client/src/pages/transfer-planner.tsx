@@ -96,7 +96,13 @@ interface PlayerProjectionData {
   totalExpectedPoints: number;
 }
 
-function AllPlayersProjectionsTab({ selectedGameweek }: { selectedGameweek: number }) {
+interface AllPlayersProjectionsTabProps {
+  selectedGameweek: number;
+  transferredOutPlayers: TransferOut[];
+  onTransferIn: (playerId: number, playerElementType: number) => void;
+}
+
+function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn }: AllPlayersProjectionsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [sortField, setSortField] = useState<string>('total');
@@ -269,6 +275,9 @@ function AllPlayersProjectionsTab({ selectedGameweek }: { selectedGameweek: numb
                     Total {sortField === 'total' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
                   </Button>
                 </th>
+                <th className="text-center p-2 font-bold bg-gray-50 dark:bg-gray-900">
+                  Action
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -301,6 +310,33 @@ function AllPlayersProjectionsTab({ selectedGameweek }: { selectedGameweek: numb
                         {(player.totalExpectedPoints || 0).toFixed(1)}
                       </span>
                     </td>
+                    <td className="p-2 text-center">
+                      {(() => {
+                        // Map position names to element types
+                        const positionMap: { [key: string]: number } = {
+                          'GKP': 1,
+                          'DEF': 2,
+                          'MID': 3,
+                          'FWD': 4
+                        };
+                        const playerElementType = positionMap[player.position];
+                        const hasMatchingTransferOut = transferredOutPlayers && transferredOutPlayers.length > 0 && transferredOutPlayers.some(
+                          t => t.elementType === playerElementType
+                        );
+                        
+                        return hasMatchingTransferOut ? (
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => onTransferIn(player.playerId, playerElementType)}
+                            data-testid={`transfer-in-${player.playerId}`}
+                          >
+                            Transfer In
+                          </Button>
+                        ) : null;
+                      })()}
+                    </td>
                   </tr>
                 );
               })}
@@ -317,6 +353,13 @@ function AllPlayersProjectionsTab({ selectedGameweek }: { selectedGameweek: numb
   );
 }
 
+interface TransferOut {
+  playerId: number;
+  playerName: string;
+  position: number;
+  elementType: number;
+}
+
 export default function TransferPlanner() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
@@ -324,6 +367,7 @@ export default function TransferPlanner() {
   const [plannerMode, setPlannerMode] = useState<"auto" | "manual">("auto");
   const [optimizedLineup, setOptimizedLineup] = useState<OptimizedLineup | null>(null);
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
+  const [transferredOutPlayers, setTransferredOutPlayers] = useState<TransferOut[]>([]);
   const { toast } = useToast();
 
   // Cache manager ID functionality
@@ -549,6 +593,69 @@ export default function TransferPlanner() {
     setManualLineup(newLineup);
   };
 
+  // Handle transferring a player out
+  const handleTransferOut = (pick: TeamPick) => {
+    const player = getPlayerById(pick.element);
+    if (!player) return;
+
+    const transferOut: TransferOut = {
+      playerId: player.id,
+      playerName: player.web_name,
+      position: pick.position,
+      elementType: player.element_type,
+    };
+
+    setTransferredOutPlayers(prev => [...prev, transferOut]);
+    
+    // Remove from lineup
+    setManualLineup(prev => prev.filter(p => p.element !== pick.element));
+
+    toast({
+      title: "Player Transferred Out",
+      description: `${player.web_name} has been transferred out. Select a replacement from the Projected Points tab.`
+    });
+  };
+
+  // Handle transferring a player in
+  const handleTransferIn = (playerId: number, playerElementType: number) => {
+    const player = getPlayerById(playerId);
+    if (!player) return;
+
+    // Find the matching transferred out player
+    const transferOutIndex = transferredOutPlayers.findIndex(
+      t => t.elementType === playerElementType
+    );
+
+    if (transferOutIndex === -1) {
+      toast({
+        title: "Error",
+        description: "No matching position found for transfer",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const transferredOut = transferredOutPlayers[transferOutIndex];
+
+    // Create new pick with the same position as the transferred out player
+    const newPick: TeamPick = {
+      element: playerId,
+      position: transferredOut.position,
+      multiplier: 1,
+      is_captain: false,
+      is_vice_captain: false,
+    };
+
+    // Add to lineup and remove from transferred out list
+    setManualLineup(prev => [...prev, newPick].sort((a, b) => a.position - b.position));
+    setTransferredOutPlayers(prev => prev.filter((_, i) => i !== transferOutIndex));
+
+    toast({
+      title: "Player Transferred In",
+      description: `${player.web_name} has been added to your team`
+    });
+  };
+
   const nextGameweeks = getNextGameweeks();
 
   return (
@@ -706,22 +813,32 @@ export default function TransferPlanner() {
                               <div className="text-sm text-muted-foreground">No projection</div>
                             )}
                           </div>
-                          <Select onValueChange={(value) => swapPlayers(index, parseInt(value))}>
-                            <SelectTrigger className="w-[140px]" data-testid={`swap-${pick.element}`}>
-                              <ArrowUpDown className="h-4 w-4 mr-2" />
-                              <SelectValue placeholder="Swap" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
-                                const benchPlayer = getPlayerById(benchPick.element);
-                                return (
-                                  <SelectItem key={benchPick.element} value={benchIndex.toString()}>
-                                    {benchPlayer?.web_name}
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
+                          <div className="flex gap-2">
+                            <Select onValueChange={(value) => swapPlayers(index, parseInt(value))}>
+                              <SelectTrigger className="w-[140px]" data-testid={`swap-${pick.element}`}>
+                                <ArrowUpDown className="h-4 w-4 mr-2" />
+                                <SelectValue placeholder="Swap" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
+                                  const benchPlayer = getPlayerById(benchPick.element);
+                                  return (
+                                    <SelectItem key={benchPick.element} value={benchIndex.toString()}>
+                                      {benchPlayer?.web_name}
+                                    </SelectItem>
+                                  );
+                                })}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleTransferOut(pick)}
+                              data-testid={`transfer-out-${pick.element}`}
+                            >
+                              Transfer Out
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     );
@@ -784,6 +901,14 @@ export default function TransferPlanner() {
                               </Button>
                             </div>
                           )}
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleTransferOut(pick)}
+                            data-testid={`bench-transfer-out-${pick.element}`}
+                          >
+                            Transfer Out
+                          </Button>
                         </div>
                       </div>
                     );
@@ -938,7 +1063,11 @@ export default function TransferPlanner() {
           </TabsList>
 
           <TabsContent value="projected-points" className="space-y-4">
-            <AllPlayersProjectionsTab selectedGameweek={selectedGameweek as number} />
+            <AllPlayersProjectionsTab 
+              selectedGameweek={selectedGameweek as number} 
+              transferredOutPlayers={transferredOutPlayers}
+              onTransferIn={handleTransferIn}
+            />
           </TabsContent>
 
           <TabsContent value="drafts" className="space-y-4">
