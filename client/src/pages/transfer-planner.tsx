@@ -346,56 +346,55 @@ export default function TransferPlanner() {
 
       {/* Gameweek and Mode Selection */}
       {searchedId && teamData && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Select Gameweek
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Select
-                value={selectedGameweek?.toString()}
-                onValueChange={(value) => setSelectedGameweek(parseInt(value))}
-              >
-                <SelectTrigger data-testid="select-gameweek">
-                  <SelectValue placeholder="Select gameweek" />
-                </SelectTrigger>
-                <SelectContent>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              {/* Gameweek Selection */}
+              <div>
+                <div className="text-sm font-medium mb-2">Select GW</div>
+                <div className="flex gap-2">
                   {nextGameweeks.map(gw => (
-                    <SelectItem key={gw.id} value={gw.id.toString()}>
-                      Gameweek {gw.id}
-                    </SelectItem>
+                    <Button
+                      key={gw.id}
+                      variant={selectedGameweek === gw.id ? "default" : "outline"}
+                      size="lg"
+                      className="text-lg font-semibold"
+                      onClick={() => setSelectedGameweek(gw.id)}
+                      data-testid={`gw-button-${gw.id}`}
+                    >
+                      {gw.id}
+                    </Button>
                   ))}
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
+                </div>
+              </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Planning Mode
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Select
-                value={plannerMode}
-                onValueChange={(value: "auto" | "manual") => setPlannerMode(value)}
-              >
-                <SelectTrigger data-testid="select-mode">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Auto (AI Recommended)</SelectItem>
-                  <SelectItem value="manual">Manual Selection</SelectItem>
-                </SelectContent>
-              </Select>
-            </CardContent>
-          </Card>
-        </div>
+              {/* Mode Selection */}
+              <div>
+                <div className="text-sm font-medium mb-2">Planning Mode</div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={plannerMode === "manual" ? "default" : "outline"}
+                    size="lg"
+                    className="flex-1"
+                    onClick={() => setPlannerMode("manual")}
+                    data-testid="mode-button-manual"
+                  >
+                    Manual
+                  </Button>
+                  <Button
+                    variant={plannerMode === "auto" ? "default" : "outline"}
+                    size="lg"
+                    className="flex-1"
+                    onClick={() => setPlannerMode("auto")}
+                    data-testid="mode-button-auto"
+                  >
+                    Auto
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Manual Selection Section */}
