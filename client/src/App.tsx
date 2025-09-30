@@ -70,6 +70,7 @@ import PlayerBonusPoints from "./pages/player-bonus-points";
 import Login from "./pages/login";
 import ResponsiveTableDemo from "./pages/responsive-table-demo";
 import CurrentStandings from "./pages/current-standings";
+import TransferPlanner from "./pages/transfer-planner";
 
 
 function Router() {
@@ -87,6 +88,7 @@ function Router() {
       <Route path="/watchlist" component={Watchlist} />
       <Route path="/my-team" component={MyTeam} />
       <Route path="/my-leagues" component={MyLeagues} />
+      <Route path="/transfer-planner" component={TransferPlanner} />
       <Route path="/league-analysis/:leagueId/:leagueName/:managerId" component={LeagueAnalysisPage} />
       <Route path="/price-tracker" component={PriceTracker} />
       <Route path="/recent-price-changes" component={RecentPriceChanges} />

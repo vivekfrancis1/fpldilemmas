@@ -13973,12 +13973,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Fetch complete draft with players
-      const players = await db.select()
+      const draftPlayersList = await db.select()
         .from(draftPlayers)
         .where(eq(draftPlayers.draftId, draft.id))
         .orderBy(asc(draftPlayers.squadPosition));
 
-      res.json({ success: true, draft: { ...draft, players } });
+      res.json({ success: true, draft: { ...draft, players: draftPlayersList } });
     } catch (error) {
       console.error("Error creating draft:", error);
       res.status(500).json({ error: "Failed to create draft" });
