@@ -247,8 +247,8 @@ export default function TransferPlanner() {
     const projection = playerProjections.find(p => p.playerId === playerId);
     if (!projection) return null;
 
-    // Get the points for the selected gameweek - gameweekBreakdown uses just the number as key
-    const points = projection.gameweekBreakdown?.[selectedGameweek];
+    // Get the points for the selected gameweek - API returns gameweekProjections with gameweek number as key
+    const points = projection.gameweekProjections?.[selectedGameweek];
     return points !== undefined ? points : null;
   };
 
