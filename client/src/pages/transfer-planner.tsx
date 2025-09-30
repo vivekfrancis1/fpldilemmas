@@ -1194,6 +1194,7 @@ export default function TransferPlanner() {
                   <div className="grid gap-2">
                     {optimizedLineup.starting11.map((player) => {
                       const fullPlayer = getPlayerById(player.element);
+                      const pick = teamData.picks.find(p => p.element === player.element);
                       return (
                         <div
                           key={player.element}
@@ -1204,24 +1205,36 @@ export default function TransferPlanner() {
                           }`}
                           data-testid={`optimized-player-${player.element}`}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 flex-1">
                             {player.isCaptain && (
                               <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
                             )}
                             {player.isViceCaptain && (
                               <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
                             )}
-                            <div>
+                            <div className="flex-1">
                               <div className="font-medium">{player.web_name}</div>
                               <div className="text-sm text-muted-foreground">
                                 {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)}
                               </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="font-bold text-purple-600">{player.projectedPoints.toFixed(1)} pts</div>
-                            {player.isCaptain && (
-                              <div className="text-xs text-muted-foreground">({(player.projectedPoints * 2).toFixed(1)} with (C))</div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <div className="font-bold text-purple-600">{player.projectedPoints.toFixed(1)} pts</div>
+                              {player.isCaptain && (
+                                <div className="text-xs text-muted-foreground">({(player.projectedPoints * 2).toFixed(1)} with (C))</div>
+                              )}
+                            </div>
+                            {pick && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleTransferOut(pick)}
+                                data-testid={`transfer-out-${player.element}`}
+                              >
+                                Transfer Out
+                              </Button>
                             )}
                           </div>
                         </div>
@@ -1236,24 +1249,37 @@ export default function TransferPlanner() {
                   <div className="grid gap-2">
                     {optimizedLineup.bench.map((player) => {
                       const fullPlayer = getPlayerById(player.element);
+                      const pick = teamData.picks.find(p => p.element === player.element);
                       return (
                         <div
                           key={player.element}
                           className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-900"
                           data-testid={`bench-player-${player.element}`}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 flex-1">
                             <span className="text-xs font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
                               {player.benchPosition}
                             </span>
-                            <div>
+                            <div className="flex-1">
                               <div className="font-medium">{player.web_name}</div>
                               <div className="text-sm text-muted-foreground">
                                 {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)}
                               </div>
                             </div>
                           </div>
-                          <div className="text-sm text-muted-foreground">{player.projectedPoints.toFixed(1)} pts</div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-sm text-muted-foreground">{player.projectedPoints.toFixed(1)} pts</div>
+                            {pick && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleTransferOut(pick)}
+                                data-testid={`transfer-out-bench-${player.element}`}
+                              >
+                                Transfer Out
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
