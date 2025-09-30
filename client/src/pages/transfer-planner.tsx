@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, TrendingUp, Save, Calendar, Target } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface TeamPick {
   element: number;
@@ -61,11 +63,35 @@ interface BootstrapData {
   }>;
 }
 
+interface OptimizedLineup {
+  formation: string;
+  starting11: Array<{
+    element: number;
+    position: number;
+    projectedPoints: number;
+    web_name: string;
+    isCaptain: boolean;
+    isViceCaptain: boolean;
+  }>;
+  bench: Array<{
+    element: number;
+    position: number;
+    projectedPoints: number;
+    web_name: string;
+    benchPosition: number;
+  }>;
+  totalProjectedPoints: number;
+  captainProjectedPoints: number;
+  gameweek: number;
+}
+
 export default function TransferPlanner() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<number | null>(null);
   const [plannerMode, setPlannerMode] = useState<"auto" | "manual">("auto");
+  const [optimizedLineup, setOptimizedLineup] = useState<OptimizedLineup | null>(null);
+  const { toast } = useToast();
 
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
@@ -103,6 +129,47 @@ export default function TransferPlanner() {
     enabled: !!searchedId,
   });
 
+  // Auto-optimization mutation
+  const optimizeMutation = useMutation({
+    mutationFn: async () => {
+      if (!teamData || !selectedGameweek) {
+        throw new Error("Team data and gameweek are required");
+      }
+
+      const response = await fetch("/api/transfer-planner/auto-optimize", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          picks: teamData.picks,
+          gameweek: selectedGameweek
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Optimization failed");
+      }
+
+      return response.json();
+    },
+    onSuccess: (data: OptimizedLineup) => {
+      setOptimizedLineup(data);
+      toast({
+        title: "Team Optimized!",
+        description: `Best formation: ${data.formation} with ${data.totalProjectedPoints.toFixed(1)} projected points`
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Optimization Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  });
+
   // Get next 6 gameweeks
   const getNextGameweeks = () => {
     if (!bootstrapData) return [];
@@ -130,6 +197,11 @@ export default function TransferPlanner() {
       }
     }
   }, [bootstrapData]);
+
+  // Clear optimized lineup when gameweek or mode changes
+  useEffect(() => {
+    setOptimizedLineup(null);
+  }, [selectedGameweek, plannerMode]);
 
   const handleSearch = () => {
     if (managerId.trim()) {
@@ -255,6 +327,119 @@ export default function TransferPlanner() {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Auto-Optimization Section */}
+      {searchedId && teamData && selectedGameweek && plannerMode === "auto" && (
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-purple-600" />
+              Auto-Optimization
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              onClick={() => optimizeMutation.mutate()}
+              disabled={optimizeMutation.isPending}
+              className="w-full bg-purple-600 hover:bg-purple-700"
+              data-testid="button-auto-optimize"
+            >
+              {optimizeMutation.isPending ? "Optimizing..." : "Run Auto-Optimization"}
+            </Button>
+
+            {optimizedLineup && (
+              <div className="mt-6 space-y-6">
+                {/* Formation and Points Summary */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-4 bg-white dark:bg-gray-900 rounded-lg border">
+                    <div className="text-sm text-muted-foreground">Formation</div>
+                    <div className="text-2xl font-bold text-purple-600">{optimizedLineup.formation}</div>
+                  </div>
+                  <div className="text-center p-4 bg-white dark:bg-gray-900 rounded-lg border">
+                    <div className="text-sm text-muted-foreground">Projected Points</div>
+                    <div className="text-2xl font-bold text-purple-600">{optimizedLineup.totalProjectedPoints.toFixed(1)}</div>
+                  </div>
+                </div>
+
+                {/* Starting 11 */}
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-yellow-500" />
+                    Starting 11
+                  </h3>
+                  <div className="grid gap-2">
+                    {optimizedLineup.starting11.map((player) => {
+                      const fullPlayer = getPlayerById(player.element);
+                      return (
+                        <div
+                          key={player.element}
+                          className={`flex items-center justify-between p-3 rounded-lg border ${
+                            player.isCaptain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
+                            player.isViceCaptain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
+                            'border-gray-200'
+                          }`}
+                          data-testid={`optimized-player-${player.element}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {player.isCaptain && (
+                              <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
+                            )}
+                            {player.isViceCaptain && (
+                              <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
+                            )}
+                            <div>
+                              <div className="font-medium">{player.web_name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-purple-600">{player.projectedPoints.toFixed(1)} pts</div>
+                            {player.isCaptain && (
+                              <div className="text-xs text-muted-foreground">({(player.projectedPoints * 2).toFixed(1)} with (C))</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Bench */}
+                <div>
+                  <h3 className="font-semibold mb-3">Bench (Recommended Order)</h3>
+                  <div className="grid gap-2">
+                    {optimizedLineup.bench.map((player) => {
+                      const fullPlayer = getPlayerById(player.element);
+                      return (
+                        <div
+                          key={player.element}
+                          className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-900"
+                          data-testid={`bench-player-${player.element}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
+                              {player.benchPosition}
+                            </span>
+                            <div>
+                              <div className="font-medium">{player.web_name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-sm text-muted-foreground">{player.projectedPoints.toFixed(1)} pts</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Main Content Tabs */}
