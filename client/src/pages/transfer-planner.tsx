@@ -1054,7 +1054,7 @@ export default function TransferPlanner() {
               {/* Cash in Bank */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1">Cash in Bank</div>
-                <div className="text-2xl font-bold text-yellow-600">
+                <div className={`text-2xl font-bold ${calculateCurrentBank() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
                   £{calculateCurrentBank().toFixed(1)}m
                 </div>
               </div>
