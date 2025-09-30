@@ -658,6 +658,24 @@ export default function TransferPlanner() {
     setManualLineup(newLineup);
   };
 
+  // Handle captain selection
+  const handleSetCaptain = (playerId: number) => {
+    setManualLineup(prev => prev.map(pick => ({
+      ...pick,
+      is_captain: pick.element === playerId,
+      is_vice_captain: pick.is_vice_captain && pick.element !== playerId ? true : false
+    })));
+  };
+
+  // Handle vice captain selection
+  const handleSetViceCaptain = (playerId: number) => {
+    setManualLineup(prev => prev.map(pick => ({
+      ...pick,
+      is_vice_captain: pick.element === playerId,
+      is_captain: pick.is_captain && pick.element !== playerId ? true : false
+    })));
+  };
+
   // Handle transferring a player out
   const handleTransferOut = (pick: TeamPick) => {
     const player = getPlayerById(pick.element);
@@ -980,10 +998,34 @@ export default function TransferPlanner() {
                               <div className="text-sm text-muted-foreground">No projection</div>
                             )}
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-2">
+                            {!pick.is_captain && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700 border-yellow-300"
+                                onClick={() => handleSetCaptain(pick.element)}
+                                data-testid={`set-captain-${pick.element}`}
+                              >
+                                <Crown className="h-3 w-3 mr-1" />
+                                Captain
+                              </Button>
+                            )}
+                            {!pick.is_vice_captain && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 border-blue-300"
+                                onClick={() => handleSetViceCaptain(pick.element)}
+                                data-testid={`set-vice-${pick.element}`}
+                              >
+                                <Crown className="h-3 w-3 mr-1" />
+                                Vice
+                              </Button>
+                            )}
                             <Select onValueChange={(value) => swapPlayers(index, parseInt(value))}>
-                              <SelectTrigger className="w-[140px]" data-testid={`swap-${pick.element}`}>
-                                <ArrowUpDown className="h-4 w-4 mr-2" />
+                              <SelectTrigger className="w-[100px]" data-testid={`swap-${pick.element}`}>
+                                <ArrowUpDown className="h-4 w-4 mr-1" />
                                 <SelectValue placeholder="Swap" />
                               </SelectTrigger>
                               <SelectContent>
