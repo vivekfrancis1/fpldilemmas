@@ -22,7 +22,7 @@ import {
   teamProjections,
   users
 } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
 import { projectionService } from "./projection-service";
 import { FPL_PLAYERS, getPlayerName, getPlayerTeam, getPlayerById, getFullPlayerName } from "@shared/player-constants";
