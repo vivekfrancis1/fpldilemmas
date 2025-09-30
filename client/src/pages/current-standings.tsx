@@ -5,6 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -48,12 +55,13 @@ export default function CurrentStandings() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sortField, setSortField] = useState<SortField>('position');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [venue, setVenue] = useState<'all' | 'home' | 'away'>('all');
   const queryClient = useQueryClient();
 
   const { data: standingsData, isLoading, error } = useQuery<CurrentTeamStanding[]>({
-    queryKey: ["/api/current-standings"],
+    queryKey: ["/api/current-standings", venue],
     queryFn: async () => {
-      const response = await fetch('/api/current-standings');
+      const response = await fetch(`/api/current-standings?venue=${venue}`);
       if (!response.ok) {
         throw new Error('Failed to fetch current standings');
       }
@@ -70,7 +78,7 @@ export default function CurrentStandings() {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ["/api/current-standings"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/current-standings", venue] });
     setIsRefreshing(false);
   };
 
@@ -230,7 +238,20 @@ export default function CurrentStandings() {
           <p className="fpl-page-subtitle">
             Enhanced Premier League table with detailed statistics from completed matches and official results
           </p>
-          <div className="mt-6">
+          <div className="mt-6 flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-gray-700">Venue Filter:</label>
+              <Select value={venue} onValueChange={(value: 'all' | 'home' | 'away') => setVenue(value)}>
+                <SelectTrigger className="w-[140px]" data-testid="select-venue-filter">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" data-testid="option-venue-all">All Matches</SelectItem>
+                  <SelectItem value="home" data-testid="option-venue-home">Home Only</SelectItem>
+                  <SelectItem value="away" data-testid="option-venue-away">Away Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button 
               onClick={handleRefresh}
               disabled={isRefreshing}
