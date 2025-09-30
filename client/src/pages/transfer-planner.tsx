@@ -179,6 +179,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                            player.team.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesPosition = positionFilter === "all" || player.position === positionFilter;
       const matchesTeam = teamFilter === "all" || player.team === teamFilter;
+      
       return matchesSearch && matchesPosition && matchesTeam;
     })
     .sort((a, b) => {
@@ -235,10 +236,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Positions</SelectItem>
-                <SelectItem value="GKP">Goalkeepers</SelectItem>
-                <SelectItem value="DEF">Defenders</SelectItem>
-                <SelectItem value="MID">Midfielders</SelectItem>
-                <SelectItem value="FWD">Forwards</SelectItem>
+                <SelectItem value="Goalkeeper">Goalkeepers</SelectItem>
+                <SelectItem value="Defender">Defenders</SelectItem>
+                <SelectItem value="Midfielder">Midfielders</SelectItem>
+                <SelectItem value="Forward">Forwards</SelectItem>
               </SelectContent>
             </Select>
           </div>
