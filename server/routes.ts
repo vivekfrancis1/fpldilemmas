@@ -1857,6 +1857,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const data = await response.json();
+      
+      // Also fetch entry data to get accurate bank balance
+      const entryResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
+      if (entryResponse.ok) {
+        const entryData = await entryResponse.json();
+        // Override transfers data with accurate data from entry endpoint
+        data.transfers = {
+          ...data.transfers,
+          bank: entryData.last_deadline_bank || data.transfers.bank,
+          limit: entryData.last_deadline_total_transfers || data.transfers.limit
+        };
+      }
+      
       res.json(data);
     } catch (error) {
       console.error(`Error fetching manager team for ID ${req.params.managerId}:`, error);
