@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -378,13 +378,14 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         
                         return hasMatchingTransferOut && isAffordable ? (
                           <Button
-                            size="sm"
-                            variant="default"
-                            className="bg-green-600 hover:bg-green-700"
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-green-600 hover:bg-green-50 hover:text-green-700"
                             onClick={() => onTransferIn(player.playerId, playerElementType)}
                             data-testid={`transfer-in-${player.playerId}`}
+                            title="Transfer In"
                           >
-                            Transfer In
+                            <Plus className="h-4 w-4" />
                           </Button>
                         ) : null;
                       })()}
@@ -998,35 +999,34 @@ export default function TransferPlanner() {
                               <div className="text-sm text-muted-foreground">No projection</div>
                             )}
                           </div>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-1">
                             {!pick.is_captain && (
                               <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700 border-yellow-300"
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
                                 onClick={() => handleSetCaptain(pick.element)}
                                 data-testid={`set-captain-${pick.element}`}
+                                title="Set as Captain"
                               >
-                                <Crown className="h-3 w-3 mr-1" />
-                                Captain
+                                <Crown className="h-4 w-4" />
                               </Button>
                             )}
                             {!pick.is_vice_captain && (
                               <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-blue-600 hover:bg-blue-50 hover:text-blue-700 border-blue-300"
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                                 onClick={() => handleSetViceCaptain(pick.element)}
                                 data-testid={`set-vice-${pick.element}`}
+                                title="Set as Vice Captain"
                               >
-                                <Crown className="h-3 w-3 mr-1" />
-                                Vice
+                                <Crown className="h-4 w-4" />
                               </Button>
                             )}
                             <Select onValueChange={(value) => swapPlayers(index, parseInt(value))}>
-                              <SelectTrigger className="w-[100px]" data-testid={`swap-${pick.element}`}>
-                                <ArrowUpDown className="h-4 w-4 mr-1" />
-                                <SelectValue placeholder="Swap" />
+                              <SelectTrigger className="h-8 w-8 p-0 border-0 hover:bg-gray-100" data-testid={`swap-${pick.element}`} title="Swap with bench">
+                                <ArrowUpDown className="h-4 w-4" />
                               </SelectTrigger>
                               <SelectContent>
                                 {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
@@ -1040,12 +1040,14 @@ export default function TransferPlanner() {
                               </SelectContent>
                             </Select>
                             <Button
-                              size="sm"
-                              variant="destructive"
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
                               onClick={() => handleTransferOut(pick)}
                               data-testid={`transfer-out-${pick.element}`}
+                              title="Transfer Out"
                             >
-                              Transfer Out
+                              <X className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
@@ -1111,12 +1113,14 @@ export default function TransferPlanner() {
                             </div>
                           )}
                           <Button
-                            size="sm"
-                            variant="destructive"
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
                             onClick={() => handleTransferOut(pick)}
                             data-testid={`bench-transfer-out-${pick.element}`}
+                            title="Transfer Out"
                           >
-                            Transfer Out
+                            <X className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -1228,12 +1232,14 @@ export default function TransferPlanner() {
                             </div>
                             {pick && (
                               <Button
-                                size="sm"
-                                variant="destructive"
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
                                 onClick={() => handleTransferOut(pick)}
                                 data-testid={`transfer-out-${player.element}`}
+                                title="Transfer Out"
                               >
-                                Transfer Out
+                                <X className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
@@ -1271,12 +1277,14 @@ export default function TransferPlanner() {
                             <div className="text-sm text-muted-foreground">{player.projectedPoints.toFixed(1)} pts</div>
                             {pick && (
                               <Button
-                                size="sm"
-                                variant="destructive"
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
                                 onClick={() => handleTransferOut(pick)}
                                 data-testid={`transfer-out-bench-${player.element}`}
+                                title="Transfer Out"
                               >
-                                Transfer Out
+                                <X className="h-4 w-4" />
                               </Button>
                             )}
                           </div>
