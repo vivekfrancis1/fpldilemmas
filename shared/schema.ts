@@ -1588,3 +1588,66 @@ export const playerVenueSplits = pgTable("player_venue_splits", {
 
 export type PlayerVenueSplit = typeof playerVenueSplits.$inferSelect;
 export type InsertPlayerVenueSplit = typeof playerVenueSplits.$inferInsert;
+
+// Transfer Planner Drafts - Store user's planned lineups and transfers
+export const transferPlannerDrafts = pgTable("transfer_planner_drafts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  managerId: integer("manager_id").notNull(),
+  gameweek: integer("gameweek").notNull(),
+  draftName: varchar("draft_name", { length: 100 }).notNull(),
+  mode: varchar("mode", { length: 20 }).notNull(), // 'auto' or 'manual'
+  
+  // Formation (e.g., "3-4-3", "4-4-2")
+  formation: varchar("formation", { length: 10 }),
+  
+  // Metadata
+  totalProjectedPoints: decimal("total_projected_points", { precision: 7, scale: 2 }).default("0"),
+  transfersUsed: integer("transfers_used").notNull().default(0),
+  teamValue: decimal("team_value", { precision: 8, scale: 2 }).default("0"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_drafts_manager_id").on(table.managerId),
+  index("idx_drafts_gameweek").on(table.gameweek),
+  index("idx_drafts_manager_gameweek").on(table.managerId, table.gameweek),
+]);
+
+// Draft Players - Individual player selections for each draft
+export const draftPlayers = pgTable("draft_players", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  draftId: varchar("draft_id").references(() => transferPlannerDrafts.id, { onDelete: "cascade" }).notNull(),
+  
+  // Player info
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name", { length: 100 }).notNull(),
+  teamName: varchar("team_name", { length: 50 }).notNull(),
+  position: varchar("position", { length: 20 }).notNull(), // 'GKP', 'DEF', 'MID', 'FWD'
+  price: decimal("price", { precision: 5, scale: 2 }).notNull(),
+  
+  // Squad position
+  isStarter: boolean("is_starter").notNull().default(false), // true = starting 11, false = bench
+  squadPosition: integer("squad_position").notNull(), // 1-15 (1-11 starters, 12-15 bench)
+  isCaptain: boolean("is_captain").notNull().default(false),
+  isViceCaptain: boolean("is_vice_captain").notNull().default(false),
+  
+  // Transfer tracking
+  isTransferIn: boolean("is_transfer_in").notNull().default(false),
+  isTransferOut: boolean("is_transfer_out").notNull().default(false),
+  replacedPlayerId: integer("replaced_player_id"), // if transfer in, which player was replaced
+  
+  // Projected points for this gameweek
+  projectedPoints: decimal("projected_points", { precision: 6, scale: 2 }).default("0"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_draft_players_draft_id").on(table.draftId),
+  index("idx_draft_players_player_id").on(table.playerId),
+]);
+
+export type TransferPlannerDraft = typeof transferPlannerDrafts.$inferSelect;
+export type InsertTransferPlannerDraft = typeof transferPlannerDrafts.$inferInsert;
+
+export type DraftPlayer = typeof draftPlayers.$inferSelect;
+export type InsertDraftPlayer = typeof draftPlayers.$inferInsert;
