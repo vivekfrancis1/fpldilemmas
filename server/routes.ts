@@ -13851,6 +13851,175 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ Player Total Points Database API routes registered successfully");
 
+  // Transfer Planner Auto-Optimization Endpoint
+  app.post("/api/transfer-planner/auto-optimize", async (req, res) => {
+    try {
+      const { picks, gameweek } = req.body;
+
+      if (!picks || !Array.isArray(picks) || picks.length !== 15) {
+        return res.status(400).json({ error: "Invalid picks - must provide 15 players" });
+      }
+
+      if (!gameweek || typeof gameweek !== 'number') {
+        return res.status(400).json({ error: "Invalid gameweek" });
+      }
+
+      console.log(`🎯 Auto-optimizing team for GW${gameweek} with ${picks.length} players`);
+
+      // Fetch bootstrap data for player details
+      const bootstrapResponse = await internalFetch(`${getApiBaseUrl()}/api/bootstrap-static`);
+      const bootstrapData = await bootstrapResponse.json();
+      const allPlayers = bootstrapData.elements;
+
+      // Fetch player total points projections for the gameweek
+      const projectionsResponse = await internalFetch(
+        `${getApiBaseUrl()}/api/player-total-points-projections?startGameweek=${gameweek}&endGameweek=${gameweek}`
+      );
+      const projections = await projectionsResponse.json();
+
+      // Create a map of player ID to projected points for the specific gameweek
+      const playerProjections = new Map<number, number>();
+      projections.forEach((p: any) => {
+        const gwData = p.gameweekData?.find((gw: any) => gw.gameweek === gameweek);
+        if (gwData) {
+          playerProjections.set(p.playerId, gwData.totalPoints || 0);
+        }
+      });
+
+      // Enrich picks with player data and projected points
+      const enrichedPicks = picks.map((pick: any) => {
+        const player = allPlayers.find((p: any) => p.id === pick.element);
+        const projectedPoints = playerProjections.get(pick.element) || 0;
+        
+        return {
+          ...pick,
+          player,
+          position: player?.element_type,
+          projectedPoints,
+          web_name: player?.web_name
+        };
+      });
+
+      // Group by position
+      const gkps = enrichedPicks.filter(p => p.position === 1);
+      const defs = enrichedPicks.filter(p => p.position === 2);
+      const mids = enrichedPicks.filter(p => p.position === 3);
+      const fwds = enrichedPicks.filter(p => p.position === 4);
+
+      // Sort each position by projected points (descending)
+      gkps.sort((a, b) => b.projectedPoints - a.projectedPoints);
+      defs.sort((a, b) => b.projectedPoints - a.projectedPoints);
+      mids.sort((a, b) => b.projectedPoints - a.projectedPoints);
+      fwds.sort((a, b) => b.projectedPoints - a.projectedPoints);
+
+      // Try all valid formations and find the best one
+      const validFormations = [
+        { def: 3, mid: 4, fwd: 3 },
+        { def: 3, mid: 5, fwd: 2 },
+        { def: 4, mid: 3, fwd: 3 },
+        { def: 4, mid: 4, fwd: 2 },
+        { def: 4, mid: 5, fwd: 1 },
+        { def: 5, mid: 3, fwd: 2 },
+        { def: 5, mid: 4, fwd: 1 },
+        { def: 5, mid: 2, fwd: 3 }
+      ];
+
+      let bestFormation = null;
+      let bestPoints = -1;
+      let bestStarting11 = null;
+
+      for (const formation of validFormations) {
+        // Check if we have enough players for this formation
+        if (defs.length < formation.def || mids.length < formation.mid || fwds.length < formation.fwd) {
+          continue;
+        }
+
+        // Select best players for this formation
+        const starting11 = [
+          gkps[0], // Always start best GK
+          ...defs.slice(0, formation.def),
+          ...mids.slice(0, formation.mid),
+          ...fwds.slice(0, formation.fwd)
+        ];
+
+        // Calculate total projected points
+        const totalPoints = starting11.reduce((sum, p) => sum + p.projectedPoints, 0);
+
+        if (totalPoints > bestPoints) {
+          bestPoints = totalPoints;
+          bestFormation = formation;
+          bestStarting11 = starting11;
+        }
+      }
+
+      if (!bestStarting11 || !bestFormation) {
+        return res.status(400).json({ error: "Unable to find valid formation" });
+      }
+
+      // Determine bench (players not in starting 11)
+      const starting11Ids = new Set(bestStarting11.map(p => p.element));
+      const bench = enrichedPicks
+        .filter(p => !starting11Ids.has(p.element))
+        .sort((a, b) => {
+          // Bench order priority: DEF > MID > FWD > GK
+          const positionPriority = { 2: 1, 3: 2, 4: 3, 1: 4 };
+          const aPriority = positionPriority[a.position as keyof typeof positionPriority] || 5;
+          const bPriority = positionPriority[b.position as keyof typeof positionPriority] || 5;
+          
+          if (aPriority !== bPriority) {
+            return aPriority - bPriority;
+          }
+          // Within same position, order by projected points
+          return b.projectedPoints - a.projectedPoints;
+        });
+
+      // Select captain (highest projected points in starting 11)
+      const captain = bestStarting11.reduce((best, p) => 
+        p.projectedPoints > best.projectedPoints ? p : best
+      );
+
+      // Select vice-captain (second highest projected points in starting 11, excluding captain)
+      const viceCaptain = bestStarting11
+        .filter(p => p.element !== captain.element)
+        .reduce((best, p) => 
+          p.projectedPoints > best.projectedPoints ? p : best
+        );
+
+      const result = {
+        formation: `${bestFormation.def}-${bestFormation.mid}-${bestFormation.fwd}`,
+        starting11: bestStarting11.map(p => ({
+          element: p.element,
+          position: p.position,
+          projectedPoints: p.projectedPoints,
+          web_name: p.web_name,
+          isCaptain: p.element === captain.element,
+          isViceCaptain: p.element === viceCaptain.element
+        })),
+        bench: bench.map((p, index) => ({
+          element: p.element,
+          position: p.position,
+          projectedPoints: p.projectedPoints,
+          web_name: p.web_name,
+          benchPosition: index + 1
+        })),
+        totalProjectedPoints: bestPoints,
+        captainProjectedPoints: captain.projectedPoints * 2, // Captain gets double points
+        gameweek
+      };
+
+      console.log(`✅ Auto-optimization complete: ${result.formation} formation, ${bestPoints.toFixed(1)} projected points`);
+
+      res.json(result);
+
+    } catch (error) {
+      console.error("❌ Error in auto-optimization:", error);
+      res.status(500).json({ 
+        error: "Auto-optimization failed",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
