@@ -172,6 +172,19 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   const nextGameweeks = getNextGameweeks();
 
+  // Calculate top 3 players for each gameweek
+  const getTop3ForGameweek = (gw: number) => {
+    const sorted = [...allPlayersData]
+      .map(p => ({ playerId: p.playerId, points: p.gameweekProjections[gw.toString()] || 0 }))
+      .sort((a, b) => b.points - a.points);
+    
+    return {
+      first: sorted[0]?.playerId,
+      second: sorted[1]?.playerId,
+      third: sorted[2]?.playerId,
+    };
+  };
+
   // Get unique teams for filter
   const teams = bootstrapData?.teams || [];
   const uniqueTeams = Array.from(new Set(allPlayersData.map(p => p.team))).sort();
@@ -343,9 +356,26 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     <td className="p-2 text-center">£{player.price.toFixed(1)}m</td>
                     {nextGameweeks.map((gw) => {
                       const gwPoints = player.gameweekProjections[gw.toString()] || 0;
+                      const top3 = getTop3ForGameweek(gw);
+                      
+                      // Determine styling based on rank
+                      let bgColor = '';
+                      let textColor = 'text-purple-600';
+                      
+                      if (player.playerId === top3.first) {
+                        bgColor = 'bg-yellow-100 dark:bg-yellow-900/30';
+                        textColor = 'text-yellow-800 dark:text-yellow-300';
+                      } else if (player.playerId === top3.second) {
+                        bgColor = 'bg-gray-200 dark:bg-gray-700';
+                        textColor = 'text-gray-800 dark:text-gray-300';
+                      } else if (player.playerId === top3.third) {
+                        bgColor = 'bg-orange-100 dark:bg-orange-900/30';
+                        textColor = 'text-orange-800 dark:text-orange-300';
+                      }
+                      
                       return (
-                        <td key={gw} className="p-2 text-center">
-                          <span className="text-purple-600 font-medium">
+                        <td key={gw} className={`p-2 text-center ${bgColor}`}>
+                          <span className={`${textColor} font-medium`}>
                             {gwPoints.toFixed(1)}
                           </span>
                         </td>
