@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -91,7 +91,15 @@ export default function TransferPlanner() {
   const [selectedGameweek, setSelectedGameweek] = useState<number | null>(null);
   const [plannerMode, setPlannerMode] = useState<"auto" | "manual">("auto");
   const [optimizedLineup, setOptimizedLineup] = useState<OptimizedLineup | null>(null);
+  const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
   const { toast } = useToast();
+
+  // Initialize manual lineup when team data loads
+  useEffect(() => {
+    if (teamData?.picks) {
+      setManualLineup([...teamData.picks]);
+    }
+  }, [teamData]);
 
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
@@ -252,6 +260,46 @@ export default function TransferPlanner() {
     return points !== undefined ? points : null;
   };
 
+  // Swap a starting 11 player with a bench player
+  const swapPlayers = (startingIndex: number, benchIndex: number) => {
+    const newLineup = [...manualLineup];
+    const temp = newLineup[startingIndex];
+    newLineup[startingIndex] = newLineup[11 + benchIndex];
+    newLineup[11 + benchIndex] = temp;
+    
+    // Update positions
+    newLineup[startingIndex].position = startingIndex + 1;
+    newLineup[11 + benchIndex].position = 11 + benchIndex + 1;
+    
+    setManualLineup(newLineup);
+    toast({
+      title: "Players Swapped",
+      description: `${getPlayerById(newLineup[startingIndex].element)?.web_name} moved to starting 11`
+    });
+  };
+
+  // Move bench player up or down (excluding GK)
+  const moveBenchPlayer = (benchIndex: number, direction: 'up' | 'down') => {
+    if (benchIndex === 0) return; // Can't move GK
+    
+    const actualIndex = 11 + benchIndex;
+    const swapIndex = direction === 'up' ? actualIndex - 1 : actualIndex + 1;
+    
+    // Don't allow moving past GK or past last bench player
+    if (swapIndex === 11 || swapIndex > 14) return;
+    
+    const newLineup = [...manualLineup];
+    const temp = newLineup[actualIndex];
+    newLineup[actualIndex] = newLineup[swapIndex];
+    newLineup[swapIndex] = temp;
+    
+    // Update positions
+    newLineup[actualIndex].position = actualIndex + 1;
+    newLineup[swapIndex].position = swapIndex + 1;
+    
+    setManualLineup(newLineup);
+  };
+
   const nextGameweeks = getNextGameweeks();
 
   return (
@@ -368,7 +416,7 @@ export default function TransferPlanner() {
                   Starting 11
                 </h3>
                 <div className="grid gap-2">
-                  {teamData?.picks.slice(0, 11).map((pick, index) => {
+                  {manualLineup.slice(0, 11).map((pick, index) => {
                     const player = getPlayerById(pick.element);
                     const projectedPoints = getPlayerProjectedPoints(pick.element);
                     if (!player) return null;
@@ -383,31 +431,49 @@ export default function TransferPlanner() {
                         }`}
                         data-testid={`starting-player-${pick.element}`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1">
                           {pick.is_captain && (
                             <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
                           )}
                           {pick.is_vice_captain && (
                             <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
                           )}
-                          <div>
+                          <div className="flex-1">
                             <div className="font-medium">{player.web_name}</div>
                             <div className="text-sm text-muted-foreground">
                               {getTeamName(player.team)} • {getPositionName(player.element_type)}
                             </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          {projectedPoints !== null ? (
-                            <>
-                              <div className="font-bold text-blue-600">{projectedPoints.toFixed(1)} pts</div>
-                              {pick.is_captain && (
-                                <div className="text-xs text-muted-foreground">({(projectedPoints * 2).toFixed(1)} with (C))</div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="text-sm text-muted-foreground">No projection</div>
-                          )}
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            {projectedPoints !== null ? (
+                              <>
+                                <div className="font-bold text-blue-600">{projectedPoints.toFixed(1)} pts</div>
+                                {pick.is_captain && (
+                                  <div className="text-xs text-muted-foreground">({(projectedPoints * 2).toFixed(1)} with (C))</div>
+                                )}
+                              </>
+                            ) : (
+                              <div className="text-sm text-muted-foreground">No projection</div>
+                            )}
+                          </div>
+                          <Select onValueChange={(value) => swapPlayers(index, parseInt(value))}>
+                            <SelectTrigger className="w-[140px]" data-testid={`swap-${pick.element}`}>
+                              <ArrowUpDown className="h-4 w-4 mr-2" />
+                              <SelectValue placeholder="Swap" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
+                                const benchPlayer = getPlayerById(benchPick.element);
+                                return (
+                                  <SelectItem key={benchPick.element} value={benchIndex.toString()}>
+                                    {benchPlayer?.web_name}
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                     );
@@ -419,9 +485,10 @@ export default function TransferPlanner() {
               <div>
                 <h3 className="font-semibold mb-3">Bench (Current Order)</h3>
                 <div className="grid gap-2">
-                  {teamData?.picks.slice(11, 15).map((pick, index) => {
+                  {manualLineup.slice(11, 15).map((pick, index) => {
                     const player = getPlayerById(pick.element);
                     const projectedPoints = getPlayerProjectedPoints(pick.element);
+                    const isGK = player?.element_type === 1;
                     if (!player) return null;
                     
                     return (
@@ -430,19 +497,45 @@ export default function TransferPlanner() {
                         className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-900"
                         data-testid={`bench-player-${pick.element}`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-1">
                           <span className="text-xs font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
                             {index + 1}
                           </span>
-                          <div>
+                          <div className="flex-1">
                             <div className="font-medium">{player.web_name}</div>
                             <div className="text-sm text-muted-foreground">
                               {getTeamName(player.team)} • {getPositionName(player.element_type)}
                             </div>
                           </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {projectedPoints !== null ? `${projectedPoints.toFixed(1)} pts` : 'No projection'}
+                        <div className="flex items-center gap-3">
+                          <div className="text-sm text-muted-foreground">
+                            {projectedPoints !== null ? `${projectedPoints.toFixed(1)} pts` : 'No projection'}
+                          </div>
+                          {!isGK && (
+                            <div className="flex flex-col gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => moveBenchPlayer(index, 'up')}
+                                disabled={index === 1}
+                                data-testid={`move-up-${pick.element}`}
+                              >
+                                <ChevronUp className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => moveBenchPlayer(index, 'down')}
+                                disabled={index === 3}
+                                data-testid={`move-down-${pick.element}`}
+                              >
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -455,16 +548,12 @@ export default function TransferPlanner() {
                 <div className="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                   <span className="font-semibold">Total Projected Points (GW{selectedGameweek})</span>
                   <span className="text-2xl font-bold text-blue-600">
-                    {teamData?.picks
+                    {manualLineup
+                      .slice(0, 11)
                       .reduce((total, pick) => {
                         const projectedPoints = getPlayerProjectedPoints(pick.element);
-                        // Only count starting 11 players (positions 1-11)
-                        const playerPosition = teamData.picks.indexOf(pick);
-                        if (playerPosition < 11) {
-                          const multiplier = pick.is_captain ? 2 : 1;
-                          return total + (projectedPoints || 0) * multiplier;
-                        }
-                        return total;
+                        const multiplier = pick.is_captain ? 2 : 1;
+                        return total + (projectedPoints || 0) * multiplier;
                       }, 0)
                       .toFixed(1)}
                   </span>
