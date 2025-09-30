@@ -1859,6 +1859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = await response.json();
       
       console.log("DEBUG: Picks transfers object:", JSON.stringify(data.transfers));
+      console.log("DEBUG: Sample pick data:", JSON.stringify(data.picks?.[0]));
       
       // Also fetch entry data to get accurate bank balance and transfer info
       const entryResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);

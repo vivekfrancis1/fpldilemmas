@@ -526,6 +526,7 @@ export default function TransferPlanner() {
   // Initialize manual lineup when team data loads
   useEffect(() => {
     if (teamData?.picks) {
+      console.log("DEBUG: First pick from teamData:", teamData.picks[0]);
       setManualLineup([...teamData.picks]);
       // Reset all transfers when loading new team data
       setGameweekTransfers({});
