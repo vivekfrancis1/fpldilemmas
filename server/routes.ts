@@ -1862,11 +1862,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const entryResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
       if (entryResponse.ok) {
         const entryData = await entryResponse.json();
-        // Override transfers data with accurate data from entry endpoint
+        // Override bank with accurate data from entry endpoint (bank is the cash in bank)
         data.transfers = {
           ...data.transfers,
-          bank: entryData.last_deadline_bank || data.transfers.bank,
-          limit: entryData.last_deadline_total_transfers || data.transfers.limit
+          bank: entryData.last_deadline_bank || data.transfers.bank
         };
       }
       
