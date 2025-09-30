@@ -99,12 +99,16 @@ interface PlayerProjectionData {
 function AllPlayersProjectionsTab({ selectedGameweek }: { selectedGameweek: number }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
-  const [sortField, setSortField] = useState<'gwPoints' | 'price' | 'name'>('gwPoints');
+  const [sortField, setSortField] = useState<string>('total');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   const { data: allPlayersData, isLoading } = useQuery<PlayerProjectionData[]>({
     queryKey: ["/api/cached/player-total-points"],
     staleTime: 60 * 60 * 1000,
+  });
+
+  const { data: bootstrapData } = useQuery<BootstrapData>({
+    queryKey: ["/api/bootstrap-static"],
   });
 
   if (isLoading) {
@@ -131,7 +135,30 @@ function AllPlayersProjectionsTab({ selectedGameweek }: { selectedGameweek: numb
     );
   }
 
-  const gwKey = selectedGameweek.toString();
+  // Get next 6 gameweeks
+  const getNextGameweeks = () => {
+    if (!bootstrapData) return [];
+    
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    const nextEvent = bootstrapData.events.find(e => e.is_next);
+    
+    let startGW = currentEvent?.id || nextEvent?.id || 1;
+    if (currentEvent?.finished) {
+      startGW = nextEvent?.id || startGW + 1;
+    }
+    
+    const gameweeks = [];
+    for (let i = 0; i < 6; i++) {
+      const gwNumber = startGW + i;
+      if (gwNumber <= 38) {
+        gameweeks.push(gwNumber);
+      }
+    }
+    
+    return gameweeks;
+  };
+
+  const nextGameweeks = getNextGameweeks();
 
   // Filter and sort players
   const filteredPlayers = allPlayersData
@@ -144,24 +171,27 @@ function AllPlayersProjectionsTab({ selectedGameweek }: { selectedGameweek: numb
     .sort((a, b) => {
       let comparison = 0;
       
-      if (sortField === 'gwPoints') {
-        const aPoints = a.gameweekProjections[gwKey] || 0;
-        const bPoints = b.gameweekProjections[gwKey] || 0;
-        comparison = aPoints - bPoints;
+      if (sortField === 'total') {
+        comparison = (a.totalExpectedPoints || 0) - (b.totalExpectedPoints || 0);
       } else if (sortField === 'price') {
         comparison = a.price - b.price;
       } else if (sortField === 'name') {
         comparison = a.name.localeCompare(b.name);
+      } else if (sortField.startsWith('gw_')) {
+        const gwKey = sortField.replace('gw_', '');
+        const aPoints = a.gameweekProjections[gwKey] || 0;
+        const bPoints = b.gameweekProjections[gwKey] || 0;
+        comparison = aPoints - bPoints;
       }
       
       return sortDirection === 'desc' ? -comparison : comparison;
     });
 
-  const handleSort = (field: 'gwPoints' | 'price' | 'name') => {
+  const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortField(field);
+      setSortField(field as any);
       setSortDirection(field === 'name' ? 'asc' : 'desc');
     }
   };
@@ -169,7 +199,7 @@ function AllPlayersProjectionsTab({ selectedGameweek }: { selectedGameweek: numb
   return (
     <Card>
       <CardHeader>
-        <CardTitle>All Players - GW{selectedGameweek} Projections</CardTitle>
+        <CardTitle>All Players - Next 6 Gameweeks Projections</CardTitle>
         <div className="flex flex-col md:flex-row gap-4 mt-4">
           <Input
             placeholder="Search players or teams..."
@@ -194,20 +224,19 @@ function AllPlayersProjectionsTab({ selectedGameweek }: { selectedGameweek: numb
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
-                <th className="text-left p-2">
+                <th className="text-left p-2 sticky left-0 bg-white dark:bg-gray-950 z-10">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleSort('name')}
                     data-testid="sort-name"
                   >
-                    Player {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp className="h-4 w-4 inline ml-1" /> : <ChevronDown className="h-4 w-4 inline ml-1" />)}
+                    Player {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-left p-2">Team</th>
                 <th className="text-left p-2">
                   <Button
                     variant="ghost"
@@ -215,41 +244,61 @@ function AllPlayersProjectionsTab({ selectedGameweek }: { selectedGameweek: numb
                     onClick={() => handleSort('price')}
                     data-testid="sort-price"
                   >
-                    Price {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-4 w-4 inline ml-1" /> : <ChevronDown className="h-4 w-4 inline ml-1" />)}
+                    Price {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-left p-2">Own%</th>
-                <th className="text-right p-2">
+                {nextGameweeks.map((gw) => (
+                  <th key={gw} className="text-center p-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSort(`gw_${gw}`)}
+                      data-testid={`sort-gw${gw}`}
+                    >
+                      GW{gw} {sortField === `gw_${gw}` && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                    </Button>
+                  </th>
+                ))}
+                <th className="text-center p-2 font-bold">
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleSort('gwPoints')}
-                    data-testid="sort-points"
+                    onClick={() => handleSort('total')}
+                    data-testid="sort-total"
                   >
-                    GW{selectedGameweek} Pts {sortField === 'gwPoints' && (sortDirection === 'asc' ? <ChevronUp className="h-4 w-4 inline ml-1" /> : <ChevronDown className="h-4 w-4 inline ml-1" />)}
+                    Total {sortField === 'total' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
                   </Button>
                 </th>
               </tr>
             </thead>
             <tbody>
               {filteredPlayers.map((player) => {
-                const gwPoints = player.gameweekProjections[gwKey] || 0;
                 return (
                   <tr
                     key={player.playerId}
                     className="border-b hover:bg-gray-50 dark:hover:bg-gray-900"
                     data-testid={`player-row-${player.playerId}`}
                   >
-                    <td className="p-2">
+                    <td className="p-2 sticky left-0 bg-white dark:bg-gray-950">
                       <div className="font-medium">{player.name}</div>
-                      <div className="text-sm text-muted-foreground">{player.position}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {player.position} • {player.team} • £{player.price.toFixed(1)}m • {player.ownership.toFixed(1)}%
+                      </div>
                     </td>
-                    <td className="p-2 text-sm">{player.team}</td>
-                    <td className="p-2 text-sm">£{player.price.toFixed(1)}m</td>
-                    <td className="p-2 text-sm">{player.ownership.toFixed(1)}%</td>
-                    <td className="p-2 text-right">
-                      <span className="font-bold text-purple-600 text-lg">
-                        {gwPoints.toFixed(1)}
+                    <td className="p-2 text-center">£{player.price.toFixed(1)}m</td>
+                    {nextGameweeks.map((gw) => {
+                      const gwPoints = player.gameweekProjections[gw.toString()] || 0;
+                      return (
+                        <td key={gw} className="p-2 text-center">
+                          <span className="text-purple-600 font-medium">
+                            {gwPoints.toFixed(1)}
+                          </span>
+                        </td>
+                      );
+                    })}
+                    <td className="p-2 text-center">
+                      <span className="font-bold text-green-600 text-base">
+                        {(player.totalExpectedPoints || 0).toFixed(1)}
                       </span>
                     </td>
                   </tr>
