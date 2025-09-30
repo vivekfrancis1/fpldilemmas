@@ -1835,18 +1835,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid manager ID" });
       }
 
-      // Get current or most recent completed gameweek if not specified
+      // Get current or most recent gameweek if not specified
       let currentGameweek = gameweek;
       if (!currentGameweek) {
         const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
         if (bootstrapResponse.ok) {
           const bootstrapData = await bootstrapResponse.json();
-          // Get the most recent finished gameweek to ensure we have purchase_price data
-          const finishedGW = bootstrapData.events.find((event: any) => event.finished && !event.is_next);
+          // Get the current gameweek (the one that is happening now)
           const currentGW = bootstrapData.events.find((event: any) => event.is_current);
-          // Use finished GW if available, otherwise current GW
-          currentGameweek = (finishedGW?.id || currentGW?.id || 1);
-          console.log(`DEBUG: Using gameweek ${currentGameweek} for team data (finished: ${!!finishedGW})`);
+          // If no current gameweek, get the next one
+          const nextGW = bootstrapData.events.find((event: any) => event.is_next);
+          // Use current GW if available, otherwise next GW, otherwise most recent finished
+          const finishedGW = bootstrapData.events.filter((event: any) => event.finished).sort((a: any, b: any) => b.id - a.id)[0];
+          currentGameweek = (currentGW?.id || nextGW?.id || finishedGW?.id || 1);
+          console.log(`DEBUG: Using gameweek ${currentGameweek} for team data (current: ${!!currentGW}, next: ${!!nextGW})`);
         } else {
           currentGameweek = "1"; // fallback
         }
