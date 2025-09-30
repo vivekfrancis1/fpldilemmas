@@ -68,11 +68,12 @@ export default function CurrentStandings() {
       }
       const data = await response.json();
       
-      // Calculate adjusted rates: 0.5 * (GF + xGF) / Number of games played and 0.5 * (GA + xGA) / Number of games played
+      // Calculate AGR and AGAR as totals (will be converted to per-game in displayData if needed)
+      // AGR = 0.5 * (Goals + xG), AGAR = 0.5 * (Goals Against + xGC)
       return data.map((team: any) => ({
         ...team,
-        adjustedGoalRate: team.played > 0 ? 0.5 * (team.goalsFor + team.expectedGoalsFor) / team.played : 0,
-        adjustedGoalsAgainstRate: team.played > 0 ? 0.5 * (team.goalsAgainst + team.expectedGoalsAgainst) / team.played : 0
+        adjustedGoalRate: 0.5 * (team.goalsFor + team.expectedGoalsFor),
+        adjustedGoalsAgainstRate: 0.5 * (team.goalsAgainst + team.expectedGoalsAgainst)
       }));
     },
   });
@@ -108,6 +109,8 @@ export default function CurrentStandings() {
         expectedGoalsAgainst: team.expectedGoalsAgainst / team.played,
         tackles: team.tackles / team.played,
         defensiveActions: team.defensiveActions / team.played,
+        adjustedGoalRate: team.adjustedGoalRate / team.played,
+        adjustedGoalsAgainstRate: team.adjustedGoalsAgainstRate / team.played,
       };
     }
     return team;
