@@ -13544,7 +13544,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/player-venue-stats", async (req, res) => {
     try {
       const venue = (req.query.venue as string) || 'all';
-      const season = (req.query.season as string) || '2025/26';
+      const requestedSeason = (req.query.season as string) || '2025/26';
+      
+      // Map 'current' to actual season '2025/26'
+      const season = requestedSeason === 'current' ? '2025/26' : requestedSeason;
       
       if (!['all', 'home', 'away'].includes(venue)) {
         return res.status(400).json({ error: "Invalid venue parameter. Must be 'all', 'home', or 'away'" });
