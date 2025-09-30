@@ -1391,8 +1391,10 @@ export default function TransferPlanner() {
                             <div className="text-sm text-muted-foreground">
                               {getTeamName(player.team)} • {getPositionName(player.element_type)}
                             </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Price: £{(player.now_cost / 10).toFixed(1)}m
+                            <div className="text-xs text-muted-foreground mt-1 flex gap-3">
+                              <span>Buy: £{pick.purchase_price ? (pick.purchase_price / 10).toFixed(1) : (player.now_cost / 10).toFixed(1)}m</span>
+                              <span>Now: £{(player.now_cost / 10).toFixed(1)}m</span>
+                              <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                             </div>
                           </div>
                         </div>
@@ -1530,8 +1532,10 @@ export default function TransferPlanner() {
                             <div className="text-sm text-muted-foreground">
                               {getTeamName(player.team)} • {getPositionName(player.element_type)}
                             </div>
-                            <div className="text-xs text-muted-foreground mt-1">
-                              Price: £{(player.now_cost / 10).toFixed(1)}m
+                            <div className="text-xs text-muted-foreground mt-1 flex gap-3">
+                              <span>Buy: £{pick.purchase_price ? (pick.purchase_price / 10).toFixed(1) : (player.now_cost / 10).toFixed(1)}m</span>
+                              <span>Now: £{(player.now_cost / 10).toFixed(1)}m</span>
+                              <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                             </div>
                           </div>
                         </div>
