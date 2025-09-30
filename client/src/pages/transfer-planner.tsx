@@ -1070,8 +1070,8 @@ export default function TransferPlanner() {
               {/* Transfers Used */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1">Transfers Used</div>
-                <div className="text-2xl font-bold text-green-600">
-                  {transferredOutPlayers.length}
+                <div className={`text-2xl font-bold ${calculateTransfersAvailable() < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  {completedTransfers.length}
                 </div>
               </div>
             </div>
