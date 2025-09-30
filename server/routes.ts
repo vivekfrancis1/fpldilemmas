@@ -1858,16 +1858,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const data = await response.json();
       
-      // Also fetch entry data to get accurate bank balance
+      console.log("DEBUG: Picks transfers object:", JSON.stringify(data.transfers));
+      
+      // Also fetch entry data to get accurate bank balance and transfer info
       const entryResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
       if (entryResponse.ok) {
         const entryData = await entryResponse.json();
-        // Override bank with accurate data from entry endpoint (bank is the cash in bank)
+        console.log("DEBUG: Entry last_deadline_bank:", entryData.last_deadline_bank);
+        console.log("DEBUG: Entry last_deadline_value:", entryData.last_deadline_value);
+        console.log("DEBUG: Entry last_deadline_total_transfers:", entryData.last_deadline_total_transfers);
+        
+        // Override with accurate data from entry endpoint
         data.transfers = {
           ...data.transfers,
-          bank: entryData.last_deadline_bank || data.transfers.bank
+          bank: entryData.last_deadline_bank || data.transfers.bank,
+          // If limit is 0 in picks, use value from history endpoint
+          limit: data.transfers.limit === 0 ? 1 : data.transfers.limit
         };
       }
+      
+      console.log("DEBUG: Final transfers object:", JSON.stringify(data.transfers));
       
       res.json(data);
     } catch (error) {
