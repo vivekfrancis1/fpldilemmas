@@ -668,6 +668,31 @@ export default function TransferPlanner() {
     return currentBank;
   };
 
+  // Calculate transfers available for a given gameweek
+  const calculateTransfersAvailable = (): number => {
+    if (!teamData?.transfers || !selectedGameweek || !bootstrapData) return 0;
+    
+    // Get current gameweek
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    const currentGW = currentEvent?.id || 1;
+    
+    // Base transfers available for current gameweek (from API)
+    let transfersAvailable = teamData.transfers.limit || 1;
+    
+    // If selected gameweek is in the future, calculate available transfers
+    if (selectedGameweek > currentGW) {
+      const gameweekDifference = selectedGameweek - currentGW;
+      // Add 1 transfer per future gameweek
+      transfersAvailable += gameweekDifference;
+    }
+    
+    // Subtract transfers used in the planner
+    transfersAvailable -= completedTransfers.length;
+    
+    // Ensure minimum of 0
+    return Math.max(0, transfersAvailable);
+  };
+
   // Swap a starting 11 player with a bench player
   const swapPlayers = (startingIndex: number, benchIndex: number) => {
     const newLineup = [...manualLineup];
@@ -997,7 +1022,7 @@ export default function TransferPlanner() {
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1">Transfers Available</div>
                 <div className="text-2xl font-bold text-purple-600">
-                  {teamData?.transfers?.limit || 0}
+                  {calculateTransfersAvailable()}
                 </div>
               </div>
 
