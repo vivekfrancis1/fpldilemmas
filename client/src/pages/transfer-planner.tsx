@@ -436,7 +436,7 @@ export default function TransferPlanner() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<number | null>(null);
-  const [plannerMode, setPlannerMode] = useState<"auto" | "manual">("auto");
+  const [plannerMode, setPlannerMode] = useState<"auto" | "manual">("manual");
   const [optimizedLineup, setOptimizedLineup] = useState<OptimizedLineup | null>(null);
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
   
