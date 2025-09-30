@@ -105,6 +105,8 @@ interface AllPlayersProjectionsTabProps {
 function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn }: AllPlayersProjectionsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
+  const [teamFilter, setTeamFilter] = useState("all");
+  const [loadGroupFilter, setLoadGroupFilter] = useState("All");
   const [sortField, setSortField] = useState<string>('total');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
@@ -166,13 +168,18 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   const nextGameweeks = getNextGameweeks();
 
+  // Get unique teams for filter
+  const teams = bootstrapData?.teams || [];
+  const uniqueTeams = Array.from(new Set(allPlayersData.map(p => p.team))).sort();
+
   // Filter and sort players
-  const filteredPlayers = allPlayersData
+  let filteredPlayers = allPlayersData
     .filter(player => {
       const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            player.team.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesPosition = positionFilter === "all" || player.position === positionFilter;
-      return matchesSearch && matchesPosition;
+      const matchesTeam = teamFilter === "all" || player.team === teamFilter;
+      return matchesSearch && matchesPosition && matchesTeam;
     })
     .sort((a, b) => {
       let comparison = 0;
@@ -193,6 +200,12 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
       return sortDirection === 'desc' ? -comparison : comparison;
     });
 
+  // Apply load group filter
+  if (loadGroupFilter !== "All") {
+    const limit = parseInt(loadGroupFilter.replace("Top ", ""));
+    filteredPlayers = filteredPlayers.slice(0, limit);
+  }
+
   const handleSort = (field: string) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -206,26 +219,54 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     <Card>
       <CardHeader>
         <CardTitle>All Players - Next 6 Gameweeks Projections</CardTitle>
-        <div className="flex flex-col md:flex-row gap-4 mt-4">
-          <Input
-            placeholder="Search players or teams..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="md:w-64"
-            data-testid="input-player-search"
-          />
-          <Select value={positionFilter} onValueChange={setPositionFilter}>
-            <SelectTrigger className="md:w-48" data-testid="select-position-filter">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Positions</SelectItem>
-              <SelectItem value="GKP">Goalkeepers</SelectItem>
-              <SelectItem value="DEF">Defenders</SelectItem>
-              <SelectItem value="MID">Midfielders</SelectItem>
-              <SelectItem value="FWD">Forwards</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col gap-4 mt-4">
+          {/* Row 1: Search and Position */}
+          <div className="flex flex-col md:flex-row gap-4">
+            <Input
+              placeholder="Search players or teams..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="md:w-64"
+              data-testid="input-player-search"
+            />
+            <Select value={positionFilter} onValueChange={setPositionFilter}>
+              <SelectTrigger className="md:w-48" data-testid="select-position-filter">
+                <SelectValue placeholder="All Positions" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Positions</SelectItem>
+                <SelectItem value="GKP">Goalkeepers</SelectItem>
+                <SelectItem value="DEF">Defenders</SelectItem>
+                <SelectItem value="MID">Midfielders</SelectItem>
+                <SelectItem value="FWD">Forwards</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {/* Row 2: Team and Load Group */}
+          <div className="flex flex-col md:flex-row gap-4">
+            <Select value={teamFilter} onValueChange={setTeamFilter}>
+              <SelectTrigger className="md:w-48" data-testid="select-team-filter">
+                <SelectValue placeholder="All Teams" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Teams</SelectItem>
+                {uniqueTeams.map(team => (
+                  <SelectItem key={team} value={team}>{team}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={loadGroupFilter} onValueChange={setLoadGroupFilter}>
+              <SelectTrigger className="md:w-48" data-testid="select-load-group">
+                <SelectValue placeholder="Load Group" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Top 50">Top 50</SelectItem>
+                <SelectItem value="Top 100">Top 100</SelectItem>
+                <SelectItem value="Top 200">Top 200</SelectItem>
+                <SelectItem value="All">All Players</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
