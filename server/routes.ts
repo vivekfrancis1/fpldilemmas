@@ -13880,9 +13880,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create a map of player ID to projected points for the specific gameweek
       const playerProjections = new Map<number, number>();
       projections.forEach((p: any) => {
-        const gwData = p.gameweekData?.find((gw: any) => gw.gameweek === gameweek);
-        if (gwData) {
-          playerProjections.set(p.playerId, gwData.totalPoints || 0);
+        // API returns gameweekProjections as an object with gameweek numbers as keys
+        const points = p.gameweekProjections?.[gameweek];
+        if (points !== undefined) {
+          playerProjections.set(p.playerId, points);
         }
       });
 
