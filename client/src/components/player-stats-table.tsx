@@ -171,6 +171,10 @@ export default function PlayerStatsTable({
         switch (field) {
           case "total_points": return player.total_points;
           case "minutes": return player.minutes;
+          case "games_played": {
+            const pointsPerGame = parseFloat(player.points_per_game) || 0;
+            return pointsPerGame > 0 ? Math.round(player.total_points / pointsPerGame) : 0;
+          }
           case "goals_scored": return player.goals_scored;
           case "assists": return player.assists;
           case "clean_sheets": return player.clean_sheets;
@@ -426,6 +430,9 @@ export default function PlayerStatsTable({
               {/* Priority columns first */}
               <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[60px] sm:min-w-[80px]">
                 <SortableHeader field="now_cost" label="Price" />
+              </th>
+              <th className="px-2 py-3 text-center min-w-[80px]">
+                <SortableHeader field="games_played" label="Games" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="total_points" label="Total Pts" />
@@ -702,6 +709,12 @@ export default function PlayerStatsTable({
                   {/* Priority columns first */}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-gray-900">
                     <span className="text-xs sm:text-sm font-medium">£{((player.now_cost || player.end_cost || 0) / 10).toFixed(1)}m</span>
+                  </td>
+                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-gray-900">
+                    {(() => {
+                      const pointsPerGame = parseFloat(player.points_per_game) || 0;
+                      return pointsPerGame > 0 ? Math.round(player.total_points / pointsPerGame) : 0;
+                    })()}
                   </td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-fpl-purple">{player.total_points || 0}</td>
                   {/* Key Performance Stats - immediately after points */}
