@@ -17,6 +17,7 @@ interface TeamPick {
   is_captain: boolean;
   is_vice_captain: boolean;
   selling_price: number;
+  is_transferred_out?: boolean;
 }
 
 interface TeamData {
@@ -768,8 +769,12 @@ export default function TransferPlanner() {
 
     setTransferredOutPlayers(prev => [...prev, transferOut]);
     
-    // Remove from lineup
-    setManualLineup(prev => prev.filter(p => p.element !== pick.element));
+    // Mark player as transferred out instead of removing
+    setManualLineup(prev => prev.map(p => 
+      p.element === pick.element 
+        ? { ...p, is_transferred_out: true }
+        : p
+    ));
 
     toast({
       title: "Player Transferred Out",
@@ -811,19 +816,22 @@ export default function TransferPlanner() {
 
     setCompletedTransfers(prev => [...prev, completedTransfer]);
 
-    // Create new pick with the same position as the transferred out player
-    // Set selling_price to now_cost initially (will be the selling price if transferred out again)
-    const newPick: TeamPick = {
-      element: playerId,
-      position: transferredOut.position,
-      multiplier: 1,
-      is_captain: false,
-      is_vice_captain: false,
-      selling_price: player.now_cost,
-    };
-
-    // Add to lineup and remove from transferred out list
-    setManualLineup(prev => [...prev, newPick].sort((a, b) => a.position - b.position));
+    // Replace the transferred out player at the same position
+    setManualLineup(prev => prev.map(p => {
+      if (p.position === transferredOut.position && p.is_transferred_out) {
+        return {
+          element: playerId,
+          position: transferredOut.position,
+          multiplier: 1,
+          is_captain: false,
+          is_vice_captain: false,
+          selling_price: player.now_cost,
+          is_transferred_out: false,
+        };
+      }
+      return p;
+    }));
+    
     setTransferredOutPlayers(prev => prev.filter((_, i) => i !== transferOutIndex));
 
     toast({
@@ -831,6 +839,22 @@ export default function TransferPlanner() {
       description: `${player.web_name} has been added to your team (£${buyingPrice.toFixed(1)}m)`
     });
   };
+
+  // Reset all transfers and restore original team
+  const handleResetTransfers = () => {
+    if (teamData?.picks) {
+      setManualLineup([...teamData.picks]);
+      setTransferredOutPlayers([]);
+      setCompletedTransfers([]);
+      toast({
+        title: "Transfers Reset",
+        description: "All transfers have been undone and your original team has been restored."
+      });
+    }
+  };
+
+  // Check if there are empty slots (transferred out players)
+  const hasEmptySlots = manualLineup.some(pick => pick.is_transferred_out);
 
   const nextGameweeks = getNextGameweeks();
 
@@ -933,9 +957,23 @@ export default function TransferPlanner() {
       {searchedId && teamData && selectedGameweek && (
         <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-              Team Summary
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+                Team Summary
+              </div>
+              {hasEmptySlots && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResetTransfers}
+                  className="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                  data-testid="button-reset-transfers"
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Reset Transfers
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1061,6 +1099,29 @@ export default function TransferPlanner() {
                     const projectedPoints = getPlayerProjectedPoints(pick.element);
                     if (!player) return null;
                     
+                    // Check if this is an empty slot (transferred out)
+                    if (pick.is_transferred_out) {
+                      return (
+                        <div
+                          key={`empty-${pick.position}`}
+                          className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20"
+                          data-testid={`empty-slot-${pick.position}`}
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <div className="flex-1">
+                              <div className="font-medium text-red-600">Empty Slot</div>
+                              <div className="text-sm text-muted-foreground">
+                                {getPositionName(player.element_type)} • Transfer a replacement from Projected Points tab
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-sm text-red-600 font-medium">
+                            Needs Replacement
+                          </div>
+                        </div>
+                      );
+                    }
+                    
                     return (
                       <div
                         key={pick.element}
@@ -1165,6 +1226,32 @@ export default function TransferPlanner() {
                     const projectedPoints = getPlayerProjectedPoints(pick.element);
                     const isGK = player?.element_type === 1;
                     if (!player) return null;
+                    
+                    // Check if this is an empty slot (transferred out)
+                    if (pick.is_transferred_out) {
+                      return (
+                        <div
+                          key={`empty-bench-${pick.position}`}
+                          className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20"
+                          data-testid={`empty-slot-bench-${pick.position}`}
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            <span className="text-xs font-bold text-red-600 bg-red-200 dark:bg-red-700 px-2 py-1 rounded">
+                              {index + 1}
+                            </span>
+                            <div className="flex-1">
+                              <div className="font-medium text-red-600">Empty Slot</div>
+                              <div className="text-sm text-muted-foreground">
+                                {getPositionName(player.element_type)} • Transfer a replacement from Projected Points tab
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-sm text-red-600 font-medium">
+                            Needs Replacement
+                          </div>
+                        </div>
+                      );
+                    }
                     
                     return (
                       <div
