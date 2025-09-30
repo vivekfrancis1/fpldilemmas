@@ -85,6 +85,189 @@ interface OptimizedLineup {
   gameweek: number;
 }
 
+interface PlayerProjectionData {
+  playerId: number;
+  name: string;
+  team: string;
+  position: string;
+  price: number;
+  ownership: number;
+  gameweekProjections: { [key: string]: number };
+  totalExpectedPoints: number;
+}
+
+function AllPlayersProjectionsTab({ selectedGameweek }: { selectedGameweek: number }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [positionFilter, setPositionFilter] = useState("all");
+  const [sortField, setSortField] = useState<'gwPoints' | 'price' | 'name'>('gwPoints');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  const { data: allPlayersData, isLoading } = useQuery<PlayerProjectionData[]>({
+    queryKey: ["/api/cached/player-total-points"],
+    staleTime: 60 * 60 * 1000,
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center text-muted-foreground">
+            Loading player projections...
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!allPlayersData) {
+    return (
+      <Card>
+        <CardContent className="py-12">
+          <div className="text-center text-muted-foreground">
+            No projection data available
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const gwKey = selectedGameweek.toString();
+
+  // Filter and sort players
+  const filteredPlayers = allPlayersData
+    .filter(player => {
+      const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           player.team.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesPosition = positionFilter === "all" || player.position === positionFilter;
+      return matchesSearch && matchesPosition;
+    })
+    .sort((a, b) => {
+      let comparison = 0;
+      
+      if (sortField === 'gwPoints') {
+        const aPoints = a.gameweekProjections[gwKey] || 0;
+        const bPoints = b.gameweekProjections[gwKey] || 0;
+        comparison = aPoints - bPoints;
+      } else if (sortField === 'price') {
+        comparison = a.price - b.price;
+      } else if (sortField === 'name') {
+        comparison = a.name.localeCompare(b.name);
+      }
+      
+      return sortDirection === 'desc' ? -comparison : comparison;
+    });
+
+  const handleSort = (field: 'gwPoints' | 'price' | 'name') => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection(field === 'name' ? 'asc' : 'desc');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>All Players - GW{selectedGameweek} Projections</CardTitle>
+        <div className="flex flex-col md:flex-row gap-4 mt-4">
+          <Input
+            placeholder="Search players or teams..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="md:w-64"
+            data-testid="input-player-search"
+          />
+          <Select value={positionFilter} onValueChange={setPositionFilter}>
+            <SelectTrigger className="md:w-48" data-testid="select-position-filter">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Positions</SelectItem>
+              <SelectItem value="GKP">Goalkeepers</SelectItem>
+              <SelectItem value="DEF">Defenders</SelectItem>
+              <SelectItem value="MID">Midfielders</SelectItem>
+              <SelectItem value="FWD">Forwards</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('name')}
+                    data-testid="sort-name"
+                  >
+                    Player {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp className="h-4 w-4 inline ml-1" /> : <ChevronDown className="h-4 w-4 inline ml-1" />)}
+                  </Button>
+                </th>
+                <th className="text-left p-2">Team</th>
+                <th className="text-left p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('price')}
+                    data-testid="sort-price"
+                  >
+                    Price {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-4 w-4 inline ml-1" /> : <ChevronDown className="h-4 w-4 inline ml-1" />)}
+                  </Button>
+                </th>
+                <th className="text-left p-2">Own%</th>
+                <th className="text-right p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('gwPoints')}
+                    data-testid="sort-points"
+                  >
+                    GW{selectedGameweek} Pts {sortField === 'gwPoints' && (sortDirection === 'asc' ? <ChevronUp className="h-4 w-4 inline ml-1" /> : <ChevronDown className="h-4 w-4 inline ml-1" />)}
+                  </Button>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPlayers.map((player) => {
+                const gwPoints = player.gameweekProjections[gwKey] || 0;
+                return (
+                  <tr
+                    key={player.playerId}
+                    className="border-b hover:bg-gray-50 dark:hover:bg-gray-900"
+                    data-testid={`player-row-${player.playerId}`}
+                  >
+                    <td className="p-2">
+                      <div className="font-medium">{player.name}</div>
+                      <div className="text-sm text-muted-foreground">{player.position}</div>
+                    </td>
+                    <td className="p-2 text-sm">{player.team}</td>
+                    <td className="p-2 text-sm">£{player.price.toFixed(1)}m</td>
+                    <td className="p-2 text-sm">{player.ownership.toFixed(1)}%</td>
+                    <td className="p-2 text-right">
+                      <span className="font-bold text-purple-600 text-lg">
+                        {gwPoints.toFixed(1)}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {filteredPlayers.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              No players found matching your criteria
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function TransferPlanner() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
@@ -693,12 +876,8 @@ export default function TransferPlanner() {
 
       {/* Main Content Tabs */}
       {searchedId && teamData && selectedGameweek && (
-        <Tabs defaultValue="my-team" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="my-team" data-testid="tab-my-team">
-              <Users className="h-4 w-4 mr-2" />
-              My Team
-            </TabsTrigger>
+        <Tabs defaultValue="projected-points" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="projected-points" data-testid="tab-projected-points">
               <TrendingUp className="h-4 w-4 mr-2" />
               Projected Points
@@ -709,171 +888,8 @@ export default function TransferPlanner() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="my-team" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Current Team - GW{selectedGameweek}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoadingTeam ? (
-                  <div className="text-center py-8">Loading team...</div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Display current team */}
-                    <div className="grid gap-2">
-                      {teamData?.picks.map((pick, index) => {
-                        const player = getPlayerById(pick.element);
-                        if (!player) return null;
-                        const projectedPoints = getPlayerProjectedPoints(pick.element);
-                        
-                        return (
-                          <div
-                            key={pick.element}
-                            className="flex items-center justify-between p-3 border rounded-lg"
-                            data-testid={`player-${pick.element}`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="font-medium text-sm text-muted-foreground w-6">
-                                {index + 1}
-                              </span>
-                              <div>
-                                <div className="font-medium">{player.web_name}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {getTeamName(player.team)} • {getPositionName(player.element_type)}
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-medium">£{(player.now_cost / 10).toFixed(1)}m</div>
-                              <div className="text-sm text-muted-foreground">
-                                {projectedPoints !== null ? (
-                                  <span className="font-semibold text-purple-600">{projectedPoints.toFixed(1)} proj pts</span>
-                                ) : (
-                                  <span>{player.total_points} season pts</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Team Stats */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
-                      <div>
-                        <div className="text-sm text-muted-foreground">Team Value</div>
-                        <div className="text-xl font-bold">
-                          £{((teamData?.transfers?.value || 0) / 10).toFixed(1)}m
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">In Bank</div>
-                        <div className="text-xl font-bold">
-                          £{((teamData?.transfers?.bank || 0) / 10).toFixed(1)}m
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Free Transfers</div>
-                        <div className="text-xl font-bold">
-                          {teamData?.transfers?.limit || 0}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-muted-foreground">Transfers Made</div>
-                        <div className="text-xl font-bold">
-                          {teamData?.transfers?.made || 0}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           <TabsContent value="projected-points" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Projected Points - GW{selectedGameweek}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {!playerProjections ? (
-                  <div className="text-center py-8">Loading projections...</div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Group players by position */}
-                    {[1, 2, 3, 4].map((positionId) => {
-                      const positionPlayers = teamData?.picks
-                        .map(pick => {
-                          const player = getPlayerById(pick.element);
-                          const projectedPoints = getPlayerProjectedPoints(pick.element);
-                          return { pick, player, projectedPoints };
-                        })
-                        .filter(p => p.player?.element_type === positionId);
-
-                      if (!positionPlayers || positionPlayers.length === 0) return null;
-
-                      return (
-                        <div key={positionId}>
-                          <h3 className="font-semibold mb-2 text-sm text-muted-foreground">
-                            {getPositionName(positionId)}s
-                          </h3>
-                          <div className="grid gap-2">
-                            {positionPlayers.map(({ pick, player, projectedPoints }) => {
-                              if (!player) return null;
-                              
-                              return (
-                                <div
-                                  key={pick.element}
-                                  className="flex items-center justify-between p-3 border rounded-lg hover:border-purple-300 transition-colors"
-                                  data-testid={`projection-${pick.element}`}
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div>
-                                      <div className="font-medium">{player.web_name}</div>
-                                      <div className="text-sm text-muted-foreground">
-                                        {getTeamName(player.team)} • £{(player.now_cost / 10).toFixed(1)}m
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    {projectedPoints !== null ? (
-                                      <>
-                                        <div className="text-xl font-bold text-purple-600">
-                                          {projectedPoints.toFixed(1)}
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">projected pts</div>
-                                      </>
-                                    ) : (
-                                      <div className="text-sm text-muted-foreground">No projection</div>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* Total projected points */}
-                    <div className="pt-4 border-t">
-                      <div className="flex justify-between items-center p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
-                        <span className="font-semibold">Total Projected Points (GW{selectedGameweek})</span>
-                        <span className="text-2xl font-bold text-purple-600">
-                          {teamData?.picks
-                            .reduce((total, pick) => {
-                              const projectedPoints = getPlayerProjectedPoints(pick.element);
-                              return total + (projectedPoints || 0);
-                            }, 0)
-                            .toFixed(1)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <AllPlayersProjectionsTab selectedGameweek={selectedGameweek} />
           </TabsContent>
 
           <TabsContent value="drafts" className="space-y-4">
