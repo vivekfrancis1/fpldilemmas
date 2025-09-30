@@ -889,7 +889,7 @@ export default function TransferPlanner() {
           </TabsList>
 
           <TabsContent value="projected-points" className="space-y-4">
-            <AllPlayersProjectionsTab selectedGameweek={selectedGameweek} />
+            <AllPlayersProjectionsTab selectedGameweek={selectedGameweek as number} />
           </TabsContent>
 
           <TabsContent value="drafts" className="space-y-4">
