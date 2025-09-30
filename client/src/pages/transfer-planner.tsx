@@ -1238,7 +1238,7 @@ export default function TransferPlanner() {
                         }
                       });
                     }
-                    return total.toFixed(1);
+                    return total.toFixed(2);
                   })()}
                 </div>
               </div>
@@ -1276,7 +1276,7 @@ export default function TransferPlanner() {
                       }
                     });
                     
-                    return total.toFixed(1);
+                    return total.toFixed(2);
                   })()}
                 </div>
               </div>
@@ -1592,7 +1592,7 @@ export default function TransferPlanner() {
                         const multiplier = pick.is_captain ? 2 : 1;
                         return total + (projectedPoints || 0) * multiplier;
                       }, 0)
-                      .toFixed(1)}
+                      .toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -1634,7 +1634,7 @@ export default function TransferPlanner() {
                         const captain = optimizedLineup.starting11.find(p => p.isCaptain);
                         const captainBonus = captain ? captain.projectedPoints : 0;
                         const totalWithCaptain = optimizedLineup.totalProjectedPoints + captainBonus;
-                        return totalWithCaptain.toFixed(1);
+                        return totalWithCaptain.toFixed(2);
                       })()}
                     </div>
                   </div>
