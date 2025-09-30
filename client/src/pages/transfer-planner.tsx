@@ -1131,7 +1131,15 @@ export default function TransferPlanner() {
                   </div>
                   <div className="text-center p-4 bg-white dark:bg-gray-900 rounded-lg border">
                     <div className="text-sm text-muted-foreground">Projected Points</div>
-                    <div className="text-2xl font-bold text-purple-600">{optimizedLineup.totalProjectedPoints.toFixed(1)}</div>
+                    <div className="text-2xl font-bold text-purple-600">
+                      {(() => {
+                        // Find captain and add the captain bonus (captain scores double)
+                        const captain = optimizedLineup.starting11.find(p => p.isCaptain);
+                        const captainBonus = captain ? captain.projectedPoints : 0;
+                        const totalWithCaptain = optimizedLineup.totalProjectedPoints + captainBonus;
+                        return totalWithCaptain.toFixed(1);
+                      })()}
+                    </div>
                   </div>
                 </div>
 
