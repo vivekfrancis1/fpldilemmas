@@ -13867,13 +13867,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🎯 Auto-optimizing team for GW${gameweek} with ${picks.length} players`);
 
       // Fetch bootstrap data for player details
-      const bootstrapResponse = await internalFetch(`${getApiBaseUrl()}/api/bootstrap-static`);
+      const bootstrapResponse = await internalFetch(`/api/bootstrap-static`);
       const bootstrapData = await bootstrapResponse.json();
       const allPlayers = bootstrapData.elements;
 
       // Fetch player total points projections for the gameweek
       const projectionsResponse = await internalFetch(
-        `${getApiBaseUrl()}/api/player-total-points-projections?startGameweek=${gameweek}&endGameweek=${gameweek}`
+        `/api/player-total-points-projections?startGameweek=${gameweek}&endGameweek=${gameweek}`
       );
       const projections = await projectionsResponse.json();
 
