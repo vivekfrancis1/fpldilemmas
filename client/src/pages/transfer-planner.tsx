@@ -231,6 +231,13 @@ export default function TransferPlanner() {
     setOptimizedLineup(null);
   }, [selectedGameweek, plannerMode]);
 
+  // Auto-run optimization when Auto mode is selected
+  useEffect(() => {
+    if (plannerMode === "auto" && selectedGameweek && teamData && !optimizeMutation.isPending) {
+      optimizeMutation.mutate();
+    }
+  }, [plannerMode, selectedGameweek, teamData]);
+
   const handleSearch = () => {
     if (managerId.trim()) {
       const trimmedId = managerId.trim();
@@ -583,16 +590,14 @@ export default function TransferPlanner() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Button 
-              onClick={() => optimizeMutation.mutate()}
-              disabled={optimizeMutation.isPending}
-              className="w-full bg-purple-600 hover:bg-purple-700"
-              data-testid="button-auto-optimize"
-            >
-              {optimizeMutation.isPending ? "Optimizing..." : "Run Auto-Optimization"}
-            </Button>
+            {optimizeMutation.isPending && (
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mb-4"></div>
+                <p className="text-muted-foreground">Optimizing your team...</p>
+              </div>
+            )}
 
-            {optimizedLineup && (
+            {optimizedLineup && !optimizeMutation.isPending && (
               <div className="mt-6 space-y-6">
                 {/* Formation and Points Summary */}
                 <div className="grid grid-cols-2 gap-4">
