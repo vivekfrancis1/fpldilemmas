@@ -801,7 +801,7 @@ export default function TransferPlanner() {
                     onClick={() => setPlannerMode("manual")}
                     data-testid="mode-button-manual"
                   >
-                    Manual
+                    Manual lineup
                   </Button>
                   <Button
                     variant={plannerMode === "auto" ? "default" : "outline"}
@@ -810,7 +810,7 @@ export default function TransferPlanner() {
                     onClick={() => setPlannerMode("auto")}
                     data-testid="mode-button-auto"
                   >
-                    Auto
+                    Auto lineup
                   </Button>
                 </div>
               </div>
