@@ -154,6 +154,20 @@ class GameweekCacheService {
 
       console.log(`📊 Processing ${players.length} players for gameweek ${gameweek}`);
 
+      // Preload all fixtures for this gameweek once for efficient lookup
+      const fixturesResponse = await fetch(`${this.FPL_API_BASE}/fixtures/?event=${gameweek}`);
+      const fixturesList = fixturesResponse.ok ? await fixturesResponse.json() : [];
+      
+      // Index fixtures by fixture ID for O(1) lookup
+      const fixtureMap = new Map();
+      fixturesList.forEach((fixture: any) => {
+        fixtureMap.set(fixture.id, {
+          team_h: fixture.team_h,
+          team_a: fixture.team_a
+        });
+      });
+      console.log(`📍 Preloaded ${fixtureMap.size} fixtures for gameweek ${gameweek}`);
+
       // Process players in batches to avoid overwhelming the API
       const batchSize = 50;
       let processedCount = 0;
@@ -174,32 +188,14 @@ class GameweekCacheService {
             const gameweekData = playerData.history.find((h: any) => h.round === gameweek);
 
             if (gameweekData) {
-              // FPL API doesn't have was_home in history - derive it from opponent_team
-              // If opponent_team exists, we need to check which team was home
-              // In FPL fixtures: team_h is home, team_a is away
-              // So if player.team is NOT opponent_team, we need to look at fixture to see who was home
-              // Simplified: check if opponent_team value indicates home/away
-              // The gameweekData actually contains fixture ID, let's use that to determine was_home
               const opponentTeam = gameweekData.opponent_team || null;
+              const fixtureId = gameweekData.fixture;
               
-              //  Determine was_home: In FPL, if your team played, you can check the fixture
-              // The logic: get the fixture for this gameweek and check if player.team == team_h
+              // Determine was_home using the preloaded fixture map
               let wasHome = false;
-              if (opponentTeam) {
-                // Fetch the fixture to determine home/away
-                // For now, use a simple heuristic: alternate home/away (this is temporary)
-                // Better: fetch actual fixture data
-                const fixtureResponse = await fetch(`${this.FPL_API_BASE}/fixtures/?event=${gameweek}`);
-                if (fixtureResponse.ok) {
-                  const fixtures = await fixtureResponse.json();
-                  const playerFixture = fixtures.find((f: any) => 
-                    (f.team_h === player.team && f.team_a === opponentTeam) || 
-                    (f.team_a === player.team && f.team_h === opponentTeam)
-                  );
-                  if (playerFixture) {
-                    wasHome = playerFixture.team_h === player.team;
-                  }
-                }
+              if (fixtureId && fixtureMap.has(fixtureId)) {
+                const fixture = fixtureMap.get(fixtureId);
+                wasHome = fixture.team_h === player.team;
               }
               
               // Insert player gameweek data
