@@ -17,6 +17,7 @@ interface TeamPick {
   is_captain: boolean;
   is_vice_captain: boolean;
   selling_price: number;
+  purchase_price?: number;
   is_transferred_out?: boolean;
 }
 
@@ -715,16 +716,27 @@ export default function TransferPlanner() {
     return points !== undefined ? points : null;
   };
 
-  // Get selling price with fallback to current price
+  // Get selling price using FPL formula: Purchase Price + floor((Current - Purchase) / 0.2) * 0.1
   const getSellingPrice = (pick: TeamPick): number => {
     const player = getPlayerById(pick.element);
     if (!player) return 0;
     
-    // If selling_price exists and is valid, use it; otherwise fallback to now_cost
+    // If we have purchase_price, calculate using FPL rules
+    // For every 0.2m rise (2 in API units), you get 0.1m profit (1 in API units)
+    if (pick.purchase_price !== undefined && !isNaN(pick.purchase_price)) {
+      const purchasePrice = pick.purchase_price;
+      const currentPrice = player.now_cost;
+      const profitPerRise = Math.floor((currentPrice - purchasePrice) / 2);
+      const sellingPrice = purchasePrice + profitPerRise;
+      return sellingPrice / 10;
+    }
+    
+    // Fallback to selling_price from API if purchase_price not available
     if (pick.selling_price && !isNaN(pick.selling_price)) {
       return pick.selling_price / 10;
     }
     
+    // Final fallback to current price
     return player.now_cost / 10;
   };
 
@@ -955,6 +967,7 @@ export default function TransferPlanner() {
           is_captain: false,
           is_vice_captain: false,
           selling_price: player.now_cost,
+          purchase_price: player.now_cost, // Set purchase price to current price for new transfers
           is_transferred_out: false,
         };
       }
