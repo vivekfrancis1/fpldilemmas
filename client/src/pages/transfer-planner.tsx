@@ -990,7 +990,7 @@ export default function TransferPlanner() {
                           <div className="flex-1">
                             <div className="font-medium">{player.web_name}</div>
                             <div className="text-sm text-muted-foreground">
-                              {getTeamName(player.team)} • {getPositionName(player.element_type)}
+                              {getTeamName(player.team)} • {getPositionName(player.element_type)} • Sell: £{(pick.selling_price / 10).toFixed(1)}m
                             </div>
                           </div>
                         </div>
@@ -1088,7 +1088,7 @@ export default function TransferPlanner() {
                           <div className="flex-1">
                             <div className="font-medium">{player.web_name}</div>
                             <div className="text-sm text-muted-foreground">
-                              {getTeamName(player.team)} • {getPositionName(player.element_type)}
+                              {getTeamName(player.team)} • {getPositionName(player.element_type)} • Sell: £{(pick.selling_price / 10).toFixed(1)}m
                             </div>
                           </div>
                         </div>
@@ -1227,7 +1227,7 @@ export default function TransferPlanner() {
                             <div className="flex-1">
                               <div className="font-medium">{player.web_name}</div>
                               <div className="text-sm text-muted-foreground">
-                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)}
+                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: £${(pick.selling_price / 10).toFixed(1)}m`}
                               </div>
                             </div>
                           </div>
@@ -1277,7 +1277,7 @@ export default function TransferPlanner() {
                             <div className="flex-1">
                               <div className="font-medium">{player.web_name}</div>
                               <div className="text-sm text-muted-foreground">
-                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)}
+                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: £${(pick.selling_price / 10).toFixed(1)}m`}
                               </div>
                             </div>
                           </div>
