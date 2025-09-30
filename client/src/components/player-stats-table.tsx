@@ -570,7 +570,7 @@ export default function PlayerStatsTable({
                   <SortableHeader field="clearances_blocks_interceptions" label="CBI" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode === 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="starts" label="Starts" />
                 </th>
@@ -834,7 +834,7 @@ export default function PlayerStatsTable({
                   {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-purple-700">{calculateStat(player, player.clearances_blocks_interceptions || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode === 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{player.starts || 0}</td>
                   )}
                   {/* All other data points */}
