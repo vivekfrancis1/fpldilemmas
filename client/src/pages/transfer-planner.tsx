@@ -16,6 +16,7 @@ interface TeamPick {
   multiplier: number;
   is_captain: boolean;
   is_vice_captain: boolean;
+  selling_price: number;
 }
 
 interface TeamData {
@@ -414,6 +415,15 @@ interface TransferOut {
   sellingPrice: number;
 }
 
+interface CompletedTransfer {
+  outPlayerId: number;
+  outPlayerName: string;
+  sellingPrice: number;
+  inPlayerId: number;
+  inPlayerName: string;
+  buyingPrice: number;
+}
+
 export default function TransferPlanner() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
@@ -422,6 +432,7 @@ export default function TransferPlanner() {
   const [optimizedLineup, setOptimizedLineup] = useState<OptimizedLineup | null>(null);
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
   const [transferredOutPlayers, setTransferredOutPlayers] = useState<TransferOut[]>([]);
+  const [completedTransfers, setCompletedTransfers] = useState<CompletedTransfer[]>([]);
   const { toast } = useToast();
 
   // Cache manager ID functionality
@@ -464,6 +475,9 @@ export default function TransferPlanner() {
   useEffect(() => {
     if (teamData?.picks) {
       setManualLineup([...teamData.picks]);
+      // Reset transfers when loading new team data
+      setTransferredOutPlayers([]);
+      setCompletedTransfers([]);
     }
   }, [teamData]);
 
@@ -568,9 +582,15 @@ export default function TransferPlanner() {
     }
   }, [bootstrapData]);
 
-  // Clear optimized lineup when gameweek or mode changes
+  // Clear optimized lineup and transfers when gameweek or mode changes
   useEffect(() => {
     setOptimizedLineup(null);
+    setTransferredOutPlayers([]);
+    setCompletedTransfers([]);
+    // Reset manual lineup to original team data when gameweek changes
+    if (teamData?.picks) {
+      setManualLineup([...teamData.picks]);
+    }
   }, [selectedGameweek, plannerMode]);
 
   // Auto-run optimization when Auto mode is selected
@@ -617,6 +637,22 @@ export default function TransferPlanner() {
     // Get the points for the selected gameweek - API returns gameweekProjections with gameweek number as key
     const points = projection.gameweekProjections?.[selectedGameweek];
     return points !== undefined ? points : null;
+  };
+
+  // Calculate current bank based on initial bank and completed transfers
+  const calculateCurrentBank = (): number => {
+    if (!teamData?.transfers?.bank) return 0;
+    
+    const initialBank = teamData.transfers.bank / 10; // Convert from API format
+    
+    // Calculate net transfer cost: sum of buying prices - sum of selling prices
+    const totalBuyingPrice = completedTransfers.reduce((sum, t) => sum + t.buyingPrice, 0);
+    const totalSellingPrice = completedTransfers.reduce((sum, t) => sum + t.sellingPrice, 0);
+    
+    // Current bank = Initial bank + Total sold - Total bought
+    const currentBank = initialBank + totalSellingPrice - totalBuyingPrice;
+    
+    return currentBank;
   };
 
   // Swap a starting 11 player with a bench player
@@ -687,7 +723,7 @@ export default function TransferPlanner() {
       playerName: player.web_name,
       position: pick.position,
       elementType: player.element_type,
-      sellingPrice: player.now_cost / 10, // Convert from API format to actual price
+      sellingPrice: pick.selling_price / 10, // Use the actual selling price from picks data
     };
 
     setTransferredOutPlayers(prev => [...prev, transferOut]);
@@ -697,7 +733,7 @@ export default function TransferPlanner() {
 
     toast({
       title: "Player Transferred Out",
-      description: `${player.web_name} has been transferred out. Select a replacement from the Projected Points tab.`
+      description: `${player.web_name} has been transferred out (£${(pick.selling_price / 10).toFixed(1)}m). Select a replacement from the Projected Points tab.`
     });
   };
 
@@ -721,14 +757,29 @@ export default function TransferPlanner() {
     }
 
     const transferredOut = transferredOutPlayers[transferOutIndex];
+    const buyingPrice = player.now_cost / 10;
+
+    // Record the completed transfer
+    const completedTransfer: CompletedTransfer = {
+      outPlayerId: transferredOut.playerId,
+      outPlayerName: transferredOut.playerName,
+      sellingPrice: transferredOut.sellingPrice,
+      inPlayerId: playerId,
+      inPlayerName: player.web_name,
+      buyingPrice: buyingPrice,
+    };
+
+    setCompletedTransfers(prev => [...prev, completedTransfer]);
 
     // Create new pick with the same position as the transferred out player
+    // Set selling_price to now_cost initially (will be the selling price if transferred out again)
     const newPick: TeamPick = {
       element: playerId,
       position: transferredOut.position,
       multiplier: 1,
       is_captain: false,
       is_vice_captain: false,
+      selling_price: player.now_cost,
     };
 
     // Add to lineup and remove from transferred out list
@@ -737,7 +788,7 @@ export default function TransferPlanner() {
 
     toast({
       title: "Player Transferred In",
-      description: `${player.web_name} has been added to your team`
+      description: `${player.web_name} has been added to your team (£${buyingPrice.toFixed(1)}m)`
     });
   };
 
@@ -923,7 +974,7 @@ export default function TransferPlanner() {
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1">Cash in Bank</div>
                 <div className="text-2xl font-bold text-yellow-600">
-                  £{teamData?.transfers?.bank ? (teamData.transfers.bank / 10).toFixed(1) : '0.0'}m
+                  £{calculateCurrentBank().toFixed(1)}m
                 </div>
               </div>
 
@@ -1326,7 +1377,7 @@ export default function TransferPlanner() {
               selectedGameweek={selectedGameweek as number} 
               transferredOutPlayers={transferredOutPlayers}
               onTransferIn={handleTransferIn}
-              currentBank={teamData?.transfers?.bank ? teamData.transfers.bank / 10 : 0}
+              currentBank={calculateCurrentBank()}
             />
           </TabsContent>
 

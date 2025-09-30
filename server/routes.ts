@@ -1868,13 +1868,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("DEBUG: Entry last_deadline_value:", entryData.last_deadline_value);
         console.log("DEBUG: Entry last_deadline_total_transfers:", entryData.last_deadline_total_transfers);
         
-        // Override with accurate data from entry endpoint
-        data.transfers = {
-          ...data.transfers,
-          bank: entryData.last_deadline_bank || data.transfers.bank,
-          // If limit is 0 in picks, use value from history endpoint
-          limit: data.transfers.limit === 0 ? 1 : data.transfers.limit
-        };
+        // Initialize transfers object if it doesn't exist
+        if (!data.transfers) {
+          data.transfers = {
+            cost: 0,
+            status: "complete",
+            limit: 1,
+            made: 0,
+            bank: entryData.last_deadline_bank || 0,
+            value: entryData.last_deadline_value || 0
+          };
+        } else {
+          // Override with accurate data from entry endpoint
+          data.transfers = {
+            ...data.transfers,
+            bank: entryData.last_deadline_bank || data.transfers.bank,
+            // If limit is 0 in picks, use value from history endpoint
+            limit: data.transfers.limit === 0 ? 1 : data.transfers.limit
+          };
+        }
       }
       
       console.log("DEBUG: Final transfers object:", JSON.stringify(data.transfers));
