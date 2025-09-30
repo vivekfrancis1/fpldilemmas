@@ -503,7 +503,7 @@ export default function PlayerStatsTable({
                   <SortableHeader field="points_per_game" label="Pts/Match" />
                 </th>
               )}
-              {!isHistoricalSeason && displayMode !== 'totals' && (
+              {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="form" label="Form" />
                 </th>
@@ -780,7 +780,7 @@ export default function PlayerStatsTable({
                   {displayMode !== 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, parseFloat(player.points_per_game || player.form || 0)).toFixed(1)}</td>
                   )}
-                  {!isHistoricalSeason && displayMode !== 'totals' && (
+                  {!isHistoricalSeason && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, parseFloat(player.form || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && (
