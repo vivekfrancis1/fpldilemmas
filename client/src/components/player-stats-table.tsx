@@ -471,7 +471,7 @@ export default function PlayerStatsTable({
                 <SortableHeader field="games_played" label="Matches" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="total_points" label="Total Pts" />
+                <SortableHeader field="total_points" label="Pts" />
               </th>
               {/* Key Performance Stats - immediately after points */}
               <th className="px-2 py-3 text-center min-w-[80px]">
@@ -486,12 +486,12 @@ export default function PlayerStatsTable({
               {/* Defensive Contribution Fields - positioned after Clean Sheets */}
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[90px]">
-                  <SortableHeader field="defensive_contribution" label="Def Contrib" />
+                  <SortableHeader field="defensive_contribution" label="Def Con" />
                 </th>
               )}
               {!isHistoricalSeason && (
                 <th className="px-2 py-3 text-center min-w-[90px]">
-                  <SortableHeader field="defensive_contribution_points" label="CBIT Pts" />
+                  <SortableHeader field="defensive_contribution_points" label="Def Con Pts" />
                 </th>
               )}
               {/* Key Performance Metrics - positioned after Defensive Contributions */}
