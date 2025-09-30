@@ -639,6 +639,19 @@ export default function TransferPlanner() {
     return points !== undefined ? points : null;
   };
 
+  // Get selling price with fallback to current price
+  const getSellingPrice = (pick: TeamPick): number => {
+    const player = getPlayerById(pick.element);
+    if (!player) return 0;
+    
+    // If selling_price exists and is valid, use it; otherwise fallback to now_cost
+    if (pick.selling_price && !isNaN(pick.selling_price)) {
+      return pick.selling_price / 10;
+    }
+    
+    return player.now_cost / 10;
+  };
+
   // Calculate current bank based on initial bank and completed transfers
   const calculateCurrentBank = (): number => {
     if (!teamData?.transfers?.bank) return 0;
@@ -718,12 +731,14 @@ export default function TransferPlanner() {
     const player = getPlayerById(pick.element);
     if (!player) return;
 
+    const sellingPrice = getSellingPrice(pick);
+
     const transferOut: TransferOut = {
       playerId: player.id,
       playerName: player.web_name,
       position: pick.position,
       elementType: player.element_type,
-      sellingPrice: pick.selling_price / 10, // Use the actual selling price from picks data
+      sellingPrice: sellingPrice,
     };
 
     setTransferredOutPlayers(prev => [...prev, transferOut]);
@@ -733,7 +748,7 @@ export default function TransferPlanner() {
 
     toast({
       title: "Player Transferred Out",
-      description: `${player.web_name} has been transferred out (£${(pick.selling_price / 10).toFixed(1)}m). Select a replacement from the Projected Points tab.`
+      description: `${player.web_name} has been transferred out (£${sellingPrice.toFixed(1)}m). Select a replacement from the Projected Points tab.`
     });
   };
 
@@ -1041,7 +1056,7 @@ export default function TransferPlanner() {
                           <div className="flex-1">
                             <div className="font-medium">{player.web_name}</div>
                             <div className="text-sm text-muted-foreground">
-                              {getTeamName(player.team)} • {getPositionName(player.element_type)} • Sell: £{(pick.selling_price / 10).toFixed(1)}m
+                              {getTeamName(player.team)} • {getPositionName(player.element_type)} • Sell: £{getSellingPrice(pick).toFixed(1)}m
                             </div>
                           </div>
                         </div>
@@ -1139,7 +1154,7 @@ export default function TransferPlanner() {
                           <div className="flex-1">
                             <div className="font-medium">{player.web_name}</div>
                             <div className="text-sm text-muted-foreground">
-                              {getTeamName(player.team)} • {getPositionName(player.element_type)} • Sell: £{(pick.selling_price / 10).toFixed(1)}m
+                              {getTeamName(player.team)} • {getPositionName(player.element_type)} • Sell: £{getSellingPrice(pick).toFixed(1)}m
                             </div>
                           </div>
                         </div>
@@ -1278,7 +1293,7 @@ export default function TransferPlanner() {
                             <div className="flex-1">
                               <div className="font-medium">{player.web_name}</div>
                               <div className="text-sm text-muted-foreground">
-                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: £${(pick.selling_price / 10).toFixed(1)}m`}
+                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: £${getSellingPrice(pick).toFixed(1)}m`}
                               </div>
                             </div>
                           </div>
@@ -1328,7 +1343,7 @@ export default function TransferPlanner() {
                             <div className="flex-1">
                               <div className="font-medium">{player.web_name}</div>
                               <div className="text-sm text-muted-foreground">
-                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: £${(pick.selling_price / 10).toFixed(1)}m`}
+                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: £${getSellingPrice(pick).toFixed(1)}m`}
                               </div>
                             </div>
                           </div>
