@@ -6,19 +6,14 @@ FPL Dilemmas is an analytics application for Fantasy Premier League (FPL) manage
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 **Development Protocol**: Always ask permission before making any changes to logic, calculations, or functionality. No unauthorized modifications are permitted.
-Site tagline: Previously used "Analytical tools to beat the deadline blues" - removed from all tool headers per user request. Now uses "Advanced FPL Analytics Platform" in sidebar and home page.
+Site tagline: Now uses "Advanced FPL Analytics Platform" in sidebar and home page.
 Navigation priority: Goals and Clean Sheets as default landing page (home route '/'), with side navigation for all tools.
 Manager ID caching: All FPL manager tools (My Live Rank, My Team, My Leagues) now automatically save and pre-load the last searched Manager ID using localStorage for seamless cross-tool experience.
-Projection Tools Limit: All projection tools (Player Projections, Match Projections, Team Goal/CS Projections, Goal Share, Assist Share) now limited to next 6 gameweeks only for focused analysis with updated dropdowns and defaults. Updated to show only future gameweeks excluding current/finished gameweeks for better forward-looking analysis. Match Projections now dynamically adapts to exclude started gameweeks. Goal Share and Assist Share successfully extended to display data for all 6 gameweeks with proper API integration.
+Projection Tools Limit: All projection tools (Player Projections, Match Projections, Team Goal/CS Projections, Goal Share, Assist Share) now limited to next 6 gameweeks only for focused analysis. Updated to show only future gameweeks excluding current/finished gameweeks.
 Most popular tools: Player Statistics, My Live Rank, and Fixture Analyzer.
-Fixture Analyzer display: Shows 6 gameweeks by default with user customization up to GW38 for comprehensive fixture analysis.
-FPL Content Creators Admin: Streamlined admin interface with only essential fields: Name, Manager ID, Description, Twitter Handle, and YouTube URL. Removed Handle, Platform, and Website fields per user request. Both Twitter and YouTube fields are optional and can be left blank. Database schema updated accordingly with proper column removal. All content creators now have complete Twitter handles and YouTube URLs populated with authentic social media data. Interface displays full URLs as clickable links and Twitter handles as styled text. Complete CRUD functionality implemented including delete feature with confirmation dialog and red-styled delete button next to edit button. Admin URL updated from /admin to /admin-content-creators for better specificity.
-Navigation Cleanup: Hidden Player Yellow Cards, Red Cards, Goals Conceded, and Bonus Points tools from sidebar navigation (Aug 31, 2025) since these components are now integrated into the comprehensive Player Total Points tool. Tools remain accessible via direct URLs but are not prominently displayed in navigation menu.
-Player Total Points Critical Fixes (Sept 6, 2025): Resolved major database field access issues with Drizzle ORM by correcting camelCase field naming (gameweekData vs gameweek_data). Fixed cached endpoint gameweek key format mismatch where frontend expected "gw4" format but API returned "4" format. Implemented range-specific caching system using Map structure to properly cache different gameweek ranges separately (GW4-6 vs GW4-9). All 10 FPL scoring components now display correctly in tooltip breakdowns with proper values from database-backed cache tables including saves, goals conceded, yellow cards, red cards, and bonus points data for all 736 players.
-
-Player Projection Pipeline Field Contract Fix (Sept 12, 2025): CRITICAL FIX - Resolved persistent undefined player names in projection APIs by fixing field name contract mismatch in projection pipeline. Root cause: Goal-share data used `id`/`name` fields while player projection code expected `playerId`/`playerName` fields. The intermediate data transformations were dropping identity fields, causing fallback logic to fail. **Solution implemented**: Added consistent identifier extraction with fallbacks (`const playerId = player.id || player.playerId; const playerName = player.name || player.playerName;`) in projection loop and used these variables consistently throughout. **Prevention**: All future projection code must use explicit field mapping with fallbacks to handle varying data source schemas. This ensures robust field access regardless of upstream data structure changes.
-
-CBIT Points Implementation (Sept 16, 2025): CRITICAL FIX - Completely corrected CBIT (Clearances, Blocks, Interceptions, Tackles) points calculation methodology in Player Statistics table. **Root cause**: Previous implementation incorrectly used season total thresholds instead of per-game calculations as per official FPL rules. **Solution implemented**: Built comprehensive backend system fetching per-game defensive stats from FPL live event endpoints, calculating binary CBIT points per game (defenders: 10+ CBIT = 2pts, midfielders/forwards: 12+ CBIRT = 2pts), and summing for accurate season totals. Added database-backed caching system with 1,480+ records, React Query frontend integration with proper error handling, and API response optimization. CBIT Pts column now displays authentic season totals calculated from individual game awards rather than incorrect threshold-based logic.
+Fixture Analyzer display: Shows 6 gameweeks by default with user customization up to GW38.
+FPL Content Creators Admin: Streamlined admin interface with only essential fields: Name, Manager ID, Description, Twitter Handle, and YouTube URL. Both Twitter and YouTube fields are optional and can be left blank. Complete CRUD functionality implemented including delete feature. Admin URL updated to /admin-content-creators.
+Navigation Cleanup: Hidden Player Yellow Cards, Red Cards, Goals Conceded, and Bonus Points tools from sidebar navigation. These components are now integrated into the comprehensive Player Total Points tool.
 
 ## System Architecture
 
@@ -30,14 +25,13 @@ CBIT Points Implementation (Sept 16, 2025): CRITICAL FIX - Completely corrected 
 - **Styling**: Tailwind CSS with a custom FPL-themed design system.
 - **Navigation**: Side navigation bar.
 - **Component Structure**: Modular components with reusable UI elements.
-- **UI/UX Decisions**: Enhanced UI design for My Team section; color-coded defensive metrics in Player Statistics; streamlined interfaces for Transfer Tracker and Open FPL Projections. Complete header standardization across all application pages using unified fpl-page-header system with consistent typography and icon sizing.
-- **Recent Routing Fix**: Added missing `/player-goals-scored` route to App.tsx router configuration (Aug 31, 2025) - maps to PlayerGoalProjections component to resolve 404 errors.
+- **UI/UX Decisions**: Enhanced UI design for My Team section; color-coded defensive metrics in Player Statistics; streamlined interfaces for Transfer Tracker and Open FPL Projections. Standardized header system across all application pages.
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js.
 - **API Design**: RESTful API endpoints prefixed with `/api/`.
 - **Data Fetching**: Proxy server for official FPL API data.
-- **Caching Strategy**: Database-backed projection caching with PostgreSQL for ultra-fast response times (sub-second after initial calculation).
+- **Caching Strategy**: Database-backed projection caching with PostgreSQL for ultra-fast response times.
 - **Performance Optimization**: Dedicated ProjectionService with intelligent caching for faster subsequent requests.
 
 ### Data Storage Solutions
@@ -57,30 +51,30 @@ CBIT Points Implementation (Sept 16, 2025): CRITICAL FIX - Completely corrected 
 - **Player Projections**: AI-powered projection model for minutes, goals, assists, clean sheets, bonus points, and CBIT% for upcoming weeks.
 - **Player Goals Scored Projections**: Individual player goal projections with advanced fixture-level hybrid calculation methodology, including penalty taker adjustments.
 - **Player Assist Projections**: Individual player assist projections with dual-tab interface and hybrid calculation methodology.
-- **Player Total Points Projections**: Comprehensive FPL points projection combining all 10 official FPL scoring components (goals, assists, clean sheets, minutes, defensive contributions, saves, goals conceded, yellow cards, red cards, bonus points) into gameweek table format with advanced pure projection methodology, authentic FPL scoring rules, and optimized cached endpoints with range-specific caching for ultra-fast performance. Features detailed gameweek-by-gameweek breakdowns in interactive tooltips showing all scoring components, database-backed FPL scoring cache for saves/goals conceded/cards/bonus points, and proper JSON parsing for Drizzle ORM field mapping.
+- **Player Total Points Projections**: Comprehensive FPL points projection combining all 10 official FPL scoring components into gameweek table format with advanced pure projection methodology, authentic FPL scoring rules, and optimized cached endpoints.
 - **Match Projections**: Data aggregator displaying projected goals and clean sheet odds for each team by gameweek.
 - **Team Goal/Clean Sheet Projections**: Advanced team-level forecasting using 8-phase spread betting market analysis and statistical modeling.
 - **Goal/Assist Share**: Dedicated tools showing team expected goals/assists breakdown by player percentage share, extended to 6 gameweeks with historical data and proper sorting.
 - **Captain Selector**: Enhanced with historical captaincy performance data, 6-factor scoring algorithm, and ownership analysis.
 - **Transfer Tracker**: Authentic transfer data analysis using real FPL API data.
 - **Open FPL Projections**: Advanced machine learning projection tool with position-specific ensemble models, multi-horizon forecasting, and hourly updates.
-- **Price Tracker**: Complete FPL API-based system tracking actual price changes with intelligent initialization and automated splitting for granularity.
-- **Results Projections**: Match prediction tool displaying predicted scores, calculated win probabilities, expected goals, and clean sheet odds for future gameweeks only (GW4+). Win probabilities are calculated using a proprietary algorithm based on predicted score differences and expected goals variance, not sourced from betting markets.
+- **Price Tracker**: Complete FPL API-based system tracking actual price changes.
+- **Results Projections**: Match prediction tool displaying predicted scores, calculated win probabilities, expected goals, and clean sheet odds for future gameweeks only.
 - **Historical Data**: Year selection functionality for player statistics from 2016/17 season onwards.
-- **Defensive Contribution Analytics**: Integration of new FPL API defensive data points and comprehensive projection model using attacking tier system for fixture-aware variance calculations. Position-specific tick mark thresholds implemented (defenders: 10, forwards/midfielders: 12) for meaningful defensive contribution display.
-- **Historical Player Stats Database**: Comprehensive PostgreSQL table with complete historical data for all players across 9 seasons (2016/17-2024/25), including all stats and per-90 statistics.
+- **Defensive Contribution Analytics**: Integration of new FPL API defensive data points and comprehensive projection model using attacking tier system for fixture-aware variance calculations.
+- **Historical Player Stats Database**: Comprehensive PostgreSQL table with complete historical data for all players across 9 seasons (2016/17-2024/25).
 - **Goal Range Compression**: Implemented realistic Premier League goal distributions by compressing team season totals.
 - **Clean Sheet Formula**: Updated to exponential decay calculation.
 - **Enhanced Context Multipliers**: Integrated weather, referee influence, post-international break, and travel distance fatigue multipliers.
-- **Comprehensive FPL Scoring System**: Implemented probability-based calculations for all official FPL scoring components (saves, goals conceded, cards, bonus points) with hybrid methodology using actual data for completed gameweeks, projections for future gameweeks, and hybrid formulas for current gameweeks.
-- **Position-Based Share Caps**: Implemented realistic caps for goal and assist share calculations to prevent unrealistic individual projections.
+- **Comprehensive FPL Scoring System**: Implemented probability-based calculations for all official FPL scoring components with hybrid methodology.
+- **Position-Based Share Caps**: Implemented realistic caps for goal and assist share calculations.
 - **Perfect Mathematical Balance**: Enhanced normalization system with redistribution logic ensures team and player totals maintain perfect balance.
+- **Transfer Planner (In Development)**: Foundational infrastructure implemented including database schema, CRUD API endpoints, and frontend page with Manager ID caching, gameweek selector (next 6 GWs), and mode selection (Auto/Manual).
 
 ### Type Safety & Validation
 - **Schema Validation**: Zod schemas for API responses.
 - **TypeScript Configuration**: Strict TypeScript with path mapping.
 - **Shared Types**: Common types and schemas shared between client and server.
-- **Data Synchronization**: Player Goals Scored Projections tool updated to use hybrid calculation methodology with penalty adjustments, ensuring consistency with Goal Share tool.
 
 ### Development Workflow
 - **Build System**: Vite for frontend, esbuild for server.
