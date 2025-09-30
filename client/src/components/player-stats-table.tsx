@@ -432,7 +432,7 @@ export default function PlayerStatsTable({
                 <SortableHeader field="now_cost" label="Price" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="games_played" label="Games" />
+                <SortableHeader field="games_played" label="Matches" />
               </th>
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="total_points" label="Total Pts" />
