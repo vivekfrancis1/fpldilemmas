@@ -1348,21 +1348,21 @@ export default function TransferPlanner() {
                         data-testid={`starting-player-${pick.element}`}
                       >
                         <div className="flex items-center gap-3 flex-1">
-                          {pick.is_captain && (
-                            <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
-                          )}
-                          {pick.is_vice_captain && (
-                            <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
-                          )}
                           <div className="flex-1">
-                            <div className="font-medium">{player.web_name}</div>
+                            <div className="font-medium flex items-center gap-2">
+                              {player.web_name}
+                              {pick.is_captain && (
+                                <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
+                              )}
+                              {pick.is_vice_captain && (
+                                <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
+                              )}
+                            </div>
                             <div className="text-sm text-muted-foreground">
                               {getTeamName(player.team)} • {getPositionName(player.element_type)}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              Buy: £{pick.purchase_price ? (pick.purchase_price / 10).toFixed(1) : 'N/A'}m • 
-                              Now: £{(player.now_cost / 10).toFixed(1)}m • 
-                              Sell: £{getSellingPrice(pick).toFixed(1)}m
+                              Price: £{(player.now_cost / 10).toFixed(1)}m
                             </div>
                           </div>
                         </div>
@@ -1501,9 +1501,7 @@ export default function TransferPlanner() {
                               {getTeamName(player.team)} • {getPositionName(player.element_type)}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
-                              Buy: £{pick.purchase_price ? (pick.purchase_price / 10).toFixed(1) : 'N/A'}m • 
-                              Now: £{(player.now_cost / 10).toFixed(1)}m • 
-                              Sell: £{getSellingPrice(pick).toFixed(1)}m
+                              Price: £{(player.now_cost / 10).toFixed(1)}m
                             </div>
                           </div>
                         </div>
@@ -1633,14 +1631,16 @@ export default function TransferPlanner() {
                           data-testid={`optimized-player-${player.element}`}
                         >
                           <div className="flex items-center gap-3 flex-1">
-                            {player.isCaptain && (
-                              <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
-                            )}
-                            {player.isViceCaptain && (
-                              <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
-                            )}
                             <div className="flex-1">
-                              <div className="font-medium">{player.web_name}</div>
+                              <div className="font-medium flex items-center gap-2">
+                                {player.web_name}
+                                {player.isCaptain && (
+                                  <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
+                                )}
+                                {player.isViceCaptain && (
+                                  <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
+                                )}
+                              </div>
                               <div className="text-sm text-muted-foreground">
                                 {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: £${getSellingPrice(pick).toFixed(1)}m`}
                               </div>
