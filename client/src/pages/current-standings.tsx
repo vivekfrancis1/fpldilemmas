@@ -604,41 +604,41 @@ export default function CurrentStandings() {
                       </td>
                       
                       {/* Match Record */}
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-900">{summaryStats.totals.played}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-green-600">{summaryStats.totals.wins}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-600">{summaryStats.totals.draws}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-red-600">{summaryStats.totals.losses}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-900">{summaryStats.totals.played.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-green-600">{summaryStats.totals.wins.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-600">{summaryStats.totals.draws.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-red-600">{summaryStats.totals.losses.toFixed(2)}</td>
                       
                       {/* Goals */}
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-900 border-l">{summaryStats.totals.goalsFor}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-900">{summaryStats.totals.goalsAgainst}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-900 border-l">{summaryStats.totals.goalsFor.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-gray-900">{summaryStats.totals.goalsAgainst.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-gray-900">
                         <span className={summaryStats.totals.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {summaryStats.totals.goalDifference >= 0 ? '+' : ''}{summaryStats.totals.goalDifference}
+                          {summaryStats.totals.goalDifference >= 0 ? '+' : ''}{summaryStats.totals.goalDifference.toFixed(2)}
                         </span>
                       </td>
                       
                       {/* Points */}
-                      <td className="px-3 py-4 text-center text-sm font-bold text-gray-900 border-l bg-blue-100">{summaryStats.totals.points}</td>
+                      <td className="px-3 py-4 text-center text-sm font-bold text-gray-900 border-l bg-blue-100">{summaryStats.totals.points.toFixed(2)}</td>
                       
                       {/* Expected Goals */}
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-600">{summaryStats.totals.expectedGoalsFor.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-500">{summaryStats.totals.expectedGoalsAgainst.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-600">{summaryStats.totals.expectedGoalsFor.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-500">{summaryStats.totals.expectedGoalsAgainst.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-purple-600">{summaryStats.totals.adjustedGoalRate.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-orange-600">{summaryStats.totals.adjustedGoalsAgainstRate.toFixed(2)}</td>
                       
                       {/* Defensive Stats */}
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-teal-600">{summaryStats.totals.tackles}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-teal-500">{summaryStats.totals.defensiveActions}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-teal-600">{summaryStats.totals.tackles.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-teal-500">{summaryStats.totals.defensiveActions.toFixed(2)}</td>
                       
                       {/* Enhanced Statistics */}
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-blue-600 border-l">{summaryStats.totals.cleanSheets}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-yellow-600">{summaryStats.totals.yellowCards}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-red-600">{summaryStats.totals.redCards}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-purple-600 border-l">{summaryStats.totals.saves}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-green-600">{summaryStats.totals.penaltiesSaved}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-orange-600 border-l">{summaryStats.totals.ownGoals}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-red-500">{summaryStats.totals.penaltiesMissed}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-blue-600 border-l">{summaryStats.totals.cleanSheets.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-yellow-600">{summaryStats.totals.yellowCards.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-red-600">{summaryStats.totals.redCards.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-purple-600 border-l">{summaryStats.totals.saves.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-green-600">{summaryStats.totals.penaltiesSaved.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-orange-600 border-l">{summaryStats.totals.ownGoals.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-red-500">{summaryStats.totals.penaltiesMissed.toFixed(2)}</td>
                     </tr>
                   )}
                   
