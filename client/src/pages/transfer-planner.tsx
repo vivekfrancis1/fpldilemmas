@@ -94,13 +94,6 @@ export default function TransferPlanner() {
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
   const { toast } = useToast();
 
-  // Initialize manual lineup when team data loads
-  useEffect(() => {
-    if (teamData?.picks) {
-      setManualLineup([...teamData.picks]);
-    }
-  }, [teamData]);
-
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
     try {
@@ -136,6 +129,13 @@ export default function TransferPlanner() {
     queryKey: ["/api/manager", searchedId, "team"],
     enabled: !!searchedId,
   });
+
+  // Initialize manual lineup when team data loads
+  useEffect(() => {
+    if (teamData?.picks) {
+      setManualLineup([...teamData.picks]);
+    }
+  }, [teamData]);
 
   // Fetch player projections for the selected gameweek
   const { data: playerProjections } = useQuery<any[]>({
