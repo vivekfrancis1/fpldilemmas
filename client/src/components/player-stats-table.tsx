@@ -74,6 +74,7 @@ export default function PlayerStatsTable({
 }: PlayerStatsTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [displayMode, setDisplayMode] = useState<'totals' | 'per_match' | 'per_start' | 'per_90'>('totals');
+  const [venueFilter, setVenueFilter] = useState<'all' | 'home' | 'away'>('all');
   
   // Check if we're viewing historical data - current season shows defensive contribution fields
   const isHistoricalSeason = season && season !== "2025/26" && season !== "current";
@@ -428,7 +429,7 @@ export default function PlayerStatsTable({
           <h3 className="fpl-card-title" data-testid="text-table-title">
             Player Statistics
           </h3>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center flex-wrap gap-2">
             <Select value={displayMode} onValueChange={(value: any) => setDisplayMode(value)}>
               <SelectTrigger className="w-[180px] h-9" data-testid="select-display-mode">
                 <SelectValue placeholder="Display mode" />
@@ -438,6 +439,16 @@ export default function PlayerStatsTable({
                 <SelectItem value="per_match">Average per match</SelectItem>
                 <SelectItem value="per_start">Average per start</SelectItem>
                 <SelectItem value="per_90">Average per 90 mins</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={venueFilter} onValueChange={(value: any) => setVenueFilter(value)}>
+              <SelectTrigger className="w-[160px] h-9" data-testid="select-venue-filter">
+                <SelectValue placeholder="Venue filter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Matches</SelectItem>
+                <SelectItem value="home">Home Matches only</SelectItem>
+                <SelectItem value="away">Away Matches only</SelectItem>
               </SelectContent>
             </Select>
             <span className="text-xs sm:text-sm text-gray-600" data-testid="text-results-count">
