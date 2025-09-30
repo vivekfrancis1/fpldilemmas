@@ -350,6 +350,131 @@ export default function TransferPlanner() {
         </div>
       )}
 
+      {/* Manual Selection Section */}
+      {searchedId && teamData && selectedGameweek && plannerMode === "manual" && (
+        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-600" />
+              Manual Team Selection
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Current Starting 11 */}
+              <div>
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Crown className="h-4 w-4 text-yellow-500" />
+                  Starting 11
+                </h3>
+                <div className="grid gap-2">
+                  {teamData?.picks.slice(0, 11).map((pick, index) => {
+                    const player = getPlayerById(pick.element);
+                    const projectedPoints = getPlayerProjectedPoints(pick.element);
+                    if (!player) return null;
+                    
+                    return (
+                      <div
+                        key={pick.element}
+                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                          pick.is_captain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
+                          pick.is_vice_captain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
+                          'border-gray-200'
+                        }`}
+                        data-testid={`starting-player-${pick.element}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {pick.is_captain && (
+                            <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
+                          )}
+                          {pick.is_vice_captain && (
+                            <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
+                          )}
+                          <div>
+                            <div className="font-medium">{player.web_name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {getTeamName(player.team)} • {getPositionName(player.element_type)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {projectedPoints !== null ? (
+                            <>
+                              <div className="font-bold text-blue-600">{projectedPoints.toFixed(1)} pts</div>
+                              {pick.is_captain && (
+                                <div className="text-xs text-muted-foreground">({(projectedPoints * 2).toFixed(1)} with (C))</div>
+                              )}
+                            </>
+                          ) : (
+                            <div className="text-sm text-muted-foreground">No projection</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Current Bench */}
+              <div>
+                <h3 className="font-semibold mb-3">Bench (Current Order)</h3>
+                <div className="grid gap-2">
+                  {teamData?.picks.slice(11, 15).map((pick, index) => {
+                    const player = getPlayerById(pick.element);
+                    const projectedPoints = getPlayerProjectedPoints(pick.element);
+                    if (!player) return null;
+                    
+                    return (
+                      <div
+                        key={pick.element}
+                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-900"
+                        data-testid={`bench-player-${pick.element}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
+                            {index + 1}
+                          </span>
+                          <div>
+                            <div className="font-medium">{player.web_name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {getTeamName(player.team)} • {getPositionName(player.element_type)}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {projectedPoints !== null ? `${projectedPoints.toFixed(1)} pts` : 'No projection'}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Total Projected Points */}
+              <div className="pt-4 border-t">
+                <div className="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                  <span className="font-semibold">Total Projected Points (GW{selectedGameweek})</span>
+                  <span className="text-2xl font-bold text-blue-600">
+                    {teamData?.picks
+                      .reduce((total, pick) => {
+                        const projectedPoints = getPlayerProjectedPoints(pick.element);
+                        // Only count starting 11 players (positions 1-11)
+                        const playerPosition = teamData.picks.indexOf(pick);
+                        if (playerPosition < 11) {
+                          const multiplier = pick.is_captain ? 2 : 1;
+                          return total + (projectedPoints || 0) * multiplier;
+                        }
+                        return total;
+                      }, 0)
+                      .toFixed(1)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Auto-Optimization Section */}
       {searchedId && teamData && selectedGameweek && plannerMode === "auto" && (
         <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
