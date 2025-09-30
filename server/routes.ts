@@ -6613,13 +6613,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireReadiness(['bootstrap-data', 'current-standings'], 'current-standings'),
     async (req, res) => {
     try {
-      console.log(`DEBUG: Enhanced Current Standings API called - calculating detailed table from completed matches`);
+      const venue = (req.query.venue as string) || 'all';
       
-      // Check cache first
+      if (!['all', 'home', 'away'].includes(venue)) {
+        return res.status(400).json({ error: "Invalid venue parameter. Must be 'all', 'home', or 'away'" });
+      }
+      
+      console.log(`DEBUG: Enhanced Current Standings API called - calculating detailed table from completed matches (venue: ${venue})`);
+      
+      // Check cache first (with venue-specific cache key)
       const now = Date.now();
-      const cached = currentStandingsCache.get('detailed_standings');
+      const cacheKey = `detailed_standings_${venue}`;
+      const cached = currentStandingsCache.get(cacheKey);
       if (cached && (now - cached.timestamp) < CURRENT_STANDINGS_CACHE_DURATION) {
-        console.log("DEBUG: Serving detailed current standings from cache");
+        console.log(`DEBUG: Serving detailed current standings from cache (venue: ${venue})`);
         return res.json(cached.data);
       }
       
@@ -6810,65 +6817,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const homeGoals = fixture.team_h_score;
         const awayGoals = fixture.team_a_score;
         
-        // Update basic stats
-        homeTeam.played++;
-        awayTeam.played++;
-        homeTeam.goalsFor += homeGoals;
-        homeTeam.goalsAgainst += awayGoals;
-        awayTeam.goalsFor += awayGoals;
-        awayTeam.goalsAgainst += homeGoals;
+        // Update basic stats based on venue filter
+        const processHome = venue === 'all' || venue === 'home';
+        const processAway = venue === 'all' || venue === 'away';
         
-        // Clean sheets
-        if (awayGoals === 0) homeTeam.cleanSheets++;
-        if (homeGoals === 0) awayTeam.cleanSheets++;
+        if (processHome) {
+          homeTeam.played++;
+          homeTeam.goalsFor += homeGoals;
+          homeTeam.goalsAgainst += awayGoals;
+          if (awayGoals === 0) homeTeam.cleanSheets++;
+        }
         
-        // Extract additional stats from fixture-level data if available
+        if (processAway) {
+          awayTeam.played++;
+          awayTeam.goalsFor += awayGoals;
+          awayTeam.goalsAgainst += homeGoals;
+          if (homeGoals === 0) awayTeam.cleanSheets++;
+        }
+        
+        // Extract additional stats from fixture-level data if available (filter by venue)
         if (fixture.stats && Array.isArray(fixture.stats)) {
           fixture.stats.forEach((stat: any) => {
             switch (stat.identifier) {
               case 'yellow_cards':
-                if (stat.h) homeTeam.yellowCards += stat.h.length;
-                if (stat.a) awayTeam.yellowCards += stat.a.length;
+                if (stat.h && processHome) homeTeam.yellowCards += stat.h.length;
+                if (stat.a && processAway) awayTeam.yellowCards += stat.a.length;
                 break;
               case 'red_cards':
-                if (stat.h) homeTeam.redCards += stat.h.length;
-                if (stat.a) awayTeam.redCards += stat.a.length;
+                if (stat.h && processHome) homeTeam.redCards += stat.h.length;
+                if (stat.a && processAway) awayTeam.redCards += stat.a.length;
                 break;
               case 'saves':
-                if (stat.h) stat.h.forEach((save: any) => homeTeam.saves += save.value || 0);
-                if (stat.a) stat.a.forEach((save: any) => awayTeam.saves += save.value || 0);
+                if (stat.h && processHome) stat.h.forEach((save: any) => homeTeam.saves += save.value || 0);
+                if (stat.a && processAway) stat.a.forEach((save: any) => awayTeam.saves += save.value || 0);
                 break;
               case 'own_goals':
-                if (stat.h) homeTeam.ownGoals += stat.h.length;
-                if (stat.a) awayTeam.ownGoals += stat.a.length;
+                if (stat.h && processHome) homeTeam.ownGoals += stat.h.length;
+                if (stat.a && processAway) awayTeam.ownGoals += stat.a.length;
                 break;
               case 'penalties_saved':
-                if (stat.h) homeTeam.penaltiesSaved += stat.h.length;
-                if (stat.a) awayTeam.penaltiesSaved += stat.a.length;
+                if (stat.h && processHome) homeTeam.penaltiesSaved += stat.h.length;
+                if (stat.a && processAway) awayTeam.penaltiesSaved += stat.a.length;
                 break;
               case 'penalties_missed':
-                if (stat.h) homeTeam.penaltiesMissed += stat.h.length;
-                if (stat.a) awayTeam.penaltiesMissed += stat.a.length;
+                if (stat.h && processHome) homeTeam.penaltiesMissed += stat.h.length;
+                if (stat.a && processAway) awayTeam.penaltiesMissed += stat.a.length;
                 break;
             }
           });
         }
         
         
-        // Determine match result and update points
+        // Determine match result and update points (filter by venue)
         if (homeGoals > awayGoals) {
-          homeTeam.wins++;
-          homeTeam.points += 3;
-          awayTeam.losses++;
+          if (processHome) {
+            homeTeam.wins++;
+            homeTeam.points += 3;
+          }
+          if (processAway) {
+            awayTeam.losses++;
+          }
         } else if (awayGoals > homeGoals) {
-          awayTeam.wins++;
-          awayTeam.points += 3;
-          homeTeam.losses++;
+          if (processAway) {
+            awayTeam.wins++;
+            awayTeam.points += 3;
+          }
+          if (processHome) {
+            homeTeam.losses++;
+          }
         } else {
-          homeTeam.draws++;
-          awayTeam.draws++;
-          homeTeam.points += 1;
-          awayTeam.points += 1;
+          if (processHome) {
+            homeTeam.draws++;
+            homeTeam.points += 1;
+          }
+          if (processAway) {
+            awayTeam.draws++;
+            awayTeam.points += 1;
+          }
         }
       });
       
@@ -6895,13 +6920,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         position: index + 1
       }));
       
-      // Cache the result
-      currentStandingsCache.set('detailed_standings', {
+      // Cache the result (with venue-specific key)
+      currentStandingsCache.set(cacheKey, {
         data: enhancedStandings,
         timestamp: now
       });
       
-      console.log(`DEBUG: Enhanced current standings calculated for ${enhancedStandings.length} teams based on ${completedFixtures.length} completed matches with detailed statistics`);
+      console.log(`DEBUG: Enhanced current standings calculated for ${enhancedStandings.length} teams based on ${completedFixtures.length} completed matches with detailed statistics (venue: ${venue})`);
       
       res.json(enhancedStandings);
     } catch (error) {
