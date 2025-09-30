@@ -129,6 +129,16 @@ export default function TransferPlanner() {
     enabled: !!searchedId,
   });
 
+  // Fetch player projections for the selected gameweek
+  const { data: playerProjections } = useQuery<any[]>({
+    queryKey: ["/api/player-total-points", selectedGameweek],
+    enabled: !!selectedGameweek,
+    queryFn: async () => {
+      const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}`);
+      return response.json();
+    }
+  });
+
   // Auto-optimization mutation
   const optimizeMutation = useMutation({
     mutationFn: async () => {
@@ -229,6 +239,17 @@ export default function TransferPlanner() {
   const getTeamName = (teamId: number): string => {
     const team = bootstrapData?.teams.find(t => t.id === teamId);
     return team?.short_name || 'Unknown';
+  };
+
+  const getPlayerProjectedPoints = (playerId: number): number | null => {
+    if (!playerProjections || !selectedGameweek) return null;
+    
+    const projection = playerProjections.find(p => p.playerId === playerId);
+    if (!projection) return null;
+
+    // Get the points for the selected gameweek
+    const gwKey = `gw${selectedGameweek}`;
+    return projection.gameweekBreakdown?.[gwKey]?.totalPoints || null;
   };
 
   const nextGameweeks = getNextGameweeks();
@@ -475,6 +496,7 @@ export default function TransferPlanner() {
                       {teamData?.picks.map((pick, index) => {
                         const player = getPlayerById(pick.element);
                         if (!player) return null;
+                        const projectedPoints = getPlayerProjectedPoints(pick.element);
                         
                         return (
                           <div
@@ -495,7 +517,13 @@ export default function TransferPlanner() {
                             </div>
                             <div className="text-right">
                               <div className="font-medium">£{(player.now_cost / 10).toFixed(1)}m</div>
-                              <div className="text-sm text-muted-foreground">{player.total_points} pts</div>
+                              <div className="text-sm text-muted-foreground">
+                                {projectedPoints !== null ? (
+                                  <span className="font-semibold text-purple-600">{projectedPoints.toFixed(1)} proj pts</span>
+                                ) : (
+                                  <span>{player.total_points} season pts</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );
@@ -541,11 +569,81 @@ export default function TransferPlanner() {
                 <CardTitle>Projected Points - GW{selectedGameweek}</CardTitle>
               </CardHeader>
               <CardContent>
-                <Alert>
-                  <AlertDescription>
-                    Projected points view coming soon...
-                  </AlertDescription>
-                </Alert>
+                {!playerProjections ? (
+                  <div className="text-center py-8">Loading projections...</div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Group players by position */}
+                    {[1, 2, 3, 4].map((positionId) => {
+                      const positionPlayers = teamData?.picks
+                        .map(pick => {
+                          const player = getPlayerById(pick.element);
+                          const projectedPoints = getPlayerProjectedPoints(pick.element);
+                          return { pick, player, projectedPoints };
+                        })
+                        .filter(p => p.player?.element_type === positionId);
+
+                      if (!positionPlayers || positionPlayers.length === 0) return null;
+
+                      return (
+                        <div key={positionId}>
+                          <h3 className="font-semibold mb-2 text-sm text-muted-foreground">
+                            {getPositionName(positionId)}s
+                          </h3>
+                          <div className="grid gap-2">
+                            {positionPlayers.map(({ pick, player, projectedPoints }) => {
+                              if (!player) return null;
+                              
+                              return (
+                                <div
+                                  key={pick.element}
+                                  className="flex items-center justify-between p-3 border rounded-lg hover:border-purple-300 transition-colors"
+                                  data-testid={`projection-${pick.element}`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div>
+                                      <div className="font-medium">{player.web_name}</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {getTeamName(player.team)} • £{(player.now_cost / 10).toFixed(1)}m
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    {projectedPoints !== null ? (
+                                      <>
+                                        <div className="text-xl font-bold text-purple-600">
+                                          {projectedPoints.toFixed(1)}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">projected pts</div>
+                                      </>
+                                    ) : (
+                                      <div className="text-sm text-muted-foreground">No projection</div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Total projected points */}
+                    <div className="pt-4 border-t">
+                      <div className="flex justify-between items-center p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+                        <span className="font-semibold">Total Projected Points (GW{selectedGameweek})</span>
+                        <span className="text-2xl font-bold text-purple-600">
+                          {teamData?.picks
+                            .reduce((total, pick) => {
+                              const projectedPoints = getPlayerProjectedPoints(pick.element);
+                              return total + (projectedPoints || 0);
+                            }, 0)
+                            .toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
