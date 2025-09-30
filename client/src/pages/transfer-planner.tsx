@@ -100,9 +100,10 @@ interface AllPlayersProjectionsTabProps {
   selectedGameweek: number;
   transferredOutPlayers: TransferOut[];
   onTransferIn: (playerId: number, playerElementType: number) => void;
+  currentBank: number;
 }
 
-function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn }: AllPlayersProjectionsTabProps) {
+function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank }: AllPlayersProjectionsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
@@ -356,17 +357,26 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       {(() => {
                         // Map position names to element types
                         const positionMap: { [key: string]: number } = {
-                          'GKP': 1,
-                          'DEF': 2,
-                          'MID': 3,
-                          'FWD': 4
+                          'Goalkeeper': 1,
+                          'Defender': 2,
+                          'Midfielder': 3,
+                          'Forward': 4
                         };
                         const playerElementType = positionMap[player.position];
+                        
+                        // Check if there's a matching transfer out for this position
                         const hasMatchingTransferOut = transferredOutPlayers && transferredOutPlayers.length > 0 && transferredOutPlayers.some(
                           t => t.elementType === playerElementType
                         );
                         
-                        return hasMatchingTransferOut ? (
+                        // Calculate available budget: current bank + selling prices of transferred out players
+                        const totalSellingPrice = transferredOutPlayers.reduce((sum, t) => sum + t.sellingPrice, 0);
+                        const availableBudget = currentBank + totalSellingPrice;
+                        
+                        // Check if player is affordable
+                        const isAffordable = player.price <= availableBudget;
+                        
+                        return hasMatchingTransferOut && isAffordable ? (
                           <Button
                             size="sm"
                             variant="default"
@@ -400,6 +410,7 @@ interface TransferOut {
   playerName: string;
   position: number;
   elementType: number;
+  sellingPrice: number;
 }
 
 export default function TransferPlanner() {
@@ -645,6 +656,7 @@ export default function TransferPlanner() {
       playerName: player.web_name,
       position: pick.position,
       elementType: player.element_type,
+      sellingPrice: player.now_cost / 10, // Convert from API format to actual price
     };
 
     setTransferredOutPlayers(prev => [...prev, transferOut]);
@@ -1109,6 +1121,7 @@ export default function TransferPlanner() {
               selectedGameweek={selectedGameweek as number} 
               transferredOutPlayers={transferredOutPlayers}
               onTransferIn={handleTransferIn}
+              currentBank={teamData?.transfers?.bank ? teamData.transfers.bank / 10 : 0}
             />
           </TabsContent>
 
