@@ -13540,6 +13540,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Player venue statistics endpoint - home/away split data
+  app.get("/api/player-venue-stats", async (req, res) => {
+    try {
+      const venue = (req.query.venue as string) || 'all';
+      const season = (req.query.season as string) || '2025/26';
+      
+      if (!['all', 'home', 'away'].includes(venue)) {
+        return res.status(400).json({ error: "Invalid venue parameter. Must be 'all', 'home', or 'away'" });
+      }
+      
+      console.log(`📊 Serving player venue statistics for ${venue} matches (${season})`);
+      
+      // Import the venue split aggregator
+      const { venueSplitAggregator } = await import("./venue-split-aggregator");
+      
+      // Get unique player IDs directly from the venue splits table to avoid external API call
+      const playerIdsResult = await pool.query(`
+        SELECT DISTINCT player_id 
+        FROM player_venue_splits 
+        WHERE season = $1
+      `, [season]);
+      const playerIds = playerIdsResult.rows.map((row: any) => row.player_id);
+      
+      // If no data in venue splits table, return empty result
+      if (playerIds.length === 0) {
+        console.log(`⚠️ No venue split data available for season ${season}`);
+        return res.json({});
+      }
+      
+      // Get venue split data
+      const venueData = await venueSplitAggregator.getPlayerVenueSplits(playerIds, venue as 'all' | 'home' | 'away', season);
+      
+      // Transform to match the expected format
+      const transformedData: { [playerId: string]: any } = {};
+      
+      venueData.forEach((player: any) => {
+        transformedData[player.player_id] = {
+          playerId: player.player_id,
+          playerName: player.player_name,
+          teamName: player.team_name,
+          position: player.position,
+          matches: player.matches || 0,
+          starts: player.starts || 0,
+          minutes: player.minutes || 0,
+          totalPoints: player.total_points || 0,
+          goalsScored: player.goals_scored || 0,
+          assists: player.assists || 0,
+          cleanSheets: player.clean_sheets || 0,
+          goalsConceded: player.goals_conceded || 0,
+          ownGoals: player.own_goals || 0,
+          penaltiesSaved: player.penalties_saved || 0,
+          penaltiesMissed: player.penalties_missed || 0,
+          yellowCards: player.yellow_cards || 0,
+          redCards: player.red_cards || 0,
+          saves: player.saves || 0,
+          bonus: player.bonus || 0,
+          bps: player.bps || 0,
+          tackles: player.tackles || 0,
+          recoveries: player.recoveries || 0,
+          clearancesBlocksInterceptions: player.clearances_blocks_interceptions || 0,
+          defensiveContribution: player.defensive_contribution || 0,
+          cbitPoints: player.cbit_points || 0,
+          savePoints: player.save_points || 0,
+          minutesPoints: player.minutes_points || 0
+        };
+      });
+      
+      res.json(transformedData);
+    } catch (error) {
+      console.error("Error fetching player venue statistics:", error);
+      res.status(500).json({ error: "Failed to fetch player venue statistics" });
+    }
+  });
+
+  // Trigger venue split aggregation
+  app.post("/api/player-venue-stats/aggregate", async (req, res) => {
+    try {
+      console.log("🚀 Manual venue split aggregation triggered");
+      const { venueSplitAggregator } = await import("./venue-split-aggregator");
+      const season = (req.body.season as string) || '2025/26';
+      
+      await venueSplitAggregator.aggregateVenueSplits(season);
+      
+      res.json({
+        success: true,
+        message: `Venue split data aggregated successfully for season ${season}`,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error aggregating venue splits:", error);
+      res.status(500).json({ error: "Failed to aggregate venue split data" });
+    }
+  });
+
   // Cache management endpoints
   app.post("/api/fpl-scoring-cache/update", async (req, res) => {
     try {

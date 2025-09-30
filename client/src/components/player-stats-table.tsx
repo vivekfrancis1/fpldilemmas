@@ -103,6 +103,20 @@ export default function PlayerStatsTable({
     gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime in v5)
   });
 
+  // Fetch venue-specific stats when venue filter is active
+  const { data: venueStatsData, isLoading: isVenueStatsLoading, isError: isVenueStatsError } = useQuery<{ [playerId: string]: any }>({
+    queryKey: ['/api/player-venue-stats', { venue: venueFilter, season: season || 'current' }],
+    queryFn: async () => {
+      const response = await fetch(`/api/player-venue-stats?venue=${venueFilter}&season=${season || 'current'}`);
+      if (!response.ok) throw new Error('Failed to fetch venue stats');
+      return response.json();
+    },
+    enabled: venueFilter !== 'all' && !isHistoricalSeason && season === 'current',
+    staleTime: 10 * 60 * 1000, // 10 minutes - longer since data changes less frequently
+    gcTime: 30 * 60 * 1000,
+    retry: 1, // Only retry once if it fails
+  });
+
   // Helper function to get CBIT points for a player
   const getCbitPoints = (playerId: number): number => {
     if (isHistoricalSeason || !cbitPointsData || isCbitPointsError) {
@@ -158,6 +172,48 @@ export default function PlayerStatsTable({
       players = [...historicalData];
     } else if (data && data.elements && Array.isArray(data.elements)) {
       players = [...data.elements];
+      
+      // Merge venue-specific stats when venue filter is active
+      if (venueFilter !== 'all' && venueStatsData && Object.keys(venueStatsData).length > 0) {
+        players = players.map(player => {
+          const venueStats = venueStatsData[player.id.toString()];
+          
+          if (venueStats) {
+            // Overlay venue-specific stats onto bootstrap player object
+            return {
+              ...player,
+              // Override statistics with venue-specific values
+              total_points: venueStats.totalPoints || 0,
+              minutes: venueStats.minutes || 0,
+              goals_scored: venueStats.goalsScored || 0,
+              assists: venueStats.assists || 0,
+              clean_sheets: venueStats.cleanSheets || 0,
+              goals_conceded: venueStats.goalsConceded || 0,
+              own_goals: venueStats.ownGoals || 0,
+              penalties_saved: venueStats.penaltiesSaved || 0,
+              penalties_missed: venueStats.penaltiesMissed || 0,
+              yellow_cards: venueStats.yellowCards || 0,
+              red_cards: venueStats.redCards || 0,
+              saves: venueStats.saves || 0,
+              bonus: venueStats.bonus || 0,
+              bps: venueStats.bps || 0,
+              starts: venueStats.starts || 0,
+              tackles: venueStats.tackles || 0,
+              recoveries: venueStats.recoveries || 0,
+              clearances_blocks_interceptions: venueStats.clearancesBlocksInterceptions || 0,
+              defensive_contribution: venueStats.defensiveContribution || 0,
+              // Recalculate derived stats
+              points_per_game: venueStats.matches > 0 ? 
+                ((venueStats.totalPoints / venueStats.matches).toFixed(1)) : "0.0",
+              // Mark that this is venue-filtered data
+              _venueFiltered: true,
+              _venueMatches: venueStats.matches || 0
+            };
+          }
+          
+          return player;
+        });
+      }
     } else {
       return [];
     }
@@ -275,7 +331,7 @@ export default function PlayerStatsTable({
     });
 
     return players;
-  }, [data, historicalData, filters, sort]);
+  }, [data, historicalData, filters, sort, venueFilter, venueStatsData]);
 
   const paginatedPlayers = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -391,7 +447,7 @@ export default function PlayerStatsTable({
     return null;
   };
 
-  if (isLoading) {
+  if (isLoading || (venueFilter !== 'all' && isVenueStatsLoading)) {
     return (
       <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
@@ -457,6 +513,20 @@ export default function PlayerStatsTable({
           </div>
         </div>
       </div>
+
+      {/* Venue filter notice */}
+      {venueFilter !== 'all' && (
+        <div className="px-4 py-2 bg-blue-50 border-b border-blue-100">
+          <p className="text-sm text-blue-700">
+            Showing {venueFilter === 'home' ? 'Home' : 'Away'} matches only 
+            {venueStatsData && Object.keys(venueStatsData).length === 0 && (
+              <span className="ml-2 text-blue-600">
+                (Venue data not yet available - showing all matches)
+              </span>
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Comprehensive Player Statistics Table */}
       <div className="overflow-x-auto">

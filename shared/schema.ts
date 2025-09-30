@@ -1521,3 +1521,70 @@ export type InsertPlayerTotalPointsWindow = typeof playerTotalPointsWindows.$inf
 
 export type PlayerTotalPointsSnapshot = typeof playerTotalPointsSnapshots.$inferSelect;
 export type InsertPlayerTotalPointsSnapshot = typeof playerTotalPointsSnapshots.$inferInsert;
+
+// Player Venue Split Statistics - Cache home/away statistics for venue filtering
+export const playerVenueSplits = pgTable("player_venue_splits", {
+  playerId: integer("player_id").notNull(),
+  venue: varchar("venue", { length: 10 }).notNull(), // 'home' or 'away'
+  season: varchar("season", { length: 10 }).notNull().default("2025/26"),
+  
+  // Player identification
+  playerName: varchar("player_name", { length: 100 }).notNull(),
+  teamName: varchar("team_name", { length: 50 }),
+  position: varchar("position", { length: 20 }),
+  
+  // Match statistics
+  matches: integer("matches").notNull().default(0),
+  starts: integer("starts").notNull().default(0),
+  minutes: integer("minutes").notNull().default(0),
+  
+  // Performance statistics
+  totalPoints: integer("total_points").notNull().default(0),
+  goalsScored: integer("goals_scored").notNull().default(0),
+  assists: integer("assists").notNull().default(0),
+  cleanSheets: integer("clean_sheets").notNull().default(0),
+  goalsConceded: integer("goals_conceded").notNull().default(0),
+  ownGoals: integer("own_goals").notNull().default(0),
+  penaltiesSaved: integer("penalties_saved").notNull().default(0),
+  penaltiesMissed: integer("penalties_missed").notNull().default(0),
+  yellowCards: integer("yellow_cards").notNull().default(0),
+  redCards: integer("red_cards").notNull().default(0),
+  saves: integer("saves").notNull().default(0),
+  bonus: integer("bonus").notNull().default(0),
+  bps: integer("bps").notNull().default(0),
+  
+  // Expected stats
+  expectedGoals: decimal("expected_goals", { precision: 6, scale: 3 }).default("0"),
+  expectedAssists: decimal("expected_assists", { precision: 6, scale: 3 }).default("0"),
+  expectedGoalInvolvements: decimal("expected_goal_involvements", { precision: 6, scale: 3 }).default("0"),
+  expectedGoalsConceded: decimal("expected_goals_conceded", { precision: 6, scale: 3 }).default("0"),
+  
+  // ICT stats
+  influence: decimal("influence", { precision: 8, scale: 2 }).default("0"),
+  creativity: decimal("creativity", { precision: 8, scale: 2 }).default("0"),
+  threat: decimal("threat", { precision: 8, scale: 2 }).default("0"),
+  ictIndex: decimal("ict_index", { precision: 8, scale: 2 }).default("0"),
+  
+  // Defensive contribution
+  tackles: integer("tackles").default(0),
+  recoveries: integer("recoveries").default(0),
+  clearancesBlocksInterceptions: integer("clearances_blocks_interceptions").default(0),
+  defensiveContribution: integer("defensive_contribution").default(0),
+  
+  // Points breakdown
+  cbitPoints: integer("cbit_points").notNull().default(0),
+  savePoints: integer("save_points").notNull().default(0),
+  minutesPoints: integer("minutes_points").notNull().default(0),
+  
+  // Metadata
+  lastUpdated: timestamp("last_updated").defaultNow(),
+  dataCompleteness: decimal("data_completeness", { precision: 5, scale: 2 }).default("100"), // Percentage of complete gameweek data
+}, (table) => [
+  primaryKey({ columns: [table.playerId, table.venue, table.season] }),
+  index("idx_player_venue_splits_player").on(table.playerId),
+  index("idx_player_venue_splits_venue").on(table.venue),
+  index("idx_player_venue_splits_season").on(table.season),
+]);
+
+export type PlayerVenueSplit = typeof playerVenueSplits.$inferSelect;
+export type InsertPlayerVenueSplit = typeof playerVenueSplits.$inferInsert;
