@@ -192,13 +192,23 @@ export default function TransferPlanner() {
   const getNextGameweeks = () => {
     if (!bootstrapData) return [];
     
-    const currentGW = bootstrapData.events.find(e => e.is_current)?.id || 1;
+    // Find the current or next gameweek
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    const nextEvent = bootstrapData.events.find(e => e.is_next);
+    
+    // Start from current if it's not finished, otherwise start from next
+    let startGW = currentEvent?.id || nextEvent?.id || 1;
+    if (currentEvent?.finished) {
+      startGW = nextEvent?.id || startGW + 1;
+    }
+    
     const nextGameweeks = [];
     
+    // Get exactly 6 upcoming gameweeks
     for (let i = 0; i < 6; i++) {
-      const gwNumber = currentGW + i;
+      const gwNumber = startGW + i;
       const gw = bootstrapData.events.find(e => e.id === gwNumber);
-      if (gw && !gw.finished) {
+      if (gw && gwNumber <= 38) {
         nextGameweeks.push(gw);
       }
     }
