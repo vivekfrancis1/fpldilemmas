@@ -807,6 +807,97 @@ export default function TransferPlanner() {
         </Card>
       )}
 
+      {/* Team Summary Stats */}
+      {searchedId && teamData && selectedGameweek && (
+        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+              Team Summary
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Total Projected Points for Selected GW */}
+              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-sm text-muted-foreground mb-1">GW{selectedGameweek} Projected</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {(() => {
+                    let total = 0;
+                    if (plannerMode === "manual") {
+                      manualLineup.slice(0, 11).forEach((pick: TeamPick) => {
+                        const points = getPlayerProjectedPoints(pick.element);
+                        if (points !== null) {
+                          total += pick.is_captain ? points * 2 : points;
+                        }
+                      });
+                    } else if (optimizedLineup) {
+                      optimizedLineup.starting11.forEach((pick: any) => {
+                        const points = getPlayerProjectedPoints(pick.element);
+                        if (points !== null) {
+                          total += pick.isCaptain ? points * 2 : points;
+                        }
+                      });
+                    }
+                    return total.toFixed(1);
+                  })()}
+                </div>
+              </div>
+
+              {/* Total Projected Points for Next 6 GWs */}
+              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-sm text-muted-foreground mb-1">Next 6 GWs Total</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {(() => {
+                    let total = 0;
+                    const nextGWs = nextGameweeks.map(gw => gw.id);
+                    
+                    const getLineup = () => {
+                      if (plannerMode === "manual") {
+                        return manualLineup.slice(0, 11).map((p: TeamPick) => p.element);
+                      } else if (optimizedLineup) {
+                        return optimizedLineup.starting11.map((p: any) => p.element);
+                      }
+                      return [];
+                    };
+                    
+                    getLineup().forEach((playerId: number) => {
+                      const player = getPlayerById(playerId);
+                      if (player && playerProjections) {
+                        const playerData = playerProjections.find((p: any) => p.playerId === player.id);
+                        if (playerData) {
+                          nextGWs.forEach(gw => {
+                            const gwPoints = playerData.gameweekProjections[gw.toString()] || 0;
+                            total += gwPoints;
+                          });
+                        }
+                      }
+                    });
+                    return total.toFixed(1);
+                  })()}
+                </div>
+              </div>
+
+              {/* Cash in Bank */}
+              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-sm text-muted-foreground mb-1">Cash in Bank</div>
+                <div className="text-2xl font-bold text-yellow-600">
+                  £{teamData?.transfers?.bank ? (teamData.transfers.bank / 10).toFixed(1) : '0.0'}m
+                </div>
+              </div>
+
+              {/* Transfers Left */}
+              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-sm text-muted-foreground mb-1">Transfers Left</div>
+                <div className="text-2xl font-bold text-purple-600">
+                  {teamData?.transfers ? (teamData.transfers.limit - teamData.transfers.made) : 0}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Manual Selection Section */}
       {searchedId && teamData && selectedGameweek && plannerMode === "manual" && (
         <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
