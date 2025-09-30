@@ -498,10 +498,12 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="value_season" label="Value" />
               </th>
-              <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="points_per_game" label="Pts/Match" />
-              </th>
-              {!isHistoricalSeason && (
+              {displayMode !== 'totals' && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="points_per_game" label="Pts/Match" />
+                </th>
+              )}
+              {!isHistoricalSeason && displayMode !== 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="form" label="Form" />
                 </th>
@@ -533,22 +535,22 @@ export default function PlayerStatsTable({
                 </th>
               )}
               {/* Per-90 Expected Stats */}
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode !== 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="expected_goals_per_90" label="xG/90" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode !== 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="expected_assists_per_90" label="xA/90" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode !== 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="expected_goal_involvements_per_90" label="xGI/90" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode !== 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="expected_goals_conceded_per_90" label="xGC/90" />
                 </th>
@@ -775,8 +777,10 @@ export default function PlayerStatsTable({
                     </td>
                   )}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-700 font-semibold">{calculateStat(player, parseFloat(player.value_season || player.value_form || 0)).toFixed(1)}</td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, parseFloat(player.points_per_game || player.form || 0)).toFixed(1)}</td>
-                  {!isHistoricalSeason && (
+                  {displayMode !== 'totals' && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, parseFloat(player.points_per_game || player.form || 0)).toFixed(1)}</td>
+                  )}
+                  {!isHistoricalSeason && displayMode !== 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, parseFloat(player.form || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && (
@@ -796,16 +800,16 @@ export default function PlayerStatsTable({
                     <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-red-600">{calculateStat(player, parseFloat(player.expected_goals_conceded || 0)).toFixed(1)}</td>
                   )}
                   {/* Per-90 Expected Stats */}
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode !== 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-purple-700">{calculateStat(player, player.expected_goals_per_90 || 0).toFixed(2)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode !== 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-blue-700">{calculateStat(player, player.expected_assists_per_90 || 0).toFixed(2)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode !== 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-indigo-700">{calculateStat(player, player.expected_goal_involvements_per_90 || 0).toFixed(2)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode !== 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-700">{calculateStat(player, player.expected_goals_conceded_per_90 || 0).toFixed(2)}</td>
                   )}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{displayMode === 'totals' ? (player.minutes || 0) : calculateStat(player, player.minutes || 0).toFixed(0)}</td>
