@@ -676,14 +676,14 @@ export default function TransferPlanner() {
     const currentEvent = bootstrapData.events.find(e => e.is_current);
     const currentGW = currentEvent?.id || 1;
     
-    // Base transfers available for current gameweek (from API)
+    // Base transfers available (from API) - this is for the next gameweek after current
     let transfersAvailable = teamData.transfers.limit || 1;
     
-    // If selected gameweek is in the future, calculate available transfers
-    if (selectedGameweek > currentGW) {
-      const gameweekDifference = selectedGameweek - currentGW;
-      // Add 1 transfer per future gameweek
-      transfersAvailable += gameweekDifference;
+    // If selected gameweek is beyond the immediate next gameweek, add extra transfers
+    // Formula: For each gameweek beyond (current + 1), add 1 transfer
+    if (selectedGameweek > currentGW + 1) {
+      const extraGameweeks = selectedGameweek - currentGW - 1;
+      transfersAvailable += extraGameweeks;
     }
     
     // Subtract transfers used in the planner
