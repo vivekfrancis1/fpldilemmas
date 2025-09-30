@@ -425,6 +425,13 @@ interface CompletedTransfer {
   buyingPrice: number;
 }
 
+interface GameweekTransfers {
+  [gameweek: number]: {
+    transferredOut: TransferOut[];
+    completed: CompletedTransfer[];
+  };
+}
+
 export default function TransferPlanner() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
@@ -432,8 +439,14 @@ export default function TransferPlanner() {
   const [plannerMode, setPlannerMode] = useState<"auto" | "manual">("auto");
   const [optimizedLineup, setOptimizedLineup] = useState<OptimizedLineup | null>(null);
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
+  
+  // Store transfers per gameweek for cumulative effect
+  const [gameweekTransfers, setGameweekTransfers] = useState<GameweekTransfers>({});
+  
+  // Current gameweek's transfers (for convenience)
   const [transferredOutPlayers, setTransferredOutPlayers] = useState<TransferOut[]>([]);
   const [completedTransfers, setCompletedTransfers] = useState<CompletedTransfer[]>([]);
+  
   const { toast } = useToast();
 
   // Cache manager ID functionality
@@ -472,11 +485,49 @@ export default function TransferPlanner() {
     enabled: !!searchedId,
   });
 
+  // Calculate baseline lineup for a given gameweek by applying all previous transfers
+  const getBaselineLineup = (targetGameweek: number): TeamPick[] => {
+    if (!teamData?.picks) return [];
+    
+    // Start with original team
+    let baseline = [...teamData.picks];
+    
+    // Get the starting gameweek
+    const firstGW = getNextGameweeks()[0]?.id || 7;
+    
+    // Apply all transfers from previous gameweeks
+    for (let gw = firstGW; gw < targetGameweek; gw++) {
+      const transfers = gameweekTransfers[gw];
+      if (transfers && transfers.completed) {
+        // Apply each completed transfer
+        transfers.completed.forEach(transfer => {
+          baseline = baseline.map(pick => {
+            if (pick.element === transfer.outPlayerId) {
+              // Replace with new player
+              const inPlayer = getPlayerById(transfer.inPlayerId);
+              if (inPlayer) {
+                return {
+                  ...pick,
+                  element: transfer.inPlayerId,
+                  selling_price: inPlayer.now_cost,
+                };
+              }
+            }
+            return pick;
+          });
+        });
+      }
+    }
+    
+    return baseline;
+  };
+
   // Initialize manual lineup when team data loads
   useEffect(() => {
     if (teamData?.picks) {
       setManualLineup([...teamData.picks]);
-      // Reset transfers when loading new team data
+      // Reset all transfers when loading new team data
+      setGameweekTransfers({});
       setTransferredOutPlayers([]);
       setCompletedTransfers([]);
     }
@@ -583,15 +634,39 @@ export default function TransferPlanner() {
     }
   }, [bootstrapData]);
 
-  // Clear optimized lineup and transfers when gameweek or mode changes
+  // Save and load transfers when gameweek changes
   useEffect(() => {
+    if (!selectedGameweek || !teamData?.picks) return;
+    
+    // Save current gameweek's transfers before switching
+    const prevGameweek = getNextGameweeks().find(gw => 
+      gameweekTransfers[gw.id]?.transferredOut?.length > 0 || 
+      gameweekTransfers[gw.id]?.completed?.length > 0
+    );
+    
+    // Clear optimized lineup when gameweek or mode changes
     setOptimizedLineup(null);
-    setTransferredOutPlayers([]);
-    setCompletedTransfers([]);
-    // Reset manual lineup to original team data when gameweek changes
-    if (teamData?.picks) {
-      setManualLineup([...teamData.picks]);
-    }
+    
+    // Load transfers for the selected gameweek or use empty if none
+    const gwTransfers = gameweekTransfers[selectedGameweek] || { transferredOut: [], completed: [] };
+    setTransferredOutPlayers(gwTransfers.transferredOut);
+    setCompletedTransfers(gwTransfers.completed);
+    
+    // Calculate and set the baseline lineup for this gameweek
+    const baseline = getBaselineLineup(selectedGameweek);
+    
+    // Apply current gameweek's pending transfers (transferred out but not yet replaced)
+    let lineupWithPendingTransfers = [...baseline];
+    gwTransfers.transferredOut.forEach(transferOut => {
+      lineupWithPendingTransfers = lineupWithPendingTransfers.map(pick => {
+        if (pick.position === transferOut.position) {
+          return { ...pick, is_transferred_out: true };
+        }
+        return pick;
+      });
+    });
+    
+    setManualLineup(lineupWithPendingTransfers);
   }, [selectedGameweek, plannerMode]);
 
   // Auto-run optimization when Auto mode is selected
@@ -672,17 +747,20 @@ export default function TransferPlanner() {
     return currentBank;
   };
 
-  // Calculate actual transfers used by comparing with original lineup
+  // Calculate actual transfers used by comparing with baseline lineup for this gameweek
   const calculateTransfersUsed = (): number => {
-    if (!teamData?.picks) return 0;
+    if (!teamData?.picks || !selectedGameweek) return 0;
     
-    // Count how many players in current lineup differ from original lineup
+    // Get the baseline lineup for this gameweek (includes all previous transfers)
+    const baseline = getBaselineLineup(selectedGameweek);
+    
+    // Count how many players in current lineup differ from baseline
     let changedPlayers = 0;
     
     manualLineup.forEach((currentPick, index) => {
-      const originalPick = teamData.picks[index];
+      const baselinePick = baseline[index];
       // If player ID is different (and not transferred out), it's a change
-      if (currentPick.element !== originalPick.element && !currentPick.is_transferred_out) {
+      if (currentPick.element !== baselinePick.element && !currentPick.is_transferred_out) {
         changedPlayers++;
       }
     });
@@ -788,7 +866,22 @@ export default function TransferPlanner() {
       sellingPrice: sellingPrice,
     };
 
-    setTransferredOutPlayers(prev => [...prev, transferOut]);
+    setTransferredOutPlayers(prev => {
+      const newTransferredOut = [...prev, transferOut];
+      
+      // Save to gameweek-specific storage
+      if (selectedGameweek) {
+        setGameweekTransfers(gwTransfers => ({
+          ...gwTransfers,
+          [selectedGameweek]: {
+            transferredOut: newTransferredOut,
+            completed: completedTransfers
+          }
+        }));
+      }
+      
+      return newTransferredOut;
+    });
     
     // Mark player as transferred out instead of removing
     setManualLineup(prev => prev.map(p => 
@@ -835,7 +928,22 @@ export default function TransferPlanner() {
       buyingPrice: buyingPrice,
     };
 
-    setCompletedTransfers(prev => [...prev, completedTransfer]);
+    setCompletedTransfers(prev => {
+      const newTransfers = [...prev, completedTransfer];
+      
+      // Save to gameweek-specific storage
+      if (selectedGameweek) {
+        setGameweekTransfers(gwTransfers => ({
+          ...gwTransfers,
+          [selectedGameweek]: {
+            transferredOut: transferredOutPlayers.filter((_, i) => i !== transferOutIndex),
+            completed: newTransfers
+          }
+        }));
+      }
+      
+      return newTransfers;
+    });
 
     // Replace the transferred out player at the same position
     setManualLineup(prev => prev.map(p => {
@@ -861,50 +969,76 @@ export default function TransferPlanner() {
     });
   };
 
-  // Reset all transfers and restore original team
+  // Reset all transfers for the current gameweek and restore baseline
   const handleResetTransfers = () => {
-    if (teamData?.picks) {
-      setManualLineup([...teamData.picks]);
-      setTransferredOutPlayers([]);
-      setCompletedTransfers([]);
-      toast({
-        title: "Transfers Reset",
-        description: "All transfers have been undone and your original team has been restored."
-      });
-    }
+    if (!teamData?.picks || !selectedGameweek) return;
+    
+    // Get the baseline lineup for this gameweek
+    const baseline = getBaselineLineup(selectedGameweek);
+    setManualLineup(baseline);
+    
+    // Clear transfers for this gameweek
+    setTransferredOutPlayers([]);
+    setCompletedTransfers([]);
+    
+    // Clear from gameweek-specific storage
+    setGameweekTransfers(gwTransfers => ({
+      ...gwTransfers,
+      [selectedGameweek]: {
+        transferredOut: [],
+        completed: []
+      }
+    }));
+    
+    toast({
+      title: "Transfers Reset",
+      description: "All transfers for this gameweek have been undone."
+    });
   };
 
-  // Undo a specific transfer and restore the original player
+  // Undo a specific transfer and restore the baseline player
   const handleUndoTransfer = (position: number) => {
-    if (!teamData?.picks) return;
+    if (!teamData?.picks || !selectedGameweek) return;
     
-    // Find the original player at this position
-    const originalPick = teamData.picks.find(p => p.position === position);
-    if (!originalPick) return;
+    // Get the baseline lineup for this gameweek
+    const baseline = getBaselineLineup(selectedGameweek);
+    const baselinePick = baseline.find(p => p.position === position);
+    if (!baselinePick) return;
     
-    const originalPlayer = getPlayerById(originalPick.element);
-    if (!originalPlayer) return;
+    const baselinePlayer = getPlayerById(baselinePick.element);
+    if (!baselinePlayer) return;
     
-    // Restore the original player at this position
+    // Restore the baseline player at this position
     setManualLineup(prev => prev.map(p => {
       if (p.position === position) {
-        return { ...originalPick };
+        return { ...baselinePick };
       }
       return p;
     }));
     
-    // Remove from transferred out list
-    setTransferredOutPlayers(prev => prev.filter(t => t.position !== position));
+    // Update transferred out list
+    const newTransferredOut = transferredOutPlayers.filter(t => t.position !== position);
+    setTransferredOutPlayers(newTransferredOut);
     
     // Remove any completed transfer related to this position
-    const transferOutEntry = transferredOutPlayers.find(t => t.position === position);
-    if (transferOutEntry) {
-      setCompletedTransfers(prev => prev.filter(t => t.outPlayerId !== transferOutEntry.playerId));
-    }
+    const transferOutEntry = transferredOutPlayers.find(t => t.position !== position);
+    const newCompletedTransfers = completedTransfers.filter(t => 
+      !transferredOutPlayers.some(to => to.playerId === t.outPlayerId && to.position === position)
+    );
+    setCompletedTransfers(newCompletedTransfers);
+    
+    // Update gameweek-specific storage
+    setGameweekTransfers(gwTransfers => ({
+      ...gwTransfers,
+      [selectedGameweek]: {
+        transferredOut: newTransferredOut,
+        completed: newCompletedTransfers
+      }
+    }));
     
     toast({
       title: "Transfer Undone",
-      description: `${originalPlayer.web_name} has been restored to your team`
+      description: `${baselinePlayer.web_name} has been restored to your team`
     });
   };
 
