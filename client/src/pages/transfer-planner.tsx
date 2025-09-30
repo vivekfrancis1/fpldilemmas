@@ -322,25 +322,25 @@ export default function TransferPlanner() {
                       <div>
                         <div className="text-sm text-muted-foreground">Team Value</div>
                         <div className="text-xl font-bold">
-                          £{((teamData?.transfers.value || 0) / 10).toFixed(1)}m
+                          £{((teamData?.transfers?.value || 0) / 10).toFixed(1)}m
                         </div>
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">In Bank</div>
                         <div className="text-xl font-bold">
-                          £{((teamData?.transfers.bank || 0) / 10).toFixed(1)}m
+                          £{((teamData?.transfers?.bank || 0) / 10).toFixed(1)}m
                         </div>
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">Free Transfers</div>
                         <div className="text-xl font-bold">
-                          {teamData?.transfers.limit || 0}
+                          {teamData?.transfers?.limit || 0}
                         </div>
                       </div>
                       <div>
                         <div className="text-sm text-muted-foreground">Transfers Made</div>
                         <div className="text-xl font-bold">
-                          {teamData?.transfers.made || 0}
+                          {teamData?.transfers?.made || 0}
                         </div>
                       </div>
                     </div>
