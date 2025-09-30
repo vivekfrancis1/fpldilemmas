@@ -476,6 +476,18 @@ export default function TransferPlanner() {
     }
   });
 
+  // Fetch player projections for next 6 gameweeks (for 6GW total calculation)
+  const { data: playerProjections6GW } = useQuery<any[]>({
+    queryKey: ["/api/player-total-points-6gw"],
+    enabled: !!selectedGameweek,
+    queryFn: async () => {
+      const startGW = nextGameweeks[0]?.id || 7;
+      const endGW = nextGameweeks[nextGameweeks.length - 1]?.id || 12;
+      const response = await fetch(`/api/player-total-points?startGameweek=${startGW}&endGameweek=${endGW}`);
+      return response.json();
+    }
+  });
+
   // Auto-optimization mutation
   const optimizeMutation = useMutation({
     mutationFn: async () => {
@@ -825,17 +837,23 @@ export default function TransferPlanner() {
                   {(() => {
                     let total = 0;
                     if (plannerMode === "manual") {
+                      // Get starting 11 from manual lineup
                       manualLineup.slice(0, 11).forEach((pick: TeamPick) => {
                         const points = getPlayerProjectedPoints(pick.element);
                         if (points !== null) {
-                          total += pick.is_captain ? points * 2 : points;
+                          // Apply captain multiplier (2x for captain)
+                          const multiplier = pick.is_captain ? 2 : 1;
+                          total += points * multiplier;
                         }
                       });
                     } else if (optimizedLineup) {
+                      // Get starting 11 from optimized lineup
                       optimizedLineup.starting11.forEach((pick: any) => {
                         const points = getPlayerProjectedPoints(pick.element);
                         if (points !== null) {
-                          total += pick.isCaptain ? points * 2 : points;
+                          // Apply captain multiplier (2x for captain)
+                          const multiplier = pick.isCaptain ? 2 : 1;
+                          total += points * multiplier;
                         }
                       });
                     }
@@ -849,23 +867,26 @@ export default function TransferPlanner() {
                 <div className="text-sm text-muted-foreground mb-1">Next 6 GWs Total</div>
                 <div className="text-2xl font-bold text-blue-600">
                   {(() => {
+                    if (!playerProjections6GW) return '0.0';
+                    
                     let total = 0;
                     const nextGWs = nextGameweeks.map(gw => gw.id);
                     
-                    const getLineup = () => {
-                      if (plannerMode === "manual") {
-                        return manualLineup.slice(0, 11).map((p: TeamPick) => p.element);
-                      } else if (optimizedLineup) {
-                        return optimizedLineup.starting11.map((p: any) => p.element);
-                      }
-                      return [];
-                    };
+                    // Get starting 11 player IDs based on mode
+                    let starting11PlayerIds: number[] = [];
+                    if (plannerMode === "manual") {
+                      starting11PlayerIds = manualLineup.slice(0, 11).map((p: TeamPick) => p.element);
+                    } else if (optimizedLineup) {
+                      starting11PlayerIds = optimizedLineup.starting11.map((p: any) => p.element);
+                    }
                     
-                    getLineup().forEach((playerId: number) => {
+                    // Sum up projected points for each player across all 6 gameweeks
+                    starting11PlayerIds.forEach((playerId: number) => {
                       const player = getPlayerById(playerId);
-                      if (player && playerProjections) {
-                        const playerData = playerProjections.find((p: any) => p.playerId === player.id);
-                        if (playerData) {
+                      if (player) {
+                        const playerData = playerProjections6GW.find((p: any) => p.playerId === player.id);
+                        if (playerData && playerData.gameweekProjections) {
+                          // Sum points across all 6 gameweeks
                           nextGWs.forEach(gw => {
                             const gwPoints = playerData.gameweekProjections[gw.toString()] || 0;
                             total += gwPoints;
@@ -873,6 +894,7 @@ export default function TransferPlanner() {
                         }
                       }
                     });
+                    
                     return total.toFixed(1);
                   })()}
                 </div>
