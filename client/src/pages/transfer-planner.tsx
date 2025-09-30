@@ -1370,9 +1370,9 @@ export default function TransferPlanner() {
                           <div className="text-right">
                             {projectedPoints !== null ? (
                               <>
-                                <div className="font-bold text-blue-600">{projectedPoints.toFixed(1)} pts</div>
+                                <div className="font-bold text-blue-600">{projectedPoints.toFixed(2)} pts</div>
                                 {pick.is_captain && (
-                                  <div className="text-xs text-muted-foreground">({(projectedPoints * 2).toFixed(1)} with (C))</div>
+                                  <div className="text-xs text-muted-foreground">({(projectedPoints * 2).toFixed(2)} with (C))</div>
                                 )}
                               </>
                             ) : (
@@ -1507,7 +1507,7 @@ export default function TransferPlanner() {
                         </div>
                         <div className="flex items-center gap-3">
                           <div className="text-sm text-muted-foreground">
-                            {projectedPoints !== null ? `${projectedPoints.toFixed(1)} pts` : 'No projection'}
+                            {projectedPoints !== null ? `${projectedPoints.toFixed(2)} pts` : 'No projection'}
                           </div>
                           {!isGK && (
                             <div className="flex flex-col gap-1">
@@ -1648,9 +1648,9 @@ export default function TransferPlanner() {
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <div className="font-bold text-purple-600">{player.projectedPoints.toFixed(1)} pts</div>
+                              <div className="font-bold text-purple-600">{player.projectedPoints.toFixed(2)} pts</div>
                               {player.isCaptain && (
-                                <div className="text-xs text-muted-foreground">({(player.projectedPoints * 2).toFixed(1)} with (C))</div>
+                                <div className="text-xs text-muted-foreground">({(player.projectedPoints * 2).toFixed(2)} with (C))</div>
                               )}
                             </div>
                             {pick && (
@@ -1697,7 +1697,7 @@ export default function TransferPlanner() {
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="text-sm text-muted-foreground">{player.projectedPoints.toFixed(1)} pts</div>
+                            <div className="text-sm text-muted-foreground">{player.projectedPoints.toFixed(2)} pts</div>
                             {pick && (
                               <Button
                                 size="icon"
