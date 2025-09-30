@@ -135,11 +135,11 @@ export default function CurrentStandings() {
     return 0;
   });
 
-  // Calculate totals and averages
+  // Calculate totals and averages using displayData (which respects both venue and stats view filters)
   const calculateSummaryStats = () => {
-    if (!standingsData || standingsData.length === 0) return null;
+    if (!displayData || displayData.length === 0) return null;
     
-    const totals = standingsData.reduce((acc, team) => ({
+    const totals = displayData.reduce((acc, team) => ({
       played: acc.played + team.played,
       wins: acc.wins + team.wins,
       draws: acc.draws + team.draws,
@@ -169,7 +169,7 @@ export default function CurrentStandings() {
       adjustedGoalRate: 0, adjustedGoalsAgainstRate: 0
     });
 
-    const teamCount = standingsData.length;
+    const teamCount = displayData.length;
     const averages = {
       played: totals.played / teamCount,
       wins: totals.wins / teamCount,
