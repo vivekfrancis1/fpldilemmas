@@ -663,8 +663,11 @@ export default function TransferPlanner() {
     const totalBuyingPrice = completedTransfers.reduce((sum, t) => sum + t.buyingPrice, 0);
     const totalSellingPrice = completedTransfers.reduce((sum, t) => sum + t.sellingPrice, 0);
     
-    // Current bank = Initial bank + Total sold - Total bought
-    const currentBank = initialBank + totalSellingPrice - totalBuyingPrice;
+    // Add selling prices from players transferred out but not yet replaced
+    const pendingSellingPrice = transferredOutPlayers.reduce((sum, t) => sum + t.sellingPrice, 0);
+    
+    // Current bank = Initial bank + Total sold + Pending sold - Total bought
+    const currentBank = initialBank + totalSellingPrice + pendingSellingPrice - totalBuyingPrice;
     
     return currentBank;
   };
