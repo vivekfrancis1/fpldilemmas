@@ -467,9 +467,11 @@ export default function PlayerStatsTable({
               <th className="px-1 sm:px-2 py-2 sm:py-3 text-center min-w-[60px] sm:min-w-[80px]">
                 <SortableHeader field="now_cost" label="Price" />
               </th>
-              <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="games_played" label="Matches" />
-              </th>
+              {displayMode === 'totals' && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="games_played" label="Matches" />
+                </th>
+              )}
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="total_points" label="Pts" />
               </th>
@@ -503,7 +505,7 @@ export default function PlayerStatsTable({
                   <SortableHeader field="points_per_game" label="Pts/Match" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode === 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="form" label="Form" />
                 </th>
@@ -580,27 +582,27 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="bps" label="BPS" />
               </th>
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode === 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="event_points" label="GW Pts" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode === 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="transfers_in_event" label="GW In" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode === 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="transfers_out_event" label="GW Out" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode === 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="transfers_in" label="Total In" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode === 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="transfers_out" label="Total Out" />
                 </th>
@@ -642,14 +644,16 @@ export default function PlayerStatsTable({
               <th className="px-2 py-3 text-center min-w-[80px]">
                 <SortableHeader field="own_goals" label="Own Goals" />
               </th>
-              {!isHistoricalSeason && (
+              {!isHistoricalSeason && displayMode === 'totals' && (
                 <th className="px-2 py-3 text-center min-w-[80px]">
                   <SortableHeader field="cost_change_event" label="Price Δ GW" />
                 </th>
               )}
-              <th className="px-2 py-3 text-center min-w-[80px]">
-                <SortableHeader field="cost_change_start" label="Price Δ Start" />
-              </th>
+              {displayMode === 'totals' && (
+                <th className="px-2 py-3 text-center min-w-[80px]">
+                  <SortableHeader field="cost_change_start" label="Price Δ Start" />
+                </th>
+              )}
 
             </tr>
           </thead>
@@ -727,12 +731,14 @@ export default function PlayerStatsTable({
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-gray-900">
                     <span className="text-xs sm:text-sm font-medium">£{((player.now_cost || player.end_cost || 0) / 10).toFixed(1)}m</span>
                   </td>
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-gray-900">
-                    {(() => {
-                      const pointsPerGame = parseFloat(player.points_per_game) || 0;
-                      return pointsPerGame > 0 ? Math.round(player.total_points / pointsPerGame) : 0;
-                    })()}
-                  </td>
+                  {displayMode === 'totals' && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm font-medium text-gray-900">
+                      {(() => {
+                        const pointsPerGame = parseFloat(player.points_per_game) || 0;
+                        return pointsPerGame > 0 ? Math.round(player.total_points / pointsPerGame) : 0;
+                      })()}
+                    </td>
+                  )}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-fpl-purple">{calculateStat(player, player.total_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   {/* Key Performance Stats - immediately after points */}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-green-600">{calculateStat(player, player.goals_scored || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
@@ -759,7 +765,7 @@ export default function PlayerStatsTable({
                   {displayMode !== 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, parseFloat(player.points_per_game || player.form || 0)).toFixed(1)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode === 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, parseFloat(player.form || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && (
@@ -826,19 +832,19 @@ export default function PlayerStatsTable({
                   {/* All other data points */}
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, player.bonus || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-gray-900">{calculateStat(player, player.bps || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode === 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm font-bold text-fpl-purple">{calculateStat(player, player.event_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode === 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-600">{(player.transfers_in_event || 0).toLocaleString()}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode === 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{(player.transfers_out_event || 0).toLocaleString()}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode === 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-green-600">{(player.transfers_in || 0).toLocaleString()}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode === 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{(player.transfers_out || 0).toLocaleString()}</td>
                   )}
                   {!isHistoricalSeason && (
@@ -856,7 +862,7 @@ export default function PlayerStatsTable({
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-yellow-600">{calculateStat(player, player.yellow_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{calculateStat(player, player.red_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   <td className="px-2 py-4 text-center text-xs sm:text-sm text-red-600">{calculateStat(player, player.own_goals || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  {!isHistoricalSeason && (
+                  {!isHistoricalSeason && displayMode === 'totals' && (
                     <td className="px-2 py-4 text-center text-xs sm:text-sm">
                       <div className="flex items-center justify-center">
                         <span className={(player.cost_change_event || 0) > 0 ? 'text-green-600' : (player.cost_change_event || 0) < 0 ? 'text-red-600' : 'text-gray-900'}>
@@ -865,13 +871,15 @@ export default function PlayerStatsTable({
                       </div>
                     </td>
                   )}
-                  <td className="px-2 py-4 text-center text-xs sm:text-sm">
-                    <div className="flex items-center justify-center">
-                      <span className={(player.cost_change_start || 0) > 0 ? 'text-green-600' : (player.cost_change_start || 0) < 0 ? 'text-red-600' : 'text-gray-900'}>
-                        {(player.cost_change_start || 0) > 0 ? '+' : ''}{formatValue((player.cost_change_start || 0) / 10, 'decimal')}
-                      </span>
-                    </div>
-                  </td>
+                  {displayMode === 'totals' && (
+                    <td className="px-2 py-4 text-center text-xs sm:text-sm">
+                      <div className="flex items-center justify-center">
+                        <span className={(player.cost_change_start || 0) > 0 ? 'text-green-600' : (player.cost_change_start || 0) < 0 ? 'text-red-600' : 'text-gray-900'}>
+                          {(player.cost_change_start || 0) > 0 ? '+' : ''}{formatValue((player.cost_change_start || 0) / 10, 'decimal')}
+                        </span>
+                      </div>
+                    </td>
+                  )}
 
                 </tr>
               );
