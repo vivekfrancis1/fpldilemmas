@@ -1628,3 +1628,32 @@ export const insertTransferPlannerDraftSchema = createInsertSchema(transferPlann
   updatedAt: true,
 });
 export type InsertTransferPlannerDraftType = z.infer<typeof insertTransferPlannerDraftSchema>;
+
+// Buy Price Overrides - Store custom buy prices set by managers for their players
+// These apply globally across all drafts (Base, Manual A-J, Auto)
+export const buyPriceOverrides = pgTable("buy_price_overrides", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  managerId: integer("manager_id").notNull(),
+  playerId: integer("player_id").notNull(),
+  
+  // Custom buy price in tenths (e.g., 75 = £7.5m)
+  buyPrice: integer("buy_price").notNull(),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_buy_price_overrides_manager").on(table.managerId),
+  uniqueIndex("idx_buy_price_overrides_manager_player").on(table.managerId, table.playerId),
+]);
+
+export type BuyPriceOverride = typeof buyPriceOverrides.$inferSelect;
+export type InsertBuyPriceOverride = typeof buyPriceOverrides.$inferInsert;
+
+// Zod schema for buy price override validation
+export const insertBuyPriceOverrideSchema = createInsertSchema(buyPriceOverrides).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertBuyPriceOverrideType = z.infer<typeof insertBuyPriceOverrideSchema>;

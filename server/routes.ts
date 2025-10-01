@@ -1986,6 +1986,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`💰 Fetching buy prices for manager ${managerId}`);
       
+      // Get current gameweek from bootstrap data
+      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      const bootstrapData = await bootstrapResponse.json();
+      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
+      
       // Fetch manager's current team
       const teamResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
       if (!teamResponse.ok) {

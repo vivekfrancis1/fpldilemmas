@@ -613,14 +613,16 @@ export default function TransferPlanner() {
       console.log("DEBUG: Initializing team for manager:", searchedId);
       console.log("DEBUG: First pick from teamData:", teamData.picks[0]);
       
-      // Merge buy prices into picks if available
-      let picksWithBuyPrices = [...teamData.picks];
-      if (buyPricesData?.buyPrices) {
-        picksWithBuyPrices = teamData.picks.map(pick => ({
+      // Merge buy prices into picks if available, defaulting to current price
+      let picksWithBuyPrices = teamData.picks.map(pick => {
+        const player = getPlayerById(pick.element);
+        const currentPrice = player?.now_cost || pick.selling_price;
+        
+        return {
           ...pick,
-          purchase_price: buyPricesData.buyPrices[pick.element] || pick.selling_price
-        }));
-      }
+          purchase_price: buyPricesData?.buyPrices?.[pick.element] || currentPrice
+        };
+      });
       
       setManualLineup(picksWithBuyPrices);
       // Reset all transfers when loading NEW team data (different manager)
