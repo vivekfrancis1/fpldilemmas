@@ -620,11 +620,13 @@ export default function TransferPlanner() {
 
   // Fetch player projections for next 6 gameweeks (for 6GW total calculation)
   const { data: playerProjections6GW } = useQuery<any[]>({
-    queryKey: ["/api/player-total-points-6gw"],
-    enabled: !!selectedGameweek,
+    queryKey: ["/api/player-total-points-6gw", bootstrapData?.events],
+    enabled: !!bootstrapData,
     queryFn: async () => {
-      const startGW = nextGameweeks[0]?.id || 7;
-      const endGW = nextGameweeks[nextGameweeks.length - 1]?.id || 12;
+      // Compute gameweek range inside queryFn
+      const nextGWs = getNextGameweeks();
+      const startGW = nextGWs[0]?.id || 7;
+      const endGW = nextGWs[nextGWs.length - 1]?.id || (startGW + 5);
       const response = await fetch(`/api/player-total-points?startGameweek=${startGW}&endGameweek=${endGW}`);
       return response.json();
     }
@@ -989,6 +991,110 @@ export default function TransferPlanner() {
     const initial = calculateInitialTransfers();
     const used = calculateTransfersUsed();
     return initial - used;
+  };
+
+  // ===== DRAFT COMPARISON HELPERS =====
+  
+  // Get squad at a specific gameweek for a given draft (after applying cumulative transfers)
+  const getSquadAtGameweek = (draftTransfers: Record<number, { transferredOut: any[], completed: any[] }>, targetGW: number): TeamPick[] => {
+    if (!teamData?.picks) return [];
+    
+    // Start with base team
+    let squad = [...teamData.picks];
+    const nextGWs = getNextGameweeks();
+    
+    // Apply all completed transfers from GW7 up to and including targetGW
+    nextGWs.forEach(gw => {
+      if (gw.id <= targetGW) {
+        const gwTransfers = draftTransfers[gw.id];
+        if (gwTransfers?.completed) {
+          gwTransfers.completed.forEach(transfer => {
+            squad = squad.map(pick => {
+              if (pick.element === transfer.outPlayerId) {
+                const inPlayer = getPlayerById(transfer.inPlayerId);
+                if (inPlayer) {
+                  return {
+                    ...pick,
+                    element: transfer.inPlayerId,
+                    selling_price: inPlayer.now_cost,
+                    purchase_price: inPlayer.now_cost,
+                  };
+                }
+              }
+              return pick;
+            });
+          });
+        }
+      }
+    });
+    
+    return squad;
+  };
+
+  // Calculate manual mode points for a draft at a specific gameweek
+  const calculateManualPointsForGameweek = (squad: TeamPick[], gameweek: number, projections6GW: any[]): number => {
+    if (!projections6GW) return 0;
+    
+    // Get starting 11 (positions 1-11, more robust than slice)
+    const starting11 = squad.filter(pick => pick.position <= 11);
+    
+    let totalPoints = 0;
+    starting11.forEach(pick => {
+      const projection = projections6GW.find((p: any) => p.playerId === pick.element);
+      const gwPoints = projection?.gameweekProjections?.[gameweek.toString()] || 0;
+      
+      // Double points for captain
+      const multiplier = pick.is_captain ? 2 : 1;
+      totalPoints += gwPoints * multiplier;
+    });
+    
+    return totalPoints;
+  };
+
+  // Build comparison data for all drafts in Manual mode
+  const buildDraftComparisonData = () => {
+    if (!teamData?.picks || !playerProjections6GW) return [];
+    
+    const nextGWs = getNextGameweeks();
+    if (nextGWs.length === 0) return [];
+    
+    const comparisonRows: any[] = [];
+    
+    // Base Draft (Manual mode only)
+    const baseRow = {
+      draftKey: 'Base',
+      mode: 'Manual',
+      gameweeks: {} as Record<number, number>,
+      total: 0
+    };
+    
+    nextGWs.forEach(gw => {
+      const squad = getSquadAtGameweek({}, gw.id); // Empty transfers = base team
+      const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW);
+      baseRow.gameweeks[gw.id] = points;
+      baseRow.total += points;
+    });
+    comparisonRows.push(baseRow);
+    
+    // All saved drafts (Manual mode only)
+    savedDrafts.forEach(draft => {
+      const draftRow = {
+        draftKey: draft.draftLetter,
+        mode: 'Manual',
+        gameweeks: {} as Record<number, number>,
+        total: 0
+      };
+      
+      nextGWs.forEach(gw => {
+        const squad = getSquadAtGameweek(draft.gameweekTransfers || {}, gw.id);
+        const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW);
+        draftRow.gameweeks[gw.id] = points;
+        draftRow.total += points;
+      });
+      comparisonRows.push(draftRow);
+    });
+    
+    return comparisonRows;
   };
 
   // Swap a starting 11 player with a bench player
@@ -1836,6 +1942,83 @@ export default function TransferPlanner() {
                 </Button>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Draft Comparison Table */}
+      {searchedId && teamData && playerProjections && (
+        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-blue-600" />
+              Draft Comparison (Manual Mode)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const comparisonData = buildDraftComparisonData();
+              const nextGWs = getNextGameweeks();
+              
+              if (comparisonData.length === 0 || nextGWs.length === 0) {
+                return <p className="text-muted-foreground text-sm">No comparison data available</p>;
+              }
+              
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2 font-semibold" data-testid="header-draft">Draft</th>
+                        {nextGWs.map(gw => (
+                          <th key={gw.id} className="text-center p-2 font-semibold" data-testid={`header-gw${gw.id}`}>
+                            GW{gw.id}
+                          </th>
+                        ))}
+                        <th className="text-center p-2 font-semibold bg-blue-50 dark:bg-blue-950/20" data-testid="header-total">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {comparisonData.map((row, idx) => (
+                        <tr 
+                          key={`${row.draftKey}-${row.mode}`} 
+                          className={`border-b hover:bg-gray-50 dark:hover:bg-gray-900 ${
+                            row.draftKey === activeDraft ? 'bg-blue-50 dark:bg-blue-950/10' : ''
+                          }`}
+                          data-testid={`row-${row.draftKey}-${row.mode.toLowerCase()}`}
+                        >
+                          <td className="p-2 font-medium" data-testid={`cell-draft-${row.draftKey}`}>
+                            {row.draftKey} {row.draftKey === activeDraft && '●'}
+                          </td>
+                          {nextGWs.map(gw => (
+                            <td 
+                              key={gw.id} 
+                              className="text-center p-2 text-sm"
+                              data-testid={`cell-${row.draftKey}-gw${gw.id}`}
+                            >
+                              {row.gameweeks[gw.id]?.toFixed(1) || '0.0'}
+                            </td>
+                          ))}
+                          <td 
+                            className="text-center p-2 font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/20"
+                            data-testid={`cell-${row.draftKey}-total`}
+                          >
+                            {row.total.toFixed(1)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+            
+            <div className="mt-4 text-xs text-muted-foreground">
+              <p>● = Currently active draft</p>
+              <p>Manual mode shows projected points based on your saved lineup and transfers for each gameweek.</p>
+            </div>
           </CardContent>
         </Card>
       )}
