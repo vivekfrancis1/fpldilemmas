@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -1112,6 +1114,87 @@ export default function TransferPlanner() {
     return bestPoints;
   };
 
+  // Compute a canonical signature for a draft to detect duplicates
+  // Signature includes: squad composition at each GW, captain/vice, and transfers
+  const computeDraftSignature = (draftTransfers: any, nextGWs: any[]) => {
+    const signature: any = {
+      gameweeks: {}
+    };
+    
+    nextGWs.forEach(gw => {
+      const squad = getSquadAtGameweek(draftTransfers, gw.id);
+      // Sort squad by element ID for consistent comparison
+      const sortedSquad = squad
+        .map(pick => ({
+          element: pick.element,
+          position: pick.position,
+          multiplier: pick.multiplier,
+          is_captain: pick.is_captain,
+          is_vice_captain: pick.is_vice_captain
+        }))
+        .sort((a, b) => a.element - b.element);
+      
+      signature.gameweeks[gw.id] = sortedSquad;
+    });
+    
+    // Include transfers for each gameweek in signature
+    signature.transfers = {};
+    nextGWs.forEach(gw => {
+      const gwTransfers = draftTransfers[gw.id] || { transferredOut: [], completed: [] };
+      signature.transfers[gw.id] = {
+        transferredOut: [...gwTransfers.transferredOut].sort(),
+        completed: [...gwTransfers.completed].sort((a, b) => {
+          if (a.playerOut !== b.playerOut) return a.playerOut - b.playerOut;
+          return a.playerIn - b.playerIn;
+        })
+      };
+    });
+    
+    return JSON.stringify(signature);
+  };
+
+  // Identify duplicate drafts by comparing signatures
+  const identifyDuplicateDrafts = () => {
+    const nextGWs = getNextGameweeks();
+    if (nextGWs.length === 0) return {};
+    
+    // Map to store signature -> earliest draft with that signature
+    const signatureMap = new Map<string, string>();
+    const duplicates: Record<string, { isDuplicate: boolean; duplicateOfKey: string }> = {};
+    
+    // Array of all drafts in creation order (Base first, then saved drafts)
+    const allDrafts = [
+      { draftKey: 'Base', transfers: {} },
+      ...savedDrafts.map((draft: any) => ({
+        draftKey: draft.draftLetter,
+        transfers: draft.draftLetter === activeDraft ? gameweekTransfers : (draft.gameweekTransfers || {})
+      }))
+    ];
+    
+    // Process each draft
+    allDrafts.forEach(draft => {
+      const signature = computeDraftSignature(draft.transfers, nextGWs);
+      
+      if (signatureMap.has(signature)) {
+        // This is a duplicate
+        const originalKey = signatureMap.get(signature)!;
+        duplicates[draft.draftKey] = {
+          isDuplicate: true,
+          duplicateOfKey: originalKey
+        };
+      } else {
+        // First draft with this signature
+        signatureMap.set(signature, draft.draftKey);
+        duplicates[draft.draftKey] = {
+          isDuplicate: false,
+          duplicateOfKey: ''
+        };
+      }
+    });
+    
+    return duplicates;
+  };
+
   // Build comparison data for all drafts with both Manual and Auto modes
   const buildDraftComparisonData = () => {
     if (!teamData?.picks || !playerProjections6GW) return [];
@@ -2006,6 +2089,9 @@ export default function TransferPlanner() {
               // Find the maximum total points
               const maxTotal = Math.max(...comparisonData.map(row => row.total));
               
+              // Identify duplicate drafts
+              const duplicateInfo = identifyDuplicateDrafts();
+              
               return (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
@@ -2025,6 +2111,9 @@ export default function TransferPlanner() {
                     <tbody>
                       {comparisonData.map((row, idx) => {
                         const isMaxTotal = row.total === maxTotal;
+                        const isDuplicate = row.mode === 'Manual' && duplicateInfo[row.draftKey]?.isDuplicate;
+                        const duplicateOf = duplicateInfo[row.draftKey]?.duplicateOfKey;
+                        
                         return (
                           <tr 
                             key={`${row.draftKey}-${row.mode}`} 
@@ -2037,17 +2126,65 @@ export default function TransferPlanner() {
                           >
                             <td className="p-2 font-medium" data-testid={`cell-draft-${row.draftKey}`}>
                               <div className="flex items-center gap-2">
-                              <span>{row.draftKey}</span>
-                              <span className={`text-xs px-2 py-0.5 rounded ${
-                                row.mode === 'Manual' 
-                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
-                                  : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                              }`}>
-                                {row.mode}
-                              </span>
-                              {row.draftKey === activeDraft && row.mode === 'Manual' && <span className="text-blue-600">●</span>}
-                            </div>
-                          </td>
+                                <span>{row.draftKey}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded ${
+                                  row.mode === 'Manual' 
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
+                                    : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                                }`}>
+                                  {row.mode}
+                                </span>
+                                {row.draftKey === activeDraft && row.mode === 'Manual' && <span className="text-blue-600">●</span>}
+                                
+                                {isDuplicate && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Badge 
+                                          variant="outline" 
+                                          className="text-xs border-orange-400 text-orange-700 bg-orange-50 dark:bg-orange-950/20 flex items-center gap-1"
+                                          data-testid={`badge-duplicate-${row.draftKey}`}
+                                        >
+                                          <Copy className="h-3 w-3" />
+                                          Duplicate of {duplicateOf}
+                                        </Badge>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>This draft matches Draft {duplicateOf} exactly across lineup, captain, and transfers.</p>
+                                        <p className="text-xs mt-1">You can delete it.</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                                
+                                {isDuplicate && row.draftKey !== 'Base' && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-5 w-5 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${row.draftKey}`, {
+                                          method: "DELETE"
+                                        });
+                                        if (response.ok) {
+                                          if (activeDraft === row.draftKey) {
+                                            switchToDraft("Base");
+                                          }
+                                          await loadDrafts();
+                                          toast({ title: "Draft Deleted", description: `Duplicate Draft ${row.draftKey} has been deleted` });
+                                        }
+                                      } catch (error) {
+                                        toast({ title: "Error", description: "Failed to delete draft", variant: "destructive" });
+                                      }
+                                    }}
+                                    data-testid={`button-delete-duplicate-${row.draftKey}`}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
                           {nextGWs.map(gw => (
                             <td 
                               key={gw.id} 
