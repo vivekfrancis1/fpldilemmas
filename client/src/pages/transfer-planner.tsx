@@ -773,6 +773,17 @@ export default function TransferPlanner() {
     return points !== undefined ? points : null;
   };
 
+  // Check if a player is transferred in (different from the baseline for this gameweek)
+  const isPlayerTransferredIn = (pick: TeamPick): boolean => {
+    if (!selectedGameweek) return false;
+    
+    const baseline = getBaselineLineup(selectedGameweek);
+    const baselinePick = baseline.find(p => p.position === pick.position);
+    
+    // Player is transferred in if their ID is different from baseline
+    return baselinePick ? pick.element !== baselinePick.element : false;
+  };
+
   // Get selling price using FPL formula: Purchase Price + floor((Current - Purchase) / 0.2) * 0.1
   const getSellingPrice = (pick: TeamPick): number => {
     const player = getPlayerById(pick.element);
@@ -1421,9 +1432,10 @@ export default function TransferPlanner() {
                     return (
                       <div
                         key={pick.element}
-                        className={`flex items-center justify-between p-3 rounded-lg border ${
+                        className={`flex items-center justify-between p-3 rounded-lg border-2 ${
                           pick.is_captain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
                           pick.is_vice_captain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
+                          isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
                           'border-gray-200'
                         }`}
                         data-testid={`starting-player-${pick.element}`}
@@ -1432,6 +1444,9 @@ export default function TransferPlanner() {
                           <div className="flex-1">
                             <div className="font-medium flex items-center gap-2">
                               {player.web_name}
+                              {isPlayerTransferredIn(pick) && (
+                                <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">NEW</span>
+                              )}
                               {pick.is_captain && (
                                 <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
                               )}
@@ -1570,7 +1585,11 @@ export default function TransferPlanner() {
                     return (
                       <div
                         key={pick.element}
-                        className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-900"
+                        className={`flex items-center justify-between p-3 rounded-lg border-2 ${
+                          isPlayerTransferredIn(pick) 
+                            ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
+                            : 'border-gray-200 bg-gray-50 dark:bg-gray-900'
+                        }`}
                         data-testid={`bench-player-${pick.element}`}
                       >
                         <div className="flex items-center gap-3 flex-1">
@@ -1578,7 +1597,12 @@ export default function TransferPlanner() {
                             {index + 1}
                           </span>
                           <div className="flex-1">
-                            <div className="font-medium">{player.web_name}</div>
+                            <div className="font-medium flex items-center gap-2">
+                              {player.web_name}
+                              {isPlayerTransferredIn(pick) && (
+                                <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">NEW</span>
+                              )}
+                            </div>
                             <div className="text-sm text-muted-foreground">
                               {getTeamName(player.team)} • {getPositionName(player.element_type)}
                             </div>
