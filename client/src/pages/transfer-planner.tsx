@@ -234,6 +234,8 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
         comparison = a.price - b.price;
       } else if (sortField === 'name') {
         comparison = a.name.localeCompare(b.name);
+      } else if (sortField === 'ownership') {
+        comparison = a.ownership - b.ownership;
       } else if (sortField === 'avgValue') {
         comparison = (a.averageValue || 0) - (b.averageValue || 0);
       } else if (sortField === 'avgMins') {
@@ -346,6 +348,16 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   <Button
                     variant="ghost"
                     size="sm"
+                    onClick={() => handleSort('ownership')}
+                    data-testid="sort-ownership"
+                  >
+                    Own% {sortField === 'ownership' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                  </Button>
+                </th>
+                <th className="text-center p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleSort('avgValue')}
                     data-testid="sort-avgValue"
                   >
@@ -400,10 +412,15 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     <td className="p-2 sticky left-0 bg-white dark:bg-gray-950">
                       <div className="font-medium">{player.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {player.position} • {player.team} • £{player.price.toFixed(1)}m • {player.ownership.toFixed(1)}%
+                        {player.position} • {player.team}
                       </div>
                     </td>
                     <td className="p-2 text-center">£{player.price.toFixed(1)}m</td>
+                    <td className="p-2 text-center">
+                      <span className="text-orange-600 dark:text-orange-400 font-medium">
+                        {player.ownership.toFixed(1)}%
+                      </span>
+                    </td>
                     <td className="p-2 text-center">
                       <span className="text-blue-600 dark:text-blue-400 font-medium">
                         {(player.averageValue || 0).toFixed(2)}
