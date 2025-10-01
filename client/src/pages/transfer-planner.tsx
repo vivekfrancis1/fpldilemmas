@@ -1121,9 +1121,9 @@ export default function TransferPlanner() {
     
     const comparisonRows: any[] = [];
     
-    // Current Draft - Manual mode
+    // Base Draft - Manual mode
     const baseManualRow = {
-      draftKey: 'Current',
+      draftKey: 'Base',
       mode: 'Manual',
       gameweeks: {} as Record<number, number>,
       total: 0
@@ -1137,9 +1137,9 @@ export default function TransferPlanner() {
     });
     comparisonRows.push(baseManualRow);
     
-    // Current Draft - Auto mode
+    // Base Draft - Auto mode
     const baseAutoRow = {
-      draftKey: 'Current',
+      draftKey: 'Base',
       mode: 'Auto',
       gameweeks: {} as Record<number, number>,
       total: 0
