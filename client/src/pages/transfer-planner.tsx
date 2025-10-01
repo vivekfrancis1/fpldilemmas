@@ -1087,6 +1087,24 @@ export default function TransferPlanner() {
     });
   };
 
+  // Reset all transfers across all gameweeks
+  const handleResetAllTransfers = () => {
+    if (!teamData?.picks || !selectedGameweek) return;
+    
+    // Reset to original team data
+    setManualLineup([...teamData.picks]);
+    
+    // Clear all transfer data
+    setTransferredOutPlayers([]);
+    setCompletedTransfers([]);
+    setGameweekTransfers({});
+    
+    toast({
+      title: "All Transfers Reset",
+      description: "All transfers across all gameweeks have been undone."
+    });
+  };
+
   // Undo a specific transfer and restore the baseline player
   const handleUndoTransfer = (position: number) => {
     if (!teamData?.picks || !selectedGameweek) return;
@@ -1242,18 +1260,35 @@ export default function TransferPlanner() {
                 <TrendingUp className="h-5 w-5 text-green-600" />
                 Team Summary
               </div>
-              {hasEmptySlots && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleResetTransfers}
-                  className="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
-                  data-testid="button-reset-transfers"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Reset Transfers
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {(completedTransfers.length > 0 || transferredOutPlayers.length > 0) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetTransfers}
+                    className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                    data-testid="button-reset-gw-transfers"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Undo This GW
+                  </Button>
+                )}
+                {Object.keys(gameweekTransfers).some(gw => 
+                  gameweekTransfers[parseInt(gw)]?.completed?.length > 0 || 
+                  gameweekTransfers[parseInt(gw)]?.transferredOut?.length > 0
+                ) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleResetAllTransfers}
+                    className="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                    data-testid="button-reset-all-transfers"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Undo All GWs
+                  </Button>
+                )}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
