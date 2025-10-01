@@ -2252,7 +2252,7 @@ export default function TransferPlanner() {
             {activeDraft !== "Base" && (
               <div className="flex gap-2 flex-wrap pt-2 border-t">
                 <Button
-                  onClick={saveCurrentDraft}
+                  onClick={() => saveCurrentDraft()}
                   size="sm"
                   variant="default"
                   disabled={!hasUnsavedChanges}
@@ -2465,15 +2465,52 @@ export default function TransferPlanner() {
                                 )}
                               </div>
                             </td>
-                          {nextGWs.map(gw => (
-                            <td 
-                              key={gw.id} 
-                              className="text-center p-2 text-sm"
-                              data-testid={`cell-${row.draftKey}-gw${gw.id}`}
-                            >
-                              {row.gameweeks[gw.id]?.toFixed(1) || '0.0'}
-                            </td>
-                          ))}
+                          {nextGWs.map(gw => {
+                            // Get transfers for this draft and gameweek
+                            const getDraftTransfers = () => {
+                              if (row.draftKey === 'Base') return null;
+                              const draft = savedDrafts.find(d => d.draftLetter === row.draftKey);
+                              if (!draft || !draft.gameweekTransfers) return null;
+                              return draft.gameweekTransfers[gw.id] || draft.gameweekTransfers[gw.id.toString()];
+                            };
+                            
+                            const gwTransfers = getDraftTransfers();
+                            const hasTransfers = gwTransfers && gwTransfers.completed && gwTransfers.completed.length > 0;
+                            
+                            return (
+                              <td 
+                                key={gw.id} 
+                                className="text-center p-2 text-sm"
+                                data-testid={`cell-${row.draftKey}-gw${gw.id}`}
+                              >
+                                {hasTransfers ? (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="cursor-help underline decoration-dotted">
+                                          {row.gameweeks[gw.id]?.toFixed(1) || '0.0'}
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-xs">
+                                        <div className="text-sm">
+                                          <p className="font-semibold mb-1">GW{gw.id} Transfers:</p>
+                                          {gwTransfers.completed.map((transfer: any, idx: number) => (
+                                            <p key={idx} className="text-xs">
+                                              <span className="text-red-400">Out:</span> {transfer.outPlayerName} (£{transfer.sellingPrice.toFixed(1)}m)
+                                              <br />
+                                              <span className="text-green-400">In:</span> {transfer.inPlayerName} (£{transfer.buyingPrice.toFixed(1)}m)
+                                            </p>
+                                          ))}
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                ) : (
+                                  <span>{row.gameweeks[gw.id]?.toFixed(1) || '0.0'}</span>
+                                )}
+                              </td>
+                            );
+                          })}
                           <td 
                             className="text-center p-2 font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/20"
                             data-testid={`cell-${row.draftKey}-total`}
