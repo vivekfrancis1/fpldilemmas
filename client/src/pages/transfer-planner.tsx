@@ -2422,13 +2422,15 @@ export default function TransferPlanner() {
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-3">
-                                    <div 
-                                      className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
-                                      onClick={() => handleScrollToReplacement(player.element_type)}
-                                      data-testid={`needs-replacement-${pick.position}`}
-                                    >
-                                      Needs Replacement
-                                    </div>
+                                    {plannerMode === "manual" && (
+                                      <div 
+                                        className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                                        onClick={() => handleScrollToReplacement(player.element_type)}
+                                        data-testid={`needs-replacement-${pick.position}`}
+                                      >
+                                        Needs Replacement
+                                      </div>
+                                    )}
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -2531,16 +2533,18 @@ export default function TransferPlanner() {
                                         })}
                                       </SelectContent>
                                     </Select>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                      onClick={() => handleTransferOut(pick)}
-                                      data-testid={`transfer-out-${pick.element}`}
-                                      title="Transfer Out"
-                                    >
-                                      <X className="h-4 w-4" />
-                                    </Button>
+                                    {plannerMode === "manual" && (
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                        onClick={() => handleTransferOut(pick)}
+                                        data-testid={`transfer-out-${pick.element}`}
+                                        title="Transfer Out"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -2583,13 +2587,15 @@ export default function TransferPlanner() {
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div 
-                              className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
-                              onClick={() => handleScrollToReplacement(player.element_type)}
-                              data-testid={`needs-replacement-bench-${pick.position}`}
-                            >
-                              Needs Replacement
-                            </div>
+                            {plannerMode === "manual" && (
+                              <div 
+                                className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                                onClick={() => handleScrollToReplacement(player.element_type)}
+                                data-testid={`needs-replacement-bench-${pick.position}`}
+                              >
+                                Needs Replacement
+                              </div>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -2663,16 +2669,18 @@ export default function TransferPlanner() {
                               </Button>
                             </div>
                           )}
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
-                            onClick={() => handleTransferOut(pick)}
-                            data-testid={`bench-transfer-out-${pick.element}`}
-                            title="Transfer Out"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
+                          {plannerMode === "manual" && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
+                              onClick={() => handleTransferOut(pick)}
+                              data-testid={`bench-transfer-out-${pick.element}`}
+                              title="Transfer Out"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     );
@@ -2787,23 +2795,9 @@ export default function TransferPlanner() {
                                       </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                      <div 
-                                        className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
-                                        onClick={() => handleScrollToReplacement(fullPlayer?.element_type || 1)}
-                                        data-testid={`needs-replacement-auto-${player.element}`}
-                                      >
-                                        Needs Replacement
+                                      <div className="text-sm text-red-600 font-medium">
+                                        Switch to Manual mode to add replacement
                                       </div>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleUndoTransfer(pick.position)}
-                                        className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
-                                        data-testid={`undo-transfer-auto-${player.element}`}
-                                      >
-                                        <RotateCcw className="h-4 w-4 mr-1" />
-                                        Undo
-                                      </Button>
                                     </div>
                                   </div>
                                 );
@@ -2846,18 +2840,6 @@ export default function TransferPlanner() {
                                         <div className="text-xs text-muted-foreground">({(player.projectedPoints * 2).toFixed(2)} with (C))</div>
                                       )}
                                     </div>
-                                    {pick && (
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                        onClick={() => handleTransferOut(pick)}
-                                        data-testid={`transfer-out-${player.element}`}
-                                        title="Transfer Out"
-                                      >
-                                        <X className="h-4 w-4" />
-                                      </Button>
-                                    )}
                                   </div>
                                 </div>
                               );
@@ -2897,23 +2879,9 @@ export default function TransferPlanner() {
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
-                              <div 
-                                className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
-                                onClick={() => handleScrollToReplacement(fullPlayer?.element_type || 1)}
-                                data-testid={`needs-replacement-bench-auto-${player.element}`}
-                              >
-                                Needs Replacement
+                              <div className="text-sm text-red-600 font-medium">
+                                Switch to Manual mode to add replacement
                               </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleUndoTransfer(pick.position)}
-                                className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
-                                data-testid={`undo-transfer-bench-auto-${player.element}`}
-                              >
-                                <RotateCcw className="h-4 w-4 mr-1" />
-                                Undo
-                              </Button>
                             </div>
                           </div>
                         );
@@ -2947,18 +2915,6 @@ export default function TransferPlanner() {
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-sm text-muted-foreground">{player.projectedPoints.toFixed(2)} pts</div>
-                            {pick && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                onClick={() => handleTransferOut(pick)}
-                                data-testid={`transfer-out-bench-${player.element}`}
-                                title="Transfer Out"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
                           </div>
                         </div>
                       );
