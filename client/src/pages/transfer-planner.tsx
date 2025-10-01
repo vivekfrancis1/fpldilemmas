@@ -1085,6 +1085,11 @@ export default function TransferPlanner() {
       title: "Player Transferred Out",
       description: `${player.web_name} has been transferred out (£${sellingPrice.toFixed(1)}m). Click "Needs Replacement" to select a replacement.`
     });
+
+    // Auto-save draft after transfer out
+    if (activeDraft !== "Base") {
+      setTimeout(() => saveCurrentDraft(), 100);
+    }
   };
 
   // Handle clicking "Needs Replacement" to scroll to projections
@@ -1204,6 +1209,11 @@ export default function TransferPlanner() {
         teamLineupRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, plannerMode === "auto" ? 500 : 100); // Wait longer in auto mode for optimization to complete
+
+    // Auto-save draft after transfer in
+    if (activeDraft !== "Base") {
+      setTimeout(() => saveCurrentDraft(), 200);
+    }
   };
 
   // Reset all transfers for the current gameweek and restore baseline
