@@ -1,4 +1,4 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
 import { eq, sql, inArray, desc } from "drizzle-orm";
@@ -114,6 +114,14 @@ export interface IStorage {
     startGameweek: number;
     endGameweek: number;
   }>>;
+  
+  // Transfer Planner Draft operations
+  createTransferPlannerDraft(draft: Omit<InsertTransferPlannerDraft, 'id' | 'createdAt' | 'updatedAt'>): Promise<TransferPlannerDraft>;
+  getTransferPlannerDraft(managerId: number, draftLetter: string): Promise<TransferPlannerDraft | undefined>;
+  getAllTransferPlannerDrafts(managerId: number): Promise<TransferPlannerDraft[]>;
+  updateTransferPlannerDraft(managerId: number, draftLetter: string, updates: Partial<Omit<InsertTransferPlannerDraft, 'id' | 'managerId' | 'draftLetter' | 'createdAt' | 'updatedAt'>>): Promise<TransferPlannerDraft>;
+  deleteTransferPlannerDraft(managerId: number, draftLetter: string): Promise<boolean>;
+  deleteAllTransferPlannerDrafts(managerId: number): Promise<number>;
   
 }
 
@@ -486,6 +494,31 @@ export class MemStorage implements IStorage {
     endGameweek: number;
   }>> {
     return [];
+  }
+
+  // Transfer Planner Draft operations (in-memory stubs)
+  async createTransferPlannerDraft(draft: Omit<InsertTransferPlannerDraft, 'id' | 'createdAt' | 'updatedAt'>): Promise<TransferPlannerDraft> {
+    throw new Error("MemStorage: Transfer Planner Draft operations not supported. Use DatabaseStorage.");
+  }
+
+  async getTransferPlannerDraft(managerId: number, draftLetter: string): Promise<TransferPlannerDraft | undefined> {
+    return undefined;
+  }
+
+  async getAllTransferPlannerDrafts(managerId: number): Promise<TransferPlannerDraft[]> {
+    return [];
+  }
+
+  async updateTransferPlannerDraft(managerId: number, draftLetter: string, updates: Partial<Omit<InsertTransferPlannerDraft, 'id' | 'managerId' | 'draftLetter' | 'createdAt' | 'updatedAt'>>): Promise<TransferPlannerDraft> {
+    throw new Error("MemStorage: Transfer Planner Draft operations not supported. Use DatabaseStorage.");
+  }
+
+  async deleteTransferPlannerDraft(managerId: number, draftLetter: string): Promise<boolean> {
+    return false;
+  }
+
+  async deleteAllTransferPlannerDrafts(managerId: number): Promise<number> {
+    return 0;
   }
 
 }
@@ -1641,6 +1674,139 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error getting Player Total Points snapshots:", error);
       return [];
+    }
+  }
+
+  // Transfer Planner Draft methods
+  async createTransferPlannerDraft(draft: Omit<InsertTransferPlannerDraft, 'id' | 'createdAt' | 'updatedAt'>): Promise<TransferPlannerDraft> {
+    try {
+      console.log(`💾 Creating draft ${draft.draftLetter} for manager ${draft.managerId}`);
+      
+      const [result] = await db
+        .insert(transferPlannerDrafts)
+        .values({
+          managerId: draft.managerId,
+          draftLetter: draft.draftLetter,
+          gameweekTransfers: draft.gameweekTransfers,
+          mode: draft.mode || 'manual',
+          teamBank: draft.teamBank.toString(),
+          teamValue: draft.teamValue.toString(),
+          totalProjectedPoints: draft.totalProjectedPoints?.toString() || '0',
+          totalTransfersUsed: draft.totalTransfersUsed || 0,
+        })
+        .returning();
+      
+      return result;
+    } catch (error) {
+      console.error("Error creating transfer planner draft:", error);
+      throw error;
+    }
+  }
+
+  async getTransferPlannerDraft(managerId: number, draftLetter: string): Promise<TransferPlannerDraft | undefined> {
+    try {
+      const [result] = await db
+        .select()
+        .from(transferPlannerDrafts)
+        .where(
+          sql`${transferPlannerDrafts.managerId} = ${managerId} AND ${transferPlannerDrafts.draftLetter} = ${draftLetter}`
+        )
+        .limit(1);
+      
+      return result;
+    } catch (error) {
+      console.error("Error getting transfer planner draft:", error);
+      return undefined;
+    }
+  }
+
+  async getAllTransferPlannerDrafts(managerId: number): Promise<TransferPlannerDraft[]> {
+    try {
+      const results = await db
+        .select()
+        .from(transferPlannerDrafts)
+        .where(eq(transferPlannerDrafts.managerId, managerId))
+        .orderBy(transferPlannerDrafts.draftLetter);
+      
+      return results;
+    } catch (error) {
+      console.error("Error getting all transfer planner drafts:", error);
+      return [];
+    }
+  }
+
+  async updateTransferPlannerDraft(managerId: number, draftLetter: string, updates: Partial<Omit<InsertTransferPlannerDraft, 'id' | 'managerId' | 'draftLetter' | 'createdAt' | 'updatedAt'>>): Promise<TransferPlannerDraft> {
+    try {
+      console.log(`💾 Updating draft ${draftLetter} for manager ${managerId}`);
+      
+      const updateData: any = {
+        updatedAt: new Date(),
+      };
+      
+      if (updates.gameweekTransfers !== undefined) {
+        updateData.gameweekTransfers = updates.gameweekTransfers;
+      }
+      if (updates.mode !== undefined) {
+        updateData.mode = updates.mode;
+      }
+      if (updates.teamBank !== undefined) {
+        updateData.teamBank = updates.teamBank.toString();
+      }
+      if (updates.teamValue !== undefined) {
+        updateData.teamValue = updates.teamValue.toString();
+      }
+      if (updates.totalProjectedPoints !== undefined) {
+        updateData.totalProjectedPoints = updates.totalProjectedPoints.toString();
+      }
+      if (updates.totalTransfersUsed !== undefined) {
+        updateData.totalTransfersUsed = updates.totalTransfersUsed;
+      }
+      
+      const [result] = await db
+        .update(transferPlannerDrafts)
+        .set(updateData)
+        .where(
+          sql`${transferPlannerDrafts.managerId} = ${managerId} AND ${transferPlannerDrafts.draftLetter} = ${draftLetter}`
+        )
+        .returning();
+      
+      return result;
+    } catch (error) {
+      console.error("Error updating transfer planner draft:", error);
+      throw error;
+    }
+  }
+
+  async deleteTransferPlannerDraft(managerId: number, draftLetter: string): Promise<boolean> {
+    try {
+      console.log(`🗑️ Deleting draft ${draftLetter} for manager ${managerId}`);
+      
+      const result = await db
+        .delete(transferPlannerDrafts)
+        .where(
+          sql`${transferPlannerDrafts.managerId} = ${managerId} AND ${transferPlannerDrafts.draftLetter} = ${draftLetter}`
+        );
+      
+      return true;
+    } catch (error) {
+      console.error("Error deleting transfer planner draft:", error);
+      return false;
+    }
+  }
+
+  async deleteAllTransferPlannerDrafts(managerId: number): Promise<number> {
+    try {
+      console.log(`🗑️ Deleting all drafts for manager ${managerId}`);
+      
+      const result = await db
+        .delete(transferPlannerDrafts)
+        .where(eq(transferPlannerDrafts.managerId, managerId));
+      
+      // Since drizzle doesn't return affected rows count directly, we'll return a success indicator
+      return 1;
+    } catch (error) {
+      console.error("Error deleting all transfer planner drafts:", error);
+      return 0;
     }
   }
 

@@ -14061,6 +14061,183 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Transfer Planner Draft Management Endpoints
+  
+  // Save or update a draft
+  app.post("/api/transfer-planner/drafts", async (req, res) => {
+    try {
+      const { managerId, draftLetter, gameweekTransfers, mode, teamBank, teamValue, totalProjectedPoints, totalTransfersUsed } = req.body;
+
+      // Validation
+      if (!managerId || !draftLetter || !gameweekTransfers) {
+        return res.status(400).json({ error: "Missing required fields: managerId, draftLetter, gameweekTransfers" });
+      }
+
+      // Validate draft letter is A-J
+      if (!/^[A-J]$/.test(draftLetter)) {
+        return res.status(400).json({ error: "Draft letter must be A-J" });
+      }
+
+      console.log(`💾 Saving draft ${draftLetter} for manager ${managerId}`);
+
+      // Check if draft already exists
+      const existing = await storage.getTransferPlannerDraft(managerId, draftLetter);
+
+      let draft;
+      if (existing) {
+        // Update existing draft
+        draft = await storage.updateTransferPlannerDraft(managerId, draftLetter, {
+          gameweekTransfers,
+          mode: mode || 'manual',
+          teamBank: teamBank || 0,
+          teamValue: teamValue || 0,
+          totalProjectedPoints: totalProjectedPoints || 0,
+          totalTransfersUsed: totalTransfersUsed || 0,
+        });
+      } else {
+        // Create new draft
+        draft = await storage.createTransferPlannerDraft({
+          managerId,
+          draftLetter,
+          gameweekTransfers,
+          mode: mode || 'manual',
+          teamBank: teamBank || 0,
+          teamValue: teamValue || 0,
+          totalProjectedPoints: totalProjectedPoints || 0,
+          totalTransfersUsed: totalTransfersUsed || 0,
+        });
+      }
+
+      console.log(`✅ Draft ${draftLetter} saved successfully`);
+      res.json({ success: true, draft });
+
+    } catch (error) {
+      console.error("❌ Error saving draft:", error);
+      res.status(500).json({ 
+        error: "Failed to save draft",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get all drafts for a manager
+  app.get("/api/transfer-planner/drafts/:managerId", async (req, res) => {
+    try {
+      const managerId = parseInt(req.params.managerId);
+
+      if (isNaN(managerId)) {
+        return res.status(400).json({ error: "Invalid manager ID" });
+      }
+
+      console.log(`📋 Fetching all drafts for manager ${managerId}`);
+
+      const drafts = await storage.getAllTransferPlannerDrafts(managerId);
+
+      res.json({ success: true, drafts, count: drafts.length });
+
+    } catch (error) {
+      console.error("❌ Error fetching drafts:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch drafts",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get a specific draft
+  app.get("/api/transfer-planner/drafts/:managerId/:draftLetter", async (req, res) => {
+    try {
+      const managerId = parseInt(req.params.managerId);
+      const { draftLetter } = req.params;
+
+      if (isNaN(managerId)) {
+        return res.status(400).json({ error: "Invalid manager ID" });
+      }
+
+      if (!/^[A-J]$/.test(draftLetter)) {
+        return res.status(400).json({ error: "Draft letter must be A-J" });
+      }
+
+      console.log(`📄 Fetching draft ${draftLetter} for manager ${managerId}`);
+
+      const draft = await storage.getTransferPlannerDraft(managerId, draftLetter);
+
+      if (!draft) {
+        return res.status(404).json({ error: "Draft not found" });
+      }
+
+      res.json({ success: true, draft });
+
+    } catch (error) {
+      console.error("❌ Error fetching draft:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch draft",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Delete a specific draft
+  app.delete("/api/transfer-planner/drafts/:managerId/:draftLetter", async (req, res) => {
+    try {
+      const managerId = parseInt(req.params.managerId);
+      const { draftLetter } = req.params;
+
+      if (isNaN(managerId)) {
+        return res.status(400).json({ error: "Invalid manager ID" });
+      }
+
+      if (!/^[A-J]$/.test(draftLetter)) {
+        return res.status(400).json({ error: "Draft letter must be A-J" });
+      }
+
+      console.log(`🗑️ Deleting draft ${draftLetter} for manager ${managerId}`);
+
+      const success = await storage.deleteTransferPlannerDraft(managerId, draftLetter);
+
+      if (!success) {
+        return res.status(404).json({ error: "Draft not found" });
+      }
+
+      console.log(`✅ Draft ${draftLetter} deleted successfully`);
+      res.json({ success: true });
+
+    } catch (error) {
+      console.error("❌ Error deleting draft:", error);
+      res.status(500).json({ 
+        error: "Failed to delete draft",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Delete all drafts for a manager
+  app.delete("/api/transfer-planner/drafts/:managerId", async (req, res) => {
+    try {
+      const managerId = parseInt(req.params.managerId);
+
+      if (isNaN(managerId)) {
+        return res.status(400).json({ error: "Invalid manager ID" });
+      }
+
+      console.log(`🗑️ Deleting all drafts for manager ${managerId}`);
+
+      const count = await storage.deleteAllTransferPlannerDrafts(managerId);
+
+      console.log(`✅ Deleted ${count} drafts successfully`);
+      res.json({ success: true, deletedCount: count });
+
+    } catch (error) {
+      console.error("❌ Error deleting drafts:", error);
+      res.status(500).json({ 
+        error: "Failed to delete drafts",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  console.log("✓ Transfer Planner Draft API routes registered successfully");
+
   const httpServer = createServer(app);
   return httpServer;
 }

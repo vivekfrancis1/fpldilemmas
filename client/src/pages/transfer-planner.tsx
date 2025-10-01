@@ -507,6 +507,11 @@ export default function TransferPlanner() {
   // Ref for scrolling to team lineup after transfer
   const teamLineupRef = useRef<HTMLDivElement>(null);
   
+  // Draft management state
+  const [selectedDraft, setSelectedDraft] = useState<string | null>(null);
+  const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
+  const [showDraftPanel, setShowDraftPanel] = useState(false);
+  
   const { toast } = useToast();
 
   // Cache manager ID functionality
