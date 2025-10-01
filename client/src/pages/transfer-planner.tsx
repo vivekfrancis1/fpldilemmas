@@ -338,7 +338,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Player {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2 sticky left-[140px] md:left-[200px] bg-white dark:bg-gray-950 z-20 font-bold text-xs md:text-sm">
+                <th className="text-center py-1 px-1 md:p-2 font-bold text-xs md:text-sm">
                   Action
                 </th>
                 <th className="text-left py-1 px-1 md:p-2">
@@ -444,7 +444,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         })()} • {player.team}
                       </div>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center sticky left-[140px] md:left-[200px] bg-white dark:bg-gray-950 z-10">
+                    <td className="py-1 px-1 md:p-2 text-center">
                       {(() => {
                         // Map position names to element types
                         const positionMap: { [key: string]: number } = {
