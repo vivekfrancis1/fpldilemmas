@@ -1592,11 +1592,11 @@ export default function TransferPlanner() {
   const createNewDraft = () => {
     // Find next available letter
     const usedLetters = savedDrafts.map(d => d.draftLetter);
-    const allLetters = 'ABCDEFGHIJ'.split('');
+    const allLetters = 'ABCDE'.split('');
     const nextLetter = allLetters.find(l => !usedLetters.includes(l));
     
     if (!nextLetter) {
-      toast({ title: "Limit Reached", description: "Maximum 10 drafts allowed (A-J)", variant: "destructive" });
+      toast({ title: "Limit Reached", description: "Maximum 5 drafts allowed (A-E). Delete a draft to create a new one.", variant: "destructive" });
       return;
     }
 
@@ -1906,7 +1906,7 @@ export default function TransferPlanner() {
               ))}
 
               {/* New Draft Button */}
-              {savedDrafts.length < 10 && (
+              {savedDrafts.length < 5 && (
                 <Button
                   onClick={createNewDraft}
                   size="sm"
