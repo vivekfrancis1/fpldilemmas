@@ -2023,6 +2023,112 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get buy price overrides for a manager
+  app.get("/api/manager/:managerId/buy-price-overrides", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+      
+      console.log(`💰 Fetching buy price overrides for manager ${managerId}`);
+      
+      const result = await db.execute(sql`
+        SELECT player_id, buy_price 
+        FROM buy_price_overrides 
+        WHERE manager_id = ${parseInt(managerId)}
+      `);
+      
+      const overrides: Record<number, number> = {};
+      for (const row of result.rows as any[]) {
+        overrides[row.player_id] = row.buy_price;
+      }
+      
+      console.log(`✅ Retrieved ${Object.keys(overrides).length} buy price override(s)`);
+      res.json({ overrides });
+      
+    } catch (error) {
+      console.error(`❌ Error fetching buy price overrides for manager ${req.params.managerId}:`, error);
+      res.status(500).json({
+        error: "Failed to fetch buy price overrides",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Save or update buy price override for a player
+  app.post("/api/manager/:managerId/buy-price-overrides", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      const { playerId, buyPrice } = req.body;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+      
+      if (!playerId || isNaN(Number(playerId))) {
+        return res.status(400).json({ message: "Invalid player ID" });
+      }
+      
+      if (!buyPrice || isNaN(Number(buyPrice))) {
+        return res.status(400).json({ message: "Invalid buy price" });
+      }
+      
+      console.log(`💰 Saving buy price override for manager ${managerId}, player ${playerId}: ${buyPrice}`);
+      
+      // Upsert buy price override
+      await db.execute(sql`
+        INSERT INTO buy_price_overrides (manager_id, player_id, buy_price, updated_at)
+        VALUES (${parseInt(managerId)}, ${parseInt(playerId)}, ${parseInt(buyPrice)}, NOW())
+        ON CONFLICT (manager_id, player_id) 
+        DO UPDATE SET buy_price = ${parseInt(buyPrice)}, updated_at = NOW()
+      `);
+      
+      console.log(`✅ Buy price override saved successfully`);
+      res.json({ success: true });
+      
+    } catch (error) {
+      console.error(`❌ Error saving buy price override:`, error);
+      res.status(500).json({
+        error: "Failed to save buy price override",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Delete buy price override for a player
+  app.delete("/api/manager/:managerId/buy-price-overrides/:playerId", async (req, res) => {
+    try {
+      const { managerId, playerId } = req.params;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+      
+      if (!playerId || isNaN(Number(playerId))) {
+        return res.status(400).json({ message: "Invalid player ID" });
+      }
+      
+      console.log(`💰 Deleting buy price override for manager ${managerId}, player ${playerId}`);
+      
+      await db.execute(sql`
+        DELETE FROM buy_price_overrides 
+        WHERE manager_id = ${parseInt(managerId)} AND player_id = ${parseInt(playerId)}
+      `);
+      
+      console.log(`✅ Buy price override deleted successfully`);
+      res.json({ success: true });
+      
+    } catch (error) {
+      console.error(`❌ Error deleting buy price override:`, error);
+      res.status(500).json({
+        error: "Failed to delete buy price override",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Top 25 managers batch endpoint with caching
   const TOP_25_MANAGERS = [
     { rank: 1, name: "Tom Dollimore", managerId: 497000 },
