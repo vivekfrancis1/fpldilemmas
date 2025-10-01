@@ -860,12 +860,13 @@ export default function TransferPlanner() {
     }
     
     // For subsequent gameweeks, calculate cumulatively
-    // Initial for GW_N = Remaining from GW_(N-1) + 1
+    // Initial for GW_N = min(1, Remaining from GW_(N-1) + 1)
     let cumulativeRemaining = teamData.transfers.limit || 1;
     
     for (let gw = firstPlanningGW; gw < selectedGameweek; gw++) {
       const used = calculateTransfersUsedForGameweek(gw);
-      cumulativeRemaining = cumulativeRemaining - used + 1; // Remaining + 1 for next GW
+      // Cap at 1: can't have more than 1 initial transfer
+      cumulativeRemaining = Math.min(1, cumulativeRemaining - used + 1);
     }
     
     return cumulativeRemaining;
