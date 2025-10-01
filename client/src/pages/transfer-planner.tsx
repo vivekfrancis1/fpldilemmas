@@ -709,16 +709,18 @@ export default function TransferPlanner() {
   useEffect(() => {
     if (!selectedGameweek || !teamData?.picks) return;
     
-    // Save current gameweek's transfers before switching
-    const prevGameweek = getNextGameweeks().find(gw => 
-      gameweekTransfers[gw.id]?.transferredOut?.length > 0 || 
-      gameweekTransfers[gw.id]?.completed?.length > 0
-    );
-    
     // Clear optimized lineup when gameweek changes
     setOptimizedLineup(null);
     
-    // Load transfers for the selected gameweek or use empty if none
+    // Base Draft: ALWAYS show original team with NO transfers
+    if (activeDraft === "Base") {
+      setTransferredOutPlayers([]);
+      setCompletedTransfers([]);
+      setManualLineup([...teamData.picks]);
+      return;
+    }
+    
+    // Other drafts: Load transfers for the selected gameweek
     const gwTransfers = gameweekTransfers[selectedGameweek] || { transferredOut: [], completed: [] };
     setTransferredOutPlayers(gwTransfers.transferredOut);
     setCompletedTransfers(gwTransfers.completed);
@@ -756,7 +758,7 @@ export default function TransferPlanner() {
     });
     
     setManualLineup(lineupWithTransfers);
-  }, [selectedGameweek]);
+  }, [selectedGameweek, activeDraft]);
 
   // Auto-run optimization when Auto mode is selected
   useEffect(() => {
