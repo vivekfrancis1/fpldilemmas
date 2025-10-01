@@ -1344,6 +1344,11 @@ export default function TransferPlanner() {
                 <div className={`text-2xl font-bold ${calculateTransfersRemaining() < 0 ? 'text-red-600' : 'text-blue-600'}`}>
                   {calculateTransfersRemaining()}
                 </div>
+                {calculateTransfersRemaining() < 0 && (
+                  <div className="text-xs text-red-600 mt-1">
+                    Undo at least {Math.abs(calculateTransfersRemaining())} transfer{Math.abs(calculateTransfersRemaining()) > 1 ? 's' : ''}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
