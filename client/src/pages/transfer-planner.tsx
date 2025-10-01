@@ -508,9 +508,9 @@ export default function TransferPlanner() {
   const teamLineupRef = useRef<HTMLDivElement>(null);
   
   // Draft management state
-  const [selectedDraft, setSelectedDraft] = useState<string | null>(null);
+  const [activeDraft, setActiveDraft] = useState<string>("Base"); // Current working draft
   const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
-  const [showDraftPanel, setShowDraftPanel] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
   const { toast } = useToast();
 
@@ -1296,8 +1296,21 @@ export default function TransferPlanner() {
   };
 
   // Draft management functions
-  const handleSaveDraft = async (draftLetter: string) => {
-    if (!searchedId || !selectedGameweek) return;
+  const loadDrafts = async () => {
+    if (!searchedId) return;
+    try {
+      const response = await fetch(`/api/transfer-planner/drafts/${searchedId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSavedDrafts(data.drafts || []);
+      }
+    } catch (error) {
+      console.error("Failed to load drafts:", error);
+    }
+  };
+
+  const saveCurrentDraft = async () => {
+    if (!searchedId || activeDraft === "Base") return;
 
     try {
       const response = await fetch("/api/transfer-planner/drafts", {
@@ -1305,7 +1318,7 @@ export default function TransferPlanner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           managerId: parseInt(searchedId),
-          draftLetter,
+          draftLetter: activeDraft,
           gameweekTransfers,
           mode: plannerMode,
           teamBank: calculateBankAfterTransfers(),
@@ -1316,46 +1329,136 @@ export default function TransferPlanner() {
       });
 
       if (response.ok) {
-        toast({ title: "Draft Saved", description: `Draft ${draftLetter} has been saved` });
-        // Refresh drafts list
-        const draftsResponse = await fetch(`/api/transfer-planner/drafts/${searchedId}`);
-        if (draftsResponse.ok) {
-          const data = await draftsResponse.json();
-          setSavedDrafts(data.drafts || []);
-        }
+        setHasUnsavedChanges(false);
+        toast({ title: "Draft Saved", description: `Draft ${activeDraft} saved successfully` });
+        await loadDrafts();
       }
     } catch (error) {
       toast({ title: "Error", description: "Failed to save draft", variant: "destructive" });
     }
   };
 
-  const handleLoadDraft = async (draftLetter: string) => {
-    if (!searchedId) return;
-
-    try {
-      const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${draftLetter}`);
-      if (response.ok) {
-        const data = await response.json();
-        const draft = data.draft;
-        
-        setGameweekTransfers(draft.gameweekTransfers);
-        setPlannerMode(draft.mode);
-        setSelectedDraft(draftLetter);
-        
-        toast({ title: "Draft Loaded", description: `Draft ${draftLetter} has been loaded` });
+  const switchToDraft = async (draftLetter: string) => {
+    if (draftLetter === "Base") {
+      // Switch to Base Draft - reset to original team
+      setGameweekTransfers({});
+      setTransferredOutPlayers([]);
+      setCompletedTransfers([]);
+      setActiveDraft("Base");
+      setHasUnsavedChanges(false);
+      if (teamData?.picks) {
+        setManualLineup([...teamData.picks]);
       }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to load draft", variant: "destructive" });
+      toast({ title: "Base Draft", description: "Switched to base team (no transfers)" });
+    } else {
+      try {
+        const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${draftLetter}`);
+        if (response.ok) {
+          const data = await response.json();
+          const draft = data.draft;
+          
+          setGameweekTransfers(draft.gameweekTransfers);
+          setPlannerMode(draft.mode);
+          setActiveDraft(draftLetter);
+          setHasUnsavedChanges(false);
+          
+          toast({ title: "Draft Loaded", description: `Switched to Draft ${draftLetter}` });
+        }
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to load draft", variant: "destructive" });
+      }
     }
   };
+
+  const createNewDraft = () => {
+    // Find next available letter
+    const usedLetters = savedDrafts.map(d => d.draftLetter);
+    const allLetters = 'ABCDEFGHIJ'.split('');
+    const nextLetter = allLetters.find(l => !usedLetters.includes(l));
+    
+    if (!nextLetter) {
+      toast({ title: "Limit Reached", description: "Maximum 10 drafts allowed (A-J)", variant: "destructive" });
+      return;
+    }
+
+    // Reset to Base Draft state
+    setGameweekTransfers({});
+    setTransferredOutPlayers([]);
+    setCompletedTransfers([]);
+    setActiveDraft(nextLetter);
+    setHasUnsavedChanges(true);
+    if (teamData?.picks) {
+      setManualLineup([...teamData.picks]);
+    }
+    
+    toast({ title: "New Draft Created", description: `Draft ${nextLetter} created from base team` });
+  };
+
+  const duplicateCurrentDraft = () => {
+    if (activeDraft === "Base") {
+      toast({ title: "Cannot Duplicate", description: "Create a new draft instead", variant: "destructive" });
+      return;
+    }
+
+    const usedLetters = savedDrafts.map(d => d.draftLetter);
+    const allLetters = 'ABCDEFGHIJ'.split('');
+    const nextLetter = allLetters.find(l => !usedLetters.includes(l));
+    
+    if (!nextLetter) {
+      toast({ title: "Limit Reached", description: "Maximum 10 drafts allowed (A-J)", variant: "destructive" });
+      return;
+    }
+
+    // Keep current transfers and switch to new draft
+    setActiveDraft(nextLetter);
+    setHasUnsavedChanges(true);
+    
+    toast({ title: "Draft Duplicated", description: `Draft ${activeDraft} copied to Draft ${nextLetter}` });
+  };
+
+  const deleteCurrentDraft = async () => {
+    if (activeDraft === "Base") {
+      toast({ title: "Cannot Delete", description: "Base draft cannot be deleted", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${activeDraft}`, {
+        method: "DELETE"
+      });
+
+      if (response.ok) {
+        // Switch to Base Draft
+        switchToDraft("Base");
+        await loadDrafts();
+        toast({ title: "Draft Deleted", description: `Draft ${activeDraft} has been deleted` });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete draft", variant: "destructive" });
+    }
+  };
+
+  // Auto-save to Draft A when first transfer is made
+  useEffect(() => {
+    const hasTransfers = Object.values(gameweekTransfers).some(gw => 
+      gw.completed.length > 0 || gw.transferredOut.length > 0
+    );
+
+    if (hasTransfers && activeDraft === "Base") {
+      // Auto-create Draft A
+      setActiveDraft("A");
+      setHasUnsavedChanges(true);
+      toast({ title: "Draft A Created", description: "Your transfers are now in Draft A" });
+    } else if (hasTransfers && activeDraft !== "Base") {
+      setHasUnsavedChanges(true);
+    }
+  }, [gameweekTransfers]);
 
   // Load drafts when manager changes
   useEffect(() => {
     if (searchedId) {
-      fetch(`/api/transfer-planner/drafts/${searchedId}`)
-        .then(res => res.json())
-        .then(data => setSavedDrafts(data.drafts || []))
-        .catch(() => {});
+      loadDrafts();
+      setActiveDraft("Base");
     }
   }, [searchedId]);
 
@@ -1459,53 +1562,103 @@ export default function TransferPlanner() {
         </Card>
       )}
 
-      {/* Draft Management - Minimal UI */}
+      {/* Draft Management */}
       {searchedId && teamData && selectedGameweek && (
         <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Save className="h-5 w-5 text-purple-600" />
-              Draft Management
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Save className="h-5 w-5 text-purple-600" />
+                Draft Management
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-normal text-muted-foreground">
+                  Active: <span className="font-bold text-purple-600">{activeDraft === "Base" ? "Base Draft" : `Draft ${activeDraft}`}</span>
+                  {hasUnsavedChanges && activeDraft !== "Base" && <span className="ml-2 text-orange-600">●</span>}
+                </span>
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Save Draft */}
-            <div>
-              <div className="text-sm font-medium mb-2">Save Current Plan</div>
-              <div className="flex gap-2 flex-wrap">
-                {['A', 'B', 'C', 'D', 'E'].map(letter => (
-                  <Button
-                    key={letter}
-                    onClick={() => handleSaveDraft(letter)}
-                    size="sm"
-                    variant={selectedDraft === letter ? "default" : "outline"}
-                    className="w-12"
-                    data-testid={`button-save-draft-${letter}`}
-                  >
-                    {letter}
-                  </Button>
-                ))}
-              </div>
+            {/* Draft Controls */}
+            <div className="flex gap-2 flex-wrap">
+              {/* Switch to Base */}
+              <Button
+                onClick={() => switchToDraft("Base")}
+                size="sm"
+                variant={activeDraft === "Base" ? "default" : "outline"}
+                className="gap-1"
+                data-testid="button-switch-base"
+              >
+                Base
+              </Button>
+
+              {/* Saved Drafts */}
+              {savedDrafts.map((draft: any) => (
+                <Button
+                  key={draft.draftLetter}
+                  onClick={() => switchToDraft(draft.draftLetter)}
+                  size="sm"
+                  variant={activeDraft === draft.draftLetter ? "default" : "outline"}
+                  data-testid={`button-switch-draft-${draft.draftLetter}`}
+                >
+                  {draft.draftLetter}
+                </Button>
+              ))}
+
+              {/* New Draft Button */}
+              {savedDrafts.length < 10 && (
+                <Button
+                  onClick={createNewDraft}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1 border-dashed"
+                  data-testid="button-new-draft"
+                >
+                  <Plus className="h-4 w-4" />
+                  New
+                </Button>
+              )}
             </div>
 
-            {/* Load Draft */}
-            {savedDrafts.length > 0 && (
-              <div>
-                <div className="text-sm font-medium mb-2">Load Saved Draft ({savedDrafts.length})</div>
-                <div className="flex gap-2 flex-wrap">
-                  {savedDrafts.map((draft: any) => (
-                    <Button
-                      key={draft.draftLetter}
-                      onClick={() => handleLoadDraft(draft.draftLetter)}
-                      size="sm"
-                      variant="outline"
-                      className="w-12"
-                      data-testid={`button-load-draft-${draft.draftLetter}`}
-                    >
-                      {draft.draftLetter}
-                    </Button>
-                  ))}
-                </div>
+            {/* Action Buttons */}
+            {activeDraft !== "Base" && (
+              <div className="flex gap-2 flex-wrap pt-2 border-t">
+                <Button
+                  onClick={saveCurrentDraft}
+                  size="sm"
+                  variant="default"
+                  disabled={!hasUnsavedChanges}
+                  data-testid="button-save-draft"
+                >
+                  <Save className="h-4 w-4 mr-1" />
+                  Save {hasUnsavedChanges && "●"}
+                </Button>
+                
+                <Button
+                  onClick={duplicateCurrentDraft}
+                  size="sm"
+                  variant="outline"
+                  data-testid="button-duplicate-draft"
+                >
+                  Duplicate
+                </Button>
+                
+                <Button
+                  onClick={deleteCurrentDraft}
+                  size="sm"
+                  variant="outline"
+                  className="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                  data-testid="button-delete-draft"
+                >
+                  Delete
+                </Button>
+              </div>
+            )}
+
+            {activeDraft === "Base" && (
+              <div className="text-sm text-muted-foreground">
+                Base Draft shows your current team with no transfers. Make a transfer to automatically create Draft A.
               </div>
             )}
           </CardContent>
