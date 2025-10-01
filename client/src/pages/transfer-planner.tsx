@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2 } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -518,6 +518,10 @@ export default function TransferPlanner() {
   const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
+  // Buy price editing state
+  const [editingBuyPrice, setEditingBuyPrice] = useState<number | null>(null);
+  const [editBuyPriceValue, setEditBuyPriceValue] = useState<string>("");
+  
   const { toast } = useToast();
 
   // Cache manager ID functionality
@@ -608,7 +612,17 @@ export default function TransferPlanner() {
     if (teamData?.picks && searchedId && initializedManagerRef.current !== searchedId) {
       console.log("DEBUG: Initializing team for manager:", searchedId);
       console.log("DEBUG: First pick from teamData:", teamData.picks[0]);
-      setManualLineup([...teamData.picks]);
+      
+      // Merge buy prices into picks if available
+      let picksWithBuyPrices = [...teamData.picks];
+      if (buyPricesData?.buyPrices) {
+        picksWithBuyPrices = teamData.picks.map(pick => ({
+          ...pick,
+          purchase_price: buyPricesData.buyPrices[pick.element] || pick.selling_price
+        }));
+      }
+      
+      setManualLineup(picksWithBuyPrices);
       // Reset all transfers when loading NEW team data (different manager)
       setGameweekTransfers({});
       setTransferredOutPlayers([]);
@@ -616,7 +630,7 @@ export default function TransferPlanner() {
       // Mark this manager as initialized
       initializedManagerRef.current = searchedId;
     }
-  }, [teamData, searchedId]);
+  }, [teamData, searchedId, buyPricesData]);
 
   // Fetch player projections for the selected gameweek
   const { data: playerProjections } = useQuery<any[]>({
@@ -855,6 +869,38 @@ export default function TransferPlanner() {
     
     // Final fallback to current price
     return player.now_cost / 10;
+  };
+
+  // Update buy price for a player
+  const updateBuyPrice = (playerId: number, newBuyPrice: number) => {
+    setManualLineup(prev => prev.map(pick => {
+      if (pick.element === playerId) {
+        return {
+          ...pick,
+          purchase_price: Math.round(newBuyPrice * 10) // Convert to API format (tenths)
+        };
+      }
+      return pick;
+    }));
+    setEditingBuyPrice(null);
+    setEditBuyPriceValue("");
+    setHasUnsavedChanges(true);
+    toast({
+      title: "Buy Price Updated",
+      description: `Buy price set to £${newBuyPrice.toFixed(1)}m`
+    });
+  };
+
+  // Start editing buy price
+  const startEditingBuyPrice = (playerId: number, currentBuyPrice: number) => {
+    setEditingBuyPrice(playerId);
+    setEditBuyPriceValue((currentBuyPrice / 10).toFixed(1));
+  };
+
+  // Cancel editing buy price
+  const cancelEditingBuyPrice = () => {
+    setEditingBuyPrice(null);
+    setEditBuyPriceValue("");
   };
 
   // Calculate initial bank for the selected gameweek (before any transfers in that GW)
@@ -2622,7 +2668,10 @@ export default function TransferPlanner() {
                                     </div>
                                     <div className="text-xs text-muted-foreground mt-1 flex gap-3">
                                       <span>Now: £{(player.now_cost / 10).toFixed(1)}m</span>
-                                      <span>Sell: ~£{getSellingPrice(pick).toFixed(1)}m</span>
+                                      {pick.purchase_price && (
+                                        <span>Buy: £{(pick.purchase_price / 10).toFixed(1)}m</span>
+                                      )}
+                                      <span>Sell: ~£{(getSellingPrice(pick) / 10).toFixed(1)}m</span>
                                     </div>
                                   </div>
                                 </div>
@@ -2783,7 +2832,10 @@ export default function TransferPlanner() {
                             </div>
                             <div className="text-xs text-muted-foreground mt-1 flex gap-3">
                               <span>Now: £{(player.now_cost / 10).toFixed(1)}m</span>
-                              <span>Sell: ~£{getSellingPrice(pick).toFixed(1)}m</span>
+                              {pick.purchase_price && (
+                                <span>Buy: £{(pick.purchase_price / 10).toFixed(1)}m</span>
+                              )}
+                              <span>Sell: ~£{(getSellingPrice(pick) / 10).toFixed(1)}m</span>
                             </div>
                           </div>
                         </div>
