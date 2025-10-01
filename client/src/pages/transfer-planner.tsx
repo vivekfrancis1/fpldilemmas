@@ -956,22 +956,19 @@ export default function TransferPlanner() {
       sellingPrice: sellingPrice,
     };
 
-    setTransferredOutPlayers(prev => {
-      const newTransferredOut = [...prev, transferOut];
-      
-      // Save to gameweek-specific storage
-      if (selectedGameweek) {
-        setGameweekTransfers(gwTransfers => ({
-          ...gwTransfers,
-          [selectedGameweek]: {
-            transferredOut: newTransferredOut,
-            completed: completedTransfers
-          }
-        }));
-      }
-      
-      return newTransferredOut;
-    });
+    const newTransferredOut = [...transferredOutPlayers, transferOut];
+    setTransferredOutPlayers(newTransferredOut);
+    
+    // Save to gameweek-specific storage immediately
+    if (selectedGameweek) {
+      setGameweekTransfers(gwTransfers => ({
+        ...gwTransfers,
+        [selectedGameweek]: {
+          transferredOut: newTransferredOut,
+          completed: completedTransfers
+        }
+      }));
+    }
     
     // Mark player as transferred out instead of removing
     setManualLineup(prev => prev.map(p => 
@@ -1018,22 +1015,24 @@ export default function TransferPlanner() {
       buyingPrice: buyingPrice,
     };
 
-    setCompletedTransfers(prev => {
-      const newTransfers = [...prev, completedTransfer];
-      
-      // Save to gameweek-specific storage
-      if (selectedGameweek) {
-        setGameweekTransfers(gwTransfers => ({
-          ...gwTransfers,
-          [selectedGameweek]: {
-            transferredOut: transferredOutPlayers.filter((_, i) => i !== transferOutIndex),
-            completed: newTransfers
-          }
-        }));
-      }
-      
-      return newTransfers;
-    });
+    // Calculate new states
+    const newTransfers = [...completedTransfers, completedTransfer];
+    const newTransferredOut = transferredOutPlayers.filter((_, i) => i !== transferOutIndex);
+    
+    // Update all states
+    setCompletedTransfers(newTransfers);
+    setTransferredOutPlayers(newTransferredOut);
+    
+    // Save to gameweek-specific storage immediately
+    if (selectedGameweek) {
+      setGameweekTransfers(gwTransfers => ({
+        ...gwTransfers,
+        [selectedGameweek]: {
+          transferredOut: newTransferredOut,
+          completed: newTransfers
+        }
+      }));
+    }
 
     // Replace the transferred out player at the same position
     setManualLineup(prev => prev.map(p => {
@@ -1051,8 +1050,6 @@ export default function TransferPlanner() {
       }
       return p;
     }));
-    
-    setTransferredOutPlayers(prev => prev.filter((_, i) => i !== transferOutIndex));
 
     toast({
       title: "Player Transferred In",
@@ -1424,149 +1421,181 @@ export default function TransferPlanner() {
             <div className="space-y-6">
               {/* Current Starting 11 */}
               <div>
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  <Crown className="h-4 w-4 text-yellow-500" />
-                  Starting 11
-                </h3>
-                <div className="grid gap-2">
-                  {manualLineup.slice(0, 11).map((pick, index) => {
-                    const player = getPlayerById(pick.element);
-                    const projectedPoints = getPlayerProjectedPoints(pick.element);
-                    if (!player) return null;
+                {(() => {
+                  // Calculate formation from starting 11
+                  const starting11 = manualLineup.slice(0, 11).map(pick => getPlayerById(pick.element)).filter(Boolean);
+                  const defs = starting11.filter(p => p!.element_type === 2).length;
+                  const mids = starting11.filter(p => p!.element_type === 3).length;
+                  const fwds = starting11.filter(p => p!.element_type === 4).length;
+                  const formation = `${defs}-${mids}-${fwds}`;
+                  
+                  return (
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <Crown className="h-4 w-4 text-yellow-500" />
+                      Starting 11 
+                      <span className="text-sm font-normal text-muted-foreground">({formation})</span>
+                    </h3>
+                  );
+                })()}
+                <div className="space-y-4">
+                  {/* Group players by position */}
+                  {[1, 2, 3, 4].map(posType => {
+                    const positionPlayers = manualLineup.slice(0, 11).filter(pick => {
+                      const player = getPlayerById(pick.element);
+                      return player?.element_type === posType;
+                    });
                     
-                    // Check if this is an empty slot (transferred out)
-                    if (pick.is_transferred_out) {
-                      return (
-                        <div
-                          key={`empty-${pick.position}`}
-                          className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20"
-                          data-testid={`empty-slot-${pick.position}`}
-                        >
-                          <div className="flex items-center gap-3 flex-1">
-                            <div className="flex-1">
-                              <div className="font-medium text-red-600">Empty Slot</div>
-                              <div className="text-sm text-muted-foreground">
-                                {getPositionName(player.element_type)} • Transfer a replacement from Projected Points tab
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-sm text-red-600 font-medium">
-                              Needs Replacement
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleUndoTransfer(pick.position)}
-                              className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
-                              data-testid={`undo-transfer-${pick.position}`}
-                            >
-                              <RotateCcw className="h-4 w-4 mr-1" />
-                              Undo
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    }
+                    if (positionPlayers.length === 0) return null;
                     
                     return (
-                      <div
-                        key={pick.element}
-                        className={`flex items-center justify-between p-3 rounded-lg border-2 ${
-                          pick.is_captain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
-                          pick.is_vice_captain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
-                          isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
-                          'border-gray-200'
-                        }`}
-                        data-testid={`starting-player-${pick.element}`}
-                      >
-                        <div className="flex items-center gap-3 flex-1">
-                          <div className="flex-1">
-                            <div className="font-medium flex items-center gap-2">
-                              {player.web_name}
-                              {isPlayerTransferredIn(pick) && (
-                                <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">NEW</span>
-                              )}
-                              {pick.is_captain && (
-                                <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
-                              )}
-                              {pick.is_vice_captain && (
-                                <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
-                              )}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {getTeamName(player.team)} • {getPositionName(player.element_type)}
-                            </div>
-                            <div className="text-xs text-muted-foreground mt-1 flex gap-3">
-                              <span>Now: £{(player.now_cost / 10).toFixed(1)}m</span>
-                              <span>Sell: ~£{getSellingPrice(pick).toFixed(1)}m</span>
-                            </div>
-                          </div>
+                      <div key={posType}>
+                        <div className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
+                          {posType === 1 ? 'Goalkeepers' : posType === 2 ? 'Defenders' : posType === 3 ? 'Midfielders' : 'Forwards'}
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            {projectedPoints !== null ? (
-                              <>
-                                <div className="font-bold text-blue-600">{projectedPoints.toFixed(2)} pts</div>
-                                {pick.is_captain && (
-                                  <div className="text-xs text-muted-foreground">({(projectedPoints * 2).toFixed(2)} with (C))</div>
-                                )}
-                              </>
-                            ) : (
-                              <div className="text-sm text-muted-foreground">No projection</div>
-                            )}
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {!pick.is_captain && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
-                                onClick={() => handleSetCaptain(pick.element)}
-                                data-testid={`set-captain-${pick.element}`}
-                                title="Set as Captain"
+                        <div className="grid gap-2">
+                          {positionPlayers.map((pick) => {
+                            const player = getPlayerById(pick.element);
+                            const projectedPoints = getPlayerProjectedPoints(pick.element);
+                            if (!player) return null;
+                            const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
+                    
+                            // Check if this is an empty slot (transferred out)
+                            if (pick.is_transferred_out) {
+                              return (
+                                <div
+                                  key={`empty-${pick.position}`}
+                                  className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20"
+                                  data-testid={`empty-slot-${pick.position}`}
+                                >
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div className="flex-1">
+                                      <div className="font-medium text-red-600">Empty Slot</div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {getPositionName(player.element_type)} • Transfer a replacement from Projected Points tab
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <div className="text-sm text-red-600 font-medium">
+                                      Needs Replacement
+                                    </div>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleUndoTransfer(pick.position)}
+                                      className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                                      data-testid={`undo-transfer-${pick.position}`}
+                                    >
+                                      <RotateCcw className="h-4 w-4 mr-1" />
+                                      Undo
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            
+                            return (
+                              <div
+                                key={pick.element}
+                                className={`flex items-center justify-between p-3 rounded-lg border-2 ${
+                                  pick.is_captain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
+                                  pick.is_vice_captain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
+                                  isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
+                                  'border-gray-200'
+                                }`}
+                                data-testid={`starting-player-${pick.element}`}
                               >
-                                <Crown className="h-4 w-4" />
-                              </Button>
-                            )}
-                            {!pick.is_vice_captain && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                                onClick={() => handleSetViceCaptain(pick.element)}
-                                data-testid={`set-vice-${pick.element}`}
-                                title="Set as Vice Captain"
-                              >
-                                <Crown className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <Select onValueChange={(value) => swapPlayers(index, parseInt(value))}>
-                              <SelectTrigger className="h-8 w-8 p-0 border-0 hover:bg-gray-100" data-testid={`swap-${pick.element}`} title="Swap with bench">
-                                <ArrowUpDown className="h-4 w-4" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
-                                  const benchPlayer = getPlayerById(benchPick.element);
-                                  return (
-                                    <SelectItem key={benchPick.element} value={benchIndex.toString()}>
-                                      {benchPlayer?.web_name}
-                                    </SelectItem>
-                                  );
-                                })}
-                              </SelectContent>
-                            </Select>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
-                              onClick={() => handleTransferOut(pick)}
-                              data-testid={`transfer-out-${pick.element}`}
-                              title="Transfer Out"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
+                                <div className="flex items-center gap-3 flex-1">
+                                  <div className="flex-1">
+                                    <div className="font-medium flex items-center gap-2">
+                                      {player.web_name}
+                                      {isPlayerTransferredIn(pick) && (
+                                        <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">NEW</span>
+                                      )}
+                                      {pick.is_captain && (
+                                        <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
+                                      )}
+                                      {pick.is_vice_captain && (
+                                        <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
+                                      )}
+                                    </div>
+                                    <div className="text-sm text-muted-foreground">
+                                      {getTeamName(player.team)} • {getPositionName(player.element_type)}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground mt-1 flex gap-3">
+                                      <span>Now: £{(player.now_cost / 10).toFixed(1)}m</span>
+                                      <span>Sell: ~£{getSellingPrice(pick).toFixed(1)}m</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <div className="text-right">
+                                    {projectedPoints !== null ? (
+                                      <>
+                                        <div className="font-bold text-blue-600">{projectedPoints.toFixed(2)} pts</div>
+                                        {pick.is_captain && (
+                                          <div className="text-xs text-muted-foreground">({(projectedPoints * 2).toFixed(2)} with (C))</div>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <div className="text-sm text-muted-foreground">No projection</div>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {!pick.is_captain && (
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
+                                        onClick={() => handleSetCaptain(pick.element)}
+                                        data-testid={`set-captain-${pick.element}`}
+                                        title="Set as Captain"
+                                      >
+                                        <Crown className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    {!pick.is_vice_captain && (
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                                        onClick={() => handleSetViceCaptain(pick.element)}
+                                        data-testid={`set-vice-${pick.element}`}
+                                        title="Set as Vice Captain"
+                                      >
+                                        <Crown className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
+                                      <SelectTrigger className="h-8 w-8 p-0 border-0 hover:bg-gray-100" data-testid={`swap-${pick.element}`} title="Swap with bench">
+                                        <ArrowUpDown className="h-4 w-4" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
+                                          const benchPlayer = getPlayerById(benchPick.element);
+                                          return (
+                                            <SelectItem key={benchPick.element} value={benchIndex.toString()}>
+                                              {benchPlayer?.web_name}
+                                            </SelectItem>
+                                          );
+                                        })}
+                                      </SelectContent>
+                                    </Select>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                      onClick={() => handleTransferOut(pick)}
+                                      data-testid={`transfer-out-${pick.element}`}
+                                      title="Transfer Out"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     );
