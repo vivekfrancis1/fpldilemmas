@@ -812,23 +812,47 @@ export default function TransferPlanner() {
     return player.now_cost / 10;
   };
 
-  // Calculate current bank based on initial bank and completed transfers
-  const calculateCurrentBank = (): number => {
-    if (!teamData?.transfers?.bank) return 0;
+  // Calculate initial bank for the selected gameweek (before any transfers in that GW)
+  const calculateInitialBank = (): number => {
+    if (!teamData?.transfers?.bank || !selectedGameweek) return 0;
     
-    const initialBank = teamData.transfers.bank / 10; // Convert from API format
+    const teamBank = teamData.transfers.bank / 10; // Convert from API format
     
-    // Calculate net transfer cost: sum of buying prices - sum of selling prices
+    // Calculate cumulative effect of all transfers from PREVIOUS gameweeks
+    let cumulativeEffect = 0;
+    const nextGWs = getNextGameweeks();
+    
+    nextGWs.forEach(gw => {
+      if (gw.id < selectedGameweek) {
+        const gwTransfers = gameweekTransfers[gw.id];
+        if (gwTransfers && gwTransfers.completed) {
+          gwTransfers.completed.forEach(transfer => {
+            cumulativeEffect += transfer.sellingPrice - transfer.buyingPrice;
+          });
+        }
+      }
+    });
+    
+    return teamBank + cumulativeEffect;
+  };
+
+  // Calculate bank after transfers for the selected gameweek
+  const calculateBankAfterTransfers = (): number => {
+    const initialBank = calculateInitialBank();
+    
+    // Add effect of current gameweek's transfers
     const totalBuyingPrice = completedTransfers.reduce((sum, t) => sum + t.buyingPrice, 0);
     const totalSellingPrice = completedTransfers.reduce((sum, t) => sum + t.sellingPrice, 0);
     
     // Add selling prices from players transferred out but not yet replaced
     const pendingSellingPrice = transferredOutPlayers.reduce((sum, t) => sum + t.sellingPrice, 0);
     
-    // Current bank = Initial bank + Total sold + Pending sold - Total bought
-    const currentBank = initialBank + totalSellingPrice + pendingSellingPrice - totalBuyingPrice;
-    
-    return currentBank;
+    return initialBank + totalSellingPrice + pendingSellingPrice - totalBuyingPrice;
+  };
+
+  // Calculate current bank based on initial bank and completed transfers (DEPRECATED - use calculateBankAfterTransfers)
+  const calculateCurrentBank = (): number => {
+    return calculateBankAfterTransfers();
   };
 
   // Calculate transfers used for a specific gameweek
@@ -1289,7 +1313,7 @@ export default function TransferPlanner() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
               {/* Total Projected Points for Selected GW */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1">GW {selectedGameweek} Projected Points</div>
@@ -1364,11 +1388,19 @@ export default function TransferPlanner() {
                 </div>
               </div>
 
-              {/* Cash in Bank */}
+              {/* Initial Cash in Bank */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">Cash in Bank</div>
-                <div className={`text-2xl font-bold ${calculateCurrentBank() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
-                  £{calculateCurrentBank().toFixed(1)}m
+                <div className="text-sm text-muted-foreground mb-1">Initial Cash in Bank</div>
+                <div className={`text-2xl font-bold ${calculateInitialBank() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
+                  £{calculateInitialBank().toFixed(1)}m
+                </div>
+              </div>
+
+              {/* Cash in Bank After Transfers */}
+              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-sm text-muted-foreground mb-1">Cash After Transfers</div>
+                <div className={`text-2xl font-bold ${calculateBankAfterTransfers() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
+                  £{calculateBankAfterTransfers().toFixed(1)}m
                 </div>
               </div>
 
