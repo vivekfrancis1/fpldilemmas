@@ -102,6 +102,8 @@ interface PlayerProjectionData {
   ownership: number;
   gameweekProjections: { [key: string]: number };
   totalExpectedPoints: number;
+  averageValue?: number;
+  avgMinutesPerGameweek?: number;
 }
 
 interface AllPlayersProjectionsTabProps {
@@ -232,6 +234,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
         comparison = a.price - b.price;
       } else if (sortField === 'name') {
         comparison = a.name.localeCompare(b.name);
+      } else if (sortField === 'avgValue') {
+        comparison = (a.averageValue || 0) - (b.averageValue || 0);
+      } else if (sortField === 'avgMins') {
+        comparison = (a.avgMinutesPerGameweek || 0) - (b.avgMinutesPerGameweek || 0);
       } else if (sortField.startsWith('gw_')) {
         const gwKey = sortField.replace('gw_', '');
         const aPoints = a.gameweekProjections[gwKey] || 0;
@@ -336,6 +342,26 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Price {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
                   </Button>
                 </th>
+                <th className="text-center p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('avgValue')}
+                    data-testid="sort-avgValue"
+                  >
+                    Avg Value {sortField === 'avgValue' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                  </Button>
+                </th>
+                <th className="text-center p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('avgMins')}
+                    data-testid="sort-avgMins"
+                  >
+                    Avg Mins {sortField === 'avgMins' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                  </Button>
+                </th>
                 {nextGameweeks.map((gw) => (
                   <th key={gw} className="text-center p-2">
                     <Button
@@ -378,6 +404,16 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       </div>
                     </td>
                     <td className="p-2 text-center">£{player.price.toFixed(1)}m</td>
+                    <td className="p-2 text-center">
+                      <span className="text-blue-600 dark:text-blue-400 font-medium">
+                        {(player.averageValue || 0).toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center">
+                      <span className="text-purple-600 dark:text-purple-400 font-medium">
+                        {Math.round(player.avgMinutesPerGameweek || 0)}
+                      </span>
+                    </td>
                     {nextGameweeks.map((gw) => {
                       const gwPoints = player.gameweekProjections[gw.toString()] || 0;
                       const top3 = getTop3ForGameweek(gw);
