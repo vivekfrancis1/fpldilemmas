@@ -582,8 +582,18 @@ export default function TransferPlanner() {
   const getBaselineLineup = (targetGameweek: number): TeamPick[] => {
     if (!teamData?.picks) return [];
     
-    // Start with original team
-    let baseline = [...teamData.picks];
+    // Start with original team with buy price overrides applied
+    let baseline = teamData.picks.map(pick => {
+      const player = getPlayerById(pick.element);
+      const currentPrice = player?.now_cost || pick.selling_price;
+      const overridePrice = buyPriceOverridesData?.overrides?.[pick.element];
+      const apiPrice = buyPricesData?.buyPrices?.[pick.element];
+      
+      return {
+        ...pick,
+        purchase_price: overridePrice || apiPrice || pick.purchase_price || currentPrice
+      };
+    });
     
     // Get the starting gameweek
     const firstGW = getNextGameweeks()[0]?.id || 7;
@@ -599,10 +609,13 @@ export default function TransferPlanner() {
               // Replace with new player
               const inPlayer = getPlayerById(transfer.inPlayerId);
               if (inPlayer) {
+                // Check for buy price override for the transferred-in player
+                const overridePrice = buyPriceOverridesData?.overrides?.[transfer.inPlayerId];
                 return {
                   ...pick,
                   element: transfer.inPlayerId,
                   selling_price: inPlayer.now_cost,
+                  purchase_price: overridePrice || inPlayer.now_cost,
                 };
               }
             }
