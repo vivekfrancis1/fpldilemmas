@@ -337,6 +337,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Player {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
                   </Button>
                 </th>
+                <th className="text-center p-2 sticky left-[200px] bg-white dark:bg-gray-950 z-10 font-bold">
+                  Action
+                </th>
                 <th className="text-left p-2">
                   <Button
                     variant="ghost"
@@ -409,9 +412,6 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Own% {sortField === 'ownership' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center p-2 font-bold bg-gray-50 dark:bg-gray-900">
-                  Action
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -427,6 +427,43 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       <div className="text-xs text-muted-foreground">
                         {player.position} • {player.team}
                       </div>
+                    </td>
+                    <td className="p-2 text-center sticky left-[200px] bg-white dark:bg-gray-950">
+                      {(() => {
+                        // Map position names to element types
+                        const positionMap: { [key: string]: number } = {
+                          'Goalkeeper': 1,
+                          'Defender': 2,
+                          'Midfielder': 3,
+                          'Forward': 4
+                        };
+                        const playerElementType = positionMap[player.position];
+                        
+                        // Check if there's a matching transfer out for this position
+                        const hasMatchingTransferOut = transferredOutPlayers && transferredOutPlayers.length > 0 && transferredOutPlayers.some(
+                          t => t.elementType === playerElementType
+                        );
+                        
+                        // Calculate available budget: current bank + selling prices of transferred out players
+                        const totalSellingPrice = transferredOutPlayers.reduce((sum, t) => sum + t.sellingPrice, 0);
+                        const availableBudget = currentBank + totalSellingPrice;
+                        
+                        // Check if player is affordable
+                        const isAffordable = player.price <= availableBudget;
+                        
+                        return hasMatchingTransferOut && isAffordable ? (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-green-600 hover:bg-green-50 hover:text-green-700"
+                            onClick={() => onTransferIn(player.playerId, playerElementType)}
+                            data-testid={`transfer-in-${player.playerId}`}
+                            title="Transfer In"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        ) : null;
+                      })()}
                     </td>
                     <td className="p-2 text-center">£{player.price.toFixed(1)}m</td>
                     {nextGameweeks.map((gw) => {
@@ -480,43 +517,6 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       <span className="text-orange-600 dark:text-orange-400 font-medium">
                         {player.ownership.toFixed(1)}%
                       </span>
-                    </td>
-                    <td className="p-2 text-center">
-                      {(() => {
-                        // Map position names to element types
-                        const positionMap: { [key: string]: number } = {
-                          'Goalkeeper': 1,
-                          'Defender': 2,
-                          'Midfielder': 3,
-                          'Forward': 4
-                        };
-                        const playerElementType = positionMap[player.position];
-                        
-                        // Check if there's a matching transfer out for this position
-                        const hasMatchingTransferOut = transferredOutPlayers && transferredOutPlayers.length > 0 && transferredOutPlayers.some(
-                          t => t.elementType === playerElementType
-                        );
-                        
-                        // Calculate available budget: current bank + selling prices of transferred out players
-                        const totalSellingPrice = transferredOutPlayers.reduce((sum, t) => sum + t.sellingPrice, 0);
-                        const availableBudget = currentBank + totalSellingPrice;
-                        
-                        // Check if player is affordable
-                        const isAffordable = player.price <= availableBudget;
-                        
-                        return hasMatchingTransferOut && isAffordable ? (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 text-green-600 hover:bg-green-50 hover:text-green-700"
-                            onClick={() => onTransferIn(player.playerId, playerElementType)}
-                            data-testid={`transfer-in-${player.playerId}`}
-                            title="Transfer In"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        ) : null;
-                      })()}
                     </td>
                   </tr>
                 );
