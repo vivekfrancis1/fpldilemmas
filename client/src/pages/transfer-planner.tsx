@@ -1739,7 +1739,7 @@ export default function TransferPlanner() {
                   data-testid="button-save-draft"
                 >
                   <Save className="h-4 w-4 mr-1" />
-                  Save {hasUnsavedChanges && "●"}
+                  Save Draft {activeDraft} {hasUnsavedChanges && "●"}
                 </Button>
                 
                 <Button
@@ -1748,7 +1748,7 @@ export default function TransferPlanner() {
                   variant="outline"
                   data-testid="button-duplicate-draft"
                 >
-                  Duplicate
+                  Duplicate Draft {activeDraft}
                 </Button>
                 
                 <Button
@@ -1758,7 +1758,7 @@ export default function TransferPlanner() {
                   className="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
                   data-testid="button-delete-draft"
                 >
-                  Delete
+                  Delete Draft {activeDraft}
                 </Button>
               </div>
             )}
