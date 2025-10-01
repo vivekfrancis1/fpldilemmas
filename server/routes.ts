@@ -1974,6 +1974,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Calculate buy prices for players in a manager's team
+  app.get("/api/manager/:managerId/buy-prices", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+      
+      console.log(`💰 Calculating buy prices for manager ${managerId}`);
+      
+      // Fetch manager's current team
+      const teamResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
+      if (!teamResponse.ok) {
+        throw new Error(`Failed to fetch team: ${teamResponse.status}`);
+      }
+      const teamData = await teamResponse.json();
+      
+      // Fetch manager's transfer history
+      const transfersResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`);
+      if (!transfersResponse.ok) {
+        throw new Error(`Failed to fetch transfers: ${transfersResponse.status}`);
+      }
+      const transfersData = await transfersResponse.json();
+      
+      // Fetch all price changes from database
+      const priceChanges = await storage.getPriceChanges(10000);
+      
+      // Build price change history map: playerId -> array of changes sorted by date
+      const priceChangeMap = new Map<number, Array<{date: string, priceChange: number}>>();
+      for (const change of priceChanges) {
+        if (!priceChangeMap.has(change.playerId)) {
+          priceChangeMap.set(change.playerId, []);
+        }
+        priceChangeMap.get(change.playerId)!.push({
+          date: change.changeDate,
+          priceChange: change.priceChange
+        });
+      }
+      
+      // Sort price changes by date for each player
+      for (const [playerId, changes] of priceChangeMap.entries()) {
+        changes.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      }
+      
+      // Calculate buy price for each player in the team
+      const buyPrices: Record<number, number> = {};
+      
+      for (const pick of teamData.picks) {
+        const playerId = pick.element;
+        const sellingPrice = pick.selling_price;
+        
+        // Find when this player was transferred in
+        const transferIn = transfersData.find((t: any) => t.element_in === playerId);
+        
+        if (!transferIn) {
+          // Player was in original squad, buy price = selling price (no profit calculation needed)
+          buyPrices[playerId] = sellingPrice;
+          continue;
+        }
+        
+        // Parse transfer time (format: "2024-09-14T06:30:00Z")
+        const transferTime = new Date(transferIn.time);
+        
+        // IST is UTC+5:30, so 7am IST = 1:30am UTC
+        // If transfer happened before 7am IST on a date, price changes on that date don't apply
+        // If transfer happened at/after 7am IST on a date, price changes on that date do apply
+        
+        let buyPrice = sellingPrice;
+        const playerChanges = priceChangeMap.get(playerId) || [];
+        
+        for (const change of playerChanges) {
+          const changeDate = new Date(change.date);
+          // Price changes happen at 7am IST = 1:30am UTC
+          const changeTime = new Date(changeDate);
+          changeTime.setUTCHours(1, 30, 0, 0);
+          
+          // If the price change happened AFTER the transfer, subtract it from buy price
+          if (changeTime > transferTime) {
+            buyPrice -= change.priceChange;
+          }
+        }
+        
+        buyPrices[playerId] = buyPrice;
+      }
+      
+      console.log(`✅ Calculated buy prices for ${Object.keys(buyPrices).length} players`);
+      res.json({ buyPrices });
+      
+    } catch (error) {
+      console.error(`❌ Error calculating buy prices for manager ${req.params.managerId}:`, error);
+      res.status(500).json({
+        error: "Failed to calculate buy prices",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Top 25 managers batch endpoint with caching
   const TOP_25_MANAGERS = [
     { rank: 1, name: "Tom Dollimore", managerId: 497000 },
