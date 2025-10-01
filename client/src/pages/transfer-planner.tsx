@@ -347,46 +347,6 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Price {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center p-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('ownership')}
-                    data-testid="sort-ownership"
-                  >
-                    Own% {sortField === 'ownership' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
-                  </Button>
-                </th>
-                <th className="text-center p-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('form')}
-                    data-testid="sort-form"
-                  >
-                    Form {sortField === 'form' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
-                  </Button>
-                </th>
-                <th className="text-center p-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('avgValue')}
-                    data-testid="sort-avgValue"
-                  >
-                    Avg Value {sortField === 'avgValue' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
-                  </Button>
-                </th>
-                <th className="text-center p-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleSort('avgMins')}
-                    data-testid="sort-avgMins"
-                  >
-                    Avg Mins {sortField === 'avgMins' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
-                  </Button>
-                </th>
                 {nextGameweeks.map((gw) => (
                   <th key={gw} className="text-center p-2">
                     <Button
@@ -409,6 +369,46 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Total {sortField === 'total' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
                   </Button>
                 </th>
+                <th className="text-center p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('avgValue')}
+                    data-testid="sort-avgValue"
+                  >
+                    Avg Value {sortField === 'avgValue' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                  </Button>
+                </th>
+                <th className="text-center p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('form')}
+                    data-testid="sort-form"
+                  >
+                    Form {sortField === 'form' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                  </Button>
+                </th>
+                <th className="text-center p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('avgMins')}
+                    data-testid="sort-avgMins"
+                  >
+                    Avg Mins {sortField === 'avgMins' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                  </Button>
+                </th>
+                <th className="text-center p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleSort('ownership')}
+                    data-testid="sort-ownership"
+                  >
+                    Own% {sortField === 'ownership' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                  </Button>
+                </th>
                 <th className="text-center p-2 font-bold bg-gray-50 dark:bg-gray-900">
                   Action
                 </th>
@@ -429,26 +429,6 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       </div>
                     </td>
                     <td className="p-2 text-center">£{player.price.toFixed(1)}m</td>
-                    <td className="p-2 text-center">
-                      <span className="text-orange-600 dark:text-orange-400 font-medium">
-                        {player.ownership.toFixed(1)}%
-                      </span>
-                    </td>
-                    <td className="p-2 text-center">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                        {(player.form || 0).toFixed(1)}
-                      </span>
-                    </td>
-                    <td className="p-2 text-center">
-                      <span className="text-blue-600 dark:text-blue-400 font-medium">
-                        {(player.averageValue || 0).toFixed(2)}
-                      </span>
-                    </td>
-                    <td className="p-2 text-center">
-                      <span className="text-purple-600 dark:text-purple-400 font-medium">
-                        {Math.round(player.avgMinutesPerGameweek || 0)}
-                      </span>
-                    </td>
                     {nextGameweeks.map((gw) => {
                       const gwPoints = player.gameweekProjections[gw.toString()] || 0;
                       const top3 = getTop3ForGameweek(gw);
@@ -479,6 +459,26 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     <td className="p-2 text-center">
                       <span className="font-bold text-green-600 text-base">
                         {(player.totalExpectedPoints || 0).toFixed(1)}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center">
+                      <span className="text-blue-600 dark:text-blue-400 font-medium">
+                        {(player.averageValue || 0).toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                        {(player.form || 0).toFixed(1)}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center">
+                      <span className="text-purple-600 dark:text-purple-400 font-medium">
+                        {Math.round(player.avgMinutesPerGameweek || 0)}
+                      </span>
+                    </td>
+                    <td className="p-2 text-center">
+                      <span className="text-orange-600 dark:text-orange-400 font-medium">
+                        {player.ownership.toFixed(1)}%
                       </span>
                     </td>
                     <td className="p-2 text-center">
