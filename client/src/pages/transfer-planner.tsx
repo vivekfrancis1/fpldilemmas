@@ -1472,6 +1472,9 @@ export default function TransferPlanner() {
     const player = getPlayerById(pick.element);
     if (!player) return;
 
+    let isCreatingNewDraft = false;
+    let newDraftLetter = "";
+
     // If in Base draft, check if we can create a new draft or need to use existing one
     if (activeDraft === "Base") {
       const usedLetters = savedDrafts.map(d => d.draftLetter);
@@ -1490,43 +1493,24 @@ export default function TransferPlanner() {
       
       // Auto-create a new draft and switch to it
       const nextLetter = availableLetters[0];
+      newDraftLetter = nextLetter;
+      isCreatingNewDraft = true;
       
       if (!searchedId) {
         toast({ title: "Error", description: "Manager ID not found", variant: "destructive" });
         return;
       }
 
-      // Create the new draft from Base
+      // Switch to new draft but DON'T save yet - let the transfer out be recorded first
       const emptyGameweekTransfers = {};
-      
-      try {
-        const response = await fetch(`/api/transfer-planner/drafts/${searchedId}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            draftLetter: nextLetter,
-            gameweekTransfers: emptyGameweekTransfers
-          })
-        });
-        
-        if (response.ok) {
-          await loadDrafts();
-          setActiveDraft(nextLetter);
-          setGameweekTransfers(emptyGameweekTransfers);
-          setTransferredOutPlayers([]);
-          setCompletedTransfers([]);
-          toast({ 
-            title: "New Draft Created", 
-            description: `Draft ${nextLetter} created. You can now make transfers.`
-          });
-        } else {
-          toast({ title: "Error", description: "Failed to create draft", variant: "destructive" });
-          return;
-        }
-      } catch (error) {
-        toast({ title: "Error", description: "Failed to create draft", variant: "destructive" });
-        return;
-      }
+      setActiveDraft(nextLetter);
+      setGameweekTransfers(emptyGameweekTransfers);
+      setTransferredOutPlayers([]);
+      setCompletedTransfers([]);
+      toast({ 
+        title: "New Draft Created", 
+        description: `Draft ${nextLetter} created. Making transfer...`
+      });
     }
 
     const sellingPrice = getSellingPrice(pick);
@@ -1542,15 +1526,37 @@ export default function TransferPlanner() {
     const newTransferredOut = [...transferredOutPlayers, transferOut];
     setTransferredOutPlayers(newTransferredOut);
     
-    // Save to gameweek-specific storage immediately
+    // Save to gameweek-specific storage immediately and capture updated value
+    let updatedGameweekTransfers = gameweekTransfers;
     if (selectedGameweek) {
-      setGameweekTransfers(gwTransfers => ({
-        ...gwTransfers,
+      updatedGameweekTransfers = {
+        ...gameweekTransfers,
         [selectedGameweek]: {
           transferredOut: newTransferredOut,
           completed: completedTransfers
         }
-      }));
+      };
+      setGameweekTransfers(updatedGameweekTransfers);
+    }
+    
+    // Now save the new draft if we just created it from Base (with the transfer out included)
+    if (isCreatingNewDraft && newDraftLetter && searchedId) {
+      try {
+        const response = await fetch(`/api/transfer-planner/drafts/${searchedId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            draftLetter: newDraftLetter,
+            gameweekTransfers: updatedGameweekTransfers
+          })
+        });
+        
+        if (response.ok) {
+          await loadDrafts();
+        }
+      } catch (error) {
+        console.error("Failed to save new draft:", error);
+      }
     }
     
     // Mark player as transferred out instead of removing
