@@ -570,6 +570,14 @@ export default function TransferPlanner() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch buy price overrides set by the manager (applies to all drafts)
+  const { data: buyPriceOverridesData, refetch: refetchBuyPriceOverrides } = useQuery<{ overrides: Record<number, number> }>({
+    queryKey: ["/api/manager", searchedId, "buy-price-overrides"],
+    enabled: !!searchedId,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+  });
+
   // Calculate baseline lineup for a given gameweek by applying all previous transfers
   const getBaselineLineup = (targetGameweek: number): TeamPick[] => {
     if (!teamData?.picks) return [];
@@ -614,13 +622,18 @@ export default function TransferPlanner() {
       console.log("DEBUG: First pick from teamData:", teamData.picks[0]);
       
       // Merge buy prices into picks if available, defaulting to current price
+      // Priority: Buy price overrides > FPL API buy prices > Current price
       let picksWithBuyPrices = teamData.picks.map(pick => {
         const player = getPlayerById(pick.element);
         const currentPrice = player?.now_cost || pick.selling_price;
         
+        // Check for manual override first (applies across all drafts)
+        const overridePrice = buyPriceOverridesData?.overrides?.[pick.element];
+        const apiPrice = buyPricesData?.buyPrices?.[pick.element];
+        
         return {
           ...pick,
-          purchase_price: buyPricesData?.buyPrices?.[pick.element] || currentPrice
+          purchase_price: overridePrice || apiPrice || currentPrice
         };
       });
       
@@ -632,7 +645,7 @@ export default function TransferPlanner() {
       // Mark this manager as initialized
       initializedManagerRef.current = searchedId;
     }
-  }, [teamData, searchedId, buyPricesData]);
+  }, [teamData, searchedId, buyPricesData, buyPriceOverridesData]);
 
   // Fetch player projections for the selected gameweek
   const { data: playerProjections } = useQuery<any[]>({
@@ -744,11 +757,27 @@ export default function TransferPlanner() {
     // Clear optimized lineup when gameweek changes
     setOptimizedLineup(null);
     
+    // Helper to apply buy price overrides to lineup
+    const applyBuyPriceOverrides = (lineup: TeamPick[]) => {
+      return lineup.map(pick => {
+        const overridePrice = buyPriceOverridesData?.overrides?.[pick.element];
+        const apiPrice = buyPricesData?.buyPrices?.[pick.element];
+        const player = getPlayerById(pick.element);
+        const currentPrice = player?.now_cost || pick.selling_price;
+        
+        return {
+          ...pick,
+          purchase_price: overridePrice || apiPrice || pick.purchase_price || currentPrice
+        };
+      });
+    };
+    
     // Base Draft: ALWAYS show original team with NO transfers
     if (activeDraft === "Base") {
       setTransferredOutPlayers([]);
       setCompletedTransfers([]);
-      setManualLineup([...teamData.picks]);
+      const baseLineup = applyBuyPriceOverrides([...teamData.picks]);
+      setManualLineup(baseLineup);
       return;
     }
     
@@ -789,8 +818,11 @@ export default function TransferPlanner() {
       });
     });
     
+    // Apply buy price overrides before setting state
+    lineupWithTransfers = applyBuyPriceOverrides(lineupWithTransfers);
+    
     setManualLineup(lineupWithTransfers);
-  }, [selectedGameweek, activeDraft]);
+  }, [selectedGameweek, activeDraft, buyPriceOverridesData, buyPricesData]);
 
   // Auto-run optimization when Auto mode is selected
   useEffect(() => {
@@ -873,8 +905,11 @@ export default function TransferPlanner() {
     return player.now_cost / 10;
   };
 
-  // Update buy price for a player
-  const updateBuyPrice = (playerId: number, newBuyPrice: number) => {
+  // Update buy price for a player - auto-saves to database
+  const updateBuyPrice = async (playerId: number, newBuyPrice: number) => {
+    if (!searchedId) return;
+    
+    // Update local state immediately for responsive UI
     setManualLineup(prev => prev.map(pick => {
       if (pick.element === playerId) {
         return {
@@ -886,11 +921,30 @@ export default function TransferPlanner() {
     }));
     setEditingBuyPrice(null);
     setEditBuyPriceValue("");
-    setHasUnsavedChanges(true);
-    toast({
-      title: "Buy Price Updated",
-      description: `Buy price set to £${newBuyPrice.toFixed(1)}m`
-    });
+    
+    // Auto-save to database
+    try {
+      await fetch(`/api/manager/${searchedId}/buy-price-overrides`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: playerId,
+          buyPrice: Math.round(newBuyPrice * 10) // Store in API format (tenths)
+        })
+      });
+      
+      toast({
+        title: "Buy Price Saved",
+        description: `Buy price set to £${newBuyPrice.toFixed(1)}m and saved`
+      });
+    } catch (error) {
+      console.error("Failed to save buy price:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save buy price. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Start editing buy price
