@@ -835,7 +835,7 @@ export default function TransferPlanner() {
     lineupWithTransfers = applyBuyPriceOverrides(lineupWithTransfers);
     
     setManualLineup(lineupWithTransfers);
-  }, [selectedGameweek, activeDraft, buyPriceOverridesData, buyPricesData]);
+  }, [selectedGameweek, activeDraft, gameweekTransfers, buyPriceOverridesData, buyPricesData]);
 
   // Auto-run optimization when Auto mode is selected
   useEffect(() => {
@@ -1847,10 +1847,20 @@ export default function TransferPlanner() {
           const data = await response.json();
           const draft = data.draft;
           
+          // Reset ALL state for complete draft isolation
           setGameweekTransfers(draft.gameweekTransfers);
           setPlannerMode(draft.mode);
           setActiveDraft(draftLetter);
           setHasUnsavedChanges(false);
+          
+          // Reset transferred out players and completed transfers
+          setTransferredOutPlayers([]);
+          setCompletedTransfers([]);
+          
+          // Reset lineup to base team, transfers will be applied via useEffect
+          if (teamData?.picks) {
+            setManualLineup([...teamData.picks]);
+          }
           
           toast({ title: "Draft Loaded", description: `Switched to Draft ${draftLetter}` });
         }
@@ -2059,41 +2069,6 @@ export default function TransferPlanner() {
     }
   };
 
-  const saveAllDrafts = async () => {
-    if (!searchedId || savedDrafts.length === 0) return;
-
-    const currentTransfers = gameweekTransfers;
-    const currentMode = plannerMode;
-    const currentBank = calculateBankAfterTransfers();
-    const totalTransfers = Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0);
-
-    try {
-      // Save to all existing drafts
-      const savePromises = savedDrafts.map(draft => 
-        fetch("/api/transfer-planner/drafts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            managerId: parseInt(searchedId),
-            draftLetter: draft.draftLetter,
-            gameweekTransfers: currentTransfers,
-            mode: currentMode,
-            teamBank: currentBank,
-            teamValue: 0,
-            totalProjectedPoints: 0,
-            totalTransfersUsed: totalTransfers
-          })
-        })
-      );
-
-      await Promise.all(savePromises);
-      setHasUnsavedChanges(false);
-      await loadDrafts();
-      toast({ title: "All Drafts Saved", description: `Saved current plan to ${savedDrafts.length} draft(s)` });
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to save all drafts", variant: "destructive" });
-    }
-  };
 
   // Auto-save to Draft A when first transfer is made
   useEffect(() => {
@@ -2292,17 +2267,6 @@ export default function TransferPlanner() {
             {/* Bulk Actions */}
             {savedDrafts.length > 0 && (
               <div className="flex gap-2 flex-wrap pt-2 border-t">
-                <Button
-                  onClick={saveAllDrafts}
-                  size="sm"
-                  variant="outline"
-                  className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950/20"
-                  data-testid="button-save-all-drafts"
-                >
-                  <Save className="h-4 w-4 mr-1" />
-                  Save All Drafts
-                </Button>
-                
                 <Button
                   onClick={deleteAllDrafts}
                   size="sm"
