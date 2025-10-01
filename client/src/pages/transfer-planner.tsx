@@ -1909,6 +1909,28 @@ export default function TransferPlanner() {
     }
   };
 
+  // Helper function to generate tooltip content for a draft
+  const getDraftTooltipContent = (draft: any) => {
+    if (!draft.gameweekTransfers || Object.keys(draft.gameweekTransfers).length === 0) {
+      return "No transfers in this draft";
+    }
+
+    const gameweeks = Object.keys(draft.gameweekTransfers).sort((a, b) => Number(a) - Number(b));
+    const tooltipLines: string[] = [];
+
+    gameweeks.forEach(gw => {
+      const gwData = draft.gameweekTransfers[gw];
+      if (gwData.completed && gwData.completed.length > 0) {
+        tooltipLines.push(`GW${gw}:`);
+        gwData.completed.forEach((transfer: CompletedTransfer) => {
+          tooltipLines.push(`  ${transfer.outPlayerName} → ${transfer.inPlayerName}`);
+        });
+      }
+    });
+
+    return tooltipLines.length > 0 ? tooltipLines.join('\n') : "No completed transfers";
+  };
+
   // Draft management functions
   const loadDrafts = async () => {
     if (!searchedId) return;
@@ -2323,15 +2345,24 @@ export default function TransferPlanner() {
 
               {/* Saved Drafts */}
               {savedDrafts.map((draft: any) => (
-                <Button
-                  key={draft.draftLetter}
-                  onClick={() => switchToDraft(draft.draftLetter)}
-                  size="sm"
-                  variant={activeDraft === draft.draftLetter ? "default" : "outline"}
-                  data-testid={`button-switch-draft-${draft.draftLetter}`}
-                >
-                  {draft.draftLetter}
-                </Button>
+                <TooltipProvider key={draft.draftLetter}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={() => switchToDraft(draft.draftLetter)}
+                        size="sm"
+                        variant={activeDraft === draft.draftLetter ? "default" : "outline"}
+                        data-testid={`button-switch-draft-${draft.draftLetter}`}
+                      >
+                        {draft.draftLetter}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-md whitespace-pre-line text-left">
+                      <div className="font-semibold mb-1">Draft {draft.draftLetter} Transfers</div>
+                      <div className="text-sm">{getDraftTooltipContent(draft)}</div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               ))}
 
               {/* New Draft Button */}
