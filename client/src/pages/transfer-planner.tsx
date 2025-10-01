@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiRequest } from "@/lib/queryClient";
@@ -607,6 +608,10 @@ export default function TransferPlanner() {
   // Buy price editing state
   const [editingBuyPrice, setEditingBuyPrice] = useState<number | null>(null);
   const [editBuyPriceValue, setEditBuyPriceValue] = useState<string>("");
+  
+  // Captain confirmation dialogs
+  const [captainConfirmation, setCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
+  const [viceCaptainConfirmation, setViceCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
   
   const { toast } = useToast();
 
@@ -1537,20 +1542,44 @@ export default function TransferPlanner() {
 
   // Handle captain selection
   const handleSetCaptain = (playerId: number) => {
+    const player = getPlayerById(playerId);
+    if (!player) return;
+    
+    setCaptainConfirmation({
+      playerId,
+      playerName: player.web_name
+    });
+  };
+  
+  // Confirm captain selection
+  const confirmSetCaptain = (playerId: number) => {
     setManualLineup(prev => prev.map(pick => ({
       ...pick,
       is_captain: pick.element === playerId,
       is_vice_captain: pick.is_vice_captain && pick.element !== playerId ? true : false
     })));
+    setCaptainConfirmation(null);
   };
 
   // Handle vice captain selection
   const handleSetViceCaptain = (playerId: number) => {
+    const player = getPlayerById(playerId);
+    if (!player) return;
+    
+    setViceCaptainConfirmation({
+      playerId,
+      playerName: player.web_name
+    });
+  };
+  
+  // Confirm vice captain selection
+  const confirmSetViceCaptain = (playerId: number) => {
     setManualLineup(prev => prev.map(pick => ({
       ...pick,
       is_vice_captain: pick.element === playerId,
       is_captain: pick.is_captain && pick.element !== playerId ? true : false
     })));
+    setViceCaptainConfirmation(null);
   };
 
   // Handle transferring a player out
@@ -3773,6 +3802,44 @@ export default function TransferPlanner() {
           </CardContent>
         </Card>
       )}
+
+      {/* Captain Confirmation Dialog */}
+      <AlertDialog open={!!captainConfirmation} onOpenChange={() => setCaptainConfirmation(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Set {captainConfirmation?.playerName} as Captain?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Your captain gets <strong>double the number of points</strong> they score in the gameweek.</p>
+              <p className="text-sm text-muted-foreground">Choose wisely - this can significantly impact your gameweek score!</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => captainConfirmation && confirmSetCaptain(captainConfirmation.playerId)}>
+              Confirm Captain
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Vice Captain Confirmation Dialog */}
+      <AlertDialog open={!!viceCaptainConfirmation} onOpenChange={() => setViceCaptainConfirmation(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Set {viceCaptainConfirmation?.playerName} as Vice Captain?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>Your vice captain fills in as captain and gets <strong>double the number of points</strong> if your selected captain doesn't play that gameweek.</p>
+              <p className="text-sm text-muted-foreground">Pick a reliable player who is likely to start!</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => viceCaptainConfirmation && confirmSetViceCaptain(viceCaptainConfirmation.playerId)}>
+              Confirm Vice Captain
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
