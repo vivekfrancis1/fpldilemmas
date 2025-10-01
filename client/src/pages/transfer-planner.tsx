@@ -1394,7 +1394,7 @@ export default function TransferPlanner() {
     toast({ title: "New Draft Created", description: `Draft ${nextLetter} created from base team` });
   };
 
-  const duplicateCurrentDraft = () => {
+  const duplicateCurrentDraft = async () => {
     if (activeDraft === "Base") {
       toast({ title: "Cannot Duplicate", description: "Create a new draft instead", variant: "destructive" });
       return;
@@ -1409,11 +1409,32 @@ export default function TransferPlanner() {
       return;
     }
 
-    // Keep current transfers and switch to new draft
-    setActiveDraft(nextLetter);
-    setHasUnsavedChanges(true);
-    
-    toast({ title: "Draft Duplicated", description: `Draft ${activeDraft} copied to Draft ${nextLetter}` });
+    // Save current transfers as the new draft
+    try {
+      const response = await fetch("/api/transfer-planner/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          managerId: parseInt(searchedId),
+          draftLetter: nextLetter,
+          gameweekTransfers,
+          mode: plannerMode,
+          teamBank: calculateBankAfterTransfers(),
+          teamValue: 0,
+          totalProjectedPoints: 0,
+          totalTransfersUsed: Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0)
+        })
+      });
+
+      if (response.ok) {
+        setActiveDraft(nextLetter);
+        setHasUnsavedChanges(false);
+        await loadDrafts();
+        toast({ title: "Draft Duplicated", description: `Draft ${activeDraft} copied to Draft ${nextLetter}` });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to duplicate draft", variant: "destructive" });
+    }
   };
 
   const deleteCurrentDraft = async () => {
