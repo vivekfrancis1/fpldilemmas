@@ -2882,13 +2882,13 @@ export default function TransferPlanner() {
           <CardContent className="pt-6">
             <div>
               <div className="text-sm font-medium mb-2">Select GW</div>
-              <div className="flex gap-2">
+              <div className="flex gap-1 md:gap-2 flex-wrap">
                 {nextGameweeks.map(gw => (
                   <Button
                     key={gw.id}
                     variant={selectedGameweek === gw.id ? "default" : "outline"}
-                    size="lg"
-                    className="text-lg font-semibold"
+                    size="sm"
+                    className="text-sm md:text-lg font-semibold min-w-[2.5rem] md:min-w-[3rem]"
                     onClick={() => setSelectedGameweek(gw.id)}
                     data-testid={`gw-button-${gw.id}`}
                   >
@@ -2910,17 +2910,17 @@ export default function TransferPlanner() {
                 <TrendingUp className="h-5 w-5 text-green-600" />
                 {activeDraft === "Base" ? "Base Draft Team Summary" : `Draft ${activeDraft} Team Summary`}
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-1 md:gap-2">
                 {(completedTransfers.length > 0 || transferredOutPlayers.length > 0) && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleResetTransfers}
-                    className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                    className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20 h-7 px-2 md:h-9 md:px-3"
                     data-testid="button-reset-gw-transfers"
                   >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Undo This GW
+                    <RotateCcw className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                    <span className="hidden sm:inline">Undo This GW</span>
                   </Button>
                 )}
                 {Object.keys(gameweekTransfers).some(gw => 
@@ -2931,11 +2931,11 @@ export default function TransferPlanner() {
                     variant="outline"
                     size="sm"
                     onClick={handleResetAllTransfers}
-                    className="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                    className="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20 h-7 px-2 md:h-9 md:px-3"
                     data-testid="button-reset-all-transfers"
                   >
-                    <X className="h-4 w-4 mr-2" />
-                    Undo All GWs
+                    <X className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                    <span className="hidden sm:inline">Undo All GWs</span>
                   </Button>
                 )}
               </div>
@@ -3455,40 +3455,40 @@ export default function TransferPlanner() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 md:gap-2 flex-wrap">
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleUndoTransfer(pick.position)}
-                              className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                              className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20 h-7 px-2 md:h-9 md:px-3"
                               data-testid={`undo-transfer-bench-${pick.position}`}
                             >
-                              <RotateCcw className="h-4 w-4 mr-1" />
-                              Undo
+                              <RotateCcw className="h-3 w-3 md:h-4 md:w-4 md:mr-1" />
+                              <span className="hidden md:inline">Undo</span>
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleUndoGameweekTransfersForPosition(pick.position)}
-                              className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/20"
+                              className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/20 h-7 px-2 md:h-9 md:px-3"
                               data-testid={`undo-gw-transfers-bench-${pick.position}`}
                             >
-                              <RotateCcw className="h-4 w-4 mr-1" />
-                              Undo GW
+                              <RotateCcw className="h-3 w-3 md:h-4 md:w-4 md:mr-1" />
+                              <span className="hidden md:inline">Undo GW</span>
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleUndoAllTransfersForPosition(pick.position)}
-                              className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                              className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20 h-7 px-2 md:h-9 md:px-3"
                               data-testid={`undo-all-transfers-bench-${pick.position}`}
                             >
-                              <X className="h-4 w-4 mr-1" />
-                              Undo All
+                              <X className="h-3 w-3 md:h-4 md:w-4 md:mr-1" />
+                              <span className="hidden md:inline">Undo All</span>
                             </Button>
                             {plannerMode === "manual" && (
                               <div 
-                                className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                                className="text-xs md:text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-2 md:px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
                                 onClick={() => handleScrollToReplacement(player.element_type)}
                                 data-testid={`replace-bench-${pick.position}`}
                               >
@@ -3583,8 +3583,8 @@ export default function TransferPlanner() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1 md:gap-3">
+                          <div className="text-xs md:text-sm text-muted-foreground">
                             {projectedPoints !== null ? `${projectedPoints.toFixed(2)} pts` : 'No projection'}
                           </div>
                           {!isGK && (
@@ -3597,7 +3597,7 @@ export default function TransferPlanner() {
                                 disabled={index === 1}
                                 data-testid={`move-up-${pick.element}`}
                               >
-                                <ChevronUp className="h-4 w-4" />
+                                <ChevronUp className="h-3 w-3 md:h-4 md:w-4" />
                               </Button>
                               <Button
                                 size="sm"
@@ -3607,7 +3607,7 @@ export default function TransferPlanner() {
                                 disabled={index === 3}
                                 data-testid={`move-down-${pick.element}`}
                               >
-                                <ChevronDown className="h-4 w-4" />
+                                <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
                               </Button>
                             </div>
                           )}
@@ -3615,12 +3615,12 @@ export default function TransferPlanner() {
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
+                              className="h-7 w-7 md:h-8 md:w-8 text-red-600 hover:bg-red-50 hover:text-red-700 flex-shrink-0"
                               onClick={() => handleTransferOut(pick)}
                               data-testid={`bench-transfer-out-${pick.element}`}
                               title="Transfer Out"
                             >
-                              <X className="h-4 w-4" />
+                              <X className="h-3 w-3 md:h-4 md:w-4" />
                             </Button>
                           )}
                         </div>
@@ -3771,7 +3771,7 @@ export default function TransferPlanner() {
                                         )}
                                       </div>
                                       <div className="text-sm text-muted-foreground">
-                                        {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)} • {pick && `Sell: ~£${getSellingPrice(pick).toFixed(1)}m`}
+                                        {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)}{pick && <span className="hidden md:inline"> • Sell: ~£{getSellingPrice(pick).toFixed(1)}m</span>}
                                       </div>
                                     </div>
                                   </div>
@@ -3851,7 +3851,7 @@ export default function TransferPlanner() {
                                 )}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)} • {pick && `Sell: ~£${getSellingPrice(pick).toFixed(1)}m`}
+                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)}{pick && <span className="hidden md:inline"> • Sell: ~£{getSellingPrice(pick).toFixed(1)}m</span>}
                               </div>
                             </div>
                           </div>
