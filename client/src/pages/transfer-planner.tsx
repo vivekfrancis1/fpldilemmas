@@ -1516,7 +1516,7 @@ export default function TransferPlanner() {
                 </div>
                 {calculateTransfersRemaining() < 0 && (
                   <div className="text-xs text-red-600 mt-1">
-                    Undo at least {Math.abs(calculateTransfersRemaining())} transfer{Math.abs(calculateTransfersRemaining()) > 1 ? 's' : ''}
+                    This will result in {Math.abs(calculateTransfersRemaining()) * 4} points penalty
                   </div>
                 )}
               </div>
