@@ -1383,17 +1383,45 @@ export default function TransferPlanner() {
       return;
     }
 
+    if (!searchedId) {
+      toast({ title: "Error", description: "Manager ID not found", variant: "destructive" });
+      return;
+    }
+
     // Reset to Base Draft state
-    setGameweekTransfers({});
+    const emptyGameweekTransfers = {};
+    setGameweekTransfers(emptyGameweekTransfers);
     setTransferredOutPlayers([]);
     setCompletedTransfers([]);
     setActiveDraft(nextLetter);
-    setHasUnsavedChanges(true);
     if (teamData?.picks) {
       setManualLineup([...teamData.picks]);
     }
     
-    toast({ title: "New Draft Created", description: `Draft ${nextLetter} created from base team` });
+    // Auto-save the new draft immediately
+    fetch("/api/transfer-planner/drafts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        managerId: parseInt(searchedId),
+        draftLetter: nextLetter,
+        gameweekTransfers: emptyGameweekTransfers,
+        mode: plannerMode,
+        teamBank: teamData?.entry?.bank || 0,
+        teamValue: teamData?.entry?.value || 0,
+        totalProjectedPoints: 0,
+        totalTransfersUsed: 0
+      })
+    }).then(response => {
+      if (response.ok) {
+        setHasUnsavedChanges(false);
+        loadDrafts();
+        toast({ title: "Draft Created & Saved", description: `Draft ${nextLetter} created from base team` });
+      }
+    }).catch(() => {
+      setHasUnsavedChanges(true);
+      toast({ title: "Draft Created", description: `Draft ${nextLetter} created (save manually)` });
+    });
   };
 
   const duplicateCurrentDraft = async () => {
