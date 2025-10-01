@@ -1841,12 +1841,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
         if (bootstrapResponse.ok) {
           const bootstrapData = await bootstrapResponse.json();
-          // Get the most recent finished gameweek to ensure we have purchase_price data
-          const finishedGW = bootstrapData.events.find((event: any) => event.finished && !event.is_next);
+          // Get the current gameweek (the one that is live or most recent)
           const currentGW = bootstrapData.events.find((event: any) => event.is_current);
-          // Use finished GW if available, otherwise current GW
-          currentGameweek = (finishedGW?.id || currentGW?.id || 1);
-          console.log(`DEBUG: Using gameweek ${currentGameweek} for team data (finished: ${!!finishedGW})`);
+          // Use current GW if available
+          currentGameweek = (currentGW?.id || 1);
+          console.log(`DEBUG: Using gameweek ${currentGameweek} for team data (current: ${!!currentGW})`);
         } else {
           currentGameweek = "1"; // fallback
         }
