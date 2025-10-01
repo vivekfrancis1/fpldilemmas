@@ -811,8 +811,8 @@ export default function TransferPlanner() {
     return changedPlayers;
   };
 
-  // Calculate transfers available for a given gameweek
-  const calculateTransfersAvailable = (): number => {
+  // Calculate initial transfers available for a given gameweek (does not subtract used transfers)
+  const calculateInitialTransfers = (): number => {
     if (!teamData?.transfers || !selectedGameweek || !bootstrapData) return 0;
     
     // Get current gameweek
@@ -829,11 +829,14 @@ export default function TransferPlanner() {
       transfersAvailable += extraGameweeks;
     }
     
-    // Subtract actual transfers used (net changes from original lineup)
-    transfersAvailable -= calculateTransfersUsed();
-    
-    // Ensure minimum of 0
-    return Math.max(0, transfersAvailable);
+    return transfersAvailable;
+  };
+
+  // Calculate transfers remaining (initial - used)
+  const calculateTransfersRemaining = (): number => {
+    const initial = calculateInitialTransfers();
+    const used = calculateTransfersUsed();
+    return Math.max(0, initial - used);
   };
 
   // Swap a starting 11 player with a bench player
@@ -1210,7 +1213,7 @@ export default function TransferPlanner() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               {/* Total Projected Points for Selected GW */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1">GW {selectedGameweek} Projected Points</div>
@@ -1297,15 +1300,23 @@ export default function TransferPlanner() {
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1">Initial Transfers Available</div>
                 <div className="text-2xl font-bold text-purple-600">
-                  {calculateTransfersAvailable()}
+                  {calculateInitialTransfers()}
                 </div>
               </div>
 
               {/* Transfers Used */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1">Transfers Used</div>
-                <div className={`text-2xl font-bold ${calculateTransfersAvailable() < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                <div className={`text-2xl font-bold ${calculateTransfersRemaining() < 0 ? 'text-red-600' : 'text-green-600'}`}>
                   {calculateTransfersUsed()}
+                </div>
+              </div>
+
+              {/* Transfers Remaining */}
+              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-sm text-muted-foreground mb-1">Transfers Remaining</div>
+                <div className={`text-2xl font-bold ${calculateTransfersRemaining() < 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                  {calculateTransfersRemaining()}
                 </div>
               </div>
             </div>
