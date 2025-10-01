@@ -104,15 +104,34 @@ interface AllPlayersProjectionsTabProps {
   transferredOutPlayers: TransferOut[];
   onTransferIn: (playerId: number, playerElementType: number) => void;
   currentBank: number;
+  initialPositionFilter?: string;
+  scrollToView?: boolean;
+  onScrollComplete?: () => void;
 }
 
-function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank }: AllPlayersProjectionsTabProps) {
+function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank, initialPositionFilter = "all", scrollToView = false, onScrollComplete }: AllPlayersProjectionsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [positionFilter, setPositionFilter] = useState("all");
+  const [positionFilter, setPositionFilter] = useState(initialPositionFilter);
   const [teamFilter, setTeamFilter] = useState("all");
   const [loadGroupFilter, setLoadGroupFilter] = useState("All");
   const [sortField, setSortField] = useState<string>('total');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  // Update position filter when initialPositionFilter changes
+  useEffect(() => {
+    setPositionFilter(initialPositionFilter);
+  }, [initialPositionFilter]);
+
+  // Scroll to view when requested
+  useEffect(() => {
+    if (scrollToView && sectionRef.current) {
+      sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (onScrollComplete) {
+        onScrollComplete();
+      }
+    }
+  }, [scrollToView, onScrollComplete]);
 
   const { data: allPlayersData, isLoading } = useQuery<PlayerProjectionData[]>({
     queryKey: ["/api/cached/player-total-points"],
@@ -234,7 +253,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   };
 
   return (
-    <Card>
+    <Card ref={sectionRef}>
       <CardHeader>
         <CardTitle>All Players - Next 6 Gameweeks Projections</CardTitle>
         <div className="flex flex-col gap-4 mt-4">
@@ -477,6 +496,10 @@ export default function TransferPlanner() {
   // Current gameweek's transfers (for convenience)
   const [transferredOutPlayers, setTransferredOutPlayers] = useState<TransferOut[]>([]);
   const [completedTransfers, setCompletedTransfers] = useState<CompletedTransfer[]>([]);
+  
+  // Player projections tab state for quick navigation
+  const [projectionPositionFilter, setProjectionPositionFilter] = useState<string>("all");
+  const [scrollToProjections, setScrollToProjections] = useState<boolean>(false);
   
   // Track which manager has been initialized to prevent unwanted resets
   const initializedManagerRef = useRef<string | null>(null);
@@ -1030,9 +1053,22 @@ export default function TransferPlanner() {
         : p
     ));
 
+    // Map element_type to position filter value
+    const positionMap: { [key: number]: string } = {
+      1: "Goalkeeper",
+      2: "Defender",
+      3: "Midfielder",
+      4: "Forward"
+    };
+    
+    // Set position filter and trigger scroll to projections
+    const positionFilter = positionMap[player.element_type] || "all";
+    setProjectionPositionFilter(positionFilter);
+    setScrollToProjections(true);
+
     toast({
       title: "Player Transferred Out",
-      description: `${player.web_name} has been transferred out (£${sellingPrice.toFixed(1)}m). Select a replacement from the Projected Points tab.`
+      description: `${player.web_name} has been transferred out (£${sellingPrice.toFixed(1)}m). Scroll to Projected Points to select a replacement.`
     });
   };
 
@@ -2009,6 +2045,9 @@ export default function TransferPlanner() {
               transferredOutPlayers={transferredOutPlayers}
               onTransferIn={handleTransferIn}
               currentBank={calculateCurrentBank()}
+              initialPositionFilter={projectionPositionFilter}
+              scrollToView={scrollToProjections}
+              onScrollComplete={() => setScrollToProjections(false)}
             />
           </TabsContent>
 
