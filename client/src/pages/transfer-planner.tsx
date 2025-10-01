@@ -2386,7 +2386,7 @@ export default function TransferPlanner() {
 
             {activeDraft === "Base" && (
               <div className="text-sm text-muted-foreground">
-                Base Draft shows your current team with no transfers. Make a transfer to automatically create Draft A.
+                Base Draft shows your current team with no transfers. Make a transfer to automatically create a new draft.
               </div>
             )}
 
