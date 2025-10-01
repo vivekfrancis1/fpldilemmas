@@ -1295,6 +1295,70 @@ export default function TransferPlanner() {
     });
   };
 
+  // Draft management functions
+  const handleSaveDraft = async (draftLetter: string) => {
+    if (!searchedId || !selectedGameweek) return;
+
+    try {
+      const response = await fetch("/api/transfer-planner/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          managerId: parseInt(searchedId),
+          draftLetter,
+          gameweekTransfers,
+          mode: plannerMode,
+          teamBank: calculateBankAfterTransfers(),
+          teamValue: 0,
+          totalProjectedPoints: 0,
+          totalTransfersUsed: Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0)
+        })
+      });
+
+      if (response.ok) {
+        toast({ title: "Draft Saved", description: `Draft ${draftLetter} has been saved` });
+        // Refresh drafts list
+        const draftsResponse = await fetch(`/api/transfer-planner/drafts/${searchedId}`);
+        if (draftsResponse.ok) {
+          const data = await draftsResponse.json();
+          setSavedDrafts(data.drafts || []);
+        }
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save draft", variant: "destructive" });
+    }
+  };
+
+  const handleLoadDraft = async (draftLetter: string) => {
+    if (!searchedId) return;
+
+    try {
+      const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${draftLetter}`);
+      if (response.ok) {
+        const data = await response.json();
+        const draft = data.draft;
+        
+        setGameweekTransfers(draft.gameweekTransfers);
+        setPlannerMode(draft.mode);
+        setSelectedDraft(draftLetter);
+        
+        toast({ title: "Draft Loaded", description: `Draft ${draftLetter} has been loaded` });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to load draft", variant: "destructive" });
+    }
+  };
+
+  // Load drafts when manager changes
+  useEffect(() => {
+    if (searchedId) {
+      fetch(`/api/transfer-planner/drafts/${searchedId}`)
+        .then(res => res.json())
+        .then(data => setSavedDrafts(data.drafts || []))
+        .catch(() => {});
+    }
+  }, [searchedId]);
+
   // Check if there are empty slots (transferred out players)
   const hasEmptySlots = manualLineup.some(pick => pick.is_transferred_out);
 
@@ -1391,6 +1455,59 @@ export default function TransferPlanner() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Draft Management - Minimal UI */}
+      {searchedId && teamData && selectedGameweek && (
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Save className="h-5 w-5 text-purple-600" />
+              Draft Management
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Save Draft */}
+            <div>
+              <div className="text-sm font-medium mb-2">Save Current Plan</div>
+              <div className="flex gap-2 flex-wrap">
+                {['A', 'B', 'C', 'D', 'E'].map(letter => (
+                  <Button
+                    key={letter}
+                    onClick={() => handleSaveDraft(letter)}
+                    size="sm"
+                    variant={selectedDraft === letter ? "default" : "outline"}
+                    className="w-12"
+                    data-testid={`button-save-draft-${letter}`}
+                  >
+                    {letter}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Load Draft */}
+            {savedDrafts.length > 0 && (
+              <div>
+                <div className="text-sm font-medium mb-2">Load Saved Draft ({savedDrafts.length})</div>
+                <div className="flex gap-2 flex-wrap">
+                  {savedDrafts.map((draft: any) => (
+                    <Button
+                      key={draft.draftLetter}
+                      onClick={() => handleLoadDraft(draft.draftLetter)}
+                      size="sm"
+                      variant="outline"
+                      className="w-12"
+                      data-testid={`button-load-draft-${draft.draftLetter}`}
+                    >
+                      {draft.draftLetter}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
