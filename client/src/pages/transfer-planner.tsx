@@ -924,7 +924,7 @@ export default function TransferPlanner() {
     
     // Auto-save to database
     try {
-      await fetch(`/api/manager/${searchedId}/buy-price-overrides`, {
+      const response = await fetch(`/api/manager/${searchedId}/buy-price-overrides`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -933,10 +933,17 @@ export default function TransferPlanner() {
         })
       });
       
-      toast({
-        title: "Buy Price Saved",
-        description: `Buy price set to £${newBuyPrice.toFixed(1)}m and saved`
-      });
+      if (response.ok) {
+        // Refetch overrides to ensure persistence across drafts
+        await refetchBuyPriceOverrides();
+        
+        toast({
+          title: "Buy Price Saved",
+          description: `Buy price set to £${newBuyPrice.toFixed(1)}m and saved`
+        });
+      } else {
+        throw new Error("Failed to save buy price");
+      }
     } catch (error) {
       console.error("Failed to save buy price:", error);
       toast({
