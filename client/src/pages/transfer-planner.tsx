@@ -1789,6 +1789,67 @@ export default function TransferPlanner() {
     }
   };
 
+  // Undo ALL transfers for a position across all gameweeks (back to original team)
+  const handleUndoAllTransfersForPosition = async (position: number) => {
+    if (!teamData?.picks || !selectedGameweek) return;
+    
+    // Get the original player from the initial team data
+    const originalPick = teamData.picks.find(p => p.position === position);
+    if (!originalPick) return;
+    
+    const originalPlayer = getPlayerById(originalPick.element);
+    if (!originalPlayer) return;
+    
+    // Remove ALL transfers across ALL gameweeks that involve this position
+    const updatedGameweekTransfers: typeof gameweekTransfers = {};
+    
+    Object.keys(gameweekTransfers).forEach(gw => {
+      const gwNum = parseInt(gw);
+      const gwTransfers = gameweekTransfers[gwNum];
+      
+      // Filter out transfers at this position
+      const newTransferredOut = gwTransfers.transferredOut.filter(t => t.position !== position);
+      const newCompleted = gwTransfers.completed.filter(t => {
+        // Remove any transfer where either the out or in happened at this position
+        const outPosition = teamData.picks.find(p => p.element === t.outPlayerId)?.position;
+        return outPosition !== position;
+      });
+      
+      // Only keep the gameweek if it still has transfers
+      if (newTransferredOut.length > 0 || newCompleted.length > 0) {
+        updatedGameweekTransfers[gwNum] = {
+          transferredOut: newTransferredOut,
+          completed: newCompleted
+        };
+      }
+    });
+    
+    setGameweekTransfers(updatedGameweekTransfers);
+    
+    // Update current gameweek's state
+    const currentGwTransfers = updatedGameweekTransfers[selectedGameweek] || { transferredOut: [], completed: [] };
+    setTransferredOutPlayers(currentGwTransfers.transferredOut);
+    setCompletedTransfers(currentGwTransfers.completed);
+    
+    // Restore the original player at this position
+    setManualLineup(prev => prev.map(p => {
+      if (p.position === position) {
+        return { ...originalPick };
+      }
+      return p;
+    }));
+    
+    toast({
+      title: "All Transfers Undone",
+      description: `${originalPlayer.web_name} has been restored (all transfers removed)`
+    });
+    
+    // Auto-save the draft if not on Base
+    if (activeDraft !== "Base") {
+      await saveCurrentDraft(updatedGameweekTransfers);
+    }
+  };
+
   // Draft management functions
   const loadDrafts = async () => {
     if (!searchedId) return;
@@ -2846,7 +2907,7 @@ export default function TransferPlanner() {
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-2">
                                     {plannerMode === "manual" && (
                                       <div 
                                         className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
@@ -2865,6 +2926,16 @@ export default function TransferPlanner() {
                                     >
                                       <RotateCcw className="h-4 w-4 mr-1" />
                                       Undo
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleUndoAllTransfersForPosition(pick.position)}
+                                      className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                                      data-testid={`undo-all-transfers-${pick.position}`}
+                                    >
+                                      <X className="h-4 w-4 mr-1" />
+                                      Undo All
                                     </Button>
                                   </div>
                                 </div>
@@ -3064,7 +3135,7 @@ export default function TransferPlanner() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
                             {plannerMode === "manual" && (
                               <div 
                                 className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
@@ -3083,6 +3154,16 @@ export default function TransferPlanner() {
                             >
                               <RotateCcw className="h-4 w-4 mr-1" />
                               Undo
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUndoAllTransfersForPosition(pick.position)}
+                              className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                              data-testid={`undo-all-transfers-bench-${pick.position}`}
+                            >
+                              <X className="h-4 w-4 mr-1" />
+                              Undo All
                             </Button>
                           </div>
                         </div>
