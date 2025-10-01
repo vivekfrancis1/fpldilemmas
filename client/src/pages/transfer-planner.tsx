@@ -1490,6 +1490,11 @@ export default function TransferPlanner() {
                 <div className={`text-2xl font-bold ${calculateBankAfterTransfers() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
                   £{calculateBankAfterTransfers().toFixed(1)}m
                 </div>
+                {calculateBankAfterTransfers() < 0 && (
+                  <div className="text-xs text-red-600 mt-1">
+                    These transfers may not be possible. But it depends on your actual sell value of the transferred out players.
+                  </div>
+                )}
               </div>
 
               {/* Initial Transfers Available */}
