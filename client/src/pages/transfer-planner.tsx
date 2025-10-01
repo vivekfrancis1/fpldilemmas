@@ -213,6 +213,12 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     };
   };
 
+  // Convert team full name to short name
+  const getTeamShortName = (teamFullName: string): string => {
+    const team = bootstrapData?.teams.find(t => t.name === teamFullName);
+    return team?.short_name || teamFullName;
+  };
+
   // Get unique teams for filter
   const teams = bootstrapData?.teams || [];
   const uniqueTeams = Array.from(new Set(allPlayersData.map(p => p.team))).sort();
