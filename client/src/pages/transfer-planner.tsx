@@ -1850,6 +1850,59 @@ export default function TransferPlanner() {
     }
   };
 
+  // Undo all transfers for a position for the CURRENT gameweek only
+  const handleUndoGameweekTransfersForPosition = async (position: number) => {
+    if (!teamData?.picks || !selectedGameweek) return;
+    
+    // Get the baseline player for this gameweek (considering previous gameweeks' transfers)
+    const baseline = getBaselineLineup(selectedGameweek);
+    const baselinePick = baseline.find(p => p.position === position);
+    if (!baselinePick) return;
+    
+    const baselinePlayer = getPlayerById(baselinePick.element);
+    if (!baselinePlayer) return;
+    
+    // Remove transfers for this position in the CURRENT gameweek only
+    const currentGwTransfers = gameweekTransfers[selectedGameweek] || { transferredOut: [], completed: [] };
+    const newTransferredOut = currentGwTransfers.transferredOut.filter(t => t.position !== position);
+    const newCompleted = currentGwTransfers.completed.filter(t => {
+      // Remove any transfer where the out happened at this position
+      const outPosition = teamData.picks.find(p => p.element === t.outPlayerId)?.position;
+      return outPosition !== position;
+    });
+    
+    // Update gameweek transfers
+    const updatedGameweekTransfers = {
+      ...gameweekTransfers,
+      [selectedGameweek]: {
+        transferredOut: newTransferredOut,
+        completed: newCompleted
+      }
+    };
+    
+    setGameweekTransfers(updatedGameweekTransfers);
+    setTransferredOutPlayers(newTransferredOut);
+    setCompletedTransfers(newCompleted);
+    
+    // Restore the baseline player at this position
+    setManualLineup(prev => prev.map(p => {
+      if (p.position === position) {
+        return { ...baselinePick };
+      }
+      return p;
+    }));
+    
+    toast({
+      title: "GW Transfers Undone",
+      description: `${baselinePlayer.web_name} restored (GW${selectedGameweek} transfers removed)`
+    });
+    
+    // Auto-save the draft if not on Base
+    if (activeDraft !== "Base") {
+      await saveCurrentDraft(updatedGameweekTransfers);
+    }
+  };
+
   // Draft management functions
   const loadDrafts = async () => {
     if (!searchedId) return;
@@ -2930,6 +2983,16 @@ export default function TransferPlanner() {
                                     <Button
                                       size="sm"
                                       variant="outline"
+                                      onClick={() => handleUndoGameweekTransfersForPosition(pick.position)}
+                                      className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/20"
+                                      data-testid={`undo-gw-transfers-${pick.position}`}
+                                    >
+                                      <RotateCcw className="h-4 w-4 mr-1" />
+                                      Undo GW
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
                                       onClick={() => handleUndoAllTransfersForPosition(pick.position)}
                                       className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
                                       data-testid={`undo-all-transfers-${pick.position}`}
@@ -3154,6 +3217,16 @@ export default function TransferPlanner() {
                             >
                               <RotateCcw className="h-4 w-4 mr-1" />
                               Undo
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUndoGameweekTransfersForPosition(pick.position)}
+                              className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/20"
+                              data-testid={`undo-gw-transfers-bench-${pick.position}`}
+                            >
+                              <RotateCcw className="h-4 w-4 mr-1" />
+                              Undo GW
                             </Button>
                             <Button
                               size="sm"
