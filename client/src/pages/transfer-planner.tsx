@@ -342,7 +342,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                 <th className="text-center py-1 px-1 md:p-2 font-bold text-xs md:text-sm w-[44px] min-w-[44px] max-w-[44px]">
                   Action
                 </th>
-                <th className="text-left py-1 px-1 md:p-2">
+                <th className="text-left py-1 px-1 md:p-2 hidden md:table-cell">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -485,7 +485,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         ) : null;
                       })()}
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center">£{player.price.toFixed(1)}m</td>
+                    <td className="py-1 px-1 md:p-2 text-center hidden md:table-cell">£{player.price.toFixed(1)}m</td>
                     {nextGameweeks.map((gw, idx) => {
                       const gwPoints = player.gameweekProjections[gw.toString()] || 0;
                       const top3 = getTop3ForGameweek(gw);
