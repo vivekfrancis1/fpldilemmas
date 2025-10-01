@@ -1526,11 +1526,34 @@ export default function TransferPlanner() {
       gw.completed.length > 0 || gw.transferredOut.length > 0
     );
 
-    if (hasTransfers && activeDraft === "Base") {
-      // Auto-create Draft A
+    if (hasTransfers && activeDraft === "Base" && searchedId) {
+      // Auto-create and save Draft A
       setActiveDraft("A");
-      setHasUnsavedChanges(true);
-      toast({ title: "Draft A Created", description: "Your transfers are now in Draft A" });
+      
+      // Auto-save Draft A immediately
+      fetch("/api/transfer-planner/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          managerId: parseInt(searchedId),
+          draftLetter: "A",
+          gameweekTransfers,
+          mode: plannerMode,
+          teamBank: calculateBankAfterTransfers(),
+          teamValue: 0,
+          totalProjectedPoints: 0,
+          totalTransfersUsed: Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0)
+        })
+      }).then(response => {
+        if (response.ok) {
+          setHasUnsavedChanges(false);
+          loadDrafts();
+          toast({ title: "Draft A Created & Saved", description: "Your transfers are now in Draft A" });
+        }
+      }).catch(() => {
+        setHasUnsavedChanges(true);
+        toast({ title: "Draft A Created", description: "Your transfers are now in Draft A (save manually)" });
+      });
     } else if (hasTransfers && activeDraft !== "Base") {
       setHasUnsavedChanges(true);
     }
