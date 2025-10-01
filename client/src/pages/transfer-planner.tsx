@@ -1319,6 +1319,9 @@ export default function TransferPlanner() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <div className="text-xs text-muted-foreground mb-4 italic">
+              * Sell prices shown are approximate values and may not reflect exact FPL prices
+            </div>
             <div className="space-y-6">
               {/* Current Starting 11 */}
               <div>
@@ -1392,9 +1395,8 @@ export default function TransferPlanner() {
                               {getTeamName(player.team)} • {getPositionName(player.element_type)}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1 flex gap-3">
-                              <span>Buy: £{pick.purchase_price ? (pick.purchase_price / 10).toFixed(1) : (player.now_cost / 10).toFixed(1)}m</span>
                               <span>Now: £{(player.now_cost / 10).toFixed(1)}m</span>
-                              <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
+                              <span>Sell: ~£{getSellingPrice(pick).toFixed(1)}m</span>
                             </div>
                           </div>
                         </div>
@@ -1533,9 +1535,8 @@ export default function TransferPlanner() {
                               {getTeamName(player.team)} • {getPositionName(player.element_type)}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1 flex gap-3">
-                              <span>Buy: £{pick.purchase_price ? (pick.purchase_price / 10).toFixed(1) : (player.now_cost / 10).toFixed(1)}m</span>
                               <span>Now: £{(player.now_cost / 10).toFixed(1)}m</span>
-                              <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
+                              <span>Sell: ~£{getSellingPrice(pick).toFixed(1)}m</span>
                             </div>
                           </div>
                         </div>
@@ -1624,6 +1625,9 @@ export default function TransferPlanner() {
 
             {optimizedLineup && !optimizeMutation.isPending && (
               <div className="mt-6 space-y-6">
+                <div className="text-xs text-muted-foreground mb-4 italic">
+                  * Sell prices shown are approximate values and may not reflect exact FPL prices
+                </div>
                 {/* Formation and Points Summary */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-white dark:bg-gray-900 rounded-lg border">
@@ -1676,7 +1680,7 @@ export default function TransferPlanner() {
                                 )}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: £${getSellingPrice(pick).toFixed(1)}m`}
+                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: ~£${getSellingPrice(pick).toFixed(1)}m`}
                               </div>
                             </div>
                           </div>
@@ -1726,7 +1730,7 @@ export default function TransferPlanner() {
                             <div className="flex-1">
                               <div className="font-medium">{player.web_name}</div>
                               <div className="text-sm text-muted-foreground">
-                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: £${getSellingPrice(pick).toFixed(1)}m`}
+                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: ~£${getSellingPrice(pick).toFixed(1)}m`}
                               </div>
                             </div>
                           </div>
