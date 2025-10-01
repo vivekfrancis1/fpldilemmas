@@ -2001,6 +2001,63 @@ export default function TransferPlanner() {
     }
   };
 
+  const deleteAllDuplicateDrafts = async () => {
+    if (!searchedId) return;
+
+    // Identify all duplicate drafts
+    const duplicateInfo = identifyDuplicateDrafts();
+    const duplicateDrafts = Object.entries(duplicateInfo)
+      .filter(([key, info]) => info.isDuplicate && key !== 'Base')
+      .map(([key]) => key);
+
+    if (duplicateDrafts.length === 0) {
+      toast({ title: "No Duplicates", description: "No duplicate drafts found", variant: "default" });
+      return;
+    }
+
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${duplicateDrafts.length} duplicate draft(s)? (${duplicateDrafts.join(', ')})\n\nOriginal drafts will be kept. This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      // Delete each duplicate draft
+      const deletePromises = duplicateDrafts.map(draftLetter =>
+        fetch(`/api/transfer-planner/drafts/${searchedId}/${draftLetter}`, {
+          method: "DELETE"
+        })
+      );
+
+      const results = await Promise.all(deletePromises);
+      const successCount = results.filter(r => r.ok).length;
+
+      // If the active draft was deleted, switch to Base
+      if (duplicateDrafts.includes(activeDraft)) {
+        switchToDraft("Base");
+      }
+
+      // Reload drafts
+      await loadDrafts();
+
+      if (successCount === duplicateDrafts.length) {
+        toast({ 
+          title: "Duplicates Deleted", 
+          description: `Successfully deleted ${successCount} duplicate draft(s)` 
+        });
+      } else {
+        toast({ 
+          title: "Partial Success", 
+          description: `Deleted ${successCount} of ${duplicateDrafts.length} duplicate draft(s)`,
+          variant: "default"
+        });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete duplicate drafts", variant: "destructive" });
+    }
+  };
+
   const saveAllDrafts = async () => {
     if (!searchedId || savedDrafts.length === 0) return;
 
@@ -2264,10 +2321,32 @@ export default function TransferPlanner() {
       {searchedId && teamData && playerProjections6GW && (
         <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5 text-blue-600" />
-              Draft Comparison
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-blue-600" />
+                Draft Comparison
+              </CardTitle>
+              {(() => {
+                const duplicateInfo = identifyDuplicateDrafts();
+                const duplicateCount = Object.values(duplicateInfo).filter(info => info.isDuplicate).length;
+                
+                if (duplicateCount > 0) {
+                  return (
+                    <Button
+                      onClick={deleteAllDuplicateDrafts}
+                      size="sm"
+                      variant="outline"
+                      className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                      data-testid="button-delete-all-duplicates"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete All Duplicates ({duplicateCount})
+                    </Button>
+                  );
+                }
+                return null;
+              })()}
+            </div>
           </CardHeader>
           <CardContent>
             {(() => {
