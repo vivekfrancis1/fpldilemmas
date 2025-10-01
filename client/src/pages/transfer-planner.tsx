@@ -1557,13 +1557,19 @@ export default function TransferPlanner() {
   };
   
   // Confirm captain selection
-  const confirmSetCaptain = (playerId: number) => {
+  const confirmSetCaptain = async (playerId: number) => {
     setManualLineup(prev => prev.map(pick => ({
       ...pick,
       is_captain: pick.element === playerId,
       is_vice_captain: pick.is_vice_captain && pick.element !== playerId ? true : false
     })));
     setCaptainConfirmation(null);
+    
+    // Auto-save draft if not on Base
+    if (activeDraft !== "Base") {
+      // Small delay to ensure state is updated
+      setTimeout(() => saveCurrentDraft(), 100);
+    }
   };
 
   // Handle vice captain selection
@@ -1578,13 +1584,19 @@ export default function TransferPlanner() {
   };
   
   // Confirm vice captain selection
-  const confirmSetViceCaptain = (playerId: number) => {
+  const confirmSetViceCaptain = async (playerId: number) => {
     setManualLineup(prev => prev.map(pick => ({
       ...pick,
       is_vice_captain: pick.element === playerId,
       is_captain: pick.is_captain && pick.element !== playerId ? true : false
     })));
     setViceCaptainConfirmation(null);
+    
+    // Auto-save draft if not on Base
+    if (activeDraft !== "Base") {
+      // Small delay to ensure state is updated
+      setTimeout(() => saveCurrentDraft(), 100);
+    }
   };
 
   // Handle transferring a player out
@@ -2076,6 +2088,12 @@ export default function TransferPlanner() {
     if (!searchedId || draftLetter === "Base") return;
 
     const transfersData = transfersToSave || gameweekTransfers;
+    
+    // Extract captain and vice-captain from current lineup
+    const captainPick = manualLineup.find(p => p.is_captain);
+    const viceCaptainPick = manualLineup.find(p => p.is_vice_captain);
+    const captainPlayer = captainPick ? getPlayerById(captainPick.element) : null;
+    const viceCaptainPlayer = viceCaptainPick ? getPlayerById(viceCaptainPick.element) : null;
 
     try {
       const response = await fetch("/api/transfer-planner/drafts", {
@@ -2089,7 +2107,11 @@ export default function TransferPlanner() {
           teamBank: calculateBankAfterTransfers(),
           teamValue: 0,
           totalProjectedPoints: 0,
-          totalTransfersUsed: Object.values(transfersData).reduce((sum, gw) => sum + gw.completed.length, 0)
+          totalTransfersUsed: Object.values(transfersData).reduce((sum, gw) => sum + gw.completed.length, 0),
+          captainPlayerId: captainPick?.element || null,
+          captainPlayerName: captainPlayer?.web_name || null,
+          viceCaptainPlayerId: viceCaptainPick?.element || null,
+          viceCaptainPlayerName: viceCaptainPlayer?.web_name || null
         })
       });
 
@@ -2137,8 +2159,21 @@ export default function TransferPlanner() {
           setCompletedTransfers([]);
           
           // Reset lineup to base team, transfers will be applied via useEffect
+          // Also restore captain and vice-captain selections from draft
           if (teamData?.picks) {
-            setManualLineup([...teamData.picks]);
+            const baseLineup = [...teamData.picks];
+            
+            // Apply saved captain/vice-captain if available
+            if (draft.captainPlayerId || draft.viceCaptainPlayerId) {
+              const updatedLineup = baseLineup.map(pick => ({
+                ...pick,
+                is_captain: pick.element === draft.captainPlayerId,
+                is_vice_captain: pick.element === draft.viceCaptainPlayerId
+              }));
+              setManualLineup(updatedLineup);
+            } else {
+              setManualLineup(baseLineup);
+            }
           }
           
           toast({ title: "Draft Loaded", description: `Switched to Draft ${draftLetter}` });
