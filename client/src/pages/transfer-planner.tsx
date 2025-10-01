@@ -1562,11 +1562,11 @@ export default function TransferPlanner() {
 
     toast({
       title: "Player Transferred Out",
-      description: `${player.web_name} has been transferred out (£${sellingPrice.toFixed(1)}m). Click "Needs Replacement" to select a replacement.`
+      description: `${player.web_name} has been transferred out (£${sellingPrice.toFixed(1)}m). Click "Replace" to select a replacement.`
     });
   };
 
-  // Handle clicking "Needs Replacement" to scroll to projections
+  // Handle clicking "Replace" to scroll to projections
   const handleScrollToReplacement = (elementType: number) => {
     // Map element_type to position filter value
     const positionMap: { [key: number]: string } = {
@@ -2956,20 +2956,11 @@ export default function TransferPlanner() {
                                     <div className="flex-1">
                                       <div className="font-medium text-red-600">Empty Slot</div>
                                       <div className="text-sm text-muted-foreground">
-                                        {getPositionName(player.element_type)} • Click "Needs Replacement" to find a player
+                                        {getPositionName(player.element_type)} • Click "Replace" to find a player
                                       </div>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    {plannerMode === "manual" && (
-                                      <div 
-                                        className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
-                                        onClick={() => handleScrollToReplacement(player.element_type)}
-                                        data-testid={`needs-replacement-${pick.position}`}
-                                      >
-                                        Needs Replacement
-                                      </div>
-                                    )}
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -3000,6 +2991,15 @@ export default function TransferPlanner() {
                                       <X className="h-4 w-4 mr-1" />
                                       Undo All
                                     </Button>
+                                    {plannerMode === "manual" && (
+                                      <div 
+                                        className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                                        onClick={() => handleScrollToReplacement(player.element_type)}
+                                        data-testid={`replace-${pick.position}`}
+                                      >
+                                        Replace
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               );
@@ -3194,20 +3194,11 @@ export default function TransferPlanner() {
                             <div className="flex-1">
                               <div className="font-medium text-red-600">Empty Slot</div>
                               <div className="text-sm text-muted-foreground">
-                                {getPositionName(player.element_type)} • Click "Needs Replacement" to find a player
+                                {getPositionName(player.element_type)} • Click "Replace" to find a player
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {plannerMode === "manual" && (
-                              <div 
-                                className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
-                                onClick={() => handleScrollToReplacement(player.element_type)}
-                                data-testid={`needs-replacement-bench-${pick.position}`}
-                              >
-                                Needs Replacement
-                              </div>
-                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -3238,6 +3229,15 @@ export default function TransferPlanner() {
                               <X className="h-4 w-4 mr-1" />
                               Undo All
                             </Button>
+                            {plannerMode === "manual" && (
+                              <div 
+                                className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                                onClick={() => handleScrollToReplacement(player.element_type)}
+                                data-testid={`replace-bench-${pick.position}`}
+                              >
+                                Replace
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -3475,7 +3475,7 @@ export default function TransferPlanner() {
                                       <div className="flex-1">
                                         <div className="font-medium text-red-600">Empty Slot</div>
                                         <div className="text-sm text-muted-foreground">
-                                          {fullPlayer && getPositionName(fullPlayer.element_type)} • Click "Needs Replacement" to find a player
+                                          {fullPlayer && getPositionName(fullPlayer.element_type)} • Click "Replace" to find a player
                                         </div>
                                       </div>
                                     </div>
@@ -3559,7 +3559,7 @@ export default function TransferPlanner() {
                               <div className="flex-1">
                                 <div className="font-medium text-red-600">Empty Slot</div>
                                 <div className="text-sm text-muted-foreground">
-                                  {fullPlayer && getPositionName(fullPlayer.element_type)} • Click "Needs Replacement" to find a player
+                                  {fullPlayer && getPositionName(fullPlayer.element_type)} • Click "Replace" to find a player
                                 </div>
                               </div>
                             </div>
