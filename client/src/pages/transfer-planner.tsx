@@ -858,11 +858,11 @@ export default function TransferPlanner() {
     return transfersAvailable;
   };
 
-  // Calculate transfers remaining (initial - used)
+  // Calculate transfers remaining (initial - used, can be negative)
   const calculateTransfersRemaining = (): number => {
     const initial = calculateInitialTransfers();
     const used = calculateTransfersUsed();
-    return Math.max(0, initial - used);
+    return initial - used;
   };
 
   // Swap a starting 11 player with a bench player
