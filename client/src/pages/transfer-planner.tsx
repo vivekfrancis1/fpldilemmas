@@ -598,9 +598,13 @@ export default function TransferPlanner() {
   // Auto-optimization mutation
   const optimizeMutation = useMutation({
     mutationFn: async () => {
-      if (!teamData || !selectedGameweek) {
+      if (!teamData || !selectedGameweek || manualLineup.length === 0) {
         throw new Error("Team data and gameweek are required");
       }
+
+      // Use manualLineup which includes all transfers for this gameweek
+      // Filter out transferred-out players (empty slots)
+      const activeLineup = manualLineup.filter(pick => !pick.is_transferred_out);
 
       const response = await fetch("/api/transfer-planner/auto-optimize", {
         method: "POST",
@@ -608,7 +612,7 @@ export default function TransferPlanner() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          picks: teamData.picks,
+          picks: activeLineup,
           gameweek: selectedGameweek
         })
       });
@@ -1730,13 +1734,14 @@ export default function TransferPlanner() {
                   <div className="grid gap-2">
                     {optimizedLineup.starting11.map((player) => {
                       const fullPlayer = getPlayerById(player.element);
-                      const pick = teamData.picks.find(p => p.element === player.element);
+                      const pick = manualLineup.find(p => p.element === player.element);
                       return (
                         <div
                           key={player.element}
-                          className={`flex items-center justify-between p-3 rounded-lg border ${
+                          className={`flex items-center justify-between p-3 rounded-lg border-2 ${
                             player.isCaptain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
                             player.isViceCaptain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
+                            pick && isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
                             'border-gray-200'
                           }`}
                           data-testid={`optimized-player-${player.element}`}
@@ -1745,6 +1750,9 @@ export default function TransferPlanner() {
                             <div className="flex-1">
                               <div className="font-medium flex items-center gap-2">
                                 {player.web_name}
+                                {pick && isPlayerTransferredIn(pick) && (
+                                  <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">NEW</span>
+                                )}
                                 {player.isCaptain && (
                                   <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
                                 )}
@@ -1789,11 +1797,15 @@ export default function TransferPlanner() {
                   <div className="grid gap-2">
                     {optimizedLineup.bench.map((player) => {
                       const fullPlayer = getPlayerById(player.element);
-                      const pick = teamData.picks.find(p => p.element === player.element);
+                      const pick = manualLineup.find(p => p.element === player.element);
                       return (
                         <div
                           key={player.element}
-                          className="flex items-center justify-between p-3 rounded-lg border border-gray-200 bg-gray-50 dark:bg-gray-900"
+                          className={`flex items-center justify-between p-3 rounded-lg border-2 ${
+                            pick && isPlayerTransferredIn(pick) 
+                              ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
+                              : 'border-gray-200 bg-gray-50 dark:bg-gray-900'
+                          }`}
                           data-testid={`bench-player-${player.element}`}
                         >
                           <div className="flex items-center gap-3 flex-1">
@@ -1801,7 +1813,12 @@ export default function TransferPlanner() {
                               {player.benchPosition}
                             </span>
                             <div className="flex-1">
-                              <div className="font-medium">{player.web_name}</div>
+                              <div className="font-medium flex items-center gap-2">
+                                {player.web_name}
+                                {pick && isPlayerTransferredIn(pick) && (
+                                  <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">NEW</span>
+                                )}
+                              </div>
                               <div className="text-sm text-muted-foreground">
                                 {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: ~£${getSellingPrice(pick).toFixed(1)}m`}
                               </div>
