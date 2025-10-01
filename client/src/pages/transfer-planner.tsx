@@ -1051,7 +1051,66 @@ export default function TransferPlanner() {
     return totalPoints;
   };
 
-  // Build comparison data for all drafts in Manual mode
+  // Calculate auto mode points for a draft at a specific gameweek
+  const calculateAutoPointsForGameweek = (squad: TeamPick[], gameweek: number, projections6GW: any[]): number => {
+    if (!projections6GW) return 0;
+    
+    // Get all 15 players with their projections for this gameweek
+    const playersWithPoints = squad.map(pick => {
+      const player = getPlayerById(pick.element);
+      const playerData = projections6GW.find((p: any) => p.playerId === pick.element);
+      const gwPoints = playerData?.gameweekProjections?.[gameweek.toString()] || 0;
+      
+      return {
+        element: pick.element,
+        position: player?.element_type || 0,
+        projectedPoints: gwPoints
+      };
+    });
+    
+    // Group by position and sort by points
+    const gkps = playersWithPoints.filter(p => p.position === 1).sort((a, b) => b.projectedPoints - a.projectedPoints);
+    const defs = playersWithPoints.filter(p => p.position === 2).sort((a, b) => b.projectedPoints - a.projectedPoints);
+    const mids = playersWithPoints.filter(p => p.position === 3).sort((a, b) => b.projectedPoints - a.projectedPoints);
+    const fwds = playersWithPoints.filter(p => p.position === 4).sort((a, b) => b.projectedPoints - a.projectedPoints);
+    
+    // Try all valid formations and find best for this gameweek
+    const validFormations = [
+      { def: 3, mid: 4, fwd: 3 }, { def: 3, mid: 5, fwd: 2 },
+      { def: 4, mid: 3, fwd: 3 }, { def: 4, mid: 4, fwd: 2 },
+      { def: 4, mid: 5, fwd: 1 }, { def: 5, mid: 3, fwd: 2 },
+      { def: 5, mid: 4, fwd: 1 }, { def: 5, mid: 2, fwd: 3 }
+    ];
+    
+    let bestPoints = 0;
+    validFormations.forEach(formation => {
+      if (defs.length >= formation.def && mids.length >= formation.mid && fwds.length >= formation.fwd) {
+        const selected = [
+          gkps[0],
+          ...defs.slice(0, formation.def),
+          ...mids.slice(0, formation.mid),
+          ...fwds.slice(0, formation.fwd)
+        ];
+        
+        const formationPoints = selected.reduce((sum, p) => sum + (p?.projectedPoints || 0), 0);
+        
+        // Find captain (highest points in starting 11)
+        const captain = selected.slice(1).reduce((max, p) => 
+          (p?.projectedPoints || 0) > (max?.projectedPoints || 0) ? p : max
+        , selected[1]);
+        
+        const totalWithCaptain = formationPoints + (captain?.projectedPoints || 0);
+        
+        if (totalWithCaptain > bestPoints) {
+          bestPoints = totalWithCaptain;
+        }
+      }
+    });
+    
+    return bestPoints;
+  };
+
+  // Build comparison data for all drafts with both Manual and Auto modes
   const buildDraftComparisonData = () => {
     if (!teamData?.picks || !playerProjections6GW) return [];
     
@@ -1060,8 +1119,8 @@ export default function TransferPlanner() {
     
     const comparisonRows: any[] = [];
     
-    // Base Draft (Manual mode only)
-    const baseRow = {
+    // Base Draft - Manual mode
+    const baseManualRow = {
       draftKey: 'Base',
       mode: 'Manual',
       gameweeks: {} as Record<number, number>,
@@ -1071,14 +1130,31 @@ export default function TransferPlanner() {
     nextGWs.forEach(gw => {
       const squad = getSquadAtGameweek({}, gw.id); // Empty transfers = base team
       const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW);
-      baseRow.gameweeks[gw.id] = points;
-      baseRow.total += points;
+      baseManualRow.gameweeks[gw.id] = points;
+      baseManualRow.total += points;
     });
-    comparisonRows.push(baseRow);
+    comparisonRows.push(baseManualRow);
     
-    // All saved drafts (Manual mode only)
+    // Base Draft - Auto mode
+    const baseAutoRow = {
+      draftKey: 'Base',
+      mode: 'Auto',
+      gameweeks: {} as Record<number, number>,
+      total: 0
+    };
+    
+    nextGWs.forEach(gw => {
+      const squad = getSquadAtGameweek({}, gw.id);
+      const points = calculateAutoPointsForGameweek(squad, gw.id, playerProjections6GW);
+      baseAutoRow.gameweeks[gw.id] = points;
+      baseAutoRow.total += points;
+    });
+    comparisonRows.push(baseAutoRow);
+    
+    // All saved drafts - both Manual and Auto modes
     savedDrafts.forEach(draft => {
-      const draftRow = {
+      // Manual mode row
+      const draftManualRow = {
         draftKey: draft.draftLetter,
         mode: 'Manual',
         gameweeks: {} as Record<number, number>,
@@ -1088,10 +1164,26 @@ export default function TransferPlanner() {
       nextGWs.forEach(gw => {
         const squad = getSquadAtGameweek(draft.gameweekTransfers || {}, gw.id);
         const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW);
-        draftRow.gameweeks[gw.id] = points;
-        draftRow.total += points;
+        draftManualRow.gameweeks[gw.id] = points;
+        draftManualRow.total += points;
       });
-      comparisonRows.push(draftRow);
+      comparisonRows.push(draftManualRow);
+      
+      // Auto mode row
+      const draftAutoRow = {
+        draftKey: draft.draftLetter,
+        mode: 'Auto',
+        gameweeks: {} as Record<number, number>,
+        total: 0
+      };
+      
+      nextGWs.forEach(gw => {
+        const squad = getSquadAtGameweek(draft.gameweekTransfers || {}, gw.id);
+        const points = calculateAutoPointsForGameweek(squad, gw.id, playerProjections6GW);
+        draftAutoRow.gameweeks[gw.id] = points;
+        draftAutoRow.total += points;
+      });
+      comparisonRows.push(draftAutoRow);
     });
     
     return comparisonRows;
@@ -1899,7 +1991,7 @@ export default function TransferPlanner() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5 text-blue-600" />
-              Draft Comparison (Manual Mode)
+              Draft Comparison (Manual & Auto)
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1917,6 +2009,7 @@ export default function TransferPlanner() {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left p-2 font-semibold" data-testid="header-draft">Draft</th>
+                        <th className="text-left p-2 font-semibold" data-testid="header-mode">Mode</th>
                         {nextGWs.map(gw => (
                           <th key={gw.id} className="text-center p-2 font-semibold" data-testid={`header-gw${gw.id}`}>
                             GW{gw.id}
@@ -1932,12 +2025,15 @@ export default function TransferPlanner() {
                         <tr 
                           key={`${row.draftKey}-${row.mode}`} 
                           className={`border-b hover:bg-gray-50 dark:hover:bg-gray-900 ${
-                            row.draftKey === activeDraft ? 'bg-blue-50 dark:bg-blue-950/10' : ''
+                            row.draftKey === activeDraft && row.mode === 'Manual' ? 'bg-blue-50 dark:bg-blue-950/10' : ''
                           }`}
                           data-testid={`row-${row.draftKey}-${row.mode.toLowerCase()}`}
                         >
                           <td className="p-2 font-medium" data-testid={`cell-draft-${row.draftKey}`}>
-                            {row.draftKey} {row.draftKey === activeDraft && '●'}
+                            {row.draftKey} {row.draftKey === activeDraft && row.mode === 'Manual' && '●'}
+                          </td>
+                          <td className="p-2 text-sm text-muted-foreground" data-testid={`cell-mode-${row.draftKey}`}>
+                            {row.mode}
                           </td>
                           {nextGWs.map(gw => (
                             <td 
@@ -1963,8 +2059,9 @@ export default function TransferPlanner() {
             })()}
             
             <div className="mt-4 text-xs text-muted-foreground">
-              <p>● = Currently active draft</p>
-              <p>Manual mode shows projected points based on your saved lineup and transfers for each gameweek.</p>
+              <p>● = Currently active draft (Manual mode)</p>
+              <p><strong>Manual:</strong> Projected points based on your saved lineup and transfers.</p>
+              <p><strong>Auto:</strong> Optimized lineup with best formation and captain for maximum points.</p>
             </div>
           </CardContent>
         </Card>
