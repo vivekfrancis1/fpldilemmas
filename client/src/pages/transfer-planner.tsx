@@ -1947,7 +1947,7 @@ export default function TransferPlanner() {
       )}
 
       {/* Draft Comparison Table */}
-      {searchedId && teamData && playerProjections && (
+      {searchedId && teamData && playerProjections6GW && (
         <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
