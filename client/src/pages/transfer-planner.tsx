@@ -269,21 +269,21 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   };
 
   return (
-    <Card ref={sectionRef}>
-      <CardHeader>
-        <CardTitle>All Players - Next 6 Gameweeks Projections</CardTitle>
-        <div className="flex flex-col gap-4 mt-4">
+    <Card ref={sectionRef} className="border-0 shadow-none">
+      <CardHeader className="pb-2 pt-3 px-2 md:px-4">
+        <CardTitle className="text-base md:text-lg">All Players - Next 6 Gameweeks</CardTitle>
+        <div className="flex flex-col gap-2 mt-2">
           {/* Row 1: Search and Position */}
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Input
               placeholder="Search players or teams..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="md:w-64"
+              className="h-8 text-sm sm:w-48 md:w-64"
               data-testid="input-player-search"
             />
             <Select value={positionFilter} onValueChange={setPositionFilter}>
-              <SelectTrigger className="md:w-48" data-testid="select-position-filter">
+              <SelectTrigger className="h-8 text-sm sm:w-36 md:w-48" data-testid="select-position-filter">
                 <SelectValue placeholder="All Positions" />
               </SelectTrigger>
               <SelectContent>
@@ -296,9 +296,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             </Select>
           </div>
           {/* Row 2: Team and Load Group */}
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="md:w-48" data-testid="select-team-filter">
+              <SelectTrigger className="h-8 text-sm sm:w-36 md:w-48" data-testid="select-team-filter">
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
               <SelectContent>
@@ -309,7 +309,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               </SelectContent>
             </Select>
             <Select value={loadGroupFilter} onValueChange={setLoadGroupFilter}>
-              <SelectTrigger className="md:w-48" data-testid="select-load-group">
+              <SelectTrigger className="h-8 text-sm sm:w-36 md:w-48" data-testid="select-load-group">
                 <SelectValue placeholder="Load Group" />
               </SelectTrigger>
               <SelectContent>
@@ -322,94 +322,102 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+      <CardContent className="p-2 md:p-4">
+        <div className="overflow-x-auto -mx-2 md:mx-0">
+          <table className="w-full text-xs md:text-sm">
             <thead>
               <tr className="border-b">
-                <th className="text-left p-2 sticky left-0 bg-white dark:bg-gray-950 z-20">
+                <th className="text-left py-1 px-1 md:p-2 sticky left-0 bg-white dark:bg-gray-950 z-20">
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
                     onClick={() => handleSort('name')}
                     data-testid="sort-name"
                   >
-                    Player {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                    Player {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center p-2 sticky left-[200px] bg-white dark:bg-gray-950 z-20 font-bold">
+                <th className="text-center py-1 px-1 md:p-2 sticky left-[140px] md:left-[200px] bg-white dark:bg-gray-950 z-20 font-bold text-xs md:text-sm">
                   Action
                 </th>
-                <th className="text-left p-2">
+                <th className="text-left py-1 px-1 md:p-2">
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
                     onClick={() => handleSort('price')}
                     data-testid="sort-price"
                   >
-                    Price {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                    Price {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
                 {nextGameweeks.map((gw) => (
-                  <th key={gw} className="text-center p-2">
+                  <th key={gw} className="text-center py-1 px-1 md:p-2">
                     <Button
                       variant="ghost"
                       size="sm"
+                      className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
                       onClick={() => handleSort(`gw_${gw}`)}
                       data-testid={`sort-gw${gw}`}
                     >
-                      GW{gw} {sortField === `gw_${gw}` && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                      GW{gw} {sortField === `gw_${gw}` && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                     </Button>
                   </th>
                 ))}
-                <th className="text-center p-2 font-bold">
+                <th className="text-center py-1 px-1 md:p-2 font-bold">
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
                     onClick={() => handleSort('total')}
                     data-testid="sort-total"
                   >
-                    Total {sortField === 'total' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                    Total {sortField === 'total' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center p-2">
+                <th className="text-center py-1 px-1 md:p-2">
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
                     onClick={() => handleSort('avgValue')}
                     data-testid="sort-avgValue"
                   >
-                    Avg Value {sortField === 'avgValue' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                    Avg Val {sortField === 'avgValue' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center p-2">
+                <th className="text-center py-1 px-1 md:p-2">
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
                     onClick={() => handleSort('form')}
                     data-testid="sort-form"
                   >
-                    Form {sortField === 'form' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                    Form {sortField === 'form' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center p-2">
+                <th className="text-center py-1 px-1 md:p-2">
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
                     onClick={() => handleSort('avgMins')}
                     data-testid="sort-avgMins"
                   >
-                    Avg Mins {sortField === 'avgMins' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                    Mins {sortField === 'avgMins' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center p-2">
+                <th className="text-center py-1 px-1 md:p-2">
                   <Button
                     variant="ghost"
                     size="sm"
+                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
                     onClick={() => handleSort('ownership')}
                     data-testid="sort-ownership"
                   >
-                    Own% {sortField === 'ownership' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                    Own% {sortField === 'ownership' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
               </tr>
@@ -422,9 +430,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     className="border-b hover:bg-gray-50 dark:hover:bg-gray-900"
                     data-testid={`player-row-${player.playerId}`}
                   >
-                    <td className="p-2 sticky left-0 bg-white dark:bg-gray-950 z-10">
-                      <div className="font-medium">{player.name}</div>
-                      <div className="text-xs text-muted-foreground">
+                    <td className="py-1 px-1 md:p-2 sticky left-0 bg-white dark:bg-gray-950 z-10">
+                      <div className="font-medium text-xs md:text-sm">{player.name}</div>
+                      <div className="text-[10px] md:text-xs text-muted-foreground">
                         {(() => {
                           const positionShortforms: { [key: string]: string } = {
                             'Goalkeeper': 'GKP',
@@ -436,7 +444,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         })()} • {player.team}
                       </div>
                     </td>
-                    <td className="p-2 text-center sticky left-[200px] bg-white dark:bg-gray-950 z-10">
+                    <td className="py-1 px-1 md:p-2 text-center sticky left-[140px] md:left-[200px] bg-white dark:bg-gray-950 z-10">
                       {(() => {
                         // Map position names to element types
                         const positionMap: { [key: string]: number } = {
@@ -463,17 +471,17 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-8 w-8 text-green-600 hover:bg-green-50 hover:text-green-700"
+                            className="h-6 w-6 md:h-8 md:w-8 text-green-600 hover:bg-green-50 hover:text-green-700"
                             onClick={() => onTransferIn(player.playerId, playerElementType)}
                             data-testid={`transfer-in-${player.playerId}`}
                             title="Transfer In"
                           >
-                            <Plus className="h-4 w-4" />
+                            <Plus className="h-3 w-3 md:h-4 md:w-4" />
                           </Button>
                         ) : null;
                       })()}
                     </td>
-                    <td className="p-2 text-center">£{player.price.toFixed(1)}m</td>
+                    <td className="py-1 px-1 md:p-2 text-center">£{player.price.toFixed(1)}m</td>
                     {nextGameweeks.map((gw) => {
                       const gwPoints = player.gameweekProjections[gw.toString()] || 0;
                       const top3 = getTop3ForGameweek(gw);
@@ -494,34 +502,34 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       }
                       
                       return (
-                        <td key={gw} className={`p-2 text-center ${bgColor}`}>
+                        <td key={gw} className={`py-1 px-1 md:p-2 text-center ${bgColor}`}>
                           <span className={`${textColor} font-medium`}>
                             {gwPoints.toFixed(1)}
                           </span>
                         </td>
                       );
                     })}
-                    <td className="p-2 text-center">
-                      <span className="font-bold text-green-600 text-base">
+                    <td className="py-1 px-1 md:p-2 text-center">
+                      <span className="font-bold text-green-600">
                         {(player.totalExpectedPoints || 0).toFixed(1)}
                       </span>
                     </td>
-                    <td className="p-2 text-center">
+                    <td className="py-1 px-1 md:p-2 text-center">
                       <span className="text-blue-600 dark:text-blue-400 font-medium">
                         {(player.averageValue || 0).toFixed(2)}
                       </span>
                     </td>
-                    <td className="p-2 text-center">
+                    <td className="py-1 px-1 md:p-2 text-center">
                       <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                         {(player.form || 0).toFixed(1)}
                       </span>
                     </td>
-                    <td className="p-2 text-center">
+                    <td className="py-1 px-1 md:p-2 text-center">
                       <span className="text-purple-600 dark:text-purple-400 font-medium">
                         {Math.round(player.avgMinutesPerGameweek || 0)}
                       </span>
                     </td>
-                    <td className="p-2 text-center">
+                    <td className="py-1 px-1 md:p-2 text-center">
                       <span className="text-orange-600 dark:text-orange-400 font-medium">
                         {player.ownership.toFixed(1)}%
                       </span>
@@ -2360,27 +2368,27 @@ export default function TransferPlanner() {
   const nextGameweeks = getNextGameweeks();
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-2 md:p-4 lg:p-6 space-y-3 md:space-y-4">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
-          <Target className="h-8 w-8 text-white" />
+      <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
+        <div className="p-2 md:p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
+          <Target className="h-5 w-5 md:h-8 md:w-8 text-white" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold">Transfer Planner</h1>
-          <p className="text-muted-foreground">Plan your transfers and optimize your team</p>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Transfer Planner</h1>
+          <p className="text-xs md:text-sm text-muted-foreground">Plan transfers & optimize your team</p>
         </div>
       </div>
 
       {/* Manager ID Input */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
+        <CardHeader className="pb-2 md:pb-4">
+          <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+            <Users className="h-4 w-4 md:h-5 md:w-5" />
             Manager ID
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2 md:pt-4">
           <div className="flex gap-2">
             <Input
               type="number"
@@ -2388,11 +2396,12 @@ export default function TransferPlanner() {
               value={managerId}
               onChange={(e) => setManagerId(e.target.value)}
               onKeyPress={handleKeyPress}
-              className="flex-1"
+              className="flex-1 h-8 md:h-10 text-sm md:text-base"
               data-testid="input-manager-id"
             />
             <Button 
               onClick={handleSearch}
+              className="h-8 md:h-10 text-sm md:text-base"
               data-testid="button-search-manager"
             >
               Load Team
@@ -2404,21 +2413,21 @@ export default function TransferPlanner() {
       {/* Draft Management */}
       {searchedId && teamData && selectedGameweek && (
         <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Save className="h-5 w-5 text-purple-600" />
-                Draft Management
+                <Save className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
+                <span className="text-base md:text-lg">Draft Management</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-normal text-muted-foreground">
+                <span className="text-xs md:text-sm font-normal text-muted-foreground">
                   Active: <span className="font-bold text-purple-600">{activeDraft === "Base" ? "Base Draft" : `Draft ${activeDraft}`}</span>
                   {hasUnsavedChanges && activeDraft !== "Base" && <span className="ml-2 text-orange-600">●</span>}
                 </span>
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-2 md:space-y-4 pt-2 md:pt-4">
             {/* Draft Controls */}
             <div className="flex gap-2 flex-wrap">
               {/* Switch to Base */}
