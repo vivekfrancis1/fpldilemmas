@@ -2235,7 +2235,6 @@ export default function TransferPlanner() {
                           <tr 
                             key={`${row.draftKey}-${row.mode}`} 
                             className={`border-b hover:bg-gray-50 dark:hover:bg-gray-900 ${
-                              isMaxTotal ? 'bg-green-100 dark:bg-green-950/20 border-2 border-green-500' : 
                               row.draftKey === activeDraft && row.mode === 'Manual' ? 'bg-blue-50 dark:bg-blue-950/10' : 
                               row.mode === 'Auto' ? 'bg-purple-50/30 dark:bg-purple-950/10' : ''
                             }`}
@@ -2252,6 +2251,15 @@ export default function TransferPlanner() {
                                   {row.mode}
                                 </span>
                                 {row.draftKey === activeDraft && row.mode === 'Manual' && <span className="text-blue-600">●</span>}
+                                {isMaxTotal && (
+                                  <Badge 
+                                    variant="default" 
+                                    className="text-xs bg-green-600 text-white dark:bg-green-500"
+                                    data-testid={`badge-best-${row.draftKey}-${row.mode.toLowerCase()}`}
+                                  >
+                                    Best
+                                  </Badge>
+                                )}
                                 
                                 {isDuplicate && (
                                   <TooltipProvider>
