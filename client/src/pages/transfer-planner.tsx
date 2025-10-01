@@ -2537,7 +2537,7 @@ export default function TransferPlanner() {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-green-600" />
-                Team Summary
+                {activeDraft === "Base" ? "Base Draft Team Summary" : `Draft ${activeDraft} Team Summary`}
               </div>
               <div className="flex gap-2">
                 {(completedTransfers.length > 0 || transferredOutPlayers.length > 0) && (
@@ -2782,7 +2782,7 @@ export default function TransferPlanner() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-blue-600" />
-              Manual Team Selection
+              {activeDraft === "Base" ? "Base Draft Manual Team Selection" : `Draft ${activeDraft} Manual Team Selection`}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -3246,7 +3246,7 @@ export default function TransferPlanner() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-purple-600" />
-              Auto-Optimization
+              {activeDraft === "Base" ? "Base Draft Auto Team Selection" : `Draft ${activeDraft} Auto Team Selection`}
             </CardTitle>
           </CardHeader>
           <CardContent>
