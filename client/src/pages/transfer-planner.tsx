@@ -1049,6 +1049,14 @@ export default function TransferPlanner() {
         : p
     ));
 
+    toast({
+      title: "Player Transferred Out",
+      description: `${player.web_name} has been transferred out (£${sellingPrice.toFixed(1)}m). Click "Needs Replacement" to select a replacement.`
+    });
+  };
+
+  // Handle clicking "Needs Replacement" to scroll to projections
+  const handleScrollToReplacement = (elementType: number) => {
     // Map element_type to position filter value
     const positionMap: { [key: number]: string } = {
       1: "Goalkeeper",
@@ -1058,14 +1066,9 @@ export default function TransferPlanner() {
     };
     
     // Set position filter and trigger scroll to projections
-    const positionFilter = positionMap[player.element_type] || "all";
+    const positionFilter = positionMap[elementType] || "all";
     setProjectionPositionFilter(positionFilter);
     setScrollToProjections(true);
-
-    toast({
-      title: "Player Transferred Out",
-      description: `${player.web_name} has been transferred out (£${sellingPrice.toFixed(1)}m). Scroll to Projected Points to select a replacement.`
-    });
   };
 
   // Handle transferring a player in
@@ -1578,12 +1581,16 @@ export default function TransferPlanner() {
                                     <div className="flex-1">
                                       <div className="font-medium text-red-600">Empty Slot</div>
                                       <div className="text-sm text-muted-foreground">
-                                        {getPositionName(player.element_type)} • Transfer a replacement from Projected Points tab
+                                        {getPositionName(player.element_type)} • Click "Needs Replacement" to find a player
                                       </div>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-3">
-                                    <div className="text-sm text-red-600 font-medium">
+                                    <div 
+                                      className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                                      onClick={() => handleScrollToReplacement(player.element_type)}
+                                      data-testid={`needs-replacement-${pick.position}`}
+                                    >
                                       Needs Replacement
                                     </div>
                                     <Button
@@ -1735,12 +1742,16 @@ export default function TransferPlanner() {
                             <div className="flex-1">
                               <div className="font-medium text-red-600">Empty Slot</div>
                               <div className="text-sm text-muted-foreground">
-                                {getPositionName(player.element_type)} • Transfer a replacement from Projected Points tab
+                                {getPositionName(player.element_type)} • Click "Needs Replacement" to find a player
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="text-sm text-red-600 font-medium">
+                            <div 
+                              className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                              onClick={() => handleScrollToReplacement(player.element_type)}
+                              data-testid={`needs-replacement-bench-${pick.position}`}
+                            >
                               Needs Replacement
                             </div>
                             <Button
