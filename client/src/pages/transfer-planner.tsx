@@ -1297,7 +1297,8 @@ export default function TransferPlanner() {
       { draftKey: 'Base', transfers: {} },
       ...savedDrafts.map((draft: any) => ({
         draftKey: draft.draftLetter,
-        transfers: draft.draftLetter === activeDraft ? gameweekTransfers : (draft.gameweekTransfers || {})
+        // Always use the saved gameweekTransfers from the draft object for accurate comparison
+        transfers: draft.gameweekTransfers || {}
       }))
     ];
     
