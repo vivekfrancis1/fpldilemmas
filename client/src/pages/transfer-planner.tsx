@@ -445,7 +445,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                             'Forward': 'FWD'
                           };
                           return positionShortforms[player.position] || player.position;
-                        })()} • {player.team}
+                        })()} • {getTeamShortName(player.team)}
                       </div>
                     </td>
                     <td className="py-1 px-1 md:p-2 text-center w-[44px] min-w-[44px] max-w-[44px]">
@@ -963,9 +963,24 @@ export default function TransferPlanner() {
     return position?.singular_name || "Unknown";
   };
 
+  const getPositionShortName = (elementType: number): string => {
+    const shortforms: { [key: number]: string } = {
+      1: 'GKP',
+      2: 'DEF',
+      3: 'MID',
+      4: 'FWD'
+    };
+    return shortforms[elementType] || getPositionName(elementType);
+  };
+
   const getTeamName = (teamId: number): string => {
     const team = bootstrapData?.teams.find(t => t.id === teamId);
     return team?.short_name || 'Unknown';
+  };
+
+  const getTeamShortName = (teamFullName: string): string => {
+    const team = bootstrapData?.teams.find(t => t.name === teamFullName);
+    return team?.short_name || teamFullName;
   };
 
   const getPlayerProjectedPoints = (playerId: number): number | null => {
@@ -3192,7 +3207,7 @@ export default function TransferPlanner() {
                                     <div className="flex-1">
                                       <div className="font-medium text-red-600">Empty Slot</div>
                                       <div className="text-sm text-muted-foreground">
-                                        {getPositionName(player.element_type)} • Click "Replace" to find a player
+                                        {getPositionShortName(player.element_type)} • Click "Replace" to find a player
                                       </div>
                                     </div>
                                   </div>
@@ -3267,7 +3282,7 @@ export default function TransferPlanner() {
                                       )}
                                     </div>
                                     <div className="text-sm text-muted-foreground">
-                                      {getTeamName(player.team)} • {getPositionName(player.element_type)}
+                                      {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
                                     </div>
                                     <div className="text-xs text-muted-foreground mt-1">
                                       {editingBuyPrice === pick.element ? (
@@ -3430,7 +3445,7 @@ export default function TransferPlanner() {
                             <div className="flex-1">
                               <div className="font-medium text-red-600">Empty Slot</div>
                               <div className="text-sm text-muted-foreground">
-                                {getPositionName(player.element_type)} • Click "Replace" to find a player
+                                {getPositionShortName(player.element_type)} • Click "Replace" to find a player
                               </div>
                             </div>
                           </div>
@@ -3501,7 +3516,7 @@ export default function TransferPlanner() {
                               )}
                             </div>
                             <div className="text-sm text-muted-foreground">
-                              {getTeamName(player.team)} • {getPositionName(player.element_type)}
+                              {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
                               {editingBuyPrice === pick.element ? (
@@ -3711,7 +3726,7 @@ export default function TransferPlanner() {
                                       <div className="flex-1">
                                         <div className="font-medium text-red-600">Empty Slot</div>
                                         <div className="text-sm text-muted-foreground">
-                                          {fullPlayer && getPositionName(fullPlayer.element_type)} • Click "Replace" to find a player
+                                          {fullPlayer && getPositionShortName(fullPlayer.element_type)} • Click "Replace" to find a player
                                         </div>
                                       </div>
                                     </div>
@@ -3750,7 +3765,7 @@ export default function TransferPlanner() {
                                         )}
                                       </div>
                                       <div className="text-sm text-muted-foreground">
-                                        {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: ~£${getSellingPrice(pick).toFixed(1)}m`}
+                                        {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)} • {pick && `Sell: ~£${getSellingPrice(pick).toFixed(1)}m`}
                                       </div>
                                     </div>
                                   </div>
@@ -3795,7 +3810,7 @@ export default function TransferPlanner() {
                               <div className="flex-1">
                                 <div className="font-medium text-red-600">Empty Slot</div>
                                 <div className="text-sm text-muted-foreground">
-                                  {fullPlayer && getPositionName(fullPlayer.element_type)} • Click "Replace" to find a player
+                                  {fullPlayer && getPositionShortName(fullPlayer.element_type)} • Click "Replace" to find a player
                                 </div>
                               </div>
                             </div>
@@ -3830,7 +3845,7 @@ export default function TransferPlanner() {
                                 )}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: ~£${getSellingPrice(pick).toFixed(1)}m`}
+                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)} • {pick && `Sell: ~£${getSellingPrice(pick).toFixed(1)}m`}
                               </div>
                             </div>
                           </div>
