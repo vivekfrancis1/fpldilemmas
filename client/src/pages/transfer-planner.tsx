@@ -558,6 +558,14 @@ export default function TransferPlanner() {
     refetchOnWindowFocus: false, // Prevent auto-refetch that would reset transfers
   });
 
+  // Fetch buy prices for all players in the team
+  const { data: buyPricesData } = useQuery<{ buyPrices: Record<number, number> }>({
+    queryKey: ["/api/manager", searchedId, "buy-prices"],
+    enabled: !!searchedId,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
+  });
+
   // Calculate baseline lineup for a given gameweek by applying all previous transfers
   const getBaselineLineup = (targetGameweek: number): TeamPick[] => {
     if (!teamData?.picks) return [];
