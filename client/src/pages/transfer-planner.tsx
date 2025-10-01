@@ -2003,6 +2003,9 @@ export default function TransferPlanner() {
                 return <p className="text-muted-foreground text-sm">No comparison data available</p>;
               }
               
+              // Find the maximum total points
+              const maxTotal = Math.max(...comparisonData.map(row => row.total));
+              
               return (
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
@@ -2020,18 +2023,20 @@ export default function TransferPlanner() {
                       </tr>
                     </thead>
                     <tbody>
-                      {comparisonData.map((row, idx) => (
-                        <tr 
-                          key={`${row.draftKey}-${row.mode}`} 
-                          className={`border-b hover:bg-gray-50 dark:hover:bg-gray-900 ${
-                            row.draftKey === activeDraft && row.mode === 'Manual' ? 'bg-blue-50 dark:bg-blue-950/10' : ''
-                          } ${
-                            row.mode === 'Auto' ? 'bg-purple-50/30 dark:bg-purple-950/10' : ''
-                          }`}
-                          data-testid={`row-${row.draftKey}-${row.mode.toLowerCase()}`}
-                        >
-                          <td className="p-2 font-medium" data-testid={`cell-draft-${row.draftKey}`}>
-                            <div className="flex items-center gap-2">
+                      {comparisonData.map((row, idx) => {
+                        const isMaxTotal = row.total === maxTotal;
+                        return (
+                          <tr 
+                            key={`${row.draftKey}-${row.mode}`} 
+                            className={`border-b hover:bg-gray-50 dark:hover:bg-gray-900 ${
+                              isMaxTotal ? 'bg-green-100 dark:bg-green-950/20 border-2 border-green-500' : 
+                              row.draftKey === activeDraft && row.mode === 'Manual' ? 'bg-blue-50 dark:bg-blue-950/10' : 
+                              row.mode === 'Auto' ? 'bg-purple-50/30 dark:bg-purple-950/10' : ''
+                            }`}
+                            data-testid={`row-${row.draftKey}-${row.mode.toLowerCase()}`}
+                          >
+                            <td className="p-2 font-medium" data-testid={`cell-draft-${row.draftKey}`}>
+                              <div className="flex items-center gap-2">
                               <span>{row.draftKey}</span>
                               <span className={`text-xs px-2 py-0.5 rounded ${
                                 row.mode === 'Manual' 
@@ -2059,7 +2064,8 @@ export default function TransferPlanner() {
                             {row.total.toFixed(1)}
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
