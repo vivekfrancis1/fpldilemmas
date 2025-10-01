@@ -1188,12 +1188,20 @@ export default function TransferPlanner() {
       description: `${player.web_name} has been added to your team (£${buyingPrice.toFixed(1)}m)`
     });
 
+    // If in Auto mode, trigger re-optimization with the updated lineup
+    if (plannerMode === "auto") {
+      // Need to wait for state updates to complete, then re-optimize
+      setTimeout(() => {
+        optimizeMutation.mutate();
+      }, 50);
+    }
+
     // Scroll back to team lineup to see the new player
     setTimeout(() => {
       if (teamLineupRef.current) {
         teamLineupRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    }, 100);
+    }, plannerMode === "auto" ? 500 : 100); // Wait longer in auto mode for optimization to complete
   };
 
   // Reset all transfers for the current gameweek and restore baseline
