@@ -1292,11 +1292,6 @@ export default function TransferPlanner() {
       title: "Player Transferred Out",
       description: `${player.web_name} has been transferred out (£${sellingPrice.toFixed(1)}m). Click "Needs Replacement" to select a replacement.`
     });
-
-    // Auto-save draft after transfer out
-    if (activeDraft !== "Base") {
-      setTimeout(() => saveCurrentDraft(), 100);
-    }
   };
 
   // Handle clicking "Needs Replacement" to scroll to projections
@@ -1417,8 +1412,8 @@ export default function TransferPlanner() {
       }
     }, plannerMode === "auto" ? 500 : 100); // Wait longer in auto mode for optimization to complete
 
-    // Auto-save draft after transfer in
-    if (activeDraft !== "Base") {
+    // Auto-save draft after transfer in ONLY if all positions are filled (no empty slots)
+    if (activeDraft !== "Base" && newTransferredOut.length === 0) {
       setTimeout(() => saveCurrentDraft(), 200);
     }
   };
