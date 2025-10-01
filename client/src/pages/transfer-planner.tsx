@@ -1453,9 +1453,66 @@ export default function TransferPlanner() {
   };
 
   // Handle transferring a player out
-  const handleTransferOut = (pick: TeamPick) => {
+  const handleTransferOut = async (pick: TeamPick) => {
     const player = getPlayerById(pick.element);
     if (!player) return;
+
+    // If in Base draft, check if we can create a new draft or need to use existing one
+    if (activeDraft === "Base") {
+      const usedLetters = savedDrafts.map(d => d.draftLetter);
+      const allLetters = 'ABCDE'.split('');
+      const availableLetters = allLetters.filter(l => !usedLetters.includes(l));
+      
+      // If we already have 5 drafts, prevent transfer from Base
+      if (availableLetters.length === 0) {
+        toast({
+          title: "Draft Limit Reached",
+          description: "You have 5 drafts already. Please delete a draft first, or make transfers in an existing draft instead of Base.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Auto-create a new draft and switch to it
+      const nextLetter = availableLetters[0];
+      
+      if (!searchedId) {
+        toast({ title: "Error", description: "Manager ID not found", variant: "destructive" });
+        return;
+      }
+
+      // Create the new draft from Base
+      const emptyGameweekTransfers = {};
+      
+      try {
+        const response = await fetch(`/api/transfer-planner/drafts/${searchedId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            draftLetter: nextLetter,
+            gameweekTransfers: emptyGameweekTransfers
+          })
+        });
+        
+        if (response.ok) {
+          await loadDrafts();
+          setActiveDraft(nextLetter);
+          setGameweekTransfers(emptyGameweekTransfers);
+          setTransferredOutPlayers([]);
+          setCompletedTransfers([]);
+          toast({ 
+            title: "New Draft Created", 
+            description: `Draft ${nextLetter} created. You can now make transfers.`
+          });
+        } else {
+          toast({ title: "Error", description: "Failed to create draft", variant: "destructive" });
+          return;
+        }
+      } catch (error) {
+        toast({ title: "Error", description: "Failed to create draft", variant: "destructive" });
+        return;
+      }
+    }
 
     const sellingPrice = getSellingPrice(pick);
 
