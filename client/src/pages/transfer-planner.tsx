@@ -838,24 +838,44 @@ export default function TransferPlanner() {
   const calculateInitialBank = (): number => {
     if (!teamData?.transfers?.bank || !selectedGameweek) return 0;
     
-    const teamBank = teamData.transfers.bank / 10; // Convert from API format
-    
-    // Calculate cumulative effect of all transfers from PREVIOUS gameweeks
-    let cumulativeEffect = 0;
     const nextGWs = getNextGameweeks();
+    const firstGW = nextGWs[0]?.id;
+    
+    // For the first gameweek in the planning horizon, use the actual team bank
+    if (selectedGameweek === firstGW) {
+      return teamData.transfers.bank / 10; // Convert from API format
+    }
+    
+    // For subsequent gameweeks, initial bank = max(0, Cash after transfers from previous GW)
+    const previousGW = selectedGameweek - 1;
+    
+    // Calculate cash after transfers for previous gameweek
+    const teamBank = teamData.transfers.bank / 10;
+    let cumulativeBank = teamBank;
     
     nextGWs.forEach(gw => {
-      if (gw.id < selectedGameweek) {
+      if (gw.id <= previousGW) {
         const gwTransfers = gameweekTransfers[gw.id];
-        if (gwTransfers && gwTransfers.completed) {
-          gwTransfers.completed.forEach(transfer => {
-            cumulativeEffect += transfer.sellingPrice - transfer.buyingPrice;
-          });
+        if (gwTransfers) {
+          // Add completed transfers effect
+          if (gwTransfers.completed) {
+            gwTransfers.completed.forEach(transfer => {
+              cumulativeBank += transfer.sellingPrice - transfer.buyingPrice;
+            });
+          }
+          
+          // Add pending transferred out players' selling prices
+          if (gw.id === previousGW && gwTransfers.transferredOut) {
+            gwTransfers.transferredOut.forEach(transfer => {
+              cumulativeBank += transfer.sellingPrice;
+            });
+          }
         }
       }
     });
     
-    return teamBank + cumulativeEffect;
+    // Return max(0, previous GW's cash after transfers)
+    return Math.max(0, cumulativeBank);
   };
 
   // Calculate bank after transfers for the selected gameweek
