@@ -816,46 +816,48 @@ export default function TransferPlanner() {
     return currentBank;
   };
 
+  // Calculate transfers used for a specific gameweek
+  const calculateTransfersUsedForGameweek = (gameweek: number): number => {
+    if (!teamData?.picks) return 0;
+    
+    // Get completed transfers for this specific gameweek
+    const gwTransfers = gameweekTransfers[gameweek];
+    if (!gwTransfers) return 0;
+    
+    // Count completed transfers for this gameweek
+    return gwTransfers.completed?.length || 0;
+  };
+
   // Calculate actual transfers used by comparing with baseline lineup for this gameweek
   const calculateTransfersUsed = (): number => {
     if (!teamData?.picks || !selectedGameweek) return 0;
-    
-    // Get the baseline lineup for this gameweek (includes all previous transfers)
-    const baseline = getBaselineLineup(selectedGameweek);
-    
-    // Count how many players in current lineup differ from baseline
-    let changedPlayers = 0;
-    
-    manualLineup.forEach((currentPick, index) => {
-      const baselinePick = baseline[index];
-      // If player ID is different (and not transferred out), it's a change
-      if (currentPick.element !== baselinePick.element && !currentPick.is_transferred_out) {
-        changedPlayers++;
-      }
-    });
-    
-    return changedPlayers;
+    return calculateTransfersUsedForGameweek(selectedGameweek);
   };
 
-  // Calculate initial transfers available for a given gameweek (does not subtract used transfers)
+  // Calculate initial transfers available for a given gameweek (cumulative logic)
   const calculateInitialTransfers = (): number => {
     if (!teamData?.transfers || !selectedGameweek || !bootstrapData) return 0;
     
-    // Get current gameweek
+    // Get current gameweek and the first planning gameweek
     const currentEvent = bootstrapData.events.find(e => e.is_current);
     const currentGW = currentEvent?.id || 1;
+    const firstPlanningGW = currentGW + 1;
     
-    // Base transfers available (from API) - this is for the next gameweek after current
-    let transfersAvailable = teamData.transfers.limit || 1;
-    
-    // If selected gameweek is beyond the immediate next gameweek, add extra transfers
-    // Formula: For each gameweek beyond (current + 1), add 1 transfer
-    if (selectedGameweek > currentGW + 1) {
-      const extraGameweeks = selectedGameweek - currentGW - 1;
-      transfersAvailable += extraGameweeks;
+    // For the first gameweek in planning, use the base from API
+    if (selectedGameweek === firstPlanningGW) {
+      return teamData.transfers.limit || 1;
     }
     
-    return transfersAvailable;
+    // For subsequent gameweeks, calculate cumulatively
+    // Initial for GW_N = Remaining from GW_(N-1) + 1
+    let cumulativeRemaining = teamData.transfers.limit || 1;
+    
+    for (let gw = firstPlanningGW; gw < selectedGameweek; gw++) {
+      const used = calculateTransfersUsedForGameweek(gw);
+      cumulativeRemaining = cumulativeRemaining - used + 1; // Remaining + 1 for next GW
+    }
+    
+    return cumulativeRemaining;
   };
 
   // Calculate transfers remaining (initial - used, can be negative)
