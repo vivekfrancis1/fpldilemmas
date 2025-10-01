@@ -1943,6 +1943,46 @@ export default function TransferPlanner() {
                             {positionPlayers.map((player) => {
                               const fullPlayer = getPlayerById(player.element);
                               const pick = manualLineup.find(p => p.element === player.element);
+                              
+                              // Check if this player slot is transferred out
+                              if (pick && pick.is_transferred_out) {
+                                return (
+                                  <div
+                                    key={`empty-auto-${player.element}`}
+                                    className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20"
+                                    data-testid={`empty-slot-auto-${player.element}`}
+                                  >
+                                    <div className="flex items-center gap-3 flex-1">
+                                      <div className="flex-1">
+                                        <div className="font-medium text-red-600">Empty Slot</div>
+                                        <div className="text-sm text-muted-foreground">
+                                          {fullPlayer && getPositionName(fullPlayer.element_type)} • Click "Needs Replacement" to find a player
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <div 
+                                        className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                                        onClick={() => handleScrollToReplacement(fullPlayer?.element_type || 1)}
+                                        data-testid={`needs-replacement-auto-${player.element}`}
+                                      >
+                                        Needs Replacement
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => handleUndoTransfer(pick.position)}
+                                        className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                                        data-testid={`undo-transfer-auto-${player.element}`}
+                                      >
+                                        <RotateCcw className="h-4 w-4 mr-1" />
+                                        Undo
+                                      </Button>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              
                               return (
                                 <div
                                   key={player.element}
@@ -2010,6 +2050,49 @@ export default function TransferPlanner() {
                     {optimizedLineup.bench.map((player) => {
                       const fullPlayer = getPlayerById(player.element);
                       const pick = manualLineup.find(p => p.element === player.element);
+                      
+                      // Check if this bench player is transferred out
+                      if (pick && pick.is_transferred_out) {
+                        return (
+                          <div
+                            key={`empty-bench-auto-${player.element}`}
+                            className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20"
+                            data-testid={`empty-slot-bench-auto-${player.element}`}
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              <span className="text-xs font-bold text-red-600 bg-red-200 dark:bg-red-700 px-2 py-1 rounded">
+                                {player.benchPosition}
+                              </span>
+                              <div className="flex-1">
+                                <div className="font-medium text-red-600">Empty Slot</div>
+                                <div className="text-sm text-muted-foreground">
+                                  {fullPlayer && getPositionName(fullPlayer.element_type)} • Click "Needs Replacement" to find a player
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div 
+                                className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                                onClick={() => handleScrollToReplacement(fullPlayer?.element_type || 1)}
+                                data-testid={`needs-replacement-bench-auto-${player.element}`}
+                              >
+                                Needs Replacement
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleUndoTransfer(pick.position)}
+                                className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                                data-testid={`undo-transfer-bench-auto-${player.element}`}
+                              >
+                                <RotateCcw className="h-4 w-4 mr-1" />
+                                Undo
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      }
+                      
                       return (
                         <div
                           key={player.element}
