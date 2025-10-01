@@ -1006,7 +1006,9 @@ export default function TransferPlanner() {
     // Apply all completed transfers from GW7 up to and including targetGW
     nextGWs.forEach(gw => {
       if (gw.id <= targetGW) {
-        const gwTransfers = draftTransfers[gw.id];
+        // Try both string and numeric keys for compatibility
+        const gwTransfers = draftTransfers[gw.id] || draftTransfers[gw.id.toString() as any];
+        
         if (gwTransfers?.completed) {
           gwTransfers.completed.forEach(transfer => {
             squad = squad.map(pick => {
@@ -1153,6 +1155,9 @@ export default function TransferPlanner() {
     
     // All saved drafts - both Manual and Auto modes
     savedDrafts.forEach(draft => {
+      // Use current state for active draft, saved data for others
+      const draftTransfers = draft.draftLetter === activeDraft ? gameweekTransfers : (draft.gameweekTransfers || {});
+      
       // Manual mode row
       const draftManualRow = {
         draftKey: draft.draftLetter,
@@ -1162,7 +1167,7 @@ export default function TransferPlanner() {
       };
       
       nextGWs.forEach(gw => {
-        const squad = getSquadAtGameweek(draft.gameweekTransfers || {}, gw.id);
+        const squad = getSquadAtGameweek(draftTransfers, gw.id);
         const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW);
         draftManualRow.gameweeks[gw.id] = points;
         draftManualRow.total += points;
@@ -1178,7 +1183,7 @@ export default function TransferPlanner() {
       };
       
       nextGWs.forEach(gw => {
-        const squad = getSquadAtGameweek(draft.gameweekTransfers || {}, gw.id);
+        const squad = getSquadAtGameweek(draftTransfers, gw.id);
         const points = calculateAutoPointsForGameweek(squad, gw.id, playerProjections6GW);
         draftAutoRow.gameweeks[gw.id] = points;
         draftAutoRow.total += points;
