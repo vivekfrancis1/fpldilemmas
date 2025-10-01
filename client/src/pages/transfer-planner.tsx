@@ -1558,11 +1558,27 @@ export default function TransferPlanner() {
   
   // Confirm captain selection
   const confirmSetCaptain = async (playerId: number) => {
-    setManualLineup(prev => prev.map(pick => ({
-      ...pick,
-      is_captain: pick.element === playerId,
-      is_vice_captain: pick.is_vice_captain && pick.element !== playerId ? true : false
-    })));
+    setManualLineup(prev => {
+      // Find current captain and vice-captain
+      const currentCaptain = prev.find(p => p.is_captain);
+      const currentViceCaptain = prev.find(p => p.is_vice_captain);
+      const newCaptainIsCurrentViceCaptain = currentViceCaptain?.element === playerId;
+      
+      return prev.map(pick => {
+        if (pick.element === playerId) {
+          // Set as new captain
+          return { ...pick, is_captain: true, is_vice_captain: false };
+        } else if (newCaptainIsCurrentViceCaptain && pick.element === currentCaptain?.element) {
+          // If new captain was vice-captain, swap old captain to vice-captain
+          return { ...pick, is_captain: false, is_vice_captain: true };
+        } else if (pick.is_captain) {
+          // Remove captain flag from old captain (if not being swapped to vice)
+          return { ...pick, is_captain: false };
+        } else {
+          return pick;
+        }
+      });
+    });
     setCaptainConfirmation(null);
     
     // Auto-save draft if not on Base
@@ -1585,11 +1601,27 @@ export default function TransferPlanner() {
   
   // Confirm vice captain selection
   const confirmSetViceCaptain = async (playerId: number) => {
-    setManualLineup(prev => prev.map(pick => ({
-      ...pick,
-      is_vice_captain: pick.element === playerId,
-      is_captain: pick.is_captain && pick.element !== playerId ? true : false
-    })));
+    setManualLineup(prev => {
+      // Find current captain and vice-captain
+      const currentCaptain = prev.find(p => p.is_captain);
+      const currentViceCaptain = prev.find(p => p.is_vice_captain);
+      const newViceCaptainIsCurrentCaptain = currentCaptain?.element === playerId;
+      
+      return prev.map(pick => {
+        if (pick.element === playerId) {
+          // Set as new vice-captain
+          return { ...pick, is_vice_captain: true, is_captain: false };
+        } else if (newViceCaptainIsCurrentCaptain && pick.element === currentViceCaptain?.element) {
+          // If new vice-captain was captain, swap old vice-captain to captain
+          return { ...pick, is_vice_captain: false, is_captain: true };
+        } else if (pick.is_vice_captain) {
+          // Remove vice-captain flag from old vice-captain (if not being swapped to captain)
+          return { ...pick, is_vice_captain: false };
+        } else {
+          return pick;
+        }
+      });
+    });
     setViceCaptainConfirmation(null);
     
     // Auto-save draft if not on Base
