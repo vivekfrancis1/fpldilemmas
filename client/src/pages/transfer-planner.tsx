@@ -1012,6 +1012,20 @@ export default function TransferPlanner() {
     const player = getPlayerById(playerId);
     if (!player) return;
 
+    // Check if player is already in the team
+    const isAlreadyInTeam = manualLineup.some(pick => 
+      pick.element === playerId && !pick.is_transferred_out
+    );
+    
+    if (isAlreadyInTeam) {
+      toast({
+        title: "Error",
+        description: `${player.web_name} is already in your team`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Find the matching transferred out player
     const transferOutIndex = transferredOutPlayers.findIndex(
       t => t.elementType === playerElementType
