@@ -1905,60 +1905,80 @@ export default function TransferPlanner() {
                   <h3 className="font-semibold mb-3 flex items-center gap-2">
                     <Crown className="h-4 w-4 text-yellow-500" />
                     Starting 11
+                    <span className="text-sm font-normal text-muted-foreground">({optimizedLineup.formation})</span>
                   </h3>
-                  <div className="grid gap-2">
-                    {optimizedLineup.starting11.map((player) => {
-                      const fullPlayer = getPlayerById(player.element);
-                      const pick = manualLineup.find(p => p.element === player.element);
+                  <div className="space-y-4">
+                    {/* Group players by position */}
+                    {[1, 2, 3, 4].map(posType => {
+                      const positionPlayers = optimizedLineup.starting11.filter(player => {
+                        const fullPlayer = getPlayerById(player.element);
+                        return fullPlayer?.element_type === posType;
+                      });
+                      
+                      if (positionPlayers.length === 0) return null;
+                      
                       return (
-                        <div
-                          key={player.element}
-                          className={`flex items-center justify-between p-3 rounded-lg border-2 ${
-                            player.isCaptain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
-                            player.isViceCaptain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
-                            pick && isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
-                            'border-gray-200'
-                          }`}
-                          data-testid={`optimized-player-${player.element}`}
-                        >
-                          <div className="flex items-center gap-3 flex-1">
-                            <div className="flex-1">
-                              <div className="font-medium flex items-center gap-2">
-                                {player.web_name}
-                                {pick && isPlayerTransferredIn(pick) && (
-                                  <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">NEW</span>
-                                )}
-                                {player.isCaptain && (
-                                  <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
-                                )}
-                                {player.isViceCaptain && (
-                                  <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
-                                )}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: ~£${getSellingPrice(pick).toFixed(1)}m`}
-                              </div>
-                            </div>
+                        <div key={posType}>
+                          <div className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
+                            {posType === 1 ? 'Goalkeepers' : posType === 2 ? 'Defenders' : posType === 3 ? 'Midfielders' : 'Forwards'}
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-right">
-                              <div className="font-bold text-purple-600">{player.projectedPoints.toFixed(2)} pts</div>
-                              {player.isCaptain && (
-                                <div className="text-xs text-muted-foreground">({(player.projectedPoints * 2).toFixed(2)} with (C))</div>
-                              )}
-                            </div>
-                            {pick && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                onClick={() => handleTransferOut(pick)}
-                                data-testid={`transfer-out-${player.element}`}
-                                title="Transfer Out"
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
+                          <div className="grid gap-2">
+                            {positionPlayers.map((player) => {
+                              const fullPlayer = getPlayerById(player.element);
+                              const pick = manualLineup.find(p => p.element === player.element);
+                              return (
+                                <div
+                                  key={player.element}
+                                  className={`flex items-center justify-between p-3 rounded-lg border-2 ${
+                                    player.isCaptain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
+                                    player.isViceCaptain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
+                                    pick && isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
+                                    'border-gray-200'
+                                  }`}
+                                  data-testid={`optimized-player-${player.element}`}
+                                >
+                                  <div className="flex items-center gap-3 flex-1">
+                                    <div className="flex-1">
+                                      <div className="font-medium flex items-center gap-2">
+                                        {player.web_name}
+                                        {pick && isPlayerTransferredIn(pick) && (
+                                          <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">NEW</span>
+                                        )}
+                                        {player.isCaptain && (
+                                          <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
+                                        )}
+                                        {player.isViceCaptain && (
+                                          <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
+                                        )}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground">
+                                        {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionName(fullPlayer.element_type)} • {pick && `Sell: ~£${getSellingPrice(pick).toFixed(1)}m`}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <div className="text-right">
+                                      <div className="font-bold text-purple-600">{player.projectedPoints.toFixed(2)} pts</div>
+                                      {player.isCaptain && (
+                                        <div className="text-xs text-muted-foreground">({(player.projectedPoints * 2).toFixed(2)} with (C))</div>
+                                      )}
+                                    </div>
+                                    {pick && (
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                        onClick={() => handleTransferOut(pick)}
+                                        data-testid={`transfer-out-${player.element}`}
+                                        title="Transfer Out"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       );
