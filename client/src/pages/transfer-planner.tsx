@@ -1635,15 +1635,17 @@ export default function TransferPlanner() {
     setCompletedTransfers(newTransfers);
     setTransferredOutPlayers(newTransferredOut);
     
-    // Save to gameweek-specific storage immediately
+    // Save to gameweek-specific storage immediately and capture the updated value
+    let updatedGameweekTransfers = gameweekTransfers;
     if (selectedGameweek) {
-      setGameweekTransfers(gwTransfers => ({
-        ...gwTransfers,
+      updatedGameweekTransfers = {
+        ...gameweekTransfers,
         [selectedGameweek]: {
           transferredOut: newTransferredOut,
           completed: newTransfers
         }
-      }));
+      };
+      setGameweekTransfers(updatedGameweekTransfers);
     }
 
     // Replace the transferred out player at the same position
@@ -1683,9 +1685,9 @@ export default function TransferPlanner() {
       }
     }, plannerMode === "auto" ? 500 : 100); // Wait longer in auto mode for optimization to complete
 
-    // Auto-save draft after transfer in ONLY if all positions are filled (no empty slots)
+    // Auto-save draft after transfer in with the updated transfers
     if (activeDraft !== "Base" && newTransferredOut.length === 0) {
-      setTimeout(() => saveCurrentDraft(), 200);
+      setTimeout(() => saveCurrentDraft(updatedGameweekTransfers), 200);
     }
   };
 
@@ -1794,8 +1796,10 @@ export default function TransferPlanner() {
     }
   };
 
-  const saveCurrentDraft = async () => {
+  const saveCurrentDraft = async (transfersToSave?: typeof gameweekTransfers) => {
     if (!searchedId || activeDraft === "Base") return;
+
+    const transfersData = transfersToSave || gameweekTransfers;
 
     try {
       const response = await fetch("/api/transfer-planner/drafts", {
@@ -1804,12 +1808,12 @@ export default function TransferPlanner() {
         body: JSON.stringify({
           managerId: parseInt(searchedId),
           draftLetter: activeDraft,
-          gameweekTransfers,
+          gameweekTransfers: transfersData,
           mode: plannerMode,
           teamBank: calculateBankAfterTransfers(),
           teamValue: 0,
           totalProjectedPoints: 0,
-          totalTransfersUsed: Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0)
+          totalTransfersUsed: Object.values(transfersData).reduce((sum, gw) => sum + gw.completed.length, 0)
         })
       });
 
