@@ -855,16 +855,45 @@ export default function TransferPlanner() {
     return calculateBankAfterTransfers();
   };
 
-  // Calculate transfers used for a specific gameweek
+  // Calculate transfers used for a specific gameweek by comparing with baseline
   const calculateTransfersUsedForGameweek = (gameweek: number): number => {
     if (!teamData?.picks) return 0;
     
-    // Get completed transfers for this specific gameweek
-    const gwTransfers = gameweekTransfers[gameweek];
-    if (!gwTransfers) return 0;
+    // Get the baseline lineup for this gameweek
+    const baseline = getBaselineLineup(gameweek);
     
-    // Count completed transfers for this gameweek
-    return gwTransfers.completed?.length || 0;
+    // Get the current/final lineup for this gameweek (with all cumulative transfers applied)
+    let currentLineup = [...baseline];
+    
+    // Apply all transfers from previous gameweeks
+    const nextGWs = getNextGameweeks();
+    nextGWs.forEach(gw => {
+      if (gw.id <= gameweek) {
+        const gwTransfers = gameweekTransfers[gw.id];
+        if (gwTransfers && gwTransfers.completed) {
+          gwTransfers.completed.forEach(transfer => {
+            // Replace the transferred out player with the transferred in player
+            currentLineup = currentLineup.map(pick => {
+              if (pick.element === transfer.outPlayerId) {
+                return { ...pick, element: transfer.inPlayerId };
+              }
+              return pick;
+            });
+          });
+        }
+      }
+    });
+    
+    // Count how many players are different from the baseline
+    let transfersUsed = 0;
+    baseline.forEach((baselinePick) => {
+      const currentPick = currentLineup.find(p => p.position === baselinePick.position);
+      if (currentPick && currentPick.element !== baselinePick.element) {
+        transfersUsed++;
+      }
+    });
+    
+    return transfersUsed;
   };
 
   // Calculate actual transfers used by comparing with baseline lineup for this gameweek
