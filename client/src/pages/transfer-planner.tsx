@@ -1462,6 +1462,13 @@ export default function TransferPlanner() {
   const deleteAllDrafts = async () => {
     if (!searchedId) return;
 
+    // Confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete all ${savedDrafts.length} draft(s)? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
     try {
       const response = await fetch(`/api/transfer-planner/drafts/${searchedId}`, {
         method: "DELETE"
