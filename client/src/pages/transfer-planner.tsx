@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -478,6 +478,9 @@ export default function TransferPlanner() {
   const [transferredOutPlayers, setTransferredOutPlayers] = useState<TransferOut[]>([]);
   const [completedTransfers, setCompletedTransfers] = useState<CompletedTransfer[]>([]);
   
+  // Track which manager has been initialized to prevent unwanted resets
+  const initializedManagerRef = useRef<string | null>(null);
+  
   const { toast } = useToast();
 
   // Cache manager ID functionality
@@ -514,6 +517,8 @@ export default function TransferPlanner() {
   const { data: teamData, isLoading: isLoadingTeam } = useQuery<TeamData>({
     queryKey: ["/api/manager", searchedId, "team"],
     enabled: !!searchedId,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false, // Prevent auto-refetch that would reset transfers
   });
 
   // Calculate baseline lineup for a given gameweek by applying all previous transfers
@@ -553,17 +558,20 @@ export default function TransferPlanner() {
     return baseline;
   };
 
-  // Initialize manual lineup when team data loads
+  // Initialize manual lineup when team data loads (only on first load or manager change)
   useEffect(() => {
-    if (teamData?.picks) {
+    if (teamData?.picks && searchedId && initializedManagerRef.current !== searchedId) {
+      console.log("DEBUG: Initializing team for manager:", searchedId);
       console.log("DEBUG: First pick from teamData:", teamData.picks[0]);
       setManualLineup([...teamData.picks]);
-      // Reset all transfers when loading new team data
+      // Reset all transfers when loading NEW team data (different manager)
       setGameweekTransfers({});
       setTransferredOutPlayers([]);
       setCompletedTransfers([]);
+      // Mark this manager as initialized
+      initializedManagerRef.current = searchedId;
     }
-  }, [teamData]);
+  }, [teamData, searchedId]);
 
   // Fetch player projections for the selected gameweek
   const { data: playerProjections } = useQuery<any[]>({
@@ -687,10 +695,28 @@ export default function TransferPlanner() {
     // Calculate and set the baseline lineup for this gameweek
     const baseline = getBaselineLineup(selectedGameweek);
     
+    // Apply current gameweek's completed transfers (so Vicario→Pope persists)
+    let lineupWithTransfers = [...baseline];
+    gwTransfers.completed.forEach(transfer => {
+      lineupWithTransfers = lineupWithTransfers.map(pick => {
+        if (pick.element === transfer.outPlayerId) {
+          const inPlayer = getPlayerById(transfer.inPlayerId);
+          if (inPlayer) {
+            return {
+              ...pick,
+              element: transfer.inPlayerId,
+              selling_price: inPlayer.now_cost,
+              purchase_price: inPlayer.now_cost,
+            };
+          }
+        }
+        return pick;
+      });
+    });
+    
     // Apply current gameweek's pending transfers (transferred out but not yet replaced)
-    let lineupWithPendingTransfers = [...baseline];
     gwTransfers.transferredOut.forEach(transferOut => {
-      lineupWithPendingTransfers = lineupWithPendingTransfers.map(pick => {
+      lineupWithTransfers = lineupWithTransfers.map(pick => {
         if (pick.position === transferOut.position) {
           return { ...pick, is_transferred_out: true };
         }
@@ -698,7 +724,7 @@ export default function TransferPlanner() {
       });
     });
     
-    setManualLineup(lineupWithPendingTransfers);
+    setManualLineup(lineupWithTransfers);
   }, [selectedGameweek]);
 
   // Auto-run optimization when Auto mode is selected
