@@ -425,7 +425,15 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     <td className="p-2 sticky left-0 bg-white dark:bg-gray-950">
                       <div className="font-medium">{player.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {player.position} • {player.team}
+                        {(() => {
+                          const positionShortforms: { [key: string]: string } = {
+                            'Goalkeeper': 'GKP',
+                            'Defender': 'DEF',
+                            'Midfielder': 'MID',
+                            'Forward': 'FWD'
+                          };
+                          return positionShortforms[player.position] || player.position;
+                        })()} • {player.team}
                       </div>
                     </td>
                     <td className="p-2 text-center sticky left-[200px] bg-white dark:bg-gray-950">
