@@ -676,7 +676,7 @@ export default function TransferPlanner() {
       gameweekTransfers[gw.id]?.completed?.length > 0
     );
     
-    // Clear optimized lineup when gameweek or mode changes
+    // Clear optimized lineup when gameweek changes
     setOptimizedLineup(null);
     
     // Load transfers for the selected gameweek or use empty if none
@@ -699,7 +699,7 @@ export default function TransferPlanner() {
     });
     
     setManualLineup(lineupWithPendingTransfers);
-  }, [selectedGameweek, plannerMode]);
+  }, [selectedGameweek]);
 
   // Auto-run optimization when Auto mode is selected
   useEffect(() => {
