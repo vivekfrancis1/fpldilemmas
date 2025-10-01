@@ -649,10 +649,6 @@ export default function TransferPlanner() {
     },
     onSuccess: (data: OptimizedLineup) => {
       setOptimizedLineup(data);
-      toast({
-        title: "Team Optimized!",
-        description: `Best formation: ${data.formation} with ${data.totalProjectedPoints.toFixed(1)} projected points`
-      });
     },
     onError: (error: Error) => {
       toast({
