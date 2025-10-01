@@ -1369,8 +1369,9 @@ export default function TransferPlanner() {
     
     // All saved drafts - both Manual and Auto modes
     savedDrafts.forEach(draft => {
-      // Use current state for active draft, saved data for others
-      const draftTransfers = draft.draftLetter === activeDraft ? gameweekTransfers : (draft.gameweekTransfers || {});
+      // Always use the saved gameweekTransfers from database for accurate comparison
+      // This ensures each draft shows its own saved transfers, not mixed with current editing state
+      const draftTransfers = draft.gameweekTransfers || {};
       
       // Manual mode row
       const draftManualRow = {
