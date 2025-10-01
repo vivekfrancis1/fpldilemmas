@@ -1470,35 +1470,80 @@ export default function TransferPlanner() {
                 </div>
                 <div className="text-2xl font-bold text-blue-600">
                   {(() => {
-                    if (!playerProjections6GW) return '0.0';
+                    if (!playerProjections6GW || !teamData?.picks) return '0.0';
                     
-                    let total = 0;
+                    let grandTotal = 0;
                     const nextGWs = nextGameweeks.map(gw => gw.id);
                     
-                    // Get starting 11 player IDs based on mode
-                    let starting11PlayerIds: number[] = [];
-                    if (plannerMode === "manual") {
-                      starting11PlayerIds = manualLineup.slice(0, 11).map((p: TeamPick) => p.element);
-                    } else if (optimizedLineup) {
-                      starting11PlayerIds = optimizedLineup.starting11.map((p: any) => p.element);
-                    }
-                    
-                    // Sum up projected points for each player across all 6 gameweeks
-                    starting11PlayerIds.forEach((playerId: number) => {
-                      const player = getPlayerById(playerId);
-                      if (player) {
-                        const playerData = playerProjections6GW.find((p: any) => p.playerId === player.id);
-                        if (playerData && playerData.gameweekProjections) {
-                          // Sum points across all 6 gameweeks
-                          nextGWs.forEach(gw => {
-                            const gwPoints = playerData.gameweekProjections[gw.toString()] || 0;
-                            total += gwPoints;
-                          });
-                        }
+                    // For each gameweek, calculate the optimal lineup's points for THAT specific gameweek
+                    nextGWs.forEach(gw => {
+                      // Get the lineup for this specific gameweek (with cumulative transfers applied)
+                      const lineupForGW = getBaselineLineup(gw);
+                      
+                      if (plannerMode === "auto") {
+                        // For auto mode: simulate auto-optimization for THIS specific gameweek
+                        // Get all 15 players with their projections for this gameweek
+                        const playersWithPoints = lineupForGW.map(pick => {
+                          const player = getPlayerById(pick.element);
+                          const playerData = playerProjections6GW.find((p: any) => p.playerId === pick.element);
+                          const gwPoints = playerData?.gameweekProjections?.[gw.toString()] || 0;
+                          
+                          return {
+                            element: pick.element,
+                            position: player?.element_type || 0,
+                            projectedPoints: gwPoints
+                          };
+                        });
+                        
+                        // Group by position
+                        const gkps = playersWithPoints.filter(p => p.position === 1).sort((a, b) => b.projectedPoints - a.projectedPoints);
+                        const defs = playersWithPoints.filter(p => p.position === 2).sort((a, b) => b.projectedPoints - a.projectedPoints);
+                        const mids = playersWithPoints.filter(p => p.position === 3).sort((a, b) => b.projectedPoints - a.projectedPoints);
+                        const fwds = playersWithPoints.filter(p => p.position === 4).sort((a, b) => b.projectedPoints - a.projectedPoints);
+                        
+                        // Try all valid formations and find best for this gameweek
+                        const validFormations = [
+                          { def: 3, mid: 4, fwd: 3 }, { def: 3, mid: 5, fwd: 2 },
+                          { def: 4, mid: 3, fwd: 3 }, { def: 4, mid: 4, fwd: 2 },
+                          { def: 4, mid: 5, fwd: 1 }, { def: 5, mid: 3, fwd: 2 },
+                          { def: 5, mid: 4, fwd: 1 }, { def: 5, mid: 2, fwd: 3 }
+                        ];
+                        
+                        let bestPoints = 0;
+                        validFormations.forEach(formation => {
+                          if (defs.length >= formation.def && mids.length >= formation.mid && fwds.length >= formation.fwd) {
+                            const starting11 = [
+                              gkps[0],
+                              ...defs.slice(0, formation.def),
+                              ...mids.slice(0, formation.mid),
+                              ...fwds.slice(0, formation.fwd)
+                            ].filter(Boolean);
+                            
+                            const formationPoints = starting11.reduce((sum, p) => sum + p.projectedPoints, 0);
+                            // Add captain bonus (best player gets 2x)
+                            const captain = starting11.reduce((best, p) => p.projectedPoints > best.projectedPoints ? p : best, starting11[0]);
+                            const totalWithCaptain = formationPoints + (captain?.projectedPoints || 0);
+                            
+                            if (totalWithCaptain > bestPoints) {
+                              bestPoints = totalWithCaptain;
+                            }
+                          }
+                        });
+                        
+                        grandTotal += bestPoints;
+                      } else {
+                        // For manual mode: use the manual lineup for this gameweek
+                        lineupForGW.slice(0, 11).forEach(pick => {
+                          const playerData = playerProjections6GW.find((p: any) => p.playerId === pick.element);
+                          const gwPoints = playerData?.gameweekProjections?.[gw.toString()] || 0;
+                          // Apply captain multiplier if this is the selected GW
+                          const multiplier = (gw === selectedGameweek && pick.is_captain) ? 2 : 1;
+                          grandTotal += gwPoints * multiplier;
+                        });
                       }
                     });
                     
-                    return total.toFixed(2);
+                    return grandTotal.toFixed(2);
                   })()}
                 </div>
               </div>
