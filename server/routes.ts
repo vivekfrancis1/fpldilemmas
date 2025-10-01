@@ -8753,9 +8753,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate average expected minutes per gameweek (from minutes player data)
         const avgMinutesPerGameweek = minutesPlayer?.expectedMinutesPerGame || 0;
         
-        // Calculate average value (average points per gameweek / price)
+        // Calculate average value (total points across all gameweeks / price)
         const avgPointsPerGameweek = totalExpectedPoints / (end - start + 1);
-        const averageValue = price > 0 ? avgPointsPerGameweek / price : 0;
+        const averageValue = price > 0 ? totalExpectedPoints / price : 0;
 
         return {
           playerId: playerId,
@@ -12477,7 +12477,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Calculate additional metrics
             const avgPointsPerGameweek = player.averagePerGameweek || 0;
-            const averageValue = price > 0 ? avgPointsPerGameweek / price : 0;
+            const totalExpectedPoints = player.totalExpectedPoints || 0;
+            const averageValue = price > 0 ? totalExpectedPoints / price : 0;
             // For cached data, we need to fetch the minutes data separately or store it
             const avgMinutesPerGameweek = player.avgMinutesPerGameweek || 90; // Default assumption if not stored
 
