@@ -324,22 +324,22 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
         </div>
       </CardHeader>
       <CardContent className="p-2 md:p-4">
-        <div className="overflow-x-auto -mx-2 md:mx-0">
-          <table className="w-full text-xs md:text-sm">
+        <div className="w-full overflow-x-auto md:overflow-visible">
+          <table className="w-full min-w-[900px] md:min-w-0 text-xs md:text-sm">
             <thead>
               <tr className="border-b">
-                <th className="text-left py-1 px-1 md:p-2 sticky left-0 bg-white dark:bg-gray-950 z-20">
+                <th className="text-left py-1 px-1 md:p-2 sticky left-0 bg-white dark:bg-gray-950 z-20 w-[160px] min-w-[160px] max-w-[200px]">
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
+                    className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm truncate"
                     onClick={() => handleSort('name')}
                     data-testid="sort-name"
                   >
                     Player {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2 font-bold text-xs md:text-sm">
+                <th className="text-center py-1 px-1 md:p-2 font-bold text-xs md:text-sm w-[44px] min-w-[44px] max-w-[44px]">
                   Action
                 </th>
                 <th className="text-left py-1 px-1 md:p-2">
@@ -353,19 +353,22 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Price {sortField === 'price' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                {nextGameweeks.map((gw) => (
-                  <th key={gw} className="text-center py-1 px-1 md:p-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
-                      onClick={() => handleSort(`gw_${gw}`)}
-                      data-testid={`sort-gw${gw}`}
-                    >
-                      GW{gw} {sortField === `gw_${gw}` && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
-                    </Button>
-                  </th>
-                ))}
+                {nextGameweeks.map((gw, idx) => {
+                  const colCls = idx < 2 ? "table-cell" : idx < 4 ? "hidden sm:table-cell" : "hidden lg:table-cell";
+                  return (
+                    <th key={gw} className={`text-center py-1 px-1 md:p-2 ${colCls}`}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 md:h-8 px-1 md:px-3 text-xs md:text-sm"
+                        onClick={() => handleSort(`gw_${gw}`)}
+                        data-testid={`sort-gw${gw}`}
+                      >
+                        GW{gw} {sortField === `gw_${gw}` && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
+                      </Button>
+                    </th>
+                  );
+                })}
                 <th className="text-center py-1 px-1 md:p-2 font-bold">
                   <Button
                     variant="ghost"
@@ -377,7 +380,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Total {sortField === 'total' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2">
+                <th className="text-center py-1 px-1 md:p-2 hidden md:table-cell">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -388,7 +391,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Avg Val {sortField === 'avgValue' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2">
+                <th className="text-center py-1 px-1 md:p-2 hidden md:table-cell">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -399,7 +402,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Form {sortField === 'form' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2">
+                <th className="text-center py-1 px-1 md:p-2 hidden md:table-cell">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -410,7 +413,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Mins {sortField === 'avgMins' && (sortDirection === 'asc' ? <ChevronUp className="h-2 w-2 md:h-3 md:w-3 inline ml-1" /> : <ChevronDown className="h-2 w-2 md:h-3 md:w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center py-1 px-1 md:p-2">
+                <th className="text-center py-1 px-1 md:p-2 hidden md:table-cell">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -431,9 +434,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     className="border-b hover:bg-gray-50 dark:hover:bg-gray-900"
                     data-testid={`player-row-${player.playerId}`}
                   >
-                    <td className="py-1 px-1 md:p-2 sticky left-0 bg-white dark:bg-gray-950 z-10">
-                      <div className="font-medium text-xs md:text-sm">{player.name}</div>
-                      <div className="text-[10px] md:text-xs text-muted-foreground">
+                    <td className="py-1 px-1 md:p-2 sticky left-0 bg-white dark:bg-gray-950 z-10 w-[160px] min-w-[160px] max-w-[200px]">
+                      <div className="font-medium text-xs md:text-sm truncate max-w-[150px]">{player.name}</div>
+                      <div className="text-[10px] md:text-xs text-muted-foreground truncate">
                         {(() => {
                           const positionShortforms: { [key: string]: string } = {
                             'Goalkeeper': 'GKP',
@@ -445,7 +448,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         })()} • {player.team}
                       </div>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center">
+                    <td className="py-1 px-1 md:p-2 text-center w-[44px] min-w-[44px] max-w-[44px]">
                       {(() => {
                         // Map position names to element types
                         const positionMap: { [key: string]: number } = {
@@ -483,7 +486,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       })()}
                     </td>
                     <td className="py-1 px-1 md:p-2 text-center">£{player.price.toFixed(1)}m</td>
-                    {nextGameweeks.map((gw) => {
+                    {nextGameweeks.map((gw, idx) => {
                       const gwPoints = player.gameweekProjections[gw.toString()] || 0;
                       const top3 = getTop3ForGameweek(gw);
                       
@@ -502,8 +505,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         textColor = 'text-orange-800 dark:text-orange-300';
                       }
                       
+                      const colCls = idx < 2 ? "table-cell" : idx < 4 ? "hidden sm:table-cell" : "hidden lg:table-cell";
+                      
                       return (
-                        <td key={gw} className={`py-1 px-1 md:p-2 text-center ${bgColor}`}>
+                        <td key={gw} className={`py-1 px-1 md:p-2 text-center ${bgColor} ${colCls}`}>
                           <span className={`${textColor} font-medium`}>
                             {gwPoints.toFixed(1)}
                           </span>
@@ -515,22 +520,22 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         {(player.totalExpectedPoints || 0).toFixed(1)}
                       </span>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center">
+                    <td className="py-1 px-1 md:p-2 text-center hidden md:table-cell">
                       <span className="text-blue-600 dark:text-blue-400 font-medium">
                         {(player.averageValue || 0).toFixed(2)}
                       </span>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center">
+                    <td className="py-1 px-1 md:p-2 text-center hidden md:table-cell">
                       <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                         {(player.form || 0).toFixed(1)}
                       </span>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center">
+                    <td className="py-1 px-1 md:p-2 text-center hidden md:table-cell">
                       <span className="text-purple-600 dark:text-purple-400 font-medium">
                         {Math.round(player.avgMinutesPerGameweek || 0)}
                       </span>
                     </td>
-                    <td className="py-1 px-1 md:p-2 text-center">
+                    <td className="py-1 px-1 md:p-2 text-center hidden md:table-cell">
                       <span className="text-orange-600 dark:text-orange-400 font-medium">
                         {player.ownership.toFixed(1)}%
                       </span>
@@ -2397,7 +2402,7 @@ export default function TransferPlanner() {
   const nextGameweeks = getNextGameweeks();
 
   return (
-    <div className="container mx-auto p-2 md:p-4 lg:p-6 space-y-3 md:space-y-4">
+    <div className="container mx-auto p-2 md:p-4 lg:p-6 space-y-3 md:space-y-4 overflow-x-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
         <div className="p-2 md:p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
