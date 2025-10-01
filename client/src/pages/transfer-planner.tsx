@@ -100,6 +100,7 @@ interface PlayerProjectionData {
   position: string;
   price: number;
   ownership: number;
+  form: number;
   gameweekProjections: { [key: string]: number };
   totalExpectedPoints: number;
   averageValue?: number;
@@ -236,6 +237,8 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
         comparison = a.name.localeCompare(b.name);
       } else if (sortField === 'ownership') {
         comparison = a.ownership - b.ownership;
+      } else if (sortField === 'form') {
+        comparison = (a.form || 0) - (b.form || 0);
       } else if (sortField === 'avgValue') {
         comparison = (a.averageValue || 0) - (b.averageValue || 0);
       } else if (sortField === 'avgMins') {
@@ -358,6 +361,16 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   <Button
                     variant="ghost"
                     size="sm"
+                    onClick={() => handleSort('form')}
+                    data-testid="sort-form"
+                  >
+                    Form {sortField === 'form' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
+                  </Button>
+                </th>
+                <th className="text-center p-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => handleSort('avgValue')}
                     data-testid="sort-avgValue"
                   >
@@ -419,6 +432,11 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     <td className="p-2 text-center">
                       <span className="text-orange-600 dark:text-orange-400 font-medium">
                         {player.ownership.toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="p-2 text-center">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                        {(player.form || 0).toFixed(1)}
                       </span>
                     </td>
                     <td className="p-2 text-center">

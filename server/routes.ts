@@ -8749,6 +8749,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === playerId);
         const price = bootstrapPlayer ? bootstrapPlayer.now_cost / 10 : 0; // Convert from tenths to actual price
         const ownership = bootstrapPlayer ? parseFloat(bootstrapPlayer.selected_by_percent) : 0; // Ensure it's a number
+        const form = bootstrapPlayer ? parseFloat(bootstrapPlayer.form) : 0; // Player's current form
         
         // Calculate average expected minutes per gameweek (from minutes player data)
         const avgMinutesPerGameweek = minutesPlayer?.expectedMinutesPerGame || 0;
@@ -8766,6 +8767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: basePlayer.position,
           price: price,
           ownership: ownership,
+          form: form,
           gameweekProjections,
           totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
           averagePerGameweek: Math.round(avgPointsPerGameweek * 100) / 100,
@@ -12474,6 +12476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
             const price = bootstrapPlayer ? bootstrapPlayer.now_cost / 10 : 0; // Convert from tenths to actual price
             const ownership = bootstrapPlayer ? parseFloat(bootstrapPlayer.selected_by_percent) : 0; // Ensure it's a number
+            const form = bootstrapPlayer ? parseFloat(bootstrapPlayer.form) : 0; // Player's current form
             
             // Calculate additional metrics
             const avgPointsPerGameweek = player.averagePerGameweek || 0;
@@ -12492,6 +12495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               position: player.position,
               price: price,
               ownership: ownership,
+              form: form,
               gameweekProjections: player.totalPointsData || {},
               totalExpectedPoints: player.totalExpectedPoints || 0,
               totalPoints: player.totalExpectedPoints || 0,
