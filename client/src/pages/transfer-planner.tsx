@@ -327,7 +327,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
-                <th className="text-left p-2 sticky left-0 bg-white dark:bg-gray-950 z-10">
+                <th className="text-left p-2 sticky left-0 bg-white dark:bg-gray-950 z-20">
                   <Button
                     variant="ghost"
                     size="sm"
@@ -337,7 +337,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     Player {sortField === 'name' && (sortDirection === 'asc' ? <ChevronUp className="h-3 w-3 inline ml-1" /> : <ChevronDown className="h-3 w-3 inline ml-1" />)}
                   </Button>
                 </th>
-                <th className="text-center p-2 sticky left-[200px] bg-white dark:bg-gray-950 z-10 font-bold">
+                <th className="text-center p-2 sticky left-[200px] bg-white dark:bg-gray-950 z-20 font-bold">
                   Action
                 </th>
                 <th className="text-left p-2">
@@ -422,7 +422,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     className="border-b hover:bg-gray-50 dark:hover:bg-gray-900"
                     data-testid={`player-row-${player.playerId}`}
                   >
-                    <td className="p-2 sticky left-0 bg-white dark:bg-gray-950">
+                    <td className="p-2 sticky left-0 bg-white dark:bg-gray-950 z-10">
                       <div className="font-medium">{player.name}</div>
                       <div className="text-xs text-muted-foreground">
                         {(() => {
@@ -436,7 +436,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         })()} • {player.team}
                       </div>
                     </td>
-                    <td className="p-2 text-center sticky left-[200px] bg-white dark:bg-gray-950">
+                    <td className="p-2 text-center sticky left-[200px] bg-white dark:bg-gray-950 z-10">
                       {(() => {
                         // Map position names to element types
                         const positionMap: { [key: string]: number } = {
