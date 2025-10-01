@@ -2009,7 +2009,6 @@ export default function TransferPlanner() {
                     <thead>
                       <tr className="border-b">
                         <th className="text-left p-2 font-semibold" data-testid="header-draft">Draft</th>
-                        <th className="text-left p-2 font-semibold" data-testid="header-mode">Mode</th>
                         {nextGWs.map(gw => (
                           <th key={gw.id} className="text-center p-2 font-semibold" data-testid={`header-gw${gw.id}`}>
                             GW{gw.id}
@@ -2026,14 +2025,23 @@ export default function TransferPlanner() {
                           key={`${row.draftKey}-${row.mode}`} 
                           className={`border-b hover:bg-gray-50 dark:hover:bg-gray-900 ${
                             row.draftKey === activeDraft && row.mode === 'Manual' ? 'bg-blue-50 dark:bg-blue-950/10' : ''
+                          } ${
+                            row.mode === 'Auto' ? 'bg-purple-50/30 dark:bg-purple-950/10' : ''
                           }`}
                           data-testid={`row-${row.draftKey}-${row.mode.toLowerCase()}`}
                         >
                           <td className="p-2 font-medium" data-testid={`cell-draft-${row.draftKey}`}>
-                            {row.draftKey} {row.draftKey === activeDraft && row.mode === 'Manual' && '●'}
-                          </td>
-                          <td className="p-2 text-sm text-muted-foreground" data-testid={`cell-mode-${row.draftKey}`}>
-                            {row.mode}
+                            <div className="flex items-center gap-2">
+                              <span>{row.draftKey}</span>
+                              <span className={`text-xs px-2 py-0.5 rounded ${
+                                row.mode === 'Manual' 
+                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
+                                  : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                              }`}>
+                                {row.mode}
+                              </span>
+                              {row.draftKey === activeDraft && row.mode === 'Manual' && <span className="text-blue-600">●</span>}
+                            </div>
                           </td>
                           {nextGWs.map(gw => (
                             <td 
