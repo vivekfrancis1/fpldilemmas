@@ -1738,7 +1738,7 @@ export default function TransferPlanner() {
   };
 
   // Undo a specific transfer and restore the baseline player
-  const handleUndoTransfer = (position: number) => {
+  const handleUndoTransfer = async (position: number) => {
     if (!teamData?.picks || !selectedGameweek) return;
     
     // Get the baseline lineup for this gameweek
@@ -1769,18 +1769,24 @@ export default function TransferPlanner() {
     setCompletedTransfers(newCompletedTransfers);
     
     // Update gameweek-specific storage
-    setGameweekTransfers(gwTransfers => ({
-      ...gwTransfers,
+    const updatedGameweekTransfers = {
+      ...gameweekTransfers,
       [selectedGameweek]: {
         transferredOut: newTransferredOut,
         completed: newCompletedTransfers
       }
-    }));
+    };
+    setGameweekTransfers(updatedGameweekTransfers);
     
     toast({
       title: "Transfer Undone",
       description: `${baselinePlayer.web_name} has been restored to your team`
     });
+    
+    // Auto-save the draft if not on Base
+    if (activeDraft !== "Base") {
+      await saveCurrentDraft(updatedGameweekTransfers);
+    }
   };
 
   // Draft management functions
