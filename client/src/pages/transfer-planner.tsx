@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -3660,47 +3659,19 @@ export default function TransferPlanner() {
         </Card>
       )}
 
-      {/* Main Content Tabs */}
+      {/* Projected Points Section */}
       {searchedId && teamData && selectedGameweek && (
-        <Tabs defaultValue="projected-points" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="projected-points" data-testid="tab-projected-points">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Projected Points
-            </TabsTrigger>
-            <TabsTrigger value="drafts" data-testid="tab-drafts">
-              <Save className="h-4 w-4 mr-2" />
-              My Drafts
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="projected-points" className="space-y-4">
-            <AllPlayersProjectionsTab 
-              selectedGameweek={selectedGameweek as number} 
-              transferredOutPlayers={transferredOutPlayers}
-              onTransferIn={handleTransferIn}
-              currentBank={calculateCurrentBank()}
-              initialPositionFilter={projectionPositionFilter}
-              scrollToView={scrollToProjections}
-              onScrollComplete={() => setScrollToProjections(false)}
-            />
-          </TabsContent>
-
-          <TabsContent value="drafts" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>My Draft Plans</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Alert>
-                  <AlertDescription>
-                    Draft management coming soon...
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <div className="space-y-4">
+          <AllPlayersProjectionsTab 
+            selectedGameweek={selectedGameweek as number} 
+            transferredOutPlayers={transferredOutPlayers}
+            onTransferIn={handleTransferIn}
+            currentBank={calculateCurrentBank()}
+            initialPositionFilter={projectionPositionFilter}
+            scrollToView={scrollToProjections}
+            onScrollComplete={() => setScrollToProjections(false)}
+          />
+        </div>
       )}
 
       {/* Empty State */}
