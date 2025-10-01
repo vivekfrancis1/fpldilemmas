@@ -1459,6 +1459,60 @@ export default function TransferPlanner() {
     }
   };
 
+  const deleteAllDrafts = async () => {
+    if (!searchedId) return;
+
+    try {
+      const response = await fetch(`/api/transfer-planner/drafts/${searchedId}`, {
+        method: "DELETE"
+      });
+
+      if (response.ok) {
+        switchToDraft("Base");
+        setSavedDrafts([]);
+        toast({ title: "All Drafts Deleted", description: "All saved drafts have been deleted" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to delete all drafts", variant: "destructive" });
+    }
+  };
+
+  const saveAllDrafts = async () => {
+    if (!searchedId || savedDrafts.length === 0) return;
+
+    const currentTransfers = gameweekTransfers;
+    const currentMode = plannerMode;
+    const currentBank = calculateBankAfterTransfers();
+    const totalTransfers = Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0);
+
+    try {
+      // Save to all existing drafts
+      const savePromises = savedDrafts.map(draft => 
+        fetch("/api/transfer-planner/drafts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            managerId: parseInt(searchedId),
+            draftLetter: draft.draftLetter,
+            gameweekTransfers: currentTransfers,
+            mode: currentMode,
+            teamBank: currentBank,
+            teamValue: 0,
+            totalProjectedPoints: 0,
+            totalTransfersUsed: totalTransfers
+          })
+        })
+      );
+
+      await Promise.all(savePromises);
+      setHasUnsavedChanges(false);
+      await loadDrafts();
+      toast({ title: "All Drafts Saved", description: `Saved current plan to ${savedDrafts.length} draft(s)` });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save all drafts", variant: "destructive" });
+    }
+  };
+
   // Auto-save to Draft A when first transfer is made
   useEffect(() => {
     const hasTransfers = Object.values(gameweekTransfers).some(gw => 
@@ -1680,6 +1734,32 @@ export default function TransferPlanner() {
             {activeDraft === "Base" && (
               <div className="text-sm text-muted-foreground">
                 Base Draft shows your current team with no transfers. Make a transfer to automatically create Draft A.
+              </div>
+            )}
+
+            {/* Bulk Actions */}
+            {savedDrafts.length > 0 && (
+              <div className="flex gap-2 flex-wrap pt-2 border-t">
+                <Button
+                  onClick={saveAllDrafts}
+                  size="sm"
+                  variant="outline"
+                  className="text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950/20"
+                  data-testid="button-save-all-drafts"
+                >
+                  <Save className="h-4 w-4 mr-1" />
+                  Save All Drafts
+                </Button>
+                
+                <Button
+                  onClick={deleteAllDrafts}
+                  size="sm"
+                  variant="outline"
+                  className="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                  data-testid="button-delete-all-drafts"
+                >
+                  Delete All Drafts
+                </Button>
               </div>
             )}
           </CardContent>
