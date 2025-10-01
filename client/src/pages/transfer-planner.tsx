@@ -504,6 +504,9 @@ export default function TransferPlanner() {
   // Track which manager has been initialized to prevent unwanted resets
   const initializedManagerRef = useRef<string | null>(null);
   
+  // Ref for scrolling to team lineup after transfer
+  const teamLineupRef = useRef<HTMLDivElement>(null);
+  
   const { toast } = useToast();
 
   // Cache manager ID functionality
@@ -1157,6 +1160,13 @@ export default function TransferPlanner() {
       title: "Player Transferred In",
       description: `${player.web_name} has been added to your team (£${buyingPrice.toFixed(1)}m)`
     });
+
+    // Scroll back to team lineup to see the new player
+    setTimeout(() => {
+      if (teamLineupRef.current) {
+        teamLineupRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
   };
 
   // Reset all transfers for the current gameweek and restore baseline
@@ -1517,7 +1527,7 @@ export default function TransferPlanner() {
 
       {/* Manual Selection Section */}
       {searchedId && teamData && selectedGameweek && plannerMode === "manual" && (
-        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
+        <Card ref={teamLineupRef} className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5 text-blue-600" />
