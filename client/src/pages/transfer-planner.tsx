@@ -1970,53 +1970,25 @@ export default function TransferPlanner() {
         </Card>
       )}
 
-      {/* Gameweek and Mode Selection */}
+      {/* Gameweek Selection */}
       {searchedId && teamData && (
         <Card>
           <CardContent className="pt-6">
-            <div className="space-y-4">
-              {/* Gameweek Selection */}
-              <div>
-                <div className="text-sm font-medium mb-2">Select GW</div>
-                <div className="flex gap-2">
-                  {nextGameweeks.map(gw => (
-                    <Button
-                      key={gw.id}
-                      variant={selectedGameweek === gw.id ? "default" : "outline"}
-                      size="lg"
-                      className="text-lg font-semibold"
-                      onClick={() => setSelectedGameweek(gw.id)}
-                      data-testid={`gw-button-${gw.id}`}
-                    >
-                      {gw.id}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Mode Selection */}
-              <div>
-                <div className="text-sm font-medium mb-2">Planning Mode</div>
-                <div className="flex gap-2">
+            <div>
+              <div className="text-sm font-medium mb-2">Select GW</div>
+              <div className="flex gap-2">
+                {nextGameweeks.map(gw => (
                   <Button
-                    variant={plannerMode === "manual" ? "default" : "outline"}
+                    key={gw.id}
+                    variant={selectedGameweek === gw.id ? "default" : "outline"}
                     size="lg"
-                    className="flex-1"
-                    onClick={() => setPlannerMode("manual")}
-                    data-testid="mode-button-manual"
+                    className="text-lg font-semibold"
+                    onClick={() => setSelectedGameweek(gw.id)}
+                    data-testid={`gw-button-${gw.id}`}
                   >
-                    Manual lineup
+                    {gw.id}
                   </Button>
-                  <Button
-                    variant={plannerMode === "auto" ? "default" : "outline"}
-                    size="lg"
-                    className="flex-1"
-                    onClick={() => setPlannerMode("auto")}
-                    data-testid="mode-button-auto"
-                  >
-                    Auto lineup
-                  </Button>
-                </div>
+                ))}
               </div>
             </div>
           </CardContent>
@@ -2232,6 +2204,37 @@ export default function TransferPlanner() {
                     This will result in {Math.abs(calculateTransfersRemaining()) * 4} points penalty
                   </div>
                 )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Planning Mode Selection */}
+      {searchedId && teamData && (
+        <Card>
+          <CardContent className="pt-6">
+            <div>
+              <div className="text-sm font-medium mb-2">Planning Mode</div>
+              <div className="flex gap-2">
+                <Button
+                  variant={plannerMode === "manual" ? "default" : "outline"}
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => setPlannerMode("manual")}
+                  data-testid="mode-button-manual"
+                >
+                  Manual lineup
+                </Button>
+                <Button
+                  variant={plannerMode === "auto" ? "default" : "outline"}
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => setPlannerMode("auto")}
+                  data-testid="mode-button-auto"
+                >
+                  Auto lineup
+                </Button>
               </div>
             </div>
           </CardContent>
