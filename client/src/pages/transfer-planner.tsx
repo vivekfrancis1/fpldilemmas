@@ -1547,7 +1547,7 @@ export default function TransferPlanner() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             draftLetter: newDraftLetter,
-            gameweekTransfers: updatedGameweekTransfers
+            gameweekTransfers: structuredClone(updatedGameweekTransfers) // Deep clone to prevent shared references
           })
         });
         
@@ -1694,7 +1694,8 @@ export default function TransferPlanner() {
 
     // Auto-save draft after transfer in with the updated transfers
     if (activeDraft !== "Base" && newTransferredOut.length === 0) {
-      setTimeout(() => saveCurrentDraft(updatedGameweekTransfers), 200);
+      const draftToSave = activeDraft; // Capture draft letter before async operation
+      setTimeout(() => saveCurrentDraft(updatedGameweekTransfers, draftToSave), 200);
     }
   };
 
@@ -1791,7 +1792,8 @@ export default function TransferPlanner() {
     
     // Auto-save the draft if not on Base
     if (activeDraft !== "Base") {
-      await saveCurrentDraft(updatedGameweekTransfers);
+      const draftToSave = activeDraft; // Capture draft letter before async operation
+      await saveCurrentDraft(updatedGameweekTransfers, draftToSave);
     }
   };
 
@@ -1852,7 +1854,8 @@ export default function TransferPlanner() {
     
     // Auto-save the draft if not on Base
     if (activeDraft !== "Base") {
-      await saveCurrentDraft(updatedGameweekTransfers);
+      const draftToSave = activeDraft; // Capture draft letter before async operation
+      await saveCurrentDraft(updatedGameweekTransfers, draftToSave);
     }
   };
 
@@ -1905,7 +1908,8 @@ export default function TransferPlanner() {
     
     // Auto-save the draft if not on Base
     if (activeDraft !== "Base") {
-      await saveCurrentDraft(updatedGameweekTransfers);
+      const draftToSave = activeDraft; // Capture draft letter before async operation
+      await saveCurrentDraft(updatedGameweekTransfers, draftToSave);
     }
   };
 
@@ -1945,8 +1949,11 @@ export default function TransferPlanner() {
     }
   };
 
-  const saveCurrentDraft = async (transfersToSave?: typeof gameweekTransfers) => {
-    if (!searchedId || activeDraft === "Base") return;
+  const saveCurrentDraft = async (transfersToSave?: typeof gameweekTransfers, targetDraftLetter?: string) => {
+    // Capture the draft letter to save - use explicit parameter or current activeDraft
+    const draftLetter = targetDraftLetter || activeDraft;
+    
+    if (!searchedId || draftLetter === "Base") return;
 
     const transfersData = transfersToSave || gameweekTransfers;
 
@@ -1956,8 +1963,8 @@ export default function TransferPlanner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           managerId: parseInt(searchedId),
-          draftLetter: activeDraft,
-          gameweekTransfers: transfersData,
+          draftLetter: draftLetter,
+          gameweekTransfers: structuredClone(transfersData), // Deep clone to prevent shared references
           mode: plannerMode,
           teamBank: calculateBankAfterTransfers(),
           teamValue: 0,
@@ -1967,8 +1974,11 @@ export default function TransferPlanner() {
       });
 
       if (response.ok) {
-        setHasUnsavedChanges(false);
-        toast({ title: "Draft Saved", description: `Draft ${activeDraft} saved successfully` });
+        // Only update UI state if we're still on the same draft
+        if (draftLetter === activeDraft) {
+          setHasUnsavedChanges(false);
+        }
+        toast({ title: "Draft Saved", description: `Draft ${draftLetter} saved successfully` });
         await loadDrafts();
       }
     } catch (error) {
@@ -1996,7 +2006,8 @@ export default function TransferPlanner() {
           const draft = data.draft;
           
           // Reset ALL state for complete draft isolation
-          setGameweekTransfers(draft.gameweekTransfers);
+          // CRITICAL: Deep clone to prevent shared references between drafts
+          setGameweekTransfers(structuredClone(draft.gameweekTransfers || {}));
           setPlannerMode(draft.mode);
           setActiveDraft(draftLetter);
           setHasUnsavedChanges(false);
@@ -2093,7 +2104,7 @@ export default function TransferPlanner() {
         body: JSON.stringify({
           managerId: parseInt(searchedId),
           draftLetter: nextLetter,
-          gameweekTransfers,
+          gameweekTransfers: structuredClone(gameweekTransfers), // Deep clone to prevent shared references
           mode: plannerMode,
           teamBank: calculateBankAfterTransfers(),
           teamValue: 0,
