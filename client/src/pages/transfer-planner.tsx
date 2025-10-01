@@ -3342,7 +3342,7 @@ export default function TransferPlanner() {
                                           >
                                             <Edit2 className="h-3 w-3 text-blue-600" />
                                           </Button>
-                                          <span>Current: £{(player.now_cost / 10).toFixed(1)}m</span>
+                                          <span className="hidden md:inline">Current: £{(player.now_cost / 10).toFixed(1)}m</span>
                                           <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                         </div>
                                       )}
@@ -3576,7 +3576,7 @@ export default function TransferPlanner() {
                                   >
                                     <Edit2 className="h-3 w-3 text-blue-600" />
                                   </Button>
-                                  <span>Current: £{(player.now_cost / 10).toFixed(1)}m</span>
+                                  <span className="hidden md:inline">Current: £{(player.now_cost / 10).toFixed(1)}m</span>
                                   <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                 </div>
                               )}
