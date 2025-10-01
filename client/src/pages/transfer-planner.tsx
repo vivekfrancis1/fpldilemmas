@@ -31,6 +31,10 @@ interface TeamData {
     bank: number;
     value: number;
   };
+  entry?: {
+    bank: number;
+    value: number;
+  };
 }
 
 interface Player {
