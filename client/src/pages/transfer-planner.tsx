@@ -3959,25 +3959,6 @@ export default function TransferPlanner() {
                 <div className="text-xs text-muted-foreground mb-4 italic">
                   * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
                 </div>
-                {/* Formation and Points Summary */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-4 bg-white dark:bg-gray-900 rounded-lg border">
-                    <div className="text-sm text-muted-foreground">Formation</div>
-                    <div className="text-2xl font-bold text-purple-600">{optimizedLineup.formation}</div>
-                  </div>
-                  <div className="text-center p-4 bg-white dark:bg-gray-900 rounded-lg border">
-                    <div className="text-sm text-muted-foreground">Projected Points</div>
-                    <div className="text-2xl font-bold text-purple-600">
-                      {(() => {
-                        // Find captain and add the captain bonus (captain scores double)
-                        const captain = optimizedLineup.starting11.find(p => p.isCaptain);
-                        const captainBonus = captain ? captain.projectedPoints : 0;
-                        const totalWithCaptain = optimizedLineup.totalProjectedPoints + captainBonus;
-                        return totalWithCaptain.toFixed(2);
-                      })()}
-                    </div>
-                  </div>
-                </div>
 
                 {/* Starting 11 */}
                 <div>
