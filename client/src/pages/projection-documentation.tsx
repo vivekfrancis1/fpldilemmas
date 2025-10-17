@@ -518,105 +518,246 @@ export default function ProjectionDocumentation() {
 
           {/* Algorithms Tab */}
           <TabsContent value="algorithms" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Cpu className="h-5 w-5" />
-                  Core Algorithm Architecture
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <Alert>
-                  <Brain className="h-4 w-4" />
-                  <AlertDescription>
-                    All algorithms use deterministic calculations with MASTER_TEAM_DEFAULTS as the single source of truth.
-                    Results are mathematically balanced and reproducible across sessions.
-                  </AlertDescription>
-                </Alert>
+            <Alert>
+              <Brain className="h-4 w-4" />
+              <AlertDescription>
+                <strong>100% Real FPL Data:</strong> All algorithms use deterministic calculations with live FPL API data as the foundation. No synthetic base xG values - every projection is derived from actual team performance data from the current standings API.
+              </AlertDescription>
+            </Alert>
 
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">1. Pure Projection Methodology</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm">
-                      <div className="space-y-2">
-                        <div><span className="text-blue-600">for</span> gameweek <span className="text-blue-600">in</span> upcoming_gameweeks:</div>
-                        <div className="ml-4"><span className="text-blue-600">if</span> gameweek &gt;= current_gameweek + 1:</div>
-                        <div className="ml-8">data = calculatePureProjections(gameweek)</div>
-                        <div className="ml-4"><span className="text-blue-600">else</span>:</div>
-                        <div className="ml-8">skip  # Only future gameweeks</div>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-2">
-                      This ensures clean forward-looking projections by focusing only on upcoming gameweeks (GW4+) without mixing historical data.
-                    </p>
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">2. Team Goal Projection Formula (NEW Hybrid Approach)</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="space-y-3">
-                        <div className="font-mono text-sm">
-                          <strong>Goals = (TeamAvgGoals + RealTeamxGF + OpponentAvgGC + RealOpponentxGA) × 0.25 × VenueFactor × ContextMultipliers</strong>
-                        </div>
-                        <div className="text-sm space-y-1">
-                          <p><strong>TeamAvgGoals:</strong> Actual average goals scored per game from current season</p>
-                          <p><strong>RealTeamxGF:</strong> Live expected goals for from FPL current standings API</p>
-                          <p><strong>OpponentAvgGC:</strong> Opponent's actual average goals conceded per game</p>
-                          <p><strong>RealOpponentxGA:</strong> Live expected goals against from FPL current standings API</p>
-                          <p><strong>VenueFactor:</strong> Home (1.12), Away (0.84) - Updated from 1.16</p>
-                          <p><strong>ContextMultipliers:</strong> 15+ situational factors (derby: 0.87, top6: 1.12, etc.)</p>
-                          <p><strong>Market Bounds:</strong> REMOVED - projections flow freely based on pure performance</p>
-                        </div>
-                      </div>
+            <div className="space-y-6">
+              
+              {/* Algorithm 1: Hybrid Team Goals */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Cpu className="h-5 w-5 text-green-600" />
+                    1. Hybrid Team Goals Algorithm
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-green-900 mb-3">Implementation (server/team-goals-service.ts)</h4>
+                    <div className="bg-white p-3 rounded border font-mono text-sm space-y-2">
+                      <div className="text-blue-600">async function</div> <div>calculateFixtureGoals(team, opponent, fixture, isHome):</div>
+                      <div className="ml-4">// Phase 1: Fetch real data from current standings</div>
+                      <div className="ml-4">teamAvgGoals = await getTeamAverageGoals(team.id)</div>
+                      <div className="ml-4">teamAvgXG = await getTeamAverageXG(team.id)</div>
+                      <div className="ml-4">opponentAvgGC = await getTeamAverageGoalsConceded(opponent.id)</div>
+                      <div className="ml-4">opponentAvgXGA = await getTeamAverageXGC(opponent.id)</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4">// Phase 2: Hybrid calculation</div>
+                      <div className="ml-4">baseGoals = (teamAvgGoals + teamAvgXG + opponentAvgGC + opponentAvgXGA) × 0.25</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4">// Phase 3: Apply venue factor</div>
+                      <div className="ml-4">venueFactor = isHome ? 1.12 : 0.84</div>
+                      <div className="ml-4">goalsWithVenue = baseGoals × venueFactor</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4">// Phase 4: Context multipliers</div>
+                      <div className="ml-4">finalGoals = applyContextMultipliers(goalsWithVenue, team, opponent, fixture)</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4 text-green-600">return</div> finalGoals
                     </div>
                   </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-blue-50 p-3 rounded text-sm">
+                      <strong className="text-blue-900">Data Fetching:</strong>
+                      <ul className="list-disc ml-5 mt-1 text-blue-800">
+                        <li>Calls /api/current-standings internally</li>
+                        <li>Calculates averages from played games</li>
+                        <li>5-minute cache on standings data</li>
+                        <li>10-minute cache on team projections</li>
+                      </ul>
+                    </div>
+                    <div className="bg-purple-50 p-3 rounded text-sm">
+                      <strong className="text-purple-900">Context Factors:</strong>
+                      <ul className="list-disc ml-5 mt-1 text-purple-800">
+                        <li>Team form: Last 5 games (3+ wins = 1.06×)</li>
+                        <li>Derby matches: 0.87× multiplier</li>
+                        <li>Top 6 battles: 1.12× multiplier</li>
+                        <li>Season finale (GW37+): 1.05×</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">3. Player Goal Share Calculation</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm">
-                      <div className="space-y-2">
-                        <div>playerGoals = teamGoals × playerGoalShare</div>
-                        <div>playerGoalShare = historicalGoalShare × minutesWeight × formFactor</div>
-                        <div>goalShare = min(goalShare, POSITION_CAPS[position])</div>
-                        <div>// Position caps: GK(2%), DEF(25%), MID(35%), FWD(35%)</div>
+              {/* Algorithm 2: Position Caps & Redistribution */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Settings className="h-5 w-5 text-orange-600" />
+                    2. Position Caps & Redistribution Algorithm
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-orange-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-orange-900 mb-3">Implementation (server/projection-adjustments.ts)</h4>
+                    <div className="bg-white p-3 rounded border font-mono text-sm space-y-2">
+                      <div className="text-blue-600">function</div> <div>enforcePositionCaps(teamPlayerShares, type):</div>
+                      <div className="ml-4">// Step 1: Apply position caps</div>
+                      <div className="ml-4">totalExcess = 0</div>
+                      <div className="ml-4"><span className="text-blue-600">for each</span> player <span className="text-blue-600">in</span> teamPlayerShares:</div>
+                      <div className="ml-8">positionCap = getPositionCap(player.position, type)</div>
+                      <div className="ml-8">cappedShare = min(player.share, positionCap)</div>
+                      <div className="ml-8">excess = player.share - cappedShare</div>
+                      <div className="ml-8">totalExcess += excess</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4">// Step 2: Redistribute excess proportionally</div>
+                      <div className="ml-4"><span className="text-blue-600">if</span> totalExcess &gt; 0:</div>
+                      <div className="ml-8">totalCappedShare = sum(all cappedShares)</div>
+                      <div className="ml-8">redistributionFactor = totalExcess / totalCappedShare</div>
+                      <div className="ml-8"><span className="text-blue-600">for each</span> player <span className="text-blue-600">not at cap</span>:</div>
+                      <div className="ml-12">player.share = min(player.share × (1 + redistributionFactor), positionCap)</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4">// Step 3: Normalize to 100%</div>
+                      <div className="ml-4">totalShare = sum(all player shares)</div>
+                      <div className="ml-4"><span className="text-blue-600">for each</span> player:</div>
+                      <div className="ml-8">player.share = (player.share / totalShare) × 100</div>
+                    </div>
+                  </div>
+                  <div className="bg-yellow-50 p-3 rounded text-sm">
+                    <strong className="text-yellow-900">Position Caps Reference:</strong>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div className="text-yellow-800">
+                        <strong>Goals:</strong> GK 2%, DEF 10%, MID 25%, FWD 30%
+                      </div>
+                      <div className="text-yellow-800">
+                        <strong>Assists:</strong> GK 2%, DEF 15%, MID 30%, FWD 25%
                       </div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
 
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">4. Clean Sheet Probability Formula</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg font-mono text-sm">
-                      <div className="space-y-2">
-                        <div>cleanSheetProbability = 100 × Math.exp(-1.1 × expectedGoalsAgainst)</div>
-                        <div>playerCSPoints = cleanSheetProbability × minutes60PlusProbability × positionPoints</div>
-                        <div>// Position points: GK/DEF = 4pts, MID = 1pt, FWD = 0pts</div>
-                      </div>
+              {/* Algorithm 3: Set Piece Adjustments */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-purple-600" />
+                    3. Set Piece Adjustments Algorithm
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-purple-900 mb-3">Penalty Taker Adjustment (Goals)</h4>
+                    <div className="bg-white p-3 rounded border font-mono text-sm space-y-2">
+                      <div className="text-blue-600">function</div> <div>getPenaltyTakerAdjustment(playerId, bootstrapData):</div>
+                      <div className="ml-4">player = bootstrapData.elements.find(p =&gt; p.id === playerId)</div>
+                      <div className="ml-4">penaltyOrder = player.penalties_order</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4"><span className="text-blue-600">if</span> penaltyOrder === 1:  // Primary</div>
+                      <div className="ml-8">adjustment = 0.6 + (player.goals_scored × 0.03)</div>
+                      <div className="ml-8">adjustment = min(0.8, adjustment)  // Cap at 0.8</div>
+                      <div className="ml-4"><span className="text-blue-600">else if</span> penaltyOrder === 2:  // Secondary</div>
+                      <div className="ml-8">adjustment = 0.3 + (player.goals_scored × 0.025)</div>
+                      <div className="ml-8">adjustment = min(0.5, adjustment)  // Cap at 0.5</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4"><span className="text-green-600">return</span> adjustment</div>
                     </div>
                   </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">5. Mathematical Balance System</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm mb-3">
-                        The system ensures perfect mathematical balance using a two-pass normalization algorithm:
-                      </p>
-                      <div className="font-mono text-sm space-y-2">
-                        <div>// Pass 1: Apply position caps</div>
-                        <div>cappedShares = applyPositionCaps(rawShares)</div>
-                        <div>excessGoals = teamGoals - sum(cappedShares)</div>
-                        <div></div>
-                        <div>// Pass 2: Redistribute excess proportionally</div>
-                        <div>redistributedShares = redistributeExcess(cappedShares, excessGoals)</div>
-                        <div>finalShares = normalize(redistributedShares, teamGoals)</div>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-3">
-                        This reduces goal projection discrepancy from 104+ goals to only 0.29 goals (99.975% accuracy).
-                      </p>
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-900 mb-3">Corner Taker Adjustment (Assists)</h4>
+                    <div className="bg-white p-3 rounded border font-mono text-sm space-y-2">
+                      <div className="text-blue-600">function</div> <div>getCornerFreekickAdjustment(playerId, bootstrapData):</div>
+                      <div className="ml-4">player = bootstrapData.elements.find(p =&gt; p.id === playerId)</div>
+                      <div className="ml-4">cornerOrder = player.corners_and_indirect_freekicks_order</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4"><span className="text-blue-600">if</span> cornerOrder === 1:  // Primary</div>
+                      <div className="ml-8">adjustment = 0.8 + (player.assists × 0.04)</div>
+                      <div className="ml-8">adjustment = min(1.2, adjustment)  // Cap at 1.2</div>
+                      <div className="ml-4"><span className="text-blue-600">else if</span> cornerOrder === 2:  // Secondary</div>
+                      <div className="ml-8">adjustment = 0.5 + (player.assists × 0.03)</div>
+                      <div className="ml-8">adjustment = min(0.8, adjustment)  // Cap at 0.8</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4"><span className="text-green-600">return</span> adjustment</div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* Algorithm 4: Clean Sheet Probability */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-cyan-600" />
+                    4. Clean Sheet Probability Algorithm
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-cyan-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-cyan-900 mb-3">Exponential Decay Formula (Poisson-based)</h4>
+                    <div className="bg-white p-3 rounded border font-mono text-sm space-y-2">
+                      <div className="text-blue-600">function</div> <div>calculateCleanSheetProbability(teamId, opponent, venue):</div>
+                      <div className="ml-4">// Calculate expected goals conceded</div>
+                      <div className="ml-4">goalsConceded = calculateOpponentGoalsScored(opponent, teamId, venue)</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4">// Apply exponential decay (Poisson P(0) formula)</div>
+                      <div className="ml-4">cleanSheetProbability = 100 × Math.exp(-1.1 × goalsConceded)</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4">// Calculate player clean sheet points</div>
+                      <div className="ml-4">positionPoints = getPositionCSPoints(player.position)</div>
+                      <div className="ml-4">minutes60PlusProb = player.expectedMinutes &gt;= 60 ? 1.0 : 0.0</div>
+                      <div className="ml-4">playerCSPoints = (cleanSheetProbability / 100) × minutes60PlusProb × positionPoints</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4"><span className="text-green-600">return</span> playerCSPoints</div>
+                    </div>
+                  </div>
+                  <div className="bg-green-50 p-3 rounded text-sm">
+                    <strong className="text-green-900">Probability Examples:</strong>
+                    <div className="grid grid-cols-2 gap-2 mt-2 text-green-800">
+                      <div>0.5 xGA → 57% CS chance</div>
+                      <div>1.0 xGA → 33% CS chance</div>
+                      <div>1.5 xGA → 19% CS chance</div>
+                      <div>2.0 xGA → 11% CS chance</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Algorithm 5: Mathematical Balance */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calculator className="h-5 w-5 text-amber-600" />
+                    5. Mathematical Balance Verification
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="bg-amber-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-amber-900 mb-3">Three-Phase Balance System</h4>
+                    <div className="bg-white p-3 rounded border font-mono text-sm space-y-2">
+                      <div className="text-blue-600">function</div> <div>ensureMathematicalBalance(teamGoals, playerProjections):</div>
+                      <div className="ml-4">// Phase 1: Apply position caps</div>
+                      <div className="ml-4">cappedProjections = enforcePositionCaps(playerProjections)</div>
+                      <div className="ml-4">sumCapped = sum(cappedProjections)</div>
+                      <div className="ml-4">excess = teamGoals - sumCapped</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4">// Phase 2: Redistribute excess</div>
+                      <div className="ml-4"><span className="text-blue-600">if</span> excess &gt; 0:</div>
+                      <div className="ml-8">redistributedProjections = redistributeProportionally(cappedProjections, excess)</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4">// Phase 3: Final normalization</div>
+                      <div className="ml-4">totalSum = sum(redistributedProjections)</div>
+                      <div className="ml-4">normalizedProjections = redistributedProjections.map(p =&gt; (p / totalSum) × teamGoals)</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4">// Verify balance</div>
+                      <div className="ml-4">finalSum = sum(normalizedProjections)</div>
+                      <div className="ml-4">discrepancy = abs(finalSum - teamGoals)</div>
+                      <div className="ml-4"><span className="text-blue-600">assert</span> discrepancy &lt; 0.5  // Should be ≈0.29 goals</div>
+                    </div>
+                  </div>
+                  <div className="bg-green-50 p-3 rounded text-sm">
+                    <strong className="text-green-900">Balance Achievement:</strong>
+                    <div className="mt-2 text-green-800">
+                      Original system: 104+ goals discrepancy<br/>
+                      Current system: 0.29 goals discrepancy (99.975% accuracy)
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+            </div>
           </TabsContent>
 
           {/* Player Tools Tab */}
@@ -1403,197 +1544,577 @@ export default function ProjectionDocumentation() {
 
           {/* Data Sources Tab */}
           <TabsContent value="data-sources" className="space-y-6">
+            <Alert>
+              <Database className="h-4 w-4" />
+              <AlertDescription>
+                <strong>100% Authentic FPL Data:</strong> Every projection uses live data from official Fantasy Premier League APIs with strategic caching for optimal performance. No synthetic or estimated base values.
+              </AlertDescription>
+            </Alert>
+
+            {/* Current Standings API - NEW PRIMARY SOURCE */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Official FPL API Integration
+                  <Database className="h-5 w-5 text-green-600" />
+                  Current Standings API (Primary Data Source)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-gray-700">
-                  All projection tools use authentic data from the official Fantasy Premier League API, ensuring accuracy and reliability.
+                  <strong>The foundation of the hybrid formula:</strong> Real-time team performance data including live xGF and xGA from the current standings API.
+                </p>
+                
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-green-900 mb-2">API Endpoint</h4>
+                  <div className="bg-white p-3 rounded border font-mono text-sm">
+                    GET /api/current-standings
+                  </div>
+                  <p className="text-sm text-green-700 mt-2">
+                    Returns comprehensive team statistics for all 20 Premier League teams including goals scored/conceded, expected goals (xGF/xGA), points, and league position.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-900 mb-2">Live Team Metrics (from API)</h4>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>✓ Goals scored per game (actual)</li>
+                      <li>✓ Expected goals for (xGF) - LIVE</li>
+                      <li>✓ Goals conceded per game (actual)</li>
+                      <li>✓ Expected goals against (xGA) - LIVE</li>
+                      <li>✓ Played games count</li>
+                      <li>✓ Clean sheets & form</li>
+                    </ul>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-purple-900 mb-2">Caching Strategy</h4>
+                    <ul className="text-sm text-purple-700 space-y-1">
+                      <li>• Cache duration: 5 minutes</li>
+                      <li>• Updates after every match</li>
+                      <li>• In-memory storage for speed</li>
+                      <li>• Automatic refresh on invalidation</li>
+                      <li>• No manual intervention required</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 p-3 rounded">
+                  <strong className="text-yellow-900">Integration with Hybrid Formula:</strong>
+                  <p className="text-sm text-yellow-800 mt-2">
+                    The hybrid formula uses: (TeamAvgGoals + <strong>RealTeamxGF</strong> + OpponentAvgGC + <strong>RealOpponentxGA</strong>) × 0.25 × VenueFactor
+                  </p>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Where <strong>RealTeamxGF</strong> and <strong>RealOpponentxGA</strong> come directly from this API endpoint.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bootstrap Static API */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                  Bootstrap Static API
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-gray-700">
+                  Core FPL data containing all player information, team details, and current season statistics.
                 </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-900 mb-2">Real-time Data</h4>
+                    <h4 className="font-semibold text-green-900 mb-2">Player Data Fields</h4>
                     <ul className="text-sm text-green-700 space-y-1">
-                      <li>• Current season player statistics</li>
-                      <li>• Gameweek-by-gameweek results</li>
-                      <li>• Price changes and ownership</li>
-                      <li>• Transfer data and trends</li>
-                      <li>• Fixture lists and results</li>
+                      <li>• Goals, assists, clean sheets</li>
+                      <li>• Minutes played per game</li>
+                      <li>• Penalty & corner taker order</li>
+                      <li>• Current price & ownership</li>
+                      <li>• Position & team assignment</li>
+                      <li>• Form & ICT indices</li>
                     </ul>
                   </div>
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-blue-900 mb-2">API Endpoints</h4>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• <code>/bootstrap-static/</code> - Core data</li>
-                      <li>• <code>/element-summary/:id</code> - Player details</li>
-                      <li>• <code>/fixtures/</code> - Match fixtures</li>
-                      <li>• <code>/entry/:id/</code> - Manager data</li>
-                      <li>• Daily automated fetching</li>
-                    </ul>
+                    <h4 className="font-semibold text-blue-900 mb-2">API Details</h4>
+                    <div className="text-sm text-blue-700 space-y-1">
+                      <div className="font-mono bg-white p-2 rounded">GET /api/bootstrap-static</div>
+                      <div className="mt-2">
+                        <strong>Update Frequency:</strong> Real-time
+                      </div>
+                      <div><strong>Cache:</strong> 10 minutes (in-memory)</div>
+                      <div><strong>Size:</strong> ~600KB compressed</div>
+                      <div><strong>Players:</strong> 700+ active players</div>
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Fixtures API */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Historical Player Statistics Database
+                  <Calendar className="h-5 w-5 text-purple-600" />
+                  Fixtures API
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-gray-700">
-                  Comprehensive historical data spanning 9 seasons (2016/17-2024/25) with over 2,800 player records.
+                  Complete fixture schedule with match results, difficulty ratings, and team matchups for all gameweeks.
                 </p>
                 
-                <div className="space-y-4">
-                  <Alert>
-                    <Database className="h-4 w-4" />
-                    <AlertDescription>
-                      Historical data sourced from official FPL API history_past field, ensuring complete accuracy and authenticity.
-                    </AlertDescription>
-                  </Alert>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <h4 className="font-semibold mb-2">Coverage Period</h4>
-                      <ul className="text-sm space-y-1 text-gray-600">
-                        <li>• 2016/17 season onwards</li>
-                        <li>• Complete season statistics</li>
-                        <li>• Player progression tracking</li>
-                        <li>• Position-specific metrics</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Data Points</h4>
-                      <ul className="text-sm space-y-1 text-gray-600">
-                        <li>• Goals, assists, clean sheets</li>
-                        <li>• Minutes played and appearances</li>
-                        <li>• Defensive contributions</li>
-                        <li>• FPL points and pricing</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold mb-2">Usage</h4>
-                      <ul className="text-sm space-y-1 text-gray-600">
-                        <li>• Player Statistics tool</li>
-                        <li>• Historical comparison</li>
-                        <li>• Trend analysis</li>
-                        <li>• Projection modeling</li>
-                      </ul>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-purple-50 p-3 rounded">
+                    <h4 className="font-semibold text-purple-900 mb-2">Fixture Data</h4>
+                    <ul className="text-sm text-purple-700 space-y-1">
+                      <li>• Home vs Away teams</li>
+                      <li>• Gameweek number</li>
+                      <li>• Kickoff time</li>
+                      <li>• Venue information</li>
+                      <li>• Difficulty ratings (1-5)</li>
+                    </ul>
+                  </div>
+                  <div className="bg-blue-50 p-3 rounded">
+                    <h4 className="font-semibold text-blue-900 mb-2">Usage</h4>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• Team goal projections</li>
+                      <li>• Match predictions</li>
+                      <li>• Venue factor application</li>
+                      <li>• Context multipliers</li>
+                      <li>• Fixture planning</li>
+                    </ul>
+                  </div>
+                  <div className="bg-green-50 p-3 rounded">
+                    <h4 className="font-semibold text-green-900 mb-2">API Details</h4>
+                    <div className="text-sm text-green-700 space-y-1">
+                      <div className="font-mono bg-white p-1 rounded text-xs">GET /api/fixtures</div>
+                      <div className="mt-1">Cache: 10 min</div>
+                      <div>Coverage: All GWs</div>
+                      <div>Real-time updates</div>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Database-Cached Projections */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Server className="h-5 w-5 text-orange-600" />
+                  Database-Cached Projections
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-gray-700">
+                  Computed projections cached in PostgreSQL database for lightning-fast retrieval and consistent calculations.
+                </p>
+                
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-orange-900 mb-3">Cached Tables & Endpoints</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="bg-white p-3 rounded border">
+                      <div className="font-mono text-xs text-orange-800">cached_player_total_points</div>
+                      <div className="text-xs text-gray-600 mt-1">API: /api/cached/player-total-points</div>
+                      <div className="text-xs text-gray-500">All-in-one points projection</div>
+                    </div>
+                    <div className="bg-white p-3 rounded border">
+                      <div className="font-mono text-xs text-orange-800">cached_team_goals</div>
+                      <div className="text-xs text-gray-600 mt-1">API: /api/team-goal-projections</div>
+                      <div className="text-xs text-gray-500">Hybrid team goals (10min cache)</div>
+                    </div>
+                    <div className="bg-white p-3 rounded border">
+                      <div className="font-mono text-xs text-orange-800">cached_player_save_points</div>
+                      <div className="text-xs text-gray-600 mt-1">GK saves projection</div>
+                      <div className="text-xs text-gray-500">Based on opponent shots</div>
+                    </div>
+                    <div className="bg-white p-3 rounded border">
+                      <div className="font-mono text-xs text-orange-800">cached_player_bonus_points</div>
+                      <div className="text-xs text-gray-600 mt-1">Bonus points probability</div>
+                      <div className="text-xs text-gray-500">BPS-based calculation</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 p-3 rounded text-sm">
+                  <strong className="text-blue-900">Cache Strategy Benefits:</strong>
+                  <ul className="list-disc ml-5 mt-2 text-blue-700">
+                    <li>Sub-second response times for complex projections</li>
+                    <li>Consistent calculations across all users</li>
+                    <li>Reduced API load on FPL servers</li>
+                    <li>Automatic refresh after gameweeks</li>
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Historical Database */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Archive className="h-5 w-5 text-cyan-600" />
+                  Historical Player Database
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-gray-700">
+                  Nine seasons of FPL history (2016/17 - 2024/25) with 2,800+ player records for trend analysis and projections.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-cyan-50 p-3 rounded">
+                    <h4 className="font-semibold text-cyan-900 mb-2">Coverage</h4>
+                    <ul className="text-sm text-cyan-700 space-y-1">
+                      <li>• 9 complete seasons</li>
+                      <li>• 2,800+ player records</li>
+                      <li>• All positions covered</li>
+                      <li>• Loan & transfer tracking</li>
+                    </ul>
+                  </div>
+                  <div className="bg-blue-50 p-3 rounded">
+                    <h4 className="font-semibold text-blue-900 mb-2">Metrics</h4>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• Goals & assists</li>
+                      <li>• Clean sheets</li>
+                      <li>• Minutes & appearances</li>
+                      <li>• Points & pricing</li>
+                    </ul>
+                  </div>
+                  <div className="bg-green-50 p-3 rounded">
+                    <h4 className="font-semibold text-green-900 mb-2">Source</h4>
+                    <div className="text-sm text-green-700 space-y-1">
+                      <div className="font-mono bg-white p-1 rounded text-xs">FPL history_past</div>
+                      <div className="mt-1">Official FPL API</div>
+                      <div>100% authentic</div>
+                      <div>Annual updates</div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
           </TabsContent>
 
           {/* Configuration Tab */}
           <TabsContent value="configuration" className="space-y-6">
+            <Alert>
+              <Settings className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Implementation Location:</strong> All configuration constants are defined in <code>server/projection-adjustments.ts</code> and used across projection services. These values have been calibrated based on historical FPL performance data.
+              </AlertDescription>
+            </Alert>
+
+            {/* Venue Factors */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" />
-                  MASTER_TEAM_DEFAULTS Configuration
+                  <Home className="h-5 w-5 text-blue-600" />
+                  Venue Factors (Updated)
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <Alert>
-                  <Settings className="h-4 w-4" />
-                  <AlertDescription>
-                    Location: <code>server/routes.ts</code> lines 12-97. This configuration serves as the single source of truth for all projection calculations.
-                  </AlertDescription>
-                </Alert>
+              <CardContent className="space-y-4">
+                <p className="text-gray-700">
+                  Home/away adjustments applied to team goal projections, calibrated from 2024/25 season data.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-900 mb-3">Home Advantage</h4>
+                    <div className="text-3xl font-bold text-blue-700">1.12×</div>
+                    <p className="text-sm text-blue-600 mt-2">
+                      12% boost to expected goals at home
+                    </p>
+                    <div className="bg-white p-2 rounded mt-3 text-sm font-mono">
+                      const HOME_FACTOR = 1.12
+                    </div>
+                    <p className="text-xs text-blue-500 mt-2">
+                      Previously: 1.16× (reduced for accuracy)
+                    </p>
+                  </div>
+                  <div className="bg-orange-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-orange-900 mb-3">Away Penalty</h4>
+                    <div className="text-3xl font-bold text-orange-700">0.84×</div>
+                    <p className="text-sm text-orange-600 mt-2">
+                      16% reduction to expected goals away
+                    </p>
+                    <div className="bg-white p-2 rounded mt-3 text-sm font-mono">
+                      const AWAY_FACTOR = 0.84
+                    </div>
+                    <p className="text-xs text-orange-500 mt-2">
+                      Mirrors home advantage (1.12 ÷ 1.12 = 0.84)
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Team Classifications & Multipliers</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <h4 className="font-semibold mb-3">Attack Classifications</h4>
-                        <div className="space-y-3">
-                          <div className="bg-green-50 p-3 rounded">
-                            <div className="font-semibold text-green-900">Elite (1.35x)</div>
-                            <div className="text-sm text-green-700">Teams: [12, 13] - Liverpool, Manchester City</div>
-                          </div>
-                          <div className="bg-blue-50 p-3 rounded">
-                            <div className="font-semibold text-blue-900">Strong (1.15x)</div>
-                            <div className="text-sm text-blue-700">Teams: [1, 7, 15, 18, 2] - Arsenal, Chelsea, Newcastle, Tottenham, Aston Villa</div>
-                          </div>
-                          <div className="bg-gray-50 p-3 rounded">
-                            <div className="font-semibold text-gray-900">Average (1.00x)</div>
-                            <div className="text-sm text-gray-700">Teams: [6, 14, 4, 5, 10, 8] - Brighton, Man Utd, Bournemouth, Brentford, Fulham, Palace</div>
-                          </div>
-                          <div className="bg-orange-50 p-3 rounded">
-                            <div className="font-semibold text-orange-900">Weak (0.85x)</div>
-                            <div className="text-sm text-orange-700">Teams: [9, 16, 19, 20] - Everton, Forest, West Ham, Wolves</div>
-                          </div>
-                        </div>
+            {/* Position Caps */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <UserCheck className="h-5 w-5 text-purple-600" />
+                  Position Caps (Enforced)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-gray-700">
+                  Maximum share limits by position to prevent unrealistic individual projections. Enforced via <code>enforcePositionCaps()</code> in projection-adjustments.ts.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-green-900 mb-3">Goal Share Caps</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center bg-white p-2 rounded">
+                        <span className="text-sm">Goalkeeper (GK)</span>
+                        <span className="font-bold text-green-700">2%</span>
                       </div>
-
-                      <div>
-                        <h4 className="font-semibold mb-3">Defense Classifications</h4>
-                        <div className="space-y-3">
-                          <div className="bg-green-50 p-3 rounded">
-                            <div className="font-semibold text-green-900">Elite (0.70x)</div>
-                            <div className="text-sm text-green-700">Teams: [1] - Arsenal</div>
-                          </div>
-                          <div className="bg-blue-50 p-3 rounded">
-                            <div className="font-semibold text-blue-900">Strong (0.85x)</div>
-                            <div className="text-sm text-blue-700">Teams: [12, 13, 7, 15, 16] - Liverpool, Man City, Chelsea, Newcastle, Forest</div>
-                          </div>
-                          <div className="bg-gray-50 p-3 rounded">
-                            <div className="font-semibold text-gray-900">Average (1.00x)</div>
-                            <div className="text-sm text-gray-700">Teams: [2, 9, 14, 18, 8, 10] - Villa, Everton, Man Utd, Tottenham, Palace, Fulham</div>
-                          </div>
-                          <div className="bg-orange-50 p-3 rounded">
-                            <div className="font-semibold text-orange-900">Weak (1.15x)</div>
-                            <div className="text-sm text-orange-700">Teams: [4, 5, 6, 19, 20] - Bournemouth, Brentford, Brighton, West Ham, Wolves</div>
-                          </div>
-                        </div>
+                      <div className="flex justify-between items-center bg-white p-2 rounded">
+                        <span className="text-sm">Defender (DEF)</span>
+                        <span className="font-bold text-green-700">10%</span>
+                      </div>
+                      <div className="flex justify-between items-center bg-white p-2 rounded">
+                        <span className="text-sm">Midfielder (MID)</span>
+                        <span className="font-bold text-green-700">25%</span>
+                      </div>
+                      <div className="flex justify-between items-center bg-white p-2 rounded">
+                        <span className="text-sm">Forward (FWD)</span>
+                        <span className="font-bold text-green-700">30%</span>
                       </div>
                     </div>
                   </div>
-
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">Penalty Taker Configuration</h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-sm text-gray-600 mb-3">
-                        Adjustments added to goals per 90 to account for penalty goals that xG methodology misses:
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm font-mono">
-                        <div>
-                          <h4 className="font-semibold mb-2">Primary Penalty Takers</h4>
-                          <div className="space-y-1">
-                            <div>Bruno Fernandes: +0.15</div>
-                            <div>Mohamed Salah: +0.12</div>
-                            <div>Harry Kane: +0.10</div>
-                            <div>Cole Palmer: +0.10</div>
-                            <div>Bukayo Saka: +0.08</div>
-                            <div>Erling Haaland: +0.08</div>
-                          </div>
-                        </div>
-                        <div>
-                          <h4 className="font-semibold mb-2">Position-Specific Caps</h4>
-                          <div className="space-y-1">
-                            <div>Goalkeeper (GKP): 2%</div>
-                            <div>Defender (DEF): 25%</div>
-                            <div>Midfielder (MID): 35%</div>
-                            <div>Forward (FWD): 35%</div>
-                          </div>
-                        </div>
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-900 mb-3">Assist Share Caps</h4>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center bg-white p-2 rounded">
+                        <span className="text-sm">Goalkeeper (GK)</span>
+                        <span className="font-bold text-blue-700">2%</span>
                       </div>
+                      <div className="flex justify-between items-center bg-white p-2 rounded">
+                        <span className="text-sm">Defender (DEF)</span>
+                        <span className="font-bold text-blue-700">15%</span>
+                      </div>
+                      <div className="flex justify-between items-center bg-white p-2 rounded">
+                        <span className="text-sm">Midfielder (MID)</span>
+                        <span className="font-bold text-blue-700">30%</span>
+                      </div>
+                      <div className="flex justify-between items-center bg-white p-2 rounded">
+                        <span className="text-sm">Forward (FWD)</span>
+                        <span className="font-bold text-blue-700">25%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 p-3 rounded text-sm">
+                  <strong className="text-yellow-900">Implementation Note:</strong>
+                  <p className="text-yellow-800 mt-1">
+                    Position caps are applied first, then excess is redistributed proportionally to uncapped players. This ensures team totals balance while preventing unrealistic individual shares.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Context Multipliers */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-orange-600" />
+                  Context Multipliers (15+ Factors)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-gray-700">
+                  Situational adjustments applied to team goal projections based on match context and team form.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-green-50 p-3 rounded">
+                    <h4 className="font-semibold text-green-900 mb-2">Form-Based</h4>
+                    <ul className="text-sm text-green-700 space-y-1">
+                      <li>• Winning streak (3+): 1.06×</li>
+                      <li>• Losing streak (3+): 0.91×</li>
+                      <li>• Recent form: ±5%</li>
+                      <li>• Momentum shifts</li>
+                    </ul>
+                  </div>
+                  <div className="bg-blue-50 p-3 rounded">
+                    <h4 className="font-semibold text-blue-900 mb-2">Match Context</h4>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• Derby matches: 0.87×</li>
+                      <li>• Top 6 clashes: 1.12×</li>
+                      <li>• Season finale (GW37+): 1.05×</li>
+                      <li>• European fixtures: 0.92×</li>
+                    </ul>
+                  </div>
+                  <div className="bg-purple-50 p-3 rounded">
+                    <h4 className="font-semibold text-purple-900 mb-2">Team-Specific</h4>
+                    <ul className="text-sm text-purple-700 space-y-1">
+                      <li>• New manager bounce: 1.08×</li>
+                      <li>• Relegation battle: 0.88×</li>
+                      <li>• Title race: 1.04×</li>
+                      <li>• Team news impact</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-3 rounded text-sm font-mono">
+                  <div><strong>Implementation:</strong> server/team-goals-service.ts</div>
+                  <div className="mt-2">function applyContextMultipliers(baseGoals, team, opponent, fixture)</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Set Piece Adjustments */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-cyan-600" />
+                  Set Piece Adjustments
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-gray-700">
+                  Bonus goals/assists for penalty takers and set piece specialists, applied after base projection calculations.
+                </p>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-cyan-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-cyan-900 mb-3">Penalty Takers (Goals)</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="bg-white p-2 rounded flex justify-between">
+                        <span>Primary taker</span>
+                        <span className="font-bold text-cyan-700">+0.6 to +0.8</span>
+                      </div>
+                      <div className="bg-white p-2 rounded flex justify-between">
+                        <span>Secondary taker</span>
+                        <span className="font-bold text-cyan-700">+0.3 to +0.5</span>
+                      </div>
+                      <p className="text-xs text-cyan-600 mt-2">
+                        Scales with player's goals scored history
+                      </p>
+                      <div className="bg-white p-2 rounded text-xs font-mono mt-2">
+                        adjustment = 0.6 + (goals × 0.03)<br/>
+                        capped at 0.8 per gameweek
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-900 mb-3">Corner/FK Takers (Assists)</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="bg-white p-2 rounded flex justify-between">
+                        <span>Primary taker</span>
+                        <span className="font-bold text-blue-700">+0.8 to +1.2</span>
+                      </div>
+                      <div className="bg-white p-2 rounded flex justify-between">
+                        <span>Secondary taker</span>
+                        <span className="font-bold text-blue-700">+0.5 to +0.8</span>
+                      </div>
+                      <p className="text-xs text-blue-600 mt-2">
+                        Scales with player's assists history
+                      </p>
+                      <div className="bg-white p-2 rounded text-xs font-mono mt-2">
+                        adjustment = 0.8 + (assists × 0.04)<br/>
+                        capped at 1.2 per gameweek
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 p-3 rounded text-sm">
+                  <strong className="text-yellow-900">Data Source:</strong>
+                  <p className="text-yellow-800 mt-1">
+                    Set piece taker order comes from bootstrap-static API: <code>penalties_order</code> and <code>corners_and_indirect_freekicks_order</code> fields
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Clean Sheet Configuration */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-teal-600" />
+                  Clean Sheet Probability Configuration
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-gray-700">
+                  Exponential decay formula parameters for calculating clean sheet probability from expected goals conceded.
+                </p>
+                
+                <div className="bg-teal-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-teal-900 mb-3">Formula Parameters</h4>
+                  <div className="bg-white p-3 rounded border font-mono text-sm">
+                    CS% = 100 × e^(-1.1 × xGA)
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div className="text-sm">
+                      <strong className="text-teal-900">Decay Rate:</strong>
+                      <div className="text-teal-700">1.1 (Poisson constant)</div>
+                    </div>
+                    <div className="text-sm">
+                      <strong className="text-teal-900">Base Multiplier:</strong>
+                      <div className="text-teal-700">100 (percentage scale)</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-green-50 p-3 rounded">
+                  <h4 className="font-semibold text-green-900 mb-2">Position Points Multipliers</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                    <div className="bg-white p-2 rounded text-center">
+                      <div className="font-bold text-green-700">GK: 4pts</div>
+                    </div>
+                    <div className="bg-white p-2 rounded text-center">
+                      <div className="font-bold text-green-700">DEF: 4pts</div>
+                    </div>
+                    <div className="bg-white p-2 rounded text-center">
+                      <div className="font-bold text-green-700">MID: 1pt</div>
+                    </div>
+                    <div className="bg-white p-2 rounded text-center">
+                      <div className="font-bold text-green-700">FWD: 0pts</div>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Mathematical Constants */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calculator className="h-5 w-5 text-gray-600" />
+                  Mathematical Constants
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-4 rounded">
+                    <h4 className="font-semibold mb-2">Assist Ratio</h4>
+                    <div className="text-2xl font-bold text-gray-700">0.72</div>
+                    <p className="text-sm text-gray-600 mt-1">
+                      TeamAssists = TeamGoals × 0.72
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Based on PL historical average (72% of goals have assists)
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded">
+                    <h4 className="font-semibold mb-2">Hybrid Weight</h4>
+                    <div className="text-2xl font-bold text-gray-700">0.25</div>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Equal weight to 4 data sources
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      (AvgGoals + xGF + OpponentGC + OpponentxGA) × 0.25
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
           </TabsContent>
 
           {/* Troubleshooting Tab */}
