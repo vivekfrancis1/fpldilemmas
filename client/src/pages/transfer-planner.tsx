@@ -4356,7 +4356,7 @@ export default function TransferPlanner() {
                                         <Button
                                           size="sm"
                                           variant="ghost"
-                                          className="h-8 w-[72px] text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
+                                          className="h-10 w-[72px] mt-1 text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
                                           onClick={() => handleTransferOut(pick)}
                                           data-testid={`pitch-transfer-out-${pick.element}`}
                                           title="Transfer Out"
@@ -4585,7 +4585,7 @@ export default function TransferPlanner() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-8 w-[72px] text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
+                                    className="h-10 w-[72px] mt-1 text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
                                     onClick={() => handleTransferOut(pick)}
                                     data-testid={`pitch-bench-transfer-out-${pick.element}`}
                                     title="Transfer Out"
