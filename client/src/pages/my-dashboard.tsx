@@ -985,31 +985,6 @@ export default function MyDashboard() {
                   {/* Pitch View */}
                   {teamView === "pitch" && (
                     <div className="space-y-4">
-                      {/* Pitch Header - Points and Transfers */}
-                      <div className="bg-white rounded-lg shadow-md p-4">
-                        <div className="flex justify-between items-center">
-                          <div className="text-center flex-1">
-                            <div className="text-sm text-gray-600 mb-1">Gameweek {getCurrentGameweekDashboard()}</div>
-                            <div className="text-3xl font-bold text-gray-900">{managerData?.summary_event_points || 0}</div>
-                            <div className="text-xs text-gray-500 mt-1">Total Points</div>
-                          </div>
-                          <div className="h-12 w-px bg-gray-300"></div>
-                          <div className="text-center flex-1">
-                            <div className="text-sm text-gray-600 mb-1">Transfers</div>
-                            <div className="text-3xl font-bold text-gray-900">
-                              {teamData.entry_history?.event_transfers || 0}/1
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {teamData.entry_history?.event_transfers_cost && teamData.entry_history.event_transfers_cost > 0 ? (
-                                <span className="text-red-600">Cost: -{teamData.entry_history.event_transfers_cost} pts</span>
-                              ) : (
-                                <span>Free Transfers</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
                       {/* Pitch */}
                       <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8">
                         {/* Pitch Lines */}
