@@ -4038,7 +4038,7 @@ export default function TransferPlanner() {
                                         )}
                                       </div>
                                       <div className="text-sm text-muted-foreground">
-                                        {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)}{pick && <span className="hidden md:inline"> • Sell: ~£{getSellingPrice(pick).toFixed(1)}m</span>}
+                                        {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)}
                                       </div>
                                     </div>
                                   </div>
@@ -4118,7 +4118,7 @@ export default function TransferPlanner() {
                                 )}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)}{pick && <span className="hidden md:inline"> • Sell: ~£{getSellingPrice(pick).toFixed(1)}m</span>}
+                                {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)}
                               </div>
                             </div>
                           </div>
