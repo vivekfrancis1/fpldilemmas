@@ -308,6 +308,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   const [loadGroupFilter, setLoadGroupFilter] = useState("All");
   const [sortField, setSortField] = useState<string>('total');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [minPrice, setMinPrice] = useState<number>(4.0);
+  const [maxPrice, setMaxPrice] = useState<number>(15.0);
+  const [onlyAffordable, setOnlyAffordable] = useState(false);
   const sectionRef = useRef<HTMLDivElement>(null);
 
   // Update position filter when initialPositionFilter changes
@@ -429,8 +432,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                            player.team.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesPosition = positionFilter === "all" || player.position === positionFilter;
       const matchesTeam = teamFilter === "all" || player.team === teamFilter;
+      const matchesPrice = player.price >= minPrice && player.price <= maxPrice;
+      const isAffordable = !onlyAffordable || player.price <= currentBank;
       
-      return matchesSearch && matchesPosition && matchesTeam;
+      return matchesSearch && matchesPosition && matchesTeam && matchesPrice && isAffordable;
     })
     .sort((a, b) => {
       let comparison = 0;
@@ -525,6 +530,46 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                 <SelectItem value="All">All Players</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          {/* Row 3: Price Filter */}
+          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Price:</span>
+              <Input
+                type="number"
+                step="0.1"
+                min="4.0"
+                max="15.0"
+                value={minPrice}
+                onChange={(e) => setMinPrice(parseFloat(e.target.value) || 4.0)}
+                className="h-8 w-20 text-sm"
+                data-testid="input-min-price"
+              />
+              <span className="text-sm text-muted-foreground">to</span>
+              <Input
+                type="number"
+                step="0.1"
+                min="4.0"
+                max="15.0"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 15.0)}
+                className="h-8 w-20 text-sm"
+                data-testid="input-max-price"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="only-affordable"
+                checked={onlyAffordable}
+                onChange={(e) => setOnlyAffordable(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+                data-testid="checkbox-only-affordable"
+              />
+              <label htmlFor="only-affordable" className="text-sm text-muted-foreground cursor-pointer">
+                Only show affordable (≤£{currentBank.toFixed(1)}m)
+              </label>
+            </div>
           </div>
         </div>
       </CardHeader>
