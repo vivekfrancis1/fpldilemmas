@@ -334,6 +334,22 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     queryKey: ["/api/bootstrap-static"],
   });
 
+  // Apply availability adjustments to all players - MUST BE BEFORE EARLY RETURNS
+  const adjustedPlayersData = useMemo(() => {
+    if (!bootstrapData || !allPlayersData) return allPlayersData || [];
+    
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    const nextEvent = bootstrapData.events.find(e => e.is_next);
+    let currentGameweek = currentEvent?.id || nextEvent?.id || 1;
+    if (currentEvent?.finished) {
+      currentGameweek = nextEvent?.id || currentGameweek + 1;
+    }
+    
+    return allPlayersData.map(player => 
+      applyAvailabilityAdjustments(player, bootstrapData, currentGameweek)
+    );
+  }, [allPlayersData, bootstrapData]);
+
   if (isLoading) {
     return (
       <Card>
@@ -357,22 +373,6 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
       </Card>
     );
   }
-
-  // Apply availability adjustments to all players
-  const adjustedPlayersData = useMemo(() => {
-    if (!bootstrapData) return allPlayersData;
-    
-    const currentEvent = bootstrapData.events.find(e => e.is_current);
-    const nextEvent = bootstrapData.events.find(e => e.is_next);
-    let currentGameweek = currentEvent?.id || nextEvent?.id || 1;
-    if (currentEvent?.finished) {
-      currentGameweek = nextEvent?.id || currentGameweek + 1;
-    }
-    
-    return allPlayersData.map(player => 
-      applyAvailabilityAdjustments(player, bootstrapData, currentGameweek)
-    );
-  }, [allPlayersData, bootstrapData]);
 
   // Get next 6 gameweeks
   const getNextGameweeks = () => {
