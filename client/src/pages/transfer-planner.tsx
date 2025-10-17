@@ -3447,10 +3447,10 @@ export default function TransferPlanner() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-xs text-muted-foreground mb-4 italic">
+            <div className="text-xs text-muted-foreground mb-2 italic">
               * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
             </div>
-            <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3">
               {/* Current Starting 11 */}
               <div>
                 {(() => {
@@ -3462,14 +3462,14 @@ export default function TransferPlanner() {
                   const formation = `${defs}-${mids}-${fwds}`;
                   
                   return (
-                    <h3 className="font-semibold mb-3 flex items-center gap-2">
-                      <Crown className="h-4 w-4 text-yellow-500" />
+                    <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                      <Crown className="h-3.5 w-3.5 text-yellow-500" />
                       Starting 11 
-                      <span className="text-sm font-normal text-muted-foreground">({formation})</span>
+                      <span className="text-xs font-normal text-muted-foreground">({formation})</span>
                     </h3>
                   );
                 })()}
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {/* Group players by position */}
                   {[1, 2, 3, 4].map(posType => {
                     const positionPlayers = manualLineup.slice(0, 11).filter(pick => {
@@ -3481,10 +3481,10 @@ export default function TransferPlanner() {
                     
                     return (
                       <div key={posType}>
-                        <div className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
-                          {posType === 1 ? 'Goalkeepers' : posType === 2 ? 'Defenders' : posType === 3 ? 'Midfielders' : 'Forwards'}
+                        <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase">
+                          {posType === 1 ? 'GKP' : posType === 2 ? 'DEF' : posType === 3 ? 'MID' : 'FWD'}
                         </div>
-                        <div className="grid gap-2">
+                        <div className="grid gap-1">
                           {positionPlayers.map((pick) => {
                             const player = getPlayerById(pick.element);
                             const projectedPoints = getPlayerProjectedPoints(pick.element);
@@ -3496,7 +3496,7 @@ export default function TransferPlanner() {
                               return (
                                 <div
                                   key={`empty-${pick.position}`}
-                                  className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20"
+                                  className="flex items-center justify-between p-1.5 rounded border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-xs"
                                   data-testid={`empty-slot-${pick.position}`}
                                 >
                                   <div className="flex items-center gap-3 flex-1">
@@ -3555,7 +3555,7 @@ export default function TransferPlanner() {
                             return (
                               <div
                                 key={pick.element}
-                                className={`flex items-center justify-between p-3 rounded-lg border-2 ${
+                                className={`flex items-center justify-between p-1.5 rounded border ${
                                   pick.is_captain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
                                   pick.is_vice_captain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
                                   isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
@@ -3563,21 +3563,21 @@ export default function TransferPlanner() {
                                 }`}
                                 data-testid={`starting-player-${pick.element}`}
                               >
-                                <div className="flex items-center gap-3 flex-1">
-                                  <div className="flex-1">
-                                    <div className="font-medium flex items-center gap-2">
-                                      {player.web_name}
+                                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
+                                      <span className="truncate">{player.web_name}</span>
                                       {isPlayerTransferredIn(pick) && (
-                                        <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">NEW</span>
+                                        <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
                                       )}
                                       {pick.is_captain && (
-                                        <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
+                                        <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-1 py-0.5 rounded">C</span>
                                       )}
                                       {pick.is_vice_captain && (
-                                        <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
+                                        <span className="text-[10px] font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">VC</span>
                                       )}
                                     </div>
-                                    <div className="text-sm text-muted-foreground">
+                                    <div className="text-[10px] text-muted-foreground truncate">
                                       {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
                                       {(() => {
                                         const fixture = getPlayerFixture(pick.element, selectedGameweek);
@@ -3587,9 +3587,9 @@ export default function TransferPlanner() {
                                         return null;
                                       })()}
                                     </div>
-                                    <div className="text-xs text-muted-foreground mt-1">
+                                    <div className="text-[10px] text-muted-foreground">
                                       {editingBuyPrice === pick.element ? (
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1">
                                           <span>Buy: £</span>
                                           <Input
                                             type="number"
@@ -3598,7 +3598,7 @@ export default function TransferPlanner() {
                                             max="15.0"
                                             value={editBuyPriceValue}
                                             onChange={(e) => setEditBuyPriceValue(e.target.value)}
-                                            className="h-6 w-16 text-xs"
+                                            className="h-5 w-14 text-[10px] p-1"
                                             autoFocus
                                             data-testid={`input-buy-price-${pick.element}`}
                                           />
@@ -3628,7 +3628,7 @@ export default function TransferPlanner() {
                                           </Button>
                                         </div>
                                       ) : (
-                                        <div className="flex gap-3 items-center">
+                                        <div className="flex gap-2 items-center">
                                           <span>Buy: £{((pick.purchase_price || player.now_cost) / 10).toFixed(1)}m</span>
                                           <Button
                                             size="icon"
@@ -3637,56 +3637,55 @@ export default function TransferPlanner() {
                                             onClick={() => startEditingBuyPrice(pick.element, pick.purchase_price || player.now_cost)}
                                             data-testid={`button-edit-buy-price-${pick.element}`}
                                           >
-                                            <Edit2 className="h-3 w-3 text-blue-600" />
+                                            <Edit2 className="h-2.5 w-2.5 text-blue-600" />
                                           </Button>
-                                          <span className="hidden md:inline">Current: £{(player.now_cost / 10).toFixed(1)}m</span>
                                           <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                         </div>
                                       )}
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1.5">
                                   <div className="text-right">
                                     {projectedPoints !== null ? (
                                       <>
-                                        <div className="font-bold text-blue-600">{projectedPoints.toFixed(2)} pts</div>
+                                        <div className="text-xs font-bold text-blue-600">{projectedPoints.toFixed(1)} pts</div>
                                         {pick.is_captain && (
-                                          <div className="text-xs text-muted-foreground">({(projectedPoints * 2).toFixed(2)} with (C))</div>
+                                          <div className="text-[10px] text-muted-foreground">({(projectedPoints * 2).toFixed(1)} C)</div>
                                         )}
                                       </>
                                     ) : (
-                                      <div className="text-sm text-muted-foreground">No projection</div>
+                                      <div className="text-[10px] text-muted-foreground">-</div>
                                     )}
                                   </div>
-                                  <div className="flex flex-wrap gap-1">
+                                  <div className="flex flex-wrap gap-0.5">
                                     {!pick.is_captain && (
                                       <Button
                                         size="icon"
                                         variant="ghost"
-                                        className="h-8 w-8 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
+                                        className="h-6 w-6 p-0 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
                                         onClick={() => handleSetCaptain(pick.element)}
                                         data-testid={`set-captain-${pick.element}`}
                                         title="Set as Captain"
                                       >
-                                        <Crown className="h-4 w-4" />
+                                        <Crown className="h-3 w-3" />
                                       </Button>
                                     )}
                                     {!pick.is_vice_captain && (
                                       <Button
                                         size="icon"
                                         variant="ghost"
-                                        className="h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                                        className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
                                         onClick={() => handleSetViceCaptain(pick.element)}
                                         data-testid={`set-vice-${pick.element}`}
                                         title="Set as Vice Captain"
                                       >
-                                        <Crown className="h-4 w-4" />
+                                        <Crown className="h-3 w-3" />
                                       </Button>
                                     )}
                                     <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
-                                      <SelectTrigger className="h-8 w-8 p-0 border-0 hover:bg-gray-100" data-testid={`swap-${pick.element}`} title="Swap with bench">
-                                        <ArrowUpDown className="h-4 w-4" />
+                                      <SelectTrigger className="h-6 w-6 p-0 border-0 hover:bg-gray-100" data-testid={`swap-${pick.element}`} title="Swap with bench">
+                                        <ArrowUpDown className="h-3 w-3" />
                                       </SelectTrigger>
                                       <SelectContent>
                                         {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
@@ -3726,12 +3725,12 @@ export default function TransferPlanner() {
                                       <Button
                                         size="icon"
                                         variant="ghost"
-                                        className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                        className="h-6 w-6 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
                                         onClick={() => handleTransferOut(pick)}
                                         data-testid={`transfer-out-${pick.element}`}
                                         title="Transfer Out"
                                       >
-                                        <X className="h-4 w-4" />
+                                        <X className="h-3 w-3" />
                                       </Button>
                                     )}
                                   </div>
@@ -3748,8 +3747,8 @@ export default function TransferPlanner() {
 
               {/* Current Bench */}
               <div>
-                <h3 className="font-semibold mb-3">Bench (Current Order)</h3>
-                <div className="grid gap-2">
+                <h3 className="text-sm font-semibold mb-2">Bench</h3>
+                <div className="grid gap-1">
                   {manualLineup.slice(11, 15).map((pick, index) => {
                     const player = getPlayerById(pick.element);
                     const projectedPoints = getPlayerProjectedPoints(pick.element);
@@ -3761,17 +3760,17 @@ export default function TransferPlanner() {
                       return (
                         <div
                           key={`empty-bench-${pick.position}`}
-                          className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20"
+                          className="flex items-center justify-between p-1.5 rounded border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-xs"
                           data-testid={`empty-slot-bench-${pick.position}`}
                         >
-                          <div className="flex items-center gap-3 flex-1">
-                            <span className="text-xs font-bold text-red-600 bg-red-200 dark:bg-red-700 px-2 py-1 rounded">
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                            <span className="text-[10px] font-bold text-red-600 bg-red-200 dark:bg-red-700 px-1 py-0.5 rounded">
                               {index + 1}
                             </span>
-                            <div className="flex-1">
-                              <div className="font-medium text-red-600">Empty Slot</div>
-                              <div className="text-sm text-muted-foreground">
-                                {getPositionShortName(player.element_type)} • Click "Replace" to find a player
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-medium text-red-600">Empty</div>
+                              <div className="text-[10px] text-muted-foreground truncate">
+                                {getPositionShortName(player.element_type)}
                               </div>
                             </div>
                           </div>
@@ -3823,25 +3822,25 @@ export default function TransferPlanner() {
                     return (
                       <div
                         key={pick.element}
-                        className={`flex items-center justify-between p-3 rounded-lg border-2 ${
+                        className={`flex items-center justify-between p-1.5 rounded border ${
                           isPlayerTransferredIn(pick) 
                             ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
                             : 'border-gray-200 bg-gray-50 dark:bg-gray-900'
                         }`}
                         data-testid={`bench-player-${pick.element}`}
                       >
-                        <div className="flex items-center gap-3 flex-1">
-                          <span className="text-xs font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                          <span className="text-[10px] font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">
                             {index + 1}
                           </span>
-                          <div className="flex-1">
-                            <div className="font-medium flex items-center gap-2">
-                              {player.web_name}
+                          <div className="flex-1 min-w-0">
+                            <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
+                              <span className="truncate">{player.web_name}</span>
                               {isPlayerTransferredIn(pick) && (
-                                <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">NEW</span>
+                                <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
                               )}
                             </div>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-[10px] text-muted-foreground truncate">
                               {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
                               {(() => {
                                 const fixture = getPlayerFixture(pick.element, selectedGameweek);
@@ -3851,9 +3850,9 @@ export default function TransferPlanner() {
                                 return null;
                               })()}
                             </div>
-                            <div className="text-xs text-muted-foreground mt-1">
+                            <div className="text-[10px] text-muted-foreground">
                               {editingBuyPrice === pick.element ? (
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1">
                                   <span>Buy: £</span>
                                   <Input
                                     type="number"
@@ -3862,7 +3861,7 @@ export default function TransferPlanner() {
                                     max="15.0"
                                     value={editBuyPriceValue}
                                     onChange={(e) => setEditBuyPriceValue(e.target.value)}
-                                    className="h-6 w-16 text-xs"
+                                    className="h-5 w-14 text-[10px] p-1"
                                     autoFocus
                                     data-testid={`input-buy-price-${pick.element}`}
                                   />
@@ -3892,7 +3891,7 @@ export default function TransferPlanner() {
                                   </Button>
                                 </div>
                               ) : (
-                                <div className="flex gap-3 items-center">
+                                <div className="flex gap-2 items-center">
                                   <span>Buy: £{((pick.purchase_price || player.now_cost) / 10).toFixed(1)}m</span>
                                   <Button
                                     size="icon"
@@ -3901,40 +3900,39 @@ export default function TransferPlanner() {
                                     onClick={() => startEditingBuyPrice(pick.element, pick.purchase_price || player.now_cost)}
                                     data-testid={`button-edit-buy-price-${pick.element}`}
                                   >
-                                    <Edit2 className="h-3 w-3 text-blue-600" />
+                                    <Edit2 className="h-2.5 w-2.5 text-blue-600" />
                                   </Button>
-                                  <span className="hidden md:inline">Current: £{(player.now_cost / 10).toFixed(1)}m</span>
                                   <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                 </div>
                               )}
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1 md:gap-3">
-                          <div className="text-xs md:text-sm text-muted-foreground">
-                            {projectedPoints !== null ? `${projectedPoints.toFixed(2)} pts` : 'No projection'}
+                        <div className="flex items-center gap-1">
+                          <div className="text-[10px] text-muted-foreground min-w-[40px] text-right">
+                            {projectedPoints !== null ? `${projectedPoints.toFixed(1)}` : '-'}
                           </div>
                           {!isGK && (
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-0.5">
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-6 w-6 p-0"
+                                className="h-4 w-4 p-0"
                                 onClick={() => moveBenchPlayer(index, 'up')}
                                 disabled={index === 1}
                                 data-testid={`move-up-${pick.element}`}
                               >
-                                <ChevronUp className="h-3 w-3 md:h-4 md:w-4" />
+                                <ChevronUp className="h-2.5 w-2.5" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-6 w-6 p-0"
+                                className="h-4 w-4 p-0"
                                 onClick={() => moveBenchPlayer(index, 'down')}
                                 disabled={index === 3}
                                 data-testid={`move-down-${pick.element}`}
                               >
-                                <ChevronDown className="h-3 w-3 md:h-4 md:w-4" />
+                                <ChevronDown className="h-2.5 w-2.5" />
                               </Button>
                             </div>
                           )}
@@ -3942,12 +3940,12 @@ export default function TransferPlanner() {
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-7 w-7 md:h-8 md:w-8 text-red-600 hover:bg-red-50 hover:text-red-700 flex-shrink-0"
+                              className="h-6 w-6 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
                               onClick={() => handleTransferOut(pick)}
                               data-testid={`bench-transfer-out-${pick.element}`}
                               title="Transfer Out"
                             >
-                              <X className="h-3 w-3 md:h-4 md:w-4" />
+                              <X className="h-3 w-3" />
                             </Button>
                           )}
                         </div>
@@ -3996,34 +3994,35 @@ export default function TransferPlanner() {
             )}
 
             {optimizedLineup && !optimizeMutation.isPending && (
-              <div className="mt-6 space-y-6">
-                <div className="text-xs text-muted-foreground mb-4 italic">
+              <div className="mt-4">
+                <div className="text-xs text-muted-foreground mb-2 italic">
                   * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
                 </div>
 
-                {/* Starting 11 */}
-                <div>
-                  <h3 className="font-semibold mb-3 flex items-center gap-2">
-                    <Crown className="h-4 w-4 text-yellow-500" />
-                    Starting 11
-                    <span className="text-sm font-normal text-muted-foreground">({optimizedLineup.formation})</span>
-                  </h3>
-                  <div className="space-y-4">
-                    {/* Group players by position */}
-                    {[1, 2, 3, 4].map(posType => {
-                      const positionPlayers = optimizedLineup.starting11.filter(player => {
-                        const fullPlayer = getPlayerById(player.element);
-                        return fullPlayer?.element_type === posType;
-                      });
-                      
-                      if (positionPlayers.length === 0) return null;
-                      
-                      return (
-                        <div key={posType}>
-                          <div className="text-xs font-semibold text-muted-foreground mb-2 uppercase">
-                            {posType === 1 ? 'Goalkeepers' : posType === 2 ? 'Defenders' : posType === 3 ? 'Midfielders' : 'Forwards'}
-                          </div>
-                          <div className="grid gap-2">
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3">
+                  {/* Starting 11 */}
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                      <Crown className="h-3.5 w-3.5 text-yellow-500" />
+                      Starting 11
+                      <span className="text-xs font-normal text-muted-foreground">({optimizedLineup.formation})</span>
+                    </h3>
+                    <div className="space-y-2">
+                      {/* Group players by position */}
+                      {[1, 2, 3, 4].map(posType => {
+                        const positionPlayers = optimizedLineup.starting11.filter(player => {
+                          const fullPlayer = getPlayerById(player.element);
+                          return fullPlayer?.element_type === posType;
+                        });
+                        
+                        if (positionPlayers.length === 0) return null;
+                        
+                        return (
+                          <div key={posType}>
+                            <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase">
+                              {posType === 1 ? 'GKP' : posType === 2 ? 'DEF' : posType === 3 ? 'MID' : 'FWD'}
+                            </div>
+                            <div className="grid gap-1">
                             {positionPlayers.map((player) => {
                               const fullPlayer = getPlayerById(player.element);
                               const pick = manualLineup.find(p => p.element === player.element);
@@ -4056,7 +4055,7 @@ export default function TransferPlanner() {
                               return (
                                 <div
                                   key={player.element}
-                                  className={`flex items-center justify-between p-3 rounded-lg border-2 ${
+                                  className={`flex items-center justify-between p-1.5 rounded border ${
                                     player.isCaptain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
                                     player.isViceCaptain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
                                     pick && isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
@@ -4064,21 +4063,21 @@ export default function TransferPlanner() {
                                   }`}
                                   data-testid={`optimized-player-${player.element}`}
                                 >
-                                  <div className="flex items-center gap-3 flex-1">
-                                    <div className="flex-1">
-                                      <div className="font-medium flex items-center gap-2">
-                                        {player.web_name}
+                                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
+                                        <span className="truncate">{player.web_name}</span>
                                         {pick && isPlayerTransferredIn(pick) && (
-                                          <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">NEW</span>
+                                          <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
                                         )}
                                         {player.isCaptain && (
-                                          <span className="text-xs font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">C</span>
+                                          <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-1 py-0.5 rounded">C</span>
                                         )}
                                         {player.isViceCaptain && (
-                                          <span className="text-xs font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">VC</span>
+                                          <span className="text-[10px] font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">VC</span>
                                         )}
                                       </div>
-                                      <div className="text-sm text-muted-foreground">
+                                      <div className="text-[10px] text-muted-foreground truncate">
                                         {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)}
                                         {(() => {
                                           const fixture = getPlayerFixture(player.element, selectedGameweek);
@@ -4090,11 +4089,11 @@ export default function TransferPlanner() {
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-1.5">
                                     <div className="text-right">
-                                      <div className="font-bold text-purple-600">{player.projectedPoints.toFixed(2)} pts</div>
+                                      <div className="text-xs font-bold text-purple-600">{player.projectedPoints.toFixed(1)} pts</div>
                                       {player.isCaptain && (
-                                        <div className="text-xs text-muted-foreground">({(player.projectedPoints * 2).toFixed(2)} with (C))</div>
+                                        <div className="text-[10px] text-muted-foreground">({(player.projectedPoints * 2).toFixed(1)} C)</div>
                                       )}
                                     </div>
                                   </div>
@@ -4110,8 +4109,8 @@ export default function TransferPlanner() {
 
                 {/* Bench */}
                 <div>
-                  <h3 className="font-semibold mb-3">Bench (Recommended Order)</h3>
-                  <div className="grid gap-2">
+                    <h3 className="text-sm font-semibold mb-2">Bench</h3>
+                    <div className="grid gap-1">
                     {optimizedLineup.bench.map((player) => {
                       const fullPlayer = getPlayerById(player.element);
                       const pick = manualLineup.find(p => p.element === player.element);
@@ -4147,25 +4146,25 @@ export default function TransferPlanner() {
                       return (
                         <div
                           key={player.element}
-                          className={`flex items-center justify-between p-3 rounded-lg border-2 ${
+                          className={`flex items-center justify-between p-1.5 rounded border ${
                             pick && isPlayerTransferredIn(pick) 
                               ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
                               : 'border-gray-200 bg-gray-50 dark:bg-gray-900'
                           }`}
                           data-testid={`bench-player-${player.element}`}
                         >
-                          <div className="flex items-center gap-3 flex-1">
-                            <span className="text-xs font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                            <span className="text-[10px] font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">
                               {player.benchPosition}
                             </span>
-                            <div className="flex-1">
-                              <div className="font-medium flex items-center gap-2">
-                                {player.web_name}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
+                                <span className="truncate">{player.web_name}</span>
                                 {pick && isPlayerTransferredIn(pick) && (
-                                  <span className="text-xs font-bold text-green-600 bg-green-100 dark:bg-green-900 px-2 py-1 rounded">NEW</span>
+                                  <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
                                 )}
                               </div>
-                              <div className="text-sm text-muted-foreground">
+                              <div className="text-[10px] text-muted-foreground truncate">
                                 {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)}
                                 {(() => {
                                   const fixture = getPlayerFixture(player.element, selectedGameweek);
@@ -4177,12 +4176,13 @@ export default function TransferPlanner() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <div className="text-sm text-muted-foreground">{player.projectedPoints.toFixed(2)} pts</div>
+                          <div className="flex items-center gap-1.5">
+                            <div className="text-[10px] text-muted-foreground">{player.projectedPoints.toFixed(1)}</div>
                           </div>
                         </div>
                       );
                     })}
+                    </div>
                   </div>
                 </div>
               </div>
