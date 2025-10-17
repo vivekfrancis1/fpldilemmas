@@ -1060,7 +1060,7 @@ export default function MyDashboard() {
                                         {/* Team Name */}
                                         <div className="text-center mb-1">
                                           <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
-                                            {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
+                                            {playerTeam?.short_name || 'UNK'}
                                           </div>
                                         </div>
 
@@ -1070,6 +1070,15 @@ export default function MyDashboard() {
                                             {player.web_name}
                                           </div>
                                         </div>
+
+                                        {/* Dream Team Indicator */}
+                                        {player.in_dreamteam && (
+                                          <div className="text-center mb-1">
+                                            <div className="text-lg font-bold" style={{ color: textColor }}>
+                                              *
+                                            </div>
+                                          </div>
+                                        )}
 
                                         {/* Points */}
                                         <div className="text-center mb-2">
@@ -1136,7 +1145,7 @@ export default function MyDashboard() {
                                         )}
                                         <div className="text-center mb-1">
                                           <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
-                                            {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
+                                            {playerTeam?.short_name || 'UNK'}
                                           </div>
                                         </div>
                                         <div className="text-center mb-1">
@@ -1144,6 +1153,13 @@ export default function MyDashboard() {
                                             {player.web_name}
                                           </div>
                                         </div>
+                                        {player.in_dreamteam && (
+                                          <div className="text-center mb-1">
+                                            <div className="text-lg font-bold" style={{ color: textColor }}>
+                                              *
+                                            </div>
+                                          </div>
+                                        )}
                                         <div className="text-center mb-2">
                                           <div className="text-2xl font-bold" style={{ color: textColor }}>
                                             {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
@@ -1206,7 +1222,7 @@ export default function MyDashboard() {
                                         )}
                                         <div className="text-center mb-1">
                                           <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
-                                            {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
+                                            {playerTeam?.short_name || 'UNK'}
                                           </div>
                                         </div>
                                         <div className="text-center mb-1">
@@ -1214,6 +1230,13 @@ export default function MyDashboard() {
                                             {player.web_name}
                                           </div>
                                         </div>
+                                        {player.in_dreamteam && (
+                                          <div className="text-center mb-1">
+                                            <div className="text-lg font-bold" style={{ color: textColor }}>
+                                              *
+                                            </div>
+                                          </div>
+                                        )}
                                         <div className="text-center mb-2">
                                           <div className="text-2xl font-bold" style={{ color: textColor }}>
                                             {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
@@ -1276,7 +1299,7 @@ export default function MyDashboard() {
                                         )}
                                         <div className="text-center mb-1">
                                           <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
-                                            {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
+                                            {playerTeam?.short_name || 'UNK'}
                                           </div>
                                         </div>
                                         <div className="text-center mb-1">
@@ -1284,6 +1307,13 @@ export default function MyDashboard() {
                                             {player.web_name}
                                           </div>
                                         </div>
+                                        {player.in_dreamteam && (
+                                          <div className="text-center mb-1">
+                                            <div className="text-lg font-bold" style={{ color: textColor }}>
+                                              *
+                                            </div>
+                                          </div>
+                                        )}
                                         <div className="text-center mb-2">
                                           <div className="text-2xl font-bold" style={{ color: textColor }}>
                                             {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
@@ -1331,7 +1361,7 @@ export default function MyDashboard() {
                                   >
                                     <div className="text-center mb-1">
                                       <div className="text-[9px] font-bold uppercase" style={{ color: textColor }}>
-                                        {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
+                                        {playerTeam?.short_name || 'UNK'}
                                       </div>
                                     </div>
                                     <div className="text-center mb-1">
@@ -1339,6 +1369,13 @@ export default function MyDashboard() {
                                         {player.web_name}
                                       </div>
                                     </div>
+                                    {player.in_dreamteam && (
+                                      <div className="text-center mb-1">
+                                        <div className="text-base font-bold" style={{ color: textColor }}>
+                                          *
+                                        </div>
+                                      </div>
+                                    )}
                                     <div className="text-center mb-1.5">
                                       <div className="text-xl font-bold" style={{ color: textColor }}>
                                         {player.event_points || 0}
