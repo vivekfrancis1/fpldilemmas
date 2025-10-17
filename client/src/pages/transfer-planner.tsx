@@ -3180,10 +3180,33 @@ export default function TransferPlanner() {
       {searchedId && teamData && selectedGameweek && (
         <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                {activeDraft === "Base" ? "Base Draft Team Summary" : `Draft ${activeDraft} Team Summary`}
+            <CardTitle className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                  {activeDraft === "Base" ? "Base Draft Team Summary" : `Draft ${activeDraft} Team Summary`}
+                </div>
+                {/* Planning Mode Tabs */}
+                <div className="flex gap-1 bg-muted/50 p-1 rounded-lg">
+                  <Button
+                    variant={plannerMode === "manual" ? "default" : "ghost"}
+                    size="sm"
+                    className="h-7 px-3 text-xs"
+                    onClick={() => setPlannerMode("manual")}
+                    data-testid="mode-button-manual"
+                  >
+                    Manual
+                  </Button>
+                  <Button
+                    variant={plannerMode === "auto" ? "default" : "ghost"}
+                    size="sm"
+                    className="h-7 px-3 text-xs"
+                    onClick={() => setPlannerMode("auto")}
+                    data-testid="mode-button-auto"
+                  >
+                    Auto
+                  </Button>
+                </div>
               </div>
               <div className="flex gap-1 md:gap-2">
                 {(completedTransfers.length > 0 || transferredOutPlayers.length > 0) && (
@@ -3381,37 +3404,6 @@ export default function TransferPlanner() {
                     This will result in {Math.abs(calculateTransfersRemaining()) * 4} points penalty
                   </div>
                 )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Planning Mode Selection */}
-      {searchedId && teamData && (
-        <Card>
-          <CardContent className="pt-6">
-            <div>
-              <div className="text-sm font-medium mb-2">Planning Mode</div>
-              <div className="flex gap-2">
-                <Button
-                  variant={plannerMode === "manual" ? "default" : "outline"}
-                  size="lg"
-                  className="flex-1"
-                  onClick={() => setPlannerMode("manual")}
-                  data-testid="mode-button-manual"
-                >
-                  Manual lineup
-                </Button>
-                <Button
-                  variant={plannerMode === "auto" ? "default" : "outline"}
-                  size="lg"
-                  className="flex-1"
-                  onClick={() => setPlannerMode("auto")}
-                  data-testid="mode-button-auto"
-                >
-                  Auto lineup
-                </Button>
               </div>
             </div>
           </CardContent>
