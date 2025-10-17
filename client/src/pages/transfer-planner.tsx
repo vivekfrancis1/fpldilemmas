@@ -3588,7 +3588,7 @@ export default function TransferPlanner() {
                             return (
                               <div
                                 key={pick.element}
-                                className={`flex items-center justify-between p-1.5 rounded border gap-1 min-h-[52px] ${
+                                className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] ${
                                   pick.is_captain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
                                   pick.is_vice_captain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
                                   isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
@@ -3702,7 +3702,7 @@ export default function TransferPlanner() {
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-0.5 shrink-0">
+                                <div className="flex items-center gap-2 shrink-0">
                                   <div className="text-right min-w-[32px]">
                                     {projectedPoints !== null ? (
                                       <>
@@ -3855,7 +3855,7 @@ export default function TransferPlanner() {
                     return (
                       <div
                         key={pick.element}
-                        className={`flex items-center justify-between p-1.5 rounded border gap-1 min-h-[52px] ${
+                        className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] ${
                           isPlayerTransferredIn(pick) 
                             ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
                             : 'border-gray-200 bg-gray-50 dark:bg-gray-900'
@@ -3941,7 +3941,7 @@ export default function TransferPlanner() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-0.5 shrink-0">
+                        <div className="flex items-center gap-2 shrink-0">
                           <div className="text-[10px] text-muted-foreground min-w-[32px] text-right">
                             {projectedPoints !== null ? `${projectedPoints.toFixed(1)}` : '-'}
                           </div>
@@ -4092,7 +4092,7 @@ export default function TransferPlanner() {
                               return (
                                 <div
                                   key={player.element}
-                                  className={`flex items-center justify-between p-1.5 rounded border gap-1 min-h-[52px] ${
+                                  className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] ${
                                     player.isCaptain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
                                     player.isViceCaptain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
                                     pick && isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
@@ -4126,7 +4126,7 @@ export default function TransferPlanner() {
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-0.5 shrink-0">
+                                  <div className="flex items-center gap-2 shrink-0">
                                     <div className="text-right min-w-[32px]">
                                       <div className="text-xs font-bold text-purple-600">{player.projectedPoints.toFixed(1)}</div>
                                       {player.isCaptain && (
@@ -4183,7 +4183,7 @@ export default function TransferPlanner() {
                       return (
                         <div
                           key={player.element}
-                          className={`flex items-center justify-between p-1.5 rounded border gap-1 min-h-[52px] ${
+                          className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] ${
                             pick && isPlayerTransferredIn(pick) 
                               ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
                               : 'border-gray-200 bg-gray-50 dark:bg-gray-900'
@@ -4213,7 +4213,7 @@ export default function TransferPlanner() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-0.5 shrink-0">
+                          <div className="flex items-center gap-2 shrink-0">
                             <div className="text-[10px] text-muted-foreground min-w-[32px] text-right">{player.projectedPoints.toFixed(1)}</div>
                           </div>
                         </div>
