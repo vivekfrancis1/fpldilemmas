@@ -5211,7 +5211,8 @@ export default function TransferPlanner() {
                                 }
 
                                 const teamColor = getTeamJerseyColor(fullPlayer.team);
-                                const textColor = getBrightness(teamColor) > 128 ? 'text-black' : 'text-white';
+                                const hexTextColor = getTextColor(teamColor);
+                                const textColor = hexTextColor === '#000000' ? 'text-black' : 'text-white';
 
                                 return (
                                   <div
@@ -5262,13 +5263,7 @@ export default function TransferPlanner() {
                                         if (fixture) {
                                           return (
                                             <div className="text-[10px] opacity-90 text-center mt-1 truncate">
-                                              {fixture.opponent} {fixture.difficulty && (
-                                                <span className={`inline-block w-3 h-3 rounded-full ml-1 ${
-                                                  fixture.difficulty <= 2 ? 'bg-green-500' :
-                                                  fixture.difficulty === 3 ? 'bg-yellow-500' :
-                                                  'bg-red-500'
-                                                }`}></span>
-                                              )}
+                                              {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}
                                             </div>
                                           );
                                         }
@@ -5310,7 +5305,8 @@ export default function TransferPlanner() {
                             }
 
                             const teamColor = getTeamJerseyColor(fullPlayer.team);
-                            const textColor = getBrightness(teamColor) > 128 ? 'text-black' : 'text-white';
+                            const hexTextColor = getTextColor(teamColor);
+                            const textColor = hexTextColor === '#000000' ? 'text-black' : 'text-white';
 
                             return (
                               <div
