@@ -4074,7 +4074,7 @@ export default function TransferPlanner() {
             {optimizedLineup && !optimizeMutation.isPending && (
               <div className="mt-4">
                 <div className="text-xs text-muted-foreground mb-2 italic">
-                  * All player swaps/transfers should be done in the Manual lineup, and it will automatically reflect in the Auto lineup.
+                  * All player transfers should be done from the Manual lineup section, and it will automatically reflect in the Auto lineup.
                 </div>
 
                 <div>
