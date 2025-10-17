@@ -385,6 +385,33 @@ export default function MyDashboard() {
     return bootstrapData?.teams.find(t => t.id === teamId);
   };
 
+  const getTeamJerseyColor = (teamId: number): string => {
+    const jerseyColors: Record<number, string> = {
+      1: '#EF0107',      // Arsenal - Red
+      2: '#95BFE5',      // Aston Villa - Claret & Blue (Light Blue)
+      3: '#E80909',      // Bournemouth - Red & Black
+      4: '#FDB913',      // Brentford - Red & White (Gold)
+      5: '#0057B8',      // Brighton - Blue & White
+      6: '#034694',      // Chelsea - Dark Blue
+      7: '#C8102E',      // Crystal Palace - Red & Blue
+      8: '#003399',      // Everton - Blue
+      9: '#FFFFFF',      // Fulham - White
+      10: '#FBEE23',     // Ipswich - Blue
+      11: '#003090',     // Leicester - Blue
+      12: '#C8102E',     // Liverpool - Red
+      13: '#6CABDD',     // Man City - Sky Blue
+      14: '#DA291C',     // Man Utd - Red
+      15: '#241F20',     // Newcastle - Black & White
+      16: '#DA020E',     // Nottm Forest - Red
+      17: '#1B458F',     // Southampton - Red & White
+      18: '#FFFFFF',     // Tottenham - White
+      19: '#FBEE23',     // West Ham - Claret & Blue (Gold)
+      20: '#FDB913'      // Wolves - Gold & Black
+    };
+    
+    return jerseyColors[teamId] || '#9CA3AF';
+  };
+
   const getNextFixtures = (teamId: number, count: number = 5) => {
     if (!fixturesData || !Array.isArray(fixturesData)) {
       return [];
