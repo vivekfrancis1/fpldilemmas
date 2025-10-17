@@ -1017,130 +1017,383 @@ export default function ProjectionDocumentation() {
 
           {/* Team Tools Tab */}
           <TabsContent value="team-tools" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Team-Level Projections:</strong> All team tools use the hybrid real FPL data methodology to calculate team-level statistics that feed into player projections. These tools provide the foundation for accurate player-level forecasting by establishing realistic team performance baselines.
+              </AlertDescription>
+            </Alert>
+
+            <div className="space-y-6">
               
-              {/* Team Goal Projections */}
+              {/* Team Goals Scored */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Target className="h-5 w-5 text-green-600" />
-                    Team Goal Projections
+                    Team Goals Scored
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-4">
                   <p className="text-sm text-gray-600">
-                    Advanced team-level goal forecasting using compressed goal range distributions and enhanced context multipliers.
+                    Advanced team-level goal forecasting using hybrid real FPL performance data combined with expected goals analysis. This is the foundation for all player goal and assist projections.
                   </p>
-                  <div className="space-y-2">
-                    <Badge variant="outline">Goal Range Compression</Badge>
-                    <Badge variant="outline">Enhanced Context Multipliers</Badge>
-                    <Badge variant="outline">Weather Integration</Badge>
-                    <Badge variant="outline">Referee Influence</Badge>
-                    <Badge variant="outline">Travel Distance Fatigue</Badge>
-                    <Badge variant="outline">Post-International Break</Badge>
+                  
+                  <div className="bg-green-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-green-900 mb-2">Hybrid Real Data Formula</h4>
+                    <div className="bg-white p-3 rounded border font-mono text-sm mb-3">
+                      TeamGoals = (TeamAvgGoals + RealTeamxGF + OpponentAvgGC + RealOpponentxGA) × 0.25 × VenueFactor × ContextMultipliers
+                    </div>
+                    <p className="text-sm text-green-800">
+                      This formula combines four real data sources: team's actual average goals scored, team's real expected goals from current standings, opponent's actual average goals conceded, and opponent's real expected goals against from current standings.
+                    </p>
                   </div>
-                  <div className="bg-green-50 p-3 rounded text-sm">
-                    <strong>Logic:</strong> Base xG (1.5) × attack tier × defense tier × venue factor × comprehensive context multipliers. Features realistic Premier League goal distributions with compression and 15+ context factors including weather, referee influence, and travel fatigue.
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-blue-50 p-3 rounded">
+                      <h4 className="font-semibold text-blue-900 mb-2">Real Data Inputs (100% FPL API)</h4>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• Team actual avg goals/game (from current standings)</li>
+                        <li>• Team real xGF/game (from FPL API standings)</li>
+                        <li>• Opponent actual avg goals conceded/game</li>
+                        <li>• Opponent real xGA/game (from FPL API)</li>
+                        <li>• No synthetic base xG - exclusively real data</li>
+                      </ul>
+                    </div>
+                    <div className="bg-purple-50 p-3 rounded">
+                      <h4 className="font-semibold text-purple-900 mb-2">Venue & Context Factors</h4>
+                      <ul className="text-sm text-purple-700 space-y-1">
+                        <li>• Home advantage: 1.12× (reduced from 1.16)</li>
+                        <li>• Away factor: 0.84×</li>
+                        <li>• Team form (last 5 games): ±6%</li>
+                        <li>• Derby matches: 0.87× (defensive)</li>
+                        <li>• Top 6 battles: 1.12× (high-scoring)</li>
+                        <li>• Season finale: 1.05× (open games)</li>
+                      </ul>
+                    </div>
                   </div>
-                  <div className="bg-blue-50 p-3 rounded text-sm">
-                    <strong>Enhanced Features:</strong> Weather impact analysis, referee historical influence, post-international break adjustments, and travel distance fatigue calculations for ultra-realistic projections.
+
+                  <div className="bg-yellow-50 p-3 rounded">
+                    <h4 className="font-semibold text-yellow-900 mb-2">Key Implementation Changes</h4>
+                    <ul className="text-sm text-yellow-800 space-y-1">
+                      <li>✅ Market bounds completely removed (was 0.6-3.0)</li>
+                      <li>✅ Tier-based multipliers replaced with live xGF/xGA data</li>
+                      <li>✅ 5-minute cache on current standings data</li>
+                      <li>✅ 10-minute cache on team goal projections</li>
+                      <li>✅ Real FPL data only - no synthetic calculations</li>
+                    </ul>
                   </div>
-                  <div className="bg-gray-50 p-3 rounded text-sm font-mono">
-                    <div>API: /api/team-goal-projections</div>
-                    <div>Context: 15+ multiplier factors</div>
-                    <div>Compression: Realistic PL distributions</div>
-                    <div>Cache: Optimized team projections</div>
+
+                  <div className="bg-gray-50 p-3 rounded text-sm font-mono space-y-1">
+                    <div><strong>API:</strong> /api/team-goal-projections</div>
+                    <div><strong>Service:</strong> TeamGoalsService.getTeamGoalProjections()</div>
+                    <div><strong>Data Source:</strong> /api/current-standings (real FPL data)</div>
+                    <div><strong>Cache:</strong> 10 minutes per gameweek range</div>
+                    <div><strong>Output:</strong> Expected goals per team per gameweek</div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Team Clean Sheet Projections */}
+              {/* Team Assists */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-blue-600" />
+                    Team Assists
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Team assist projections derived directly from team goal projections using historical Premier League assist-to-goal ratios.
+                  </p>
+                  
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-blue-900 mb-2">Simple Ratio Formula</h4>
+                    <div className="bg-white p-3 rounded border font-mono text-sm mb-3">
+                      TeamAssists = TeamGoals × 0.72
+                    </div>
+                    <p className="text-sm text-blue-800">
+                      Based on historical Premier League data showing that approximately 72% of goals have an associated assist. This ratio is consistent across teams and seasons.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-green-50 p-3 rounded">
+                      <h4 className="font-semibold text-green-900 mb-2">Calculation Flow</h4>
+                      <ul className="text-sm text-green-700 space-y-1">
+                        <li>1. Calculate team goals (hybrid formula)</li>
+                        <li>2. Multiply by 0.72 for assist total</li>
+                        <li>3. Distribute to players by assist share %</li>
+                        <li>4. Apply position caps (see below)</li>
+                        <li>5. Add set piece bonuses (corners/FKs)</li>
+                      </ul>
+                    </div>
+                    <div className="bg-purple-50 p-3 rounded">
+                      <h4 className="font-semibold text-purple-900 mb-2">Assist Share Position Caps</h4>
+                      <ul className="text-sm text-purple-700 space-y-1">
+                        <li>• Goalkeeper: Max 2% share</li>
+                        <li>• Defender: Max 15% share</li>
+                        <li>• Midfielder: Max 30% share</li>
+                        <li>• Forward: Max 25% share (lower than goals)</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="bg-orange-50 p-3 rounded">
+                    <h4 className="font-semibold text-orange-900 mb-2">Set Piece Assist Bonuses</h4>
+                    <p className="text-sm text-orange-800 mb-2">
+                      Additional assists added for corner and indirect freekick takers:
+                    </p>
+                    <ul className="text-sm text-orange-700 space-y-1">
+                      <li>• Primary corner taker: +0.8 to +1.2 assists</li>
+                      <li>• Secondary corner taker: +0.5 to +0.8 assists</li>
+                      <li>• Tertiary corner taker: +0.3 to +0.5 assists</li>
+                      <li>• Bonus scales with actual assists recorded</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-gray-50 p-3 rounded text-sm font-mono space-y-1">
+                    <div><strong>API:</strong> /api/team-assist-projections</div>
+                    <div><strong>Module:</strong> server/projection-adjustments.ts</div>
+                    <div><strong>Input:</strong> Team goal projections × 0.72</div>
+                    <div><strong>Adjustments:</strong> Position caps + set piece bonuses</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Team Goals Conceded & Clean Sheets */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Shield className="h-5 w-5 text-cyan-600" />
-                    Team Clean Sheet Odds
+                    Team Goals Conceded & Clean Sheets
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-4">
                   <p className="text-sm text-gray-600">
-                    Clean sheet probability calculations using updated exponential decay formula with enhanced defensive modeling.
+                    Team defensive projections calculated using opponent's attacking threat combined with exponential decay formula for clean sheet probability.
                   </p>
-                  <div className="space-y-2">
-                    <Badge variant="outline">Updated Exponential Decay</Badge>
-                    <Badge variant="outline">Enhanced xGA Analysis</Badge>
-                    <Badge variant="outline">Defensive Tier Integration</Badge>
-                    <Badge variant="outline">Context-Aware Modeling</Badge>
+                  
+                  <div className="bg-red-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-red-900 mb-2">Goals Conceded Calculation</h4>
+                    <div className="bg-white p-3 rounded border font-mono text-sm mb-3">
+                      GoalsConceded = OpponentGoalsScored<br/>
+                      (Using hybrid real data formula with venue inverted)
+                    </div>
+                    <p className="text-sm text-red-800">
+                      Goals conceded is simply the opponent's expected goals scored, calculated using the same hybrid formula but from the defensive perspective. Venue factors are inverted (home team defends better at 1.12×, worse away at 0.84×).
+                    </p>
                   </div>
-                  <div className="bg-cyan-50 p-3 rounded text-sm">
-                    <strong>Logic:</strong> Updated clean sheet formula using exponential decay calculation with enhanced defensive tier integration. CS% = 100 × e^(-1.1 × contextual_xGA) where contextual_xGA includes venue, opponent strength, and situational factors.
+
+                  <div className="bg-cyan-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-cyan-900 mb-2">Clean Sheet Probability Formula</h4>
+                    <div className="bg-white p-3 rounded border font-mono text-sm mb-3">
+                      CleanSheetProbability = 100 × e^(-1.1 × GoalsConceded)
+                    </div>
+                    <p className="text-sm text-cyan-800 mb-3">
+                      Exponential decay formula based on Poisson distribution theory. The decay factor of -1.1 provides realistic Premier League clean sheet probabilities.
+                    </p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="bg-white p-2 rounded border">
+                        <div className="font-semibold">0.5 xGA → 57% CS</div>
+                        <div className="text-xs text-gray-600">Elite defensive fixture</div>
+                      </div>
+                      <div className="bg-white p-2 rounded border">
+                        <div className="font-semibold">1.0 xGA → 33% CS</div>
+                        <div className="text-xs text-gray-600">Average fixture</div>
+                      </div>
+                      <div className="bg-white p-2 rounded border">
+                        <div className="font-semibold">1.5 xGA → 19% CS</div>
+                        <div className="text-xs text-gray-600">Difficult fixture</div>
+                      </div>
+                      <div className="bg-white p-2 rounded border">
+                        <div className="font-semibold">2.0 xGA → 11% CS</div>
+                        <div className="text-xs text-gray-600">Very difficult fixture</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-blue-50 p-3 rounded text-sm">
-                    <strong>Enhanced Features:</strong> Improved defensive strength calculations, better opponent attack integration, and contextual adjustments for fixture difficulty and team form.
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-green-50 p-3 rounded">
+                      <h4 className="font-semibold text-green-900 mb-2">Real Data Foundation</h4>
+                      <ul className="text-sm text-green-700 space-y-1">
+                        <li>• Opponent's actual goals scored/game</li>
+                        <li>• Opponent's real xGF from standings</li>
+                        <li>• Team's actual goals conceded/game</li>
+                        <li>• Team's real xGA from standings</li>
+                        <li>• Contextual adjustments applied</li>
+                      </ul>
+                    </div>
+                    <div className="bg-purple-50 p-3 rounded">
+                      <h4 className="font-semibold text-purple-900 mb-2">FPL Clean Sheet Points</h4>
+                      <ul className="text-sm text-purple-700 space-y-1">
+                        <li>• Goalkeeper: 4 points</li>
+                        <li>• Defender: 4 points</li>
+                        <li>• Midfielder: 1 point</li>
+                        <li>• Forward: 0 points</li>
+                        <li>• Requires 60+ minutes played</li>
+                      </ul>
+                    </div>
                   </div>
-                  <div className="bg-gray-50 p-3 rounded text-sm font-mono">
-                    <div>API: /api/team-cs-projections</div>
-                    <div>Formula: Updated exponential decay</div>
-                    <div>Input: Enhanced contextual xGA</div>
-                    <div>Cache: Team clean sheet projections</div>
+
+                  <div className="bg-gray-50 p-3 rounded text-sm font-mono space-y-1">
+                    <div><strong>API:</strong> /api/team-cs-projections</div>
+                    <div><strong>Formula:</strong> 100 × e^(-1.1 × xGA)</div>
+                    <div><strong>Input:</strong> Opponent goals scored (hybrid formula)</div>
+                    <div><strong>Output:</strong> Clean sheet probability % per fixture</div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Projected Standings */}
+              {/* Goal Share Distribution */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-orange-600" />
+                    Goal Share Distribution
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-gray-600">
+                    Individual player goal projections calculated by distributing team goals based on historical share percentage with strict position-based caps.
+                  </p>
+                  
+                  <div className="bg-orange-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-orange-900 mb-2">Player Goal Share Formula</h4>
+                    <div className="bg-white p-3 rounded border font-mono text-sm mb-3">
+                      PlayerGoals = TeamGoals × min(HistoricalShare × FormFactor, POSITION_CAP) × MinutesWeight
+                    </div>
+                    <p className="text-sm text-orange-800">
+                      Each player's goal projection is their share of the team's total expected goals, capped by position limits and weighted by expected minutes played.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-blue-50 p-3 rounded">
+                      <h4 className="font-semibold text-blue-900 mb-2">Position Caps (% of Team Goals)</h4>
+                      <ul className="text-sm text-blue-700 space-y-2">
+                        <li className="flex justify-between">
+                          <span>• Goalkeeper:</span>
+                          <strong>Max 2%</strong>
+                        </li>
+                        <li className="flex justify-between">
+                          <span>• Defender:</span>
+                          <strong>Max 10%</strong>
+                        </li>
+                        <li className="flex justify-between">
+                          <span>• Midfielder:</span>
+                          <strong>Max 25%</strong>
+                        </li>
+                        <li className="flex justify-between">
+                          <span>• Forward:</span>
+                          <strong>Max 30%</strong>
+                        </li>
+                      </ul>
+                      <p className="text-xs text-blue-600 mt-2">
+                        *Elite exceptions: Haaland 40%, Salah 30%
+                      </p>
+                    </div>
+                    <div className="bg-green-50 p-3 rounded">
+                      <h4 className="font-semibold text-green-900 mb-2">Share Calculation Process</h4>
+                      <ul className="text-sm text-green-700 space-y-1">
+                        <li>1. Calculate historical goal share %</li>
+                        <li>2. Apply current form multiplier</li>
+                        <li>3. Enforce position-based caps</li>
+                        <li>4. Redistribute excess to team</li>
+                        <li>5. Normalize to 100% team total</li>
+                        <li>6. Weight by expected minutes</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="bg-purple-50 p-3 rounded">
+                    <h4 className="font-semibold text-purple-900 mb-2">Penalty Taker Adjustments</h4>
+                    <p className="text-sm text-purple-800 mb-2">
+                      Additional goals added for penalty takers (not included in base xG):
+                    </p>
+                    <ul className="text-sm text-purple-700 space-y-1">
+                      <li>• Primary penalty taker: +0.6 to +0.8 goals (based on conversion rate)</li>
+                      <li>• Secondary penalty taker: +0.3 to +0.5 goals</li>
+                      <li>• Adjustment scales with goals scored history</li>
+                      <li>• Applied after base goal share calculation</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-gray-50 p-3 rounded text-sm font-mono space-y-1">
+                    <div><strong>API:</strong> /api/goal-share</div>
+                    <div><strong>Module:</strong> server/projection-adjustments.ts</div>
+                    <div><strong>Function:</strong> enforcePositionCaps()</div>
+                    <div><strong>Input:</strong> Team goals + player historical share</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Match Predictions & Standings */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-yellow-600" />
-                    Projected Standings
+                    Match Predictions & Standings
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-4">
                   <p className="text-sm text-gray-600">
-                    Final league table prediction using simulated match outcomes and point calculations.
+                    League standings and match result predictions using team goal projections to simulate all remaining fixtures and calculate final table positions.
                   </p>
-                  <div className="space-y-2">
-                    <Badge variant="outline">Match Simulation</Badge>
-                    <Badge variant="outline">Points Calculation</Badge>
-                    <Badge variant="outline">Qualification Zones</Badge>
-                    <Badge variant="outline">Season Projection</Badge>
+                  
+                  <div className="bg-yellow-50 p-4 rounded-lg">
+                    <h4 className="font-semibold text-yellow-900 mb-2">Match Outcome Simulation</h4>
+                    <div className="bg-white p-3 rounded border font-mono text-sm mb-3">
+                      For each fixture:<br/>
+                      • Calculate TeamA expected goals (hybrid formula)<br/>
+                      • Calculate TeamB expected goals (hybrid formula)<br/>
+                      • Determine result: Win if xG difference &gt; 0.5, else Draw<br/>
+                      • Award points: Win = 3, Draw = 1, Loss = 0
+                    </div>
                   </div>
-                  <div className="bg-yellow-50 p-3 rounded text-sm">
-                    <strong>Logic:</strong> Uses team goal projections to simulate all remaining fixtures. Calculates wins/draws/losses and projects final points totals for league table positions.
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded text-sm font-mono">
-                    <div>API: /api/projected-standings</div>
-                    <div>Method: Monte Carlo simulation</div>
-                    <div>Output: Final table with points</div>
-                  </div>
-                </CardContent>
-              </Card>
 
-              {/* Predicted Scores */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="h-5 w-5 text-purple-600" />
-                    Predicted Match Scores
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <p className="text-sm text-gray-600">
-                    Individual match result predictions using Poisson distribution and expected goals modeling.
-                  </p>
-                  <div className="space-y-2">
-                    <Badge variant="outline">Poisson Modeling</Badge>
-                    <Badge variant="outline">Score Probabilities</Badge>
-                    <Badge variant="outline">Result Prediction</Badge>
-                    <Badge variant="outline">Confidence Levels</Badge>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-blue-50 p-3 rounded">
+                      <h4 className="font-semibold text-blue-900 mb-2">Points Calculation</h4>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• Win: 3 points (xG margin &gt; 0.5)</li>
+                        <li>• Draw: 1 point (xG margin ≤ 0.5)</li>
+                        <li>• Loss: 0 points</li>
+                        <li>• Goal difference calculated from xG</li>
+                        <li>• Simulates all remaining fixtures</li>
+                      </ul>
+                    </div>
+                    <div className="bg-green-50 p-3 rounded">
+                      <h4 className="font-semibold text-green-900 mb-2">Standings Output</h4>
+                      <ul className="text-sm text-green-700 space-y-1">
+                        <li>• Current points + projected points</li>
+                        <li>• Final league position</li>
+                        <li>• Total goals for/against</li>
+                        <li>• Goal difference</li>
+                        <li>• Qualification zones (CL, EL, REL)</li>
+                      </ul>
+                    </div>
                   </div>
-                  <div className="bg-purple-50 p-3 rounded text-sm">
-                    <strong>Logic:</strong> Uses team goal projections as expected goals input for Poisson distribution. Calculates most likely scorelines and match outcome probabilities.
+
+                  <div className="bg-purple-50 p-3 rounded">
+                    <h4 className="font-semibold text-purple-900 mb-2">Poisson Score Predictions</h4>
+                    <p className="text-sm text-purple-800 mb-2">
+                      Alternative prediction method using Poisson distribution:
+                    </p>
+                    <ul className="text-sm text-purple-700 space-y-1">
+                      <li>• P(Team scores n goals) = (λ^n × e^-λ) / n!</li>
+                      <li>• λ = expected goals from hybrid formula</li>
+                      <li>• Calculate probability for each scoreline (0-0 to 5-5)</li>
+                      <li>• Most likely score = highest probability combination</li>
+                      <li>• Provides confidence intervals for predictions</li>
+                    </ul>
                   </div>
-                  <div className="bg-gray-50 p-3 rounded text-sm font-mono">
-                    <div>API: /api/predicted-scores</div>
-                    <div>Model: Poisson distribution</div>
-                    <div>Input: Expected goals per team</div>
+
+                  <div className="bg-gray-50 p-3 rounded text-sm font-mono space-y-1">
+                    <div><strong>API:</strong> /api/projected-standings</div>
+                    <div><strong>Input:</strong> Team goal projections (all fixtures)</div>
+                    <div><strong>Method:</strong> Deterministic simulation</div>
+                    <div><strong>Output:</strong> Final table with positions & points</div>
                   </div>
                 </CardContent>
               </Card>
