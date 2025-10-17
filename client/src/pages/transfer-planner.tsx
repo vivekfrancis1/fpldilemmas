@@ -3450,7 +3450,7 @@ export default function TransferPlanner() {
             <div className="text-xs text-muted-foreground mb-2 italic">
               * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3">
+            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-3">
               {/* Current Starting 11 */}
               <div>
                 {(() => {
@@ -3555,7 +3555,7 @@ export default function TransferPlanner() {
                             return (
                               <div
                                 key={pick.element}
-                                className={`flex items-center justify-between p-1.5 rounded border ${
+                                className={`flex items-center justify-between p-1.5 rounded border gap-1 min-h-[52px] ${
                                   pick.is_captain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
                                   pick.is_vice_captain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
                                   isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
@@ -3563,7 +3563,7 @@ export default function TransferPlanner() {
                                 }`}
                                 data-testid={`starting-player-${pick.element}`}
                               >
-                                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                <div className="flex items-center gap-1 flex-1 min-w-0">
                                   <div className="flex-1 min-w-0">
                                     <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
                                       <span className="truncate">{player.web_name}</span>
@@ -3645,20 +3645,20 @@ export default function TransferPlanner() {
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                  <div className="text-right">
+                                <div className="flex items-center gap-0.5 shrink-0">
+                                  <div className="text-right min-w-[32px]">
                                     {projectedPoints !== null ? (
                                       <>
-                                        <div className="text-xs font-bold text-blue-600">{projectedPoints.toFixed(1)} pts</div>
+                                        <div className="text-xs font-bold text-blue-600">{projectedPoints.toFixed(1)}</div>
                                         {pick.is_captain && (
-                                          <div className="text-[10px] text-muted-foreground">({(projectedPoints * 2).toFixed(1)} C)</div>
+                                          <div className="text-[10px] text-muted-foreground">({(projectedPoints * 2).toFixed(1)})</div>
                                         )}
                                       </>
                                     ) : (
                                       <div className="text-[10px] text-muted-foreground">-</div>
                                     )}
                                   </div>
-                                  <div className="flex flex-wrap gap-0.5">
+                                  <div className="flex flex-wrap gap-0.5 shrink-0">
                                     {!pick.is_captain && (
                                       <Button
                                         size="icon"
@@ -3822,14 +3822,14 @@ export default function TransferPlanner() {
                     return (
                       <div
                         key={pick.element}
-                        className={`flex items-center justify-between p-1.5 rounded border ${
+                        className={`flex items-center justify-between p-1.5 rounded border gap-1 min-h-[52px] ${
                           isPlayerTransferredIn(pick) 
                             ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
                             : 'border-gray-200 bg-gray-50 dark:bg-gray-900'
                         }`}
                         data-testid={`bench-player-${pick.element}`}
                       >
-                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                        <div className="flex items-center gap-1 flex-1 min-w-0">
                           <span className="text-[10px] font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">
                             {index + 1}
                           </span>
@@ -3908,12 +3908,12 @@ export default function TransferPlanner() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          <div className="text-[10px] text-muted-foreground min-w-[40px] text-right">
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <div className="text-[10px] text-muted-foreground min-w-[32px] text-right">
                             {projectedPoints !== null ? `${projectedPoints.toFixed(1)}` : '-'}
                           </div>
                           {!isGK && (
-                            <div className="flex flex-col gap-0.5">
+                            <div className="flex flex-col gap-0.5 shrink-0">
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -3940,7 +3940,7 @@ export default function TransferPlanner() {
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-6 w-6 p-0 text-red-600 hover:bg-red-50 hover:text-red-700"
+                              className="h-6 w-6 p-0 text-red-600 hover:bg-red-50 hover:text-red-700 shrink-0"
                               onClick={() => handleTransferOut(pick)}
                               data-testid={`bench-transfer-out-${pick.element}`}
                               title="Transfer Out"
@@ -3999,7 +3999,7 @@ export default function TransferPlanner() {
                   * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3">
+                <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-3">
                   {/* Starting 11 */}
                   <div>
                     <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
@@ -4055,7 +4055,7 @@ export default function TransferPlanner() {
                               return (
                                 <div
                                   key={player.element}
-                                  className={`flex items-center justify-between p-1.5 rounded border ${
+                                  className={`flex items-center justify-between p-1.5 rounded border gap-1 min-h-[52px] ${
                                     player.isCaptain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
                                     player.isViceCaptain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
                                     pick && isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
@@ -4063,7 +4063,7 @@ export default function TransferPlanner() {
                                   }`}
                                   data-testid={`optimized-player-${player.element}`}
                                 >
-                                  <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                  <div className="flex items-center gap-1 flex-1 min-w-0">
                                     <div className="flex-1 min-w-0">
                                       <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
                                         <span className="truncate">{player.web_name}</span>
@@ -4089,11 +4089,11 @@ export default function TransferPlanner() {
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <div className="text-right">
-                                      <div className="text-xs font-bold text-purple-600">{player.projectedPoints.toFixed(1)} pts</div>
+                                  <div className="flex items-center gap-0.5 shrink-0">
+                                    <div className="text-right min-w-[32px]">
+                                      <div className="text-xs font-bold text-purple-600">{player.projectedPoints.toFixed(1)}</div>
                                       {player.isCaptain && (
-                                        <div className="text-[10px] text-muted-foreground">({(player.projectedPoints * 2).toFixed(1)} C)</div>
+                                        <div className="text-[10px] text-muted-foreground">({(player.projectedPoints * 2).toFixed(1)})</div>
                                       )}
                                     </div>
                                   </div>
@@ -4146,14 +4146,14 @@ export default function TransferPlanner() {
                       return (
                         <div
                           key={player.element}
-                          className={`flex items-center justify-between p-1.5 rounded border ${
+                          className={`flex items-center justify-between p-1.5 rounded border gap-1 min-h-[52px] ${
                             pick && isPlayerTransferredIn(pick) 
                               ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
                               : 'border-gray-200 bg-gray-50 dark:bg-gray-900'
                           }`}
                           data-testid={`bench-player-${player.element}`}
                         >
-                          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                          <div className="flex items-center gap-1 flex-1 min-w-0">
                             <span className="text-[10px] font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">
                               {player.benchPosition}
                             </span>
@@ -4176,8 +4176,8 @@ export default function TransferPlanner() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5">
-                            <div className="text-[10px] text-muted-foreground">{player.projectedPoints.toFixed(1)}</div>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <div className="text-[10px] text-muted-foreground min-w-[32px] text-right">{player.projectedPoints.toFixed(1)}</div>
                           </div>
                         </div>
                       );
