@@ -836,6 +836,7 @@ export default function TransferPlanner() {
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<number | null>(null);
   const [plannerMode, setPlannerMode] = useState<"auto" | "manual">("manual");
+  const [teamView, setTeamView] = useState<"list" | "pitch">("pitch");
   const [optimizedLineup, setOptimizedLineup] = useState<OptimizedLineup | null>(null);
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
   
@@ -2821,6 +2822,42 @@ export default function TransferPlanner() {
 
   const nextGameweeks = getNextGameweeks();
 
+  // Jersey color helper functions
+  const getTeamJerseyColor = (teamId: number): string => {
+    const jerseyColors: { [key: number]: string } = {
+      1: '#EF0107',    // Arsenal - Red
+      2: '#95BFE5',    // Aston Villa - Claret & Blue
+      3: '#E80909',    // Bournemouth - Red & Black
+      4: '#FBEE23',    // Brentford - Red & White
+      5: '#0057B8',    // Brighton - Blue & White
+      6: '#6CABDD',    // Chelsea - Blue
+      7: '#1B458F',    // Crystal Palace - Blue & Red
+      8: '#003399',    // Everton - Blue
+      9: '#FFFFFF',    // Fulham - White & Black
+      10: '#00B2A9',   // Ipswich - Blue
+      11: '#003090',   // Leicester - Blue
+      12: '#C8102E',   // Liverpool - Red
+      13: '#6CABDD',   // Man City - Sky Blue
+      14: '#DA291C',   // Man Utd - Red
+      15: '#241F20',   // Newcastle - Black & White
+      16: '#EF0107',   // Nottingham Forest - Red
+      17: '#D71920',   // Southampton - Red & White
+      18: '#132257',   // Tottenham - Navy & White
+      19: '#7A263A',   // West Ham - Claret & Blue
+      20: '#FDB913'    // Wolves - Gold & Black
+    };
+    return jerseyColors[teamId] || '#718096';
+  };
+
+  const getTextColor = (bgColor: string): string => {
+    const hex = bgColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 128 ? '#000000' : '#FFFFFF';
+  };
+
   return (
     <div className="container mx-auto p-2 md:p-4 lg:p-6 space-y-3 md:space-y-4 overflow-x-hidden">
       {/* Header */}
@@ -3503,6 +3540,32 @@ export default function TransferPlanner() {
             <div className="text-xs text-muted-foreground mb-2 italic">
               * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
             </div>
+
+            {/* View Toggle */}
+            <div className="flex justify-center gap-2 mb-4">
+              <Button
+                variant={teamView === "pitch" ? "default" : "outline"}
+                onClick={() => setTeamView("pitch")}
+                className="flex items-center gap-2"
+                data-testid="button-team-pitch-view"
+              >
+                <Target className="h-4 w-4" />
+                Pitch View
+              </Button>
+              <Button
+                variant={teamView === "list" ? "default" : "outline"}
+                onClick={() => setTeamView("list")}
+                className="flex items-center gap-2"
+                data-testid="button-team-list-view"
+              >
+                <Users className="h-4 w-4" />
+                List View
+              </Button>
+            </div>
+
+            <div>
+            {/* List View */}
+            {teamView === "list" && (
             <div>
               {/* Horizontal Aligned Lineup */}
               <div className="space-y-3">
@@ -4049,6 +4112,13 @@ export default function TransferPlanner() {
                   </span>
                 </div>
               </div>
+            </div>
+            )}
+
+            {/* Pitch View */}
+            {teamView === "pitch" && (
+              <div>Pitch view placeholder</div>
+            )}
             </div>
           </CardContent>
         </Card>
