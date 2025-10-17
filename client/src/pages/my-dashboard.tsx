@@ -229,6 +229,7 @@ export default function MyDashboard() {
   const [, setLocation] = useLocation();
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
+  const [teamView, setTeamView] = useState<"list" | "pitch">("list");
 
 
   // Cache manager ID functionality
@@ -917,7 +918,278 @@ export default function MyDashboard() {
                     </CardContent>
                   </Card>
 
-                  {/* Starting XI and Bench */}
+                  {/* View Toggle */}
+                  <div className="flex justify-center gap-2">
+                    <Button
+                      variant={teamView === "list" ? "default" : "outline"}
+                      onClick={() => setTeamView("list")}
+                      className="flex items-center gap-2"
+                      data-testid="button-team-list-view"
+                    >
+                      <Users className="h-4 w-4" />
+                      List View
+                    </Button>
+                    <Button
+                      variant={teamView === "pitch" ? "default" : "outline"}
+                      onClick={() => setTeamView("pitch")}
+                      className="flex items-center gap-2"
+                      data-testid="button-team-pitch-view"
+                    >
+                      <Target className="h-4 w-4" />
+                      Pitch View
+                    </Button>
+                  </div>
+
+                  {/* Pitch View */}
+                  {teamView === "pitch" && (
+                    <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8">
+                      {/* Pitch Lines */}
+                      <div className="absolute inset-0 opacity-30 pointer-events-none">
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white rounded-full"></div>
+                      </div>
+
+                      <div className="relative space-y-6">
+                        {/* Goalkeepers */}
+                        {(() => {
+                          const gks = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
+                            .filter(pick => {
+                              const player = getPlayerById(pick.element);
+                              return player?.element_type === 1;
+                            });
+                          
+                          return gks.length > 0 && (
+                            <div className="flex justify-center gap-4">
+                              {gks.map(pick => {
+                                const player = getPlayerById(pick.element);
+                                if (!player) return null;
+                                const playerTeam = getPlayerTeam(player);
+                                
+                                return (
+                                  <div key={pick.element} className="flex flex-col items-center" data-testid={`pitch-player-${player.id}`}>
+                                    <div className="relative">
+                                      {/* Jersey */}
+                                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden shadow-lg">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-gray-300 to-gray-400"></div>
+                                        <div className="relative text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
+                                          {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
+                                        </div>
+                                        {(pick.is_captain || pick.is_vice_captain) && (
+                                          <div className="absolute top-1 right-1">
+                                            {pick.is_captain && (
+                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">C</div>
+                                            )}
+                                            {pick.is_vice_captain && (
+                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                      {/* Player Info */}
+                                      <div className="mt-2 text-center">
+                                        <div className="bg-black text-white px-2 py-1 text-xs font-bold uppercase rounded">
+                                          {player.web_name}
+                                        </div>
+                                        <div className="text-xs text-white font-semibold mt-1">
+                                          {playerTeam?.short_name || 'UNK'}({getNextFixtures(playerTeam?.id || 0, 1)[0]?.isHome ? 'H' : 'A'})
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Defenders */}
+                        {(() => {
+                          const defs = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
+                            .filter(pick => {
+                              const player = getPlayerById(pick.element);
+                              return player?.element_type === 2;
+                            });
+                          
+                          return defs.length > 0 && (
+                            <div className="flex justify-center gap-2 sm:gap-4">
+                              {defs.map(pick => {
+                                const player = getPlayerById(pick.element);
+                                if (!player) return null;
+                                const playerTeam = getPlayerTeam(player);
+                                
+                                return (
+                                  <div key={pick.element} className="flex flex-col items-center" data-testid={`pitch-player-${player.id}`}>
+                                    <div className="relative">
+                                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-lg flex items-center justify-center relative overflow-hidden shadow-lg">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-600"></div>
+                                        <div className="relative text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
+                                          {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
+                                        </div>
+                                        {(pick.is_captain || pick.is_vice_captain) && (
+                                          <div className="absolute top-1 right-1">
+                                            {pick.is_captain && (
+                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">C</div>
+                                            )}
+                                            {pick.is_vice_captain && (
+                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="mt-2 text-center">
+                                        <div className="bg-black text-white px-2 py-1 text-xs font-bold uppercase rounded">
+                                          {player.web_name}
+                                        </div>
+                                        <div className="text-xs text-white font-semibold mt-1">
+                                          {playerTeam?.short_name || 'UNK'}({getNextFixtures(playerTeam?.id || 0, 1)[0]?.isHome ? 'H' : 'A'})
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Midfielders */}
+                        {(() => {
+                          const mids = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
+                            .filter(pick => {
+                              const player = getPlayerById(pick.element);
+                              return player?.element_type === 3;
+                            });
+                          
+                          return mids.length > 0 && (
+                            <div className="flex justify-center gap-2 sm:gap-4">
+                              {mids.map(pick => {
+                                const player = getPlayerById(pick.element);
+                                if (!player) return null;
+                                const playerTeam = getPlayerTeam(player);
+                                
+                                return (
+                                  <div key={pick.element} className="flex flex-col items-center" data-testid={`pitch-player-${player.id}`}>
+                                    <div className="relative">
+                                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-lg flex items-center justify-center relative overflow-hidden shadow-lg">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-green-600"></div>
+                                        <div className="relative text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
+                                          {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
+                                        </div>
+                                        {(pick.is_captain || pick.is_vice_captain) && (
+                                          <div className="absolute top-1 right-1">
+                                            {pick.is_captain && (
+                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">C</div>
+                                            )}
+                                            {pick.is_vice_captain && (
+                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="mt-2 text-center">
+                                        <div className="bg-black text-white px-2 py-1 text-xs font-bold uppercase rounded">
+                                          {player.web_name}
+                                        </div>
+                                        <div className="text-xs text-white font-semibold mt-1">
+                                          {playerTeam?.short_name || 'UNK'}({getNextFixtures(playerTeam?.id || 0, 1)[0]?.isHome ? 'H' : 'A'})
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Forwards */}
+                        {(() => {
+                          const fwds = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
+                            .filter(pick => {
+                              const player = getPlayerById(pick.element);
+                              return player?.element_type === 4;
+                            });
+                          
+                          return fwds.length > 0 && (
+                            <div className="flex justify-center gap-2 sm:gap-4">
+                              {fwds.map(pick => {
+                                const player = getPlayerById(pick.element);
+                                if (!player) return null;
+                                const playerTeam = getPlayerTeam(player);
+                                
+                                return (
+                                  <div key={pick.element} className="flex flex-col items-center" data-testid={`pitch-player-${player.id}`}>
+                                    <div className="relative">
+                                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-lg flex items-center justify-center relative overflow-hidden shadow-lg">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-red-400 to-red-600"></div>
+                                        <div className="relative text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
+                                          {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
+                                        </div>
+                                        {(pick.is_captain || pick.is_vice_captain) && (
+                                          <div className="absolute top-1 right-1">
+                                            {pick.is_captain && (
+                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">C</div>
+                                            )}
+                                            {pick.is_vice_captain && (
+                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="mt-2 text-center">
+                                        <div className="bg-black text-white px-2 py-1 text-xs font-bold uppercase rounded">
+                                          {player.web_name}
+                                        </div>
+                                        <div className="text-xs text-white font-semibold mt-1">
+                                          {playerTeam?.short_name || 'UNK'}({getNextFixtures(playerTeam?.id || 0, 1)[0]?.isHome ? 'H' : 'A'})
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Bench Display */}
+                      <div className="mt-6 pt-6 border-t-2 border-white/30">
+                        <h3 className="text-white font-bold text-center mb-4">BENCH</h3>
+                        <div className="flex justify-center gap-2 sm:gap-4 flex-wrap">
+                          {sortPlayersByPosition(teamData.picks.filter(pick => pick.position > 11)).map((pick, index) => {
+                            const player = getPlayerById(pick.element);
+                            if (!player) return null;
+                            const playerTeam = getPlayerTeam(player);
+                            
+                            return (
+                              <div key={pick.element} className="flex flex-col items-center opacity-75" data-testid={`pitch-bench-${player.id}`}>
+                                <div className="relative">
+                                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-400 rounded-lg flex items-center justify-center relative overflow-hidden shadow-lg">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-gray-500 to-gray-600"></div>
+                                    <div className="relative text-xl sm:text-2xl font-bold text-white drop-shadow-lg">
+                                      {player.event_points || 0}
+                                    </div>
+                                  </div>
+                                  <div className="mt-2 text-center">
+                                    <div className="bg-gray-700 text-white px-1.5 py-0.5 text-xs font-bold uppercase rounded">
+                                      {player.web_name}
+                                    </div>
+                                    <div className="text-xs text-white font-semibold mt-1">
+                                      {playerTeam?.short_name || 'UNK'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* List View - Starting XI and Bench */}
+                  {teamView === "list" && (
                   <div className="grid gap-6 lg:grid-cols-2">
                     {/* Starting XI */}
                     <Card className="bg-white shadow-lg border border-gray-200">
@@ -1107,6 +1379,7 @@ export default function MyDashboard() {
                       </CardContent>
                     </Card>
                   </div>
+                  )}
                 </>
               )}
               
