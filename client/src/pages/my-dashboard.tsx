@@ -963,15 +963,6 @@ export default function MyDashboard() {
                   {/* View Toggle */}
                   <div className="flex justify-center gap-2">
                     <Button
-                      variant={teamView === "list" ? "default" : "outline"}
-                      onClick={() => setTeamView("list")}
-                      className="flex items-center gap-2"
-                      data-testid="button-team-list-view"
-                    >
-                      <Users className="h-4 w-4" />
-                      List View
-                    </Button>
-                    <Button
                       variant={teamView === "pitch" ? "default" : "outline"}
                       onClick={() => setTeamView("pitch")}
                       className="flex items-center gap-2"
@@ -979,6 +970,15 @@ export default function MyDashboard() {
                     >
                       <Target className="h-4 w-4" />
                       Pitch View
+                    </Button>
+                    <Button
+                      variant={teamView === "list" ? "default" : "outline"}
+                      onClick={() => setTeamView("list")}
+                      className="flex items-center gap-2"
+                      data-testid="button-team-list-view"
+                    >
+                      <Users className="h-4 w-4" />
+                      List View
                     </Button>
                   </div>
 
