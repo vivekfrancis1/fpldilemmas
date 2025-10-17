@@ -4174,42 +4174,42 @@ export default function TransferPlanner() {
                               return (
                                 <div key={`empty-${pick.position}`} className="flex flex-col items-center w-40" data-testid={`pitch-empty-${pick.position}`}>
                                   <div className="relative w-full">
-                                    <div className="rounded-lg p-2 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-1.5">
-                                      <div className="text-xs font-bold text-red-600">EMPTY SLOT</div>
-                                      <div className="text-[11px] text-red-500">{getPositionShortName(player.element_type)}</div>
-                                      <div className="text-2xl font-bold text-red-600">-</div>
+                                    <div className="rounded-lg p-3 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-2">
+                                      <div className="text-sm font-bold text-red-600">EMPTY SLOT</div>
+                                      <div className="text-xs text-red-500">{getPositionShortName(player.element_type)}</div>
+                                      <div className="text-3xl font-bold text-red-600">-</div>
                                       
                                       {/* Action Buttons for Transferred Out */}
-                                      <div className="flex flex-col gap-1 mt-1">
+                                      <div className="flex flex-col gap-1.5">
                                         <Button
                                           size="sm"
-                                          className="h-7 text-xs font-semibold bg-red-600 text-white hover:bg-red-700"
+                                          className="w-full h-8 text-sm font-semibold bg-red-600 text-white hover:bg-red-700"
                                           onClick={() => handleScrollToReplacement(player.element_type)}
                                           data-testid={`pitch-replace-${pick.position}`}
                                         >
                                           Replace
                                         </Button>
-                                        <div className="flex gap-1">
+                                        <div className="flex gap-1.5">
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            className="h-7 px-2 text-[10px] flex-1 text-blue-600 border-blue-300"
+                                            className="flex-1 h-7 text-xs text-blue-600 border-blue-300 bg-white hover:bg-blue-50"
                                             onClick={() => handleUndoTransfer(pick.position)}
                                             data-testid={`pitch-undo-${pick.position}`}
                                             title="Undo last transfer"
                                           >
-                                            <RotateCcw className="h-3 w-3 mr-0.5" />
+                                            <RotateCcw className="h-3 w-3 mr-1" />
                                             Undo
                                           </Button>
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            className="h-7 px-2 text-[10px] flex-1 text-orange-600 border-orange-300"
+                                            className="flex-1 h-7 text-xs text-orange-600 border-orange-300 bg-white hover:bg-orange-50"
                                             onClick={() => handleUndoAllTransfersForPosition(pick.position)}
                                             data-testid={`pitch-undo-all-${pick.position}`}
                                             title="Undo all transfers"
                                           >
-                                            <X className="h-3 w-3 mr-0.5" />
+                                            <X className="h-3 w-3 mr-1" />
                                             All
                                           </Button>
                                         </div>
@@ -4319,8 +4319,12 @@ export default function TransferPlanner() {
                                     {/* Primary Action Buttons - Swap & Transfer */}
                                     <div className="flex justify-center gap-1.5 mt-1.5">
                                       <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
-                                        <SelectTrigger className="h-7 w-[72px] px-0 text-[11px] font-semibold bg-white/90 hover:bg-white flex items-center justify-center" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench">
-                                          <div className="flex items-center">
+                                        <SelectTrigger 
+                                          className="h-7 w-[72px] p-0 text-[11px] font-semibold bg-white/90 hover:bg-white border border-gray-300 rounded-md [&>svg]:hidden" 
+                                          data-testid={`pitch-swap-${pick.element}`} 
+                                          title="Swap with bench"
+                                        >
+                                          <div className="flex items-center justify-center w-full">
                                             <ArrowUpDown className="h-3 w-3 mr-1" />
                                             Swap
                                           </div>
@@ -4554,8 +4558,12 @@ export default function TransferPlanner() {
                               {/* Action Buttons for Bench */}
                               <div className="flex justify-center gap-1.5 mt-1.5">
                                 <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
-                                  <SelectTrigger className="h-7 w-[72px] px-0 text-[11px] font-semibold bg-white/90 hover:bg-white flex items-center justify-center" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI">
-                                    <div className="flex items-center">
+                                  <SelectTrigger 
+                                    className="h-7 w-[72px] p-0 text-[11px] font-semibold bg-white/90 hover:bg-white border border-gray-300 rounded-md [&>svg]:hidden" 
+                                    data-testid={`pitch-bench-swap-${pick.element}`} 
+                                    title="Swap with starting XI"
+                                  >
+                                    <div className="flex items-center justify-center w-full">
                                       <ArrowUpDown className="h-3 w-3 mr-1" />
                                       Swap
                                     </div>
