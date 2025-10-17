@@ -557,19 +557,21 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                 data-testid="input-max-price"
               />
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="only-affordable"
-                checked={onlyAffordable}
-                onChange={(e) => setOnlyAffordable(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300"
-                data-testid="checkbox-only-affordable"
-              />
-              <label htmlFor="only-affordable" className="text-sm text-muted-foreground cursor-pointer">
-                Only show affordable (≤£{currentBank.toFixed(1)}m)
-              </label>
-            </div>
+            {transferredOutPlayers.length > 0 && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="only-affordable"
+                  checked={onlyAffordable}
+                  onChange={(e) => setOnlyAffordable(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                  data-testid="checkbox-only-affordable"
+                />
+                <label htmlFor="only-affordable" className="text-sm text-muted-foreground cursor-pointer">
+                  Only show affordable (≤£{currentBank.toFixed(1)}m)
+                </label>
+              </div>
+            )}
           </div>
         </div>
       </CardHeader>
