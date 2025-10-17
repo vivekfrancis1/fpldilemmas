@@ -1067,30 +1067,48 @@ export default function MyDashboard() {
                                 const playerTeam = getPlayerTeam(player);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center" data-testid={`pitch-player-${player.id}`}>
-                                    <div className="relative">
-                                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-lg flex items-center justify-center relative overflow-hidden shadow-lg">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-blue-600"></div>
-                                        <div className="relative text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
-                                          {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
-                                        </div>
-                                        {(pick.is_captain || pick.is_vice_captain) && (
-                                          <div className="absolute top-1 right-1">
-                                            {pick.is_captain && (
-                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">C</div>
-                                            )}
-                                            {pick.is_vice_captain && (
-                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
-                                            )}
+                                  <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
+                                    <div className="relative w-full">
+                                      <div className="bg-white rounded-lg shadow-xl p-2">
+                                        <div className="relative w-20 h-20 mx-auto mb-2">
+                                          <svg viewBox="0 0 100 100" className="w-full h-full">
+                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill="#3B82F6" stroke="#333" strokeWidth="2"/>
+                                            <circle cx="50" cy="35" r="8" fill="white"/>
+                                          </svg>
+                                          <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="text-2xl font-bold text-gray-800">
+                                              {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
+                                            </div>
                                           </div>
-                                        )}
-                                      </div>
-                                      <div className="mt-2 text-center">
-                                        <div className="bg-black text-white px-2 py-1 text-xs font-bold uppercase rounded">
-                                          {player.web_name}
+                                          {(pick.is_captain || pick.is_vice_captain) && (
+                                            <div className="absolute -top-1 -right-1">
+                                              {pick.is_captain && (
+                                                <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
+                                              )}
+                                              {pick.is_vice_captain && (
+                                                <div className="w-6 h-6 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
-                                        <div className="text-xs text-white font-semibold mt-1">
-                                          {playerTeam?.short_name || 'UNK'}({getNextFixtures(playerTeam?.id || 0, 1)[0]?.isHome ? 'H' : 'A'})
+                                        <div className="text-center mb-2">
+                                          <div className="bg-black text-white px-2 py-0.5 text-xs font-bold uppercase rounded mb-1">
+                                            {player.web_name}
+                                          </div>
+                                          <div className="text-xs font-semibold text-gray-700">
+                                            {playerTeam?.short_name || 'UNK'}
+                                          </div>
+                                        </div>
+                                        <div className="flex justify-center gap-1">
+                                          {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => (
+                                            <div 
+                                              key={idx}
+                                              className={`px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
+                                              title={`GW${fixture.gameweek}: ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`}
+                                            >
+                                              {fixture.opponent.substring(0, 3)}
+                                            </div>
+                                          ))}
                                         </div>
                                       </div>
                                     </div>
@@ -1117,30 +1135,48 @@ export default function MyDashboard() {
                                 const playerTeam = getPlayerTeam(player);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center" data-testid={`pitch-player-${player.id}`}>
-                                    <div className="relative">
-                                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-lg flex items-center justify-center relative overflow-hidden shadow-lg">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-green-600"></div>
-                                        <div className="relative text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
-                                          {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
-                                        </div>
-                                        {(pick.is_captain || pick.is_vice_captain) && (
-                                          <div className="absolute top-1 right-1">
-                                            {pick.is_captain && (
-                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">C</div>
-                                            )}
-                                            {pick.is_vice_captain && (
-                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
-                                            )}
+                                  <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
+                                    <div className="relative w-full">
+                                      <div className="bg-white rounded-lg shadow-xl p-2">
+                                        <div className="relative w-20 h-20 mx-auto mb-2">
+                                          <svg viewBox="0 0 100 100" className="w-full h-full">
+                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill="#10B981" stroke="#333" strokeWidth="2"/>
+                                            <circle cx="50" cy="35" r="8" fill="white"/>
+                                          </svg>
+                                          <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="text-2xl font-bold text-gray-800">
+                                              {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
+                                            </div>
                                           </div>
-                                        )}
-                                      </div>
-                                      <div className="mt-2 text-center">
-                                        <div className="bg-black text-white px-2 py-1 text-xs font-bold uppercase rounded">
-                                          {player.web_name}
+                                          {(pick.is_captain || pick.is_vice_captain) && (
+                                            <div className="absolute -top-1 -right-1">
+                                              {pick.is_captain && (
+                                                <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
+                                              )}
+                                              {pick.is_vice_captain && (
+                                                <div className="w-6 h-6 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
-                                        <div className="text-xs text-white font-semibold mt-1">
-                                          {playerTeam?.short_name || 'UNK'}({getNextFixtures(playerTeam?.id || 0, 1)[0]?.isHome ? 'H' : 'A'})
+                                        <div className="text-center mb-2">
+                                          <div className="bg-black text-white px-2 py-0.5 text-xs font-bold uppercase rounded mb-1">
+                                            {player.web_name}
+                                          </div>
+                                          <div className="text-xs font-semibold text-gray-700">
+                                            {playerTeam?.short_name || 'UNK'}
+                                          </div>
+                                        </div>
+                                        <div className="flex justify-center gap-1">
+                                          {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => (
+                                            <div 
+                                              key={idx}
+                                              className={`px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
+                                              title={`GW${fixture.gameweek}: ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`}
+                                            >
+                                              {fixture.opponent.substring(0, 3)}
+                                            </div>
+                                          ))}
                                         </div>
                                       </div>
                                     </div>
@@ -1167,30 +1203,48 @@ export default function MyDashboard() {
                                 const playerTeam = getPlayerTeam(player);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center" data-testid={`pitch-player-${player.id}`}>
-                                    <div className="relative">
-                                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-lg flex items-center justify-center relative overflow-hidden shadow-lg">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-red-400 to-red-600"></div>
-                                        <div className="relative text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
-                                          {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
-                                        </div>
-                                        {(pick.is_captain || pick.is_vice_captain) && (
-                                          <div className="absolute top-1 right-1">
-                                            {pick.is_captain && (
-                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">C</div>
-                                            )}
-                                            {pick.is_vice_captain && (
-                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
-                                            )}
+                                  <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
+                                    <div className="relative w-full">
+                                      <div className="bg-white rounded-lg shadow-xl p-2">
+                                        <div className="relative w-20 h-20 mx-auto mb-2">
+                                          <svg viewBox="0 0 100 100" className="w-full h-full">
+                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill="#EF4444" stroke="#333" strokeWidth="2"/>
+                                            <circle cx="50" cy="35" r="8" fill="white"/>
+                                          </svg>
+                                          <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="text-2xl font-bold text-gray-800">
+                                              {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
+                                            </div>
                                           </div>
-                                        )}
-                                      </div>
-                                      <div className="mt-2 text-center">
-                                        <div className="bg-black text-white px-2 py-1 text-xs font-bold uppercase rounded">
-                                          {player.web_name}
+                                          {(pick.is_captain || pick.is_vice_captain) && (
+                                            <div className="absolute -top-1 -right-1">
+                                              {pick.is_captain && (
+                                                <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
+                                              )}
+                                              {pick.is_vice_captain && (
+                                                <div className="w-6 h-6 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
-                                        <div className="text-xs text-white font-semibold mt-1">
-                                          {playerTeam?.short_name || 'UNK'}({getNextFixtures(playerTeam?.id || 0, 1)[0]?.isHome ? 'H' : 'A'})
+                                        <div className="text-center mb-2">
+                                          <div className="bg-black text-white px-2 py-0.5 text-xs font-bold uppercase rounded mb-1">
+                                            {player.web_name}
+                                          </div>
+                                          <div className="text-xs font-semibold text-gray-700">
+                                            {playerTeam?.short_name || 'UNK'}
+                                          </div>
+                                        </div>
+                                        <div className="flex justify-center gap-1">
+                                          {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => (
+                                            <div 
+                                              key={idx}
+                                              className={`px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
+                                              title={`GW${fixture.gameweek}: ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`}
+                                            >
+                                              {fixture.opponent.substring(0, 3)}
+                                            </div>
+                                          ))}
                                         </div>
                                       </div>
                                     </div>
@@ -1212,20 +1266,38 @@ export default function MyDashboard() {
                             const playerTeam = getPlayerTeam(player);
                             
                             return (
-                              <div key={pick.element} className="flex flex-col items-center opacity-75" data-testid={`pitch-bench-${player.id}`}>
-                                <div className="relative">
-                                  <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-400 rounded-lg flex items-center justify-center relative overflow-hidden shadow-lg">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-gray-500 to-gray-600"></div>
-                                    <div className="relative text-xl sm:text-2xl font-bold text-white drop-shadow-lg">
-                                      {player.event_points || 0}
+                              <div key={pick.element} className="flex flex-col items-center w-24 opacity-90" data-testid={`pitch-bench-${player.id}`}>
+                                <div className="relative w-full">
+                                  <div className="bg-white/90 rounded-lg shadow-lg p-1.5">
+                                    <div className="relative w-16 h-16 mx-auto mb-1.5">
+                                      <svg viewBox="0 0 100 100" className="w-full h-full">
+                                        <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill="#9CA3AF" stroke="#333" strokeWidth="2"/>
+                                        <circle cx="50" cy="35" r="8" fill="white"/>
+                                      </svg>
+                                      <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="text-xl font-bold text-gray-800">
+                                          {player.event_points || 0}
+                                        </div>
+                                      </div>
                                     </div>
-                                  </div>
-                                  <div className="mt-2 text-center">
-                                    <div className="bg-gray-700 text-white px-1.5 py-0.5 text-xs font-bold uppercase rounded">
-                                      {player.web_name}
+                                    <div className="text-center mb-1.5">
+                                      <div className="bg-gray-700 text-white px-1.5 py-0.5 text-xs font-bold uppercase rounded mb-1">
+                                        {player.web_name}
+                                      </div>
+                                      <div className="text-xs font-semibold text-gray-700">
+                                        {playerTeam?.short_name || 'UNK'}
+                                      </div>
                                     </div>
-                                    <div className="text-xs text-white font-semibold mt-1">
-                                      {playerTeam?.short_name || 'UNK'}
+                                    <div className="flex justify-center gap-0.5">
+                                      {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => (
+                                        <div 
+                                          key={idx}
+                                          className={`px-1 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
+                                          title={`GW${fixture.gameweek}: ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`}
+                                        >
+                                          {fixture.opponent.substring(0, 3)}
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
                                 </div>
