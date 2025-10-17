@@ -122,6 +122,7 @@ interface Player {
   first_name: string;
   second_name: string;
   web_name: string;
+  team: number;
   team_name: string;
   element_type: number;
   now_cost: number;
@@ -382,8 +383,7 @@ export default function MyDashboard() {
   };
 
   const getPlayerTeam = (player: Player) => {
-    const teamId = (player as any).team || player.team_name;
-    return bootstrapData?.teams.find(t => t.id === teamId);
+    return bootstrapData?.teams.find(t => t.id === player.team);
   };
 
   const getTeamJerseyColor = (teamId: number): string => {
