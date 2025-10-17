@@ -4168,13 +4168,9 @@ export default function TransferPlanner() {
                             const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
                             const fixture = getPlayerFixture(pick.element, selectedGameweek);
                             
-                            // Debug logging
-                            if (pick.position === 1) {
-                              console.log('DEBUG pitch view - Position 1 pick:', pick);
-                            }
-                            
                             // Check if player is transferred out
                             if (pick.is_transferred_out) {
+                              console.log('DEBUG - Showing empty slot for position:', pick.position, 'pick:', pick);
                               return (
                                 <div key={`empty-${pick.position}`} className="flex flex-col items-center w-40" data-testid={`pitch-empty-${pick.position}`}>
                                   <div className="relative w-full">
@@ -4323,9 +4319,11 @@ export default function TransferPlanner() {
                                     {/* Primary Action Buttons - Swap & Transfer */}
                                     <div className="flex justify-center gap-1.5 mt-1.5">
                                       <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
-                                        <SelectTrigger className="h-7 w-[72px] text-[11px] font-semibold bg-white/90 hover:bg-white flex items-center justify-center" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench">
-                                          <ArrowUpDown className="h-3 w-3 mr-1" />
-                                          Swap
+                                        <SelectTrigger className="h-7 w-[72px] px-0 text-[11px] font-semibold bg-white/90 hover:bg-white flex items-center justify-center" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench">
+                                          <div className="flex items-center">
+                                            <ArrowUpDown className="h-3 w-3 mr-1" />
+                                            Swap
+                                          </div>
                                         </SelectTrigger>
                                         <SelectContent>
                                           {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
@@ -4556,9 +4554,11 @@ export default function TransferPlanner() {
                               {/* Action Buttons for Bench */}
                               <div className="flex justify-center gap-1.5 mt-1.5">
                                 <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
-                                  <SelectTrigger className="h-7 w-[72px] text-[11px] font-semibold bg-white/90 hover:bg-white flex items-center justify-center" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI">
-                                    <ArrowUpDown className="h-3 w-3 mr-1" />
-                                    Swap
+                                  <SelectTrigger className="h-7 w-[72px] px-0 text-[11px] font-semibold bg-white/90 hover:bg-white flex items-center justify-center" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI">
+                                    <div className="flex items-center">
+                                      <ArrowUpDown className="h-3 w-3 mr-1" />
+                                      Swap
+                                    </div>
                                   </SelectTrigger>
                                   <SelectContent>
                                     {manualLineup.slice(0, 11).map((startPick, startIndex) => {
