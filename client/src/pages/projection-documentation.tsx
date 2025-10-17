@@ -621,6 +621,13 @@ export default function ProjectionDocumentation() {
 
           {/* Player Tools Tab */}
           <TabsContent value="player-tools" className="space-y-6">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                All player projection tools use actual implementation logic from the FPL scoring system. Each component is calculated independently and combined for total points.
+              </AlertDescription>
+            </Alert>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               {/* Player Total Points */}
@@ -633,31 +640,29 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Comprehensive FPL points projection combining all 10 official scoring components with detailed gameweek breakdowns and interactive tooltips.
+                    Comprehensive FPL points projection combining all 10 official scoring components with detailed gameweek breakdowns.
                   </p>
-                  <div className="space-y-2">
-                    <Badge variant="outline">Goals Points</Badge>
-                    <Badge variant="outline">Assists Points</Badge>
-                    <Badge variant="outline">Clean Sheet Points</Badge>
-                    <Badge variant="outline">Defensive Contribution Points</Badge>
-                    <Badge variant="outline">Saves Points (GK)</Badge>
-                    <Badge variant="outline">Goals Conceded Points</Badge>
-                    <Badge variant="outline">Yellow Cards Points</Badge>
-                    <Badge variant="outline">Red Cards Points</Badge>
-                    <Badge variant="outline">Bonus Points</Badge>
-                    <Badge variant="outline">Minutes Points</Badge>
-                  </div>
                   <div className="bg-yellow-50 p-3 rounded text-sm">
-                    <strong>Logic:</strong> Pure projection methodology for upcoming gameweeks only (GW4+). Uses database-backed FPL scoring cache with range-specific caching (GW4-6, GW4-9) and detailed component breakdowns in interactive tooltips showing all scoring factors.
+                    <strong>Formula:</strong><br/>
+                    <code className="text-xs">TotalPoints = GoalPoints + AssistPoints + CleanSheetPoints + DCPoints + MinutesPoints + SavesPoints + BonusPoints - GoalsConcededPoints - YellowCardPoints - RedCardPoints</code>
                   </div>
-                  <div className="bg-blue-50 p-3 rounded text-sm">
-                    <strong>Recent Fixes:</strong> Resolved Drizzle ORM field access issues (camelCase naming), fixed gameweek key format mismatches, and implemented Map-based range-specific caching for ultra-fast performance.
+                  <div className="space-y-2">
+                    <div className="text-sm"><strong>Components:</strong></div>
+                    <Badge variant="outline">Goals × Position Multiplier</Badge>
+                    <Badge variant="outline">Assists × 3</Badge>
+                    <Badge variant="outline">Clean Sheets × Position Points</Badge>
+                    <Badge variant="outline">DC ≥ Threshold: 2pts</Badge>
+                    <Badge variant="outline">Minutes: 1-2pts</Badge>
+                    <Badge variant="outline">Saves ÷ 3: 1pt</Badge>
+                    <Badge variant="outline">Bonus (Cached)</Badge>
+                    <Badge variant="outline">GC ÷ 2: -1pt (GK/DEF)</Badge>
+                    <Badge variant="outline">Yellow: -1pt</Badge>
+                    <Badge variant="outline">Red: -3pt</Badge>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                     <div>API: /api/cached/player-total-points</div>
-                    <div>Cache: cached_player_saves, cached_player_yellow_cards</div>
-                    <div>Performance: Sub-second response times</div>
-                    <div>Coverage: All 736 players with complete data</div>
+                    <div>Cache: cached_player_total_points</div>
+                    <div>Performance: Sub-second response</div>
                   </div>
                 </CardContent>
               </Card>
@@ -667,28 +672,69 @@ export default function ProjectionDocumentation() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Target className="h-5 w-5 text-green-600" />
-                    Player Goal Projections
+                    Goals & Points from Goals
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Individual player goal projections using pure calculation methodology with historical xG data integration for upcoming gameweeks only.
+                    Individual player goal projections using hybrid team goals and historical goal share data.
                   </p>
-                  <div className="space-y-2">
-                    <Badge variant="outline">Pure Projection Methodology</Badge>
-                    <Badge variant="outline">Historical xG Integration</Badge>
-                    <Badge variant="outline">Expected Minutes Weighting</Badge>
-                    <Badge variant="outline">Penalty Taker Adjustments</Badge>
-                    <Badge variant="outline">Perfect Mathematical Balance</Badge>
-                  </div>
                   <div className="bg-green-50 p-3 rounded text-sm">
-                    <strong>Logic:</strong> Uses NEW hybrid team goal projections (real FPL data) × player goal share × minutes weighting. Enhanced with historical season xG data for ultra-realistic projections with position-specific caps and perfect team balance. No synthetic base xG values.
+                    <strong>Formula:</strong><br/>
+                    <code className="text-xs">PlayerGoals = HybridTeamGoals × (PlayerGoalShare / 100) × (ExpectedMinutes / 90)</code><br/>
+                    <code className="text-xs">+ PenaltyAdjustment + FreekickAdjustment</code>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div><strong>Position Caps:</strong> GK: 2%, DEF: 10%, MID: 30%, FWD: 40%</div>
+                    <div><strong>Penalty Adjustments:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>Primary: +0.6 to +0.8 goals per GW</li>
+                      <li>Secondary: +0.3 to +0.5 goals per GW</li>
+                    </ul>
+                    <div><strong>Points Calculation:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>GK/DEF: Goals × 6 points</li>
+                      <li>MID: Goals × 5 points</li>
+                      <li>FWD: Goals × 4 points</li>
+                    </ul>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
-                    <div>API: /api/cached/player-goals-projections</div>
-                    <div>Balance: Perfect team goal normalization</div>
-                    <div>Data: Current + Historical xG integration</div>
-                    <div>Cache: Database-backed for performance</div>
+                    <div>API: /api/player-goal-projections</div>
+                    <div>Data Source: Hybrid team goals + historical xG</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Player Assist Projections */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-blue-600" />
+                    Assists & Points from Assists
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Assist projections based on team creativity and individual assist share from historical data.
+                  </p>
+                  <div className="bg-blue-50 p-3 rounded text-sm">
+                    <strong>Formula:</strong><br/>
+                    <code className="text-xs">PlayerAssists = TeamAssists × (PlayerAssistShare / 100)</code><br/>
+                    <code className="text-xs">TeamAssists = TeamGoals × 0.72</code>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div><strong>Position Caps:</strong> GK: 2%, DEF: 15%, MID: 40%, FWD: 25%</div>
+                    <div><strong>Set Piece Bonuses:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>Primary corner/freekick: +0.8 assists</li>
+                      <li>Secondary corner/freekick: +0.5 assists</li>
+                      <li>Direct freekick specialist: +0.2 assists</li>
+                    </ul>
+                    <div><strong>Points:</strong> Each assist = 3 points</div>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded text-sm font-mono">
+                    <div>API: /api/player-assist-projections</div>
+                    <div>Data: Assist share + xA integration</div>
                   </div>
                 </CardContent>
               </Card>
@@ -698,26 +744,73 @@ export default function ProjectionDocumentation() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Clock className="h-5 w-5 text-purple-600" />
-                    Player Minutes
+                    Minutes & Points from Minutes
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Expected minutes per game considering rotation, form, and role within team.
+                    Expected minutes per game based on actual performance and team rotation patterns.
                   </p>
-                  <div className="space-y-2">
-                    <Badge variant="outline">Starting Probability</Badge>
-                    <Badge variant="outline">Rotation Analysis</Badge>
-                    <Badge variant="outline">Form Assessment</Badge>
-                    <Badge variant="outline">Injury Risk</Badge>
-                  </div>
                   <div className="bg-purple-50 p-3 rounded text-sm">
-                    <strong>Logic:</strong> Historical minutes analysis combined with current season trends, team rotation patterns, and player-specific factors like age, form, and injury history.
+                    <strong>Formula:</strong><br/>
+                    <code className="text-xs">ExpectedMinutes = (CurrentMinutes / GamesPlayed)</code><br/>
+                    <code className="text-xs">MinutesPoints = (ExpectedMinutes / 90) × 2</code>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div><strong>Calculation:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>Uses actual minutes played this season</li>
+                      <li>Divided by team games played (not appearances)</li>
+                      <li>Capped at 90 minutes per game maximum</li>
+                    </ul>
+                    <div><strong>FPL Points Rules:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>0-59 minutes: 0 points</li>
+                      <li>60-89 minutes: 1 point</li>
+                      <li>90+ minutes: 2 points</li>
+                    </ul>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                     <div>API: /api/player-minutes-projections</div>
-                    <div>Data: FPL minutes + historical trends</div>
-                    <div>Factors: rotation, form, injuries</div>
+                    <div>Data: FPL bootstrap actual minutes</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Clean Sheets */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-teal-600" />
+                    Clean Sheets & CS Points
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Clean sheet probability using exponential decay based on expected goals conceded.
+                  </p>
+                  <div className="bg-teal-50 p-3 rounded text-sm">
+                    <strong>Formula:</strong><br/>
+                    <code className="text-xs">CS% = 100 × e^(-1.1 × GoalsConceded)</code><br/>
+                    <code className="text-xs">CSPoints = CS% × Minutes60+% × PositionPoints</code>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div><strong>Goals Conceded Calculation:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>Based on hybrid opponent attack data</li>
+                      <li>Real team defensive performance</li>
+                      <li>Venue and context adjustments</li>
+                    </ul>
+                    <div><strong>Position Points:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>GK/DEF: 4 points per clean sheet</li>
+                      <li>MID: 1 point per clean sheet</li>
+                      <li>FWD: 0 points</li>
+                    </ul>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded text-sm font-mono">
+                    <div>API: /api/clean-sheet-projections</div>
+                    <div>Formula: Exponential decay (e^-1.1×xGA)</div>
                   </div>
                 </CardContent>
               </Card>
@@ -727,26 +820,194 @@ export default function ProjectionDocumentation() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Shield className="h-5 w-5 text-red-600" />
-                    Defensive Contributions
+                    Defensive Contributions & DC Points
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    New FPL 2025/26 defensive metrics: Tackles, Recoveries, CBI with 2-point threshold bonuses.
+                    FPL 2025/26 defensive metrics: Tackles, Recoveries, CBI with threshold-based scoring.
                   </p>
-                  <div className="space-y-2">
-                    <Badge variant="outline">Tackles Projection</Badge>
-                    <Badge variant="outline">Recoveries Forecast</Badge>
-                    <Badge variant="outline">CBI Analysis</Badge>
-                    <Badge variant="outline">Threshold Scoring</Badge>
-                  </div>
                   <div className="bg-red-50 p-3 rounded text-sm">
-                    <strong>Logic:</strong> Uses attacking tier system for variance calculations. DEF get 2pts if DC≥10, MID/FWD get 2pts if DC≥12. DC = CBI + Tackles (DEF) or CBI + Tackles + Recoveries (MID/FWD).
+                    <strong>Formulas:</strong><br/>
+                    <code className="text-xs">DEF: DC = CBI + Tackles</code><br/>
+                    <code className="text-xs">MID/FWD: DC = CBI + Tackles + Recoveries</code><br/>
+                    <code className="text-xs">Points = (DC ≥ Threshold) ? 2 : 0</code>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div><strong>Thresholds:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>Defenders: DC ≥ 10 → 2 points</li>
+                      <li>Midfielders: DC ≥ 12 → 2 points</li>
+                      <li>Forwards: DC ≥ 12 → 2 points</li>
+                      <li>Goalkeepers: Uses defender formula</li>
+                    </ul>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                     <div>API: /api/player-defensive-contributions</div>
-                    <div>Formula: Position-specific DC calculation</div>
-                    <div>Thresholds: DEF≥10, MID/FWD≥12</div>
+                    <div>Data: Per-90 rates from historical stats</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Goalkeeper Saves */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-cyan-600" />
+                    Saves & Points from Saves (GK Only)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Goalkeeper save projections based on opponent shots on target and defensive quality.
+                  </p>
+                  <div className="bg-cyan-50 p-3 rounded text-sm">
+                    <strong>Formula:</strong><br/>
+                    <code className="text-xs">ExpectedSaves = OpponentShotsOnTarget × TeamDefensiveQuality</code><br/>
+                    <code className="text-xs">SavePoints = floor(Saves / 3) × 1</code>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div><strong>FPL Scoring Rules:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>1 point for every 3 saves</li>
+                      <li>5 bonus points for each penalty save</li>
+                      <li>Examples: 6 saves = 2pts, 9 saves = 3pts</li>
+                    </ul>
+                    <div><strong>Data Source:</strong> Cached from FPL live data</div>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded text-sm font-mono">
+                    <div>Cache: cached_player_save_points</div>
+                    <div>Table: gameweek_player_data (saves)</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Goals Conceded */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-orange-600" />
+                    Goals Conceded & GC Points (GK/DEF)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Goals conceded projections for goalkeepers and defenders based on team defensive performance.
+                  </p>
+                  <div className="bg-orange-50 p-3 rounded text-sm">
+                    <strong>Formula:</strong><br/>
+                    <code className="text-xs">GoalsConceded = OpponentGoalsScored (from hybrid formula)</code><br/>
+                    <code className="text-xs">GCPoints = -floor(GoalsConceded / 2)</code>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div><strong>FPL Scoring Rules:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>GK/DEF only: -1 point per 2 goals conceded</li>
+                      <li>Examples: 1 GC = 0pts, 2 GC = -1pt, 4 GC = -2pts</li>
+                      <li>Based on team defensive record vs opponent</li>
+                    </ul>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded text-sm font-mono">
+                    <div>Cache: cached_player_goals_conceded</div>
+                    <div>Calculation: Hybrid real data formula</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Yellow Cards */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                    Yellow Cards & YC Points
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Yellow card probability based on player position, form, and opponent difficulty.
+                  </p>
+                  <div className="bg-yellow-50 p-3 rounded text-sm">
+                    <strong>Formula:</strong><br/>
+                    <code className="text-xs">YCProbability = BaseRate × PositionMultiplier × FormFactor × FixtureDifficulty</code><br/>
+                    <code className="text-xs">YCPoints = ExpectedYellowCards × -1</code>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div><strong>Position Base Rates:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>Defenders: Higher base probability</li>
+                      <li>Midfielders: Medium probability</li>
+                      <li>Forwards: Lower probability</li>
+                    </ul>
+                    <div><strong>Points:</strong> Each yellow card = -1 point</div>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded text-sm font-mono">
+                    <div>Cache: cached_player_yellow_cards</div>
+                    <div>Data: Historical yellow card rates</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Red Cards */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-red-700" />
+                    Red Cards & RC Points
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Red card probability based on player discipline, position, and fixture difficulty.
+                  </p>
+                  <div className="bg-red-50 p-3 rounded text-sm">
+                    <strong>Formula:</strong><br/>
+                    <code className="text-xs">RCProbability = BaseRate × PositionMultiplier × FormFactor × FixtureDifficulty</code><br/>
+                    <code className="text-xs">RCPoints = ExpectedRedCards × -3</code>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div><strong>Position Risk:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>Defenders: Higher risk (last man situations)</li>
+                      <li>Others: Lower base probability</li>
+                    </ul>
+                    <div><strong>Points:</strong> Each red card = -3 points</div>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded text-sm font-mono">
+                    <div>Cache: cached_player_red_cards</div>
+                    <div>Probability: Generally very low (&lt;0.1)</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Bonus Points */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Trophy className="h-5 w-5 text-amber-600" />
+                    Bonus Points
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Bonus point projections based on overall performance metrics and historical BPS data.
+                  </p>
+                  <div className="bg-amber-50 p-3 rounded text-sm">
+                    <strong>Formula:</strong><br/>
+                    <code className="text-xs">BonusProbability = f(Goals, Assists, CleanSheets) × FormFactor × OwnershipWeight</code>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div><strong>Calculation Factors:</strong></div>
+                    <ul className="list-disc ml-5 text-xs">
+                      <li>Goals, assists, clean sheets performance</li>
+                      <li>Recent form and BPS trends</li>
+                      <li>Player ownership influence</li>
+                      <li>Capped probability for realistic distribution</li>
+                    </ul>
+                    <div><strong>Note:</strong> Probabilistic estimate, actual bonus based on FPL BPS</div>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded text-sm font-mono">
+                    <div>Cache: cached_player_bonus_points</div>
+                    <div>Data: Probability-based calculation</div>
                   </div>
                 </CardContent>
               </Card>
