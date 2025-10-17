@@ -974,10 +974,16 @@ export default function TransferPlanner() {
   // Fetch player projections for the selected gameweek
   const { data: playerProjections } = useQuery<any[]>({
     queryKey: ["/api/player-total-points", selectedGameweek],
-    enabled: !!selectedGameweek,
+    enabled: !!selectedGameweek && selectedGameweek > 0,
     queryFn: async () => {
+      if (!selectedGameweek) return [];
       const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}`);
-      return response.json();
+      if (!response.ok) {
+        console.error('Failed to fetch player projections:', response.statusText);
+        return [];
+      }
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     }
   });
 
@@ -988,10 +994,17 @@ export default function TransferPlanner() {
     queryFn: async () => {
       // Compute gameweek range inside queryFn
       const nextGWs = getNextGameweeks();
-      const startGW = nextGWs[0]?.id || 7;
-      const endGW = nextGWs[nextGWs.length - 1]?.id || (startGW + 5);
+      if (nextGWs.length === 0) return [];
+      const startGW = nextGWs[0]?.id;
+      const endGW = nextGWs[nextGWs.length - 1]?.id;
+      if (!startGW || !endGW) return [];
       const response = await fetch(`/api/player-total-points?startGameweek=${startGW}&endGameweek=${endGW}`);
-      return response.json();
+      if (!response.ok) {
+        console.error('Failed to fetch 6GW player projections:', response.statusText);
+        return [];
+      }
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
     }
   });
 
