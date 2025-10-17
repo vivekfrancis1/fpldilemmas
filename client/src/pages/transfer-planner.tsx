@@ -3036,14 +3036,16 @@ export default function TransferPlanner() {
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <Badge 
-                                          variant="outline" 
-                                          className="text-xs border-orange-400 text-orange-700 bg-orange-50 dark:bg-orange-950/20 flex items-center gap-1"
-                                          data-testid={`badge-duplicate-${row.draftKey}`}
-                                        >
-                                          <Copy className="h-3 w-3" />
-                                          Duplicate of {duplicateOf}
-                                        </Badge>
+                                        <button className="inline-flex">
+                                          <Badge 
+                                            variant="outline" 
+                                            className="text-xs border-orange-400 text-orange-700 bg-orange-50 dark:bg-orange-950/20 flex items-center gap-1"
+                                            data-testid={`badge-duplicate-${row.draftKey}`}
+                                          >
+                                            <Copy className="h-3 w-3" />
+                                            Duplicate of {duplicateOf}
+                                          </Badge>
+                                        </button>
                                       </TooltipTrigger>
                                       <TooltipContent>
                                         <p>This draft matches Draft {duplicateOf} exactly across lineup, captain, and transfers.</p>
