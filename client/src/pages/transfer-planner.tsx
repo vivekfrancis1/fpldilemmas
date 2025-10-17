@@ -4317,7 +4317,7 @@ export default function TransferPlanner() {
                                     <div className="flex justify-center gap-1.5 mt-1.5">
                                       <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
                                         <SelectTrigger 
-                                          className="h-3.5 w-[30px] px-1 py-0 text-[7px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded-full [&>svg]:hidden" 
+                                          className="h-3.5 w-[42px] px-1.5 py-0 text-[8px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" 
                                           data-testid={`pitch-swap-${pick.element}`} 
                                           title="Swap with bench"
                                         >
@@ -4355,7 +4355,7 @@ export default function TransferPlanner() {
                                         <Button
                                           size="sm"
                                           variant="ghost"
-                                          className="h-8 w-[72px] text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
+                                          className="h-9 w-[72px] text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
                                           onClick={() => handleTransferOut(pick)}
                                           data-testid={`pitch-transfer-out-${pick.element}`}
                                           title="Transfer Out"
@@ -4555,7 +4555,7 @@ export default function TransferPlanner() {
                               <div className="flex justify-center gap-1.5 mt-1.5">
                                 <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
                                   <SelectTrigger 
-                                    className="h-3.5 w-[30px] px-1 py-0 text-[7px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded-full [&>svg]:hidden" 
+                                    className="h-3.5 w-[42px] px-1.5 py-0 text-[8px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" 
                                     data-testid={`pitch-bench-swap-${pick.element}`} 
                                     title="Swap with starting XI"
                                   >
@@ -4583,7 +4583,7 @@ export default function TransferPlanner() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-8 w-[72px] text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
+                                    className="h-9 w-[72px] text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
                                     onClick={() => handleTransferOut(pick)}
                                     data-testid={`pitch-bench-transfer-out-${pick.element}`}
                                     title="Transfer Out"
