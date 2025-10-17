@@ -4317,14 +4317,11 @@ export default function TransferPlanner() {
                                     <div className="flex justify-center gap-1.5 mt-1.5">
                                       <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
                                         <SelectTrigger 
-                                          className="h-5 w-12 p-0 text-[8px] font-medium bg-white/70 hover:bg-white/90 border border-gray-200 rounded [&>svg]:hidden" 
+                                          className="h-6 w-6 p-0 bg-white/70 hover:bg-white/90 border border-gray-200 rounded-full [&>svg]:hidden flex items-center justify-center" 
                                           data-testid={`pitch-swap-${pick.element}`} 
                                           title="Swap with bench"
                                         >
-                                          <div className="flex items-center justify-center w-full gap-0.5">
-                                            <ArrowUpDown className="h-2 w-2" />
-                                            <span>Swap</span>
-                                          </div>
+                                          <ArrowUpDown className="h-3.5 w-3.5" />
                                         </SelectTrigger>
                                         <SelectContent>
                                           {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
@@ -4556,14 +4553,11 @@ export default function TransferPlanner() {
                               <div className="flex justify-center gap-1.5 mt-1.5">
                                 <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
                                   <SelectTrigger 
-                                    className="h-5 w-12 p-0 text-[8px] font-medium bg-white/70 hover:bg-white/90 border border-gray-200 rounded [&>svg]:hidden" 
+                                    className="h-6 w-6 p-0 bg-white/70 hover:bg-white/90 border border-gray-200 rounded-full [&>svg]:hidden flex items-center justify-center" 
                                     data-testid={`pitch-bench-swap-${pick.element}`} 
                                     title="Swap with starting XI"
                                   >
-                                    <div className="flex items-center justify-center w-full gap-0.5">
-                                      <ArrowUpDown className="h-2 w-2" />
-                                      <span>Swap</span>
-                                    </div>
+                                    <ArrowUpDown className="h-3.5 w-3.5" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {manualLineup.slice(0, 11).map((startPick, startIndex) => {
