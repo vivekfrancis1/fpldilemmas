@@ -3450,9 +3450,9 @@ export default function TransferPlanner() {
             <div className="text-xs text-muted-foreground mb-2 italic">
               * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-3">
-              {/* Current Starting 11 */}
-              <div>
+            <div>
+              {/* Horizontal Aligned Lineup */}
+              <div className="space-y-3">
                 {(() => {
                   // Calculate formation from starting 11
                   const starting11 = manualLineup.slice(0, 11).map(pick => getPlayerById(pick.element)).filter(Boolean);
@@ -3469,21 +3469,42 @@ export default function TransferPlanner() {
                     </h3>
                   );
                 })()}
-                <div className="space-y-2">
-                  {/* Group players by position */}
-                  {[1, 2, 3, 4].map(posType => {
-                    const positionPlayers = manualLineup.slice(0, 11).filter(pick => {
+                
+                {/* Horizontal layout with starting and bench aligned */}
+                {[1, 2, 3, 4].map((posType, posIndex) => {
+                  const positionPlayers = manualLineup.slice(0, 11).filter(pick => {
+                    const player = getPlayerById(pick.element);
+                    return player?.element_type === posType;
+                  });
+                  
+                  if (positionPlayers.length === 0) return null;
+                  
+                  // Get bench players for this row
+                  let benchPlayersForRow: typeof manualLineup = [];
+                  if (posType === 1) {
+                    // GK row - show bench GK
+                    benchPlayersForRow = manualLineup.slice(11, 15).filter(pick => {
                       const player = getPlayerById(pick.element);
-                      return player?.element_type === posType;
+                      return player?.element_type === 1;
                     });
-                    
-                    if (positionPlayers.length === 0) return null;
-                    
-                    return (
-                      <div key={posType}>
-                        <div className="text-[10px] font-semibold text-muted-foreground mb-1 uppercase">
+                  } else if (posType === 2) {
+                    // DEF row - show 3 bench outfield players
+                    benchPlayersForRow = manualLineup.slice(11, 15).filter(pick => {
+                      const player = getPlayerById(pick.element);
+                      return player?.element_type !== 1;
+                    });
+                  }
+                  
+                  return (
+                    <div key={posType}>
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="text-[10px] font-semibold text-muted-foreground uppercase min-w-[30px]">
                           {posType === 1 ? 'GKP' : posType === 2 ? 'DEF' : posType === 3 ? 'MID' : 'FWD'}
                         </div>
+                        <div className="h-px bg-gray-200 flex-1"></div>
+                      </div>
+                      <div className="grid lg:grid-cols-[2fr_auto_1fr] gap-2">
+                        {/* Starting players */}
                         <div className="grid gap-1">
                           {positionPlayers.map((pick) => {
                             const player = getPlayerById(pick.element);
@@ -3739,17 +3760,17 @@ export default function TransferPlanner() {
                             );
                           })}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Current Bench */}
-              <div>
-                <h3 className="text-sm font-semibold mb-2">Bench</h3>
-                <div className="grid gap-1">
-                  {manualLineup.slice(11, 15).map((pick, index) => {
+                        
+                        {/* Divider */}
+                        {benchPlayersForRow.length > 0 && (
+                          <div className="hidden lg:flex items-center justify-center">
+                            <div className="w-px h-full bg-gray-300"></div>
+                          </div>
+                        )}
+                        
+                        {/* Bench players for this row */}
+                        <div className="grid gap-1">
+                          {benchPlayersForRow.map((pick, index) => {
                     const player = getPlayerById(pick.element);
                     const projectedPoints = getPlayerProjectedPoints(pick.element);
                     const isGK = player?.element_type === 1;
@@ -3950,9 +3971,13 @@ export default function TransferPlanner() {
                           )}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Total Projected Points */}
