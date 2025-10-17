@@ -4317,11 +4317,11 @@ export default function TransferPlanner() {
                                     <div className="flex justify-center gap-1.5 mt-1.5">
                                       <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
                                         <SelectTrigger 
-                                          className="h-6 w-6 p-0 bg-white/70 hover:bg-white/90 border border-gray-200 rounded-full [&>svg]:hidden flex items-center justify-center" 
+                                          className="h-5 w-5 p-0 bg-white/80 hover:bg-white border border-gray-300 rounded-full [&>svg]:hidden flex items-center justify-center" 
                                           data-testid={`pitch-swap-${pick.element}`} 
                                           title="Swap with bench"
                                         >
-                                          <ArrowUpDown className="h-3.5 w-3.5" />
+                                          <ArrowUpDown className="h-3 w-3 text-gray-700" />
                                         </SelectTrigger>
                                         <SelectContent>
                                           {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
@@ -4553,11 +4553,11 @@ export default function TransferPlanner() {
                               <div className="flex justify-center gap-1.5 mt-1.5">
                                 <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
                                   <SelectTrigger 
-                                    className="h-6 w-6 p-0 bg-white/70 hover:bg-white/90 border border-gray-200 rounded-full [&>svg]:hidden flex items-center justify-center" 
+                                    className="h-5 w-5 p-0 bg-white/80 hover:bg-white border border-gray-300 rounded-full [&>svg]:hidden flex items-center justify-center" 
                                     data-testid={`pitch-bench-swap-${pick.element}`} 
                                     title="Swap with starting XI"
                                   >
-                                    <ArrowUpDown className="h-3.5 w-3.5" />
+                                    <ArrowUpDown className="h-3 w-3 text-gray-700" />
                                   </SelectTrigger>
                                   <SelectContent>
                                     {manualLineup.slice(0, 11).map((startPick, startIndex) => {
