@@ -231,7 +231,7 @@ export default function MyDashboard() {
   const [, setLocation] = useLocation();
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
-  const [teamView, setTeamView] = useState<"list" | "pitch">("list");
+  const [teamView, setTeamView] = useState<"list" | "pitch">("pitch");
 
 
   // Cache manager ID functionality
