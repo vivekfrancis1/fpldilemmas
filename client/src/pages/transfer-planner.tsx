@@ -487,95 +487,86 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     <Card ref={sectionRef} className="border-0 shadow-none">
       <CardHeader className="pb-2 pt-3 px-2 md:px-4">
         <CardTitle className="text-base md:text-lg">All Players - Next 6 Gameweeks</CardTitle>
-        <div className="flex flex-col gap-2 mt-2">
-          {/* Row 1: Search */}
-          <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 mt-2 flex-wrap items-start sm:items-center">
+          <Input
+            placeholder="Search players or teams..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-8 text-sm w-full sm:w-40"
+            data-testid="input-player-search"
+          />
+          <Select value={positionFilter} onValueChange={setPositionFilter}>
+            <SelectTrigger className="h-8 text-sm w-full sm:w-32" data-testid="select-position-filter">
+              <SelectValue placeholder="All Positions" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Positions</SelectItem>
+              <SelectItem value="Goalkeeper">Goalkeepers</SelectItem>
+              <SelectItem value="Defender">Defenders</SelectItem>
+              <SelectItem value="Midfielder">Midfielders</SelectItem>
+              <SelectItem value="Forward">Forwards</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={teamFilter} onValueChange={setTeamFilter}>
+            <SelectTrigger className="h-8 text-sm w-full sm:w-28" data-testid="select-team-filter">
+              <SelectValue placeholder="All Teams" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Teams</SelectItem>
+              {uniqueTeams.map(team => (
+                <SelectItem key={team} value={team}>{team}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={loadGroupFilter} onValueChange={setLoadGroupFilter}>
+            <SelectTrigger className="h-8 text-sm w-full sm:w-28" data-testid="select-load-group">
+              <SelectValue placeholder="Filter" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Players</SelectItem>
+              <SelectItem value="Top 50">Top 50</SelectItem>
+              <SelectItem value="Value 50">Value 50</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="flex items-center gap-1">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Price:</span>
             <Input
-              placeholder="Search players or teams..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-8 text-sm sm:w-48 md:w-64"
-              data-testid="input-player-search"
+              type="number"
+              step="0.1"
+              min="4.0"
+              max="15.0"
+              value={minPrice}
+              onChange={(e) => setMinPrice(parseFloat(e.target.value) || 4.0)}
+              className="h-8 w-16 text-sm"
+              data-testid="input-min-price"
+            />
+            <span className="text-sm text-muted-foreground">-</span>
+            <Input
+              type="number"
+              step="0.1"
+              min="4.0"
+              max="15.0"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 15.0)}
+              className="h-8 w-16 text-sm"
+              data-testid="input-max-price"
             />
           </div>
-          {/* Row 2: Position, Team and Load Group */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Select value={positionFilter} onValueChange={setPositionFilter}>
-              <SelectTrigger className="h-8 text-sm sm:w-36 md:w-40" data-testid="select-position-filter">
-                <SelectValue placeholder="All Positions" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Positions</SelectItem>
-                <SelectItem value="Goalkeeper">Goalkeepers</SelectItem>
-                <SelectItem value="Defender">Defenders</SelectItem>
-                <SelectItem value="Midfielder">Midfielders</SelectItem>
-                <SelectItem value="Forward">Forwards</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="h-8 text-sm sm:w-36 md:w-40" data-testid="select-team-filter">
-                <SelectValue placeholder="All Teams" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Teams</SelectItem>
-                {uniqueTeams.map(team => (
-                  <SelectItem key={team} value={team}>{team}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={loadGroupFilter} onValueChange={setLoadGroupFilter}>
-              <SelectTrigger className="h-8 text-sm sm:w-32 md:w-36" data-testid="select-load-group">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Players</SelectItem>
-                <SelectItem value="Top 50">Top 50</SelectItem>
-                <SelectItem value="Value 50">Value 50</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {/* Row 3: Price Filter */}
-          <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+          {transferredOutPlayers.length > 0 && (
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground whitespace-nowrap">Price:</span>
-              <Input
-                type="number"
-                step="0.1"
-                min="4.0"
-                max="15.0"
-                value={minPrice}
-                onChange={(e) => setMinPrice(parseFloat(e.target.value) || 4.0)}
-                className="h-8 w-20 text-sm"
-                data-testid="input-min-price"
+              <input
+                type="checkbox"
+                id="only-affordable"
+                checked={onlyAffordable}
+                onChange={(e) => setOnlyAffordable(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300"
+                data-testid="checkbox-only-affordable"
               />
-              <span className="text-sm text-muted-foreground">to</span>
-              <Input
-                type="number"
-                step="0.1"
-                min="4.0"
-                max="15.0"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(parseFloat(e.target.value) || 15.0)}
-                className="h-8 w-20 text-sm"
-                data-testid="input-max-price"
-              />
+              <label htmlFor="only-affordable" className="text-sm text-muted-foreground cursor-pointer whitespace-nowrap">
+                Only affordable (≤£{currentBank.toFixed(1)}m)
+              </label>
             </div>
-            {transferredOutPlayers.length > 0 && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="only-affordable"
-                  checked={onlyAffordable}
-                  onChange={(e) => setOnlyAffordable(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300"
-                  data-testid="checkbox-only-affordable"
-                />
-                <label htmlFor="only-affordable" className="text-sm text-muted-foreground cursor-pointer">
-                  Only show affordable (≤£{currentBank.toFixed(1)}m)
-                </label>
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="p-2 md:p-4">
