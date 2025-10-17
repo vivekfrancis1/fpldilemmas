@@ -465,9 +465,13 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     });
 
   // Apply load group filter
-  if (loadGroupFilter !== "All") {
-    const limit = parseInt(loadGroupFilter.replace("Top ", ""));
-    filteredPlayers = filteredPlayers.slice(0, limit);
+  if (loadGroupFilter === "Top 50") {
+    filteredPlayers = filteredPlayers.slice(0, 50);
+  } else if (loadGroupFilter === "Value 50") {
+    // Sort by average value (descending) and take top 50
+    filteredPlayers = [...filteredPlayers]
+      .sort((a, b) => (b.averageValue || 0) - (a.averageValue || 0))
+      .slice(0, 50);
   }
 
   const handleSort = (field: string) => {
@@ -484,7 +488,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
       <CardHeader className="pb-2 pt-3 px-2 md:px-4">
         <CardTitle className="text-base md:text-lg">All Players - Next 6 Gameweeks</CardTitle>
         <div className="flex flex-col gap-2 mt-2">
-          {/* Row 1: Search and Position */}
+          {/* Row 1: Search */}
           <div className="flex flex-col sm:flex-row gap-2">
             <Input
               placeholder="Search players or teams..."
@@ -493,8 +497,11 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               className="h-8 text-sm sm:w-48 md:w-64"
               data-testid="input-player-search"
             />
+          </div>
+          {/* Row 2: Position, Team and Load Group */}
+          <div className="flex flex-col sm:flex-row gap-2">
             <Select value={positionFilter} onValueChange={setPositionFilter}>
-              <SelectTrigger className="h-8 text-sm sm:w-36 md:w-48" data-testid="select-position-filter">
+              <SelectTrigger className="h-8 text-sm sm:w-36 md:w-40" data-testid="select-position-filter">
                 <SelectValue placeholder="All Positions" />
               </SelectTrigger>
               <SelectContent>
@@ -505,11 +512,8 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                 <SelectItem value="Forward">Forwards</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          {/* Row 2: Team and Load Group */}
-          <div className="flex flex-col sm:flex-row gap-2">
             <Select value={teamFilter} onValueChange={setTeamFilter}>
-              <SelectTrigger className="h-8 text-sm sm:w-36 md:w-48" data-testid="select-team-filter">
+              <SelectTrigger className="h-8 text-sm sm:w-36 md:w-40" data-testid="select-team-filter">
                 <SelectValue placeholder="All Teams" />
               </SelectTrigger>
               <SelectContent>
@@ -520,14 +524,13 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               </SelectContent>
             </Select>
             <Select value={loadGroupFilter} onValueChange={setLoadGroupFilter}>
-              <SelectTrigger className="h-8 text-sm sm:w-36 md:w-48" data-testid="select-load-group">
-                <SelectValue placeholder="Load Group" />
+              <SelectTrigger className="h-8 text-sm sm:w-32 md:w-36" data-testid="select-load-group">
+                <SelectValue placeholder="Filter" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Top 50">Top 50</SelectItem>
-                <SelectItem value="Top 100">Top 100</SelectItem>
-                <SelectItem value="Top 200">Top 200</SelectItem>
                 <SelectItem value="All">All Players</SelectItem>
+                <SelectItem value="Top 50">Top 50</SelectItem>
+                <SelectItem value="Value 50">Value 50</SelectItem>
               </SelectContent>
             </Select>
           </div>
