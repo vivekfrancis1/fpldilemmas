@@ -4168,6 +4168,57 @@ export default function TransferPlanner() {
                             const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
                             const fixture = getPlayerFixture(pick.element, selectedGameweek);
                             
+                            // Check if player is transferred out
+                            if (pick.is_transferred_out) {
+                              return (
+                                <div key={`empty-${pick.position}`} className="flex flex-col items-center w-40" data-testid={`pitch-empty-${pick.position}`}>
+                                  <div className="relative w-full">
+                                    <div className="rounded-lg p-2 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-1.5">
+                                      <div className="text-xs font-bold text-red-600">EMPTY SLOT</div>
+                                      <div className="text-[11px] text-red-500">{getPositionShortName(player.element_type)}</div>
+                                      <div className="text-2xl font-bold text-red-600">-</div>
+                                      
+                                      {/* Action Buttons for Transferred Out */}
+                                      <div className="flex flex-col gap-1 mt-1">
+                                        <Button
+                                          size="sm"
+                                          className="h-7 text-xs font-semibold bg-red-600 text-white hover:bg-red-700"
+                                          onClick={() => handleScrollToReplacement(player.element_type)}
+                                          data-testid={`pitch-replace-${pick.position}`}
+                                        >
+                                          Replace
+                                        </Button>
+                                        <div className="flex gap-1">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 px-2 text-[10px] flex-1 text-blue-600 border-blue-300"
+                                            onClick={() => handleUndoTransfer(pick.position)}
+                                            data-testid={`pitch-undo-${pick.position}`}
+                                            title="Undo last transfer"
+                                          >
+                                            <RotateCcw className="h-3 w-3 mr-0.5" />
+                                            Undo
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 px-2 text-[10px] flex-1 text-orange-600 border-orange-300"
+                                            onClick={() => handleUndoAllTransfersForPosition(pick.position)}
+                                            data-testid={`pitch-undo-all-${pick.position}`}
+                                            title="Undo all transfers"
+                                          >
+                                            <X className="h-3 w-3 mr-0.5" />
+                                            All
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            
                             return (
                               <div key={pick.element} className="flex flex-col items-center w-40" data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
@@ -4265,10 +4316,10 @@ export default function TransferPlanner() {
                                     </div>
 
                                     {/* Primary Action Buttons - Swap & Transfer */}
-                                    <div className="flex justify-center gap-2 mt-2">
+                                    <div className="flex justify-center gap-1.5 mt-1.5">
                                       <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
-                                        <SelectTrigger className="h-8 px-3 text-xs font-semibold bg-white/90 hover:bg-white border-2" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench">
-                                          <ArrowUpDown className="h-4 w-4 mr-1" />
+                                        <SelectTrigger className="h-7 px-2 text-[11px] font-semibold bg-white/90 hover:bg-white" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench">
+                                          <ArrowUpDown className="h-3 w-3 mr-1" />
                                           Swap
                                         </SelectTrigger>
                                         <SelectContent>
@@ -4301,13 +4352,13 @@ export default function TransferPlanner() {
                                         <Button
                                           size="sm"
                                           variant="ghost"
-                                          className="h-8 px-3 text-xs font-semibold text-red-600 bg-white/90 hover:bg-red-50 border-2"
+                                          className="h-7 px-2 text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
                                           onClick={() => handleTransferOut(pick)}
                                           data-testid={`pitch-transfer-out-${pick.element}`}
                                           title="Transfer Out"
                                         >
-                                          <X className="h-4 w-4 mr-1" />
-                                          Transfer
+                                          <X className="h-3 w-3 mr-1" />
+                                          Out
                                         </Button>
                                       )}
                                     </div>
@@ -4318,24 +4369,24 @@ export default function TransferPlanner() {
                                         <Button
                                           size="icon"
                                           variant="ghost"
-                                          className="h-7 w-7 p-0 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-full"
+                                          className="h-6 w-6 p-0 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-full"
                                           onClick={() => handleSetCaptain(pick.element)}
                                           data-testid={`pitch-set-captain-${pick.element}`}
                                           title="Set Captain"
                                         >
-                                          <Crown className="h-4 w-4" />
+                                          <Crown className="h-3.5 w-3.5" />
                                         </Button>
                                       )}
                                       {!pick.is_vice_captain && (
                                         <Button
                                           size="icon"
                                           variant="ghost"
-                                          className="h-7 w-7 p-0 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-full"
+                                          className="h-6 w-6 p-0 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-full"
                                           onClick={() => handleSetViceCaptain(pick.element)}
                                           data-testid={`pitch-set-vice-${pick.element}`}
                                           title="Set Vice Captain"
                                         >
-                                          <Crown className="h-4 w-4" />
+                                          <Crown className="h-3.5 w-3.5" />
                                         </Button>
                                       )}
                                     </div>
@@ -4364,6 +4415,57 @@ export default function TransferPlanner() {
                       const projectedPoints = getPlayerProjectedPoints(pick.element);
                       const fixture = getPlayerFixture(pick.element, selectedGameweek);
                       const actualIndex = 11 + benchIndex;
+                      
+                      // Check if bench player is transferred out
+                      if (pick.is_transferred_out) {
+                        return (
+                          <div key={`empty-bench-${pick.position}`} className="flex flex-col items-center w-40" data-testid={`pitch-bench-empty-${pick.position}`}>
+                            <div className="relative w-full">
+                              <div className="rounded-lg p-2 text-center shadow-md border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-1.5">
+                                <div className="text-xs font-bold text-red-600">EMPTY SLOT</div>
+                                <div className="text-[11px] text-red-500">{getPositionShortName(player.element_type)}</div>
+                                <div className="text-2xl font-bold text-red-600">-</div>
+                                
+                                {/* Action Buttons for Transferred Out */}
+                                <div className="flex flex-col gap-1 mt-1">
+                                  <Button
+                                    size="sm"
+                                    className="h-7 text-xs font-semibold bg-red-600 text-white hover:bg-red-700"
+                                    onClick={() => handleScrollToReplacement(player.element_type)}
+                                    data-testid={`pitch-bench-replace-${pick.position}`}
+                                  >
+                                    Replace
+                                  </Button>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 px-2 text-[10px] flex-1 text-blue-600 border-blue-300"
+                                      onClick={() => handleUndoTransfer(pick.position)}
+                                      data-testid={`pitch-bench-undo-${pick.position}`}
+                                      title="Undo last transfer"
+                                    >
+                                      <RotateCcw className="h-3 w-3 mr-0.5" />
+                                      Undo
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 px-2 text-[10px] flex-1 text-orange-600 border-orange-300"
+                                      onClick={() => handleUndoAllTransfersForPosition(pick.position)}
+                                      data-testid={`pitch-bench-undo-all-${pick.position}`}
+                                      title="Undo all transfers"
+                                    >
+                                      <X className="h-3 w-3 mr-0.5" />
+                                      All
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
                       
                       return (
                         <div key={pick.element} className="flex flex-col items-center w-40" data-testid={`pitch-bench-${player.id}`}>
@@ -4447,10 +4549,10 @@ export default function TransferPlanner() {
                               </div>
                               
                               {/* Action Buttons for Bench */}
-                              <div className="flex justify-center gap-2 mt-2">
+                              <div className="flex justify-center gap-1.5 mt-1.5">
                                 <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
-                                  <SelectTrigger className="h-8 px-3 text-xs font-semibold bg-white/90 hover:bg-white border-2" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI">
-                                    <ArrowUpDown className="h-4 w-4 mr-1" />
+                                  <SelectTrigger className="h-7 px-2 text-[11px] font-semibold bg-white/90 hover:bg-white" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI">
+                                    <ArrowUpDown className="h-3 w-3 mr-1" />
                                     Swap
                                   </SelectTrigger>
                                   <SelectContent>
@@ -4473,13 +4575,13 @@ export default function TransferPlanner() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-8 px-3 text-xs font-semibold text-red-600 bg-white/90 hover:bg-red-50 border-2"
+                                    className="h-7 px-2 text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
                                     onClick={() => handleTransferOut(pick)}
                                     data-testid={`pitch-bench-transfer-out-${pick.element}`}
                                     title="Transfer Out"
                                   >
-                                    <X className="h-4 w-4 mr-1" />
-                                    Transfer
+                                    <X className="h-3 w-3 mr-1" />
+                                    Out
                                   </Button>
                                 )}
                               </div>
