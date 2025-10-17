@@ -1,16 +1,199 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info, Heart, AlertTriangle, XCircle, Clock } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+// Player Availability Badge Component - only shows for players with < 100% availability
+function PlayerAvailabilityBadge({ player }: { player: any }) {
+  const chanceOfPlaying = player.chanceOfPlayingNextRound ?? 100;
+  const status = player.status || 'a';
+  const news = player.news || '';
+
+  // Only show badge if availability is not 100%
+  if (chanceOfPlaying >= 100 && status === 'a') {
+    return null;
+  }
+
+  // Determine status display based on chance of playing and status
+  let statusColor = 'text-yellow-600';
+  let statusBg = 'bg-yellow-50';
+  let statusIcon = Clock;
+  let statusText = 'Doubtful';
+  let statusBorder = 'border-yellow-200';
+
+  if (status === 's' || status === 'suspended') {
+    statusColor = 'text-red-600';
+    statusBg = 'bg-red-50';
+    statusIcon = XCircle;
+    statusText = 'Suspended';
+    statusBorder = 'border-red-200';
+  } else if (status === 'i' || status === 'injured') {
+    statusColor = 'text-red-600';
+    statusBg = 'bg-red-50';
+    statusIcon = Heart;
+    statusText = 'Injured';
+    statusBorder = 'border-red-200';
+  } else if (status === 'd' || status === 'doubtful') {
+    statusColor = 'text-yellow-600';
+    statusBg = 'bg-yellow-50';
+    statusIcon = AlertTriangle;
+    statusText = 'Doubtful';
+    statusBorder = 'border-yellow-200';
+  } else if (status === 'u' || status === 'unavailable') {
+    statusColor = 'text-gray-600';
+    statusBg = 'bg-gray-50';
+    statusIcon = XCircle;
+    statusText = 'Unavailable';
+    statusBorder = 'border-gray-200';
+  }
+
+  const StatusIcon = statusIcon;
+
+  return (
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild>
+        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] md:text-xs font-semibold cursor-help transition-colors hover:opacity-80 ${statusBg} ${statusBorder} border shadow-sm`}>
+          <StatusIcon className={`h-2.5 w-2.5 md:h-3 md:w-3 ${statusColor}`} />
+          <span className={statusColor}>
+            {chanceOfPlaying}%
+          </span>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <StatusIcon className={`h-4 w-4 ${statusColor}`} />
+            <span className="font-semibold text-gray-900">{statusText}</span>
+          </div>
+          <div className="text-sm text-gray-600">
+            <span className="font-medium">Chance of playing:</span> {chanceOfPlaying}%
+          </div>
+          {news && (
+            <div className="text-sm text-gray-700 border-t pt-2">
+              <span className="font-medium">News:</span> {news}
+            </div>
+          )}
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+// Availability Adjustment Helpers for Frontend
+function parseReturnDate(newsText: string): Date | null {
+  if (!newsText) return null;
+  
+  const patterns = [
+    /(?:expected back|return date|due back|back|suspended until)\s+(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
+    /(?:until|after)\s+(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
+  ];
+  
+  const monthMap: { [key: string]: number } = {
+    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+  };
+  
+  for (const pattern of patterns) {
+    const match = newsText.match(pattern);
+    if (match) {
+      const day = parseInt(match[1]);
+      const monthStr = match[2].toLowerCase();
+      const month = monthMap[monthStr];
+      
+      if (month !== undefined) {
+        const currentYear = new Date().getFullYear();
+        const date = new Date(currentYear, month, day);
+        
+        if (date < new Date()) {
+          date.setFullYear(currentYear + 1);
+        }
+        
+        return date;
+      }
+    }
+  }
+  
+  return null;
+}
+
+function getGameweekFromDate(date: Date, bootstrapData: any): number | null {
+  if (!bootstrapData?.events) return null;
+  
+  const sortedEvents = bootstrapData.events.sort((a: any, b: any) => a.id - b.id);
+  
+  for (const event of sortedEvents) {
+    const deadlineDate = new Date(event.deadline_time);
+    const gameweekEnd = new Date(deadlineDate.getTime() + 24 * 60 * 60 * 1000);
+    
+    if (date <= gameweekEnd) {
+      return event.id;
+    }
+  }
+  
+  const lastEvent = sortedEvents[sortedEvents.length - 1];
+  if (lastEvent) {
+    return lastEvent.id;
+  }
+  
+  return null;
+}
+
+function applyAvailabilityAdjustments(
+  player: any,
+  bootstrapData: any,
+  currentGameweek: number
+): any {
+  const chanceOfPlaying = player.chanceOfPlayingNextRound ?? 100;
+  const status = player.status || 'a';
+  const news = player.news || '';
+  
+  if (chanceOfPlaying >= 100 && status === 'a') {
+    return player;
+  }
+  
+  const adjustedPlayer = { ...player };
+  const adjustedProjections = { ...player.gameweekProjections };
+  const originalProjections = { ...player.gameweekProjections };
+  
+  if (chanceOfPlaying === 0) {
+    const returnDate = parseReturnDate(news);
+    
+    if (returnDate) {
+      const returnGameweek = getGameweekFromDate(returnDate, bootstrapData);
+      
+      Object.keys(adjustedProjections).forEach(gwKey => {
+        const gw = parseInt(gwKey);
+        if (returnGameweek && gw < returnGameweek) {
+          adjustedProjections[gwKey] = 0;
+        }
+      });
+    } else {
+      Object.keys(adjustedProjections).forEach(gwKey => {
+        adjustedProjections[gwKey] = 0;
+      });
+    }
+  } else if (chanceOfPlaying === 25 || chanceOfPlaying === 50 || chanceOfPlaying === 75) {
+    const nextGameweek = (currentGameweek + 1).toString();
+    if (adjustedProjections[nextGameweek] !== undefined) {
+      const multiplier = chanceOfPlaying / 100;
+      adjustedProjections[nextGameweek] = adjustedProjections[nextGameweek] * multiplier;
+    }
+  }
+  
+  adjustedPlayer.gameweekProjections = adjustedProjections;
+  adjustedPlayer.originalGameweekProjections = originalProjections;
+  
+  return adjustedPlayer;
+}
 
 interface TeamPick {
   element: number;
@@ -175,6 +358,22 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     );
   }
 
+  // Apply availability adjustments to all players
+  const adjustedPlayersData = useMemo(() => {
+    if (!bootstrapData) return allPlayersData;
+    
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    const nextEvent = bootstrapData.events.find(e => e.is_next);
+    let currentGameweek = currentEvent?.id || nextEvent?.id || 1;
+    if (currentEvent?.finished) {
+      currentGameweek = nextEvent?.id || currentGameweek + 1;
+    }
+    
+    return allPlayersData.map(player => 
+      applyAvailabilityAdjustments(player, bootstrapData, currentGameweek)
+    );
+  }, [allPlayersData, bootstrapData]);
+
   // Get next 6 gameweeks
   const getNextGameweeks = () => {
     if (!bootstrapData) return [];
@@ -202,7 +401,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   // Calculate top 3 players for each gameweek
   const getTop3ForGameweek = (gw: number) => {
-    const sorted = [...allPlayersData]
+    const sorted = [...adjustedPlayersData]
       .map(p => ({ playerId: p.playerId, points: p.gameweekProjections[gw.toString()] || 0 }))
       .sort((a, b) => b.points - a.points);
     
@@ -221,10 +420,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   // Get unique teams for filter
   const teams = bootstrapData?.teams || [];
-  const uniqueTeams = Array.from(new Set(allPlayersData.map(p => p.team))).sort();
+  const uniqueTeams = Array.from(new Set(adjustedPlayersData.map(p => p.team))).sort();
 
   // Filter and sort players
-  let filteredPlayers = allPlayersData
+  let filteredPlayers = adjustedPlayersData
     .filter(player => {
       const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            player.team.toLowerCase().includes(searchTerm.toLowerCase());
@@ -276,8 +475,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   };
 
   return (
-    <Card ref={sectionRef} className="border-0 shadow-none">
-      <CardHeader className="pb-2 pt-3 px-2 md:px-4">
+    <TooltipProvider>
+      <Card ref={sectionRef} className="border-0 shadow-none">
+        <CardHeader className="pb-2 pt-3 px-2 md:px-4">
         <CardTitle className="text-base md:text-lg">All Players - Next 6 Gameweeks</CardTitle>
         <div className="flex flex-col gap-2 mt-2">
           {/* Row 1: Search and Position */}
@@ -441,7 +641,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     data-testid={`player-row-${player.playerId}`}
                   >
                     <td className="py-1 px-1 md:p-2 sticky left-0 bg-white dark:bg-gray-950 z-10 w-[160px] min-w-[160px] max-w-[200px]">
-                      <div className="font-medium text-xs md:text-sm truncate max-w-[150px]">{player.name}</div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="font-medium text-xs md:text-sm truncate max-w-[100px]">{player.name}</div>
+                        <PlayerAvailabilityBadge player={player} />
+                      </div>
                       <div className="text-[10px] md:text-xs text-muted-foreground truncate">
                         {(() => {
                           const positionShortforms: { [key: string]: string } = {
@@ -558,7 +761,8 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           )}
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </TooltipProvider>
   );
 }
 
