@@ -1287,7 +1287,7 @@ export default function TransferPlanner() {
 
   // Calculate manual mode points for a draft at a specific gameweek
   const calculateManualPointsForGameweek = (squad: TeamPick[], gameweek: number, projections6GW: any[]): number => {
-    if (!projections6GW) return 0;
+    if (!projections6GW || !Array.isArray(projections6GW)) return 0;
     
     // Get starting 11 (positions 1-11, more robust than slice)
     const starting11 = squad.filter(pick => pick.position <= 11);
@@ -1307,7 +1307,7 @@ export default function TransferPlanner() {
 
   // Calculate auto mode points for a draft at a specific gameweek
   const calculateAutoPointsForGameweek = (squad: TeamPick[], gameweek: number, projections6GW: any[]): number => {
-    if (!projections6GW) return 0;
+    if (!projections6GW || !Array.isArray(projections6GW)) return 0;
     
     // Get all 15 players with their projections for this gameweek
     const playersWithPoints = squad.map(pick => {
@@ -3008,7 +3008,7 @@ export default function TransferPlanner() {
                 </div>
                 <div className="text-2xl font-bold text-blue-600">
                   {(() => {
-                    if (!playerProjections6GW || !teamData?.picks) return '0.0';
+                    if (!playerProjections6GW || !Array.isArray(playerProjections6GW) || !teamData?.picks) return '0.0';
                     
                     let grandTotal = 0;
                     const nextGWs = nextGameweeks.map(gw => gw.id);
