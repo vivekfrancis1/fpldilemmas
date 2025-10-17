@@ -2823,6 +2823,10 @@ export default function TransferPlanner() {
   const nextGameweeks = getNextGameweeks();
 
   // Jersey color helper functions
+  const getPlayerTeam = (player: any) => {
+    return bootstrapData?.teams.find(t => t.id === player.team);
+  };
+
   const getTeamJerseyColor = (teamId: number): string => {
     const jerseyColors: { [key: number]: string } = {
       1: '#EF0107',    // Arsenal - Red
