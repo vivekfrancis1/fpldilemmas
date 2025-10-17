@@ -4185,8 +4185,8 @@ export default function TransferPlanner() {
                   </div>
                 </div>
 
-                {/* Bench */}
-                <div>
+                  {/* Bench */}
+                  <div>
                     <h3 className="text-sm font-semibold mb-2">Bench</h3>
                     <div className="grid gap-1">
                     {optimizedLineup.bench.map((player) => {
