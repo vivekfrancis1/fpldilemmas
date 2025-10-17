@@ -1034,14 +1034,14 @@ export default function MyDashboard() {
                                         
                                         {/* Team Name */}
                                         <div className="text-center mb-1">
-                                          <div className="text-sm font-bold uppercase" style={{ color: textColor }}>
+                                          <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
                                             {playerTeam?.short_name || 'UNK'}
                                           </div>
                                         </div>
 
                                         {/* Player Name */}
                                         <div className="text-center mb-1">
-                                          <div className="text-base font-bold" style={{ color: textColor }}>
+                                          <div className="text-xs font-bold" style={{ color: textColor }}>
                                             {player.web_name}{player.in_dreamteam ? ' *' : ''}
                                           </div>
                                         </div>
@@ -1305,12 +1305,12 @@ export default function MyDashboard() {
                                     style={{ backgroundColor: jerseyColor }}
                                   >
                                     <div className="text-center mb-1">
-                                      <div className="text-xs font-bold uppercase" style={{ color: textColor }}>
+                                      <div className="text-[9px] font-bold uppercase" style={{ color: textColor }}>
                                         {playerTeam?.short_name || 'UNK'}
                                       </div>
                                     </div>
                                     <div className="text-center mb-1">
-                                      <div className="text-sm font-bold" style={{ color: textColor }}>
+                                      <div className="text-[10px] font-bold" style={{ color: textColor }}>
                                         {player.web_name}{player.in_dreamteam ? ' *' : ''}
                                       </div>
                                     </div>
