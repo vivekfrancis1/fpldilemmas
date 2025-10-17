@@ -4074,7 +4074,7 @@ export default function TransferPlanner() {
             {optimizedLineup && !optimizeMutation.isPending && (
               <div className="mt-4">
                 <div className="text-xs text-muted-foreground mb-2 italic">
-                  * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
+                  * All player swaps/transfers should be done in the Manual lineup, and it will automatically reflect in the Auto lineup.
                 </div>
 
                 <div>
