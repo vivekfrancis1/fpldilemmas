@@ -4165,63 +4165,107 @@ export default function TransferPlanner() {
                               );
                             }
                             
+                            const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
+                            const fixture = getPlayerFixture(pick.element, selectedGameweek);
+                            
                             return (
-                              <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
+                              <div key={pick.element} className="flex flex-col items-center w-40" data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
                                   {/* Jersey Card */}
                                   <div 
-                                    className="rounded-lg p-3 text-center shadow-lg border-2" 
+                                    className="rounded-lg p-2 text-center shadow-lg border-2 min-h-[280px] flex flex-col" 
                                     style={{ 
                                       backgroundColor: jerseyColor,
                                       borderColor: pick.is_captain ? '#facc15' : pick.is_vice_captain ? '#3b82f6' : isPlayerTransferredIn(pick) ? '#22c55e' : jerseyColor
                                     }}
                                   >
                                     {/* Team Name */}
-                                    <div className="text-center mb-1">
-                                      <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
-                                        {playerTeam?.short_name || 'UNK'}
-                                      </div>
+                                    <div className="text-[10px] font-bold uppercase mb-1" style={{ color: textColor }}>
+                                      {playerTeam?.short_name || 'UNK'}
                                     </div>
 
-                                    {/* Player Name */}
-                                    <div className="text-center mb-1">
-                                      <div className="text-xs font-bold" style={{ color: textColor }}>
-                                        {player.web_name}
-                                      </div>
-                                    </div>
-
-                                    {/* Badges */}
-                                    <div className="flex justify-center gap-1 mb-2">
-                                      {pick.is_captain && (
-                                        <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 px-1 py-0.5 rounded">C</span>
-                                      )}
-                                      {pick.is_vice_captain && (
-                                        <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1 py-0.5 rounded">VC</span>
-                                      )}
-                                      {isPlayerTransferredIn(pick) && (
-                                        <span className="text-[10px] font-bold text-green-600 bg-green-100 px-1 py-0.5 rounded">NEW</span>
-                                      )}
+                                    {/* Player Name with C/VC */}
+                                    <div className="text-xs font-bold mb-1 flex items-center justify-center gap-1" style={{ color: textColor }}>
+                                      <span>{player.web_name}</span>
+                                      {pick.is_captain && <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 px-1 py-0.5 rounded">C</span>}
+                                      {pick.is_vice_captain && <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1 py-0.5 rounded">VC</span>}
+                                      {isPlayerTransferredIn(pick) && <span className="text-[10px] font-bold text-green-600 bg-green-100 px-1 py-0.5 rounded">NEW</span>}
                                     </div>
 
                                     {/* Projected Points */}
-                                    <div className="text-center mb-2">
-                                      <div className="text-2xl font-bold" style={{ color: textColor }}>
-                                        {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
-                                      </div>
+                                    <div className="text-xl font-bold mb-1" style={{ color: textColor }}>
+                                      {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                       {pick.is_captain && projectedPoints !== null && (
-                                        <div className="text-[10px]" style={{ color: textColor }}>
-                                          ({(projectedPoints * 2).toFixed(1)})
-                                        </div>
+                                        <span className="text-[10px] ml-1">({(projectedPoints * 2).toFixed(1)})</span>
                                       )}
                                     </div>
 
+                                    {/* Opponent */}
+                                    {fixture && (
+                                      <div className="text-[10px] font-medium mb-1" style={{ color: textColor }}>
+                                        vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}
+                                      </div>
+                                    )}
+
                                     {/* Price Info */}
-                                    <div className="text-[10px] font-medium mb-2" style={{ color: textColor }}>
-                                      £{((pick.purchase_price || player.now_cost) / 10).toFixed(1)}m
+                                    <div className="text-[9px] mb-2" style={{ color: textColor }}>
+                                      {editingBuyPrice === pick.element ? (
+                                        <div className="flex items-center justify-center gap-1">
+                                          <span>£</span>
+                                          <Input
+                                            type="number"
+                                            step="0.1"
+                                            min="4.0"
+                                            max="15.0"
+                                            value={editBuyPriceValue}
+                                            onChange={(e) => setEditBuyPriceValue(e.target.value)}
+                                            className="h-4 w-12 text-[9px] p-1 text-black"
+                                            autoFocus
+                                            data-testid={`pitch-input-buy-price-${pick.element}`}
+                                          />
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-4 w-4 text-green-600 hover:bg-green-50 p-0"
+                                            onClick={() => {
+                                              const price = parseFloat(editBuyPriceValue);
+                                              if (!isNaN(price) && price >= 4.0 && price <= 15.0) {
+                                                updateBuyPrice(pick.element, price);
+                                              }
+                                            }}
+                                            data-testid={`pitch-button-save-buy-price-${pick.element}`}
+                                          >
+                                            <Check className="h-2.5 w-2.5" />
+                                          </Button>
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-4 w-4 text-red-600 hover:bg-red-50 p-0"
+                                            onClick={cancelEditingBuyPrice}
+                                            data-testid={`pitch-button-cancel-buy-price-${pick.element}`}
+                                          >
+                                            <X className="h-2.5 w-2.5" />
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex gap-1 items-center justify-center">
+                                          <span>Buy: £{((pick.purchase_price || player.now_cost) / 10).toFixed(1)}m</span>
+                                          <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            className="h-3 w-3 p-0 hover:bg-blue-50"
+                                            onClick={() => startEditingBuyPrice(pick.element, pick.purchase_price || player.now_cost)}
+                                            data-testid={`pitch-button-edit-buy-price-${pick.element}`}
+                                          >
+                                            <Edit2 className="h-2 w-2" style={{ color: textColor }} />
+                                          </Button>
+                                        </div>
+                                      )}
+                                      <div>Sell: £{getSellingPrice(pick).toFixed(1)}m</div>
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex justify-center gap-1">
+                                    <div className="flex flex-wrap justify-center gap-1 mt-auto">
                                       {!pick.is_captain && (
                                         <Button
                                           size="icon"
@@ -4229,10 +4273,53 @@ export default function TransferPlanner() {
                                           className="h-6 w-6 p-0 text-yellow-600 hover:bg-yellow-100"
                                           onClick={() => handleSetCaptain(pick.element)}
                                           data-testid={`pitch-set-captain-${pick.element}`}
+                                          title="Set Captain"
                                         >
                                           <Crown className="h-3 w-3" />
                                         </Button>
                                       )}
+                                      {!pick.is_vice_captain && (
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-100"
+                                          onClick={() => handleSetViceCaptain(pick.element)}
+                                          data-testid={`pitch-set-vice-${pick.element}`}
+                                          title="Set Vice Captain"
+                                        >
+                                          <Crown className="h-3 w-3" />
+                                        </Button>
+                                      )}
+                                      <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
+                                        <SelectTrigger className="h-6 w-6 p-0 border-0 hover:bg-gray-100" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench">
+                                          <ArrowUpDown className="h-3 w-3" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
+                                            const benchPlayer = getPlayerById(benchPick.element);
+                                            const startingPlayer = getPlayerById(pick.element);
+                                            
+                                            if (startingPlayer?.element_type === 1 && benchPlayer?.element_type !== 1) return null;
+                                            if (startingPlayer?.element_type !== 1 && benchPlayer?.element_type === 1) return null;
+                                            
+                                            if (startingPlayer?.element_type === 2 && benchPlayer?.element_type !== 2) {
+                                              const starting11 = manualLineup.slice(0, 11);
+                                              const defendersInStarting = starting11.filter(p => {
+                                                const pl = getPlayerById(p.element);
+                                                return pl?.element_type === 2;
+                                              }).length;
+                                              
+                                              if (defendersInStarting <= 3) return null;
+                                            }
+                                            
+                                            return (
+                                              <SelectItem key={benchPick.element} value={benchIndex.toString()}>
+                                                {benchPlayer?.web_name}
+                                              </SelectItem>
+                                            );
+                                          })}
+                                        </SelectContent>
+                                      </Select>
                                       {plannerMode === "manual" && (
                                         <Button
                                           size="icon"
@@ -4240,6 +4327,7 @@ export default function TransferPlanner() {
                                           className="h-6 w-6 p-0 text-red-600 hover:bg-red-100"
                                           onClick={() => handleTransferOut(pick)}
                                           data-testid={`pitch-transfer-out-${pick.element}`}
+                                          title="Transfer Out"
                                         >
                                           <X className="h-3 w-3" />
                                         </Button>
@@ -4260,7 +4348,7 @@ export default function TransferPlanner() {
                 <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                   <h3 className="text-sm font-semibold mb-3">Bench</h3>
                   <div className="flex gap-4 flex-wrap justify-center">
-                    {manualLineup.slice(11, 15).map(pick => {
+                    {manualLineup.slice(11, 15).map((pick, benchIndex) => {
                       const player = getPlayerById(pick.element);
                       if (!player) return null;
                       
@@ -4268,37 +4356,125 @@ export default function TransferPlanner() {
                       const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
                       const textColor = getTextColor(jerseyColor);
                       const projectedPoints = getPlayerProjectedPoints(pick.element);
+                      const fixture = getPlayerFixture(pick.element, selectedGameweek);
+                      const actualIndex = 11 + benchIndex;
                       
                       return (
-                        <div key={pick.element} className="flex flex-col items-center w-24" data-testid={`pitch-bench-${player.id}`}>
+                        <div key={pick.element} className="flex flex-col items-center w-40" data-testid={`pitch-bench-${player.id}`}>
                           <div className="relative w-full">
                             <div 
-                              className="rounded-lg p-2 text-center shadow-md border-2" 
+                              className="rounded-lg p-2 text-center shadow-md border-2 min-h-[280px] flex flex-col" 
                               style={{ backgroundColor: jerseyColor, borderColor: jerseyColor }}
                             >
-                              <div className="text-[9px] font-bold uppercase mb-1" style={{ color: textColor }}>
+                              <div className="text-[10px] font-bold uppercase mb-1" style={{ color: textColor }}>
                                 {playerTeam?.short_name || 'UNK'}
                               </div>
-                              <div className="text-[10px] font-bold mb-1" style={{ color: textColor }}>
+                              <div className="text-xs font-bold mb-1" style={{ color: textColor }}>
                                 {player.web_name}
                               </div>
                               <div className="text-xl font-bold mb-1" style={{ color: textColor }}>
                                 {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                               </div>
-                              <div className="text-[9px] font-medium mb-1" style={{ color: textColor }}>
-                                £{((pick.purchase_price || player.now_cost) / 10).toFixed(1)}m
-                              </div>
-                              {plannerMode === "manual" && (
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-5 w-5 p-0 text-red-600 hover:bg-red-100 mx-auto"
-                                  onClick={() => handleTransferOut(pick)}
-                                  data-testid={`pitch-bench-transfer-out-${pick.element}`}
-                                >
-                                  <X className="h-2.5 w-2.5" />
-                                </Button>
+                              
+                              {/* Opponent */}
+                              {fixture && (
+                                <div className="text-[10px] font-medium mb-1" style={{ color: textColor }}>
+                                  vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}
+                                </div>
                               )}
+                              
+                              {/* Price Info */}
+                              <div className="text-[9px] mb-2" style={{ color: textColor }}>
+                                {editingBuyPrice === pick.element ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <span>£</span>
+                                    <Input
+                                      type="number"
+                                      step="0.1"
+                                      min="4.0"
+                                      max="15.0"
+                                      value={editBuyPriceValue}
+                                      onChange={(e) => setEditBuyPriceValue(e.target.value)}
+                                      className="h-4 w-12 text-[9px] p-1 text-black"
+                                      autoFocus
+                                      data-testid={`pitch-bench-input-buy-price-${pick.element}`}
+                                    />
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-4 w-4 text-green-600 hover:bg-green-50 p-0"
+                                      onClick={() => {
+                                        const price = parseFloat(editBuyPriceValue);
+                                        if (!isNaN(price) && price >= 4.0 && price <= 15.0) {
+                                          updateBuyPrice(pick.element, price);
+                                        }
+                                      }}
+                                      data-testid={`pitch-bench-button-save-buy-price-${pick.element}`}
+                                    >
+                                      <Check className="h-2.5 w-2.5" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-4 w-4 text-red-600 hover:bg-red-50 p-0"
+                                      onClick={cancelEditingBuyPrice}
+                                      data-testid={`pitch-bench-button-cancel-buy-price-${pick.element}`}
+                                    >
+                                      <X className="h-2.5 w-2.5" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <div className="flex gap-1 items-center justify-center">
+                                    <span>Buy: £{((pick.purchase_price || player.now_cost) / 10).toFixed(1)}m</span>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-3 w-3 p-0 hover:bg-blue-50"
+                                      onClick={() => startEditingBuyPrice(pick.element, pick.purchase_price || player.now_cost)}
+                                      data-testid={`pitch-bench-button-edit-buy-price-${pick.element}`}
+                                    >
+                                      <Edit2 className="h-2 w-2" style={{ color: textColor }} />
+                                    </Button>
+                                  </div>
+                                )}
+                                <div>Sell: £{getSellingPrice(pick).toFixed(1)}m</div>
+                              </div>
+                              
+                              {/* Action Buttons for Bench */}
+                              <div className="flex flex-wrap justify-center gap-1 mt-auto">
+                                <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
+                                  <SelectTrigger className="h-6 w-6 p-0 border-0 hover:bg-gray-100" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI">
+                                    <ArrowUpDown className="h-3 w-3" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {manualLineup.slice(0, 11).map((startPick, startIndex) => {
+                                      const startPlayer = getPlayerById(startPick.element);
+                                      const benchPlayer = getPlayerById(pick.element);
+                                      
+                                      if (benchPlayer?.element_type === 1 && startPlayer?.element_type !== 1) return null;
+                                      if (benchPlayer?.element_type !== 1 && startPlayer?.element_type === 1) return null;
+                                      
+                                      return (
+                                        <SelectItem key={startPick.element} value={startIndex.toString()}>
+                                          {startPlayer?.web_name}
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                                {plannerMode === "manual" && (
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0 text-red-600 hover:bg-red-100"
+                                    onClick={() => handleTransferOut(pick)}
+                                    data-testid={`pitch-bench-transfer-out-${pick.element}`}
+                                    title="Transfer Out"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
