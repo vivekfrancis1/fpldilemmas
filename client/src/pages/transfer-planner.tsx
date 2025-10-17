@@ -4077,7 +4077,7 @@ export default function TransferPlanner() {
                   * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-3">
+                <div>
                   {/* Starting 11 */}
                   <div>
                     <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
