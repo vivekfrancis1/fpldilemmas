@@ -2511,16 +2511,19 @@ export default function TransferPlanner() {
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  <button className="inline-flex items-center">
+                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                  </button>
                 </TooltipTrigger>
-                <TooltipContent className="max-w-xs md:max-w-sm">
+                <TooltipContent className="w-80 md:w-96 p-4">
                   <div className="space-y-2 text-sm">
                     <p className="font-semibold">To find your Manager ID:</p>
-                    <ol className="list-decimal list-inside space-y-1">
-                      <li>Visit fantasy.premierleague.com from your web browser (not the mobile app) and sign in</li>
-                      <li>Click on the Points tab</li>
-                      <li>Check the URL in your browser's address bar</li>
-                      <li>Your Manager ID is the number after "entry". For example: https://fantasy.premierleague.com/entry/<strong>123456</strong>/event/3</li>
+                    <ol className="list-decimal list-inside space-y-1.5 text-left">
+                      <li className="pl-1">Visit fantasy.premierleague.com from your web browser (not the mobile app) and sign in to your account</li>
+                      <li className="pl-1">Click on the Points tab</li>
+                      <li className="pl-1">Check the URL in your browser's address bar</li>
+                      <li className="pl-1">Your Manager ID is the number in the URL after "entry"</li>
+                      <li className="pl-1">For example, in https://fantasy.premierleague.com/entry/<strong>123456</strong>/event/3, the Manager ID is <strong>123456</strong></li>
                     </ol>
                   </div>
                 </TooltipContent>
