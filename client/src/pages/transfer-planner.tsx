@@ -992,6 +992,9 @@ export default function TransferPlanner() {
   const getPlayerProjectedPoints = (playerId: number): number | null => {
     if (!playerProjections || !selectedGameweek) return null;
     
+    // Ensure playerProjections is an array
+    if (!Array.isArray(playerProjections)) return null;
+    
     const projection = playerProjections.find(p => p.playerId === playerId);
     if (!projection) return null;
 
