@@ -3567,7 +3567,12 @@ export default function TransferPlanner() {
                                   <div className="flex-1 min-w-0">
                                     <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
                                       <span className="truncate">{player.web_name}</span>
-                                      {/* Captain/Vice-Captain buttons after name */}
+                                      {pick.is_captain && (
+                                        <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-1 py-0.5 rounded">C</span>
+                                      )}
+                                      {pick.is_vice_captain && (
+                                        <span className="text-[10px] font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">VC</span>
+                                      )}
                                       {!pick.is_captain && (
                                         <Button
                                           size="icon"
@@ -3594,12 +3599,6 @@ export default function TransferPlanner() {
                                       )}
                                       {isPlayerTransferredIn(pick) && (
                                         <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
-                                      )}
-                                      {pick.is_captain && (
-                                        <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-1 py-0.5 rounded">C</span>
-                                      )}
-                                      {pick.is_vice_captain && (
-                                        <span className="text-[10px] font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">VC</span>
                                       )}
                                     </div>
                                     <div className="text-[10px] text-muted-foreground truncate">
