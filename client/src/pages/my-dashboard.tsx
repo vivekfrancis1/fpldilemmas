@@ -129,6 +129,7 @@ interface Player {
   form: string;
   selected_by_percent: string;
   event_points?: number;
+  in_dreamteam?: boolean;
 }
 
 interface BootstrapData {
@@ -1022,47 +1023,50 @@ export default function MyDashboard() {
                                 return (
                                   <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
-                                      {/* Jersey Card */}
-                                      <div className="bg-white rounded-lg shadow-xl p-2">
-                                        {/* Jersey with Team Colors */}
-                                        <div className="relative w-20 h-20 mx-auto mb-2">
-                                          <svg viewBox="0 0 100 100" className="w-full h-full">
-                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill={getTeamJerseyColor(playerTeam?.id || 0)} stroke="#333" strokeWidth="2"/>
-                                            <circle cx="50" cy="35" r="8" fill="white"/>
-                                          </svg>
-                                          <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="text-2xl font-bold text-gray-800">
-                                              {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
-                                            </div>
+                                      {/* Jersey Card with Team Color Background */}
+                                      <div 
+                                        className="rounded-lg shadow-xl p-2 relative" 
+                                        style={{ backgroundColor: getTeamJerseyColor(playerTeam?.id || 0) }}
+                                      >
+                                        {/* Captain/Vice-Captain Badge */}
+                                        {(pick.is_captain || pick.is_vice_captain) && (
+                                          <div className="absolute -top-1 -right-1 z-10">
+                                            {pick.is_captain && (
+                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
+                                            )}
+                                            {pick.is_vice_captain && (
+                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
+                                            )}
                                           </div>
-                                          {(pick.is_captain || pick.is_vice_captain) && (
-                                            <div className="absolute -top-1 -right-1">
-                                              {pick.is_captain && (
-                                                <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
-                                              )}
-                                              {pick.is_vice_captain && (
-                                                <div className="w-6 h-6 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
-                                              )}
-                                            </div>
-                                          )}
-                                        </div>
+                                        )}
                                         
-                                        {/* Player Info */}
-                                        <div className="text-center mb-2">
-                                          <div className="bg-black text-white px-2 py-0.5 text-xs font-bold uppercase rounded mb-1">
+                                        {/* Team Name */}
+                                        <div className="text-center mb-1">
+                                          <div className="text-[10px] font-bold text-white drop-shadow-md uppercase">
+                                            {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
+                                          </div>
+                                        </div>
+
+                                        {/* Player Name */}
+                                        <div className="text-center mb-1">
+                                          <div className="text-xs font-bold text-white drop-shadow-md">
                                             {player.web_name}
                                           </div>
-                                          <div className="text-xs font-semibold text-gray-700">
-                                            {playerTeam?.short_name || 'UNK'}
+                                        </div>
+
+                                        {/* Points */}
+                                        <div className="text-center mb-2">
+                                          <div className="text-2xl font-bold text-white drop-shadow-lg">
+                                            {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
                                           </div>
                                         </div>
 
                                         {/* Next 3 Fixtures */}
-                                        <div className="flex justify-center gap-1">
+                                        <div className="flex justify-center gap-0.5">
                                           {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => (
                                             <div 
                                               key={idx}
-                                              className={`px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
+                                              className={`px-1 py-0.5 rounded text-[10px] font-bold ${getDifficultyColor(fixture.difficulty)}`}
                                               title={`GW${fixture.gameweek}: ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`}
                                             >
                                               {fixture.opponent.substring(0, 3)}
@@ -1096,41 +1100,40 @@ export default function MyDashboard() {
                                 return (
                                   <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
-                                      <div className="bg-white rounded-lg shadow-xl p-2">
-                                        <div className="relative w-20 h-20 mx-auto mb-2">
-                                          <svg viewBox="0 0 100 100" className="w-full h-full">
-                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill={getTeamJerseyColor(playerTeam?.id || 0)} stroke="#333" strokeWidth="2"/>
-                                            <circle cx="50" cy="35" r="8" fill="white"/>
-                                          </svg>
-                                          <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="text-2xl font-bold text-gray-800">
-                                              {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
-                                            </div>
+                                      <div 
+                                        className="rounded-lg shadow-xl p-2 relative" 
+                                        style={{ backgroundColor: getTeamJerseyColor(playerTeam?.id || 0) }}
+                                      >
+                                        {(pick.is_captain || pick.is_vice_captain) && (
+                                          <div className="absolute -top-1 -right-1 z-10">
+                                            {pick.is_captain && (
+                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
+                                            )}
+                                            {pick.is_vice_captain && (
+                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
+                                            )}
                                           </div>
-                                          {(pick.is_captain || pick.is_vice_captain) && (
-                                            <div className="absolute -top-1 -right-1">
-                                              {pick.is_captain && (
-                                                <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
-                                              )}
-                                              {pick.is_vice_captain && (
-                                                <div className="w-6 h-6 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
-                                              )}
-                                            </div>
-                                          )}
+                                        )}
+                                        <div className="text-center mb-1">
+                                          <div className="text-[10px] font-bold text-white drop-shadow-md uppercase">
+                                            {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
+                                          </div>
                                         </div>
-                                        <div className="text-center mb-2">
-                                          <div className="bg-black text-white px-2 py-0.5 text-xs font-bold uppercase rounded mb-1">
+                                        <div className="text-center mb-1">
+                                          <div className="text-xs font-bold text-white drop-shadow-md">
                                             {player.web_name}
                                           </div>
-                                          <div className="text-xs font-semibold text-gray-700">
-                                            {playerTeam?.short_name || 'UNK'}
+                                        </div>
+                                        <div className="text-center mb-2">
+                                          <div className="text-2xl font-bold text-white drop-shadow-lg">
+                                            {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
                                           </div>
                                         </div>
-                                        <div className="flex justify-center gap-1">
+                                        <div className="flex justify-center gap-0.5">
                                           {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => (
                                             <div 
                                               key={idx}
-                                              className={`px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
+                                              className={`px-1 py-0.5 rounded text-[10px] font-bold ${getDifficultyColor(fixture.difficulty)}`}
                                               title={`GW${fixture.gameweek}: ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`}
                                             >
                                               {fixture.opponent.substring(0, 3)}
@@ -1164,41 +1167,40 @@ export default function MyDashboard() {
                                 return (
                                   <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
-                                      <div className="bg-white rounded-lg shadow-xl p-2">
-                                        <div className="relative w-20 h-20 mx-auto mb-2">
-                                          <svg viewBox="0 0 100 100" className="w-full h-full">
-                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill={getTeamJerseyColor(playerTeam?.id || 0)} stroke="#333" strokeWidth="2"/>
-                                            <circle cx="50" cy="35" r="8" fill="white"/>
-                                          </svg>
-                                          <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="text-2xl font-bold text-gray-800">
-                                              {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
-                                            </div>
+                                      <div 
+                                        className="rounded-lg shadow-xl p-2 relative" 
+                                        style={{ backgroundColor: getTeamJerseyColor(playerTeam?.id || 0) }}
+                                      >
+                                        {(pick.is_captain || pick.is_vice_captain) && (
+                                          <div className="absolute -top-1 -right-1 z-10">
+                                            {pick.is_captain && (
+                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
+                                            )}
+                                            {pick.is_vice_captain && (
+                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
+                                            )}
                                           </div>
-                                          {(pick.is_captain || pick.is_vice_captain) && (
-                                            <div className="absolute -top-1 -right-1">
-                                              {pick.is_captain && (
-                                                <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
-                                              )}
-                                              {pick.is_vice_captain && (
-                                                <div className="w-6 h-6 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
-                                              )}
-                                            </div>
-                                          )}
+                                        )}
+                                        <div className="text-center mb-1">
+                                          <div className="text-[10px] font-bold text-white drop-shadow-md uppercase">
+                                            {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
+                                          </div>
                                         </div>
-                                        <div className="text-center mb-2">
-                                          <div className="bg-black text-white px-2 py-0.5 text-xs font-bold uppercase rounded mb-1">
+                                        <div className="text-center mb-1">
+                                          <div className="text-xs font-bold text-white drop-shadow-md">
                                             {player.web_name}
                                           </div>
-                                          <div className="text-xs font-semibold text-gray-700">
-                                            {playerTeam?.short_name || 'UNK'}
+                                        </div>
+                                        <div className="text-center mb-2">
+                                          <div className="text-2xl font-bold text-white drop-shadow-lg">
+                                            {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
                                           </div>
                                         </div>
-                                        <div className="flex justify-center gap-1">
+                                        <div className="flex justify-center gap-0.5">
                                           {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => (
                                             <div 
                                               key={idx}
-                                              className={`px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
+                                              className={`px-1 py-0.5 rounded text-[10px] font-bold ${getDifficultyColor(fixture.difficulty)}`}
                                               title={`GW${fixture.gameweek}: ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`}
                                             >
                                               {fixture.opponent.substring(0, 3)}
@@ -1232,41 +1234,40 @@ export default function MyDashboard() {
                                 return (
                                   <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
-                                      <div className="bg-white rounded-lg shadow-xl p-2">
-                                        <div className="relative w-20 h-20 mx-auto mb-2">
-                                          <svg viewBox="0 0 100 100" className="w-full h-full">
-                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill={getTeamJerseyColor(playerTeam?.id || 0)} stroke="#333" strokeWidth="2"/>
-                                            <circle cx="50" cy="35" r="8" fill="white"/>
-                                          </svg>
-                                          <div className="absolute inset-0 flex items-center justify-center">
-                                            <div className="text-2xl font-bold text-gray-800">
-                                              {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
-                                            </div>
+                                      <div 
+                                        className="rounded-lg shadow-xl p-2 relative" 
+                                        style={{ backgroundColor: getTeamJerseyColor(playerTeam?.id || 0) }}
+                                      >
+                                        {(pick.is_captain || pick.is_vice_captain) && (
+                                          <div className="absolute -top-1 -right-1 z-10">
+                                            {pick.is_captain && (
+                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
+                                            )}
+                                            {pick.is_vice_captain && (
+                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
+                                            )}
                                           </div>
-                                          {(pick.is_captain || pick.is_vice_captain) && (
-                                            <div className="absolute -top-1 -right-1">
-                                              {pick.is_captain && (
-                                                <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
-                                              )}
-                                              {pick.is_vice_captain && (
-                                                <div className="w-6 h-6 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
-                                              )}
-                                            </div>
-                                          )}
+                                        )}
+                                        <div className="text-center mb-1">
+                                          <div className="text-[10px] font-bold text-white drop-shadow-md uppercase">
+                                            {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
+                                          </div>
                                         </div>
-                                        <div className="text-center mb-2">
-                                          <div className="bg-black text-white px-2 py-0.5 text-xs font-bold uppercase rounded mb-1">
+                                        <div className="text-center mb-1">
+                                          <div className="text-xs font-bold text-white drop-shadow-md">
                                             {player.web_name}
                                           </div>
-                                          <div className="text-xs font-semibold text-gray-700">
-                                            {playerTeam?.short_name || 'UNK'}
+                                        </div>
+                                        <div className="text-center mb-2">
+                                          <div className="text-2xl font-bold text-white drop-shadow-lg">
+                                            {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
                                           </div>
                                         </div>
-                                        <div className="flex justify-center gap-1">
+                                        <div className="flex justify-center gap-0.5">
                                           {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => (
                                             <div 
                                               key={idx}
-                                              className={`px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
+                                              className={`px-1 py-0.5 rounded text-[10px] font-bold ${getDifficultyColor(fixture.difficulty)}`}
                                               title={`GW${fixture.gameweek}: ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`}
                                             >
                                               {fixture.opponent.substring(0, 3)}
@@ -1295,31 +1296,30 @@ export default function MyDashboard() {
                             return (
                               <div key={pick.element} className="flex flex-col items-center w-24 opacity-90" data-testid={`pitch-bench-${player.id}`}>
                                 <div className="relative w-full">
-                                  <div className="bg-white/90 rounded-lg shadow-lg p-1.5">
-                                    <div className="relative w-16 h-16 mx-auto mb-1.5">
-                                      <svg viewBox="0 0 100 100" className="w-full h-full">
-                                        <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill={getTeamJerseyColor(playerTeam?.id || 0)} stroke="#333" strokeWidth="2"/>
-                                        <circle cx="50" cy="35" r="8" fill="white"/>
-                                      </svg>
-                                      <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="text-xl font-bold text-gray-800">
-                                          {player.event_points || 0}
-                                        </div>
+                                  <div 
+                                    className="rounded-lg shadow-lg p-1.5 relative" 
+                                    style={{ backgroundColor: getTeamJerseyColor(playerTeam?.id || 0) }}
+                                  >
+                                    <div className="text-center mb-1">
+                                      <div className="text-[9px] font-bold text-white drop-shadow-md uppercase">
+                                        {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
+                                      </div>
+                                    </div>
+                                    <div className="text-center mb-1">
+                                      <div className="text-[10px] font-bold text-white drop-shadow-md">
+                                        {player.web_name}
                                       </div>
                                     </div>
                                     <div className="text-center mb-1.5">
-                                      <div className="bg-gray-700 text-white px-1.5 py-0.5 text-xs font-bold uppercase rounded mb-1">
-                                        {player.web_name}
-                                      </div>
-                                      <div className="text-xs font-semibold text-gray-700">
-                                        {playerTeam?.short_name || 'UNK'}
+                                      <div className="text-xl font-bold text-white drop-shadow-lg">
+                                        {player.event_points || 0}
                                       </div>
                                     </div>
                                     <div className="flex justify-center gap-0.5">
                                       {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => (
                                         <div 
                                           key={idx}
-                                          className={`px-1 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
+                                          className={`px-0.5 py-0.5 rounded text-[9px] font-bold ${getDifficultyColor(fixture.difficulty)}`}
                                           title={`GW${fixture.gameweek}: ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`}
                                         >
                                           {fixture.opponent.substring(0, 3)}
