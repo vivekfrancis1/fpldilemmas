@@ -4175,28 +4175,39 @@ export default function TransferPlanner() {
                                         >
                                           Replace
                                         </Button>
-                                        <div className="flex gap-1.5">
+                                        <div className="grid grid-cols-2 gap-1">
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            className="flex-1 h-7 text-xs text-blue-600 border-blue-300 bg-white hover:bg-blue-50"
+                                            className="h-7 text-[10px] text-blue-600 border-blue-300 bg-white hover:bg-blue-50 px-1"
                                             onClick={() => handleUndoTransfer(pick.position)}
                                             data-testid={`pitch-undo-${pick.position}`}
                                             title="Undo last transfer"
                                           >
-                                            <RotateCcw className="h-3 w-3 mr-1" />
+                                            <RotateCcw className="h-3 w-3 mr-0.5" />
                                             Undo
                                           </Button>
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            className="flex-1 h-7 text-xs text-orange-600 border-orange-300 bg-white hover:bg-orange-50"
+                                            className="h-7 text-[10px] text-purple-600 border-purple-300 bg-white hover:bg-purple-50 px-1"
+                                            onClick={() => handleUndoGameweekTransfersForPosition(pick.position)}
+                                            data-testid={`pitch-undo-gw-${pick.position}`}
+                                            title="Undo gameweek transfers"
+                                          >
+                                            <RotateCcw className="h-3 w-3 mr-0.5" />
+                                            GW
+                                          </Button>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 text-[10px] text-orange-600 border-orange-300 bg-white hover:bg-orange-50 px-1 col-span-2"
                                             onClick={() => handleUndoAllTransfersForPosition(pick.position)}
                                             data-testid={`pitch-undo-all-${pick.position}`}
                                             title="Undo all transfers"
                                           >
-                                            <X className="h-3 w-3 mr-1" />
-                                            All
+                                            <X className="h-3 w-3 mr-0.5" />
+                                            Undo All
                                           </Button>
                                         </div>
                                       </div>
