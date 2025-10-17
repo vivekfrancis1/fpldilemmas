@@ -3582,7 +3582,7 @@ export default function TransferPlanner() {
                                       {(() => {
                                         const fixture = getPlayerFixture(pick.element, selectedGameweek);
                                         if (fixture) {
-                                          return <> • {fixture.isHome ? 'vs' : '@'} {fixture.opponent}</>;
+                                          return <> • {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</>;
                                         }
                                         return null;
                                       })()}
@@ -3846,7 +3846,7 @@ export default function TransferPlanner() {
                               {(() => {
                                 const fixture = getPlayerFixture(pick.element, selectedGameweek);
                                 if (fixture) {
-                                  return <> • {fixture.isHome ? 'vs' : '@'} {fixture.opponent}</>;
+                                  return <> • {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</>;
                                 }
                                 return null;
                               })()}
@@ -4083,7 +4083,7 @@ export default function TransferPlanner() {
                                         {(() => {
                                           const fixture = getPlayerFixture(player.element, selectedGameweek);
                                           if (fixture) {
-                                            return <> • {fixture.isHome ? 'vs' : '@'} {fixture.opponent}</>;
+                                            return <> • {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</>;
                                           }
                                           return null;
                                         })()}
@@ -4170,7 +4170,7 @@ export default function TransferPlanner() {
                                 {(() => {
                                   const fixture = getPlayerFixture(player.element, selectedGameweek);
                                   if (fixture) {
-                                    return <> • {fixture.isHome ? 'vs' : '@'} {fixture.opponent}</>;
+                                    return <> • {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</>;
                                   }
                                   return null;
                                 })()}
