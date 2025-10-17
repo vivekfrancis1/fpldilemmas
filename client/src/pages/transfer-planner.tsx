@@ -4095,24 +4095,20 @@ export default function TransferPlanner() {
                         
                         if (positionPlayers.length === 0) return null;
                         
-                        // Get bench players for this section
-                        let benchPlayersForSection: any[] = [];
-                        if (posType === 1) {
-                          // GKP section: show bench GK
-                          benchPlayersForSection = optimizedLineup.bench.filter(bp => {
+                        // Get bench outfield players sorted by projected points
+                        const benchOutfield = optimizedLineup.bench
+                          .filter(bp => {
                             const benchFullPlayer = getPlayerById(bp.element);
-                            return benchFullPlayer?.element_type === 1;
-                          });
-                        } else if (posType === 2) {
-                          // DEF section: show bench outfield players (sorted by projected points)
-                          benchPlayersForSection = optimizedLineup.bench
-                            .filter(bp => {
-                              const benchFullPlayer = getPlayerById(bp.element);
-                              return benchFullPlayer?.element_type !== 1; // Not GK
-                            })
-                            .sort((a, b) => b.projectedPoints - a.projectedPoints)
-                            .map((bp, idx) => ({ ...bp, benchPriority: idx + 1 }));
-                        }
+                            return benchFullPlayer?.element_type !== 1; // Not GK
+                          })
+                          .sort((a, b) => b.projectedPoints - a.projectedPoints)
+                          .map((bp, idx) => ({ ...bp, benchPriority: idx + 1 }));
+                        
+                        // Get bench GK
+                        const benchGK = optimizedLineup.bench.filter(bp => {
+                          const benchFullPlayer = getPlayerById(bp.element);
+                          return benchFullPlayer?.element_type === 1;
+                        });
                         
                         return (
                           <div key={posType}>
@@ -4122,10 +4118,185 @@ export default function TransferPlanner() {
                               </div>
                               <div className="h-px bg-gray-200 flex-1"></div>
                             </div>
-                            <div className="grid lg:grid-cols-[2fr_auto_1fr] gap-2">
-                              {/* Starting players */}
-                              <div className="grid gap-1">
-                            {positionPlayers.map((player) => {
+                            
+                            {/* For defenders, show each defender with corresponding bench player */}
+                            {posType === 2 ? (
+                              <div className="space-y-1">
+                                {positionPlayers.map((player, defIndex) => {
+                                  const benchPlayer = benchOutfield[defIndex]; // Get corresponding bench player
+                                  
+                                  return (
+                                    <div key={player.element} className="grid lg:grid-cols-[2fr_auto_1fr] gap-2">
+                                      {/* Starting defender */}
+                                      <div className="grid gap-1">
+                                        {(() => {
+                              const fullPlayer = getPlayerById(player.element);
+                              const pick = manualLineup.find(p => p.element === player.element);
+                              
+                              // Check if this player slot is transferred out
+                              if (pick && pick.is_transferred_out) {
+                                return (
+                                  <div
+                                    key={`empty-auto-${player.element}`}
+                                    className="flex items-center justify-between p-3 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20"
+                                    data-testid={`empty-slot-auto-${player.element}`}
+                                  >
+                                    <div className="flex items-center gap-3 flex-1">
+                                      <div className="flex-1">
+                                        <div className="font-medium text-red-600">Empty Slot</div>
+                                        <div className="text-sm text-muted-foreground">
+                                          {fullPlayer && getPositionShortName(fullPlayer.element_type)} • Click "Replace" to find a player
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      <div className="text-sm text-red-600 font-medium">
+                                        Switch to Manual mode to add replacement
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              
+                              return (
+                                <div
+                                  key={player.element}
+                                  className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] ${
+                                    player.isCaptain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
+                                    player.isViceCaptain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
+                                    pick && isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
+                                    'border-gray-200'
+                                  }`}
+                                  data-testid={`optimized-player-${player.element}`}
+                                >
+                                  <div className="flex items-center gap-1 flex-1 min-w-0">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
+                                        <span className="truncate">{player.web_name}</span>
+                                        {pick && isPlayerTransferredIn(pick) && (
+                                          <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
+                                        )}
+                                        {player.isCaptain && (
+                                          <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-1 py-0.5 rounded">C</span>
+                                        )}
+                                        {player.isViceCaptain && (
+                                          <span className="text-[10px] font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">VC</span>
+                                        )}
+                                      </div>
+                                      <div className="text-[10px] text-muted-foreground truncate">
+                                        {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)}
+                                        {(() => {
+                                          const fixture = getPlayerFixture(player.element, selectedGameweek);
+                                          if (fixture) {
+                                            return <> • vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</>;
+                                          }
+                                          return null;
+                                        })()}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <div className="text-right min-w-[32px]">
+                                      <div className="text-xs font-bold text-purple-600">{player.projectedPoints.toFixed(1)}</div>
+                                      {player.isCaptain && (
+                                        <div className="text-[10px] text-muted-foreground">({(player.projectedPoints * 2).toFixed(1)})</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                                        })()}
+                                      </div>
+                                      
+                                      {/* Divider */}
+                                      {benchPlayer && (
+                                        <div className="hidden lg:flex items-center justify-center">
+                                          <div className="w-px h-full bg-gray-300"></div>
+                                        </div>
+                                      )}
+                                      
+                                      {/* Corresponding bench player */}
+                                      <div className="grid gap-1">
+                                        {benchPlayer && (() => {
+                                          const fullPlayer = getPlayerById(benchPlayer.element);
+                                          const pick = manualLineup.find(p => p.element === benchPlayer.element);
+                                          
+                                          // Check if this bench player is transferred out
+                                          if (pick && pick.is_transferred_out) {
+                                            return (
+                                              <div
+                                                key={`empty-bench-auto-${benchPlayer.element}`}
+                                                className="flex items-center justify-between p-1.5 rounded border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-xs min-h-[52px]"
+                                                data-testid={`empty-slot-bench-auto-${benchPlayer.element}`}
+                                              >
+                                                <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                                                  <span className="text-[10px] font-bold text-red-600 bg-red-200 dark:bg-red-700 px-1 py-0.5 rounded">
+                                                    {benchPlayer.benchPriority || 'B'}
+                                                  </span>
+                                                  <div className="flex-1 min-w-0">
+                                                    <div className="text-xs font-medium text-red-600">Empty</div>
+                                                    <div className="text-[10px] text-muted-foreground truncate">
+                                                      {fullPlayer && getPositionShortName(fullPlayer.element_type)}
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                                <div className="text-xs text-red-600 font-medium">
+                                                  Switch to Manual
+                                                </div>
+                                              </div>
+                                            );
+                                          }
+                                          
+                                          return (
+                                            <div
+                                              key={benchPlayer.element}
+                                              className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] ${
+                                                pick && isPlayerTransferredIn(pick) 
+                                                  ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
+                                                  : 'border-gray-200 bg-gray-50 dark:bg-gray-900'
+                                              }`}
+                                              data-testid={`bench-player-${benchPlayer.element}`}
+                                            >
+                                              <div className="flex items-center gap-1 flex-1 min-w-0">
+                                                <span className="text-[10px] font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">
+                                                  {benchPlayer.benchPriority || 'B'}
+                                                </span>
+                                                <div className="flex-1 min-w-0">
+                                                  <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
+                                                    <span className="truncate">{benchPlayer.web_name}</span>
+                                                    {pick && isPlayerTransferredIn(pick) && (
+                                                      <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
+                                                    )}
+                                                  </div>
+                                                  <div className="text-[10px] text-muted-foreground truncate">
+                                                    {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)}
+                                                    {(() => {
+                                                      const fixture = getPlayerFixture(benchPlayer.element, selectedGameweek);
+                                                      if (fixture) {
+                                                        return <> • vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</>;
+                                                      }
+                                                      return null;
+                                                    })()}
+                                                  </div>
+                                                </div>
+                                              </div>
+                                              <div className="flex items-center gap-2 shrink-0">
+                                                <div className="text-[10px] text-muted-foreground min-w-[32px] text-right">{benchPlayer.projectedPoints.toFixed(1)}</div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })()}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              /* For GKP, MID, FWD - show with bench only for GKP */
+                              <div className="grid lg:grid-cols-[2fr_auto_1fr] gap-2">
+                                {/* Starting players */}
+                                <div className="grid gap-1">
+                                  {positionPlayers.map((player) => {
                               const fullPlayer = getPlayerById(player.element);
                               const pick = manualLineup.find(p => p.element === player.element);
                               
@@ -4205,15 +4376,15 @@ export default function TransferPlanner() {
                               </div>
                               
                               {/* Divider */}
-                              {benchPlayersForSection.length > 0 && (
+                              {posType === 1 && benchGK.length > 0 && (
                                 <div className="hidden lg:flex items-center justify-center">
                                   <div className="w-px h-full bg-gray-300"></div>
                                 </div>
                               )}
                               
-                              {/* Bench players for this row */}
+                              {/* Bench players for this row - only for GKP */}
                               <div className="grid gap-1">
-                                {benchPlayersForSection.map((benchPlayer) => {
+                                {posType === 1 && benchGK.map((benchPlayer: any) => {
                                   const fullPlayer = getPlayerById(benchPlayer.element);
                                   const pick = manualLineup.find(p => p.element === benchPlayer.element);
                                   
@@ -4284,6 +4455,7 @@ export default function TransferPlanner() {
                                 })}
                               </div>
                             </div>
+                            )}
                           </div>
                         );
                       })}
