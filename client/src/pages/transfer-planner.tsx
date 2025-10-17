@@ -972,15 +972,15 @@ export default function TransferPlanner() {
   }, [teamData, searchedId, buyPricesData, buyPriceOverridesData]);
 
   // Fetch player projections for the selected gameweek
-  const { data: playerProjections } = useQuery<any[]>({
+  const { data: playerProjections, isLoading: projectionsLoading, error: projectionsError } = useQuery<any[]>({
     queryKey: ["/api/player-total-points", selectedGameweek],
     enabled: !!selectedGameweek && selectedGameweek > 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
-      if (!selectedGameweek) return [];
+      if (!selectedGameweek || selectedGameweek <= 0) return [];
       const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}`);
       if (!response.ok) {
-        console.error('Failed to fetch player projections:', response.statusText);
-        return [];
+        throw new Error(`Failed to fetch projections: ${response.statusText}`);
       }
       const data = await response.json();
       return Array.isArray(data) ? data : [];
@@ -988,11 +988,11 @@ export default function TransferPlanner() {
   });
 
   // Fetch player projections for next 6 gameweeks (for 6GW total calculation)
-  const { data: playerProjections6GW } = useQuery<any[]>({
+  const { data: playerProjections6GW, isLoading: projections6GWLoading } = useQuery<any[]>({
     queryKey: ["/api/player-total-points-6gw", bootstrapData?.events],
     enabled: !!bootstrapData,
+    staleTime: 5 * 60 * 1000, // 5 minutes
     queryFn: async () => {
-      // Compute gameweek range inside queryFn
       const nextGWs = getNextGameweeks();
       if (nextGWs.length === 0) return [];
       const startGW = nextGWs[0]?.id;
@@ -1000,8 +1000,7 @@ export default function TransferPlanner() {
       if (!startGW || !endGW) return [];
       const response = await fetch(`/api/player-total-points?startGameweek=${startGW}&endGameweek=${endGW}`);
       if (!response.ok) {
-        console.error('Failed to fetch 6GW player projections:', response.statusText);
-        return [];
+        throw new Error(`Failed to fetch 6GW projections: ${response.statusText}`);
       }
       const data = await response.json();
       return Array.isArray(data) ? data : [];
@@ -1213,13 +1212,13 @@ export default function TransferPlanner() {
 
   const getPlayerProjectedPoints = (playerId: number): number | null => {
     if (!playerProjections || !selectedGameweek) return null;
-    
     if (!Array.isArray(playerProjections)) return null;
     
     const projection = playerProjections.find(p => p.playerId === playerId);
     if (!projection) return null;
 
-    const points = projection.gameweekProjections?.[selectedGameweek.toString()];
+    const gwKey = selectedGameweek.toString();
+    const points = projection.gameweekProjections?.[gwKey];
     return points !== undefined ? points : null;
   };
 
@@ -2973,7 +2972,7 @@ export default function TransferPlanner() {
       )}
 
       {/* Draft Comparison Table */}
-      {searchedId && teamData && playerProjections6GW && (
+      {searchedId && teamData && playerProjections && playerProjections6GW && (
         <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardHeader>
             <div className="flex items-center justify-between">
