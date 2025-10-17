@@ -1027,7 +1027,7 @@ export default function MyDashboard() {
                                         {/* Jersey with Team Colors */}
                                         <div className="relative w-20 h-20 mx-auto mb-2">
                                           <svg viewBox="0 0 100 100" className="w-full h-full">
-                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill="#FFD700" stroke="#333" strokeWidth="2"/>
+                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill={getTeamJerseyColor(playerTeam?.id || 0)} stroke="#333" strokeWidth="2"/>
                                             <circle cx="50" cy="35" r="8" fill="white"/>
                                           </svg>
                                           <div className="absolute inset-0 flex items-center justify-center">
@@ -1099,7 +1099,7 @@ export default function MyDashboard() {
                                       <div className="bg-white rounded-lg shadow-xl p-2">
                                         <div className="relative w-20 h-20 mx-auto mb-2">
                                           <svg viewBox="0 0 100 100" className="w-full h-full">
-                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill="#3B82F6" stroke="#333" strokeWidth="2"/>
+                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill={getTeamJerseyColor(playerTeam?.id || 0)} stroke="#333" strokeWidth="2"/>
                                             <circle cx="50" cy="35" r="8" fill="white"/>
                                           </svg>
                                           <div className="absolute inset-0 flex items-center justify-center">
@@ -1167,7 +1167,7 @@ export default function MyDashboard() {
                                       <div className="bg-white rounded-lg shadow-xl p-2">
                                         <div className="relative w-20 h-20 mx-auto mb-2">
                                           <svg viewBox="0 0 100 100" className="w-full h-full">
-                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill="#10B981" stroke="#333" strokeWidth="2"/>
+                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill={getTeamJerseyColor(playerTeam?.id || 0)} stroke="#333" strokeWidth="2"/>
                                             <circle cx="50" cy="35" r="8" fill="white"/>
                                           </svg>
                                           <div className="absolute inset-0 flex items-center justify-center">
@@ -1235,7 +1235,7 @@ export default function MyDashboard() {
                                       <div className="bg-white rounded-lg shadow-xl p-2">
                                         <div className="relative w-20 h-20 mx-auto mb-2">
                                           <svg viewBox="0 0 100 100" className="w-full h-full">
-                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill="#EF4444" stroke="#333" strokeWidth="2"/>
+                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill={getTeamJerseyColor(playerTeam?.id || 0)} stroke="#333" strokeWidth="2"/>
                                             <circle cx="50" cy="35" r="8" fill="white"/>
                                           </svg>
                                           <div className="absolute inset-0 flex items-center justify-center">
@@ -1298,7 +1298,7 @@ export default function MyDashboard() {
                                   <div className="bg-white/90 rounded-lg shadow-lg p-1.5">
                                     <div className="relative w-16 h-16 mx-auto mb-1.5">
                                       <svg viewBox="0 0 100 100" className="w-full h-full">
-                                        <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill="#9CA3AF" stroke="#333" strokeWidth="2"/>
+                                        <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill={getTeamJerseyColor(playerTeam?.id || 0)} stroke="#333" strokeWidth="2"/>
                                         <circle cx="50" cy="35" r="8" fill="white"/>
                                       </svg>
                                       <div className="absolute inset-0 flex items-center justify-center">
