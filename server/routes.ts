@@ -1052,6 +1052,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return teamGoals;
   }
 
+  // Fixtures proxy endpoint
+  app.get("/api/fixtures", async (req, res) => {
+    try {
+      const response = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching fixtures:", error);
+      res.status(500).json({ error: "Failed to fetch fixtures" });
+    }
+  });
+
   // Player data routes
   app.get("/api/bootstrap-static", async (req, res) => {
     try {

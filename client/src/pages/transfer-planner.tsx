@@ -864,10 +864,6 @@ export default function TransferPlanner() {
   // Fetch fixtures data
   const { data: fixturesData } = useQuery<any[]>({
     queryKey: ["/api/fixtures"],
-    queryFn: async () => {
-      const response = await fetch("https://fantasy.premierleague.com/api/fixtures/");
-      return response.json();
-    }
   });
 
   const { data: teamData, isLoading: isLoadingTeam } = useQuery<TeamData>({
