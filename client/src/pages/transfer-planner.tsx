@@ -4317,11 +4317,12 @@ export default function TransferPlanner() {
                                     <div className="flex justify-center gap-1.5 mt-1.5">
                                       <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
                                         <SelectTrigger 
-                                          className="h-7 w-[72px] p-0 text-[10px] font-semibold bg-white/90 hover:bg-white border border-gray-300 rounded-md [&>svg]:hidden" 
+                                          className="h-8 w-[72px] p-0 text-[11px] font-semibold bg-white/90 hover:bg-white border border-gray-300 rounded-md [&>svg]:hidden" 
                                           data-testid={`pitch-swap-${pick.element}`} 
                                           title="Swap with bench"
                                         >
                                           <div className="flex items-center justify-center w-full">
+                                            <ArrowUpDown className="h-3 w-3 mr-1" />
                                             Swap
                                           </div>
                                         </SelectTrigger>
@@ -4355,11 +4356,12 @@ export default function TransferPlanner() {
                                         <Button
                                           size="sm"
                                           variant="ghost"
-                                          className="h-7 w-[72px] text-[10px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
+                                          className="h-8 w-[72px] text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
                                           onClick={() => handleTransferOut(pick)}
                                           data-testid={`pitch-transfer-out-${pick.element}`}
                                           title="Transfer Out"
                                         >
+                                          <X className="h-3 w-3 mr-1" />
                                           Out
                                         </Button>
                                       )}
@@ -4554,11 +4556,12 @@ export default function TransferPlanner() {
                               <div className="flex justify-center gap-1.5 mt-1.5">
                                 <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
                                   <SelectTrigger 
-                                    className="h-7 w-[72px] p-0 text-[10px] font-semibold bg-white/90 hover:bg-white border border-gray-300 rounded-md [&>svg]:hidden" 
+                                    className="h-8 w-[72px] p-0 text-[11px] font-semibold bg-white/90 hover:bg-white border border-gray-300 rounded-md [&>svg]:hidden" 
                                     data-testid={`pitch-bench-swap-${pick.element}`} 
                                     title="Swap with starting XI"
                                   >
                                     <div className="flex items-center justify-center w-full">
+                                      <ArrowUpDown className="h-3 w-3 mr-1" />
                                       Swap
                                     </div>
                                   </SelectTrigger>
@@ -4582,11 +4585,12 @@ export default function TransferPlanner() {
                                   <Button
                                     size="sm"
                                     variant="ghost"
-                                    className="h-7 w-[72px] text-[10px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
+                                    className="h-8 w-[72px] text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50"
                                     onClick={() => handleTransferOut(pick)}
                                     data-testid={`pitch-bench-transfer-out-${pick.element}`}
                                     title="Transfer Out"
                                   >
+                                    <X className="h-3 w-3 mr-1" />
                                     Out
                                   </Button>
                                 )}
