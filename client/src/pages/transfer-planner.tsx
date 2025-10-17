@@ -2828,29 +2828,30 @@ export default function TransferPlanner() {
   };
 
   const getTeamJerseyColor = (teamId: number): string => {
-    const jerseyColors: { [key: number]: string } = {
-      1: '#EF0107',    // Arsenal - Red
-      2: '#95BFE5',    // Aston Villa - Sky Blue
-      3: '#DA291C',    // Bournemouth - Red
-      4: '#FBEE23',    // Brentford - Yellow
-      5: '#0057B8',    // Brighton - Blue
-      6: '#034694',    // Chelsea - Blue
-      7: '#1B458F',    // Crystal Palace - Blue
-      8: '#003399',    // Everton - Blue
-      9: '#FFFFFF',    // Fulham - White
-      10: '#00B2A9',   // Ipswich - Teal
-      11: '#003090',   // Leicester - Blue
-      12: '#C8102E',   // Liverpool - Red
-      13: '#6CABDD',   // Man City - Sky Blue
-      14: '#DA291C',   // Man Utd - Red
-      15: '#241F20',   // Newcastle - Black
-      16: '#DD0000',   // Nottingham Forest - Red
-      17: '#D71920',   // Southampton - Red
-      18: '#132257',   // Tottenham - Navy
-      19: '#7A263A',   // West Ham - Claret
-      20: '#FDB913'    // Wolves - Gold
+    const jerseyColors: Record<number, string> = {
+      1: '#EF0107',      // Arsenal - Red
+      2: '#95BFE5',      // Aston Villa - Claret & Blue (Light Blue)
+      3: '#8B0000',      // Burnley - Dark Red (not in current PL)
+      4: '#8B0000',      // Bournemouth - Dark Red/Black
+      5: '#FDB913',      // Brentford - Red & White (Gold)
+      6: '#0057B8',      // Brighton - Blue & White
+      7: '#034694',      // Chelsea - Dark Blue
+      8: '#1B458F',      // Crystal Palace - Blue & Pink
+      9: '#003399',      // Everton - Dark Blue
+      10: '#FFFFFF',     // Fulham - White
+      11: '#FFFFFF',     // Leeds - White (not in current PL)
+      12: '#C8102E',     // Liverpool - Red
+      13: '#6CABDD',     // Man City - Sky Blue
+      14: '#DA291C',     // Man Utd - Red
+      15: '#241F20',     // Newcastle - Black & White
+      16: '#DA020E',     // Nottm Forest - Red
+      17: '#1B458F',     // Sunderland - Blue (not in current PL)
+      18: '#FFFFFF',     // Spurs (Tottenham) - White
+      19: '#FBEE23',     // West Ham - Claret & Blue (Gold)
+      20: '#FDB913'      // Wolves - Gold & Black
     };
-    return jerseyColors[teamId] || '#718096';
+    
+    return jerseyColors[teamId] || '#9CA3AF';
   };
 
   const getTextColor = (bgColor: string): string => {
