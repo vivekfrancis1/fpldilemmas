@@ -4117,7 +4117,209 @@ export default function TransferPlanner() {
 
             {/* Pitch View */}
             {teamView === "pitch" && (
-              <div>Pitch view placeholder</div>
+              <div className="space-y-4">
+                {/* Pitch */}
+                <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8">
+                  {/* Pitch Lines */}
+                  <div className="absolute inset-0 opacity-30 pointer-events-none">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white rounded-full"></div>
+                  </div>
+
+                  <div className="relative space-y-6">
+                    {/* Formation sections */}
+                    {[1, 2, 3, 4].map((posType) => {
+                      const positionPlayers = manualLineup.slice(0, 11).filter(pick => {
+                        const player = getPlayerById(pick.element);
+                        return player?.element_type === posType;
+                      });
+                      
+                      if (positionPlayers.length === 0) return null;
+                      
+                      return (
+                        <div key={posType} className="flex justify-center gap-4 flex-wrap">
+                          {positionPlayers.map(pick => {
+                            const player = getPlayerById(pick.element);
+                            if (!player) return null;
+                            
+                            const playerTeam = getPlayerTeam(player);
+                            const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
+                            const textColor = getTextColor(jerseyColor);
+                            const projectedPoints = getPlayerProjectedPoints(pick.element);
+                            
+                            // Check if transferred out
+                            if (pick.is_transferred_out) {
+                              return (
+                                <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-empty-${pick.position}`}>
+                                  <div className="relative w-full">
+                                    <div className="rounded-lg p-3 text-center border-2 border-dashed border-red-300 bg-red-50">
+                                      <div className="text-[10px] font-bold text-red-600 mb-1">Empty Slot</div>
+                                      <div className="text-xs font-bold text-red-600">-</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            
+                            return (
+                              <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
+                                <div className="relative w-full">
+                                  {/* Jersey Card */}
+                                  <div 
+                                    className="rounded-lg p-3 text-center shadow-lg border-2" 
+                                    style={{ 
+                                      backgroundColor: jerseyColor,
+                                      borderColor: pick.is_captain ? '#facc15' : pick.is_vice_captain ? '#3b82f6' : isPlayerTransferredIn(pick) ? '#22c55e' : jerseyColor
+                                    }}
+                                  >
+                                    {/* Team Name */}
+                                    <div className="text-center mb-1">
+                                      <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
+                                        {playerTeam?.short_name || 'UNK'}
+                                      </div>
+                                    </div>
+
+                                    {/* Player Name */}
+                                    <div className="text-center mb-1">
+                                      <div className="text-xs font-bold" style={{ color: textColor }}>
+                                        {player.web_name}
+                                      </div>
+                                    </div>
+
+                                    {/* Badges */}
+                                    <div className="flex justify-center gap-1 mb-2">
+                                      {pick.is_captain && (
+                                        <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 px-1 py-0.5 rounded">C</span>
+                                      )}
+                                      {pick.is_vice_captain && (
+                                        <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1 py-0.5 rounded">VC</span>
+                                      )}
+                                      {isPlayerTransferredIn(pick) && (
+                                        <span className="text-[10px] font-bold text-green-600 bg-green-100 px-1 py-0.5 rounded">NEW</span>
+                                      )}
+                                    </div>
+
+                                    {/* Projected Points */}
+                                    <div className="text-center mb-2">
+                                      <div className="text-2xl font-bold" style={{ color: textColor }}>
+                                        {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
+                                      </div>
+                                      {pick.is_captain && projectedPoints !== null && (
+                                        <div className="text-[10px]" style={{ color: textColor }}>
+                                          ({(projectedPoints * 2).toFixed(1)})
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Price Info */}
+                                    <div className="text-[10px] font-medium mb-2" style={{ color: textColor }}>
+                                      £{((pick.purchase_price || player.now_cost) / 10).toFixed(1)}m
+                                    </div>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex justify-center gap-1">
+                                      {!pick.is_captain && (
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-6 w-6 p-0 text-yellow-600 hover:bg-yellow-100"
+                                          onClick={() => handleSetCaptain(pick.element)}
+                                          data-testid={`pitch-set-captain-${pick.element}`}
+                                        >
+                                          <Crown className="h-3 w-3" />
+                                        </Button>
+                                      )}
+                                      {plannerMode === "manual" && (
+                                        <Button
+                                          size="icon"
+                                          variant="ghost"
+                                          className="h-6 w-6 p-0 text-red-600 hover:bg-red-100"
+                                          onClick={() => handleTransferOut(pick)}
+                                          data-testid={`pitch-transfer-out-${pick.element}`}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Bench */}
+                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
+                  <h3 className="text-sm font-semibold mb-3">Bench</h3>
+                  <div className="flex gap-4 flex-wrap justify-center">
+                    {manualLineup.slice(11, 15).map(pick => {
+                      const player = getPlayerById(pick.element);
+                      if (!player) return null;
+                      
+                      const playerTeam = getPlayerTeam(player);
+                      const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
+                      const textColor = getTextColor(jerseyColor);
+                      const projectedPoints = getPlayerProjectedPoints(pick.element);
+                      
+                      return (
+                        <div key={pick.element} className="flex flex-col items-center w-24" data-testid={`pitch-bench-${player.id}`}>
+                          <div className="relative w-full">
+                            <div 
+                              className="rounded-lg p-2 text-center shadow-md border-2" 
+                              style={{ backgroundColor: jerseyColor, borderColor: jerseyColor }}
+                            >
+                              <div className="text-[9px] font-bold uppercase mb-1" style={{ color: textColor }}>
+                                {playerTeam?.short_name || 'UNK'}
+                              </div>
+                              <div className="text-[10px] font-bold mb-1" style={{ color: textColor }}>
+                                {player.web_name}
+                              </div>
+                              <div className="text-xl font-bold mb-1" style={{ color: textColor }}>
+                                {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
+                              </div>
+                              <div className="text-[9px] font-medium mb-1" style={{ color: textColor }}>
+                                £{((pick.purchase_price || player.now_cost) / 10).toFixed(1)}m
+                              </div>
+                              {plannerMode === "manual" && (
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-5 w-5 p-0 text-red-600 hover:bg-red-100 mx-auto"
+                                  onClick={() => handleTransferOut(pick)}
+                                  data-testid={`pitch-bench-transfer-out-${pick.element}`}
+                                >
+                                  <X className="h-2.5 w-2.5" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Total Projected Points */}
+                <div className="border-t pt-4">
+                  <div className="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                    <span className="font-semibold">Total Projected Points (GW{selectedGameweek})</span>
+                    <span className="text-2xl font-bold text-blue-600">
+                      {manualLineup
+                        .slice(0, 11)
+                        .reduce((total, pick) => {
+                          const projectedPoints = getPlayerProjectedPoints(pick.element);
+                          const multiplier = pick.is_captain ? 2 : 1;
+                          return total + (projectedPoints || 0) * multiplier;
+                        }, 0)
+                        .toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
             )}
             </div>
           </CardContent>
