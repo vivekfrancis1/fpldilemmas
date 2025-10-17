@@ -1735,6 +1735,53 @@ export default function TransferPlanner() {
 
   // Swap a starting 11 player with a bench player
   const swapPlayers = (startingIndex: number, benchIndex: number) => {
+    const startingPick = manualLineup[startingIndex];
+    const benchPick = manualLineup[11 + benchIndex];
+    
+    const startingPlayer = getPlayerById(startingPick.element);
+    const benchPlayer = getPlayerById(benchPick.element);
+    
+    if (!startingPlayer || !benchPlayer) return;
+    
+    // Rule 1: Goalkeeper can only be substituted for goalkeeper
+    if (startingPlayer.element_type === 1 && benchPlayer.element_type !== 1) {
+      toast({
+        title: "Invalid Substitution",
+        description: "Goalkeeper can only be substituted for another goalkeeper",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (benchPlayer.element_type === 1 && startingPlayer.element_type !== 1) {
+      toast({
+        title: "Invalid Substitution",
+        description: "Goalkeeper can only be substituted for another goalkeeper",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Rule 2: Check if swap would violate minimum defender rule (3 defenders)
+    if (startingPlayer.element_type === 2 && benchPlayer.element_type !== 2) {
+      // Removing a defender from starting 11
+      const starting11 = manualLineup.slice(0, 11);
+      const defendersInStarting = starting11.filter(pick => {
+        const p = getPlayerById(pick.element);
+        return p?.element_type === 2;
+      }).length;
+      
+      if (defendersInStarting <= 3) {
+        toast({
+          title: "Invalid Substitution",
+          description: "Starting 11 must have at least 3 defenders",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+    
+    // Perform the swap
     const newLineup = [...manualLineup];
     const temp = newLineup[startingIndex];
     newLineup[startingIndex] = newLineup[11 + benchIndex];
