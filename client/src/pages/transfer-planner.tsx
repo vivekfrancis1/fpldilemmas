@@ -4151,21 +4151,6 @@ export default function TransferPlanner() {
                             const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
                             const textColor = getTextColor(jerseyColor);
                             const projectedPoints = getPlayerProjectedPoints(pick.element);
-                            
-                            // Check if transferred out
-                            if (pick.is_transferred_out) {
-                              return (
-                                <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-empty-${pick.position}`}>
-                                  <div className="relative w-full">
-                                    <div className="rounded-lg p-3 text-center border-2 border-dashed border-red-300 bg-red-50">
-                                      <div className="text-[10px] font-bold text-red-600 mb-1">Empty Slot</div>
-                                      <div className="text-xs font-bold text-red-600">-</div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            }
-                            
                             const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
                             const fixture = getPlayerFixture(pick.element, selectedGameweek);
                             
