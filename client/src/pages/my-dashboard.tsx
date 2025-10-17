@@ -390,12 +390,12 @@ export default function MyDashboard() {
     const jerseyColors: Record<number, string> = {
       1: '#EF0107',      // Arsenal - Red
       2: '#95BFE5',      // Aston Villa - Claret & Blue (Light Blue)
-      3: '#E80909',      // Bournemouth - Red & Black
+      3: '#8B0000',      // Bournemouth - Dark Red/Black
       4: '#FDB913',      // Brentford - Red & White (Gold)
       5: '#0057B8',      // Brighton - Blue & White
       6: '#034694',      // Chelsea - Dark Blue
-      7: '#C8102E',      // Crystal Palace - Red & Blue
-      8: '#003399',      // Everton - Blue
+      7: '#1B458F',      // Crystal Palace - Blue & Pink
+      8: '#003399',      // Everton - Dark Blue
       9: '#FFFFFF',      // Fulham - White
       10: '#FBEE23',     // Ipswich - Blue
       11: '#003090',     // Leicester - Blue
@@ -411,6 +411,20 @@ export default function MyDashboard() {
     };
     
     return jerseyColors[teamId] || '#9CA3AF';
+  };
+
+  const getTextColor = (backgroundColor: string): string => {
+    // Convert hex to RGB
+    const hex = backgroundColor.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Calculate relative luminance
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    // Return black for light backgrounds, white for dark backgrounds
+    return luminance > 0.5 ? '#000000' : '#FFFFFF';
   };
 
   const getNextFixtures = (teamId: number, count: number = 5) => {
@@ -1020,13 +1034,16 @@ export default function MyDashboard() {
                                 if (!player) return null;
                                 const playerTeam = getPlayerTeam(player);
                                 
+                                const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
+                                const textColor = getTextColor(jerseyColor);
+                                
                                 return (
                                   <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       {/* Jersey Card with Team Color Background */}
                                       <div 
                                         className="rounded-lg shadow-xl p-2 relative" 
-                                        style={{ backgroundColor: getTeamJerseyColor(playerTeam?.id || 0) }}
+                                        style={{ backgroundColor: jerseyColor }}
                                       >
                                         {/* Captain/Vice-Captain Badge */}
                                         {(pick.is_captain || pick.is_vice_captain) && (
@@ -1042,21 +1059,21 @@ export default function MyDashboard() {
                                         
                                         {/* Team Name */}
                                         <div className="text-center mb-1">
-                                          <div className="text-[10px] font-bold text-white drop-shadow-md uppercase">
+                                          <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
                                             {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
                                           </div>
                                         </div>
 
                                         {/* Player Name */}
                                         <div className="text-center mb-1">
-                                          <div className="text-xs font-bold text-white drop-shadow-md">
+                                          <div className="text-xs font-bold" style={{ color: textColor }}>
                                             {player.web_name}
                                           </div>
                                         </div>
 
                                         {/* Points */}
                                         <div className="text-center mb-2">
-                                          <div className="text-2xl font-bold text-white drop-shadow-lg">
+                                          <div className="text-2xl font-bold" style={{ color: textColor }}>
                                             {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
                                           </div>
                                         </div>
@@ -1097,12 +1114,15 @@ export default function MyDashboard() {
                                 if (!player) return null;
                                 const playerTeam = getPlayerTeam(player);
                                 
+                                const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
+                                const textColor = getTextColor(jerseyColor);
+                                
                                 return (
                                   <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       <div 
                                         className="rounded-lg shadow-xl p-2 relative" 
-                                        style={{ backgroundColor: getTeamJerseyColor(playerTeam?.id || 0) }}
+                                        style={{ backgroundColor: jerseyColor }}
                                       >
                                         {(pick.is_captain || pick.is_vice_captain) && (
                                           <div className="absolute -top-1 -right-1 z-10">
@@ -1115,17 +1135,17 @@ export default function MyDashboard() {
                                           </div>
                                         )}
                                         <div className="text-center mb-1">
-                                          <div className="text-[10px] font-bold text-white drop-shadow-md uppercase">
+                                          <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
                                             {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
                                           </div>
                                         </div>
                                         <div className="text-center mb-1">
-                                          <div className="text-xs font-bold text-white drop-shadow-md">
+                                          <div className="text-xs font-bold" style={{ color: textColor }}>
                                             {player.web_name}
                                           </div>
                                         </div>
                                         <div className="text-center mb-2">
-                                          <div className="text-2xl font-bold text-white drop-shadow-lg">
+                                          <div className="text-2xl font-bold" style={{ color: textColor }}>
                                             {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
                                           </div>
                                         </div>
@@ -1164,12 +1184,15 @@ export default function MyDashboard() {
                                 if (!player) return null;
                                 const playerTeam = getPlayerTeam(player);
                                 
+                                const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
+                                const textColor = getTextColor(jerseyColor);
+                                
                                 return (
                                   <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       <div 
                                         className="rounded-lg shadow-xl p-2 relative" 
-                                        style={{ backgroundColor: getTeamJerseyColor(playerTeam?.id || 0) }}
+                                        style={{ backgroundColor: jerseyColor }}
                                       >
                                         {(pick.is_captain || pick.is_vice_captain) && (
                                           <div className="absolute -top-1 -right-1 z-10">
@@ -1182,17 +1205,17 @@ export default function MyDashboard() {
                                           </div>
                                         )}
                                         <div className="text-center mb-1">
-                                          <div className="text-[10px] font-bold text-white drop-shadow-md uppercase">
+                                          <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
                                             {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
                                           </div>
                                         </div>
                                         <div className="text-center mb-1">
-                                          <div className="text-xs font-bold text-white drop-shadow-md">
+                                          <div className="text-xs font-bold" style={{ color: textColor }}>
                                             {player.web_name}
                                           </div>
                                         </div>
                                         <div className="text-center mb-2">
-                                          <div className="text-2xl font-bold text-white drop-shadow-lg">
+                                          <div className="text-2xl font-bold" style={{ color: textColor }}>
                                             {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
                                           </div>
                                         </div>
@@ -1231,12 +1254,15 @@ export default function MyDashboard() {
                                 if (!player) return null;
                                 const playerTeam = getPlayerTeam(player);
                                 
+                                const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
+                                const textColor = getTextColor(jerseyColor);
+                                
                                 return (
                                   <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       <div 
                                         className="rounded-lg shadow-xl p-2 relative" 
-                                        style={{ backgroundColor: getTeamJerseyColor(playerTeam?.id || 0) }}
+                                        style={{ backgroundColor: jerseyColor }}
                                       >
                                         {(pick.is_captain || pick.is_vice_captain) && (
                                           <div className="absolute -top-1 -right-1 z-10">
@@ -1249,17 +1275,17 @@ export default function MyDashboard() {
                                           </div>
                                         )}
                                         <div className="text-center mb-1">
-                                          <div className="text-[10px] font-bold text-white drop-shadow-md uppercase">
+                                          <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
                                             {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
                                           </div>
                                         </div>
                                         <div className="text-center mb-1">
-                                          <div className="text-xs font-bold text-white drop-shadow-md">
+                                          <div className="text-xs font-bold" style={{ color: textColor }}>
                                             {player.web_name}
                                           </div>
                                         </div>
                                         <div className="text-center mb-2">
-                                          <div className="text-2xl font-bold text-white drop-shadow-lg">
+                                          <div className="text-2xl font-bold" style={{ color: textColor }}>
                                             {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
                                           </div>
                                         </div>
@@ -1293,25 +1319,28 @@ export default function MyDashboard() {
                             if (!player) return null;
                             const playerTeam = getPlayerTeam(player);
                             
+                            const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
+                            const textColor = getTextColor(jerseyColor);
+                            
                             return (
                               <div key={pick.element} className="flex flex-col items-center w-24 opacity-90" data-testid={`pitch-bench-${player.id}`}>
                                 <div className="relative w-full">
                                   <div 
                                     className="rounded-lg shadow-lg p-1.5 relative" 
-                                    style={{ backgroundColor: getTeamJerseyColor(playerTeam?.id || 0) }}
+                                    style={{ backgroundColor: jerseyColor }}
                                   >
                                     <div className="text-center mb-1">
-                                      <div className="text-[9px] font-bold text-white drop-shadow-md uppercase">
+                                      <div className="text-[9px] font-bold uppercase" style={{ color: textColor }}>
                                         {playerTeam?.short_name || 'UNK'}{player.in_dreamteam ? ' *' : ''}
                                       </div>
                                     </div>
                                     <div className="text-center mb-1">
-                                      <div className="text-[10px] font-bold text-white drop-shadow-md">
+                                      <div className="text-[10px] font-bold" style={{ color: textColor }}>
                                         {player.web_name}
                                       </div>
                                     </div>
                                     <div className="text-center mb-1.5">
-                                      <div className="text-xl font-bold text-white drop-shadow-lg">
+                                      <div className="text-xl font-bold" style={{ color: textColor }}>
                                         {player.event_points || 0}
                                       </div>
                                     </div>
