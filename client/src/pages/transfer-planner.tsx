@@ -3669,6 +3669,29 @@ export default function TransferPlanner() {
                                       <SelectContent>
                                         {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
                                           const benchPlayer = getPlayerById(benchPick.element);
+                                          const startingPlayer = getPlayerById(pick.element);
+                                          
+                                          // Filter: GK can only swap with GK, outfield can only swap with outfield
+                                          if (startingPlayer?.element_type === 1 && benchPlayer?.element_type !== 1) {
+                                            return null; // Don't show outfield players for GK swap
+                                          }
+                                          if (startingPlayer?.element_type !== 1 && benchPlayer?.element_type === 1) {
+                                            return null; // Don't show GK for outfield player swap
+                                          }
+                                          
+                                          // Additional check: if swapping out a defender, ensure we keep at least 3
+                                          if (startingPlayer?.element_type === 2 && benchPlayer?.element_type !== 2) {
+                                            const starting11 = manualLineup.slice(0, 11);
+                                            const defendersInStarting = starting11.filter(p => {
+                                              const pl = getPlayerById(p.element);
+                                              return pl?.element_type === 2;
+                                            }).length;
+                                            
+                                            if (defendersInStarting <= 3) {
+                                              return null; // Don't show non-defenders if we only have 3 defenders
+                                            }
+                                          }
+                                          
                                           return (
                                             <SelectItem key={benchPick.element} value={benchIndex.toString()}>
                                               {benchPlayer?.web_name}
