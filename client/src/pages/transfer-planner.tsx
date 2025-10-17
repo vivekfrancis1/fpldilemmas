@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -2508,6 +2508,24 @@ export default function TransferPlanner() {
           <CardTitle className="flex items-center gap-2 text-base md:text-lg">
             <Users className="h-4 w-4 md:h-5 md:w-5" />
             Manager ID
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs md:max-w-sm">
+                  <div className="space-y-2 text-sm">
+                    <p className="font-semibold">To find your Manager ID:</p>
+                    <ol className="list-decimal list-inside space-y-1">
+                      <li>Visit fantasy.premierleague.com from your web browser (not the mobile app) and sign in</li>
+                      <li>Click on the Points tab</li>
+                      <li>Check the URL in your browser's address bar</li>
+                      <li>Your Manager ID is the number after "entry". For example: https://fantasy.premierleague.com/entry/<strong>123456</strong>/event/3</li>
+                    </ol>
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-2 md:pt-4">
