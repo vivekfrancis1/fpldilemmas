@@ -475,9 +475,8 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   };
 
   return (
-    <TooltipProvider>
-      <Card ref={sectionRef} className="border-0 shadow-none">
-        <CardHeader className="pb-2 pt-3 px-2 md:px-4">
+    <Card ref={sectionRef} className="border-0 shadow-none">
+      <CardHeader className="pb-2 pt-3 px-2 md:px-4">
         <CardTitle className="text-base md:text-lg">All Players - Next 6 Gameweeks</CardTitle>
         <div className="flex flex-col gap-2 mt-2">
           {/* Row 1: Search and Position */}
@@ -643,7 +642,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                     <td className="py-1 px-1 md:p-2 sticky left-0 bg-white dark:bg-gray-950 z-10 w-[160px] min-w-[160px] max-w-[200px]">
                       <div className="flex items-center gap-1.5">
                         <div className="font-medium text-xs md:text-sm truncate max-w-[100px]">{player.name}</div>
-                        <PlayerAvailabilityBadge player={player} />
+                        <TooltipProvider>
+                          <PlayerAvailabilityBadge player={player} />
+                        </TooltipProvider>
                       </div>
                       <div className="text-[10px] md:text-xs text-muted-foreground truncate">
                         {(() => {
@@ -761,8 +762,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
           )}
         </div>
       </CardContent>
-      </Card>
-    </TooltipProvider>
+    </Card>
   );
 }
 
