@@ -942,12 +942,39 @@ export default function MyDashboard() {
 
                   {/* Pitch View */}
                   {teamView === "pitch" && (
-                    <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8">
-                      {/* Pitch Lines */}
-                      <div className="absolute inset-0 opacity-30 pointer-events-none">
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white rounded-full"></div>
+                    <div className="space-y-4">
+                      {/* Pitch Header - Points and Transfers */}
+                      <div className="bg-white rounded-lg shadow-md p-4">
+                        <div className="flex justify-between items-center">
+                          <div className="text-center flex-1">
+                            <div className="text-sm text-gray-600 mb-1">Gameweek {getCurrentGameweekDashboard()}</div>
+                            <div className="text-3xl font-bold text-gray-900">{managerData?.summary_event_points || 0}</div>
+                            <div className="text-xs text-gray-500 mt-1">Total Points</div>
+                          </div>
+                          <div className="h-12 w-px bg-gray-300"></div>
+                          <div className="text-center flex-1">
+                            <div className="text-sm text-gray-600 mb-1">Transfers</div>
+                            <div className="text-3xl font-bold text-gray-900">
+                              {teamData.entry_history?.event_transfers || 0}/1
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {teamData.entry_history?.event_transfers_cost && teamData.entry_history.event_transfers_cost > 0 ? (
+                                <span className="text-red-600">Cost: -{teamData.entry_history.event_transfers_cost} pts</span>
+                              ) : (
+                                <span>Free Transfers</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
+
+                      {/* Pitch */}
+                      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8">
+                        {/* Pitch Lines */}
+                        <div className="absolute inset-0 opacity-30 pointer-events-none">
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
+                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white rounded-full"></div>
+                        </div>
 
                       <div className="relative space-y-6">
                         {/* Goalkeepers */}
@@ -966,32 +993,54 @@ export default function MyDashboard() {
                                 const playerTeam = getPlayerTeam(player);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center" data-testid={`pitch-player-${player.id}`}>
-                                    <div className="relative">
-                                      {/* Jersey */}
-                                      <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-200 rounded-lg flex items-center justify-center relative overflow-hidden shadow-lg">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-gray-300 to-gray-400"></div>
-                                        <div className="relative text-2xl sm:text-3xl font-bold text-white drop-shadow-lg">
-                                          {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
-                                        </div>
-                                        {(pick.is_captain || pick.is_vice_captain) && (
-                                          <div className="absolute top-1 right-1">
-                                            {pick.is_captain && (
-                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">C</div>
-                                            )}
-                                            {pick.is_vice_captain && (
-                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
-                                            )}
+                                  <div key={pick.element} className="flex flex-col items-center w-28" data-testid={`pitch-player-${player.id}`}>
+                                    <div className="relative w-full">
+                                      {/* Jersey Card */}
+                                      <div className="bg-white rounded-lg shadow-xl p-2">
+                                        {/* Jersey with Team Colors */}
+                                        <div className="relative w-20 h-20 mx-auto mb-2">
+                                          <svg viewBox="0 0 100 100" className="w-full h-full">
+                                            <path d="M25,20 L15,35 L15,50 L85,50 L85,35 L75,20 L65,30 L50,25 L35,30 Z" fill="#FFD700" stroke="#333" strokeWidth="2"/>
+                                            <circle cx="50" cy="35" r="8" fill="white"/>
+                                          </svg>
+                                          <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="text-2xl font-bold text-gray-800">
+                                              {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
+                                            </div>
                                           </div>
-                                        )}
-                                      </div>
-                                      {/* Player Info */}
-                                      <div className="mt-2 text-center">
-                                        <div className="bg-black text-white px-2 py-1 text-xs font-bold uppercase rounded">
-                                          {player.web_name}
+                                          {(pick.is_captain || pick.is_vice_captain) && (
+                                            <div className="absolute -top-1 -right-1">
+                                              {pick.is_captain && (
+                                                <div className="w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
+                                              )}
+                                              {pick.is_vice_captain && (
+                                                <div className="w-6 h-6 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
+                                              )}
+                                            </div>
+                                          )}
                                         </div>
-                                        <div className="text-xs text-white font-semibold mt-1">
-                                          {playerTeam?.short_name || 'UNK'}({getNextFixtures(playerTeam?.id || 0, 1)[0]?.isHome ? 'H' : 'A'})
+                                        
+                                        {/* Player Info */}
+                                        <div className="text-center mb-2">
+                                          <div className="bg-black text-white px-2 py-0.5 text-xs font-bold uppercase rounded mb-1">
+                                            {player.web_name}
+                                          </div>
+                                          <div className="text-xs font-semibold text-gray-700">
+                                            {playerTeam?.short_name || 'UNK'}
+                                          </div>
+                                        </div>
+
+                                        {/* Next 3 Fixtures */}
+                                        <div className="flex justify-center gap-1">
+                                          {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => (
+                                            <div 
+                                              key={idx}
+                                              className={`px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)}`}
+                                              title={`GW${fixture.gameweek}: ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`}
+                                            >
+                                              {fixture.opponent.substring(0, 3)}
+                                            </div>
+                                          ))}
                                         </div>
                                       </div>
                                     </div>
@@ -1185,6 +1234,7 @@ export default function MyDashboard() {
                           })}
                         </div>
                       </div>
+                    </div>
                     </div>
                   )}
 
