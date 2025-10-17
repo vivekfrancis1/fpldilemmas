@@ -861,6 +861,15 @@ export default function TransferPlanner() {
     queryKey: ["/api/bootstrap-static"],
   });
 
+  // Fetch fixtures data
+  const { data: fixturesData } = useQuery<any[]>({
+    queryKey: ["/api/fixtures"],
+    queryFn: async () => {
+      const response = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+      return response.json();
+    }
+  });
+
   const { data: teamData, isLoading: isLoadingTeam } = useQuery<TeamData>({
     queryKey: ["/api/manager", searchedId, "team"],
     enabled: !!searchedId,
@@ -1203,6 +1212,28 @@ export default function TransferPlanner() {
 
     const points = projection.gameweekProjections?.[selectedGameweek.toString()];
     return points !== undefined ? points : null;
+  };
+
+  // Get fixture info for a player in a specific gameweek
+  const getPlayerFixture = (playerId: number, gameweek: number): { opponent: string; isHome: boolean } | null => {
+    const player = getPlayerById(playerId);
+    if (!player || !fixturesData || !bootstrapData) return null;
+
+    const playerTeamId = player.team;
+    const fixture = fixturesData.find(f => 
+      f.event === gameweek && (f.team_h === playerTeamId || f.team_a === playerTeamId)
+    );
+
+    if (!fixture) return null;
+
+    const isHome = fixture.team_h === playerTeamId;
+    const opponentId = isHome ? fixture.team_a : fixture.team_h;
+    const opponentTeam = bootstrapData.teams.find(t => t.id === opponentId);
+
+    return {
+      opponent: opponentTeam?.short_name || 'Unknown',
+      isHome
+    };
   };
 
   // Check if a player is transferred in (different from the baseline for this gameweek)
@@ -3552,6 +3583,13 @@ export default function TransferPlanner() {
                                     </div>
                                     <div className="text-sm text-muted-foreground">
                                       {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
+                                      {(() => {
+                                        const fixture = getPlayerFixture(pick.element, selectedGameweek);
+                                        if (fixture) {
+                                          return <> • {fixture.isHome ? 'vs' : '@'} {fixture.opponent}</>;
+                                        }
+                                        return null;
+                                      })()}
                                     </div>
                                     <div className="text-xs text-muted-foreground mt-1">
                                       {editingBuyPrice === pick.element ? (
@@ -3809,6 +3847,13 @@ export default function TransferPlanner() {
                             </div>
                             <div className="text-sm text-muted-foreground">
                               {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
+                              {(() => {
+                                const fixture = getPlayerFixture(pick.element, selectedGameweek);
+                                if (fixture) {
+                                  return <> • {fixture.isHome ? 'vs' : '@'} {fixture.opponent}</>;
+                                }
+                                return null;
+                              })()}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
                               {editingBuyPrice === pick.element ? (
@@ -4039,6 +4084,13 @@ export default function TransferPlanner() {
                                       </div>
                                       <div className="text-sm text-muted-foreground">
                                         {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)}
+                                        {(() => {
+                                          const fixture = getPlayerFixture(player.element, selectedGameweek);
+                                          if (fixture) {
+                                            return <> • {fixture.isHome ? 'vs' : '@'} {fixture.opponent}</>;
+                                          }
+                                          return null;
+                                        })()}
                                       </div>
                                     </div>
                                   </div>
@@ -4119,6 +4171,13 @@ export default function TransferPlanner() {
                               </div>
                               <div className="text-sm text-muted-foreground">
                                 {fullPlayer && getTeamName(fullPlayer.team)} • {fullPlayer && getPositionShortName(fullPlayer.element_type)}
+                                {(() => {
+                                  const fixture = getPlayerFixture(player.element, selectedGameweek);
+                                  if (fixture) {
+                                    return <> • {fixture.isHome ? 'vs' : '@'} {fixture.opponent}</>;
+                                  }
+                                  return null;
+                                })()}
                               </div>
                             </div>
                           </div>
