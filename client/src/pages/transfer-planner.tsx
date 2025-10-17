@@ -1196,32 +1196,12 @@ export default function TransferPlanner() {
   const getPlayerProjectedPoints = (playerId: number): number | null => {
     if (!playerProjections || !selectedGameweek) return null;
     
-    // Ensure playerProjections is an array
-    if (!Array.isArray(playerProjections)) {
-      console.log('DEBUG: playerProjections is not an array', typeof playerProjections, playerProjections);
-      return null;
-    }
+    if (!Array.isArray(playerProjections)) return null;
     
     const projection = playerProjections.find(p => p.playerId === playerId);
-    if (!projection) {
-      console.log('DEBUG: No projection found for player', playerId, 'Available players:', playerProjections.slice(0, 3).map(p => p.playerId));
-      return null;
-    }
+    if (!projection) return null;
 
-    // Get the points for the selected gameweek - API returns gameweekProjections with string keys
     const points = projection.gameweekProjections?.[selectedGameweek.toString()];
-    
-    // Debug first few lookups
-    if (playerProjections && playerProjections.length > 0 && playerId === playerProjections[0]?.playerId) {
-      console.log('DEBUG: Sample projection lookup', {
-        playerId,
-        selectedGameweek,
-        gwString: selectedGameweek.toString(),
-        gameweekProjections: projection.gameweekProjections,
-        points
-      });
-    }
-    
     return points !== undefined ? points : null;
   };
 
@@ -3245,34 +3225,22 @@ export default function TransferPlanner() {
                   {(() => {
                     let total = 0;
                     if (plannerMode === "manual") {
-                      // Get starting 11 from manual lineup
-                      const starting11 = manualLineup.slice(0, 11);
-                      console.log('DEBUG: Calculating GW total for manual mode', {
-                        starting11Count: starting11.length,
-                        playerIds: starting11.map(p => p.element),
-                        playerProjectionsCount: playerProjections?.length || 0,
-                        selectedGameweek
-                      });
-                      starting11.forEach((pick: TeamPick) => {
+                      manualLineup.slice(0, 11).forEach((pick: TeamPick) => {
                         const points = getPlayerProjectedPoints(pick.element);
                         if (points !== null) {
-                          // Apply captain multiplier (2x for captain)
                           const multiplier = pick.is_captain ? 2 : 1;
                           total += points * multiplier;
                         }
                       });
                     } else if (optimizedLineup) {
-                      // Get starting 11 from optimized lineup
                       optimizedLineup.starting11.forEach((pick: any) => {
                         const points = getPlayerProjectedPoints(pick.element);
                         if (points !== null) {
-                          // Apply captain multiplier (2x for captain)
                           const multiplier = pick.isCaptain ? 2 : 1;
                           total += points * multiplier;
                         }
                       });
                     }
-                    console.log('DEBUG: Final GW total:', total);
                     return total.toFixed(2);
                   })()}
                 </div>
@@ -3461,7 +3429,7 @@ export default function TransferPlanner() {
           </CardHeader>
           <CardContent>
             <div className="text-xs text-muted-foreground mb-4 italic">
-              * Sell prices shown are approximate values and may not reflect exact FPL prices
+              * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
             </div>
             <div className="space-y-6">
               {/* Current Starting 11 */}
@@ -3997,7 +3965,7 @@ export default function TransferPlanner() {
             {optimizedLineup && !optimizeMutation.isPending && (
               <div className="mt-6 space-y-6">
                 <div className="text-xs text-muted-foreground mb-4 italic">
-                  * Sell prices shown are approximate values and may not reflect exact FPL prices
+                  * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
                 </div>
                 {/* Formation and Points Summary */}
                 <div className="grid grid-cols-2 gap-4">
