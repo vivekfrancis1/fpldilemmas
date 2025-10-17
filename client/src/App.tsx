@@ -160,7 +160,7 @@ function Router() {
       <Route path="/top50-managers" component={Top50Managers} />
       <Route path="/top50-managers/:rank/team" component={Top50ManagerTeam} />
       <Route path="/manager-team/:managerId" component={ManagerTeam} />
-      <Route path="/projection-docs" component={ProjectionDocumentation} />
+      <Route path="/projection-documentation" component={ProjectionDocumentation} />
       <Route path="/login" component={Login} />
 
       <Route component={NotFound} />
