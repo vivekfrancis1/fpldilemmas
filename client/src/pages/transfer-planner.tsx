@@ -4320,7 +4320,7 @@ export default function TransferPlanner() {
                                     <div className="flex justify-center gap-1.5 mt-1.5">
                                       <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
                                         <SelectTrigger 
-                                          className="h-6 w-[72px] p-0 text-[11px] font-semibold bg-white/90 hover:bg-white border border-gray-300 rounded-md [&>svg]:hidden" 
+                                          className="h-5 w-[72px] p-0 text-[11px] font-semibold bg-white/90 hover:bg-white border border-gray-300 rounded-md [&>svg]:hidden" 
                                           data-testid={`pitch-swap-${pick.element}`} 
                                           title="Swap with bench"
                                         >
@@ -4559,7 +4559,7 @@ export default function TransferPlanner() {
                               <div className="flex justify-center gap-1.5 mt-1.5">
                                 <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
                                   <SelectTrigger 
-                                    className="h-6 w-[72px] p-0 text-[11px] font-semibold bg-white/90 hover:bg-white border border-gray-300 rounded-md [&>svg]:hidden" 
+                                    className="h-5 w-[72px] p-0 text-[11px] font-semibold bg-white/90 hover:bg-white border border-gray-300 rounded-md [&>svg]:hidden" 
                                     data-testid={`pitch-bench-swap-${pick.element}`} 
                                     title="Swap with starting XI"
                                   >
