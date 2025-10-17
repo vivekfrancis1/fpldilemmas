@@ -4288,6 +4288,21 @@ export default function TransferPlanner() {
                         );
                       })}
                     </div>
+
+                    {/* Total Projected Points */}
+                    <div className="pt-4 border-t mt-4">
+                      <div className="flex justify-between items-center p-4 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+                        <span className="font-semibold">Total Projected Points (GW{selectedGameweek})</span>
+                        <span className="text-2xl font-bold text-purple-600">
+                          {optimizedLineup.starting11
+                            .reduce((total, player) => {
+                              const multiplier = player.isCaptain ? 2 : 1;
+                              return total + (player.projectedPoints || 0) * multiplier;
+                            }, 0)
+                            .toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Bench - Hidden since bench is now integrated above */}
