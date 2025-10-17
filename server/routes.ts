@@ -11359,9 +11359,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
         const nextGameweek = currentGameweek + 1; // Start from next gameweek
         
-        // Get team goals conceded projections and player minutes
+        // Get team goals AGAINST (conceded) projections and player minutes
         const [teamProjectionsResponse, playerMinutesResponse] = await Promise.all([
-          fetch(`http://localhost:5000/api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`),
+          fetch(`http://localhost:5000/api/team-goals-against-projections`),
           fetch("http://localhost:5000/api/player-minutes-projections")
         ]);
         
@@ -11393,14 +11393,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let gwGoalsConceded = 0;
             let gwPoints = 0;
             
-            if (teamGoalData && teamGoalData.gameweekProjections && teamGoalData.gameweekProjections[gw]) {
-              const teamGoalsAgainst = parseFloat(teamGoalData.gameweekProjections[gw]);
+            if (teamGoalData && teamGoalData.gameweekProjections) {
+              const teamGoalsAgainst = teamGoalData.gameweekProjections[gw.toString()] || teamGoalData.gameweekProjections[gw];
               
-              // Player expected goals conceded = (expected minutes / 90) * Team expected goals conceded
-              gwGoalsConceded = (expectedMinutesPerGame / 90) * teamGoalsAgainst;
-              
-              // Points from goals conceded = -0.5 * Player expected goals conceded
-              gwPoints = -0.5 * gwGoalsConceded;
+              if (teamGoalsAgainst !== undefined) {
+                // Player expected goals conceded = (expected minutes / 90) * Team expected goals AGAINST (conceded)
+                gwGoalsConceded = (expectedMinutesPerGame / 90) * parseFloat(teamGoalsAgainst);
+                
+                // Points from goals conceded = -0.5 * Player expected goals conceded
+                gwPoints = -0.5 * gwGoalsConceded;
+              }
             }
             
             goalsConceded[`gw${gw}`] = parseFloat(gwGoalsConceded.toFixed(2));
