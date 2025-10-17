@@ -3564,6 +3564,33 @@ export default function TransferPlanner() {
                                 data-testid={`starting-player-${pick.element}`}
                               >
                                 <div className="flex items-center gap-1 flex-1 min-w-0">
+                                  {/* Captain/Vice-Captain buttons on the left */}
+                                  <div className="flex gap-0.5 shrink-0">
+                                    {!pick.is_captain && (
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
+                                        onClick={() => handleSetCaptain(pick.element)}
+                                        data-testid={`set-captain-${pick.element}`}
+                                        title="Set as Captain"
+                                      >
+                                        <Crown className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                    {!pick.is_vice_captain && (
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                                        onClick={() => handleSetViceCaptain(pick.element)}
+                                        data-testid={`set-vice-${pick.element}`}
+                                        title="Set as Vice Captain"
+                                      >
+                                        <Crown className="h-3 w-3" />
+                                      </Button>
+                                    )}
+                                  </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
                                       <span className="truncate">{player.web_name}</span>
@@ -3659,30 +3686,6 @@ export default function TransferPlanner() {
                                     )}
                                   </div>
                                   <div className="flex flex-wrap gap-0.5 shrink-0">
-                                    {!pick.is_captain && (
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-6 w-6 p-0 text-yellow-600 hover:bg-yellow-50 hover:text-yellow-700"
-                                        onClick={() => handleSetCaptain(pick.element)}
-                                        data-testid={`set-captain-${pick.element}`}
-                                        title="Set as Captain"
-                                      >
-                                        <Crown className="h-3 w-3" />
-                                      </Button>
-                                    )}
-                                    {!pick.is_vice_captain && (
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-6 w-6 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                                        onClick={() => handleSetViceCaptain(pick.element)}
-                                        data-testid={`set-vice-${pick.element}`}
-                                        title="Set as Vice Captain"
-                                      >
-                                        <Crown className="h-3 w-3" />
-                                      </Button>
-                                    )}
                                     <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
                                       <SelectTrigger className="h-6 w-6 p-0 border-0 hover:bg-gray-100" data-testid={`swap-${pick.element}`} title="Swap with bench">
                                         <ArrowUpDown className="h-3 w-3" />
