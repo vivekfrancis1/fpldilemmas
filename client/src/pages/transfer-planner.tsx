@@ -1197,13 +1197,31 @@ export default function TransferPlanner() {
     if (!playerProjections || !selectedGameweek) return null;
     
     // Ensure playerProjections is an array
-    if (!Array.isArray(playerProjections)) return null;
+    if (!Array.isArray(playerProjections)) {
+      console.log('DEBUG: playerProjections is not an array', typeof playerProjections, playerProjections);
+      return null;
+    }
     
     const projection = playerProjections.find(p => p.playerId === playerId);
-    if (!projection) return null;
+    if (!projection) {
+      console.log('DEBUG: No projection found for player', playerId, 'Available players:', playerProjections.slice(0, 3).map(p => p.playerId));
+      return null;
+    }
 
     // Get the points for the selected gameweek - API returns gameweekProjections with string keys
     const points = projection.gameweekProjections?.[selectedGameweek.toString()];
+    
+    // Debug first few lookups
+    if (playerProjections && playerProjections.length > 0 && playerId === playerProjections[0]?.playerId) {
+      console.log('DEBUG: Sample projection lookup', {
+        playerId,
+        selectedGameweek,
+        gwString: selectedGameweek.toString(),
+        gameweekProjections: projection.gameweekProjections,
+        points
+      });
+    }
+    
     return points !== undefined ? points : null;
   };
 
@@ -3228,7 +3246,14 @@ export default function TransferPlanner() {
                     let total = 0;
                     if (plannerMode === "manual") {
                       // Get starting 11 from manual lineup
-                      manualLineup.slice(0, 11).forEach((pick: TeamPick) => {
+                      const starting11 = manualLineup.slice(0, 11);
+                      console.log('DEBUG: Calculating GW total for manual mode', {
+                        starting11Count: starting11.length,
+                        playerIds: starting11.map(p => p.element),
+                        playerProjectionsCount: playerProjections?.length || 0,
+                        selectedGameweek
+                      });
+                      starting11.forEach((pick: TeamPick) => {
                         const points = getPlayerProjectedPoints(pick.element);
                         if (points !== null) {
                           // Apply captain multiplier (2x for captain)
@@ -3247,6 +3272,7 @@ export default function TransferPlanner() {
                         }
                       });
                     }
+                    console.log('DEBUG: Final GW total:', total);
                     return total.toFixed(2);
                   })()}
                 </div>
