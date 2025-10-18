@@ -4331,10 +4331,10 @@ export default function TransferPlanner() {
                                   )}
                                   
                                   {/* Jersey Card */}
-                                  <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
-                                    <defs><clipPath id={`jersey-manual-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
-                                    <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-manual-${player.id})`} />
-                                    <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                                  <svg viewBox="0 0 280 210" className="w-full drop-shadow-xl">
+                                    <defs><clipPath id={`jersey-manual-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 205 L 58 205 L 58 30 Z" /></clipPath></defs>
+                                    <rect width="280" height="210" fill={jerseyColor} clipPath={`url(#jersey-manual-${player.id})`} />
+                                    <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 205 L 58 205 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
                                     <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
                                     {isPlayerTransferredIn(pick) && (<g><circle cx="205" cy="48" r="12" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="205" y="55" fontSize="11" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
                                     <text x="140" y="68" fontSize="16" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
@@ -4375,7 +4375,7 @@ export default function TransferPlanner() {
                                         )}
                                       </div>
                                     </foreignObject>
-                                    <foreignObject x="60" y="166" width="160" height="22">
+                                    <foreignObject x="60" y="168" width="160" height="35">
                                       <div className="flex justify-center gap-1.5">
                                         <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
                                           <SelectTrigger className="h-3.5 w-[42px] px-1.5 py-0 text-[8px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
@@ -4504,10 +4504,10 @@ export default function TransferPlanner() {
                             </div>
                           )}
                           <div className="relative flex-1 opacity-90">
-                            <svg viewBox="0 0 280 190" className="w-full drop-shadow-lg">
-                              <defs><clipPath id={`jersey-bench-manual-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
-                              <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-bench-manual-${player.id})`} />
-                              <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                            <svg viewBox="0 0 280 210" className="w-full drop-shadow-lg">
+                              <defs><clipPath id={`jersey-bench-manual-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 205 L 58 205 L 58 30 Z" /></clipPath></defs>
+                              <rect width="280" height="210" fill={jerseyColor} clipPath={`url(#jersey-bench-manual-${player.id})`} />
+                              <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 205 L 58 205 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
                               <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
                               <text x="140" y="68" fontSize="16" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
                               <text x="140" y="88" fontSize="18" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
@@ -4532,7 +4532,7 @@ export default function TransferPlanner() {
                                   )}
                                 </div>
                               </foreignObject>
-                              <foreignObject x="60" y="166" width="160" height="22">
+                              <foreignObject x="60" y="168" width="160" height="35">
                                 <div className="flex justify-center gap-1.5">
                                   <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
                                     <SelectTrigger className="h-3.5 w-[42px] px-1.5 py-0 text-[8px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
