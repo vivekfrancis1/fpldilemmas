@@ -3163,8 +3163,8 @@ export default function TransferPlanner() {
               // Filter comparison data based on selected filter
               const filteredComparisonData = comparisonData.filter(row => {
                 if (comparisonFilter === "all") return true;
-                if (comparisonFilter === "manual") return row.mode === "Manual";
-                if (comparisonFilter === "auto") return row.mode === "Auto";
+                if (comparisonFilter === "manual") return row.mode === "Manual lineup";
+                if (comparisonFilter === "auto") return row.mode === "Auto lineup";
                 return true;
               });
               
@@ -3195,15 +3195,15 @@ export default function TransferPlanner() {
                     <tbody>
                       {filteredComparisonData.map((row, idx) => {
                         const isMaxTotal = row.total === maxTotal;
-                        const isDuplicate = row.mode === 'Manual' && duplicateInfo[row.draftKey]?.isDuplicate;
+                        const isDuplicate = row.mode === 'Manual lineup' && duplicateInfo[row.draftKey]?.isDuplicate;
                         const duplicateOf = duplicateInfo[row.draftKey]?.duplicateOfKey;
                         
                         return (
                           <tr 
                             key={`${row.draftKey}-${row.mode}`} 
                             className={`border-b hover:bg-gray-50 dark:hover:bg-gray-900 ${
-                              row.draftKey === activeDraft && row.mode === 'Manual' ? 'bg-blue-50 dark:bg-blue-950/10' : 
-                              row.mode === 'Auto' ? 'bg-purple-50/30 dark:bg-purple-950/10' : ''
+                              row.draftKey === activeDraft && row.mode === 'Manual lineup' ? 'bg-blue-50 dark:bg-blue-950/10' : 
+                              row.mode === 'Auto lineup' ? 'bg-purple-50/30 dark:bg-purple-950/10' : ''
                             }`}
                             data-testid={`row-${row.draftKey}-${row.mode.toLowerCase()}`}
                           >
@@ -3211,13 +3211,13 @@ export default function TransferPlanner() {
                               <div className="flex items-center gap-2">
                                 <span>{row.draftKey}</span>
                                 <span className={`text-xs px-2 py-0.5 rounded ${
-                                  row.mode === 'Manual' 
+                                  row.mode === 'Manual lineup' 
                                     ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
                                     : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
                                 }`}>
                                   {row.mode}
                                 </span>
-                                {row.draftKey === activeDraft && row.mode === 'Manual' && <span className="text-blue-600">●</span>}
+                                {row.draftKey === activeDraft && row.mode === 'Manual lineup' && <span className="text-blue-600">●</span>}
                                 {isMaxTotal && (
                                   <Badge 
                                     variant="default" 
