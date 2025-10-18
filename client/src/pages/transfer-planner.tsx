@@ -4406,7 +4406,7 @@ export default function TransferPlanner() {
                                         </div>
                                       ) : (
                                         <div className="flex gap-0.5 items-center justify-center">
-                                          <span>£{getSellingPrice(pick).toFixed(1)}m</span>
+                                          <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                           <Button
                                             size="icon"
                                             variant="ghost"
