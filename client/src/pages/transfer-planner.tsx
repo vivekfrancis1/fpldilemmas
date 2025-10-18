@@ -4294,65 +4294,45 @@ export default function TransferPlanner() {
                             return (
                               <div key={pick.element} className="flex flex-col items-center w-36" data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
-                                  {/* Captain/Vice Captain Buttons/Badges - Top Corners */}
-                                  {!pick.is_captain && plannerMode === "manual" && (
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="absolute top-3 left-3 h-5 w-5 p-0 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-md z-10"
-                                      onClick={() => handleSetCaptain(pick.element)}
-                                      data-testid={`pitch-set-captain-${pick.element}`}
-                                      title="Set Captain"
-                                    >
-                                      <Crown className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                  {pick.is_captain && (
-                                    <div className="absolute top-3 left-3 text-sm font-extrabold text-yellow-700 bg-yellow-200 px-2 py-1 rounded shadow-md z-10">
-                                      C
-                                    </div>
-                                  )}
-                                  {!pick.is_vice_captain && plannerMode === "manual" && (
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="absolute top-3 right-3 h-5 w-5 p-0 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md z-10"
-                                      onClick={() => handleSetViceCaptain(pick.element)}
-                                      data-testid={`pitch-set-vice-${pick.element}`}
-                                      title="Set Vice Captain"
-                                    >
-                                      <Crown className="h-3 w-3" />
-                                    </Button>
-                                  )}
-                                  {pick.is_vice_captain && (
-                                    <div className="absolute top-3 right-3 text-sm font-extrabold text-blue-700 bg-blue-200 px-2 py-1 rounded shadow-md z-10">
-                                      VC
-                                    </div>
-                                  )}
-                                  
                                   {/* Jersey Card */}
-                                  <svg viewBox="0 0 280 210" className="w-full drop-shadow-xl">
-                                    <defs><clipPath id={`jersey-manual-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 205 L 58 205 L 58 30 Z" /></clipPath></defs>
-                                    <rect width="280" height="210" fill={jerseyColor} clipPath={`url(#jersey-manual-${player.id})`} />
-                                    <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 205 L 58 205 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                    <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                    {isPlayerTransferredIn(pick) && (<g><circle cx="205" cy="48" r="12" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="205" y="55" fontSize="11" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
-                                    <text x="140" y="68" fontSize="16" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                    <text x="140" y="88" fontSize="18" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                    <text x="140" y="120" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                  <svg viewBox="0 0 336 252" className="w-full drop-shadow-xl">
+                                    <defs><clipPath id={`jersey-manual-${player.id}`}><path d="M 70 36 L 38 36 L 38 96 L 54 102 L 70 102 L 70 36 L 108 12 Q 114 12 120 19 L 132 30 L 144 36 Q 156 36 168 36 L 180 36 Q 192 36 204 30 L 216 19 Q 222 12 228 12 L 266 36 L 266 102 L 282 102 L 298 96 L 298 36 L 266 36 L 266 246 L 70 246 L 70 36 Z" /></clipPath></defs>
+                                    <rect width="336" height="252" fill={jerseyColor} clipPath={`url(#jersey-manual-${player.id})`} />
+                                    <path d="M 70 36 L 38 36 L 38 96 L 54 102 L 70 102 L 70 36 L 108 12 Q 114 12 120 19 L 132 30 L 144 36 Q 156 36 168 36 L 180 36 Q 192 36 204 30 L 216 19 Q 222 12 228 12 L 266 36 L 266 102 L 282 102 L 298 96 L 298 36 L 266 36 L 266 246 L 70 246 L 70 36 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                                    <path d="M 108 12 L 120 22 L 132 30 L 144 35 Q 156 35 168 35 L 180 35 Q 192 35 204 30 L 216 22 L 228 12" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                                    {isPlayerTransferredIn(pick) && (<g><circle cx="246" cy="58" r="14" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="246" y="65" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
+                                    {!pick.is_captain && plannerMode === "manual" ? (
+                                      <g onClick={() => handleSetCaptain(pick.element)} style={{ cursor: 'pointer' }} data-testid={`pitch-set-captain-${pick.element}`}>
+                                        <rect x="80" y="46" width="24" height="24" fill="rgb(254 252 232)" stroke="rgb(161 98 7)" strokeWidth="1" rx="4" />
+                                        <text x="92" y="63" fontSize="16" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">👑</text>
+                                      </g>
+                                    ) : pick.is_captain ? (
+                                      <g><rect x="80" y="46" width="28" height="28" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="94" y="67" fontSize="18" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>
+                                    ) : null}
+                                    {!pick.is_vice_captain && plannerMode === "manual" ? (
+                                      <g onClick={() => handleSetViceCaptain(pick.element)} style={{ cursor: 'pointer' }} data-testid={`pitch-set-vice-${pick.element}`}>
+                                        <rect x="232" y="46" width="24" height="24" fill="rgb(239 246 255)" stroke="rgb(29 78 216)" strokeWidth="1" rx="4" />
+                                        <text x="244" y="63" fontSize="16" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">👑</text>
+                                      </g>
+                                    ) : pick.is_vice_captain ? (
+                                      <g><rect x="228" y="46" width="32" height="28" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="244" y="67" fontSize="16" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>
+                                    ) : null}
+                                    <text x="168" y="82" fontSize="19" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                    <text x="168" y="106" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                    <text x="168" y="144" fontSize="38" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                       {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                       {pick.is_captain && projectedPoints !== null && (
-                                        <tspan fontSize="14" dx="2">({(projectedPoints * 2).toFixed(1)})</tspan>
+                                        <tspan fontSize="17" dx="3">({(projectedPoints * 2).toFixed(1)})</tspan>
                                       )}
                                     </text>
                                     {fixture && (
-                                      <text x="140" y="138" fontSize="12" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                      <text x="168" y="166" fontSize="14" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                                     )}
-                                    <foreignObject x="0" y="145" width="280" height="20">
+                                    <foreignObject x="0" y="174" width="336" height="24">
                                       <div className="flex items-center justify-center h-full">
                                         {editingSellPrice === pick.element ? (
                                           <div className="flex items-center gap-0.5">
-                                            <span className="text-[9px] font-medium" style={{ color: textColor }}>£</span>
+                                            <span className="text-[10px] font-medium" style={{ color: textColor }}>£</span>
                                             <Input
                                               type="number"
                                               step="0.1"
@@ -4360,25 +4340,25 @@ export default function TransferPlanner() {
                                               max="15.0"
                                               value={editSellPriceValue}
                                               onChange={(e) => setEditSellPriceValue(e.target.value)}
-                                              className="h-4 w-12 text-[9px] p-0.5 text-black"
+                                              className="h-5 w-14 text-[10px] p-0.5 text-black"
                                               autoFocus
                                               data-testid={`pitch-input-sell-price-${pick.element}`}
                                             />
-                                            <Button size="icon" variant="ghost" className="h-4 w-4 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-button-save-sell-price-${pick.element}`}><Check className="h-2.5 w-2.5" /></Button>
-                                            <Button size="icon" variant="ghost" className="h-4 w-4 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-button-cancel-sell-price-${pick.element}`}><X className="h-2.5 w-2.5" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-5 w-5 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-button-save-sell-price-${pick.element}`}><Check className="h-3 w-3" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-5 w-5 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-button-cancel-sell-price-${pick.element}`}><X className="h-3 w-3" /></Button>
                                           </div>
                                         ) : (
                                           <div className="flex gap-0.5 items-center">
-                                            <span className="text-[9px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
-                                            <Button size="icon" variant="ghost" className="h-3 w-3 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-button-edit-sell-price-${pick.element}`}><Edit2 className="h-2 w-2" style={{ color: textColor }} /></Button>
+                                            <span className="text-[10px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
+                                            <Button size="icon" variant="ghost" className="h-4 w-4 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-button-edit-sell-price-${pick.element}`}><Edit2 className="h-2 w-2" style={{ color: textColor }} /></Button>
                                           </div>
                                         )}
                                       </div>
                                     </foreignObject>
-                                    <foreignObject x="60" y="168" width="160" height="35">
+                                    <foreignObject x="72" y="202" width="192" height="42">
                                       <div className="flex justify-center gap-1.5">
                                         <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
-                                          <SelectTrigger className="h-3.5 w-[42px] px-1.5 py-0 text-[8px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
+                                          <SelectTrigger className="h-4 w-[50px] px-1.5 py-0 text-[9px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
                                           <SelectContent>
                                             {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
                                               const benchPlayer = getPlayerById(benchPick.element);
@@ -4395,7 +4375,7 @@ export default function TransferPlanner() {
                                           </SelectContent>
                                         </Select>
                                         {plannerMode === "manual" && (
-                                          <Button size="sm" variant="ghost" className="h-9 w-[72px] text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50 mt-1" onClick={() => handleTransferOut(pick)} data-testid={`pitch-transfer-out-${pick.element}`} title="Transfer Out"><X className="h-3 w-3 mr-1" />Out</Button>
+                                          <Button size="sm" variant="ghost" className="h-10 w-[86px] text-[12px] font-semibold text-red-600 bg-white/90 hover:bg-red-50 mt-1" onClick={() => handleTransferOut(pick)} data-testid={`pitch-transfer-out-${pick.element}`} title="Transfer Out"><X className="h-3.5 w-3.5 mr-1" />Out</Button>
                                         )}
                                       </div>
                                     </foreignObject>
@@ -4504,38 +4484,38 @@ export default function TransferPlanner() {
                             </div>
                           )}
                           <div className="relative flex-1 opacity-90">
-                            <svg viewBox="0 0 280 210" className="w-full drop-shadow-lg">
-                              <defs><clipPath id={`jersey-bench-manual-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 205 L 58 205 L 58 30 Z" /></clipPath></defs>
-                              <rect width="280" height="210" fill={jerseyColor} clipPath={`url(#jersey-bench-manual-${player.id})`} />
-                              <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 205 L 58 205 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                              <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                              <text x="140" y="68" fontSize="16" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                              <text x="140" y="88" fontSize="18" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                              <text x="140" y="120" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
+                            <svg viewBox="0 0 336 252" className="w-full drop-shadow-lg">
+                              <defs><clipPath id={`jersey-bench-manual-${player.id}`}><path d="M 70 36 L 38 36 L 38 96 L 54 102 L 70 102 L 70 36 L 108 12 Q 114 12 120 19 L 132 30 L 144 36 Q 156 36 168 36 L 180 36 Q 192 36 204 30 L 216 19 Q 222 12 228 12 L 266 36 L 266 102 L 282 102 L 298 96 L 298 36 L 266 36 L 266 246 L 70 246 L 70 36 Z" /></clipPath></defs>
+                              <rect width="336" height="252" fill={jerseyColor} clipPath={`url(#jersey-bench-manual-${player.id})`} />
+                              <path d="M 70 36 L 38 36 L 38 96 L 54 102 L 70 102 L 70 36 L 108 12 Q 114 12 120 19 L 132 30 L 144 36 Q 156 36 168 36 L 180 36 Q 192 36 204 30 L 216 19 Q 222 12 228 12 L 266 36 L 266 102 L 282 102 L 298 96 L 298 36 L 266 36 L 266 246 L 70 246 L 70 36 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                              <path d="M 108 12 L 120 22 L 132 30 L 144 35 Q 156 35 168 35 L 180 35 Q 192 35 204 30 L 216 22 L 228 12" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                              <text x="168" y="82" fontSize="19" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                              <text x="168" y="106" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                              <text x="168" y="144" fontSize="38" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
                               {fixture && (
-                                <text x="140" y="138" fontSize="12" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                <text x="168" y="166" fontSize="14" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                               )}
-                              <foreignObject x="0" y="145" width="280" height="20">
+                              <foreignObject x="0" y="174" width="336" height="24">
                                 <div className="flex items-center justify-center h-full">
                                   {editingSellPrice === pick.element ? (
                                     <div className="flex items-center gap-1">
-                                      <span className="text-[11px] font-medium" style={{ color: textColor }}>Sell: £</span>
-                                      <Input type="number" step="0.1" min="4.0" max="15.0" value={editSellPriceValue} onChange={(e) => setEditSellPriceValue(e.target.value)} className="h-5 w-14 text-[11px] p-1 text-black" autoFocus data-testid={`pitch-bench-input-sell-price-${pick.element}`} />
-                                      <Button size="icon" variant="ghost" className="h-5 w-5 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-bench-button-save-sell-price-${pick.element}`}><Check className="h-3 w-3" /></Button>
-                                      <Button size="icon" variant="ghost" className="h-5 w-5 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-bench-button-cancel-sell-price-${pick.element}`}><X className="h-3 w-3" /></Button>
+                                      <span className="text-[13px] font-medium" style={{ color: textColor }}>Sell: £</span>
+                                      <Input type="number" step="0.1" min="4.0" max="15.0" value={editSellPriceValue} onChange={(e) => setEditSellPriceValue(e.target.value)} className="h-6 w-16 text-[13px] p-1 text-black" autoFocus data-testid={`pitch-bench-input-sell-price-${pick.element}`} />
+                                      <Button size="icon" variant="ghost" className="h-6 w-6 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-bench-button-save-sell-price-${pick.element}`}><Check className="h-3.5 w-3.5" /></Button>
+                                      <Button size="icon" variant="ghost" className="h-6 w-6 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-bench-button-cancel-sell-price-${pick.element}`}><X className="h-3.5 w-3.5" /></Button>
                                     </div>
                                   ) : (
                                     <div className="flex gap-1 items-center">
-                                      <span className="text-[11px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
-                                      <Button size="icon" variant="ghost" className="h-4 w-4 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-bench-button-edit-sell-price-${pick.element}`}><Edit2 className="h-2.5 w-2.5" style={{ color: textColor }} /></Button>
+                                      <span className="text-[13px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
+                                      <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-bench-button-edit-sell-price-${pick.element}`}><Edit2 className="h-3 w-3" style={{ color: textColor }} /></Button>
                                     </div>
                                   )}
                                 </div>
                               </foreignObject>
-                              <foreignObject x="60" y="168" width="160" height="35">
+                              <foreignObject x="72" y="202" width="192" height="42">
                                 <div className="flex justify-center gap-1.5">
                                   <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
-                                    <SelectTrigger className="h-3.5 w-[42px] px-1.5 py-0 text-[8px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
+                                    <SelectTrigger className="h-4 w-[50px] px-1.5 py-0 text-[9px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
                                     <SelectContent>
                                       {manualLineup.slice(0, 11).map((startPick, startIndex) => {
                                         const startPlayer = getPlayerById(startPick.element);
@@ -4547,7 +4527,7 @@ export default function TransferPlanner() {
                                     </SelectContent>
                                   </Select>
                                   {plannerMode === "manual" && (
-                                    <Button size="sm" variant="ghost" className="h-9 w-[72px] text-[11px] font-semibold text-red-600 bg-white/90 hover:bg-red-50 mt-1" onClick={() => handleTransferOut(pick)} data-testid={`pitch-bench-transfer-out-${pick.element}`} title="Transfer Out"><X className="h-3 w-3 mr-1" />Out</Button>
+                                    <Button size="sm" variant="ghost" className="h-10 w-[86px] text-[12px] font-semibold text-red-600 bg-white/90 hover:bg-red-50 mt-1" onClick={() => handleTransferOut(pick)} data-testid={`pitch-bench-transfer-out-${pick.element}`} title="Transfer Out"><X className="h-3.5 w-3.5 mr-1" />Out</Button>
                                   )}
                                 </div>
                               </foreignObject>
