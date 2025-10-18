@@ -218,7 +218,7 @@ export default function Top50ManagerTeam() {
   });
 
   // Team view state (pitch or list)
-  const [teamView, setTeamView] = useState<"pitch" | "list">("list");
+  const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
 
   // Get bootstrap data to determine completed gameweeks
   const { data: bootstrapData } = useQuery<any>({

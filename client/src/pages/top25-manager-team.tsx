@@ -213,7 +213,7 @@ function getRankChangeDisplay(rankChange: number) {
 
 export default function Top25ManagerTeam() {
   const { rank } = useParams<{ rank: string }>();
-  const [teamView, setTeamView] = useState<"list" | "pitch">("list");
+  const [teamView, setTeamView] = useState<"list" | "pitch">("pitch");
   
   // Find manager info from our static data
   const managerInfo = TOP_25_MANAGERS.find(m => m.rank === parseInt(rank || '0'));
