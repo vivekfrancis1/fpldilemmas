@@ -308,10 +308,10 @@ export default function CreatorTeam() {
   });
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6">
+    <div className="container mx-auto px-2 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 space-y-3 sm:space-y-4 md:space-y-6">
       {/* Header */}
-      <div className="flex flex-col space-y-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col space-y-2 sm:space-y-3 md:space-y-4">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
           <Link href="/content-creators">
             <Button 
               variant="outline" 

@@ -44,9 +44,9 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
   const sortedBench = sortPlayersByPosition(benchPlayers);
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Pitch */}
-      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
+      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-3 sm:p-4 md:p-6 lg:p-8 overflow-hidden">
         {/* Pitch Lines and Graphics */}
         <div className="absolute inset-0 opacity-30 pointer-events-none">
           <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
@@ -75,21 +75,21 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
           <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
         </div>
 
-        <div className="relative space-y-6">
+        <div className="relative space-y-3 sm:space-y-4 md:space-y-6">
           {/* Goalkeepers */}
           {(() => {
             const gks = filterPlayersByType(sortedPlayers, 1);
             
             return gks.length > 0 && (
-              <div className="flex justify-center gap-4">
+              <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-4">
                 {gks.map(player => {
                   const jerseyColor = getTeamJerseyColor(player.team_id || 0);
                   const textColor = getTextColor(jerseyColor);
                   
                   return (
-                    <div key={player.element} className="flex flex-col items-center w-36" data-testid={`pitch-player-${player.element}`}>
+                    <div key={player.element} className="flex flex-col items-center w-16 sm:w-24 md:w-28 lg:w-36" data-testid={`pitch-player-${player.element}`}>
                       <div className="relative w-full">
-                        <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
+                        <svg viewBox="0 0 280 190" className="w-full drop-shadow-md sm:drop-shadow-lg md:drop-shadow-xl">
                           <defs><clipPath id={`jersey-clip-gk-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
                           <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-gk-${player.element})`} />
                           <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
@@ -117,15 +117,15 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
             const defs = filterPlayersByType(sortedPlayers, 2);
             
             return defs.length > 0 && (
-              <div className={`flex justify-center ${defs.length >= 5 ? 'gap-2' : 'gap-2 sm:gap-4'}`}>
+              <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-4">
                 {defs.map(player => {
                   const jerseyColor = getTeamJerseyColor(player.team_id || 0);
                   const textColor = getTextColor(jerseyColor);
                   
                   return (
-                    <div key={player.element} className="flex flex-col items-center w-36" data-testid={`pitch-player-${player.element}`}>
+                    <div key={player.element} className="flex flex-col items-center w-16 sm:w-24 md:w-28 lg:w-36" data-testid={`pitch-player-${player.element}`}>
                       <div className="relative w-full">
-                        <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
+                        <svg viewBox="0 0 280 190" className="w-full drop-shadow-md sm:drop-shadow-lg md:drop-shadow-xl">
                           <defs><clipPath id={`jersey-clip-def-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
                           <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-def-${player.element})`} />
                           <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
@@ -153,15 +153,15 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
             const mids = filterPlayersByType(sortedPlayers, 3);
             
             return mids.length > 0 && (
-              <div className={`flex justify-center ${mids.length >= 5 ? 'gap-2' : 'gap-2 sm:gap-4'}`}>
+              <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-4">
                 {mids.map(player => {
                   const jerseyColor = getTeamJerseyColor(player.team_id || 0);
                   const textColor = getTextColor(jerseyColor);
                   
                   return (
-                    <div key={player.element} className="flex flex-col items-center w-36" data-testid={`pitch-player-${player.element}`}>
+                    <div key={player.element} className="flex flex-col items-center w-16 sm:w-24 md:w-28 lg:w-36" data-testid={`pitch-player-${player.element}`}>
                       <div className="relative w-full">
-                        <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
+                        <svg viewBox="0 0 280 190" className="w-full drop-shadow-md sm:drop-shadow-lg md:drop-shadow-xl">
                           <defs><clipPath id={`jersey-clip-mid-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
                           <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-mid-${player.element})`} />
                           <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
@@ -189,15 +189,15 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
             const fwds = filterPlayersByType(sortedPlayers, 4);
             
             return fwds.length > 0 && (
-              <div className="flex justify-center gap-2 sm:gap-4">
+              <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-4">
                 {fwds.map(player => {
                   const jerseyColor = getTeamJerseyColor(player.team_id || 0);
                   const textColor = getTextColor(jerseyColor);
                   
                   return (
-                    <div key={player.element} className="flex flex-col items-center w-36" data-testid={`pitch-player-${player.element}`}>
+                    <div key={player.element} className="flex flex-col items-center w-16 sm:w-24 md:w-28 lg:w-36" data-testid={`pitch-player-${player.element}`}>
                       <div className="relative w-full">
-                        <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
+                        <svg viewBox="0 0 280 190" className="w-full drop-shadow-md sm:drop-shadow-lg md:drop-shadow-xl">
                           <defs><clipPath id={`jersey-clip-fwd-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
                           <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-fwd-${player.element})`} />
                           <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
@@ -224,17 +224,17 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
 
       {/* Bench Section */}
       {sortedBench.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">BENCH</h3>
-          <div className="flex justify-center gap-2 sm:gap-4 flex-wrap">
+        <div className="mt-3 sm:mt-4 md:mt-6">
+          <h3 className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 sm:mb-3 text-center">BENCH</h3>
+          <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-4 flex-wrap">
             {sortedBench.map(player => {
               const jerseyColor = getTeamJerseyColor(player.team_id || 0);
               const textColor = getTextColor(jerseyColor);
               
               return (
-                <div key={player.element} className="flex flex-col items-center w-36 opacity-90" data-testid={`bench-player-${player.element}`}>
+                <div key={player.element} className="flex flex-col items-center w-16 sm:w-24 md:w-28 lg:w-36 opacity-90" data-testid={`bench-player-${player.element}`}>
                   <div className="relative w-full">
-                    <svg viewBox="0 0 280 190" className="w-full drop-shadow-lg">
+                    <svg viewBox="0 0 280 190" className="w-full drop-shadow-md sm:drop-shadow-lg">
                       <defs><clipPath id={`jersey-clip-bench-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
                       <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-bench-${player.element})`} />
                       <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
