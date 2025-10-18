@@ -867,6 +867,10 @@ export default function TransferPlanner() {
   const [editingSellPrice, setEditingSellPrice] = useState<number | null>(null);
   const [editSellPriceValue, setEditSellPriceValue] = useState<string>("");
   
+  // Buy price editing state
+  const [editingBuyPrice, setEditingBuyPrice] = useState<number | null>(null);
+  const [editBuyPriceValue, setEditBuyPriceValue] = useState<string>("");
+  
   // Captain confirmation dialogs
   const [captainConfirmation, setCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
   const [viceCaptainConfirmation, setViceCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
@@ -1410,6 +1414,83 @@ export default function TransferPlanner() {
   const cancelEditingSellPrice = () => {
     setEditingSellPrice(null);
     setEditSellPriceValue("");
+  };
+
+  // Get buy price (current market price or override)
+  const getBuyPrice = (pick: TeamPick): number => {
+    const player = getPlayerById(pick.element);
+    if (!player) return 0;
+    
+    // Check for manual override first (from purchase_price if set)
+    if (pick.purchase_price !== undefined && !isNaN(pick.purchase_price)) {
+      return pick.purchase_price / 10;
+    }
+    
+    // Return current market price
+    return player.now_cost / 10;
+  };
+
+  // Update buy price for a player - saves override to database
+  const updateBuyPrice = async (playerId: number, newBuyPrice: number) => {
+    if (!searchedId) return;
+    
+    const newBuyPriceInTenths = Math.round(newBuyPrice * 10);
+    
+    // Update local state immediately for responsive UI
+    setManualLineup(prev => prev.map(pick => {
+      if (pick.element === playerId) {
+        return {
+          ...pick,
+          purchase_price: newBuyPriceInTenths
+        };
+      }
+      return pick;
+    }));
+    setEditingBuyPrice(null);
+    setEditBuyPriceValue("");
+    
+    // Auto-save to database
+    try {
+      const response = await fetch(`/api/manager/${searchedId}/buy-price-overrides`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: playerId,
+          buyPrice: newBuyPriceInTenths
+        })
+      });
+      
+      if (response.ok) {
+        // Refetch overrides to ensure persistence across drafts
+        await refetchBuyPriceOverrides();
+        
+        toast({
+          title: "Buy Price Updated",
+          description: `Buy price set to £${newBuyPrice.toFixed(1)}m and saved`
+        });
+      } else {
+        throw new Error("Failed to save buy price");
+      }
+    } catch (error) {
+      console.error("Failed to save buy price:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save buy price. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Start editing buy price
+  const startEditingBuyPrice = (playerId: number, currentBuyPrice: number) => {
+    setEditingBuyPrice(playerId);
+    setEditBuyPriceValue(currentBuyPrice.toFixed(1));
+  };
+
+  // Cancel editing buy price
+  const cancelEditingBuyPrice = () => {
+    setEditingBuyPrice(null);
+    setEditBuyPriceValue("");
   };
 
   // Calculate initial bank for the selected gameweek (before any transfers in that GW)
@@ -4339,22 +4420,50 @@ export default function TransferPlanner() {
                                     ) : pick.is_vice_captain ? (
                                       <g><rect x="274" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="293" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>
                                     ) : null}
-                                    <text x="202" y="98" fontSize="23" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                    <text x="202" y="127" fontSize="26" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                    <text x="202" y="173" fontSize="46" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                    <text x="202" y="85" fontSize="23" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                    <text x="202" y="110" fontSize="26" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                    <text x="202" y="150" fontSize="46" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                       {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                       {pick.is_captain && projectedPoints !== null && (
                                         <tspan fontSize="20" dx="3">({(projectedPoints * 2).toFixed(1)})</tspan>
                                       )}
                                     </text>
                                     {fixture && (
-                                      <text x="202" y="199" fontSize="17" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                      <text x="202" y="175" fontSize="17" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                                     )}
-                                    <foreignObject x="0" y="209" width="403" height="29">
+                                    <foreignObject x="0" y="195" width="403" height="32">
+                                      <div className="flex items-center justify-center h-full">
+                                        {editingBuyPrice === pick.element ? (
+                                          <div className="flex items-center gap-0.5">
+                                            <span className="text-[18px] font-medium" style={{ color: textColor }}>Buy: £</span>
+                                            <Input
+                                              type="number"
+                                              step="0.1"
+                                              min="4.0"
+                                              max="15.0"
+                                              value={editBuyPriceValue}
+                                              onChange={(e) => setEditBuyPriceValue(e.target.value)}
+                                              className="h-7 w-20 text-[18px] p-1 text-black"
+                                              autoFocus
+                                              data-testid={`pitch-input-buy-price-${pick.element}`}
+                                            />
+                                            <span className="text-[18px] font-medium" style={{ color: textColor }}>m</span>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editBuyPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateBuyPrice(pick.element, price); }}} data-testid={`pitch-button-save-buy-price-${pick.element}`}><Check className="h-4 w-4" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingBuyPrice} data-testid={`pitch-button-cancel-buy-price-${pick.element}`}><X className="h-4 w-4" /></Button>
+                                          </div>
+                                        ) : (
+                                          <div className="flex gap-0.5 items-center">
+                                            <span className="text-[18px] font-medium" style={{ color: textColor }}>Buy: £{getBuyPrice(pick).toFixed(1)}m</span>
+                                            <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-white/20" onClick={() => startEditingBuyPrice(pick.element, getBuyPrice(pick))} data-testid={`pitch-button-edit-buy-price-${pick.element}`}><Edit2 className="h-3.5 w-3.5" style={{ color: textColor }} /></Button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </foreignObject>
+                                    <foreignObject x="0" y="235" width="403" height="32">
                                       <div className="flex items-center justify-center h-full">
                                         {editingSellPrice === pick.element ? (
                                           <div className="flex items-center gap-0.5">
-                                            <span className="text-[12px] font-medium" style={{ color: textColor }}>£</span>
+                                            <span className="text-[18px] font-medium" style={{ color: textColor }}>Sell: £</span>
                                             <Input
                                               type="number"
                                               step="0.1"
@@ -4362,17 +4471,18 @@ export default function TransferPlanner() {
                                               max="15.0"
                                               value={editSellPriceValue}
                                               onChange={(e) => setEditSellPriceValue(e.target.value)}
-                                              className="h-6 w-16 text-[12px] p-0.5 text-black"
+                                              className="h-7 w-20 text-[18px] p-1 text-black"
                                               autoFocus
                                               data-testid={`pitch-input-sell-price-${pick.element}`}
                                             />
-                                            <Button size="icon" variant="ghost" className="h-6 w-6 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-button-save-sell-price-${pick.element}`}><Check className="h-3.5 w-3.5" /></Button>
-                                            <Button size="icon" variant="ghost" className="h-6 w-6 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-button-cancel-sell-price-${pick.element}`}><X className="h-3.5 w-3.5" /></Button>
+                                            <span className="text-[18px] font-medium" style={{ color: textColor }}>m</span>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-button-save-sell-price-${pick.element}`}><Check className="h-4 w-4" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-button-cancel-sell-price-${pick.element}`}><X className="h-4 w-4" /></Button>
                                           </div>
                                         ) : (
                                           <div className="flex gap-0.5 items-center">
-                                            <span className="text-[12px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
-                                            <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-button-edit-sell-price-${pick.element}`}><Edit2 className="h-2.5 w-2.5" style={{ color: textColor }} /></Button>
+                                            <span className="text-[18px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
+                                            <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-button-edit-sell-price-${pick.element}`}><Edit2 className="h-3.5 w-3.5" style={{ color: textColor }} /></Button>
                                           </div>
                                         )}
                                       </div>
@@ -4484,24 +4594,43 @@ export default function TransferPlanner() {
                               <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-bench-manual-${player.id})`} />
                               <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
                               <path d="M 130 14 L 144 26 L 158 36 L 173 42 Q 187 42 202 42 L 216 42 Q 230 42 245 36 L 259 26 L 274 14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                              <text x="202" y="98" fontSize="23" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                              <text x="202" y="127" fontSize="26" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                              <text x="202" y="173" fontSize="46" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
+                              <text x="202" y="85" fontSize="23" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                              <text x="202" y="110" fontSize="26" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                              <text x="202" y="150" fontSize="46" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
                               {fixture && (
-                                <text x="202" y="199" fontSize="17" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                <text x="202" y="175" fontSize="17" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                               )}
-                              <foreignObject x="0" y="209" width="403" height="29">
+                              <foreignObject x="0" y="195" width="403" height="32">
+                                <div className="flex items-center justify-center h-full">
+                                  {editingBuyPrice === pick.element ? (
+                                    <div className="flex items-center gap-0.5">
+                                      <span className="text-[18px] font-medium" style={{ color: textColor }}>Buy: £</span>
+                                      <Input type="number" step="0.1" min="4.0" max="15.0" value={editBuyPriceValue} onChange={(e) => setEditBuyPriceValue(e.target.value)} className="h-7 w-20 text-[18px] p-1 text-black" autoFocus data-testid={`pitch-bench-input-buy-price-${pick.element}`} />
+                                      <span className="text-[18px] font-medium" style={{ color: textColor }}>m</span>
+                                      <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editBuyPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateBuyPrice(pick.element, price); }}} data-testid={`pitch-bench-button-save-buy-price-${pick.element}`}><Check className="h-4 w-4" /></Button>
+                                      <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingBuyPrice} data-testid={`pitch-bench-button-cancel-buy-price-${pick.element}`}><X className="h-4 w-4" /></Button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex gap-0.5 items-center">
+                                      <span className="text-[18px] font-medium" style={{ color: textColor }}>Buy: £{getBuyPrice(pick).toFixed(1)}m</span>
+                                      <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-white/20" onClick={() => startEditingBuyPrice(pick.element, getBuyPrice(pick))} data-testid={`pitch-bench-button-edit-buy-price-${pick.element}`}><Edit2 className="h-3.5 w-3.5" style={{ color: textColor }} /></Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </foreignObject>
+                              <foreignObject x="0" y="235" width="403" height="32">
                                 <div className="flex items-center justify-center h-full">
                                   {editingSellPrice === pick.element ? (
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-[16px] font-medium" style={{ color: textColor }}>Sell: £</span>
-                                      <Input type="number" step="0.1" min="4.0" max="15.0" value={editSellPriceValue} onChange={(e) => setEditSellPriceValue(e.target.value)} className="h-7 w-20 text-[16px] p-1 text-black" autoFocus data-testid={`pitch-bench-input-sell-price-${pick.element}`} />
+                                    <div className="flex items-center gap-0.5">
+                                      <span className="text-[18px] font-medium" style={{ color: textColor }}>Sell: £</span>
+                                      <Input type="number" step="0.1" min="4.0" max="15.0" value={editSellPriceValue} onChange={(e) => setEditSellPriceValue(e.target.value)} className="h-7 w-20 text-[18px] p-1 text-black" autoFocus data-testid={`pitch-bench-input-sell-price-${pick.element}`} />
+                                      <span className="text-[18px] font-medium" style={{ color: textColor }}>m</span>
                                       <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-bench-button-save-sell-price-${pick.element}`}><Check className="h-4 w-4" /></Button>
                                       <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-bench-button-cancel-sell-price-${pick.element}`}><X className="h-4 w-4" /></Button>
                                     </div>
                                   ) : (
-                                    <div className="flex gap-1 items-center">
-                                      <span className="text-[16px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
+                                    <div className="flex gap-0.5 items-center">
+                                      <span className="text-[18px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                       <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-bench-button-edit-sell-price-${pick.element}`}><Edit2 className="h-3.5 w-3.5" style={{ color: textColor }} /></Button>
                                     </div>
                                   )}
@@ -5185,21 +5314,23 @@ export default function TransferPlanner() {
                                         {player.isCaptain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
                                         {player.isViceCaptain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
                                         {pick && isPlayerTransferredIn(pick) && (<g><circle cx="205" cy="48" r="12" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="205" y="55" fontSize="11" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
-                                        <text x="140" y="68" fontSize="16" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}</text>
-                                        <text x="140" y="88" fontSize="18" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.web_name}</text>
-                                        <text x="140" y="130" fontSize="36" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.projectedPoints.toFixed(1)}</text>
+                                        <text x="140" y="60" fontSize="16" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}</text>
+                                        <text x="140" y="78" fontSize="18" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.web_name}</text>
+                                        <text x="140" y="105" fontSize="36" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.projectedPoints.toFixed(1)}</text>
                                         {(() => {
                                           const fixture = getPlayerFixture(player.element, selectedGameweek);
                                           if (fixture) {
                                             return (
                                               <g>
-                                                <rect x="90" y="155" width="100" height="24" rx="5" fill="rgba(0,0,0,0.3)" />
-                                                <text x="140" y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                                <rect x="65" y="125" width="150" height="16" rx="5" fill="rgba(0,0,0,0.3)" />
+                                                <text x="140" y="137" fontSize="12" fontWeight="bold" textAnchor="middle" fill="white">vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                                               </g>
                                             );
                                           }
                                           return null;
                                         })()}
+                                        {pick && (<text x="140" y="152" fontSize="13" fontWeight="medium" textAnchor="middle" fill={hexTextColor}>Buy: £{getBuyPrice(pick).toFixed(1)}m</text>)}
+                                        {pick && (<text x="140" y="168" fontSize="13" fontWeight="medium" textAnchor="middle" fill={hexTextColor}>Sell: £{getSellingPrice(pick).toFixed(1)}m</text>)}
                                       </svg>
                                     </div>
                                   </div>
@@ -5251,21 +5382,23 @@ export default function TransferPlanner() {
                                     {pick?.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
                                     {pick?.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
                                     {pick && isPlayerTransferredIn(pick) && (<g><circle cx="205" cy="48" r="12" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="205" y="55" fontSize="11" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
-                                    <text x="140" y="68" fontSize="16" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}</text>
-                                    <text x="140" y="88" fontSize="18" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.web_name}</text>
-                                    <text x="140" y="130" fontSize="36" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.projectedPoints.toFixed(1)}</text>
+                                    <text x="140" y="60" fontSize="16" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}</text>
+                                    <text x="140" y="78" fontSize="18" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.web_name}</text>
+                                    <text x="140" y="105" fontSize="36" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.projectedPoints.toFixed(1)}</text>
                                     {(() => {
                                       const fixture = getPlayerFixture(player.element, selectedGameweek);
                                       if (fixture) {
                                         return (
                                           <g>
-                                            <rect x="90" y="155" width="100" height="24" rx="5" fill="rgba(0,0,0,0.3)" />
-                                            <text x="140" y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                            <rect x="65" y="125" width="150" height="16" rx="5" fill="rgba(0,0,0,0.3)" />
+                                            <text x="140" y="137" fontSize="12" fontWeight="bold" textAnchor="middle" fill="white">vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                                           </g>
                                         );
                                       }
                                       return null;
                                     })()}
+                                    {pick && (<text x="140" y="152" fontSize="13" fontWeight="medium" textAnchor="middle" fill={hexTextColor}>Buy: £{getBuyPrice(pick).toFixed(1)}m</text>)}
+                                    {pick && (<text x="140" y="168" fontSize="13" fontWeight="medium" textAnchor="middle" fill={hexTextColor}>Sell: £{getSellingPrice(pick).toFixed(1)}m</text>)}
                                   </svg>
                                 </div>
                               </div>
