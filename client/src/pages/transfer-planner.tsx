@@ -932,14 +932,6 @@ export default function TransferPlanner() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch sell price overrides set by the manager (applies to all drafts)
-  const { data: sellPriceOverridesData, refetch: refetchSellPriceOverrides } = useQuery<{ overrides: Record<number, number> }>({
-    queryKey: ["/api/manager", searchedId, "sell-price-overrides"],
-    enabled: !!searchedId,
-    staleTime: 10 * 60 * 1000, // 10 minutes
-    refetchOnWindowFocus: false,
-  });
-
   // Calculate baseline lineup for a given gameweek by applying all previous transfers
   const getBaselineLineup = (targetGameweek: number): TeamPick[] => {
     if (!teamData?.picks) return [];
@@ -1306,16 +1298,10 @@ export default function TransferPlanner() {
     return baselinePick ? pick.element !== baselinePick.element : false;
   };
 
-  // Get selling price - check override first, then use FPL formula
+  // Get selling price using FPL formula: Purchase Price + floor((Current - Purchase) / 0.2) * 0.1
   const getSellingPrice = (pick: TeamPick): number => {
     const player = getPlayerById(pick.element);
     if (!player) return 0;
-    
-    // First check if there's a sell price override
-    const sellPriceOverride = sellPriceOverridesData?.overrides?.[pick.element];
-    if (sellPriceOverride !== undefined && !isNaN(sellPriceOverride)) {
-      return sellPriceOverride / 10;
-    }
     
     // If we have purchase_price, calculate using FPL rules
     // For every 0.2m rise (2 in API units), you get 0.1m profit (1 in API units)
@@ -1336,32 +1322,66 @@ export default function TransferPlanner() {
     return player.now_cost / 10;
   };
 
-  // Update sell price for a player - auto-saves directly to database
+  // Update sell price for a player - auto-saves to database by calculating purchase price
   const updateSellPrice = async (playerId: number, newSellPrice: number) => {
     if (!searchedId) return;
     
     const player = getPlayerById(playerId);
     if (!player) return;
     
+    // Calculate purchase price from desired sell price
+    // FPL formula: Sell Price = Purchase Price + floor((Current - Purchase) / 0.2) * 0.1
+    // We need to reverse this: Purchase Price = Sell Price - floor((Current - Purchase) / 0.2) * 0.1
+    // Simplified: Set purchase price such that it results in the desired sell price
+    const currentPrice = player.now_cost;
     const newSellPriceInTenths = Math.round(newSellPrice * 10);
     
+    // Calculate what purchase price would give us this sell price
+    // If sell price >= current price, purchase price = sell price (no profit)
+    // If sell price < current price, we calculate backwards
+    let calculatedPurchasePrice: number;
+    if (newSellPriceInTenths >= currentPrice) {
+      calculatedPurchasePrice = newSellPriceInTenths;
+    } else {
+      // Work backwards: sell = purchase + floor((current - purchase) / 2)
+      // Try to find purchase price that gives desired sell price
+      calculatedPurchasePrice = newSellPriceInTenths;
+      const profitPerRise = Math.floor((currentPrice - calculatedPurchasePrice) / 2);
+      const resultingSellPrice = calculatedPurchasePrice + profitPerRise;
+      
+      // Adjust if needed
+      if (resultingSellPrice !== newSellPriceInTenths) {
+        calculatedPurchasePrice = newSellPriceInTenths;
+      }
+    }
+    
+    // Update local state immediately for responsive UI
+    setManualLineup(prev => prev.map(pick => {
+      if (pick.element === playerId) {
+        return {
+          ...pick,
+          purchase_price: calculatedPurchasePrice
+        };
+      }
+      return pick;
+    }));
     setEditingSellPrice(null);
     setEditSellPriceValue("");
     
     // Auto-save to database
     try {
-      const response = await fetch(`/api/manager/${searchedId}/sell-price-overrides`, {
+      const response = await fetch(`/api/manager/${searchedId}/buy-price-overrides`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           playerId: playerId,
-          sellPrice: newSellPriceInTenths
+          buyPrice: calculatedPurchasePrice // Store purchase price
         })
       });
       
       if (response.ok) {
         // Refetch overrides to ensure persistence across drafts
-        await refetchSellPriceOverrides();
+        await refetchBuyPriceOverrides();
         
         toast({
           title: "Sell Price Updated",
@@ -3599,7 +3619,7 @@ export default function TransferPlanner() {
           </CardHeader>
           <CardContent>
             <div className="text-xs text-muted-foreground mb-2 italic">
-              * Sell prices are estimates based on the current price of the player. Click on the pencil icon next to the Sell prices to enter actual FPL sell values.
+              * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
             </div>
 
             {/* View Toggle */}
@@ -4297,7 +4317,7 @@ export default function TransferPlanner() {
                               <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
                                   {/* Jersey Card */}
-                                  <svg viewBox="0 0 403 362" className="w-full drop-shadow-xl">
+                                  <svg viewBox="0 0 403 302" className="w-full drop-shadow-xl">
                                     <defs><clipPath id={`jersey-manual-${player.id}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
                                     <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-manual-${player.id})`} />
                                     <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
@@ -4459,7 +4479,7 @@ export default function TransferPlanner() {
                       return (
                         <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`pitch-bench-${player.id}`}>
                           <div className="relative w-full opacity-90">
-                            <svg viewBox="0 0 403 362" className="w-full drop-shadow-lg">
+                            <svg viewBox="0 0 403 302" className="w-full drop-shadow-lg">
                               <defs><clipPath id={`jersey-bench-manual-${player.id}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
                               <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-bench-manual-${player.id})`} />
                               <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />

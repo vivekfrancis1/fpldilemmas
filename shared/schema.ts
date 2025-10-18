@@ -1657,32 +1657,3 @@ export const insertBuyPriceOverrideSchema = createInsertSchema(buyPriceOverrides
   updatedAt: true,
 });
 export type InsertBuyPriceOverrideType = z.infer<typeof insertBuyPriceOverrideSchema>;
-
-// Sell Price Overrides - Store custom sell prices set by managers for their players
-// These apply globally across all drafts (Base, Manual A-J, Auto)
-export const sellPriceOverrides = pgTable("sell_price_overrides", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  managerId: integer("manager_id").notNull(),
-  playerId: integer("player_id").notNull(),
-  
-  // Custom sell price in tenths (e.g., 75 = £7.5m)
-  sellPrice: integer("sell_price").notNull(),
-  
-  // Timestamps
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-}, (table) => [
-  index("idx_sell_price_overrides_manager").on(table.managerId),
-  uniqueIndex("idx_sell_price_overrides_manager_player").on(table.managerId, table.playerId),
-]);
-
-export type SellPriceOverride = typeof sellPriceOverrides.$inferSelect;
-export type InsertSellPriceOverride = typeof sellPriceOverrides.$inferInsert;
-
-// Zod schema for sell price override validation
-export const insertSellPriceOverrideSchema = createInsertSchema(sellPriceOverrides).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-export type InsertSellPriceOverrideType = z.infer<typeof insertSellPriceOverrideSchema>;
