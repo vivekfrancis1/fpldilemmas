@@ -4238,7 +4238,7 @@ export default function TransferPlanner() {
                       if (positionPlayers.length === 0) return null;
                       
                       return (
-                        <div key={posType} className="flex justify-center gap-4 flex-wrap">
+                        <div key={posType} className={`flex justify-center flex-wrap ${positionPlayers.length >= 5 ? 'gap-2' : 'gap-4'}`}>
                           {positionPlayers.map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;

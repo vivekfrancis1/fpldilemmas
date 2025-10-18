@@ -117,7 +117,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
             const defs = filterPlayersByType(sortedPlayers, 2);
             
             return defs.length > 0 && (
-              <div className="flex justify-center gap-2 sm:gap-4">
+              <div className={`flex justify-center ${defs.length >= 5 ? 'gap-2' : 'gap-2 sm:gap-4'}`}>
                 {defs.map(player => {
                   const jerseyColor = getTeamJerseyColor(player.team_id || 0);
                   const textColor = getTextColor(jerseyColor);
@@ -153,7 +153,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
             const mids = filterPlayersByType(sortedPlayers, 3);
             
             return mids.length > 0 && (
-              <div className="flex justify-center gap-2 sm:gap-4">
+              <div className={`flex justify-center ${mids.length >= 5 ? 'gap-2' : 'gap-2 sm:gap-4'}`}>
                 {mids.map(player => {
                   const jerseyColor = getTeamJerseyColor(player.team_id || 0);
                   const textColor = getTextColor(jerseyColor);
