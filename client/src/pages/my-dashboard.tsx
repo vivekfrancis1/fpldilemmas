@@ -986,11 +986,25 @@ export default function MyDashboard() {
                   {teamView === "pitch" && (
                     <div className="space-y-4">
                       {/* Pitch */}
-                      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8">
-                        {/* Pitch Lines */}
+                      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
+                        {/* Pitch Lines and Graphics */}
                         <div className="absolute inset-0 opacity-30 pointer-events-none">
+                          {/* Center Line */}
                           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white rounded-full"></div>
+                          
+                          {/* Center Circle (positioned near forwards at bottom) */}
+                          <div className="absolute bottom-[15%] left-1/2 -translate-x-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
+                          <div className="absolute bottom-[15%] left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
+                          
+                          {/* Goal Post and Penalty Area (top - near goalkeeper) */}
+                          {/* Penalty Box */}
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-24 border-2 border-l-0 border-t-0 border-white"></div>
+                          {/* 6-yard Box */}
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-12 border-2 border-l-0 border-t-0 border-white"></div>
+                          {/* Penalty Spot */}
+                          <div className="absolute top-16 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
+                          {/* Goal Post */}
+                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-20 h-4 border-2 border-t-0 border-white bg-white/5"></div>
                         </div>
 
                       <div className="relative space-y-6">
