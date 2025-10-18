@@ -1095,14 +1095,23 @@ export default function TransferPlanner() {
   const getNextGameweeks = () => {
     if (!bootstrapData) return [];
     
-    // Find the current or next gameweek
-    const currentEvent = bootstrapData.events.find(e => e.is_current);
-    const nextEvent = bootstrapData.events.find(e => e.is_next);
+    // Find the first gameweek that hasn't finished and isn't current
+    const nextEvent = bootstrapData.events.find(e => !e.finished && !e.is_current);
     
-    // Start from current if it's not finished, otherwise start from next
-    let startGW = currentEvent?.id || nextEvent?.id || 1;
-    if (currentEvent?.finished) {
-      startGW = nextEvent?.id || startGW + 1;
+    // Start from the next upcoming gameweek
+    let startGW = nextEvent?.id || 1;
+    
+    // If no next event found, use the gameweek after the current/finished ones
+    if (!nextEvent) {
+      const currentEvent = bootstrapData.events.find(e => e.is_current);
+      if (currentEvent) {
+        startGW = currentEvent.id + 1;
+      } else {
+        const lastFinished = bootstrapData.events.filter(e => e.finished).sort((a, b) => b.id - a.id)[0];
+        if (lastFinished) {
+          startGW = lastFinished.id + 1;
+        }
+      }
     }
     
     const nextGameweeks = [];
