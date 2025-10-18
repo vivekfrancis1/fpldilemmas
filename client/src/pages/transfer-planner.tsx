@@ -4471,8 +4471,33 @@ export default function TransferPlanner() {
                       }
                       
                       return (
-                        <div key={pick.element} className="flex flex-col items-center w-40" data-testid={`pitch-bench-${player.id}`}>
-                          <div className="relative w-full">
+                        <div key={pick.element} className="flex items-center gap-1 w-40" data-testid={`pitch-bench-${player.id}`}>
+                          {/* Bench Reorder Arrows - Only for non-GK bench players */}
+                          {benchIndex > 0 && plannerMode === "manual" && (
+                            <div className="flex flex-col gap-0.5 shrink-0">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-4 w-4 p-0"
+                                onClick={() => moveBenchPlayer(benchIndex, 'up')}
+                                disabled={benchIndex === 1}
+                                data-testid={`pitch-bench-move-up-${pick.element}`}
+                              >
+                                <ChevronUp className="h-2.5 w-2.5" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-4 w-4 p-0"
+                                onClick={() => moveBenchPlayer(benchIndex, 'down')}
+                                disabled={benchIndex === 3}
+                                data-testid={`pitch-bench-move-down-${pick.element}`}
+                              >
+                                <ChevronDown className="h-2.5 w-2.5" />
+                              </Button>
+                            </div>
+                          )}
+                          <div className="relative flex-1">
                             <div 
                               className="rounded-lg p-2 text-center shadow-md border-2 flex flex-col" 
                               style={{ backgroundColor: jerseyColor, borderColor: jerseyColor }}
