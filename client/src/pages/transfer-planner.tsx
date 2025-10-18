@@ -4317,44 +4317,44 @@ export default function TransferPlanner() {
                               <div key={pick.element} className="flex flex-col items-center w-36" data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
                                   {/* Jersey Card */}
-                                  <svg viewBox="0 0 336 252" className="w-full drop-shadow-xl">
-                                    <defs><clipPath id={`jersey-manual-${player.id}`}><path d="M 70 36 L 38 36 L 38 96 L 54 102 L 70 102 L 70 36 L 108 12 Q 114 12 120 19 L 132 30 L 144 36 Q 156 36 168 36 L 180 36 Q 192 36 204 30 L 216 19 Q 222 12 228 12 L 266 36 L 266 102 L 282 102 L 298 96 L 298 36 L 266 36 L 266 246 L 70 246 L 70 36 Z" /></clipPath></defs>
-                                    <rect width="336" height="252" fill={jerseyColor} clipPath={`url(#jersey-manual-${player.id})`} />
-                                    <path d="M 70 36 L 38 36 L 38 96 L 54 102 L 70 102 L 70 36 L 108 12 Q 114 12 120 19 L 132 30 L 144 36 Q 156 36 168 36 L 180 36 Q 192 36 204 30 L 216 19 Q 222 12 228 12 L 266 36 L 266 102 L 282 102 L 298 96 L 298 36 L 266 36 L 266 246 L 70 246 L 70 36 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                    <path d="M 108 12 L 120 22 L 132 30 L 144 35 Q 156 35 168 35 L 180 35 Q 192 35 204 30 L 216 22 L 228 12" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                    {isPlayerTransferredIn(pick) && (<g><circle cx="246" cy="58" r="14" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="246" y="65" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
+                                  <svg viewBox="0 0 403 302" className="w-full drop-shadow-xl">
+                                    <defs><clipPath id={`jersey-manual-${player.id}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
+                                    <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-manual-${player.id})`} />
+                                    <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                                    <path d="M 130 14 L 144 26 L 158 36 L 173 42 Q 187 42 202 42 L 216 42 Q 230 42 245 36 L 259 26 L 274 14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                                    {isPlayerTransferredIn(pick) && (<g><circle cx="295" cy="70" r="17" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="295" y="78" fontSize="16" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
                                     {!pick.is_captain && plannerMode === "manual" ? (
                                       <g onClick={() => handleSetCaptain(pick.element)} style={{ cursor: 'pointer' }} data-testid={`pitch-set-captain-${pick.element}`}>
-                                        <rect x="80" y="46" width="24" height="24" fill="rgb(254 252 232)" stroke="rgb(161 98 7)" strokeWidth="1" rx="4" />
-                                        <text x="92" y="63" fontSize="16" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">👑</text>
+                                        <rect x="96" y="55" width="29" height="29" fill="rgb(254 252 232)" stroke="rgb(161 98 7)" strokeWidth="1" rx="4" />
+                                        <text x="110" y="76" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">👑</text>
                                       </g>
                                     ) : pick.is_captain ? (
-                                      <g><rect x="80" y="46" width="28" height="28" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="94" y="67" fontSize="18" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>
+                                      <g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>
                                     ) : null}
                                     {!pick.is_vice_captain && plannerMode === "manual" ? (
                                       <g onClick={() => handleSetViceCaptain(pick.element)} style={{ cursor: 'pointer' }} data-testid={`pitch-set-vice-${pick.element}`}>
-                                        <rect x="232" y="46" width="24" height="24" fill="rgb(239 246 255)" stroke="rgb(29 78 216)" strokeWidth="1" rx="4" />
-                                        <text x="244" y="63" fontSize="16" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">👑</text>
+                                        <rect x="278" y="55" width="29" height="29" fill="rgb(239 246 255)" stroke="rgb(29 78 216)" strokeWidth="1" rx="4" />
+                                        <text x="293" y="76" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">👑</text>
                                       </g>
                                     ) : pick.is_vice_captain ? (
-                                      <g><rect x="228" y="46" width="32" height="28" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="244" y="67" fontSize="16" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>
+                                      <g><rect x="274" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="293" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>
                                     ) : null}
-                                    <text x="168" y="82" fontSize="19" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                    <text x="168" y="106" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                    <text x="168" y="144" fontSize="38" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                    <text x="202" y="98" fontSize="23" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                    <text x="202" y="127" fontSize="26" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                    <text x="202" y="173" fontSize="46" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                       {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                       {pick.is_captain && projectedPoints !== null && (
-                                        <tspan fontSize="17" dx="3">({(projectedPoints * 2).toFixed(1)})</tspan>
+                                        <tspan fontSize="20" dx="3">({(projectedPoints * 2).toFixed(1)})</tspan>
                                       )}
                                     </text>
                                     {fixture && (
-                                      <text x="168" y="166" fontSize="14" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                      <text x="202" y="199" fontSize="17" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                                     )}
-                                    <foreignObject x="0" y="174" width="336" height="24">
+                                    <foreignObject x="0" y="209" width="403" height="29">
                                       <div className="flex items-center justify-center h-full">
                                         {editingSellPrice === pick.element ? (
                                           <div className="flex items-center gap-0.5">
-                                            <span className="text-[10px] font-medium" style={{ color: textColor }}>£</span>
+                                            <span className="text-[12px] font-medium" style={{ color: textColor }}>£</span>
                                             <Input
                                               type="number"
                                               step="0.1"
@@ -4362,25 +4362,25 @@ export default function TransferPlanner() {
                                               max="15.0"
                                               value={editSellPriceValue}
                                               onChange={(e) => setEditSellPriceValue(e.target.value)}
-                                              className="h-5 w-14 text-[10px] p-0.5 text-black"
+                                              className="h-6 w-16 text-[12px] p-0.5 text-black"
                                               autoFocus
                                               data-testid={`pitch-input-sell-price-${pick.element}`}
                                             />
-                                            <Button size="icon" variant="ghost" className="h-5 w-5 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-button-save-sell-price-${pick.element}`}><Check className="h-3 w-3" /></Button>
-                                            <Button size="icon" variant="ghost" className="h-5 w-5 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-button-cancel-sell-price-${pick.element}`}><X className="h-3 w-3" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-6 w-6 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-button-save-sell-price-${pick.element}`}><Check className="h-3.5 w-3.5" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-6 w-6 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-button-cancel-sell-price-${pick.element}`}><X className="h-3.5 w-3.5" /></Button>
                                           </div>
                                         ) : (
                                           <div className="flex gap-0.5 items-center">
-                                            <span className="text-[10px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
-                                            <Button size="icon" variant="ghost" className="h-4 w-4 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-button-edit-sell-price-${pick.element}`}><Edit2 className="h-2 w-2" style={{ color: textColor }} /></Button>
+                                            <span className="text-[12px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
+                                            <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-button-edit-sell-price-${pick.element}`}><Edit2 className="h-2.5 w-2.5" style={{ color: textColor }} /></Button>
                                           </div>
                                         )}
                                       </div>
                                     </foreignObject>
-                                    <foreignObject x="72" y="202" width="192" height="42">
+                                    <foreignObject x="86" y="242" width="230" height="50">
                                       <div className="flex justify-center gap-1.5">
                                         <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
-                                          <SelectTrigger className="h-4 w-[50px] px-1.5 py-0 text-[9px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
+                                          <SelectTrigger className="h-5 w-[60px] px-1.5 py-0 text-[10px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
                                           <SelectContent>
                                             {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
                                               const benchPlayer = getPlayerById(benchPick.element);
@@ -4397,7 +4397,7 @@ export default function TransferPlanner() {
                                           </SelectContent>
                                         </Select>
                                         {plannerMode === "manual" && (
-                                          <Button size="sm" variant="ghost" className="h-10 w-[86px] text-[12px] font-semibold text-red-600 bg-white/90 hover:bg-red-50 mt-1" onClick={() => handleTransferOut(pick)} data-testid={`pitch-transfer-out-${pick.element}`} title="Transfer Out"><X className="h-3.5 w-3.5 mr-1" />Out</Button>
+                                          <Button size="sm" variant="ghost" className="h-12 w-[103px] text-[14px] font-semibold text-red-600 bg-white/90 hover:bg-red-50 mt-1" onClick={() => handleTransferOut(pick)} data-testid={`pitch-transfer-out-${pick.element}`} title="Transfer Out"><X className="h-4 w-4 mr-1" />Out</Button>
                                         )}
                                       </div>
                                     </foreignObject>
@@ -4506,38 +4506,38 @@ export default function TransferPlanner() {
                             </div>
                           )}
                           <div className="relative flex-1 opacity-90">
-                            <svg viewBox="0 0 336 252" className="w-full drop-shadow-lg">
-                              <defs><clipPath id={`jersey-bench-manual-${player.id}`}><path d="M 70 36 L 38 36 L 38 96 L 54 102 L 70 102 L 70 36 L 108 12 Q 114 12 120 19 L 132 30 L 144 36 Q 156 36 168 36 L 180 36 Q 192 36 204 30 L 216 19 Q 222 12 228 12 L 266 36 L 266 102 L 282 102 L 298 96 L 298 36 L 266 36 L 266 246 L 70 246 L 70 36 Z" /></clipPath></defs>
-                              <rect width="336" height="252" fill={jerseyColor} clipPath={`url(#jersey-bench-manual-${player.id})`} />
-                              <path d="M 70 36 L 38 36 L 38 96 L 54 102 L 70 102 L 70 36 L 108 12 Q 114 12 120 19 L 132 30 L 144 36 Q 156 36 168 36 L 180 36 Q 192 36 204 30 L 216 19 Q 222 12 228 12 L 266 36 L 266 102 L 282 102 L 298 96 L 298 36 L 266 36 L 266 246 L 70 246 L 70 36 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                              <path d="M 108 12 L 120 22 L 132 30 L 144 35 Q 156 35 168 35 L 180 35 Q 192 35 204 30 L 216 22 L 228 12" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                              <text x="168" y="82" fontSize="19" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                              <text x="168" y="106" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                              <text x="168" y="144" fontSize="38" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
+                            <svg viewBox="0 0 403 302" className="w-full drop-shadow-lg">
+                              <defs><clipPath id={`jersey-bench-manual-${player.id}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
+                              <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-bench-manual-${player.id})`} />
+                              <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                              <path d="M 130 14 L 144 26 L 158 36 L 173 42 Q 187 42 202 42 L 216 42 Q 230 42 245 36 L 259 26 L 274 14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                              <text x="202" y="98" fontSize="23" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                              <text x="202" y="127" fontSize="26" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                              <text x="202" y="173" fontSize="46" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
                               {fixture && (
-                                <text x="168" y="166" fontSize="14" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                <text x="202" y="199" fontSize="17" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                               )}
-                              <foreignObject x="0" y="174" width="336" height="24">
+                              <foreignObject x="0" y="209" width="403" height="29">
                                 <div className="flex items-center justify-center h-full">
                                   {editingSellPrice === pick.element ? (
                                     <div className="flex items-center gap-1">
-                                      <span className="text-[13px] font-medium" style={{ color: textColor }}>Sell: £</span>
-                                      <Input type="number" step="0.1" min="4.0" max="15.0" value={editSellPriceValue} onChange={(e) => setEditSellPriceValue(e.target.value)} className="h-6 w-16 text-[13px] p-1 text-black" autoFocus data-testid={`pitch-bench-input-sell-price-${pick.element}`} />
-                                      <Button size="icon" variant="ghost" className="h-6 w-6 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-bench-button-save-sell-price-${pick.element}`}><Check className="h-3.5 w-3.5" /></Button>
-                                      <Button size="icon" variant="ghost" className="h-6 w-6 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-bench-button-cancel-sell-price-${pick.element}`}><X className="h-3.5 w-3.5" /></Button>
+                                      <span className="text-[16px] font-medium" style={{ color: textColor }}>Sell: £</span>
+                                      <Input type="number" step="0.1" min="4.0" max="15.0" value={editSellPriceValue} onChange={(e) => setEditSellPriceValue(e.target.value)} className="h-7 w-20 text-[16px] p-1 text-black" autoFocus data-testid={`pitch-bench-input-sell-price-${pick.element}`} />
+                                      <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-bench-button-save-sell-price-${pick.element}`}><Check className="h-4 w-4" /></Button>
+                                      <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-bench-button-cancel-sell-price-${pick.element}`}><X className="h-4 w-4" /></Button>
                                     </div>
                                   ) : (
                                     <div className="flex gap-1 items-center">
-                                      <span className="text-[13px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
-                                      <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-bench-button-edit-sell-price-${pick.element}`}><Edit2 className="h-3 w-3" style={{ color: textColor }} /></Button>
+                                      <span className="text-[16px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
+                                      <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-bench-button-edit-sell-price-${pick.element}`}><Edit2 className="h-3.5 w-3.5" style={{ color: textColor }} /></Button>
                                     </div>
                                   )}
                                 </div>
                               </foreignObject>
-                              <foreignObject x="72" y="202" width="192" height="42">
+                              <foreignObject x="86" y="242" width="230" height="50">
                                 <div className="flex justify-center gap-1.5">
                                   <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
-                                    <SelectTrigger className="h-4 w-[50px] px-1.5 py-0 text-[9px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
+                                    <SelectTrigger className="h-5 w-[60px] px-1.5 py-0 text-[10px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
                                     <SelectContent>
                                       {manualLineup.slice(0, 11).map((startPick, startIndex) => {
                                         const startPlayer = getPlayerById(startPick.element);
@@ -4549,7 +4549,7 @@ export default function TransferPlanner() {
                                     </SelectContent>
                                   </Select>
                                   {plannerMode === "manual" && (
-                                    <Button size="sm" variant="ghost" className="h-10 w-[86px] text-[12px] font-semibold text-red-600 bg-white/90 hover:bg-red-50 mt-1" onClick={() => handleTransferOut(pick)} data-testid={`pitch-bench-transfer-out-${pick.element}`} title="Transfer Out"><X className="h-3.5 w-3.5 mr-1" />Out</Button>
+                                    <Button size="sm" variant="ghost" className="h-12 w-[103px] text-[14px] font-semibold text-red-600 bg-white/90 hover:bg-red-50 mt-1" onClick={() => handleTransferOut(pick)} data-testid={`pitch-bench-transfer-out-${pick.element}`} title="Transfer Out"><X className="h-4 w-4 mr-1" />Out</Button>
                                   )}
                                 </div>
                               </foreignObject>
