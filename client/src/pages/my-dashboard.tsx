@@ -1066,16 +1066,16 @@ export default function MyDashboard() {
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs>
                                           <clipPath id={`jersey-clip-${player.id}`}>
-                                            <path d="M 58 30 L 5 30 L 5 80 L 25 90 L 58 90 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 90 L 255 90 L 275 80 L 275 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" />
+                                            <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" />
                                           </clipPath>
                                         </defs>
                                         
                                         {/* Jersey background */}
                                         <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-${player.id})`} />
                                         
-                                        {/* Jersey outline with shoulders aligned to upper body */}
+                                        {/* Jersey outline with narrower shoulders aligned to upper body */}
                                         <path 
-                                          d="M 58 30 L 5 30 L 5 80 L 25 90 L 58 90 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 90 L 255 90 L 275 80 L 275 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" 
+                                          d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" 
                                           fill="none" 
                                           stroke="rgba(0,0,0,0.15)" 
                                           strokeWidth="1.5"
