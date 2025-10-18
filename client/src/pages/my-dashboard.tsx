@@ -698,10 +698,10 @@ export default function MyDashboard() {
                   {/* Overall Rank */}
                   <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg hover:shadow-xl transition-all duration-300 mobile-dashboard-card" data-testid="card-overall-rank">
                     <CardContent className="p-3 sm:p-6">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-amber-600 mb-1">Overall Rank</p>
-                          <p className="text-xl sm:text-2xl font-bold text-amber-900">{formatRank(managerData.summary_overall_rank)}</p>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0 pt-1">
+                          <p className="text-xs font-medium text-amber-600 mb-2">Overall Rank</p>
+                          <p className="text-xl sm:text-2xl font-bold text-amber-900 break-words">{formatRank(managerData.summary_overall_rank)}</p>
                           {getRankChange() !== null && getRankChange() !== 0 && (
                             <div className={`flex items-center text-xs mt-1 ${getRankChange()! > 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {getRankChange()! > 0 ? (
@@ -715,7 +715,7 @@ export default function MyDashboard() {
                             </div>
                           )}
                         </div>
-                        <div className="p-2 bg-amber-100 rounded-full flex-shrink-0">
+                        <div className="p-2 bg-amber-100 rounded-full flex-shrink-0 self-start">
                           <Trophy className="h-5 w-5 text-amber-600" />
                         </div>
                       </div>
