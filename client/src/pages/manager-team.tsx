@@ -186,6 +186,13 @@ function getRankChangeDisplay(rankChange: number) {
 export default function ManagerTeam() {
   const { managerId } = useParams<{ managerId: string }>();
   
+  // Fetch manager general info (name, etc.)
+  const { data: managerInfo } = useQuery<any>({
+    queryKey: [`/api/manager/${managerId}`],
+    enabled: !!managerId,
+    retry: 2,
+  });
+  
   const { data: teamData, isLoading, error } = useQuery<TeamData>({
     queryKey: [`/api/manager/${managerId}/team`],
     enabled: !!managerId,
@@ -476,10 +483,10 @@ export default function ManagerTeam() {
     };
   });
 
-  // Get manager name from general info or team data
-  const managerName = teamData?.general_info ? 
-    `${teamData.general_info.player_first_name} ${teamData.general_info.player_last_name}` :
-    managerId === '45579' ? 'Sandeep VS' : `Manager ${managerId}`;
+  // Get manager name from manager info
+  const managerName = managerInfo ? 
+    `${managerInfo.player_first_name} ${managerInfo.player_last_name}` :
+    `Manager ${managerId}`;
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
@@ -577,13 +584,13 @@ export default function ManagerTeam() {
       )}
 
       {/* General Info Fallback */}
-      {teamData?.general_info && !teamData.entry_history && (
+      {managerInfo && !teamData?.entry_history && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-green-700">{teamData.general_info.summary_overall_points}</div>
+                  <div className="text-2xl font-bold text-green-700">{managerInfo.summary_overall_points}</div>
                   <div className="text-sm text-muted-foreground">Total Points</div>
                 </div>
                 <Star className="h-8 w-8 text-green-500" />
@@ -595,7 +602,7 @@ export default function ManagerTeam() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-purple-700">
-                    #{teamData.general_info.summary_overall_rank?.toLocaleString()}
+                    #{managerInfo.summary_overall_rank?.toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">Overall Rank</div>
                 </div>
@@ -607,7 +614,7 @@ export default function ManagerTeam() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-xl font-bold text-blue-700">{teamData.general_info.name}</div>
+                  <div className="text-xl font-bold text-blue-700">{managerInfo.name}</div>
                   <div className="text-sm text-muted-foreground">Team Name</div>
                 </div>
                 <Trophy className="h-8 w-8 text-blue-500" />
@@ -619,7 +626,7 @@ export default function ManagerTeam() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-lg font-bold text-gray-700">
-                    {teamData.general_info.player_first_name} {teamData.general_info.player_last_name}
+                    {managerInfo.player_first_name} {managerInfo.player_last_name}
                   </div>
                   <div className="text-sm text-muted-foreground">Manager</div>
                 </div>
