@@ -4377,7 +4377,7 @@ export default function TransferPlanner() {
                                         )}
                                       </div>
                                     </foreignObject>
-                                    <foreignObject x="86" y="242" width="230" height="50">
+                                    <foreignObject x="86" y="220" width="230" height="50">
                                       <div className="flex justify-center gap-1.5">
                                         <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
                                           <SelectTrigger className="h-5 w-[60px] px-1.5 py-0 text-[10px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
@@ -4507,7 +4507,7 @@ export default function TransferPlanner() {
                                   )}
                                 </div>
                               </foreignObject>
-                              <foreignObject x="86" y="242" width="230" height="50">
+                              <foreignObject x="86" y="220" width="230" height="50">
                                 <div className="flex justify-center gap-1.5">
                                   <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
                                     <SelectTrigger className="h-5 w-[60px] px-1.5 py-0 text-[10px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
