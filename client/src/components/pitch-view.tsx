@@ -81,7 +81,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
             const gks = filterPlayersByType(sortedPlayers, 1);
             
             return gks.length > 0 && (
-              <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
+              <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
                 {gks.map(player => {
                   const jerseyColor = getTeamJerseyColor(player.team_id || 0);
                   const textColor = getTextColor(jerseyColor);
@@ -117,7 +117,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
             const defs = filterPlayersByType(sortedPlayers, 2);
             
             return defs.length > 0 && (
-              <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
+              <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
                 {defs.map(player => {
                   const jerseyColor = getTeamJerseyColor(player.team_id || 0);
                   const textColor = getTextColor(jerseyColor);
@@ -153,7 +153,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
             const mids = filterPlayersByType(sortedPlayers, 3);
             
             return mids.length > 0 && (
-              <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
+              <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
                 {mids.map(player => {
                   const jerseyColor = getTeamJerseyColor(player.team_id || 0);
                   const textColor = getTextColor(jerseyColor);
@@ -189,7 +189,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
             const fwds = filterPlayersByType(sortedPlayers, 4);
             
             return fwds.length > 0 && (
-              <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
+              <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
                 {fwds.map(player => {
                   const jerseyColor = getTeamJerseyColor(player.team_id || 0);
                   const textColor = getTextColor(jerseyColor);
@@ -226,7 +226,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
       {sortedBench.length > 0 && (
         <div className="mt-3 sm:mt-4 md:mt-6">
           <h3 className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 sm:mb-3 text-center">BENCH</h3>
-          <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
+          <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
             {sortedBench.map(player => {
               const jerseyColor = getTeamJerseyColor(player.team_id || 0);
               const textColor = getTextColor(jerseyColor);

@@ -4413,7 +4413,7 @@ export default function TransferPlanner() {
                     {/* Bench */}
                     <div className="mt-8 pt-4 border-t border-white/30">
                       <h4 className="text-xs font-semibold text-white mb-3 text-center">Bench</h4>
-                      <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
+                      <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
                     {manualLineup.slice(11, 15).map((pick, benchIndex) => {
                       const player = getPlayerById(pick.element);
                       if (!player) return null;
@@ -4477,33 +4477,8 @@ export default function TransferPlanner() {
                       }
                       
                       return (
-                        <div key={pick.element} className="flex items-center gap-1 w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-bench-${player.id}`}>
-                          {/* Bench Reorder Arrows - Only for non-GK bench players */}
-                          {benchIndex > 0 && plannerMode === "manual" && (
-                            <div className="flex flex-col gap-0.5 shrink-0">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-4 w-4 p-0"
-                                onClick={() => moveBenchPlayer(benchIndex, 'up')}
-                                disabled={benchIndex === 1}
-                                data-testid={`pitch-bench-move-up-${pick.element}`}
-                              >
-                                <ChevronUp className="h-2.5 w-2.5" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-4 w-4 p-0"
-                                onClick={() => moveBenchPlayer(benchIndex, 'down')}
-                                disabled={benchIndex === 3}
-                                data-testid={`pitch-bench-move-down-${pick.element}`}
-                              >
-                                <ChevronDown className="h-2.5 w-2.5" />
-                              </Button>
-                            </div>
-                          )}
-                          <div className="relative flex-1 opacity-90">
+                        <div key={pick.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-bench-${player.id}`}>
+                          <div className="relative w-full opacity-90">
                             <svg viewBox="0 0 403 302" className="w-full drop-shadow-lg">
                               <defs><clipPath id={`jersey-bench-manual-${player.id}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
                               <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-bench-manual-${player.id})`} />
@@ -4553,6 +4528,31 @@ export default function TransferPlanner() {
                               </foreignObject>
                             </svg>
                           </div>
+                          {/* Bench Reorder Arrows - Only for non-GK bench players - moved below jersey */}
+                          {benchIndex > 0 && plannerMode === "manual" && (
+                            <div className="flex gap-1 justify-center mt-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-5 w-5 p-0 bg-white/80"
+                                onClick={() => moveBenchPlayer(benchIndex, 'up')}
+                                disabled={benchIndex === 1}
+                                data-testid={`pitch-bench-move-up-${pick.element}`}
+                              >
+                                <ChevronUp className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-5 w-5 p-0 bg-white/80"
+                                onClick={() => moveBenchPlayer(benchIndex, 'down')}
+                                disabled={benchIndex === 3}
+                                data-testid={`pitch-bench-move-down-${pick.element}`}
+                              >
+                                <ChevronDown className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -5147,7 +5147,7 @@ export default function TransferPlanner() {
                           if (positionPlayers.length === 0) return null;
                           
                           return (
-                            <div key={posType} className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
+                            <div key={posType} className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
                               {positionPlayers.map(player => {
                                 const fullPlayer = getPlayerById(player.element);
                                 const pick = manualLineup.find(p => p.element === player.element);
@@ -5213,7 +5213,7 @@ export default function TransferPlanner() {
                       {/* Bench */}
                       <div className="mt-8 pt-4 border-t border-white/30">
                         <h4 className="text-xs font-semibold text-white mb-3 text-center">Bench</h4>
-                        <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
+                        <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
                           {optimizedLineup.bench.map((player) => {
                             const fullPlayer = getPlayerById(player.element);
                             const pick = manualLineup.find(p => p.element === player.element);

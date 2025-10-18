@@ -1050,7 +1050,7 @@ export default function MyDashboard() {
                             });
                           
                           return gks.length > 0 && (
-                            <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
+                            <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
                               {gks.map(pick => {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
@@ -1172,7 +1172,7 @@ export default function MyDashboard() {
                             });
                           
                           return defs.length > 0 && (
-                            <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
+                            <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
                               {defs.map(pick => {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
@@ -1217,7 +1217,7 @@ export default function MyDashboard() {
                             });
                           
                           return mids.length > 0 && (
-                            <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
+                            <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
                               {mids.map(pick => {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
@@ -1262,7 +1262,7 @@ export default function MyDashboard() {
                             });
                           
                           return fwds.length > 0 && (
-                            <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
+                            <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
                               {fwds.map(pick => {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
