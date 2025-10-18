@@ -861,6 +861,7 @@ export default function TransferPlanner() {
   const [activeDraft, setActiveDraft] = useState<string>("Base"); // Current working draft
   const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [comparisonFilter, setComparisonFilter] = useState<"all" | "manual" | "auto">("all");
   
   // Buy price editing state
   const [editingBuyPrice, setEditingBuyPrice] = useState<number | null>(null);
@@ -3058,31 +3059,67 @@ export default function TransferPlanner() {
       {searchedId && teamData && playerProjections && playerProjections6GW && (
         <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-blue-600" />
-                Draft Comparison
-              </CardTitle>
-              {(() => {
-                const duplicateInfo = identifyDuplicateDrafts();
-                const duplicateCount = Object.values(duplicateInfo).filter(info => info.isDuplicate).length;
-                
-                if (duplicateCount > 0) {
-                  return (
-                    <Button
-                      onClick={deleteAllDuplicateDrafts}
-                      size="sm"
-                      variant="outline"
-                      className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
-                      data-testid="button-delete-all-duplicates"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete All Duplicates ({duplicateCount})
-                    </Button>
-                  );
-                }
-                return null;
-              })()}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-blue-600" />
+                  Draft Comparison
+                </CardTitle>
+                {(() => {
+                  const duplicateInfo = identifyDuplicateDrafts();
+                  const duplicateCount = Object.values(duplicateInfo).filter(info => info.isDuplicate).length;
+                  
+                  if (duplicateCount > 0) {
+                    return (
+                      <Button
+                        onClick={deleteAllDuplicateDrafts}
+                        size="sm"
+                        variant="outline"
+                        className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                        data-testid="button-delete-all-duplicates"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete All Duplicates ({duplicateCount})
+                      </Button>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+              
+              {/* Filter Buttons */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Show:</span>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant={comparisonFilter === "all" ? "default" : "outline"}
+                    onClick={() => setComparisonFilter("all")}
+                    className="h-7 px-3 text-xs"
+                    data-testid="filter-all"
+                  >
+                    All Lineups
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={comparisonFilter === "manual" ? "default" : "outline"}
+                    onClick={() => setComparisonFilter("manual")}
+                    className="h-7 px-3 text-xs"
+                    data-testid="filter-manual"
+                  >
+                    Manual Only
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={comparisonFilter === "auto" ? "default" : "outline"}
+                    onClick={() => setComparisonFilter("auto")}
+                    className="h-7 px-3 text-xs"
+                    data-testid="filter-auto"
+                  >
+                    Auto Only
+                  </Button>
+                </div>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -3094,8 +3131,18 @@ export default function TransferPlanner() {
                 return <p className="text-muted-foreground text-sm">No comparison data available</p>;
               }
               
-              // Find the maximum total points
-              const maxTotal = Math.max(...comparisonData.map(row => row.total));
+              // Filter comparison data based on selected filter
+              const filteredComparisonData = comparisonData.filter(row => {
+                if (comparisonFilter === "all") return true;
+                if (comparisonFilter === "manual") return row.mode === "Manual";
+                if (comparisonFilter === "auto") return row.mode === "Auto";
+                return true;
+              });
+              
+              // Find the maximum total points from filtered data
+              const maxTotal = filteredComparisonData.length > 0 
+                ? Math.max(...filteredComparisonData.map(row => row.total))
+                : 0;
               
               // Identify duplicate drafts
               const duplicateInfo = identifyDuplicateDrafts();
@@ -3117,7 +3164,7 @@ export default function TransferPlanner() {
                       </tr>
                     </thead>
                     <tbody>
-                      {comparisonData.map((row, idx) => {
+                      {filteredComparisonData.map((row, idx) => {
                         const isMaxTotal = row.total === maxTotal;
                         const isDuplicate = row.mode === 'Manual' && duplicateInfo[row.draftKey]?.isDuplicate;
                         const duplicateOf = duplicateInfo[row.draftKey]?.duplicateOfKey;
