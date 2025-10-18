@@ -1060,22 +1060,22 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-32" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-40" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       {/* Jersey-Shaped Card */}
-                                      <svg viewBox="0 0 140 150" className="w-full drop-shadow-xl">
+                                      <svg viewBox="0 0 210 150" className="w-full drop-shadow-xl">
                                         <defs>
                                           <clipPath id={`jersey-clip-${player.id}`}>
-                                            <path d="M 25 8 L 15 8 Q 10 8 8 12 L 5 20 Q 3 25 5 28 L 12 35 L 18 38 L 18 20 L 25 18 L 30 8 L 45 8 Q 48 8 50 12 L 55 16 L 60 18 Q 65 18 70 18 L 75 16 L 80 12 Q 82 8 85 8 L 100 8 L 105 18 L 112 20 L 112 38 L 118 35 L 125 28 Q 127 25 125 20 L 122 12 Q 120 8 115 8 L 105 8 L 100 18 L 100 145 L 30 145 L 30 18 L 25 8 Z" />
+                                            <path d="M 35 8 L 20 8 Q 12 8 9 13 L 5 22 Q 2 28 5 32 L 15 42 L 25 47 L 25 22 L 35 19 L 42 8 L 68 8 Q 72 8 75 13 L 82 18 L 90 21 Q 98 21 105 21 L 113 18 L 120 13 Q 123 8 127 8 L 153 8 L 160 19 L 170 22 L 170 47 L 180 42 L 190 32 Q 193 28 190 22 L 186 13 Q 183 8 175 8 L 160 8 L 153 19 L 153 145 L 42 145 L 42 19 L 35 8 Z" />
                                           </clipPath>
                                         </defs>
                                         
                                         {/* Jersey background */}
-                                        <rect width="140" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-${player.id})`} />
+                                        <rect width="210" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-${player.id})`} />
                                         
                                         {/* Jersey outline with enhanced collar and sleeves */}
                                         <path 
-                                          d="M 25 8 L 15 8 Q 10 8 8 12 L 5 20 Q 3 25 5 28 L 12 35 L 18 38 L 18 20 L 25 18 L 30 8 L 45 8 Q 48 8 50 12 L 55 16 L 60 18 Q 65 18 70 18 L 75 16 L 80 12 Q 82 8 85 8 L 100 8 L 105 18 L 112 20 L 112 38 L 118 35 L 125 28 Q 127 25 125 20 L 122 12 Q 120 8 115 8 L 105 8 L 100 18 L 100 145 L 30 145 L 30 18 L 25 8 Z" 
+                                          d="M 35 8 L 20 8 Q 12 8 9 13 L 5 22 Q 2 28 5 32 L 15 42 L 25 47 L 25 22 L 35 19 L 42 8 L 68 8 Q 72 8 75 13 L 82 18 L 90 21 Q 98 21 105 21 L 113 18 L 120 13 Q 123 8 127 8 L 153 8 L 160 19 L 170 22 L 170 47 L 180 42 L 190 32 Q 193 28 190 22 L 186 13 Q 183 8 175 8 L 160 8 L 153 19 L 153 145 L 42 145 L 42 19 L 35 8 Z" 
                                           fill="none" 
                                           stroke="rgba(0,0,0,0.15)" 
                                           strokeWidth="1.5"
@@ -1083,7 +1083,7 @@ export default function MyDashboard() {
                                         
                                         {/* V-neck collar detail */}
                                         <path 
-                                          d="M 45 8 L 50 14 L 55 16 L 60 17 Q 65 17 70 17 L 75 16 L 80 14 L 85 8" 
+                                          d="M 68 8 L 75 15 L 82 19 L 90 21 Q 98 21 105 21 L 113 19 L 120 15 L 127 8" 
                                           fill="none" 
                                           stroke="rgba(255,255,255,0.3)" 
                                           strokeWidth="1.5"
@@ -1092,37 +1092,37 @@ export default function MyDashboard() {
                                         {/* Captain/Vice Captain Badge */}
                                         {pick.is_captain && (
                                           <g>
-                                            <circle cx="28" cy="30" r="9" fill="#FCD34D" stroke="white" strokeWidth="2.5" />
-                                            <text x="28" y="35" fontSize="11" fontWeight="bold" textAnchor="middle" fill="black">C</text>
+                                            <circle cx="50" cy="32" r="10" fill="#FCD34D" stroke="white" strokeWidth="2.5" />
+                                            <text x="50" y="37" fontSize="12" fontWeight="bold" textAnchor="middle" fill="black">C</text>
                                           </g>
                                         )}
                                         {pick.is_vice_captain && (
                                           <g>
-                                            <circle cx="28" cy="30" r="9" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" />
-                                            <text x="28" y="35" fontSize="11" fontWeight="bold" textAnchor="middle" fill="black">V</text>
+                                            <circle cx="50" cy="32" r="10" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" />
+                                            <text x="50" y="37" fontSize="12" fontWeight="bold" textAnchor="middle" fill="black">V</text>
                                           </g>
                                         )}
                                         
                                         {/* Dream Team Star Badge */}
                                         {player.in_dreamteam && (
                                           <g>
-                                            <circle cx="102" cy="30" r="9" fill="#A855F7" stroke="white" strokeWidth="2.5" />
-                                            <path d="M 102 24 L 103.5 28 L 107.5 28 L 104.5 30.5 L 106 34.5 L 102 32 L 98 34.5 L 99.5 30.5 L 96.5 28 L 100.5 28 Z" fill="white" />
+                                            <circle cx="145" cy="32" r="10" fill="#A855F7" stroke="white" strokeWidth="2.5" />
+                                            <path d="M 145 25 L 147 30 L 152 30 L 148 33 L 150 38 L 145 35 L 140 38 L 142 33 L 138 30 L 143 30 Z" fill="white" />
                                           </g>
                                         )}
                                         
                                         {/* Team Name */}
-                                        <text x="65" y="55" fontSize="12" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="97.5" y="58" fontSize="13" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {playerTeam?.short_name || 'UNK'}
                                         </text>
                                         
                                         {/* Player Name */}
-                                        <text x="65" y="72" fontSize="14" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="97.5" y="77" fontSize="15" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {player.web_name}
                                         </text>
                                         
                                         {/* Points */}
-                                        <text x="65" y="100" fontSize="30" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="97.5" y="107" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
                                         </text>
                                         
@@ -1134,17 +1134,17 @@ export default function MyDashboard() {
                                           return (
                                             <g key={idx}>
                                               <rect 
-                                                x={28 + (idx * 28)} 
-                                                y="120" 
-                                                width="24" 
-                                                height="18" 
+                                                x={45 + (idx * 40)} 
+                                                y="122" 
+                                                width="35" 
+                                                height="20" 
                                                 rx="4" 
                                                 fill={diffColor}
                                               />
                                               <text 
-                                                x={40 + (idx * 28)} 
-                                                y="132" 
-                                                fontSize="10" 
+                                                x={62.5 + (idx * 40)} 
+                                                y="135" 
+                                                fontSize="11" 
                                                 fontWeight="bold" 
                                                 textAnchor="middle" 
                                                 fill="white"
@@ -1182,22 +1182,22 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-32" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-40" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
-                                      <svg viewBox="0 0 140 150" className="w-full drop-shadow-xl">
-                                        <defs><clipPath id={`jersey-clip-def-${player.id}`}><path d="M 25 8 L 15 8 Q 10 8 8 12 L 5 20 Q 3 25 5 28 L 12 35 L 18 38 L 18 20 L 25 18 L 30 8 L 45 8 Q 48 8 50 12 L 55 16 L 60 18 Q 65 18 70 18 L 75 16 L 80 12 Q 82 8 85 8 L 100 8 L 105 18 L 112 20 L 112 38 L 118 35 L 125 28 Q 127 25 125 20 L 122 12 Q 120 8 115 8 L 105 8 L 100 18 L 100 145 L 30 145 L 30 18 L 25 8 Z" /></clipPath></defs>
-                                        <rect width="140" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-def-${player.id})`} />
-                                        <path d="M 25 8 L 15 8 Q 10 8 8 12 L 5 20 Q 3 25 5 28 L 12 35 L 18 38 L 18 20 L 25 18 L 30 8 L 45 8 Q 48 8 50 12 L 55 16 L 60 18 Q 65 18 70 18 L 75 16 L 80 12 Q 82 8 85 8 L 100 8 L 105 18 L 112 20 L 112 38 L 118 35 L 125 28 Q 127 25 125 20 L 122 12 Q 120 8 115 8 L 105 8 L 100 18 L 100 145 L 30 145 L 30 18 L 25 8 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                        <path d="M 45 8 L 50 14 L 55 16 L 60 17 Q 65 17 70 17 L 75 16 L 80 14 L 85 8" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                        {pick.is_captain && (<g><circle cx="28" cy="30" r="9" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="28" y="35" fontSize="11" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
-                                        {pick.is_vice_captain && (<g><circle cx="28" cy="30" r="9" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="28" y="35" fontSize="11" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
-                                        {player.in_dreamteam && (<g><circle cx="102" cy="30" r="9" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 102 24 L 103.5 28 L 107.5 28 L 104.5 30.5 L 106 34.5 L 102 32 L 98 34.5 L 99.5 30.5 L 96.5 28 L 100.5 28 Z" fill="white" /></g>)}
-                                        <text x="65" y="55" fontSize="12" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                        <text x="65" y="72" fontSize="14" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                        <text x="65" y="100" fontSize="30" fontWeight="bold" textAnchor="middle" fill={textColor}>{(player.event_points || 0) * (pick.is_captain ? 2 : 1)}</text>
+                                      <svg viewBox="0 0 210 150" className="w-full drop-shadow-xl">
+                                        <defs><clipPath id={`jersey-clip-def-${player.id}`}><path d="M 35 8 L 20 8 Q 12 8 9 13 L 5 22 Q 2 28 5 32 L 15 42 L 25 47 L 25 22 L 35 19 L 42 8 L 68 8 Q 72 8 75 13 L 82 18 L 90 21 Q 98 21 105 21 L 113 18 L 120 13 Q 123 8 127 8 L 153 8 L 160 19 L 170 22 L 170 47 L 180 42 L 190 32 Q 193 28 190 22 L 186 13 Q 183 8 175 8 L 160 8 L 153 19 L 153 145 L 42 145 L 42 19 L 35 8 Z" /></clipPath></defs>
+                                        <rect width="210" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-def-${player.id})`} />
+                                        <path d="M 35 8 L 20 8 Q 12 8 9 13 L 5 22 Q 2 28 5 32 L 15 42 L 25 47 L 25 22 L 35 19 L 42 8 L 68 8 Q 72 8 75 13 L 82 18 L 90 21 Q 98 21 105 21 L 113 18 L 120 13 Q 123 8 127 8 L 153 8 L 160 19 L 170 22 L 170 47 L 180 42 L 190 32 Q 193 28 190 22 L 186 13 Q 183 8 175 8 L 160 8 L 153 19 L 153 145 L 42 145 L 42 19 L 35 8 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                                        <path d="M 68 8 L 75 15 L 82 19 L 90 21 Q 98 21 105 21 L 113 19 L 120 15 L 127 8" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                                        {pick.is_captain && (<g><circle cx="50" cy="32" r="10" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="50" y="37" fontSize="12" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
+                                        {pick.is_vice_captain && (<g><circle cx="50" cy="32" r="10" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="50" y="37" fontSize="12" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
+                                        {player.in_dreamteam && (<g><circle cx="145" cy="32" r="10" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 145 25 L 147 30 L 152 30 L 148 33 L 150 38 L 145 35 L 140 38 L 142 33 L 138 30 L 143 30 Z" fill="white" /></g>)}
+                                        <text x="97.5" y="58" fontSize="13" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                        <text x="97.5" y="77" fontSize="15" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                        <text x="97.5" y="107" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>{(player.event_points || 0) * (pick.is_captain ? 2 : 1)}</text>
                                         {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => {
                                           const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                          return (<g key={idx}><rect x={28 + (idx * 28)} y="120" width="24" height="18" rx="4" fill={diffColor} /><text x={40 + (idx * 28)} y="132" fontSize="10" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
+                                          return (<g key={idx}><rect x={45 + (idx * 40)} y="122" width="35" height="20" rx="4" fill={diffColor} /><text x={62.5 + (idx * 40)} y="135" fontSize="11" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
                                         })}
                                       </svg>
                                     </div>
@@ -1227,22 +1227,22 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-32" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-40" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
-                                      <svg viewBox="0 0 140 150" className="w-full drop-shadow-xl">
-                                        <defs><clipPath id={`jersey-clip-mid-${player.id}`}><path d="M 25 8 L 15 8 Q 10 8 8 12 L 5 20 Q 3 25 5 28 L 12 35 L 18 38 L 18 20 L 25 18 L 30 8 L 45 8 Q 48 8 50 12 L 55 16 L 60 18 Q 65 18 70 18 L 75 16 L 80 12 Q 82 8 85 8 L 100 8 L 105 18 L 112 20 L 112 38 L 118 35 L 125 28 Q 127 25 125 20 L 122 12 Q 120 8 115 8 L 105 8 L 100 18 L 100 145 L 30 145 L 30 18 L 25 8 Z" /></clipPath></defs>
-                                        <rect width="140" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-mid-${player.id})`} />
-                                        <path d="M 25 8 L 15 8 Q 10 8 8 12 L 5 20 Q 3 25 5 28 L 12 35 L 18 38 L 18 20 L 25 18 L 30 8 L 45 8 Q 48 8 50 12 L 55 16 L 60 18 Q 65 18 70 18 L 75 16 L 80 12 Q 82 8 85 8 L 100 8 L 105 18 L 112 20 L 112 38 L 118 35 L 125 28 Q 127 25 125 20 L 122 12 Q 120 8 115 8 L 105 8 L 100 18 L 100 145 L 30 145 L 30 18 L 25 8 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                        <path d="M 45 8 L 50 14 L 55 16 L 60 17 Q 65 17 70 17 L 75 16 L 80 14 L 85 8" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                        {pick.is_captain && (<g><circle cx="28" cy="30" r="9" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="28" y="35" fontSize="11" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
-                                        {pick.is_vice_captain && (<g><circle cx="28" cy="30" r="9" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="28" y="35" fontSize="11" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
-                                        {player.in_dreamteam && (<g><circle cx="102" cy="30" r="9" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 102 24 L 103.5 28 L 107.5 28 L 104.5 30.5 L 106 34.5 L 102 32 L 98 34.5 L 99.5 30.5 L 96.5 28 L 100.5 28 Z" fill="white" /></g>)}
-                                        <text x="65" y="55" fontSize="12" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                        <text x="65" y="72" fontSize="14" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                        <text x="65" y="100" fontSize="30" fontWeight="bold" textAnchor="middle" fill={textColor}>{(player.event_points || 0) * (pick.is_captain ? 2 : 1)}</text>
+                                      <svg viewBox="0 0 210 150" className="w-full drop-shadow-xl">
+                                        <defs><clipPath id={`jersey-clip-mid-${player.id}`}><path d="M 35 8 L 20 8 Q 12 8 9 13 L 5 22 Q 2 28 5 32 L 15 42 L 25 47 L 25 22 L 35 19 L 42 8 L 68 8 Q 72 8 75 13 L 82 18 L 90 21 Q 98 21 105 21 L 113 18 L 120 13 Q 123 8 127 8 L 153 8 L 160 19 L 170 22 L 170 47 L 180 42 L 190 32 Q 193 28 190 22 L 186 13 Q 183 8 175 8 L 160 8 L 153 19 L 153 145 L 42 145 L 42 19 L 35 8 Z" /></clipPath></defs>
+                                        <rect width="210" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-mid-${player.id})`} />
+                                        <path d="M 35 8 L 20 8 Q 12 8 9 13 L 5 22 Q 2 28 5 32 L 15 42 L 25 47 L 25 22 L 35 19 L 42 8 L 68 8 Q 72 8 75 13 L 82 18 L 90 21 Q 98 21 105 21 L 113 18 L 120 13 Q 123 8 127 8 L 153 8 L 160 19 L 170 22 L 170 47 L 180 42 L 190 32 Q 193 28 190 22 L 186 13 Q 183 8 175 8 L 160 8 L 153 19 L 153 145 L 42 145 L 42 19 L 35 8 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                                        <path d="M 68 8 L 75 15 L 82 19 L 90 21 Q 98 21 105 21 L 113 19 L 120 15 L 127 8" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                                        {pick.is_captain && (<g><circle cx="50" cy="32" r="10" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="50" y="37" fontSize="12" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
+                                        {pick.is_vice_captain && (<g><circle cx="50" cy="32" r="10" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="50" y="37" fontSize="12" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
+                                        {player.in_dreamteam && (<g><circle cx="145" cy="32" r="10" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 145 25 L 147 30 L 152 30 L 148 33 L 150 38 L 145 35 L 140 38 L 142 33 L 138 30 L 143 30 Z" fill="white" /></g>)}
+                                        <text x="97.5" y="58" fontSize="13" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                        <text x="97.5" y="77" fontSize="15" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                        <text x="97.5" y="107" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>{(player.event_points || 0) * (pick.is_captain ? 2 : 1)}</text>
                                         {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => {
                                           const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                          return (<g key={idx}><rect x={28 + (idx * 28)} y="120" width="24" height="18" rx="4" fill={diffColor} /><text x={40 + (idx * 28)} y="132" fontSize="10" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
+                                          return (<g key={idx}><rect x={45 + (idx * 40)} y="122" width="35" height="20" rx="4" fill={diffColor} /><text x={62.5 + (idx * 40)} y="135" fontSize="11" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
                                         })}
                                       </svg>
                                     </div>
@@ -1272,22 +1272,22 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-32" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-40" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
-                                      <svg viewBox="0 0 140 150" className="w-full drop-shadow-xl">
-                                        <defs><clipPath id={`jersey-clip-fwd-${player.id}`}><path d="M 25 8 L 15 8 Q 10 8 8 12 L 5 20 Q 3 25 5 28 L 12 35 L 18 38 L 18 20 L 25 18 L 30 8 L 45 8 Q 48 8 50 12 L 55 16 L 60 18 Q 65 18 70 18 L 75 16 L 80 12 Q 82 8 85 8 L 100 8 L 105 18 L 112 20 L 112 38 L 118 35 L 125 28 Q 127 25 125 20 L 122 12 Q 120 8 115 8 L 105 8 L 100 18 L 100 145 L 30 145 L 30 18 L 25 8 Z" /></clipPath></defs>
-                                        <rect width="140" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-fwd-${player.id})`} />
-                                        <path d="M 25 8 L 15 8 Q 10 8 8 12 L 5 20 Q 3 25 5 28 L 12 35 L 18 38 L 18 20 L 25 18 L 30 8 L 45 8 Q 48 8 50 12 L 55 16 L 60 18 Q 65 18 70 18 L 75 16 L 80 12 Q 82 8 85 8 L 100 8 L 105 18 L 112 20 L 112 38 L 118 35 L 125 28 Q 127 25 125 20 L 122 12 Q 120 8 115 8 L 105 8 L 100 18 L 100 145 L 30 145 L 30 18 L 25 8 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                        <path d="M 45 8 L 50 14 L 55 16 L 60 17 Q 65 17 70 17 L 75 16 L 80 14 L 85 8" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                        {pick.is_captain && (<g><circle cx="28" cy="30" r="9" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="28" y="35" fontSize="11" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
-                                        {pick.is_vice_captain && (<g><circle cx="28" cy="30" r="9" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="28" y="35" fontSize="11" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
-                                        {player.in_dreamteam && (<g><circle cx="102" cy="30" r="9" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 102 24 L 103.5 28 L 107.5 28 L 104.5 30.5 L 106 34.5 L 102 32 L 98 34.5 L 99.5 30.5 L 96.5 28 L 100.5 28 Z" fill="white" /></g>)}
-                                        <text x="65" y="55" fontSize="12" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                        <text x="65" y="72" fontSize="14" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                        <text x="65" y="100" fontSize="30" fontWeight="bold" textAnchor="middle" fill={textColor}>{(player.event_points || 0) * (pick.is_captain ? 2 : 1)}</text>
+                                      <svg viewBox="0 0 210 150" className="w-full drop-shadow-xl">
+                                        <defs><clipPath id={`jersey-clip-fwd-${player.id}`}><path d="M 35 8 L 20 8 Q 12 8 9 13 L 5 22 Q 2 28 5 32 L 15 42 L 25 47 L 25 22 L 35 19 L 42 8 L 68 8 Q 72 8 75 13 L 82 18 L 90 21 Q 98 21 105 21 L 113 18 L 120 13 Q 123 8 127 8 L 153 8 L 160 19 L 170 22 L 170 47 L 180 42 L 190 32 Q 193 28 190 22 L 186 13 Q 183 8 175 8 L 160 8 L 153 19 L 153 145 L 42 145 L 42 19 L 35 8 Z" /></clipPath></defs>
+                                        <rect width="210" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-fwd-${player.id})`} />
+                                        <path d="M 35 8 L 20 8 Q 12 8 9 13 L 5 22 Q 2 28 5 32 L 15 42 L 25 47 L 25 22 L 35 19 L 42 8 L 68 8 Q 72 8 75 13 L 82 18 L 90 21 Q 98 21 105 21 L 113 18 L 120 13 Q 123 8 127 8 L 153 8 L 160 19 L 170 22 L 170 47 L 180 42 L 190 32 Q 193 28 190 22 L 186 13 Q 183 8 175 8 L 160 8 L 153 19 L 153 145 L 42 145 L 42 19 L 35 8 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                                        <path d="M 68 8 L 75 15 L 82 19 L 90 21 Q 98 21 105 21 L 113 19 L 120 15 L 127 8" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                                        {pick.is_captain && (<g><circle cx="50" cy="32" r="10" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="50" y="37" fontSize="12" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
+                                        {pick.is_vice_captain && (<g><circle cx="50" cy="32" r="10" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="50" y="37" fontSize="12" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
+                                        {player.in_dreamteam && (<g><circle cx="145" cy="32" r="10" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 145 25 L 147 30 L 152 30 L 148 33 L 150 38 L 145 35 L 140 38 L 142 33 L 138 30 L 143 30 Z" fill="white" /></g>)}
+                                        <text x="97.5" y="58" fontSize="13" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                        <text x="97.5" y="77" fontSize="15" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                        <text x="97.5" y="107" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>{(player.event_points || 0) * (pick.is_captain ? 2 : 1)}</text>
                                         {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => {
                                           const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                          return (<g key={idx}><rect x={28 + (idx * 28)} y="120" width="24" height="18" rx="4" fill={diffColor} /><text x={40 + (idx * 28)} y="132" fontSize="10" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
+                                          return (<g key={idx}><rect x={45 + (idx * 40)} y="122" width="35" height="20" rx="4" fill={diffColor} /><text x={62.5 + (idx * 40)} y="135" fontSize="11" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
                                         })}
                                       </svg>
                                     </div>
@@ -1312,20 +1312,20 @@ export default function MyDashboard() {
                             const textColor = getTextColor(jerseyColor);
                             
                             return (
-                              <div key={pick.element} className="flex flex-col items-center w-28 opacity-90" data-testid={`pitch-bench-${player.id}`}>
+                              <div key={pick.element} className="flex flex-col items-center w-36 opacity-90" data-testid={`pitch-bench-${player.id}`}>
                                 <div className="relative w-full">
-                                  <svg viewBox="0 0 140 150" className="w-full drop-shadow-lg">
-                                    <defs><clipPath id={`jersey-clip-bench-${player.id}`}><path d="M 25 8 L 15 8 Q 10 8 8 12 L 5 20 Q 3 25 5 28 L 12 35 L 18 38 L 18 20 L 25 18 L 30 8 L 45 8 Q 48 8 50 12 L 55 16 L 60 18 Q 65 18 70 18 L 75 16 L 80 12 Q 82 8 85 8 L 100 8 L 105 18 L 112 20 L 112 38 L 118 35 L 125 28 Q 127 25 125 20 L 122 12 Q 120 8 115 8 L 105 8 L 100 18 L 100 145 L 30 145 L 30 18 L 25 8 Z" /></clipPath></defs>
-                                    <rect width="140" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-bench-${player.id})`} />
-                                    <path d="M 25 8 L 15 8 Q 10 8 8 12 L 5 20 Q 3 25 5 28 L 12 35 L 18 38 L 18 20 L 25 18 L 30 8 L 45 8 Q 48 8 50 12 L 55 16 L 60 18 Q 65 18 70 18 L 75 16 L 80 12 Q 82 8 85 8 L 100 8 L 105 18 L 112 20 L 112 38 L 118 35 L 125 28 Q 127 25 125 20 L 122 12 Q 120 8 115 8 L 105 8 L 100 18 L 100 145 L 30 145 L 30 18 L 25 8 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                    <path d="M 45 8 L 50 14 L 55 16 L 60 17 Q 65 17 70 17 L 75 16 L 80 14 L 85 8" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                    {player.in_dreamteam && (<g><circle cx="102" cy="30" r="9" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 102 24 L 103.5 28 L 107.5 28 L 104.5 30.5 L 106 34.5 L 102 32 L 98 34.5 L 99.5 30.5 L 96.5 28 L 100.5 28 Z" fill="white" /></g>)}
-                                    <text x="65" y="52" fontSize="11" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                    <text x="65" y="68" fontSize="12" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                    <text x="65" y="92" fontSize="26" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.event_points || 0}</text>
+                                  <svg viewBox="0 0 210 150" className="w-full drop-shadow-lg">
+                                    <defs><clipPath id={`jersey-clip-bench-${player.id}`}><path d="M 35 8 L 20 8 Q 12 8 9 13 L 5 22 Q 2 28 5 32 L 15 42 L 25 47 L 25 22 L 35 19 L 42 8 L 68 8 Q 72 8 75 13 L 82 18 L 90 21 Q 98 21 105 21 L 113 18 L 120 13 Q 123 8 127 8 L 153 8 L 160 19 L 170 22 L 170 47 L 180 42 L 190 32 Q 193 28 190 22 L 186 13 Q 183 8 175 8 L 160 8 L 153 19 L 153 145 L 42 145 L 42 19 L 35 8 Z" /></clipPath></defs>
+                                    <rect width="210" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-bench-${player.id})`} />
+                                    <path d="M 35 8 L 20 8 Q 12 8 9 13 L 5 22 Q 2 28 5 32 L 15 42 L 25 47 L 25 22 L 35 19 L 42 8 L 68 8 Q 72 8 75 13 L 82 18 L 90 21 Q 98 21 105 21 L 113 18 L 120 13 Q 123 8 127 8 L 153 8 L 160 19 L 170 22 L 170 47 L 180 42 L 190 32 Q 193 28 190 22 L 186 13 Q 183 8 175 8 L 160 8 L 153 19 L 153 145 L 42 145 L 42 19 L 35 8 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                                    <path d="M 68 8 L 75 15 L 82 19 L 90 21 Q 98 21 105 21 L 113 19 L 120 15 L 127 8" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                                    {player.in_dreamteam && (<g><circle cx="145" cy="32" r="10" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 145 25 L 147 30 L 152 30 L 148 33 L 150 38 L 145 35 L 140 38 L 142 33 L 138 30 L 143 30 Z" fill="white" /></g>)}
+                                    <text x="97.5" y="55" fontSize="12" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                    <text x="97.5" y="73" fontSize="14" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                    <text x="97.5" y="100" fontSize="28" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.event_points || 0}</text>
                                     {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => {
                                       const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                      return (<g key={idx}><rect x={28 + (idx * 28)} y="112" width="24" height="18" rx="4" fill={diffColor} /><text x={40 + (idx * 28)} y="124" fontSize="10" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
+                                      return (<g key={idx}><rect x={45 + (idx * 40)} y="118" width="35" height="20" rx="4" fill={diffColor} /><text x={62.5 + (idx * 40)} y="131" fontSize="11" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
                                     })}
                                   </svg>
                                 </div>
