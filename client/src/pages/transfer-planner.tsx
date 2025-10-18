@@ -5419,11 +5419,26 @@ export default function TransferPlanner() {
                               <div
                                 key={player.element}
                                 className={`relative w-20 rounded-lg overflow-hidden ${
+                                  player.isCaptain ? 'ring-2 ring-yellow-400' :
+                                  player.isViceCaptain ? 'ring-2 ring-blue-400' :
                                   pick && isPlayerTransferredIn(pick) ? 'ring-2 ring-green-500' : ''
                                 }`}
                                 style={{ backgroundColor: teamColor }}
                                 data-testid={`auto-pitch-bench-${player.element}`}
                               >
+                                {/* Captain/Vice Captain Badge - Top Left */}
+                                {player.isCaptain && (
+                                  <div className="absolute top-1 left-1 bg-yellow-500 text-white text-[9px] font-bold px-1 py-0.5 rounded">
+                                    C
+                                  </div>
+                                )}
+                                {player.isViceCaptain && (
+                                  <div className="absolute top-1 left-1 bg-blue-500 text-white text-[9px] font-bold px-1 py-0.5 rounded">
+                                    V
+                                  </div>
+                                )}
+
+                                {/* New Transfer Badge - Top Right */}
                                 {pick && isPlayerTransferredIn(pick) && (
                                   <div className="absolute top-1 right-1 bg-green-600 text-white text-[8px] font-bold px-1 py-0.5 rounded">
                                     NEW
@@ -5442,6 +5457,19 @@ export default function TransferPlanner() {
                                   <div className="text-center mt-1">
                                     <div className="text-xs font-bold">{player.projectedPoints.toFixed(1)}</div>
                                   </div>
+
+                                  {/* Fixture Info */}
+                                  {(() => {
+                                    const fixture = getPlayerFixture(player.element, selectedGameweek);
+                                    if (fixture) {
+                                      return (
+                                        <div className="text-[9px] opacity-90 text-center mt-1 truncate">
+                                          vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}
+                                        </div>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
                                 </div>
                               </div>
                             );
