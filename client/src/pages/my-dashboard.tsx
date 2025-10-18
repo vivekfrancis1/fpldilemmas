@@ -1557,7 +1557,7 @@ export default function MyDashboard() {
                     </CardHeader>
                     <CardContent>
                       {transfersData && transfersData.length > 0 ? (
-                        <div className="space-y-3 max-h-96 overflow-y-auto">
+                        <div className="space-y-3 max-h-[800px] overflow-y-auto">
                           {transfersData
                             .slice()
                             .sort((a, b) => {
@@ -1685,7 +1685,7 @@ export default function MyDashboard() {
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
-                          <div className="space-y-3 max-h-80 overflow-y-auto">
+                          <div className="space-y-3 max-h-[800px] overflow-y-auto">
                             {historyData.current.slice().reverse().map((gw) => (
                               <div key={gw.event} className="flex items-center justify-between p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200">
                                 <div>
