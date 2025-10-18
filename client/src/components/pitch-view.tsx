@@ -34,12 +34,15 @@ export interface PitchFixture {
 
 export interface PitchViewProps {
   players: PitchPlayer[];
+  benchPlayers?: PitchPlayer[];
   getNextFixtures?: (teamId: number, count: number) => PitchFixture[];
+  showFixtures?: boolean;
 }
 
-export function PitchView({ players, getNextFixtures }: PitchViewProps) {
+export function PitchView({ players, benchPlayers = [], getNextFixtures, showFixtures = true }: PitchViewProps) {
   // Sort players by position for proper formation display
   const sortedPlayers = sortPlayersByPosition(players);
+  const sortedBench = sortPlayersByPosition(benchPlayers);
   
   return (
     <div className="space-y-4">
@@ -140,7 +143,7 @@ export function PitchView({ players, getNextFixtures }: PitchViewProps) {
                               {(player.event_points || 0) * (player.is_captain ? 2 : player.multiplier || 1)}
                             </div>
                           </div>
-                          {getNextFixtures && player.team_id && (
+                          {showFixtures && getNextFixtures && player.team_id && (
                             <div className="flex justify-center gap-0.5">
                               {getNextFixtures(player.team_id, 3).map((fixture, idx) => (
                                 <div 
@@ -213,7 +216,7 @@ export function PitchView({ players, getNextFixtures }: PitchViewProps) {
                               {(player.event_points || 0) * (player.is_captain ? 2 : player.multiplier || 1)}
                             </div>
                           </div>
-                          {getNextFixtures && player.team_id && (
+                          {showFixtures && getNextFixtures && player.team_id && (
                             <div className="flex justify-center gap-0.5">
                               {getNextFixtures(player.team_id, 3).map((fixture, idx) => (
                                 <div 
@@ -286,7 +289,7 @@ export function PitchView({ players, getNextFixtures }: PitchViewProps) {
                               {(player.event_points || 0) * (player.is_captain ? 2 : player.multiplier || 1)}
                             </div>
                           </div>
-                          {getNextFixtures && player.team_id && (
+                          {showFixtures && getNextFixtures && player.team_id && (
                             <div className="flex justify-center gap-0.5">
                               {getNextFixtures(player.team_id, 3).map((fixture, idx) => (
                                 <div 
@@ -359,7 +362,7 @@ export function PitchView({ players, getNextFixtures }: PitchViewProps) {
                               {(player.event_points || 0) * (player.is_captain ? 2 : player.multiplier || 1)}
                             </div>
                           </div>
-                          {getNextFixtures && player.team_id && (
+                          {showFixtures && getNextFixtures && player.team_id && (
                             <div className="flex justify-center gap-0.5">
                               {getNextFixtures(player.team_id, 3).map((fixture, idx) => (
                                 <div 
@@ -382,6 +385,67 @@ export function PitchView({ players, getNextFixtures }: PitchViewProps) {
           })()}
         </div>
       </div>
+
+      {/* Bench Section */}
+      {sortedBench.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">BENCH</h3>
+          <div className="flex justify-center gap-2 sm:gap-4 flex-wrap">
+            {sortedBench.map(player => {
+              const jerseyColor = getTeamJerseyColor(player.team_id || 0);
+              const textColor = getTextColor(jerseyColor);
+              
+              return (
+                <div key={player.element} className="flex flex-col items-center w-28" data-testid={`bench-player-${player.element}`}>
+                  <div className="relative w-full">
+                    <div 
+                      className="rounded-lg shadow-xl p-2 relative" 
+                      style={{ backgroundColor: jerseyColor }}
+                    >
+                      {player.in_dreamteam && (
+                        <div className="absolute top-2 right-2 z-10">
+                          <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white">
+                            <Star className="h-3 w-3 text-white fill-white" />
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="text-center mb-1">
+                        <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
+                          {player.team_short_name || 'UNK'}
+                        </div>
+                      </div>
+                      <div className="text-center mb-1">
+                        <div className="text-xs font-bold" style={{ color: textColor }}>
+                          {player.web_name || player.player_name || 'Unknown'}
+                        </div>
+                      </div>
+                      <div className="text-center mb-2">
+                        <div className="text-2xl font-bold" style={{ color: textColor }}>
+                          {player.event_points || 0}
+                        </div>
+                      </div>
+                      {showFixtures && getNextFixtures && player.team_id && (
+                        <div className="flex justify-center gap-0.5">
+                          {getNextFixtures(player.team_id, 3).map((fixture, idx) => (
+                            <div 
+                              key={idx}
+                              className={`px-1 py-0.5 rounded text-[10px] font-bold ${getDifficultyColor(fixture.difficulty)}`}
+                              title={`GW${fixture.gameweek}: ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})`}
+                            >
+                              {fixture.opponent.substring(0, 3)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

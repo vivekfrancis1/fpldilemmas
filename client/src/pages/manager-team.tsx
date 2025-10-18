@@ -454,6 +454,28 @@ export default function ManagerTeam() {
     };
   });
 
+  // Map bench players to PitchPlayer format
+  const benchPlayers: PitchPlayer[] = substitutes.map(pick => {
+    const playerData = getPlayerData(pick.element);
+    const teamData = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    
+    return {
+      element: pick.element,
+      element_type: pick.element_type,
+      position: typeof pick.position === 'number' ? pick.position : parseInt(pick.position || '0'),
+      is_captain: false,
+      is_vice_captain: false,
+      multiplier: pick.multiplier,
+      player_name: pick.player_name,
+      web_name: playerData?.web_name,
+      team_name: pick.team_name,
+      team_short_name: teamData?.short_name,
+      team_id: playerData?.team,
+      event_points: pick.event_points,
+      in_dreamteam: playerData?.in_dreamteam || false,
+    };
+  });
+
   // Get manager name from general info or team data
   const managerName = teamData?.general_info ? 
     `${teamData.general_info.player_first_name} ${teamData.general_info.player_last_name}` :
@@ -666,7 +688,9 @@ export default function ManagerTeam() {
                 {teamView === "pitch" && (
                   <PitchView 
                     players={pitchPlayers}
+                    benchPlayers={benchPlayers}
                     getNextFixtures={getNextFixtures}
+                    showFixtures={false}
                   />
                 )}
 

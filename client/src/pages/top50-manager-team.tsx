@@ -34,8 +34,12 @@ import {
   TrendingDown,
   Calendar,
   BarChart3,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Eye,
+  List
 } from "lucide-react";
+import { PitchView, type PitchPlayer } from "@/components/pitch-view";
+import { getPositionFromElementType } from "@/lib/pitch-utils";
 
 type TeamPick = {
   element: number;
@@ -213,6 +217,9 @@ export default function Top50ManagerTeam() {
     retry: 2,
   });
 
+  // Team view state (pitch or list)
+  const [teamView, setTeamView] = useState<"pitch" | "list">("list");
+
   // Get bootstrap data to determine completed gameweeks
   const { data: bootstrapData } = useQuery<any>({
     queryKey: ['/api/bootstrap-static'],
@@ -326,6 +333,50 @@ export default function Top50ManagerTeam() {
 
   const captain = enrichedPicks.find(p => p.is_captain);
   const viceCaptain = enrichedPicks.find(p => p.is_vice_captain);
+
+  // Map starting eleven to PitchPlayer format for pitch view
+  const pitchPlayers: PitchPlayer[] = startingEleven.map(pick => {
+    const playerData = getPlayerData(pick.element);
+    const teamDataForPlayer = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    
+    return {
+      element: pick.element,
+      element_type: pick.element_type,
+      position: typeof pick.position === 'number' ? pick.position : parseInt(pick.position || '0'),
+      is_captain: pick.is_captain,
+      is_vice_captain: pick.is_vice_captain,
+      multiplier: pick.multiplier,
+      player_name: pick.player_name,
+      web_name: playerData?.web_name,
+      team_name: pick.team_name,
+      team_short_name: teamDataForPlayer?.short_name,
+      team_id: playerData?.team,
+      event_points: pick.event_points,
+      in_dreamteam: playerData?.in_dreamteam || false,
+    };
+  });
+
+  // Map bench players to PitchPlayer format
+  const benchPlayers: PitchPlayer[] = substitutes.map(pick => {
+    const playerData = getPlayerData(pick.element);
+    const teamDataForPlayer = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    
+    return {
+      element: pick.element,
+      element_type: pick.element_type,
+      position: typeof pick.position === 'number' ? pick.position : parseInt(pick.position || '0'),
+      is_captain: false,
+      is_vice_captain: false,
+      multiplier: pick.multiplier,
+      player_name: pick.player_name,
+      web_name: playerData?.web_name,
+      team_name: pick.team_name,
+      team_short_name: teamDataForPlayer?.short_name,
+      team_id: playerData?.team,
+      event_points: pick.event_points,
+      in_dreamteam: playerData?.in_dreamteam || false,
+    };
+  });
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
@@ -503,9 +554,45 @@ export default function Top50ManagerTeam() {
           {teamData.picks && teamData.picks.length > 0 && (
             <>
               <div>
-                <h2 className="text-xl font-semibold mb-4">Team Squad</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">Team Squad</h2>
+                  
+                  {/* View Toggle */}
+                  <div className="flex gap-2">
+                    <Button
+                      variant={teamView === "pitch" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setTeamView("pitch")}
+                      className="flex items-center gap-2"
+                      data-testid="button-view-pitch"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Pitch View
+                    </Button>
+                    <Button
+                      variant={teamView === "list" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setTeamView("list")}
+                      className="flex items-center gap-2"
+                      data-testid="button-view-list"
+                    >
+                      <List className="h-4 w-4" />
+                      List View
+                    </Button>
+                  </div>
+                </div>
                 
-                {/* Team Formation Display */}
+                {/* Pitch View */}
+                {teamView === "pitch" && (
+                  <PitchView 
+                    players={pitchPlayers}
+                    benchPlayers={benchPlayers}
+                    showFixtures={false}
+                  />
+                )}
+                
+                {/* List View - Team Formation Display */}
+                {teamView === "list" && (
                 <div className="grid gap-6 lg:grid-cols-5">
                   {/* Starting XI */}
                   <div className="lg:col-span-3">
@@ -641,6 +728,7 @@ export default function Top50ManagerTeam() {
                     </Card>
                   </div>
                 </div>
+                )}
               </div>
             </>
           )}

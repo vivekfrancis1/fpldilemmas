@@ -36,6 +36,7 @@ import {
   BarChart3,
   ArrowLeftRight
 } from "lucide-react";
+import { PitchView, PitchPlayer, PitchFixture } from "@/components/pitch-view";
 
 type TeamPick = {
   element: number;
@@ -212,6 +213,7 @@ function getRankChangeDisplay(rankChange: number) {
 
 export default function Top25ManagerTeam() {
   const { rank } = useParams<{ rank: string }>();
+  const [teamView, setTeamView] = useState<"list" | "pitch">("list");
   
   // Find manager info from our static data
   const managerInfo = TOP_25_MANAGERS.find(m => m.rank === parseInt(rank || '0'));
@@ -341,6 +343,55 @@ export default function Top25ManagerTeam() {
 
   const captain = enrichedPicks.find(p => p.is_captain);
   const viceCaptain = enrichedPicks.find(p => p.is_vice_captain);
+
+  // Map starting eleven to PitchPlayer format for pitch view
+  const pitchPlayers: PitchPlayer[] = startingEleven.map(pick => {
+    const playerData = getPlayerData(pick.element);
+    const teamData = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    
+    return {
+      element: pick.element,
+      element_type: pick.element_type,
+      position: typeof pick.position === 'number' ? pick.position : parseInt(pick.position || '0'),
+      is_captain: pick.is_captain,
+      is_vice_captain: pick.is_vice_captain,
+      multiplier: pick.multiplier,
+      player_name: pick.player_name,
+      web_name: playerData?.web_name,
+      team_name: pick.team_name,
+      team_short_name: teamData?.short_name,
+      team_id: playerData?.team,
+      event_points: pick.event_points,
+      in_dreamteam: playerData?.in_dreamteam || false,
+    };
+  });
+
+  // Map bench players to PitchPlayer format
+  const benchPlayers: PitchPlayer[] = substitutes.map(pick => {
+    const playerData = getPlayerData(pick.element);
+    const teamData = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    
+    return {
+      element: pick.element,
+      element_type: pick.element_type,
+      position: typeof pick.position === 'number' ? pick.position : parseInt(pick.position || '0'),
+      is_captain: false,
+      is_vice_captain: false,
+      multiplier: pick.multiplier,
+      player_name: pick.player_name,
+      web_name: playerData?.web_name,
+      team_name: pick.team_name,
+      team_short_name: teamData?.short_name,
+      team_id: playerData?.team,
+      event_points: pick.event_points,
+      in_dreamteam: playerData?.in_dreamteam || false,
+    };
+  });
+
+  // getNextFixtures helper (not shown in this view)
+  const getNextFixtures = (teamId: number, count: number): PitchFixture[] => {
+    return [];
+  };
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-6">
@@ -524,7 +575,39 @@ export default function Top25ManagerTeam() {
               <div>
                 <h2 className="text-xl font-semibold mb-4">Team Squad</h2>
                 
-                {/* Team Formation Display */}
+                {/* View Toggle */}
+                <div className="flex justify-center gap-2 mb-6">
+                  <Button
+                    variant={teamView === "pitch" ? "default" : "outline"}
+                    onClick={() => setTeamView("pitch")}
+                    className="flex items-center gap-2"
+                    data-testid="button-team-pitch-view"
+                  >
+                    <Target className="h-4 w-4" />
+                    Pitch View
+                  </Button>
+                  <Button
+                    variant={teamView === "list" ? "default" : "outline"}
+                    onClick={() => setTeamView("list")}
+                    className="flex items-center gap-2"
+                    data-testid="button-team-list-view"
+                  >
+                    <Users className="h-4 w-4" />
+                    List View
+                  </Button>
+                </div>
+
+                {/* Pitch View */}
+                {teamView === "pitch" && (
+                  <PitchView 
+                    players={pitchPlayers}
+                    benchPlayers={benchPlayers}
+                    showFixtures={false}
+                  />
+                )}
+
+                {/* List View */}
+                {teamView === "list" && (
                 <div className="grid gap-6 lg:grid-cols-5">
                   {/* Starting XI */}
                   <div className="lg:col-span-3">
@@ -672,11 +755,12 @@ export default function Top25ManagerTeam() {
                     </div>
                   )}
                 </div>
+                )}
               </div>
 
-          {/* Captain & Vice Captain Info */}
-          {(captain || viceCaptain) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Captain & Vice Captain Info */}
+              {(captain || viceCaptain) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {captain && (
                 <Card>
                   <CardHeader className="pb-3">
