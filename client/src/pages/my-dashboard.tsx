@@ -989,22 +989,55 @@ export default function MyDashboard() {
                       <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
                         {/* Pitch Lines and Graphics */}
                         <div className="absolute inset-0 opacity-30 pointer-events-none">
-                          {/* Center Line */}
+                          {/* Center Line - Horizontal */}
+                          <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
+                          
+                          {/* Center Line - Vertical */}
                           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
                           
-                          {/* Center Circle (positioned near forwards at bottom) */}
-                          <div className="absolute bottom-[15%] left-1/2 -translate-x-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
-                          <div className="absolute bottom-[15%] left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
+                          {/* Center Circle - positioned so bottom edge line goes through middle */}
+                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
+                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-white rounded-full"></div>
                           
-                          {/* Goal Post and Penalty Area (top - near goalkeeper) */}
-                          {/* Penalty Box */}
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-24 border-2 border-l-0 border-t-0 border-white"></div>
+                          {/* Top Goal Area (near goalkeeper) */}
+                          {/* Penalty Box - 18 yard box */}
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-t-0 border-white"></div>
                           {/* 6-yard Box */}
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-12 border-2 border-l-0 border-t-0 border-white"></div>
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-t-0 border-white"></div>
                           {/* Penalty Spot */}
-                          <div className="absolute top-16 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
+                          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
+                          {/* Penalty Arc */}
+                          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-20 h-10 border-2 border-b-0 border-l-0 border-r-0 border-white rounded-t-full"></div>
+                          
                           {/* Goal Post */}
-                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-20 h-4 border-2 border-t-0 border-white bg-white/5"></div>
+                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
+                            {/* Goal Posts */}
+                            <div className="absolute left-0 top-0 w-1 h-4 bg-white"></div>
+                            <div className="absolute right-0 top-0 w-1 h-4 bg-white"></div>
+                          </div>
+                          
+                          {/* Bottom Goal Area (near forwards) - Mirror of top */}
+                          {/* Penalty Box - 18 yard box */}
+                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-b-0 border-white"></div>
+                          {/* 6-yard Box */}
+                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-b-0 border-white"></div>
+                          {/* Penalty Spot */}
+                          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
+                          {/* Penalty Arc */}
+                          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-20 h-10 border-2 border-t-0 border-l-0 border-r-0 border-white rounded-b-full"></div>
+                          
+                          {/* Bottom Goal Post */}
+                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
+                            {/* Goal Posts */}
+                            <div className="absolute left-0 bottom-0 w-1 h-4 bg-white"></div>
+                            <div className="absolute right-0 bottom-0 w-1 h-4 bg-white"></div>
+                          </div>
+                          
+                          {/* Corner Arcs */}
+                          <div className="absolute top-0 left-0 w-4 h-4 border-2 border-t-0 border-l-0 border-white rounded-br-full"></div>
+                          <div className="absolute top-0 right-0 w-4 h-4 border-2 border-t-0 border-r-0 border-white rounded-bl-full"></div>
+                          <div className="absolute bottom-0 left-0 w-4 h-4 border-2 border-b-0 border-l-0 border-white rounded-tr-full"></div>
+                          <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
                         </div>
 
                       <div className="relative space-y-6">
