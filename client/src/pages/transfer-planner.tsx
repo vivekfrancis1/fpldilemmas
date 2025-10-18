@@ -4409,13 +4409,11 @@ export default function TransferPlanner() {
                         </div>
                       );
                     })}
-                  </div>
-                </div>
 
-                {/* Bench */}
-                <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
-                  <h3 className="text-sm font-semibold mb-3">Bench</h3>
-                  <div className="flex gap-4 flex-wrap justify-center">
+                    {/* Bench */}
+                    <div className="mt-8 pt-4 border-t border-white/30">
+                      <h4 className="text-xs font-semibold text-white mb-3 text-center">Bench</h4>
+                      <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-4 flex-wrap">
                     {manualLineup.slice(11, 15).map((pick, benchIndex) => {
                       const player = getPlayerById(pick.element);
                       if (!player) return null;
@@ -4479,7 +4477,7 @@ export default function TransferPlanner() {
                       }
                       
                       return (
-                        <div key={pick.element} className="flex items-center gap-1 w-36" data-testid={`pitch-bench-${player.id}`}>
+                        <div key={pick.element} className="flex items-center gap-1 w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-bench-${player.id}`}>
                           {/* Bench Reorder Arrows - Only for non-GK bench players */}
                           {benchIndex > 0 && plannerMode === "manual" && (
                             <div className="flex flex-col gap-0.5 shrink-0">
@@ -4558,6 +4556,8 @@ export default function TransferPlanner() {
                         </div>
                       );
                     })}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
