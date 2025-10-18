@@ -20,7 +20,7 @@ export const getTeamJerseyColor = (teamId: number): string => {
     15: '#241F20', // Newcastle
     16: '#DD0000', // Nottingham Forest
     17: '#D71920', // Southampton
-    18: '#132257', // Spurs
+    18: '#FFFFFF', // Spurs
     19: '#FDB913', // Wolves
     20: '#C8102E', // Liverpool
   };

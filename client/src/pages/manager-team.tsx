@@ -215,7 +215,7 @@ export default function ManagerTeam() {
   });
 
   // State for view toggle (pitch or list)
-  const [teamView, setTeamView] = useState<"pitch" | "list">("list");
+  const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
 
   // Function to get completed gameweeks (1-3 only)
   const getCompletedGameweeks = () => {
