@@ -4220,12 +4220,12 @@ export default function TransferPlanner() {
                             return (
                               <div key={pick.element} className="flex flex-col items-center w-40" data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
-                                  {/* Captain/Vice Captain Buttons - Top Corners */}
+                                  {/* Captain/Vice Captain Buttons/Badges - Top Corners */}
                                   {!pick.is_captain && plannerMode === "manual" && (
                                     <Button
                                       size="icon"
                                       variant="ghost"
-                                      className="absolute top-0 left-0 h-5 w-5 p-0 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-br z-10"
+                                      className="absolute top-1 left-1 h-5 w-5 p-0 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-md z-10"
                                       onClick={() => handleSetCaptain(pick.element)}
                                       data-testid={`pitch-set-captain-${pick.element}`}
                                       title="Set Captain"
@@ -4233,17 +4233,27 @@ export default function TransferPlanner() {
                                       <Crown className="h-3 w-3" />
                                     </Button>
                                   )}
+                                  {pick.is_captain && (
+                                    <div className="absolute top-1 left-1 text-[11px] font-bold text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded z-10">
+                                      C
+                                    </div>
+                                  )}
                                   {!pick.is_vice_captain && plannerMode === "manual" && (
                                     <Button
                                       size="icon"
                                       variant="ghost"
-                                      className="absolute top-0 right-0 h-5 w-5 p-0 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-bl z-10"
+                                      className="absolute top-1 right-1 h-5 w-5 p-0 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md z-10"
                                       onClick={() => handleSetViceCaptain(pick.element)}
                                       data-testid={`pitch-set-vice-${pick.element}`}
                                       title="Set Vice Captain"
                                     >
                                       <Crown className="h-3 w-3" />
                                     </Button>
+                                  )}
+                                  {pick.is_vice_captain && (
+                                    <div className="absolute top-1 right-1 text-[10px] font-bold text-blue-600 bg-blue-100 px-1 py-0.5 rounded z-10">
+                                      VC
+                                    </div>
                                   )}
                                   
                                   {/* Jersey Card */}
@@ -4259,11 +4269,9 @@ export default function TransferPlanner() {
                                       {playerTeam?.short_name || 'UNK'}
                                     </div>
 
-                                    {/* Player Name with C/VC */}
+                                    {/* Player Name with NEW badge only */}
                                     <div className="text-sm font-bold flex items-center justify-center gap-1 flex-wrap" style={{ color: textColor }}>
                                       <span>{player.web_name}</span>
-                                      {pick.is_captain && <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 px-1 py-0.5 rounded">C</span>}
-                                      {pick.is_vice_captain && <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-1 py-0.5 rounded">VC</span>}
                                       {isPlayerTransferredIn(pick) && <span className="text-[10px] font-bold text-green-600 bg-green-100 px-1 py-0.5 rounded">NEW</span>}
                                     </div>
 
