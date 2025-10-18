@@ -4413,7 +4413,7 @@ export default function TransferPlanner() {
                     {/* Bench */}
                     <div className="mt-8 pt-4 border-t border-white/30">
                       <h4 className="text-xs font-semibold text-white mb-3 text-center">Bench</h4>
-                      <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-4 flex-wrap">
+                      <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
                     {manualLineup.slice(11, 15).map((pick, benchIndex) => {
                       const player = getPlayerById(pick.element);
                       if (!player) return null;
@@ -5147,7 +5147,7 @@ export default function TransferPlanner() {
                           if (positionPlayers.length === 0) return null;
                           
                           return (
-                            <div key={posType} className="flex justify-center gap-1.5 sm:gap-2 md:gap-4">
+                            <div key={posType} className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
                               {positionPlayers.map(player => {
                                 const fullPlayer = getPlayerById(player.element);
                                 const pick = manualLineup.find(p => p.element === player.element);
@@ -5213,7 +5213,7 @@ export default function TransferPlanner() {
                       {/* Bench */}
                       <div className="mt-8 pt-4 border-t border-white/30">
                         <h4 className="text-xs font-semibold text-white mb-3 text-center">Bench</h4>
-                        <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-4">
+                        <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3">
                           {optimizedLineup.bench.map((player) => {
                             const fullPlayer = getPlayerById(player.element);
                             const pick = manualLineup.find(p => p.element === player.element);
