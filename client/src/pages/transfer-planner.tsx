@@ -4225,7 +4225,7 @@ export default function TransferPlanner() {
                                     <Button
                                       size="icon"
                                       variant="ghost"
-                                      className="absolute top-1 left-1 h-5 w-5 p-0 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-md z-10"
+                                      className="absolute top-3 left-3 h-5 w-5 p-0 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-md z-10"
                                       onClick={() => handleSetCaptain(pick.element)}
                                       data-testid={`pitch-set-captain-${pick.element}`}
                                       title="Set Captain"
@@ -4234,7 +4234,7 @@ export default function TransferPlanner() {
                                     </Button>
                                   )}
                                   {pick.is_captain && (
-                                    <div className="absolute top-1 left-1 text-[11px] font-bold text-yellow-600 bg-yellow-100 px-1.5 py-0.5 rounded z-10">
+                                    <div className="absolute top-3 left-3 text-sm font-extrabold text-yellow-700 bg-yellow-200 px-2 py-1 rounded shadow-md z-10">
                                       C
                                     </div>
                                   )}
@@ -4242,7 +4242,7 @@ export default function TransferPlanner() {
                                     <Button
                                       size="icon"
                                       variant="ghost"
-                                      className="absolute top-1 right-1 h-5 w-5 p-0 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md z-10"
+                                      className="absolute top-3 right-3 h-5 w-5 p-0 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-md z-10"
                                       onClick={() => handleSetViceCaptain(pick.element)}
                                       data-testid={`pitch-set-vice-${pick.element}`}
                                       title="Set Vice Captain"
@@ -4251,7 +4251,7 @@ export default function TransferPlanner() {
                                     </Button>
                                   )}
                                   {pick.is_vice_captain && (
-                                    <div className="absolute top-1 right-1 text-[10px] font-bold text-blue-600 bg-blue-100 px-1 py-0.5 rounded z-10">
+                                    <div className="absolute top-3 right-3 text-sm font-extrabold text-blue-700 bg-blue-200 px-2 py-1 rounded shadow-md z-10">
                                       VC
                                     </div>
                                   )}
