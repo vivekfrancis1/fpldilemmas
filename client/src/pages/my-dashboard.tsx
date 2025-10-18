@@ -1063,19 +1063,19 @@ export default function MyDashboard() {
                                   <div key={pick.element} className="flex flex-col items-center w-44" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       {/* Jersey-Shaped Card */}
-                                      <svg viewBox="0 0 280 150" className="w-full drop-shadow-xl">
+                                      <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs>
                                           <clipPath id={`jersey-clip-${player.id}`}>
-                                            <path d="M 50 10 L 30 10 Q 18 10 14 16 L 8 28 Q 4 36 8 42 L 20 55 L 32 62 L 32 28 L 50 24 L 58 10 L 92 10 Q 97 10 101 16 L 110 23 L 120 27 Q 130 27 140 27 L 150 27 Q 160 27 170 23 L 179 16 Q 183 10 188 10 L 222 10 L 230 24 L 248 28 L 248 62 L 260 55 L 272 42 Q 276 36 272 28 L 266 16 Q 262 10 250 10 L 230 10 L 222 24 L 222 145 L 58 145 L 58 24 L 50 10 Z" />
+                                            <path d="M 58 10 L 10 10 L 10 50 L 18 65 L 30 72 L 30 30 L 58 30 L 58 10 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 10 L 222 30 L 250 30 L 250 72 L 262 65 L 270 50 L 270 10 L 222 10 L 222 30 L 222 185 L 58 185 L 58 30 L 58 10 Z" />
                                           </clipPath>
                                         </defs>
                                         
                                         {/* Jersey background */}
-                                        <rect width="280" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-${player.id})`} />
+                                        <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-${player.id})`} />
                                         
-                                        {/* Jersey outline with enhanced collar and sleeves that connect seamlessly */}
+                                        {/* Jersey outline with shoulder sleeves fully attached */}
                                         <path 
-                                          d="M 50 10 L 30 10 Q 18 10 14 16 L 8 28 Q 4 36 8 42 L 20 55 L 32 62 L 32 28 L 50 24 L 58 10 L 92 10 Q 97 10 101 16 L 110 23 L 120 27 Q 130 27 140 27 L 150 27 Q 160 27 170 23 L 179 16 Q 183 10 188 10 L 222 10 L 230 24 L 248 28 L 248 62 L 260 55 L 272 42 Q 276 36 272 28 L 266 16 Q 262 10 250 10 L 230 10 L 222 24 L 222 145 L 58 145 L 58 24 L 50 10 Z" 
+                                          d="M 58 10 L 10 10 L 10 50 L 18 65 L 30 72 L 30 30 L 58 30 L 58 10 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 10 L 222 30 L 250 30 L 250 72 L 262 65 L 270 50 L 270 10 L 222 10 L 222 30 L 222 185 L 58 185 L 58 30 L 58 10 Z" 
                                           fill="none" 
                                           stroke="rgba(0,0,0,0.15)" 
                                           strokeWidth="1.5"
@@ -1083,7 +1083,7 @@ export default function MyDashboard() {
                                         
                                         {/* V-neck collar detail */}
                                         <path 
-                                          d="M 92 10 L 101 18 L 110 23 L 120 26 Q 130 26 140 26 L 150 26 Q 160 26 170 23 L 179 18 L 188 10" 
+                                          d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" 
                                           fill="none" 
                                           stroke="rgba(255,255,255,0.3)" 
                                           strokeWidth="1.5"
@@ -1092,37 +1092,37 @@ export default function MyDashboard() {
                                         {/* Captain/Vice Captain Badge */}
                                         {pick.is_captain && (
                                           <g>
-                                            <circle cx="68" cy="38" r="11" fill="#FCD34D" stroke="white" strokeWidth="2.5" />
-                                            <text x="68" y="44" fontSize="13" fontWeight="bold" textAnchor="middle" fill="black">C</text>
+                                            <circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" />
+                                            <text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text>
                                           </g>
                                         )}
                                         {pick.is_vice_captain && (
                                           <g>
-                                            <circle cx="68" cy="38" r="11" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" />
-                                            <text x="68" y="44" fontSize="13" fontWeight="bold" textAnchor="middle" fill="black">V</text>
+                                            <circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" />
+                                            <text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text>
                                           </g>
                                         )}
                                         
                                         {/* Dream Team Star Badge */}
                                         {player.in_dreamteam && (
                                           <g>
-                                            <circle cx="212" cy="38" r="11" fill="#A855F7" stroke="white" strokeWidth="2.5" />
-                                            <path d="M 212 30 L 214 36 L 220 36 L 215 40 L 217 46 L 212 42 L 207 46 L 209 40 L 204 36 L 210 36 Z" fill="white" />
+                                            <circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" />
+                                            <path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" />
                                           </g>
                                         )}
                                         
                                         {/* Team Name */}
-                                        <text x="140" y="70" fontSize="15" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="85" fontSize="16" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {playerTeam?.short_name || 'UNK'}
                                         </text>
                                         
                                         {/* Player Name */}
-                                        <text x="140" y="92" fontSize="17" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="110" fontSize="18" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {player.web_name}
                                         </text>
                                         
                                         {/* Points */}
-                                        <text x="140" y="118" fontSize="34" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="145" fontSize="36" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
                                         </text>
                                         
@@ -1135,16 +1135,16 @@ export default function MyDashboard() {
                                             <g key={idx}>
                                               <rect 
                                                 x={64 + (idx * 52)} 
-                                                y="128" 
+                                                y="162" 
                                                 width="46" 
-                                                height="18" 
+                                                height="20" 
                                                 rx="4" 
                                                 fill={diffColor}
                                               />
                                               <text 
                                                 x={87 + (idx * 52)} 
-                                                y="140" 
-                                                fontSize="12" 
+                                                y="175" 
+                                                fontSize="13" 
                                                 fontWeight="bold" 
                                                 textAnchor="middle" 
                                                 fill="white"
