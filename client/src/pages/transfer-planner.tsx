@@ -3441,7 +3441,7 @@ export default function TransferPlanner() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
               {/* Total Projected Points for Selected GW */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">GW {selectedGameweek} Projected Points</div>
+                <div className="text-sm text-muted-foreground mb-1">GW {selectedGameweek} Proj Pts</div>
                 <div className="text-2xl font-bold text-green-600">
                   {(() => {
                     let total = 0;
@@ -3471,8 +3471,8 @@ export default function TransferPlanner() {
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1">
                   {nextGameweeks.length > 0 
-                    ? `GW ${nextGameweeks[0].id}-${nextGameweeks[nextGameweeks.length - 1].id} Projected Points`
-                    : 'Next 6 GWs Projected Points'}
+                    ? `GW ${nextGameweeks[0].id}-${nextGameweeks[nextGameweeks.length - 1].id} Proj Pts`
+                    : 'Next 6 GWs Proj Pts'}
                 </div>
                 <div className="text-2xl font-bold text-blue-600">
                   {(() => {
