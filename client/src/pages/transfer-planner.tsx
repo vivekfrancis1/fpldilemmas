@@ -5349,6 +5349,11 @@ export default function TransferPlanner() {
                                     )}
 
                                     <div className={`p-2 ${textColor}`}>
+                                      {/* Team Name */}
+                                      <div className="text-[10px] font-bold opacity-90 text-center">
+                                        {bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}
+                                      </div>
+
                                       {/* Player Name */}
                                       <div className="text-xs font-bold truncate text-center">
                                         {player.web_name}
@@ -5356,7 +5361,6 @@ export default function TransferPlanner() {
 
                                       {/* Projected Points */}
                                       <div className="text-center mt-1">
-                                        <div className="text-[10px] opacity-90">Proj</div>
                                         <div className="text-sm font-bold">{player.projectedPoints.toFixed(1)}</div>
                                       </div>
 
@@ -5427,11 +5431,15 @@ export default function TransferPlanner() {
                                 )}
 
                                 <div className={`p-2 ${textColor}`}>
+                                  {/* Team Name */}
+                                  <div className="text-[9px] font-bold opacity-90 text-center">
+                                    {bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}
+                                  </div>
+
                                   <div className="text-[10px] font-bold truncate text-center">
                                     {player.web_name}
                                   </div>
                                   <div className="text-center mt-1">
-                                    <div className="text-[9px] opacity-90">Proj</div>
                                     <div className="text-xs font-bold">{player.projectedPoints.toFixed(1)}</div>
                                   </div>
                                 </div>
