@@ -1741,7 +1741,7 @@ export default function TransferPlanner() {
     // Base Draft - Manual mode
     const baseManualRow = {
       draftKey: 'Base',
-      mode: 'Manual',
+      mode: 'Manual lineup',
       gameweeks: {} as Record<number, number>,
       total: 0
     };
@@ -1757,7 +1757,7 @@ export default function TransferPlanner() {
     // Base Draft - Auto mode
     const baseAutoRow = {
       draftKey: 'Base',
-      mode: 'Auto',
+      mode: 'Auto lineup',
       gameweeks: {} as Record<number, number>,
       total: 0
     };
@@ -1779,7 +1779,7 @@ export default function TransferPlanner() {
       // Manual mode row
       const draftManualRow = {
         draftKey: draft.draftLetter,
-        mode: 'Manual',
+        mode: 'Manual lineup',
         gameweeks: {} as Record<number, number>,
         total: 0
       };
@@ -1795,7 +1795,7 @@ export default function TransferPlanner() {
       // Auto mode row
       const draftAutoRow = {
         draftKey: draft.draftLetter,
-        mode: 'Auto',
+        mode: 'Auto lineup',
         gameweeks: {} as Record<number, number>,
         total: 0
       };
@@ -3317,7 +3317,7 @@ export default function TransferPlanner() {
                     onClick={() => setPlannerMode("manual")}
                     data-testid="mode-button-manual"
                   >
-                    Manual
+                    Manual lineup
                   </Button>
                   <Button
                     variant={plannerMode === "auto" ? "default" : "ghost"}
@@ -3326,7 +3326,7 @@ export default function TransferPlanner() {
                     onClick={() => setPlannerMode("auto")}
                     data-testid="mode-button-auto"
                   >
-                    Auto
+                    Auto lineup
                   </Button>
                 </div>
               </div>
