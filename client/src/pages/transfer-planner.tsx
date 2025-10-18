@@ -4314,7 +4314,7 @@ export default function TransferPlanner() {
                             }
                             
                             return (
-                              <div key={pick.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-player-${player.id}`}>
+                              <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
                                   {/* Jersey Card */}
                                   <svg viewBox="0 0 403 302" className="w-full drop-shadow-xl">
@@ -4413,7 +4413,7 @@ export default function TransferPlanner() {
                     {/* Bench */}
                     <div className="mt-8 pt-4 border-t border-white/30">
                       <h4 className="text-xs font-semibold text-white mb-3 text-center">Bench</h4>
-                      <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
+                      <div className="flex justify-center gap-0.5 sm:gap-1 md:gap-1.5">
                     {manualLineup.slice(11, 15).map((pick, benchIndex) => {
                       const player = getPlayerById(pick.element);
                       if (!player) return null;
@@ -4477,7 +4477,7 @@ export default function TransferPlanner() {
                       }
                       
                       return (
-                        <div key={pick.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-bench-${player.id}`}>
+                        <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`pitch-bench-${player.id}`}>
                           <div className="relative w-full opacity-90">
                             <svg viewBox="0 0 403 302" className="w-full drop-shadow-lg">
                               <defs><clipPath id={`jersey-bench-manual-${player.id}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
@@ -5147,7 +5147,7 @@ export default function TransferPlanner() {
                           if (positionPlayers.length === 0) return null;
                           
                           return (
-                            <div key={posType} className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
+                            <div key={posType} className="flex justify-center gap-0.5 sm:gap-1 md:gap-1.5">
                               {positionPlayers.map(player => {
                                 const fullPlayer = getPlayerById(player.element);
                                 const pick = manualLineup.find(p => p.element === player.element);
@@ -5175,7 +5175,7 @@ export default function TransferPlanner() {
                                 const textColor = hexTextColor === '#000000' ? 'text-black' : 'text-white';
 
                                 return (
-                                  <div key={player.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`auto-pitch-player-${player.element}`}>
+                                  <div key={player.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`auto-pitch-player-${player.element}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-auto-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -5213,7 +5213,7 @@ export default function TransferPlanner() {
                       {/* Bench */}
                       <div className="mt-8 pt-4 border-t border-white/30">
                         <h4 className="text-xs font-semibold text-white mb-3 text-center">Bench</h4>
-                        <div className="flex justify-center gap-1 sm:gap-1.5 md:gap-2">
+                        <div className="flex justify-center gap-0.5 sm:gap-1 md:gap-1.5">
                           {optimizedLineup.bench.map((player) => {
                             const fullPlayer = getPlayerById(player.element);
                             const pick = manualLineup.find(p => p.element === player.element);
@@ -5241,15 +5241,15 @@ export default function TransferPlanner() {
                             const textColor = hexTextColor === '#000000' ? 'text-black' : 'text-white';
 
                             return (
-                              <div key={player.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48 opacity-90" data-testid={`auto-pitch-bench-${player.element}`}>
+                              <div key={player.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44 opacity-90" data-testid={`auto-pitch-bench-${player.element}`}>
                                 <div className="relative w-full">
                                   <svg viewBox="0 0 280 190" className="w-full drop-shadow-lg">
                                     <defs><clipPath id={`jersey-bench-auto-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
                                     <rect width="280" height="190" fill={teamColor} clipPath={`url(#jersey-bench-auto-${player.element})`} />
                                     <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
                                     <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                    {player.isCaptain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
-                                    {player.isViceCaptain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
+                                    {pick?.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
+                                    {pick?.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
                                     {pick && isPlayerTransferredIn(pick) && (<g><circle cx="205" cy="48" r="12" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="205" y="55" fontSize="11" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
                                     <text x="140" y="68" fontSize="16" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}</text>
                                     <text x="140" y="88" fontSize="18" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.web_name}</text>
