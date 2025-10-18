@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info, Heart, AlertTriangle, XCircle, Clock, List, ArrowLeftRight } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info, Heart, AlertTriangle, XCircle, Clock, List } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -4407,7 +4407,7 @@ export default function TransferPlanner() {
                 {/* Bench */}
                 <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4">
                   <h3 className="text-sm font-semibold mb-3">Bench</h3>
-                  <div className="flex gap-2 flex-wrap justify-center items-center">
+                  <div className="flex gap-4 flex-wrap justify-center">
                     {manualLineup.slice(11, 15).map((pick, benchIndex) => {
                       const player = getPlayerById(pick.element);
                       if (!player) return null;
@@ -4471,13 +4471,37 @@ export default function TransferPlanner() {
                       }
                       
                       return (
-                        <div key={pick.element} className="flex items-center gap-1">
-                          <div className="flex flex-col items-center w-40" data-testid={`pitch-bench-${player.id}`}>
-                            <div className="relative w-full">
-                              <div 
-                                className="rounded-lg p-2 text-center shadow-md border-2 flex flex-col" 
-                                style={{ backgroundColor: jerseyColor, borderColor: jerseyColor }}
+                        <div key={pick.element} className="flex items-center gap-1 w-40" data-testid={`pitch-bench-${player.id}`}>
+                          {/* Bench Reorder Arrows - Only for non-GK bench players */}
+                          {benchIndex > 0 && plannerMode === "manual" && (
+                            <div className="flex flex-col gap-0.5 shrink-0">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-4 w-4 p-0"
+                                onClick={() => moveBenchPlayer(benchIndex, 'up')}
+                                disabled={benchIndex === 1}
+                                data-testid={`pitch-bench-move-up-${pick.element}`}
                               >
+                                <ChevronUp className="h-2.5 w-2.5" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-4 w-4 p-0"
+                                onClick={() => moveBenchPlayer(benchIndex, 'down')}
+                                disabled={benchIndex === 3}
+                                data-testid={`pitch-bench-move-down-${pick.element}`}
+                              >
+                                <ChevronDown className="h-2.5 w-2.5" />
+                              </Button>
+                            </div>
+                          )}
+                          <div className="relative flex-1">
+                            <div 
+                              className="rounded-lg p-2 text-center shadow-md border-2 flex flex-col" 
+                              style={{ backgroundColor: jerseyColor, borderColor: jerseyColor }}
+                            >
                               <div className="text-[11px] font-bold uppercase" style={{ color: textColor }}>
                                 {playerTeam?.short_name || 'UNK'}
                               </div>
@@ -4596,20 +4620,6 @@ export default function TransferPlanner() {
                               </div>
                             </div>
                           </div>
-                          
-                          {/* Swap button between bench players (only in Manual mode) */}
-                          {plannerMode === "manual" && benchIndex > 0 && benchIndex < 3 && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0 rounded-full bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600"
-                              onClick={() => moveBenchPlayer(benchIndex + 1, 'up')}
-                              data-testid={`pitch-bench-swap-${benchIndex}-${benchIndex + 1}`}
-                              title={`Swap positions`}
-                            >
-                              <ArrowLeftRight className="h-3 w-3" />
-                            </Button>
-                          )}
                         </div>
                       );
                     })}
