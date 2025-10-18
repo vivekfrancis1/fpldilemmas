@@ -3554,9 +3554,9 @@ export default function TransferPlanner() {
                 </div>
               </div>
 
-              {/* Initial Cash in Bank */}
+              {/* Cash in Bank */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">Initial Cash in Bank</div>
+                <div className="text-sm text-muted-foreground mb-1">Cash in Bank</div>
                 <div className={`text-2xl font-bold ${calculateInitialBank() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
                   £{calculateInitialBank().toFixed(1)}m
                 </div>
@@ -3575,9 +3575,9 @@ export default function TransferPlanner() {
                 )}
               </div>
 
-              {/* Initial Transfers Available */}
+              {/* Transfers Available */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">Initial Transfers Available</div>
+                <div className="text-sm text-muted-foreground mb-1">Transfers Available</div>
                 <div className="text-2xl font-bold text-purple-600">
                   {calculateInitialTransfers()}
                 </div>
