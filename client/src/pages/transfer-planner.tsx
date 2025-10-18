@@ -5370,7 +5370,7 @@ export default function TransferPlanner() {
                                         if (fixture) {
                                           return (
                                             <div className="text-[10px] opacity-90 text-center mt-1 truncate">
-                                              {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}
+                                              vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}
                                             </div>
                                           );
                                         }
