@@ -863,9 +863,9 @@ export default function TransferPlanner() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [comparisonFilter, setComparisonFilter] = useState<"all" | "manual" | "auto">("all");
   
-  // Buy price editing state
-  const [editingBuyPrice, setEditingBuyPrice] = useState<number | null>(null);
-  const [editBuyPriceValue, setEditBuyPriceValue] = useState<string>("");
+  // Sell price editing state
+  const [editingSellPrice, setEditingSellPrice] = useState<number | null>(null);
+  const [editSellPriceValue, setEditSellPriceValue] = useState<string>("");
   
   // Captain confirmation dialogs
   const [captainConfirmation, setCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
@@ -1322,22 +1322,51 @@ export default function TransferPlanner() {
     return player.now_cost / 10;
   };
 
-  // Update buy price for a player - auto-saves to database
-  const updateBuyPrice = async (playerId: number, newBuyPrice: number) => {
+  // Update sell price for a player - auto-saves to database by calculating purchase price
+  const updateSellPrice = async (playerId: number, newSellPrice: number) => {
     if (!searchedId) return;
+    
+    const player = getPlayerById(playerId);
+    if (!player) return;
+    
+    // Calculate purchase price from desired sell price
+    // FPL formula: Sell Price = Purchase Price + floor((Current - Purchase) / 0.2) * 0.1
+    // We need to reverse this: Purchase Price = Sell Price - floor((Current - Purchase) / 0.2) * 0.1
+    // Simplified: Set purchase price such that it results in the desired sell price
+    const currentPrice = player.now_cost;
+    const newSellPriceInTenths = Math.round(newSellPrice * 10);
+    
+    // Calculate what purchase price would give us this sell price
+    // If sell price >= current price, purchase price = sell price (no profit)
+    // If sell price < current price, we calculate backwards
+    let calculatedPurchasePrice: number;
+    if (newSellPriceInTenths >= currentPrice) {
+      calculatedPurchasePrice = newSellPriceInTenths;
+    } else {
+      // Work backwards: sell = purchase + floor((current - purchase) / 2)
+      // Try to find purchase price that gives desired sell price
+      calculatedPurchasePrice = newSellPriceInTenths;
+      const profitPerRise = Math.floor((currentPrice - calculatedPurchasePrice) / 2);
+      const resultingSellPrice = calculatedPurchasePrice + profitPerRise;
+      
+      // Adjust if needed
+      if (resultingSellPrice !== newSellPriceInTenths) {
+        calculatedPurchasePrice = newSellPriceInTenths;
+      }
+    }
     
     // Update local state immediately for responsive UI
     setManualLineup(prev => prev.map(pick => {
       if (pick.element === playerId) {
         return {
           ...pick,
-          purchase_price: Math.round(newBuyPrice * 10) // Convert to API format (tenths)
+          purchase_price: calculatedPurchasePrice
         };
       }
       return pick;
     }));
-    setEditingBuyPrice(null);
-    setEditBuyPriceValue("");
+    setEditingSellPrice(null);
+    setEditSellPriceValue("");
     
     // Auto-save to database
     try {
@@ -1346,7 +1375,7 @@ export default function TransferPlanner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           playerId: playerId,
-          buyPrice: Math.round(newBuyPrice * 10) // Store in API format (tenths)
+          buyPrice: calculatedPurchasePrice // Store purchase price
         })
       });
       
@@ -1355,32 +1384,32 @@ export default function TransferPlanner() {
         await refetchBuyPriceOverrides();
         
         toast({
-          title: "Buy Price Saved",
-          description: `Buy price set to £${newBuyPrice.toFixed(1)}m and saved`
+          title: "Sell Price Updated",
+          description: `Sell price set to £${newSellPrice.toFixed(1)}m and saved`
         });
       } else {
-        throw new Error("Failed to save buy price");
+        throw new Error("Failed to save sell price");
       }
     } catch (error) {
-      console.error("Failed to save buy price:", error);
+      console.error("Failed to save sell price:", error);
       toast({
         title: "Error",
-        description: "Failed to save buy price. Please try again.",
+        description: "Failed to save sell price. Please try again.",
         variant: "destructive"
       });
     }
   };
 
-  // Start editing buy price
-  const startEditingBuyPrice = (playerId: number, currentBuyPrice: number) => {
-    setEditingBuyPrice(playerId);
-    setEditBuyPriceValue((currentBuyPrice / 10).toFixed(1));
+  // Start editing sell price
+  const startEditingSellPrice = (playerId: number, currentSellPrice: number) => {
+    setEditingSellPrice(playerId);
+    setEditSellPriceValue(currentSellPrice.toFixed(1));
   };
 
-  // Cancel editing buy price
-  const cancelEditingBuyPrice = () => {
-    setEditingBuyPrice(null);
-    setEditBuyPriceValue("");
+  // Cancel editing sell price
+  const cancelEditingSellPrice = () => {
+    setEditingSellPrice(null);
+    setEditSellPriceValue("");
   };
 
   // Calculate initial bank for the selected gameweek (before any transfers in that GW)
@@ -3801,19 +3830,19 @@ export default function TransferPlanner() {
                                       })()}
                                     </div>
                                     <div className="text-[10px] text-muted-foreground">
-                                      {editingBuyPrice === pick.element ? (
+                                      {editingSellPrice === pick.element ? (
                                         <div className="flex items-center gap-1">
-                                          <span>Buy: £</span>
+                                          <span>Sell: £</span>
                                           <Input
                                             type="number"
                                             step="0.1"
                                             min="4.0"
                                             max="15.0"
-                                            value={editBuyPriceValue}
-                                            onChange={(e) => setEditBuyPriceValue(e.target.value)}
+                                            value={editSellPriceValue}
+                                            onChange={(e) => setEditSellPriceValue(e.target.value)}
                                             className="h-5 w-14 text-[10px] p-1"
                                             autoFocus
-                                            data-testid={`input-buy-price-${pick.element}`}
+                                            data-testid={`input-sell-price-${pick.element}`}
                                           />
                                           <span>m</span>
                                           <Button
@@ -3821,12 +3850,12 @@ export default function TransferPlanner() {
                                             variant="ghost"
                                             className="h-5 w-5 text-green-600 hover:bg-green-50"
                                             onClick={() => {
-                                              const price = parseFloat(editBuyPriceValue);
+                                              const price = parseFloat(editSellPriceValue);
                                               if (!isNaN(price) && price >= 4.0 && price <= 15.0) {
-                                                updateBuyPrice(pick.element, price);
+                                                updateSellPrice(pick.element, price);
                                               }
                                             }}
-                                            data-testid={`button-save-buy-price-${pick.element}`}
+                                            data-testid={`button-save-sell-price-${pick.element}`}
                                           >
                                             <Check className="h-3 w-3" />
                                           </Button>
@@ -3834,25 +3863,24 @@ export default function TransferPlanner() {
                                             size="icon"
                                             variant="ghost"
                                             className="h-5 w-5 text-red-600 hover:bg-red-50"
-                                            onClick={cancelEditingBuyPrice}
-                                            data-testid={`button-cancel-buy-price-${pick.element}`}
+                                            onClick={cancelEditingSellPrice}
+                                            data-testid={`button-cancel-sell-price-${pick.element}`}
                                           >
                                             <X className="h-3 w-3" />
                                           </Button>
                                         </div>
                                       ) : (
                                         <div className="flex gap-2 items-center">
-                                          <span>Buy: £{((pick.purchase_price || player.now_cost) / 10).toFixed(1)}m</span>
+                                          <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                           <Button
                                             size="icon"
                                             variant="ghost"
                                             className="h-4 w-4 p-0 hover:bg-blue-50"
-                                            onClick={() => startEditingBuyPrice(pick.element, pick.purchase_price || player.now_cost)}
-                                            data-testid={`button-edit-buy-price-${pick.element}`}
+                                            onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))}
+                                            data-testid={`button-edit-sell-price-${pick.element}`}
                                           >
                                             <Edit2 className="h-2.5 w-2.5 text-blue-600" />
                                           </Button>
-                                          <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                         </div>
                                       )}
                                     </div>
@@ -4040,19 +4068,19 @@ export default function TransferPlanner() {
                               })()}
                             </div>
                             <div className="text-[10px] text-muted-foreground">
-                              {editingBuyPrice === pick.element ? (
+                              {editingSellPrice === pick.element ? (
                                 <div className="flex items-center gap-1">
-                                  <span>Buy: £</span>
+                                  <span>Sell: £</span>
                                   <Input
                                     type="number"
                                     step="0.1"
                                     min="4.0"
                                     max="15.0"
-                                    value={editBuyPriceValue}
-                                    onChange={(e) => setEditBuyPriceValue(e.target.value)}
+                                    value={editSellPriceValue}
+                                    onChange={(e) => setEditSellPriceValue(e.target.value)}
                                     className="h-5 w-14 text-[10px] p-1"
                                     autoFocus
-                                    data-testid={`input-buy-price-${pick.element}`}
+                                    data-testid={`input-sell-price-${pick.element}`}
                                   />
                                   <span>m</span>
                                   <Button
@@ -4060,12 +4088,12 @@ export default function TransferPlanner() {
                                     variant="ghost"
                                     className="h-5 w-5 text-green-600 hover:bg-green-50"
                                     onClick={() => {
-                                      const price = parseFloat(editBuyPriceValue);
+                                      const price = parseFloat(editSellPriceValue);
                                       if (!isNaN(price) && price >= 4.0 && price <= 15.0) {
-                                        updateBuyPrice(pick.element, price);
+                                        updateSellPrice(pick.element, price);
                                       }
                                     }}
-                                    data-testid={`button-save-buy-price-${pick.element}`}
+                                    data-testid={`button-save-sell-price-${pick.element}`}
                                   >
                                     <Check className="h-3 w-3" />
                                   </Button>
@@ -4073,25 +4101,24 @@ export default function TransferPlanner() {
                                     size="icon"
                                     variant="ghost"
                                     className="h-5 w-5 text-red-600 hover:bg-red-50"
-                                    onClick={cancelEditingBuyPrice}
-                                    data-testid={`button-cancel-buy-price-${pick.element}`}
+                                    onClick={cancelEditingSellPrice}
+                                    data-testid={`button-cancel-sell-price-${pick.element}`}
                                   >
                                     <X className="h-3 w-3" />
                                   </Button>
                                 </div>
                               ) : (
                                 <div className="flex gap-2 items-center">
-                                  <span>Buy: £{((pick.purchase_price || player.now_cost) / 10).toFixed(1)}m</span>
+                                  <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                   <Button
                                     size="icon"
                                     variant="ghost"
                                     className="h-4 w-4 p-0 hover:bg-blue-50"
-                                    onClick={() => startEditingBuyPrice(pick.element, pick.purchase_price || player.now_cost)}
-                                    data-testid={`button-edit-buy-price-${pick.element}`}
+                                    onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))}
+                                    data-testid={`button-edit-sell-price-${pick.element}`}
                                   >
                                     <Edit2 className="h-2.5 w-2.5 text-blue-600" />
                                   </Button>
-                                  <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                 </div>
                               )}
                             </div>
@@ -4337,32 +4364,33 @@ export default function TransferPlanner() {
                                       </div>
                                     )}
 
-                                    {/* Price Info - Single Line */}
+                                    {/* Price Info - Sell Price Only */}
                                     <div className="text-[9px] font-medium" style={{ color: textColor }}>
-                                      {editingBuyPrice === pick.element ? (
+                                      {editingSellPrice === pick.element ? (
                                         <div className="flex items-center justify-center gap-0.5">
+                                          <span>£</span>
                                           <Input
                                             type="number"
                                             step="0.1"
                                             min="4.0"
                                             max="15.0"
-                                            value={editBuyPriceValue}
-                                            onChange={(e) => setEditBuyPriceValue(e.target.value)}
+                                            value={editSellPriceValue}
+                                            onChange={(e) => setEditSellPriceValue(e.target.value)}
                                             className="h-4 w-12 text-[9px] p-0.5 text-black"
                                             autoFocus
-                                            data-testid={`pitch-input-buy-price-${pick.element}`}
+                                            data-testid={`pitch-input-sell-price-${pick.element}`}
                                           />
                                           <Button
                                             size="icon"
                                             variant="ghost"
                                             className="h-4 w-4 text-green-600 hover:bg-green-50 p-0"
                                             onClick={() => {
-                                              const price = parseFloat(editBuyPriceValue);
+                                              const price = parseFloat(editSellPriceValue);
                                               if (!isNaN(price) && price >= 4.0 && price <= 15.0) {
-                                                updateBuyPrice(pick.element, price);
+                                                updateSellPrice(pick.element, price);
                                               }
                                             }}
-                                            data-testid={`pitch-button-save-buy-price-${pick.element}`}
+                                            data-testid={`pitch-button-save-sell-price-${pick.element}`}
                                           >
                                             <Check className="h-2.5 w-2.5" />
                                           </Button>
@@ -4370,25 +4398,24 @@ export default function TransferPlanner() {
                                             size="icon"
                                             variant="ghost"
                                             className="h-4 w-4 text-red-600 hover:bg-red-50 p-0"
-                                            onClick={cancelEditingBuyPrice}
-                                            data-testid={`pitch-button-cancel-buy-price-${pick.element}`}
+                                            onClick={cancelEditingSellPrice}
+                                            data-testid={`pitch-button-cancel-sell-price-${pick.element}`}
                                           >
                                             <X className="h-2.5 w-2.5" />
                                           </Button>
                                         </div>
                                       ) : (
                                         <div className="flex gap-0.5 items-center justify-center">
-                                          <span>B:{((pick.purchase_price || player.now_cost) / 10).toFixed(1)}</span>
+                                          <span>£{getSellingPrice(pick).toFixed(1)}m</span>
                                           <Button
                                             size="icon"
                                             variant="ghost"
                                             className="h-3 w-3 p-0 hover:bg-white/20"
-                                            onClick={() => startEditingBuyPrice(pick.element, pick.purchase_price || player.now_cost)}
-                                            data-testid={`pitch-button-edit-buy-price-${pick.element}`}
+                                            onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))}
+                                            data-testid={`pitch-button-edit-sell-price-${pick.element}`}
                                           >
                                             <Edit2 className="h-2 w-2" style={{ color: textColor }} />
                                           </Button>
-                                          <span>S:{getSellingPrice(pick).toFixed(1)}</span>
                                         </div>
                                       )}
                                     </div>
@@ -4571,33 +4598,33 @@ export default function TransferPlanner() {
                                 </div>
                               )}
                               
-                              {/* Price Info */}
+                              {/* Price Info - Sell Price Only */}
                               <div className="text-[11px] font-medium" style={{ color: textColor }}>
-                                {editingBuyPrice === pick.element ? (
+                                {editingSellPrice === pick.element ? (
                                   <div className="flex items-center justify-center gap-1">
-                                    <span>£</span>
+                                    <span>Sell: £</span>
                                     <Input
                                       type="number"
                                       step="0.1"
                                       min="4.0"
                                       max="15.0"
-                                      value={editBuyPriceValue}
-                                      onChange={(e) => setEditBuyPriceValue(e.target.value)}
+                                      value={editSellPriceValue}
+                                      onChange={(e) => setEditSellPriceValue(e.target.value)}
                                       className="h-5 w-14 text-[11px] p-1 text-black"
                                       autoFocus
-                                      data-testid={`pitch-bench-input-buy-price-${pick.element}`}
+                                      data-testid={`pitch-bench-input-sell-price-${pick.element}`}
                                     />
                                     <Button
                                       size="icon"
                                       variant="ghost"
                                       className="h-5 w-5 text-green-600 hover:bg-green-50 p-0"
                                       onClick={() => {
-                                        const price = parseFloat(editBuyPriceValue);
+                                        const price = parseFloat(editSellPriceValue);
                                         if (!isNaN(price) && price >= 4.0 && price <= 15.0) {
-                                          updateBuyPrice(pick.element, price);
+                                          updateSellPrice(pick.element, price);
                                         }
                                       }}
-                                      data-testid={`pitch-bench-button-save-buy-price-${pick.element}`}
+                                      data-testid={`pitch-bench-button-save-sell-price-${pick.element}`}
                                     >
                                       <Check className="h-3 w-3" />
                                     </Button>
@@ -4605,27 +4632,26 @@ export default function TransferPlanner() {
                                       size="icon"
                                       variant="ghost"
                                       className="h-5 w-5 text-red-600 hover:bg-red-50 p-0"
-                                      onClick={cancelEditingBuyPrice}
-                                      data-testid={`pitch-bench-button-cancel-buy-price-${pick.element}`}
+                                      onClick={cancelEditingSellPrice}
+                                      data-testid={`pitch-bench-button-cancel-sell-price-${pick.element}`}
                                     >
                                       <X className="h-3 w-3" />
                                     </Button>
                                   </div>
                                 ) : (
                                   <div className="flex gap-1 items-center justify-center">
-                                    <span>Buy: £{((pick.purchase_price || player.now_cost) / 10).toFixed(1)}m</span>
+                                    <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                     <Button
                                       size="icon"
                                       variant="ghost"
                                       className="h-4 w-4 p-0 hover:bg-white/20"
-                                      onClick={() => startEditingBuyPrice(pick.element, pick.purchase_price || player.now_cost)}
-                                      data-testid={`pitch-bench-button-edit-buy-price-${pick.element}`}
+                                      onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))}
+                                      data-testid={`pitch-bench-button-edit-sell-price-${pick.element}`}
                                     >
                                       <Edit2 className="h-2.5 w-2.5" style={{ color: textColor }} />
                                     </Button>
                                   </div>
                                 )}
-                                <div>Sell: £{getSellingPrice(pick).toFixed(1)}m</div>
                               </div>
                               
                               {/* Action Buttons for Bench */}
