@@ -377,16 +377,27 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     );
   }
 
-  // Get next 6 gameweeks
-  const getNextGameweeks = () => {
+  // Get next 6 gameweeks (for the bottom table)
+  const getNextGameweeksForTable = () => {
     if (!bootstrapData) return [];
     
-    const currentEvent = bootstrapData.events.find(e => e.is_current);
-    const nextEvent = bootstrapData.events.find(e => e.is_next);
+    // Find the first gameweek that hasn't finished and isn't current
+    const nextEvent = bootstrapData.events.find(e => !e.finished && !e.is_current);
     
-    let startGW = currentEvent?.id || nextEvent?.id || 1;
-    if (currentEvent?.finished) {
-      startGW = nextEvent?.id || startGW + 1;
+    // Start from the next upcoming gameweek
+    let startGW = nextEvent?.id || 1;
+    
+    // If no next event found, use the gameweek after the current/finished ones
+    if (!nextEvent) {
+      const currentEvent = bootstrapData.events.find(e => e.is_current);
+      if (currentEvent) {
+        startGW = currentEvent.id + 1;
+      } else {
+        const lastFinished = bootstrapData.events.filter(e => e.finished).sort((a, b) => b.id - a.id)[0];
+        if (lastFinished) {
+          startGW = lastFinished.id + 1;
+        }
+      }
     }
     
     const gameweeks = [];
@@ -400,7 +411,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     return gameweeks;
   };
 
-  const nextGameweeks = getNextGameweeks();
+  const nextGameweeks = getNextGameweeksForTable();
 
   // Calculate top 3 players for each gameweek
   const getTop3ForGameweek = (gw: number) => {
