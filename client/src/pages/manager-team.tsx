@@ -36,6 +36,7 @@ import {
   BarChart3,
   ArrowLeftRight
 } from "lucide-react";
+import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 
 type TeamPick = {
   element: number;
@@ -208,6 +209,14 @@ export default function ManagerTeam() {
     queryKey: ['/api/bootstrap-static'],
   });
 
+  // Get fixtures data for pitch view
+  const { data: fixturesData } = useQuery<any>({
+    queryKey: ['/api/fixtures'],
+  });
+
+  // State for view toggle (pitch or list)
+  const [teamView, setTeamView] = useState<"pitch" | "list">("list");
+
   // Function to get completed gameweeks (1-3 only)
   const getCompletedGameweeks = () => {
     if (!bootstrapData?.events) return [1, 2, 3]; // Default fallback to show 1-3
@@ -255,6 +264,107 @@ export default function ManagerTeam() {
       default:
         return position.slice(0, 3).toUpperCase();
     }
+  };
+
+  // Helper functions for pitch view
+  const getPlayerTeam = (player: any) => {
+    const playerData = getPlayerData(player.element);
+    return bootstrapData?.teams.find(t => t.id === playerData?.team);
+  };
+
+  const getTeamJerseyColor = (teamId: number): string => {
+    const jerseyColors: Record<number, string> = {
+      1: '#EF0107',      // Arsenal - Red
+      2: '#95BFE5',      // Aston Villa - Claret & Blue (Light Blue)
+      3: '#8B0000',      // Burnley - Dark Red (not in current PL)
+      4: '#8B0000',      // Bournemouth - Dark Red/Black
+      5: '#FDB913',      // Brentford - Red & White (Gold)
+      6: '#0057B8',      // Brighton - Blue & White
+      7: '#034694',      // Chelsea - Dark Blue
+      8: '#1B458F',      // Crystal Palace - Blue & Pink
+      9: '#003399',      // Everton - Dark Blue
+      10: '#6CABDD',     // Fulham - White & Black (Light Blue)
+      11: '#D71920',     // Liverpool - Red
+      12: '#6CABDD',     // Man City - Sky Blue
+      13: '#DA291C',     // Man Utd - Red
+      14: '#241F20',     // Newcastle - Black & White
+      15: '#EF0107',     // Nottm Forest - Red
+      16: '#DA020E',     // Nottm Forest - Red
+      17: '#1B458F',     // Sunderland - Blue (not in current PL)
+      18: '#FFFFFF',     // Spurs (Tottenham) - White
+      19: '#FBEE23',     // West Ham - Claret & Blue (Gold)
+      20: '#FDB913'      // Wolves - Gold & Black
+    };
+    
+    return jerseyColors[teamId] || '#9CA3AF';
+  };
+
+  const getTextColor = (backgroundColor: string): string => {
+    const hex = backgroundColor.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    
+    return luminance > 0.5 ? '#000000' : '#FFFFFF';
+  };
+
+  const getCurrentGameweek = (): number => {
+    const currentEvent = bootstrapData?.events.find(e => e.is_current);
+    return currentEvent?.id || 1;
+  };
+
+  const getNextFixtures = (teamId: number, count: number = 3) => {
+    if (!fixturesData || !Array.isArray(fixturesData)) {
+      return [];
+    }
+    
+    const currentGW = getCurrentGameweek();
+    
+    return fixturesData
+      .filter((fixture: any) => {
+        const isTeamInFixture = fixture.team_h === teamId || fixture.team_a === teamId;
+        const isUpcoming = !fixture.finished && fixture.event >= currentGW;
+        return isTeamInFixture && isUpcoming;
+      })
+      .slice(0, count)
+      .map((fixture: any) => {
+        const isHome = fixture.team_h === teamId;
+        const opponentId = isHome ? fixture.team_a : fixture.team_h;
+        const opponent = bootstrapData?.teams.find(t => t.id === opponentId);
+        const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+        
+        return {
+          opponent: opponent?.short_name || 'TBD',
+          isHome,
+          difficulty: difficulty || 3,
+          gameweek: fixture.event
+        };
+      });
+  };
+
+  const getDifficultyColor = (difficulty: number): string => {
+    if (difficulty === 1) return "bg-green-600 text-white";
+    if (difficulty === 2) return "bg-green-100 text-green-800";
+    if (difficulty === 3) return "bg-gray-100 text-gray-800";
+    if (difficulty === 4) return "bg-red-100 text-red-800";
+    return "bg-red-600 text-white";
+  };
+
+  const sortPlayersByPosition = (picks: TeamPick[]) => {
+    return picks.sort((a, b) => {
+      const playerA = getPlayerData(a.element);
+      const playerB = getPlayerData(b.element);
+      
+      if (!playerA || !playerB) return 0;
+      
+      if (playerA.element_type !== playerB.element_type) {
+        return playerA.element_type - playerB.element_type;
+      }
+      
+      return (playerB.now_cost || 0) - (playerA.now_cost || 0);
+    });
   };
 
   if (isLoading) {
@@ -321,6 +431,28 @@ export default function ManagerTeam() {
 
   const captain = enrichedPicks.find(p => p.is_captain);
   const viceCaptain = enrichedPicks.find(p => p.is_vice_captain);
+  
+  // Map enriched picks to PitchPlayer format for pitch view
+  const pitchPlayers: PitchPlayer[] = startingEleven.map(pick => {
+    const playerData = getPlayerData(pick.element);
+    const teamData = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    
+    return {
+      element: pick.element,
+      element_type: pick.element_type,
+      position: typeof pick.position === 'number' ? pick.position : parseInt(pick.position || '0'),
+      is_captain: pick.is_captain,
+      is_vice_captain: pick.is_vice_captain,
+      multiplier: pick.multiplier,
+      player_name: pick.player_name,
+      web_name: playerData?.web_name,
+      team_name: pick.team_name,
+      team_short_name: teamData?.short_name,
+      team_id: playerData?.team,
+      event_points: pick.event_points,
+      in_dreamteam: playerData?.in_dreamteam || false,
+    };
+  });
 
   // Get manager name from general info or team data
   const managerName = teamData?.general_info ? 
@@ -508,7 +640,38 @@ export default function ManagerTeam() {
               <div>
                 <h2 className="text-xl font-semibold mb-4">Team Squad</h2>
                 
-                {/* Team Formation Display */}
+                {/* View Toggle */}
+                <div className="flex justify-center gap-2 mb-6">
+                  <Button
+                    variant={teamView === "pitch" ? "default" : "outline"}
+                    onClick={() => setTeamView("pitch")}
+                    className="flex items-center gap-2"
+                    data-testid="button-team-pitch-view"
+                  >
+                    <Target className="h-4 w-4" />
+                    Pitch View
+                  </Button>
+                  <Button
+                    variant={teamView === "list" ? "default" : "outline"}
+                    onClick={() => setTeamView("list")}
+                    className="flex items-center gap-2"
+                    data-testid="button-team-list-view"
+                  >
+                    <Users className="h-4 w-4" />
+                    List View
+                  </Button>
+                </div>
+
+                {/* Pitch View */}
+                {teamView === "pitch" && (
+                  <PitchView 
+                    players={pitchPlayers}
+                    getNextFixtures={getNextFixtures}
+                  />
+                )}
+
+                {/* List View */}
+                {teamView === "list" && (
                 <div className="grid gap-6 lg:grid-cols-5">
                   {/* Starting XI */}
                   <div className="lg:col-span-3">
@@ -650,6 +813,7 @@ export default function ManagerTeam() {
                     </Card>
                   </div>
                 </div>
+                )}
               </div>
             </>
           )}
