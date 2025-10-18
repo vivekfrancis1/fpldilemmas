@@ -1066,16 +1066,16 @@ export default function MyDashboard() {
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs>
                                           <clipPath id={`jersey-clip-${player.id}`}>
-                                            <path d="M 58 10 L 10 10 L 10 50 L 18 65 L 30 72 L 30 30 L 58 30 L 58 10 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 10 L 222 30 L 250 30 L 250 72 L 262 65 L 270 50 L 270 10 L 222 10 L 222 30 L 222 185 L 58 185 L 58 30 L 58 10 Z" />
+                                            <path d="M 58 10 L 5 10 L 5 75 L 25 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 255 85 L 275 75 L 275 10 L 222 10 L 222 30 L 222 185 L 58 185 L 58 30 L 58 10 Z" />
                                           </clipPath>
                                         </defs>
                                         
                                         {/* Jersey background */}
                                         <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-${player.id})`} />
                                         
-                                        {/* Jersey outline with shoulder sleeves fully attached */}
+                                        {/* Jersey outline with shoulders and arms touching the body */}
                                         <path 
-                                          d="M 58 10 L 10 10 L 10 50 L 18 65 L 30 72 L 30 30 L 58 30 L 58 10 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 10 L 222 30 L 250 30 L 250 72 L 262 65 L 270 50 L 270 10 L 222 10 L 222 30 L 222 185 L 58 185 L 58 30 L 58 10 Z" 
+                                          d="M 58 10 L 5 10 L 5 75 L 25 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 255 85 L 275 75 L 275 10 L 222 10 L 222 30 L 222 185 L 58 185 L 58 30 L 58 10 Z" 
                                           fill="none" 
                                           stroke="rgba(0,0,0,0.15)" 
                                           strokeWidth="1.5"
@@ -1112,17 +1112,17 @@ export default function MyDashboard() {
                                         )}
                                         
                                         {/* Team Name */}
-                                        <text x="140" y="85" fontSize="16" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="75" fontSize="16" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {playerTeam?.short_name || 'UNK'}
                                         </text>
                                         
                                         {/* Player Name */}
-                                        <text x="140" y="110" fontSize="18" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="98" fontSize="18" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {player.web_name}
                                         </text>
                                         
                                         {/* Points */}
-                                        <text x="140" y="145" fontSize="36" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="130" fontSize="36" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
                                         </text>
                                         
@@ -1134,17 +1134,17 @@ export default function MyDashboard() {
                                           return (
                                             <g key={idx}>
                                               <rect 
-                                                x={64 + (idx * 52)} 
-                                                y="162" 
-                                                width="46" 
-                                                height="20" 
-                                                rx="4" 
+                                                x={61 + (idx * 53)} 
+                                                y="155" 
+                                                width="50" 
+                                                height="24" 
+                                                rx="5" 
                                                 fill={diffColor}
                                               />
                                               <text 
-                                                x={87 + (idx * 52)} 
-                                                y="175" 
-                                                fontSize="13" 
+                                                x={86 + (idx * 53)} 
+                                                y="170" 
+                                                fontSize="14" 
                                                 fontWeight="bold" 
                                                 textAnchor="middle" 
                                                 fill="white"
