@@ -1034,15 +1034,16 @@ export default function MyDashboard() {
                                         className="rounded-lg shadow-xl p-2 relative" 
                                         style={{ backgroundColor: jerseyColor }}
                                       >
-                                        {/* Captain/Vice-Captain Badge */}
-                                        {(pick.is_captain || pick.is_vice_captain) && (
-                                          <div className="absolute -top-1 -right-1 z-10">
-                                            {pick.is_captain && (
-                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
-                                            )}
-                                            {pick.is_vice_captain && (
-                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
-                                            )}
+                                        {/* Captain Badge - Top Left */}
+                                        {pick.is_captain && (
+                                          <div className="absolute top-2 left-2 z-10">
+                                            <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
+                                          </div>
+                                        )}
+                                        {/* Vice Captain Badge - Top Right */}
+                                        {pick.is_vice_captain && (
+                                          <div className="absolute top-2 right-2 z-10">
+                                            <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
                                           </div>
                                         )}
                                         
@@ -1113,14 +1114,16 @@ export default function MyDashboard() {
                                         className="rounded-lg shadow-xl p-2 relative" 
                                         style={{ backgroundColor: jerseyColor }}
                                       >
-                                        {(pick.is_captain || pick.is_vice_captain) && (
-                                          <div className="absolute -top-1 -right-1 z-10">
-                                            {pick.is_captain && (
-                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
-                                            )}
-                                            {pick.is_vice_captain && (
-                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
-                                            )}
+                                        {/* Captain Badge - Top Left */}
+                                        {pick.is_captain && (
+                                          <div className="absolute top-2 left-2 z-10">
+                                            <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
+                                          </div>
+                                        )}
+                                        {/* Vice Captain Badge - Top Right */}
+                                        {pick.is_vice_captain && (
+                                          <div className="absolute top-2 right-2 z-10">
+                                            <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
                                           </div>
                                         )}
                                         <div className="text-center mb-1">
@@ -1183,14 +1186,16 @@ export default function MyDashboard() {
                                         className="rounded-lg shadow-xl p-2 relative" 
                                         style={{ backgroundColor: jerseyColor }}
                                       >
-                                        {(pick.is_captain || pick.is_vice_captain) && (
-                                          <div className="absolute -top-1 -right-1 z-10">
-                                            {pick.is_captain && (
-                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
-                                            )}
-                                            {pick.is_vice_captain && (
-                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
-                                            )}
+                                        {/* Captain Badge - Top Left */}
+                                        {pick.is_captain && (
+                                          <div className="absolute top-2 left-2 z-10">
+                                            <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
+                                          </div>
+                                        )}
+                                        {/* Vice Captain Badge - Top Right */}
+                                        {pick.is_vice_captain && (
+                                          <div className="absolute top-2 right-2 z-10">
+                                            <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
                                           </div>
                                         )}
                                         <div className="text-center mb-1">
@@ -1253,14 +1258,16 @@ export default function MyDashboard() {
                                         className="rounded-lg shadow-xl p-2 relative" 
                                         style={{ backgroundColor: jerseyColor }}
                                       >
-                                        {(pick.is_captain || pick.is_vice_captain) && (
-                                          <div className="absolute -top-1 -right-1 z-10">
-                                            {pick.is_captain && (
-                                              <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
-                                            )}
-                                            {pick.is_vice_captain && (
-                                              <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
-                                            )}
+                                        {/* Captain Badge - Top Left */}
+                                        {pick.is_captain && (
+                                          <div className="absolute top-2 left-2 z-10">
+                                            <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
+                                          </div>
+                                        )}
+                                        {/* Vice Captain Badge - Top Right */}
+                                        {pick.is_vice_captain && (
+                                          <div className="absolute top-2 right-2 z-10">
+                                            <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
                                           </div>
                                         )}
                                         <div className="text-center mb-1">
