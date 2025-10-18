@@ -1060,22 +1060,22 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-40" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-44" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       {/* Jersey-Shaped Card */}
-                                      <svg viewBox="0 0 210 150" className="w-full drop-shadow-xl">
+                                      <svg viewBox="0 0 280 150" className="w-full drop-shadow-xl">
                                         <defs>
                                           <clipPath id={`jersey-clip-${player.id}`}>
-                                            <path d="M 35 8 L 20 8 Q 12 8 9 13 L 5 22 Q 2 28 5 32 L 15 42 L 25 47 L 25 22 L 35 19 L 42 8 L 68 8 Q 72 8 75 13 L 82 18 L 90 21 Q 98 21 105 21 L 113 18 L 120 13 Q 123 8 127 8 L 153 8 L 160 19 L 170 22 L 170 47 L 180 42 L 190 32 Q 193 28 190 22 L 186 13 Q 183 8 175 8 L 160 8 L 153 19 L 153 145 L 42 145 L 42 19 L 35 8 Z" />
+                                            <path d="M 50 10 L 30 10 Q 18 10 14 16 L 8 28 Q 4 36 8 42 L 20 55 L 32 62 L 32 28 L 50 24 L 58 10 L 92 10 Q 97 10 101 16 L 110 23 L 120 27 Q 130 27 140 27 L 150 27 Q 160 27 170 23 L 179 16 Q 183 10 188 10 L 222 10 L 230 24 L 248 28 L 248 62 L 260 55 L 272 42 Q 276 36 272 28 L 266 16 Q 262 10 250 10 L 230 10 L 222 24 L 222 145 L 58 145 L 58 24 L 50 10 Z" />
                                           </clipPath>
                                         </defs>
                                         
                                         {/* Jersey background */}
-                                        <rect width="210" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-${player.id})`} />
+                                        <rect width="280" height="150" fill={jerseyColor} clipPath={`url(#jersey-clip-${player.id})`} />
                                         
-                                        {/* Jersey outline with enhanced collar and sleeves */}
+                                        {/* Jersey outline with enhanced collar and sleeves that connect seamlessly */}
                                         <path 
-                                          d="M 35 8 L 20 8 Q 12 8 9 13 L 5 22 Q 2 28 5 32 L 15 42 L 25 47 L 25 22 L 35 19 L 42 8 L 68 8 Q 72 8 75 13 L 82 18 L 90 21 Q 98 21 105 21 L 113 18 L 120 13 Q 123 8 127 8 L 153 8 L 160 19 L 170 22 L 170 47 L 180 42 L 190 32 Q 193 28 190 22 L 186 13 Q 183 8 175 8 L 160 8 L 153 19 L 153 145 L 42 145 L 42 19 L 35 8 Z" 
+                                          d="M 50 10 L 30 10 Q 18 10 14 16 L 8 28 Q 4 36 8 42 L 20 55 L 32 62 L 32 28 L 50 24 L 58 10 L 92 10 Q 97 10 101 16 L 110 23 L 120 27 Q 130 27 140 27 L 150 27 Q 160 27 170 23 L 179 16 Q 183 10 188 10 L 222 10 L 230 24 L 248 28 L 248 62 L 260 55 L 272 42 Q 276 36 272 28 L 266 16 Q 262 10 250 10 L 230 10 L 222 24 L 222 145 L 58 145 L 58 24 L 50 10 Z" 
                                           fill="none" 
                                           stroke="rgba(0,0,0,0.15)" 
                                           strokeWidth="1.5"
@@ -1083,7 +1083,7 @@ export default function MyDashboard() {
                                         
                                         {/* V-neck collar detail */}
                                         <path 
-                                          d="M 68 8 L 75 15 L 82 19 L 90 21 Q 98 21 105 21 L 113 19 L 120 15 L 127 8" 
+                                          d="M 92 10 L 101 18 L 110 23 L 120 26 Q 130 26 140 26 L 150 26 Q 160 26 170 23 L 179 18 L 188 10" 
                                           fill="none" 
                                           stroke="rgba(255,255,255,0.3)" 
                                           strokeWidth="1.5"
@@ -1092,37 +1092,37 @@ export default function MyDashboard() {
                                         {/* Captain/Vice Captain Badge */}
                                         {pick.is_captain && (
                                           <g>
-                                            <circle cx="50" cy="32" r="10" fill="#FCD34D" stroke="white" strokeWidth="2.5" />
-                                            <text x="50" y="37" fontSize="12" fontWeight="bold" textAnchor="middle" fill="black">C</text>
+                                            <circle cx="68" cy="38" r="11" fill="#FCD34D" stroke="white" strokeWidth="2.5" />
+                                            <text x="68" y="44" fontSize="13" fontWeight="bold" textAnchor="middle" fill="black">C</text>
                                           </g>
                                         )}
                                         {pick.is_vice_captain && (
                                           <g>
-                                            <circle cx="50" cy="32" r="10" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" />
-                                            <text x="50" y="37" fontSize="12" fontWeight="bold" textAnchor="middle" fill="black">V</text>
+                                            <circle cx="68" cy="38" r="11" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" />
+                                            <text x="68" y="44" fontSize="13" fontWeight="bold" textAnchor="middle" fill="black">V</text>
                                           </g>
                                         )}
                                         
                                         {/* Dream Team Star Badge */}
                                         {player.in_dreamteam && (
                                           <g>
-                                            <circle cx="145" cy="32" r="10" fill="#A855F7" stroke="white" strokeWidth="2.5" />
-                                            <path d="M 145 25 L 147 30 L 152 30 L 148 33 L 150 38 L 145 35 L 140 38 L 142 33 L 138 30 L 143 30 Z" fill="white" />
+                                            <circle cx="212" cy="38" r="11" fill="#A855F7" stroke="white" strokeWidth="2.5" />
+                                            <path d="M 212 30 L 214 36 L 220 36 L 215 40 L 217 46 L 212 42 L 207 46 L 209 40 L 204 36 L 210 36 Z" fill="white" />
                                           </g>
                                         )}
                                         
                                         {/* Team Name */}
-                                        <text x="97.5" y="58" fontSize="13" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="70" fontSize="15" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {playerTeam?.short_name || 'UNK'}
                                         </text>
                                         
                                         {/* Player Name */}
-                                        <text x="97.5" y="77" fontSize="15" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="92" fontSize="17" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {player.web_name}
                                         </text>
                                         
                                         {/* Points */}
-                                        <text x="97.5" y="107" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="118" fontSize="34" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {(player.event_points || 0) * (pick.is_captain ? 2 : 1)}
                                         </text>
                                         
@@ -1134,17 +1134,17 @@ export default function MyDashboard() {
                                           return (
                                             <g key={idx}>
                                               <rect 
-                                                x={45 + (idx * 40)} 
-                                                y="122" 
-                                                width="35" 
-                                                height="20" 
+                                                x={64 + (idx * 52)} 
+                                                y="128" 
+                                                width="46" 
+                                                height="18" 
                                                 rx="4" 
                                                 fill={diffColor}
                                               />
                                               <text 
-                                                x={62.5 + (idx * 40)} 
-                                                y="135" 
-                                                fontSize="11" 
+                                                x={87 + (idx * 52)} 
+                                                y="140" 
+                                                fontSize="12" 
                                                 fontWeight="bold" 
                                                 textAnchor="middle" 
                                                 fill="white"
