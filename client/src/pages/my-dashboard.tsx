@@ -702,13 +702,13 @@ export default function MyDashboard() {
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium text-amber-600 mb-1">Overall Rank</p>
                           <p className="text-xl sm:text-2xl font-bold text-amber-900">{formatRank(managerData.summary_overall_rank)}</p>
-                          {getRankChange() !== null && (
-                            <div className={`flex items-center text-xs mt-1 ${getRankChange()! > 0 ? 'text-green-600' : getRankChange()! < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                          {getRankChange() !== null && getRankChange() !== 0 && (
+                            <div className={`flex items-center text-xs mt-1 ${getRankChange()! > 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {getRankChange()! > 0 ? (
                                 <TrendingUp className="h-3 w-3 mr-1 flex-shrink-0" />
-                              ) : getRankChange()! < 0 ? (
+                              ) : (
                                 <TrendingDown className="h-3 w-3 mr-1 flex-shrink-0" />
-                              ) : null}
+                              )}
                               <span className="font-medium">
                                 {getRankChange()! > 0 ? '+' : ''}{formatRank(getRankChange()!)}
                               </span>
@@ -887,7 +887,7 @@ export default function MyDashboard() {
                           <div className="min-w-0 flex-1">
                             <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Transfers</p>
                             <p className="text-xl sm:text-2xl font-bold text-blue-900 truncate">
-                              {teamData.entry_history?.event_transfers || 0}/1
+                              {teamData.entry_history?.event_transfers || 0}
                             </p>
                             <p className="text-xs text-gray-600 mt-0.5 truncate">
                               {teamData.entry_history?.event_transfers || 0} made / 1 free
