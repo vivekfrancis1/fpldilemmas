@@ -5318,64 +5318,32 @@ export default function TransferPlanner() {
                                 const textColor = hexTextColor === '#000000' ? 'text-black' : 'text-white';
 
                                 return (
-                                  <div
-                                    key={player.element}
-                                    className={`relative w-24 rounded-lg overflow-hidden ${
-                                      player.isCaptain ? 'ring-2 ring-yellow-400' :
-                                      player.isViceCaptain ? 'ring-2 ring-blue-400' :
-                                      pick && isPlayerTransferredIn(pick) ? 'ring-2 ring-green-500' :
-                                      ''
-                                    }`}
-                                    style={{ backgroundColor: teamColor }}
-                                    data-testid={`auto-pitch-player-${player.element}`}
-                                  >
-                                    {/* Captain/Vice Captain Badge - Top Left */}
-                                    {player.isCaptain && (
-                                      <div className="absolute top-1 left-1 bg-yellow-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                        C
-                                      </div>
-                                    )}
-                                    {player.isViceCaptain && (
-                                      <div className="absolute top-1 left-1 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                                        V
-                                      </div>
-                                    )}
-
-                                    {/* New Transfer Badge - Top Right */}
-                                    {pick && isPlayerTransferredIn(pick) && (
-                                      <div className="absolute top-1 right-1 bg-green-600 text-white text-[8px] font-bold px-1 py-0.5 rounded">
-                                        NEW
-                                      </div>
-                                    )}
-
-                                    <div className={`p-2 ${textColor}`}>
-                                      {/* Team Name */}
-                                      <div className="text-[10px] font-bold opacity-90 text-center">
-                                        {bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}
-                                      </div>
-
-                                      {/* Player Name */}
-                                      <div className="text-xs font-bold truncate text-center">
-                                        {player.web_name}
-                                      </div>
-
-                                      {/* Projected Points */}
-                                      <div className="text-center mt-1">
-                                        <div className="text-sm font-bold">{player.projectedPoints.toFixed(1)}</div>
-                                      </div>
-
-                                      {/* Fixture Info */}
-                                      {(() => {
-                                        const fixture = getPlayerFixture(player.element, selectedGameweek);
-                                        if (fixture) {
-                                          return (
-                                            <div className="text-[10px] opacity-90 text-center mt-1 truncate">
-                                              vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}
-                                            </div>
-                                          );
-                                        }
-                                        return null;
-                                      })()}
+                                  <div key={player.element} className="flex flex-col items-center w-36" data-testid={`auto-pitch-player-${player.element}`}>
+                                    <div className="relative w-full">
+                                      <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
+                                        <defs><clipPath id={`jersey-auto-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
+                                        <rect width="280" height="190" fill={teamColor} clipPath={`url(#jersey-auto-${player.element})`} />
+                                        <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                                        <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                                        {player.isCaptain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
+                                        {player.isViceCaptain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
+                                        {pick && isPlayerTransferredIn(pick) && (<g><circle cx="205" cy="48" r="12" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="205" y="55" fontSize="11" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
+                                        <text x="140" y="68" fontSize="16" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}</text>
+                                        <text x="140" y="88" fontSize="18" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.web_name}</text>
+                                        <text x="140" y="130" fontSize="36" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.projectedPoints.toFixed(1)}</text>
+                                        {(() => {
+                                          const fixture = getPlayerFixture(player.element, selectedGameweek);
+                                          if (fixture) {
+                                            return (
+                                              <g>
+                                                <rect x="90" y="155" width="100" height="24" rx="5" fill="rgba(0,0,0,0.3)" />
+                                                <text x="140" y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                              </g>
+                                            );
+                                          }
+                                          return null;
+                                        })()}
+                                      </svg>
                                     </div>
                                   </div>
                                 );
@@ -5416,60 +5384,32 @@ export default function TransferPlanner() {
                             const textColor = hexTextColor === '#000000' ? 'text-black' : 'text-white';
 
                             return (
-                              <div
-                                key={player.element}
-                                className={`relative w-20 rounded-lg overflow-hidden ${
-                                  player.isCaptain ? 'ring-2 ring-yellow-400' :
-                                  player.isViceCaptain ? 'ring-2 ring-blue-400' :
-                                  pick && isPlayerTransferredIn(pick) ? 'ring-2 ring-green-500' : ''
-                                }`}
-                                style={{ backgroundColor: teamColor }}
-                                data-testid={`auto-pitch-bench-${player.element}`}
-                              >
-                                {/* Captain/Vice Captain Badge - Top Left */}
-                                {player.isCaptain && (
-                                  <div className="absolute top-1 left-1 bg-yellow-500 text-white text-[9px] font-bold px-1 py-0.5 rounded">
-                                    C
-                                  </div>
-                                )}
-                                {player.isViceCaptain && (
-                                  <div className="absolute top-1 left-1 bg-blue-500 text-white text-[9px] font-bold px-1 py-0.5 rounded">
-                                    V
-                                  </div>
-                                )}
-
-                                {/* New Transfer Badge - Top Right */}
-                                {pick && isPlayerTransferredIn(pick) && (
-                                  <div className="absolute top-1 right-1 bg-green-600 text-white text-[8px] font-bold px-1 py-0.5 rounded">
-                                    NEW
-                                  </div>
-                                )}
-
-                                <div className={`p-2 ${textColor}`}>
-                                  {/* Team Name */}
-                                  <div className="text-[9px] font-bold opacity-90 text-center">
-                                    {bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}
-                                  </div>
-
-                                  <div className="text-[10px] font-bold truncate text-center">
-                                    {player.web_name}
-                                  </div>
-                                  <div className="text-center mt-1">
-                                    <div className="text-xs font-bold">{player.projectedPoints.toFixed(1)}</div>
-                                  </div>
-
-                                  {/* Fixture Info */}
-                                  {(() => {
-                                    const fixture = getPlayerFixture(player.element, selectedGameweek);
-                                    if (fixture) {
-                                      return (
-                                        <div className="text-[9px] opacity-90 text-center mt-1 truncate">
-                                          vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}
-                                        </div>
-                                      );
-                                    }
-                                    return null;
-                                  })()}
+                              <div key={player.element} className="flex flex-col items-center w-36 opacity-90" data-testid={`auto-pitch-bench-${player.element}`}>
+                                <div className="relative w-full">
+                                  <svg viewBox="0 0 280 190" className="w-full drop-shadow-lg">
+                                    <defs><clipPath id={`jersey-bench-auto-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
+                                    <rect width="280" height="190" fill={teamColor} clipPath={`url(#jersey-bench-auto-${player.element})`} />
+                                    <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                                    <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                                    {player.isCaptain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
+                                    {player.isViceCaptain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
+                                    {pick && isPlayerTransferredIn(pick) && (<g><circle cx="205" cy="48" r="12" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="205" y="55" fontSize="11" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
+                                    <text x="140" y="68" fontSize="16" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}</text>
+                                    <text x="140" y="88" fontSize="18" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.web_name}</text>
+                                    <text x="140" y="130" fontSize="36" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.projectedPoints.toFixed(1)}</text>
+                                    {(() => {
+                                      const fixture = getPlayerFixture(player.element, selectedGameweek);
+                                      if (fixture) {
+                                        return (
+                                          <g>
+                                            <rect x="90" y="155" width="100" height="24" rx="5" fill="rgba(0,0,0,0.3)" />
+                                            <text x="140" y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                          </g>
+                                        );
+                                      }
+                                      return null;
+                                    })()}
+                                  </svg>
                                 </div>
                               </div>
                             );
