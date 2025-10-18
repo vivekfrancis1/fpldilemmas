@@ -1155,18 +1155,27 @@ export default function MyDashboard() {
                                         className="rounded-lg shadow-xl p-2 relative" 
                                         style={{ backgroundColor: jerseyColor }}
                                       >
-                                        {/* Captain Badge - Top Left */}
+                                        {/* Captain/Vice Captain Badge - Top Left */}
                                         {pick.is_captain && (
                                           <div className="absolute top-2 left-2 z-10">
                                             <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
                                           </div>
                                         )}
-                                        {/* Vice Captain Badge - Top Right */}
                                         {pick.is_vice_captain && (
-                                          <div className="absolute top-2 right-2 z-10">
+                                          <div className="absolute top-2 left-2 z-10">
                                             <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
                                           </div>
                                         )}
+                                        
+                                        {/* Dream Team Star Badge - Top Right */}
+                                        {player.in_dreamteam && (
+                                          <div className="absolute top-2 right-2 z-10">
+                                            <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white">
+                                              <Star className="h-3 w-3 text-white fill-white" />
+                                            </div>
+                                          </div>
+                                        )}
+                                        
                                         <div className="text-center mb-1">
                                           <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
                                             {playerTeam?.short_name || 'UNK'}
@@ -1174,7 +1183,7 @@ export default function MyDashboard() {
                                         </div>
                                         <div className="text-center mb-1">
                                           <div className="text-xs font-bold" style={{ color: textColor }}>
-                                            {player.web_name}{player.in_dreamteam ? ' *' : ''}
+                                            {player.web_name}
                                           </div>
                                         </div>
                                         <div className="text-center mb-2">
@@ -1227,18 +1236,27 @@ export default function MyDashboard() {
                                         className="rounded-lg shadow-xl p-2 relative" 
                                         style={{ backgroundColor: jerseyColor }}
                                       >
-                                        {/* Captain Badge - Top Left */}
+                                        {/* Captain/Vice Captain Badge - Top Left */}
                                         {pick.is_captain && (
                                           <div className="absolute top-2 left-2 z-10">
                                             <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
                                           </div>
                                         )}
-                                        {/* Vice Captain Badge - Top Right */}
                                         {pick.is_vice_captain && (
-                                          <div className="absolute top-2 right-2 z-10">
+                                          <div className="absolute top-2 left-2 z-10">
                                             <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
                                           </div>
                                         )}
+                                        
+                                        {/* Dream Team Star Badge - Top Right */}
+                                        {player.in_dreamteam && (
+                                          <div className="absolute top-2 right-2 z-10">
+                                            <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white">
+                                              <Star className="h-3 w-3 text-white fill-white" />
+                                            </div>
+                                          </div>
+                                        )}
+                                        
                                         <div className="text-center mb-1">
                                           <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
                                             {playerTeam?.short_name || 'UNK'}
@@ -1246,7 +1264,7 @@ export default function MyDashboard() {
                                         </div>
                                         <div className="text-center mb-1">
                                           <div className="text-xs font-bold" style={{ color: textColor }}>
-                                            {player.web_name}{player.in_dreamteam ? ' *' : ''}
+                                            {player.web_name}
                                           </div>
                                         </div>
                                         <div className="text-center mb-2">
@@ -1299,18 +1317,27 @@ export default function MyDashboard() {
                                         className="rounded-lg shadow-xl p-2 relative" 
                                         style={{ backgroundColor: jerseyColor }}
                                       >
-                                        {/* Captain Badge - Top Left */}
+                                        {/* Captain/Vice Captain Badge - Top Left */}
                                         {pick.is_captain && (
                                           <div className="absolute top-2 left-2 z-10">
                                             <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center text-xs font-bold border-2 border-white">C</div>
                                           </div>
                                         )}
-                                        {/* Vice Captain Badge - Top Right */}
                                         {pick.is_vice_captain && (
-                                          <div className="absolute top-2 right-2 z-10">
+                                          <div className="absolute top-2 left-2 z-10">
                                             <div className="w-5 h-5 bg-gray-200 border-2 border-yellow-400 rounded-full flex items-center justify-center text-xs font-bold">V</div>
                                           </div>
                                         )}
+                                        
+                                        {/* Dream Team Star Badge - Top Right */}
+                                        {player.in_dreamteam && (
+                                          <div className="absolute top-2 right-2 z-10">
+                                            <div className="w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white">
+                                              <Star className="h-3 w-3 text-white fill-white" />
+                                            </div>
+                                          </div>
+                                        )}
+                                        
                                         <div className="text-center mb-1">
                                           <div className="text-[10px] font-bold uppercase" style={{ color: textColor }}>
                                             {playerTeam?.short_name || 'UNK'}
@@ -1318,7 +1345,7 @@ export default function MyDashboard() {
                                         </div>
                                         <div className="text-center mb-1">
                                           <div className="text-xs font-bold" style={{ color: textColor }}>
-                                            {player.web_name}{player.in_dreamteam ? ' *' : ''}
+                                            {player.web_name}
                                           </div>
                                         </div>
                                         <div className="text-center mb-2">
