@@ -46,7 +46,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
   return (
     <div className="space-y-3 sm:space-y-4">
       {/* Pitch */}
-      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-3 sm:p-4 md:p-6 lg:p-8 overflow-hidden">
+      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
         {/* Pitch Lines and Graphics */}
         <div className="absolute inset-0 opacity-30 pointer-events-none">
           <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
@@ -75,7 +75,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
           <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
         </div>
 
-        <div className="relative space-y-3 sm:space-y-4 md:space-y-6">
+        <div className="relative space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-10">
           {/* Goalkeepers */}
           {(() => {
             const gks = filterPlayersByType(sortedPlayers, 1);
@@ -87,7 +87,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
                   const textColor = getTextColor(jerseyColor);
                   
                   return (
-                    <div key={player.element} className="flex flex-col items-center w-16 sm:w-24 md:w-28 lg:w-36" data-testid={`pitch-player-${player.element}`}>
+                    <div key={player.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-player-${player.element}`}>
                       <div className="relative w-full">
                         <svg viewBox="0 0 280 190" className="w-full drop-shadow-md sm:drop-shadow-lg md:drop-shadow-xl">
                           <defs><clipPath id={`jersey-clip-gk-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -123,7 +123,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
                   const textColor = getTextColor(jerseyColor);
                   
                   return (
-                    <div key={player.element} className="flex flex-col items-center w-16 sm:w-24 md:w-28 lg:w-36" data-testid={`pitch-player-${player.element}`}>
+                    <div key={player.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-player-${player.element}`}>
                       <div className="relative w-full">
                         <svg viewBox="0 0 280 190" className="w-full drop-shadow-md sm:drop-shadow-lg md:drop-shadow-xl">
                           <defs><clipPath id={`jersey-clip-def-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -159,7 +159,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
                   const textColor = getTextColor(jerseyColor);
                   
                   return (
-                    <div key={player.element} className="flex flex-col items-center w-16 sm:w-24 md:w-28 lg:w-36" data-testid={`pitch-player-${player.element}`}>
+                    <div key={player.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-player-${player.element}`}>
                       <div className="relative w-full">
                         <svg viewBox="0 0 280 190" className="w-full drop-shadow-md sm:drop-shadow-lg md:drop-shadow-xl">
                           <defs><clipPath id={`jersey-clip-mid-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -195,7 +195,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
                   const textColor = getTextColor(jerseyColor);
                   
                   return (
-                    <div key={player.element} className="flex flex-col items-center w-16 sm:w-24 md:w-28 lg:w-36" data-testid={`pitch-player-${player.element}`}>
+                    <div key={player.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-player-${player.element}`}>
                       <div className="relative w-full">
                         <svg viewBox="0 0 280 190" className="w-full drop-shadow-md sm:drop-shadow-lg md:drop-shadow-xl">
                           <defs><clipPath id={`jersey-clip-fwd-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -232,7 +232,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
               const textColor = getTextColor(jerseyColor);
               
               return (
-                <div key={player.element} className="flex flex-col items-center w-16 sm:w-24 md:w-28 lg:w-36 opacity-90" data-testid={`bench-player-${player.element}`}>
+                <div key={player.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48 opacity-90" data-testid={`bench-player-${player.element}`}>
                   <div className="relative w-full">
                     <svg viewBox="0 0 280 190" className="w-full drop-shadow-md sm:drop-shadow-lg">
                       <defs><clipPath id={`jersey-clip-bench-${player.element}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>

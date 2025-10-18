@@ -986,7 +986,7 @@ export default function MyDashboard() {
                   {teamView === "pitch" && (
                     <div className="space-y-4">
                       {/* Pitch */}
-                      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 overflow-hidden">
+                      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
                         {/* Pitch Lines and Graphics */}
                         <div className="absolute inset-0 opacity-30 pointer-events-none">
                           {/* Center Line - Horizontal */}
@@ -1040,7 +1040,7 @@ export default function MyDashboard() {
                           <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
                         </div>
 
-                      <div className="relative space-y-6">
+                      <div className="relative space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-10">
                         {/* Goalkeepers */}
                         {(() => {
                           const gks = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
@@ -1050,7 +1050,7 @@ export default function MyDashboard() {
                             });
                           
                           return gks.length > 0 && (
-                            <div className="flex justify-center gap-4">
+                            <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-4">
                               {gks.map(pick => {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
@@ -1060,7 +1060,7 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-36" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       {/* Jersey-Shaped Card */}
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
@@ -1172,7 +1172,7 @@ export default function MyDashboard() {
                             });
                           
                           return defs.length > 0 && (
-                            <div className="flex justify-center gap-2 sm:gap-4">
+                            <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-4">
                               {defs.map(pick => {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
@@ -1182,7 +1182,7 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-36" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-clip-def-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -1217,7 +1217,7 @@ export default function MyDashboard() {
                             });
                           
                           return mids.length > 0 && (
-                            <div className="flex justify-center gap-2 sm:gap-4">
+                            <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-4">
                               {mids.map(pick => {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
@@ -1227,7 +1227,7 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-36" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-clip-mid-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -1262,7 +1262,7 @@ export default function MyDashboard() {
                             });
                           
                           return fwds.length > 0 && (
-                            <div className="flex justify-center gap-2 sm:gap-4">
+                            <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-4">
                               {fwds.map(pick => {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
@@ -1272,7 +1272,7 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-36" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-clip-fwd-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -1312,7 +1312,7 @@ export default function MyDashboard() {
                             const textColor = getTextColor(jerseyColor);
                             
                             return (
-                              <div key={pick.element} className="flex flex-col items-center w-36 opacity-90" data-testid={`pitch-bench-${player.id}`}>
+                              <div key={pick.element} className="flex flex-col items-center w-24 sm:w-32 md:w-40 lg:w-48 opacity-90" data-testid={`pitch-bench-${player.id}`}>
                                 <div className="relative w-full">
                                   <svg viewBox="0 0 280 190" className="w-full drop-shadow-lg">
                                     <defs><clipPath id={`jersey-clip-bench-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
