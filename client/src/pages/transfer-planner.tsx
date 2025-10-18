@@ -4220,6 +4220,32 @@ export default function TransferPlanner() {
                             return (
                               <div key={pick.element} className="flex flex-col items-center w-40" data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
+                                  {/* Captain/Vice Captain Buttons - Top Corners */}
+                                  {!pick.is_captain && plannerMode === "manual" && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="absolute top-0 left-0 h-5 w-5 p-0 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-br z-10"
+                                      onClick={() => handleSetCaptain(pick.element)}
+                                      data-testid={`pitch-set-captain-${pick.element}`}
+                                      title="Set Captain"
+                                    >
+                                      <Crown className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  {!pick.is_vice_captain && plannerMode === "manual" && (
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="absolute top-0 right-0 h-5 w-5 p-0 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-bl z-10"
+                                      onClick={() => handleSetViceCaptain(pick.element)}
+                                      data-testid={`pitch-set-vice-${pick.element}`}
+                                      title="Set Vice Captain"
+                                    >
+                                      <Crown className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                  
                                   {/* Jersey Card */}
                                   <div 
                                     className="rounded-lg p-2 text-center shadow-lg border-2 flex flex-col" 
@@ -4362,34 +4388,6 @@ export default function TransferPlanner() {
                                         >
                                           <X className="h-3 w-3 mr-1" />
                                           Out
-                                        </Button>
-                                      )}
-                                    </div>
-
-                                    {/* Secondary Action Buttons - Captain & Vice Captain */}
-                                    <div className="flex justify-center gap-1 mt-1">
-                                      {!pick.is_captain && (
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          className="h-6 w-6 p-0 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-full"
-                                          onClick={() => handleSetCaptain(pick.element)}
-                                          data-testid={`pitch-set-captain-${pick.element}`}
-                                          title="Set Captain"
-                                        >
-                                          <Crown className="h-3.5 w-3.5" />
-                                        </Button>
-                                      )}
-                                      {!pick.is_vice_captain && (
-                                        <Button
-                                          size="icon"
-                                          variant="ghost"
-                                          className="h-6 w-6 p-0 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-full"
-                                          onClick={() => handleSetViceCaptain(pick.element)}
-                                          data-testid={`pitch-set-vice-${pick.element}`}
-                                          title="Set Vice Captain"
-                                        >
-                                          <Crown className="h-3.5 w-3.5" />
                                         </Button>
                                       )}
                                     </div>
