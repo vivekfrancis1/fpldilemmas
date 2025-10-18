@@ -5329,21 +5329,21 @@ export default function TransferPlanner() {
                                     style={{ backgroundColor: teamColor }}
                                     data-testid={`auto-pitch-player-${player.element}`}
                                   >
-                                    {/* Captain/Vice Captain Badge */}
+                                    {/* Captain/Vice Captain Badge - Top Left */}
                                     {player.isCaptain && (
-                                      <div className="absolute top-0 right-0 bg-yellow-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-bl">
+                                      <div className="absolute top-1 left-1 bg-yellow-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                                         C
                                       </div>
                                     )}
                                     {player.isViceCaptain && (
-                                      <div className="absolute top-0 right-0 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-bl">
+                                      <div className="absolute top-1 left-1 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
                                         V
                                       </div>
                                     )}
 
-                                    {/* New Transfer Badge */}
+                                    {/* New Transfer Badge - Top Right */}
                                     {pick && isPlayerTransferredIn(pick) && (
-                                      <div className="absolute top-0 left-0 bg-green-600 text-white text-[8px] font-bold px-1 py-0.5 rounded-br">
+                                      <div className="absolute top-1 right-1 bg-green-600 text-white text-[8px] font-bold px-1 py-0.5 rounded">
                                         NEW
                                       </div>
                                     )}
@@ -5425,7 +5425,7 @@ export default function TransferPlanner() {
                                 data-testid={`auto-pitch-bench-${player.element}`}
                               >
                                 {pick && isPlayerTransferredIn(pick) && (
-                                  <div className="absolute top-0 left-0 bg-green-600 text-white text-[8px] font-bold px-1 py-0.5 rounded-br">
+                                  <div className="absolute top-1 right-1 bg-green-600 text-white text-[8px] font-bold px-1 py-0.5 rounded">
                                     NEW
                                   </div>
                                 )}
