@@ -945,6 +945,11 @@ export default function MyDashboard() {
                             <p className="text-xs text-gray-600 mt-0.5 truncate">
                               {teamData.entry_history?.event_transfers || 0} made / 1 free
                             </p>
+                            {teamData.entry_history?.event_transfers_cost && teamData.entry_history.event_transfers_cost > 0 && (
+                              <p className="text-xs text-red-600 font-semibold mt-1 truncate">
+                                -{teamData.entry_history.event_transfers_cost} pts
+                              </p>
+                            )}
                           </div>
                           <div className="p-1.5 sm:p-2 bg-blue-200 rounded-full flex-shrink-0">
                             <Star className="h-4 w-4 sm:h-5 sm:w-5 text-blue-700" />
