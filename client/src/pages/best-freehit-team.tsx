@@ -939,7 +939,7 @@ export default function BestFreehitTeam() {
               ) : (
                 <>
                   <Star className="h-4 w-4" />
-                  {unlimitedBudget ? 'Select Top Players' : 'Optimize Team'}
+                  Optimize Freehit Team
                 </>
               )}
             </Button>

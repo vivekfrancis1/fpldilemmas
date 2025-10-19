@@ -910,7 +910,7 @@ export default function BestWildcardTeam() {
               ) : (
                 <>
                   <Star className="h-4 w-4" />
-                  {unlimitedBudget ? 'Select Top Players' : 'Optimize Team'}
+                  Optimize Wildcard Team
                 </>
               )}
             </Button>
