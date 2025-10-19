@@ -3639,7 +3639,7 @@ export default function TransferPlanner() {
           </CardHeader>
           <CardContent>
             <div className="text-xs text-muted-foreground mb-2 italic">
-              * Sell prices are calculated estimates. Click the pencil icon next to Buy prices to enter actual purchase prices for exact FPL sell values.
+              Sell prices are calculated estimates. Click the pencil icon to enter actual Buy prices to get exact sell prices.
             </div>
 
             {/* View Toggle */}
