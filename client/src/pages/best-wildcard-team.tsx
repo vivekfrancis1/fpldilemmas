@@ -784,7 +784,7 @@ export default function BestWildcardTeam() {
                 <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search players..." />
-                    <CommandList>
+                    <CommandList className="max-h-[300px] overflow-auto">
                       <CommandEmpty>No players found.</CommandEmpty>
                       <CommandGroup>
                         {snapshots
@@ -854,7 +854,7 @@ export default function BestWildcardTeam() {
                 <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search players..." />
-                    <CommandList>
+                    <CommandList className="max-h-[300px] overflow-auto">
                       <CommandEmpty>No players found.</CommandEmpty>
                       <CommandGroup>
                         {snapshots
