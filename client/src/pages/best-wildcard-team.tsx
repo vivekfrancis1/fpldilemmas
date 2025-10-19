@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -90,6 +90,8 @@ export default function BestWildcardTeam() {
   const [budgetConstraint, setBudgetConstraint] = useState<number>(100);
   const [includedPlayers, setIncludedPlayers] = useState<PlayerSnapshot[]>([]);
   const [excludedPlayers, setExcludedPlayers] = useState<PlayerSnapshot[]>([]);
+  const [includePopoverOpen, setIncludePopoverOpen] = useState(false);
+  const [excludePopoverOpen, setExcludePopoverOpen] = useState(false);
 
   // Fetch live Player Total Points data (dynamic next 6 gameweeks for wildcard optimization)
   const { data: liveData, isLoading, error } = useQuery({
@@ -774,7 +776,7 @@ export default function BestWildcardTeam() {
                   </Badge>
                 ))}
               </div>
-              <Popover>
+              <Popover open={includePopoverOpen} onOpenChange={setIncludePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="w-full justify-start">
                     <Plus className="h-4 w-4 mr-2" />
@@ -784,7 +786,7 @@ export default function BestWildcardTeam() {
                 <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search players..." />
-                    <CommandList className="max-h-[300px] overflow-auto">
+                    <CommandList key={includePopoverOpen ? 'open' : 'closed'} className="max-h-[300px] overflow-auto">
                       <CommandEmpty>No players found.</CommandEmpty>
                       <CommandGroup>
                         {snapshots
@@ -844,7 +846,7 @@ export default function BestWildcardTeam() {
                   </Badge>
                 ))}
               </div>
-              <Popover>
+              <Popover open={excludePopoverOpen} onOpenChange={setExcludePopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="w-full justify-start">
                     <X className="h-4 w-4 mr-2" />
@@ -854,7 +856,7 @@ export default function BestWildcardTeam() {
                 <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
                   <Command>
                     <CommandInput placeholder="Search players..." />
-                    <CommandList className="max-h-[300px] overflow-auto">
+                    <CommandList key={excludePopoverOpen ? 'open' : 'closed'} className="max-h-[300px] overflow-auto">
                       <CommandEmpty>No players found.</CommandEmpty>
                       <CommandGroup>
                         {snapshots
