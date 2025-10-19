@@ -427,34 +427,40 @@ export default function MyDashboard() {
     return luminance > 0.5 ? '#000000' : '#FFFFFF';
   };
 
-  const getNextFixtures = (teamId: number, count: number = 5) => {
+  const getNextFixtures = (teamId: number, count: number = 3) => {
     if (!fixturesData || !Array.isArray(fixturesData)) {
       return [];
     }
     
     const currentGW = getCurrentGameweekDashboard();
+    const nextGameweeks = Array.from({ length: count }, (_, i) => currentGW + i + 1);
     
-    return fixturesData
-      .filter((fixture: any) => {
-        const isTeamInFixture = fixture.team_h === teamId || fixture.team_a === teamId;
-        const isUpcoming = !fixture.finished && fixture.event >= currentGW;
-        return isTeamInFixture && isUpcoming;
-      })
-      .sort((a: any, b: any) => a.event - b.event)
-      .slice(0, count)
-      .map((fixture: any) => {
-        const isHome = fixture.team_h === teamId;
-        const opponentId = isHome ? fixture.team_a : fixture.team_h;
-        const opponent = getTeamById(opponentId);
-        const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
-        
+    return nextGameweeks.map(gw => {
+      const fixture = fixturesData.find((f: any) => 
+        (f.team_h === teamId || f.team_a === teamId) && f.event === gw
+      );
+      
+      if (!fixture) {
         return {
-          opponent: opponent?.short_name || 'TBD',
-          isHome,
-          difficulty: difficulty || 3,
-          gameweek: fixture.event
+          opponent: 'BGW',
+          isHome: true,
+          difficulty: 3,
+          gameweek: gw
         };
-      });
+      }
+      
+      const isHome = fixture.team_h === teamId;
+      const opponentId = isHome ? fixture.team_a : fixture.team_h;
+      const opponent = getTeamById(opponentId);
+      const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+      
+      return {
+        opponent: opponent?.short_name || 'TBD',
+        isHome,
+        difficulty: difficulty || 3,
+        gameweek: gw
+      };
+    });
   };
 
   const getDifficultyColor = (difficulty: number): string => {
