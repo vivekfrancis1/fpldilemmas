@@ -92,6 +92,8 @@ export default function BestWildcardTeam() {
   const [excludedPlayers, setExcludedPlayers] = useState<PlayerSnapshot[]>([]);
   const [includePopoverOpen, setIncludePopoverOpen] = useState(false);
   const [excludePopoverOpen, setExcludePopoverOpen] = useState(false);
+  const [includeSearchKey, setIncludeSearchKey] = useState(0);
+  const [excludeSearchKey, setExcludeSearchKey] = useState(0);
 
   // Fetch live Player Total Points data (dynamic next 6 gameweeks for wildcard optimization)
   const { data: liveData, isLoading, error } = useQuery({
@@ -785,8 +787,11 @@ export default function BestWildcardTeam() {
                 </PopoverTrigger>
                 <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search players..." />
-                    <CommandList key={includePopoverOpen ? 'open' : 'closed'} className="max-h-[300px] overflow-auto">
+                    <CommandInput 
+                      placeholder="Search players..." 
+                      onValueChange={() => setIncludeSearchKey(prev => prev + 1)}
+                    />
+                    <CommandList key={includeSearchKey} className="max-h-[300px] overflow-auto">
                       <CommandEmpty>No players found.</CommandEmpty>
                       <CommandGroup>
                         {snapshots
@@ -855,8 +860,11 @@ export default function BestWildcardTeam() {
                 </PopoverTrigger>
                 <PopoverContent className="w-full max-w-sm sm:w-80 p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search players..." />
-                    <CommandList key={excludePopoverOpen ? 'open' : 'closed'} className="max-h-[300px] overflow-auto">
+                    <CommandInput 
+                      placeholder="Search players..." 
+                      onValueChange={() => setExcludeSearchKey(prev => prev + 1)}
+                    />
+                    <CommandList key={excludeSearchKey} className="max-h-[300px] overflow-auto">
                       <CommandEmpty>No players found.</CommandEmpty>
                       <CommandGroup>
                         {snapshots

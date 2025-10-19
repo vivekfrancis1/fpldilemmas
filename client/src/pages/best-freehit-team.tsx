@@ -83,6 +83,8 @@ export default function BestFreehitTeam() {
   const [excludedPlayers, setExcludedPlayers] = useState<PlayerSnapshot[]>([]);
   const [includePopoverOpen, setIncludePopoverOpen] = useState(false);
   const [excludePopoverOpen, setExcludePopoverOpen] = useState(false);
+  const [includeSearchKey, setIncludeSearchKey] = useState(0);
+  const [excludeSearchKey, setExcludeSearchKey] = useState(0);
 
   // Fetch live Player Total Points data for selected gameweek
   const { data: liveData, isLoading, error } = useQuery({
@@ -799,8 +801,11 @@ export default function BestFreehitTeam() {
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search players..." />
-                    <CommandList key={includePopoverOpen ? 'open' : 'closed'} className="max-h-[300px] overflow-auto">
+                    <CommandInput 
+                      placeholder="Search players..." 
+                      onValueChange={() => setIncludeSearchKey(prev => prev + 1)}
+                    />
+                    <CommandList key={includeSearchKey} className="max-h-[300px] overflow-auto">
                       <CommandEmpty>No players found.</CommandEmpty>
                       <CommandGroup>
                         {snapshots
@@ -869,8 +874,11 @@ export default function BestFreehitTeam() {
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search players..." />
-                    <CommandList key={excludePopoverOpen ? 'open' : 'closed'} className="max-h-[300px] overflow-auto">
+                    <CommandInput 
+                      placeholder="Search players..." 
+                      onValueChange={() => setExcludeSearchKey(prev => prev + 1)}
+                    />
+                    <CommandList key={excludeSearchKey} className="max-h-[300px] overflow-auto">
                       <CommandEmpty>No players found.</CommandEmpty>
                       <CommandGroup>
                         {snapshots
