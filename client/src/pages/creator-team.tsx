@@ -192,6 +192,11 @@ export default function CreatorTeam() {
     queryKey: ['/api/bootstrap-static'],
   });
 
+  // Get fixtures data
+  const { data: fixturesData } = useQuery<any>({
+    queryKey: ['/api/fixtures'],
+  });
+
   // Function to get completed gameweeks (1-3 only)
   const getCompletedGameweeks = () => {
     if (!bootstrapData?.events) return [1, 2, 3]; // Default fallback to show 1-3
@@ -222,6 +227,102 @@ export default function CreatorTeam() {
   // Helper function to format price
   const formatPrice = (cost: number) => {
     return `£${(cost / 10).toFixed(1)}m`;
+  };
+
+  const getTeamById = (teamId: number) => {
+    return bootstrapData?.teams.find(t => t.id === teamId);
+  };
+
+  const getCurrentGameweek = (): number => {
+    const currentEvent = bootstrapData?.events.find(e => e.is_current);
+    return currentEvent?.id || 1;
+  };
+
+  const getCurrentGameweekFixture = (teamId: number) => {
+    if (!fixturesData || !Array.isArray(fixturesData)) return null;
+    
+    const currentGW = getCurrentGameweek();
+    
+    const fixture = fixturesData.find((f: any) => 
+      (f.team_h === teamId || f.team_a === teamId) && f.event === currentGW
+    );
+    
+    if (!fixture) return null;
+    
+    const isHome = fixture.team_h === teamId;
+    const opponentId = isHome ? fixture.team_a : fixture.team_h;
+    const opponent = getTeamById(opponentId);
+    
+    return {
+      finished: fixture.finished,
+      started: fixture.started,
+      opponent: opponent?.short_name || 'TBD',
+      isHome,
+      fixture
+    };
+  };
+
+  const getPlayerDisplayPoints = (player: any, teamId: number, isMultiplied: boolean = false) => {
+    const points = player.event_points || 0;
+    const displayPoints = points * (isMultiplied ? 2 : 1);
+    
+    const currentFixture = getCurrentGameweekFixture(teamId);
+    
+    if (!currentFixture) return displayPoints.toString();
+    
+    if (!currentFixture.started || (!currentFixture.finished && points === 0)) {
+      return `vs ${currentFixture.opponent.substring(0, 3)} (${currentFixture.isHome ? 'H' : 'A'})`;
+    }
+    
+    if (currentFixture.finished && points === 0) {
+      return '-';
+    }
+    
+    return displayPoints.toString();
+  };
+
+  const getNextFixtures = (teamId: number, count: number = 3) => {
+    if (!fixturesData || !Array.isArray(fixturesData)) {
+      return [];
+    }
+    
+    const currentGW = getCurrentGameweek();
+    const nextGameweeks = Array.from({ length: count }, (_, i) => currentGW + i + 1);
+    
+    return nextGameweeks.map(gw => {
+      const fixture = fixturesData.find((f: any) => 
+        (f.team_h === teamId || f.team_a === teamId) && f.event === gw
+      );
+      
+      if (!fixture) {
+        return {
+          opponent: 'BGW',
+          isHome: true,
+          difficulty: 3,
+          gameweek: gw
+        };
+      }
+      
+      const isHome = fixture.team_h === teamId;
+      const opponentId = isHome ? fixture.team_a : fixture.team_h;
+      const opponent = getTeamById(opponentId);
+      const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+      
+      return {
+        opponent: opponent?.short_name || 'TBD',
+        isHome,
+        difficulty: difficulty || 3,
+        gameweek: gw
+      };
+    });
+  };
+
+  const getDifficultyColor = (difficulty: number): string => {
+    if (difficulty === 1) return "bg-green-600 text-white";
+    if (difficulty === 2) return "bg-green-100 text-green-800";
+    if (difficulty === 3) return "bg-gray-100 text-gray-800";
+    if (difficulty === 4) return "bg-red-100 text-red-800";
+    return "bg-red-600 text-white";
   };
 
   if (isLoading) {

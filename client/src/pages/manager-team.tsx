@@ -317,9 +317,56 @@ export default function ManagerTeam() {
     return luminance > 0.5 ? '#000000' : '#FFFFFF';
   };
 
+  const getTeamById = (teamId: number) => {
+    return bootstrapData?.teams.find(t => t.id === teamId);
+  };
+
   const getCurrentGameweek = (): number => {
     const currentEvent = bootstrapData?.events.find(e => e.is_current);
     return currentEvent?.id || 1;
+  };
+
+  const getCurrentGameweekFixture = (teamId: number) => {
+    if (!fixturesData || !Array.isArray(fixturesData)) return null;
+    
+    const currentGW = getCurrentGameweek();
+    
+    const fixture = fixturesData.find((f: any) => 
+      (f.team_h === teamId || f.team_a === teamId) && f.event === currentGW
+    );
+    
+    if (!fixture) return null;
+    
+    const isHome = fixture.team_h === teamId;
+    const opponentId = isHome ? fixture.team_a : fixture.team_h;
+    const opponent = getTeamById(opponentId);
+    
+    return {
+      finished: fixture.finished,
+      started: fixture.started,
+      opponent: opponent?.short_name || 'TBD',
+      isHome,
+      fixture
+    };
+  };
+
+  const getPlayerDisplayPoints = (player: any, teamId: number, isMultiplied: boolean = false) => {
+    const points = player.event_points || 0;
+    const displayPoints = points * (isMultiplied ? 2 : 1);
+    
+    const currentFixture = getCurrentGameweekFixture(teamId);
+    
+    if (!currentFixture) return displayPoints.toString();
+    
+    if (!currentFixture.started || (!currentFixture.finished && points === 0)) {
+      return `vs ${currentFixture.opponent.substring(0, 3)} (${currentFixture.isHome ? 'H' : 'A'})`;
+    }
+    
+    if (currentFixture.finished && points === 0) {
+      return '-';
+    }
+    
+    return displayPoints.toString();
   };
 
   const getNextFixtures = (teamId: number, count: number = 3) => {
@@ -328,27 +375,34 @@ export default function ManagerTeam() {
     }
     
     const currentGW = getCurrentGameweek();
+    const nextGameweeks = Array.from({ length: count }, (_, i) => currentGW + i + 1);
     
-    return fixturesData
-      .filter((fixture: any) => {
-        const isTeamInFixture = fixture.team_h === teamId || fixture.team_a === teamId;
-        const isUpcoming = !fixture.finished && fixture.event >= currentGW;
-        return isTeamInFixture && isUpcoming;
-      })
-      .slice(0, count)
-      .map((fixture: any) => {
-        const isHome = fixture.team_h === teamId;
-        const opponentId = isHome ? fixture.team_a : fixture.team_h;
-        const opponent = bootstrapData?.teams.find(t => t.id === opponentId);
-        const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
-        
+    return nextGameweeks.map(gw => {
+      const fixture = fixturesData.find((f: any) => 
+        (f.team_h === teamId || f.team_a === teamId) && f.event === gw
+      );
+      
+      if (!fixture) {
         return {
-          opponent: opponent?.short_name || 'TBD',
-          isHome,
-          difficulty: difficulty || 3,
-          gameweek: fixture.event
+          opponent: 'BGW',
+          isHome: true,
+          difficulty: 3,
+          gameweek: gw
         };
-      });
+      }
+      
+      const isHome = fixture.team_h === teamId;
+      const opponentId = isHome ? fixture.team_a : fixture.team_h;
+      const opponent = getTeamById(opponentId);
+      const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+      
+      return {
+        opponent: opponent?.short_name || 'TBD',
+        isHome,
+        difficulty: difficulty || 3,
+        gameweek: gw
+      };
+    });
   };
 
   const getDifficultyColor = (difficulty: number): string => {
