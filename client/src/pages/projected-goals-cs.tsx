@@ -51,12 +51,12 @@ export default function ProjectedGoalsCS() {
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
 
-  // Get available gameweeks for dropdown options (next 12 gameweeks)
+  // Get available gameweeks for dropdown options (next 6 gameweeks)
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) {
-      return Array.from({ length: 12 }, (_, i) => i + 7); // Fallback starting from GW7
+      return Array.from({ length: 6 }, (_, i) => i + 7); // Fallback starting from GW7
     }
-    return getNextGameweeksForDropdown(bootstrapData.events, 12);
+    return getNextGameweeksForDropdown(bootstrapData.events, 6);
   }, [bootstrapData?.events]);
 
   // Update state when bootstrap data changes (e.g., on page load)
