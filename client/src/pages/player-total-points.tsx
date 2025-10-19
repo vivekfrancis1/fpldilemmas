@@ -1344,7 +1344,7 @@ export default function PlayerTotalPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: Math.min(15 - nextGameweek + 1, 12) }, (_, i) => nextGameweek + i).map(gw => (
+                  {Array.from({ length: 6 }, (_, i) => nextGameweek + i).map(gw => (
                     <SelectItem key={`start-gw-${gw}`} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1358,7 +1358,7 @@ export default function PlayerTotalPoints() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: Math.min(15 - nextGameweek + 1, 12) }, (_, i) => nextGameweek + i).filter(gw => gw >= (startGameweek || nextGameweek)).map(gw => (
+                  {Array.from({ length: 6 }, (_, i) => nextGameweek + i).filter(gw => gw >= (startGameweek || nextGameweek)).map(gw => (
                     <SelectItem key={`end-gw-${gw}`} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
