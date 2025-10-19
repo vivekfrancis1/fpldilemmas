@@ -3851,43 +3851,46 @@ export default function TransferPlanner() {
                                     </div>
                                     <div className="text-[10px] text-muted-foreground">
                                       {editingSellPrice === pick.element ? (
-                                        <div className="flex items-center gap-1">
-                                          <span>Sell: £</span>
-                                          <Input
-                                            type="number"
-                                            step="0.1"
-                                            min="4.0"
-                                            max="15.0"
-                                            value={editSellPriceValue}
-                                            onChange={(e) => setEditSellPriceValue(e.target.value)}
-                                            className="h-5 w-14 text-[10px] p-1"
-                                            autoFocus
-                                            data-testid={`input-sell-price-${pick.element}`}
-                                          />
-                                          <span>m</span>
-                                          <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-5 w-5 text-green-600 hover:bg-green-50"
-                                            onClick={() => {
-                                              const price = parseFloat(editSellPriceValue);
-                                              if (!isNaN(price) && price >= 4.0 && price <= 15.0) {
-                                                updateSellPrice(pick.element, price);
-                                              }
-                                            }}
-                                            data-testid={`button-save-sell-price-${pick.element}`}
-                                          >
-                                            <Check className="h-3 w-3" />
-                                          </Button>
-                                          <Button
-                                            size="icon"
-                                            variant="ghost"
-                                            className="h-5 w-5 text-red-600 hover:bg-red-50"
-                                            onClick={cancelEditingSellPrice}
-                                            data-testid={`button-cancel-sell-price-${pick.element}`}
-                                          >
-                                            <X className="h-3 w-3" />
-                                          </Button>
+                                        <div className="flex flex-col gap-0.5">
+                                          <div className="flex items-center gap-1">
+                                            <span className="font-semibold text-blue-600">Buy: £</span>
+                                            <Input
+                                              type="number"
+                                              step="0.1"
+                                              min="4.0"
+                                              max="15.0"
+                                              value={editSellPriceValue}
+                                              onChange={(e) => setEditSellPriceValue(e.target.value)}
+                                              className="h-5 w-14 text-[10px] p-1"
+                                              autoFocus
+                                              data-testid={`input-sell-price-${pick.element}`}
+                                            />
+                                            <span>m</span>
+                                            <Button
+                                              size="icon"
+                                              variant="ghost"
+                                              className="h-5 w-5 text-green-600 hover:bg-green-50"
+                                              onClick={() => {
+                                                const price = parseFloat(editSellPriceValue);
+                                                if (!isNaN(price) && price >= 4.0 && price <= 15.0) {
+                                                  updateSellPrice(pick.element, price);
+                                                }
+                                              }}
+                                              data-testid={`button-save-sell-price-${pick.element}`}
+                                            >
+                                              <Check className="h-3 w-3" />
+                                            </Button>
+                                            <Button
+                                              size="icon"
+                                              variant="ghost"
+                                              className="h-5 w-5 text-red-600 hover:bg-red-50"
+                                              onClick={cancelEditingSellPrice}
+                                              data-testid={`button-cancel-sell-price-${pick.element}`}
+                                            >
+                                              <X className="h-3 w-3" />
+                                            </Button>
+                                          </div>
+                                          <span className="text-[9px] italic text-gray-500">Sell price auto-calculated</span>
                                         </div>
                                       ) : (
                                         <div className="flex gap-2 items-center">
@@ -4089,43 +4092,46 @@ export default function TransferPlanner() {
                             </div>
                             <div className="text-[10px] text-muted-foreground">
                               {editingSellPrice === pick.element ? (
-                                <div className="flex items-center gap-1">
-                                  <span>Sell: £</span>
-                                  <Input
-                                    type="number"
-                                    step="0.1"
-                                    min="4.0"
-                                    max="15.0"
-                                    value={editSellPriceValue}
-                                    onChange={(e) => setEditSellPriceValue(e.target.value)}
-                                    className="h-5 w-14 text-[10px] p-1"
-                                    autoFocus
-                                    data-testid={`input-sell-price-${pick.element}`}
-                                  />
-                                  <span>m</span>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-5 w-5 text-green-600 hover:bg-green-50"
-                                    onClick={() => {
-                                      const price = parseFloat(editSellPriceValue);
-                                      if (!isNaN(price) && price >= 4.0 && price <= 15.0) {
-                                        updateSellPrice(pick.element, price);
-                                      }
-                                    }}
-                                    data-testid={`button-save-sell-price-${pick.element}`}
-                                  >
-                                    <Check className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-5 w-5 text-red-600 hover:bg-red-50"
-                                    onClick={cancelEditingSellPrice}
-                                    data-testid={`button-cancel-sell-price-${pick.element}`}
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
+                                <div className="flex flex-col gap-0.5">
+                                  <div className="flex items-center gap-1">
+                                    <span className="font-semibold text-blue-600">Buy: £</span>
+                                    <Input
+                                      type="number"
+                                      step="0.1"
+                                      min="4.0"
+                                      max="15.0"
+                                      value={editSellPriceValue}
+                                      onChange={(e) => setEditSellPriceValue(e.target.value)}
+                                      className="h-5 w-14 text-[10px] p-1"
+                                      autoFocus
+                                      data-testid={`input-sell-price-${pick.element}`}
+                                    />
+                                    <span>m</span>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-5 w-5 text-green-600 hover:bg-green-50"
+                                      onClick={() => {
+                                        const price = parseFloat(editSellPriceValue);
+                                        if (!isNaN(price) && price >= 4.0 && price <= 15.0) {
+                                          updateSellPrice(pick.element, price);
+                                        }
+                                      }}
+                                      data-testid={`button-save-sell-price-${pick.element}`}
+                                    >
+                                      <Check className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      className="h-5 w-5 text-red-600 hover:bg-red-50"
+                                      onClick={cancelEditingSellPrice}
+                                      data-testid={`button-cancel-sell-price-${pick.element}`}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                  <span className="text-[9px] italic text-gray-500">Sell price auto-calculated</span>
                                 </div>
                               ) : (
                                 <div className="flex gap-2 items-center">
@@ -4370,25 +4376,28 @@ export default function TransferPlanner() {
                                     {fixture && (
                                       <text x="202" y="199" fontSize="17" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                                     )}
-                                    <foreignObject x="0" y="209" width="403" height="29">
-                                      <div className="flex items-center justify-center h-full">
+                                    <foreignObject x="0" y="209" width="403" height="40">
+                                      <div className="flex flex-col items-center justify-center h-full gap-0.5">
                                         {editingSellPrice === pick.element ? (
-                                          <div className="flex items-center gap-0.5">
-                                            <span className="text-[12px] font-medium" style={{ color: textColor }}>£</span>
-                                            <Input
-                                              type="number"
-                                              step="0.1"
-                                              min="4.0"
-                                              max="15.0"
-                                              value={editSellPriceValue}
-                                              onChange={(e) => setEditSellPriceValue(e.target.value)}
-                                              className="h-6 w-16 text-[12px] p-0.5 text-black"
-                                              autoFocus
-                                              data-testid={`pitch-input-sell-price-${pick.element}`}
-                                            />
-                                            <Button size="icon" variant="ghost" className="h-6 w-6 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-button-save-sell-price-${pick.element}`}><Check className="h-3.5 w-3.5" /></Button>
-                                            <Button size="icon" variant="ghost" className="h-6 w-6 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-button-cancel-sell-price-${pick.element}`}><X className="h-3.5 w-3.5" /></Button>
-                                          </div>
+                                          <>
+                                            <div className="flex items-center gap-0.5">
+                                              <span className="text-[12px] font-semibold text-blue-600">Buy: £</span>
+                                              <Input
+                                                type="number"
+                                                step="0.1"
+                                                min="4.0"
+                                                max="15.0"
+                                                value={editSellPriceValue}
+                                                onChange={(e) => setEditSellPriceValue(e.target.value)}
+                                                className="h-6 w-16 text-[12px] p-0.5 text-black"
+                                                autoFocus
+                                                data-testid={`pitch-input-sell-price-${pick.element}`}
+                                              />
+                                              <Button size="icon" variant="ghost" className="h-6 w-6 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-button-save-sell-price-${pick.element}`}><Check className="h-3.5 w-3.5" /></Button>
+                                              <Button size="icon" variant="ghost" className="h-6 w-6 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-button-cancel-sell-price-${pick.element}`}><X className="h-3.5 w-3.5" /></Button>
+                                            </div>
+                                            <span className="text-[9px] italic" style={{ color: textColor, opacity: 0.7 }}>Sell price auto-calculated</span>
+                                          </>
                                         ) : (
                                           <div className="flex gap-0.5 items-center">
                                             <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-button-edit-sell-price-${pick.element}`}><Edit2 className="h-2.5 w-2.5" style={{ color: textColor }} /></Button>
@@ -4510,15 +4519,18 @@ export default function TransferPlanner() {
                               {fixture && (
                                 <text x="202" y="199" fontSize="17" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                               )}
-                              <foreignObject x="0" y="209" width="403" height="29">
-                                <div className="flex items-center justify-center h-full">
+                              <foreignObject x="0" y="209" width="403" height="40">
+                                <div className="flex flex-col items-center justify-center h-full gap-0.5">
                                   {editingSellPrice === pick.element ? (
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-[16px] font-medium" style={{ color: textColor }}>Sell: £</span>
-                                      <Input type="number" step="0.1" min="4.0" max="15.0" value={editSellPriceValue} onChange={(e) => setEditSellPriceValue(e.target.value)} className="h-7 w-20 text-[16px] p-1 text-black" autoFocus data-testid={`pitch-bench-input-sell-price-${pick.element}`} />
-                                      <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-bench-button-save-sell-price-${pick.element}`}><Check className="h-4 w-4" /></Button>
-                                      <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-bench-button-cancel-sell-price-${pick.element}`}><X className="h-4 w-4" /></Button>
-                                    </div>
+                                    <>
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[16px] font-semibold text-blue-600">Buy: £</span>
+                                        <Input type="number" step="0.1" min="4.0" max="15.0" value={editSellPriceValue} onChange={(e) => setEditSellPriceValue(e.target.value)} className="h-7 w-20 text-[16px] p-1 text-black" autoFocus data-testid={`pitch-bench-input-sell-price-${pick.element}`} />
+                                        <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600 hover:bg-green-50 p-0" onClick={() => { const price = parseFloat(editSellPriceValue); if (!isNaN(price) && price >= 4.0 && price <= 15.0) { updateSellPrice(pick.element, price); }}} data-testid={`pitch-bench-button-save-sell-price-${pick.element}`}><Check className="h-4 w-4" /></Button>
+                                        <Button size="icon" variant="ghost" className="h-7 w-7 text-red-600 hover:bg-red-50 p-0" onClick={cancelEditingSellPrice} data-testid={`pitch-bench-button-cancel-sell-price-${pick.element}`}><X className="h-4 w-4" /></Button>
+                                      </div>
+                                      <span className="text-[10px] italic" style={{ color: textColor, opacity: 0.7 }}>Sell price auto-calculated</span>
+                                    </>
                                   ) : (
                                     <div className="flex gap-1 items-center">
                                       <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-bench-button-edit-sell-price-${pick.element}`}><Edit2 className="h-3.5 w-3.5" style={{ color: textColor }} /></Button>
