@@ -684,14 +684,14 @@ export default function CreatorTeam() {
                                       {player.is_captain ? (
                                         <div className="space-y-1">
                                           <p className="text-sm font-semibold text-amber-600">
-                                            {(playerData.event_points || 0) * 2} pts
+                                            {getPlayerDisplayPoints(playerData, playerData.team, true)}
                                           </p>
                                           <p className="text-xs text-gray-500">
-                                            ({playerData.event_points || 0}×2 captain)
+                                            {!isNaN(Number(getPlayerDisplayPoints(playerData, playerData.team, false))) && `(${getPlayerDisplayPoints(playerData, playerData.team, false)}×2 captain)`}
                                           </p>
                                         </div>
                                       ) : (
-                                        <p className="text-sm text-gray-600">{playerData.event_points || 0} pts</p>
+                                        <p className="text-sm text-gray-600">{getPlayerDisplayPoints(playerData, playerData.team, false)}</p>
                                       )}
                                       {player.multiplier > 1 && (
                                         <Badge variant="outline" className="text-xs">
@@ -757,7 +757,7 @@ export default function CreatorTeam() {
                                     return playerData ? (
                                       <>
                                         <p className="font-semibold text-green-600">{formatPrice(playerData.now_cost)}</p>
-                                        <p className="text-sm text-gray-600">{playerData.event_points || 0} pts</p>
+                                        <p className="text-sm text-gray-600">{getPlayerDisplayPoints(playerData, playerData.team, false)}</p>
                                       </>
                                     ) : null;
                                   })()}
