@@ -533,17 +533,7 @@ export default function MyDashboard() {
   };
 
   const sortBenchPlayers = (picks: TeamPick[]) => {
-    return picks.sort((a, b) => {
-      const playerA = getPlayerById(a.element);
-      const playerB = getPlayerById(b.element);
-      
-      if (!playerA || !playerB) return 0;
-      
-      if (playerA.element_type === 1) return -1;
-      if (playerB.element_type === 1) return 1;
-      
-      return playerA.element_type - playerB.element_type;
-    });
+    return picks.sort((a, b) => a.position - b.position);
   };
 
   const getTeamValue = () => {
