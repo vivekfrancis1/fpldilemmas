@@ -1258,15 +1258,7 @@ export default function PlayerTotalPoints() {
                 <SelectContent>
                   <SelectItem key="load-group-all" value="all">All Players</SelectItem>
                   <SelectItem key="load-group-top-50" value="Top 50">Top 50</SelectItem>
-                  <SelectItem key="load-group-top-50-fwds" value="Top 50 FWDs">Top 50 FWDs</SelectItem>
-                  <SelectItem key="load-group-top-50-mids" value="Top 50 MIDs">Top 50 MIDs</SelectItem>
-                  <SelectItem key="load-group-top-50-defs" value="Top 50 DEFs">Top 50 DEFs</SelectItem>
-                  <SelectItem key="load-group-top-50-gks" value="Top 50 GKs">Top 50 GKs</SelectItem>
                   <SelectItem key="load-group-value-50" value="Value 50">Value 50</SelectItem>
-                  <SelectItem key="load-group-value-50-fwds" value="Value 50 FWDs">Value 50 FWDs</SelectItem>
-                  <SelectItem key="load-group-value-50-mids" value="Value 50 MIDs">Value 50 MIDs</SelectItem>
-                  <SelectItem key="load-group-value-50-defs" value="Value 50 DEFs">Value 50 DEFs</SelectItem>
-                  <SelectItem key="load-group-value-50-gks" value="Value 50 GKs">Value 50 GKs</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1314,8 +1306,6 @@ export default function PlayerTotalPoints() {
                   <SelectItem key="availability-all" value="all">All Players</SelectItem>
                   <SelectItem key="availability-available" value="available">Available (100%)</SelectItem>
                   <SelectItem key="availability-partial" value="partial">Partially Available</SelectItem>
-                  <SelectItem key="availability-suspended" value="suspended">Suspended</SelectItem>
-                  <SelectItem key="availability-injured" value="injured">Injured</SelectItem>
                   <SelectItem key="availability-unavailable" value="unavailable">Unavailable (0%)</SelectItem>
                 </SelectContent>
               </Select>
@@ -1351,7 +1341,7 @@ export default function PlayerTotalPoints() {
             </div>
 
             {/* Search - Second Row */}
-            <div className="space-y-2">
+            <div className="space-y-2 lg:col-span-2">
               <Label htmlFor="search" className="text-sm font-medium">Search</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
