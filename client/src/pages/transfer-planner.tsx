@@ -3891,7 +3891,6 @@ export default function TransferPlanner() {
                                         </div>
                                       ) : (
                                         <div className="flex gap-2 items-center">
-                                          <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                           <Button
                                             size="icon"
                                             variant="ghost"
@@ -3901,6 +3900,7 @@ export default function TransferPlanner() {
                                           >
                                             <Edit2 className="h-2.5 w-2.5 text-blue-600" />
                                           </Button>
+                                          <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                         </div>
                                       )}
                                     </div>
@@ -4129,7 +4129,6 @@ export default function TransferPlanner() {
                                 </div>
                               ) : (
                                 <div className="flex gap-2 items-center">
-                                  <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                   <Button
                                     size="icon"
                                     variant="ghost"
@@ -4139,6 +4138,7 @@ export default function TransferPlanner() {
                                   >
                                     <Edit2 className="h-2.5 w-2.5 text-blue-600" />
                                   </Button>
+                                  <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                 </div>
                               )}
                             </div>
@@ -4391,8 +4391,8 @@ export default function TransferPlanner() {
                                           </div>
                                         ) : (
                                           <div className="flex gap-0.5 items-center">
-                                            <span className="text-[12px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                             <Button size="icon" variant="ghost" className="h-5 w-5 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-button-edit-sell-price-${pick.element}`}><Edit2 className="h-2.5 w-2.5" style={{ color: textColor }} /></Button>
+                                            <span className="text-[12px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                           </div>
                                         )}
                                       </div>
@@ -4521,8 +4521,8 @@ export default function TransferPlanner() {
                                     </div>
                                   ) : (
                                     <div className="flex gap-1 items-center">
-                                      <span className="text-[16px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                       <Button size="icon" variant="ghost" className="h-6 w-6 p-0 hover:bg-white/20" onClick={() => startEditingSellPrice(pick.element, getSellingPrice(pick))} data-testid={`pitch-bench-button-edit-sell-price-${pick.element}`}><Edit2 className="h-3.5 w-3.5" style={{ color: textColor }} /></Button>
+                                      <span className="text-[16px] font-medium" style={{ color: textColor }}>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                     </div>
                                   )}
                                 </div>
