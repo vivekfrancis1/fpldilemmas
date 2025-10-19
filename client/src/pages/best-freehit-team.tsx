@@ -176,8 +176,8 @@ export default function BestFreehitTeam() {
     let totalCost = 0;
     let totalPoints = 0;
 
-    // Reserve budget for minimum bench cost (4 players at ~£4m each = £16m minimum)
-    const MIN_BENCH_COST = 16;
+    // Reserve budget for minimum bench cost (4 players at ~£4.5m each = £18m minimum)
+    const MIN_BENCH_COST = 18;
     const maxXIBudget = budget ? budget - MIN_BENCH_COST : undefined;
 
     // Helper to check if player can be added
