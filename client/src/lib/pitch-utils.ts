@@ -57,6 +57,15 @@ export const sortPlayersByPosition = <T extends { position: number }>(players: T
   return [...players].sort((a, b) => a.position - b.position);
 };
 
+// Sort bench players: GK first (position 12), then outfield players by element_type (DEF, MID, FWD)
+export const sortBenchPlayers = <T extends { position: number; element_type: number }>(players: T[]): T[] => {
+  return [...players].sort((a, b) => {
+    if (a.element_type === 1) return -1;
+    if (b.element_type === 1) return 1;
+    return a.element_type - b.element_type;
+  });
+};
+
 // Get player position from element_type
 export const getPositionFromElementType = (elementType: number): 'GK' | 'DEF' | 'MID' | 'FWD' => {
   if (elementType === 1) return 'GK';

@@ -532,6 +532,20 @@ export default function MyDashboard() {
     });
   };
 
+  const sortBenchPlayers = (picks: TeamPick[]) => {
+    return picks.sort((a, b) => {
+      const playerA = getPlayerById(a.element);
+      const playerB = getPlayerById(b.element);
+      
+      if (!playerA || !playerB) return 0;
+      
+      if (playerA.element_type === 1) return -1;
+      if (playerB.element_type === 1) return 1;
+      
+      return playerA.element_type - playerB.element_type;
+    });
+  };
+
   const getTeamValue = () => {
     if (!teamData?.entry_history?.value) return 0;
     return teamData.entry_history.value / 10;
@@ -1303,7 +1317,7 @@ export default function MyDashboard() {
                       <div className="mt-6 pt-6 border-t-2 border-white/30">
                         <h3 className="text-white font-bold text-center mb-4">BENCH</h3>
                         <div className="flex justify-center gap-2 sm:gap-4 flex-wrap">
-                          {sortPlayersByPosition(teamData.picks.filter(pick => pick.position > 11)).map((pick, index) => {
+                          {sortBenchPlayers(teamData.picks.filter(pick => pick.position > 11)).map((pick, index) => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
                             const playerTeam = getPlayerTeam(player);
@@ -1469,7 +1483,7 @@ export default function MyDashboard() {
                       </CardHeader>
                       <CardContent className="p-0">
                         <div className="space-y-0">
-                          {sortPlayersByPosition(teamData.picks.filter(pick => pick.position > 11)).map((pick, index) => {
+                          {sortBenchPlayers(teamData.picks.filter(pick => pick.position > 11)).map((pick, index) => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
 
