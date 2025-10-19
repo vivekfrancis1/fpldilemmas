@@ -1271,21 +1271,6 @@ export default function PlayerTotalPoints() {
               </Select>
             </div>
 
-            {/* Search */}
-            <div className="space-y-2">
-              <Label htmlFor="search" className="text-sm font-medium">Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  id="search"
-                  placeholder="Player or team..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
             {/* Position Filter */}
             <div className="space-y-2">
               <Label htmlFor="position-filter" className="text-sm font-medium">Position</Label>
@@ -1363,6 +1348,21 @@ export default function PlayerTotalPoints() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Search - Second Row */}
+            <div className="space-y-2">
+              <Label htmlFor="search" className="text-sm font-medium">Search</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  id="search"
+                  placeholder="Player or team..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
             </div>
 
             {/* Clear Filters */}
