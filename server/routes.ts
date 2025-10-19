@@ -894,7 +894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (req.session?.user) {
       res.json(req.session.user);
     } else {
-      res.status(401).json({ error: 'Not authenticated' });
+      res.json(null);
     }
   });
 
