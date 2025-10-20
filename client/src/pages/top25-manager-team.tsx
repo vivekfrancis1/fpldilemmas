@@ -242,6 +242,11 @@ export default function Top25ManagerTeam() {
     queryKey: ['/api/bootstrap-static'],
   });
 
+  // Get fixtures data - must be at top level with other hooks
+  const { data: fixturesData } = useQuery<any>({
+    queryKey: ['/api/fixtures'],
+  });
+
   // Function to get completed gameweeks (1-3 only)
   const getCompletedGameweeks = () => {
     if (!bootstrapData?.events) return [1, 2, 3]; // Default fallback to show 1-3
@@ -386,11 +391,6 @@ export default function Top25ManagerTeam() {
       event_points: pick.event_points,
       in_dreamteam: playerData?.in_dreamteam || false,
     };
-  });
-
-  // Get bootstrap data to get teams and fixtures
-  const { data: fixturesData } = useQuery<any>({
-    queryKey: ['/api/fixtures'],
   });
 
   const getTeamById = (teamId: number) => {
