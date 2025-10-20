@@ -1,4 +1,4 @@
-import { Menu, LogIn, LogOut, User } from "lucide-react";
+import { Menu, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
@@ -43,10 +43,6 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
     }
   };
 
-  const handleLogin = () => {
-    setLocation("/login");
-  };
-
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30">
       <div className="flex items-center justify-between px-3 sm:px-4 py-2 sm:py-3">
@@ -73,40 +69,25 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
         
         <div className="flex items-center space-x-2">
           <RefreshButton />
-          {!isLoading && (
-            <>
-              {isAuthenticated ? (
-                <div className="flex items-center space-x-2">
-                  {!isMobile && (
-                    <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <User className="h-4 w-4" />
-                      <span className="truncate max-w-[120px]">{user?.email}</span>
-                    </div>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleLogout}
-                    className="text-red-600 border-red-600 hover:bg-red-50 min-h-[44px] min-w-[44px] touch-manipulation"
-                    data-testid="button-logout"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    {!isMobile && <span className="ml-2">Logout</span>}
-                  </Button>
+          {!isLoading && isAuthenticated && (
+            <div className="flex items-center space-x-2">
+              {!isMobile && (
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <User className="h-4 w-4" />
+                  <span className="truncate max-w-[120px]">{user?.email}</span>
                 </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogin}
-                  className="text-fpl-purple border-fpl-purple hover:bg-fpl-purple/10 min-h-[44px] min-w-[44px] touch-manipulation"
-                  data-testid="button-login"
-                >
-                  <LogIn className="h-4 w-4" />
-                  {!isMobile && <span className="ml-2">Login</span>}
-                </Button>
               )}
-            </>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLogout}
+                className="text-red-600 border-red-600 hover:bg-red-50 min-h-[44px] min-w-[44px] touch-manipulation"
+                data-testid="button-logout"
+              >
+                <LogOut className="h-4 w-4" />
+                {!isMobile && <span className="ml-2">Logout</span>}
+              </Button>
+            </div>
           )}
         </div>
       </div>
