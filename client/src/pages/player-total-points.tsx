@@ -692,6 +692,7 @@ function createPlayerTotalPointsColumns(
   onSort: (field: SortField) => void,
   maxPointsPerGameweek: { [key: string]: number },
   teamNameToShortName: Map<string, string>,
+  playerIdToWebName: Map<number, string>,
   onPlayerCompareClick?: (player: PlayerTotalPointsData) => void,
   compareList?: PlayerTotalPointsData[],
   maxCompareReached?: boolean
@@ -706,12 +707,12 @@ function createPlayerTotalPointsColumns(
         <div className="flex items-center gap-1 md:gap-2 min-w-[140px] md:min-w-[200px]">
           <div className="flex-1">
             <div className="flex items-center gap-1 md:gap-2 flex-wrap">
-              <PlayerNameCell name={player.playerName || player.name} />
+              <PlayerNameCell name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name} />
               <PlayerAvailabilityBadge player={player} />
             </div>
             <div className="flex items-center gap-1 mt-0.5 md:mt-1 mb-0.5 md:mb-1">
               <PositionBadge position={player.position} compact={true} />
-              <TeamBadge team={teamNameToShortName?.get(player.teamName || player.team) || player.teamName || player.team} compact={true} />
+              <TeamBadge team={(teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamName || player.team} compact={true} />
             </div>
             <div className="text-xs text-gray-500 space-x-1 md:space-x-2">
               <span className="font-medium">£{(typeof player.price === 'number') ? player.price.toFixed(1) : '0.0'}m</span>
@@ -880,6 +881,16 @@ export default function PlayerTotalPoints() {
     });
     return map;
   }, [bootstrapData?.teams]);
+
+  // Create player ID to web_name mapping
+  const playerIdToWebName = useMemo(() => {
+    if (!bootstrapData?.elements) return new Map<number, string>();
+    const map = new Map<number, string>();
+    bootstrapData.elements.forEach(player => {
+      map.set(player.id, player.web_name);
+    });
+    return map;
+  }, [bootstrapData?.elements]);
 
   // Handle player comparison
   const handlePlayerCompareClick = (player: PlayerTotalPointsData) => {
@@ -1426,6 +1437,7 @@ export default function PlayerTotalPoints() {
                       handleSort, 
                       maxPointsPerGameweek,
                       teamNameToShortName,
+                      playerIdToWebName,
                       handlePlayerCompareClick, 
                       compareList, 
                       maxCompareReached
