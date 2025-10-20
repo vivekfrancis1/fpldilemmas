@@ -189,15 +189,15 @@ export default function Fixtures() {
       // Check if custom FDR exists for this opponent
       const customRating = customFDR[opponentId];
       if (customRating) {
-        return isHome ? customRating.home : customRating.away;
+        const customValue = isHome ? customRating.home : customRating.away;
+        // Only use custom value if it's actually defined and valid
+        if (customValue !== undefined && customValue > 0) {
+          return customValue;
+        }
       }
       
-      // Fallback to promoted teams as FDR 1
-      const promotedTeams = [3, 11, 17]; // Burnley, Leeds, Sunderland
-      if (promotedTeams.includes(opponentId)) {
-        return 1;
-      }
-      return originalDifficulty;
+      // Ensure we return a valid difficulty (default to 3 if invalid)
+      return originalDifficulty > 0 ? originalDifficulty : 3;
     };
 
     // Fill matrix with fixtures
