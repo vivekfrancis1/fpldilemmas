@@ -395,6 +395,28 @@ export default function Fixtures() {
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 mt-4">
+                    <div className="flex flex-wrap gap-3 text-xs justify-center bg-gray-50 p-3 rounded-lg border">
+                      <div className="flex items-center gap-1">
+                        <div className="w-4 h-4 bg-green-300 rounded"></div>
+                        <span className="font-medium">1 - Very Easy</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+                        <span className="font-medium">2 - Easy</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+                        <span className="font-medium">3 - Medium</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+                        <span className="font-medium">4 - Hard</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <div className="w-4 h-4 bg-red-300 rounded"></div>
+                        <span className="font-medium">5 - Very Hard</span>
+                      </div>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {PREMIER_LEAGUE_TEAMS.map(team => {
                         const teamDefaultFDR = defaultFDR[team.id] || { home: 3, away: 3 };
