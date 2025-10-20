@@ -374,18 +374,19 @@ export default function Fixtures() {
                 </select>
               </div>
 
-              <Dialog open={customFDROpen} onOpenChange={setCustomFDROpen}>
-                <DialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    className="flex items-center gap-2"
-                    data-testid="button-customize-fdr"
-                  >
-                    <Settings className="h-4 w-4" />
-                    Customize FDR
-                  </Button>
-                </DialogTrigger>
+              <div className="flex items-center gap-2">
+                <Dialog open={customFDROpen} onOpenChange={setCustomFDROpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="flex items-center gap-2"
+                      data-testid="button-customize-fdr"
+                    >
+                      <Settings className="h-4 w-4" />
+                      Customize FDR
+                    </Button>
+                  </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>Customize Fixture Difficulty Ratings</DialogTitle>
@@ -481,7 +482,21 @@ export default function Fixtures() {
                     </div>
                   </div>
                 </DialogContent>
-              </Dialog>
+                </Dialog>
+                
+                {Object.keys(customFDR).length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={resetCustomFDR}
+                    className="flex items-center gap-2"
+                    data-testid="button-reset-fdr-main"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Reset to Default FDR
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
