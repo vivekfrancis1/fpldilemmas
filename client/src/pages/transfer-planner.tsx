@@ -790,9 +790,26 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       );
                     })}
                     <td className="py-1 px-1 md:p-2 text-center">
-                      <span className="font-bold text-green-600">
-                        {(player.totalExpectedPoints || 0).toFixed(1)}
-                      </span>
+                      {(() => {
+                        // Calculate 4-GW total for mobile (first 4 gameweeks)
+                        const first4GWTotal = nextGameweeks.slice(0, 4).reduce((sum, gw) => {
+                          return sum + (player.gameweekProjections[gw.toString()] || 0);
+                        }, 0);
+                        
+                        // 6-GW total for desktop (all gameweeks)
+                        const total6GW = player.totalExpectedPoints || 0;
+                        
+                        return (
+                          <>
+                            <span className="font-bold text-green-600 lg:hidden">
+                              {first4GWTotal.toFixed(1)}
+                            </span>
+                            <span className="font-bold text-green-600 hidden lg:inline">
+                              {total6GW.toFixed(1)}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </td>
                     <td className="py-1 px-1 md:p-2 text-center hidden md:table-cell">
                       <span className="text-blue-600 dark:text-blue-400 font-medium">
