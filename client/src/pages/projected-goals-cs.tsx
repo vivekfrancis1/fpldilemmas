@@ -469,10 +469,9 @@ export default function ProjectedGoalsCS() {
                         {Array.from({ length: Math.ceil(projections.length / 2) }, (_, pairIndex) => {
                           const match1 = projections[pairIndex * 2];
                           const match2 = projections[pairIndex * 2 + 1];
-                          const hasTwoMatches = match1 && match2;
                           
                           return (
-                            <div key={`pair-${pairIndex}`} className={`grid grid-cols-1 gap-3 ${hasTwoMatches ? 'lg:grid-cols-2' : ''}`}>
+                            <div key={`pair-${pairIndex}`} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                               {/* First Match */}
                               {match1 && (
                                 <div 
