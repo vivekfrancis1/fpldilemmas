@@ -127,31 +127,35 @@ export default function Fixtures() {
     return avgFDR;
   }, [fixturesData, bootstrapData]);
 
-  // Get current gameweek and available gameweeks
-  const { currentGameweek, availableGameweeks } = useMemo(() => {
-    if (!bootstrapData?.events) return { currentGameweek: 1, availableGameweeks: [] };
+  // Get current gameweek and available gameweeks (next gameweek onwards, max 12)
+  const { currentGameweek, nextGameweek, availableGameweeks } = useMemo(() => {
+    if (!bootstrapData?.events) return { currentGameweek: 1, nextGameweek: 2, availableGameweeks: [] };
     
     const firstUnfinished = bootstrapData.events.find(event => !event.finished);
     const current = firstUnfinished ? firstUnfinished.id : 1;
+    const next = current + 1;
     
+    // Show only next gameweek onwards, maximum 12 gameweeks
+    const maxGameweek = Math.min(next + 11, 38); // next + 11 gives us 12 total gameweeks
     const available = bootstrapData.events
-      .filter(event => event.id >= 6 && event.id <= 38)
+      .filter(event => event.id >= next && event.id <= maxGameweek)
       .map(event => event.id)
       .sort((a, b) => a - b);
     
-    return { currentGameweek: current, availableGameweeks: available };
+    return { currentGameweek: current, nextGameweek: next, availableGameweeks: available };
   }, [bootstrapData]);
 
-  // Update gameweek range when bootstrap data changes
+  // Update gameweek range when bootstrap data changes (default 6 gameweeks from next)
   useEffect(() => {
-    if (bootstrapData?.events) {
-      const nextRange = computeNextRange(bootstrapData.events, 6);
+    if (bootstrapData?.events && availableGameweeks.length > 0) {
+      const start = availableGameweeks[0]; // Next gameweek
+      const end = Math.min(start + 5, availableGameweeks[availableGameweeks.length - 1]); // 6 gameweeks total
       setGameweekRange({
-        start: nextRange.start,
-        end: nextRange.end
+        start: start,
+        end: end
       });
     }
-  }, [bootstrapData]);
+  }, [bootstrapData, availableGameweeks]);
 
   // Get difficulty rating color class
   const getDifficultyColor = (difficulty: number) => {
@@ -589,7 +593,7 @@ export default function Fixtures() {
                       </th>
                       {gameweeks.map(gw => (
                         <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
-                          gw === currentGameweek ? 'bg-blue-100 text-blue-900' : ''
+                          gw === nextGameweek ? 'bg-blue-100 text-blue-900' : ''
                         }`}>
                           <button
                             onClick={() => handleSort(`gw-${gw}`)}
@@ -630,7 +634,7 @@ export default function Fixtures() {
                             const fixture = fixtureMatrix[team.id]?.[gw];
                             return (
                               <td key={gw} className={`px-1 py-1 text-center ${
-                                gw === currentGameweek ? 'bg-blue-50' : ''
+                                gw === nextGameweek ? 'bg-blue-50' : ''
                               }`}>
                                 {fixture ? (
                                   <div 
