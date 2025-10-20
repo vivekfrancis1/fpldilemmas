@@ -408,22 +408,25 @@ export default function ProjectedGoalsCS() {
                           )}
                         </div>
                         
-                        {/* Desktop header - single column when only 1 match */}
+                        {/* Desktop header - single column when only 1 match, aligned to left column */}
                         {projections.length === 1 && (
-                          <div className="hidden lg:flex items-center justify-end px-3 space-x-2">
-                            <div className="text-center w-[45px]">
-                              <span className="text-xs font-bold text-gray-600">GOALS</span>
+                          <div className="hidden lg:grid lg:grid-cols-2 gap-3">
+                            <div className="flex items-center justify-end px-3 space-x-2">
+                              <div className="text-center w-[45px]">
+                                <span className="text-xs font-bold text-gray-600">GOALS</span>
+                              </div>
+                              {projections.some(p => !p.finished) && (
+                                <div className="text-center w-[45px]">
+                                  <span className="text-xs font-bold text-gray-600">CS%</span>
+                                </div>
+                              )}
+                              {projections.some(p => p.finished) && (
+                                <div className="text-center w-[45px]">
+                                  <span className="text-xs font-bold text-gray-600">RESULT</span>
+                                </div>
+                              )}
                             </div>
-                            {projections.some(p => !p.finished) && (
-                              <div className="text-center w-[45px]">
-                                <span className="text-xs font-bold text-gray-600">CS%</span>
-                              </div>
-                            )}
-                            {projections.some(p => p.finished) && (
-                              <div className="text-center w-[45px]">
-                                <span className="text-xs font-bold text-gray-600">RESULT</span>
-                              </div>
-                            )}
+                            <div></div>
                           </div>
                         )}
                         
