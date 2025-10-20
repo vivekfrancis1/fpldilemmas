@@ -691,6 +691,7 @@ function createPlayerTotalPointsColumns(
   gameweekRange: number[],
   onSort: (field: SortField) => void,
   maxPointsPerGameweek: { [key: string]: number },
+  teamNameToShortName: Map<string, string>,
   onPlayerCompareClick?: (player: PlayerTotalPointsData) => void,
   compareList?: PlayerTotalPointsData[],
   maxCompareReached?: boolean
@@ -710,7 +711,7 @@ function createPlayerTotalPointsColumns(
             </div>
             <div className="flex items-center gap-1 mt-0.5 md:mt-1 mb-0.5 md:mb-1">
               <PositionBadge position={player.position} compact={true} />
-              <TeamBadge team={player.teamName || player.team} compact={true} />
+              <TeamBadge team={teamNameToShortName?.get(player.teamName || player.team) || player.teamName || player.team} compact={true} />
             </div>
             <div className="text-xs text-gray-500 space-x-1 md:space-x-2">
               <span className="font-medium">£{(typeof player.price === 'number') ? player.price.toFixed(1) : '0.0'}m</span>
@@ -869,6 +870,16 @@ export default function PlayerTotalPoints() {
 
   const nextGameweek = currentGameweek + 1;
   const maxAvailableGW = Math.min(38, nextGameweek + 11); // Next 12 gameweeks max
+
+  // Create team name to short name mapping
+  const teamNameToShortName = useMemo(() => {
+    if (!bootstrapData?.teams) return new Map<string, string>();
+    const map = new Map<string, string>();
+    bootstrapData.teams.forEach(team => {
+      map.set(team.name, team.short_name);
+    });
+    return map;
+  }, [bootstrapData?.teams]);
 
   // Handle player comparison
   const handlePlayerCompareClick = (player: PlayerTotalPointsData) => {
@@ -1414,6 +1425,7 @@ export default function PlayerTotalPoints() {
                       gameweekRange, 
                       handleSort, 
                       maxPointsPerGameweek,
+                      teamNameToShortName,
                       handlePlayerCompareClick, 
                       compareList, 
                       maxCompareReached
