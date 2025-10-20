@@ -79,6 +79,16 @@ export default function PlayerAssistProjections() {
   );
 
   // ALL useMemo hooks
+  // Create playerIdToWebName mapping for short names
+  const playerIdToWebName = useMemo(() => {
+    if (!bootstrapData?.elements) return null;
+    const map = new Map<number, string>();
+    bootstrapData.elements.forEach(player => {
+      map.set(player.id, player.web_name);
+    });
+    return map;
+  }, [bootstrapData]);
+
   const currentGameweek = useMemo(() => {
     if (!bootstrapData?.events) return 3; // Default fallback
     const currentEvent = bootstrapData.events.find(e => e.is_current);
@@ -469,7 +479,7 @@ export default function PlayerAssistProjections() {
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
                             <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
                               <PlayerNameCell 
-                                name={player.playerName}
+                                name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}
                                 position={player.position}
                                 team={player.teamShort}
                                 compact={true}
@@ -533,7 +543,7 @@ export default function PlayerAssistProjections() {
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
                             <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
                               <PlayerNameCell 
-                                name={player.playerName}
+                                name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}
                                 position={player.position}
                                 team={player.teamShort}
                                 compact={true}

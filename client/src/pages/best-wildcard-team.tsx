@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -89,6 +89,16 @@ export default function BestWildcardTeam() {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Create playerIdToWebName mapping for short names
+  const playerIdToWebName = useMemo(() => {
+    if (!bootstrapData?.elements) return new Map<number, string>();
+    const map = new Map<number, string>();
+    bootstrapData.elements.forEach((player: any) => {
+      map.set(player.id, player.web_name);
+    });
+    return map;
+  }, [bootstrapData]);
 
   // Calculate dynamic gameweek range (next 6 gameweeks)
   const currentGameweek = bootstrapData?.events.find((event: any) => event.is_current)?.id || 6;
@@ -1062,7 +1072,7 @@ export default function BestWildcardTeam() {
                     variant="secondary"
                     className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex items-center gap-1"
                   >
-                    {player.playerName}
+                    {playerIdToWebName.get(player.playerId) || player.playerName}
                     <X 
                       className="h-3 w-3 cursor-pointer hover:text-green-600" 
                       onClick={() => setIncludedPlayers(prev => prev.filter(p => p.playerId !== player.playerId))}
@@ -1106,7 +1116,7 @@ export default function BestWildcardTeam() {
                             >
                               <div className="flex items-center justify-between w-full">
                                 <div>
-                                  <span className="font-medium">{player.playerName}</span>
+                                  <span className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
                                   <span className="text-sm text-muted-foreground ml-2">
                                     {player.teamName} - {player.position}
                                   </span>
@@ -1139,7 +1149,7 @@ export default function BestWildcardTeam() {
                     variant="secondary"
                     className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 flex items-center gap-1"
                   >
-                    {player.playerName}
+                    {playerIdToWebName.get(player.playerId) || player.playerName}
                     <X 
                       className="h-3 w-3 cursor-pointer hover:text-red-600" 
                       onClick={() => setExcludedPlayers(prev => prev.filter(p => p.playerId !== player.playerId))}
@@ -1183,7 +1193,7 @@ export default function BestWildcardTeam() {
                             >
                               <div className="flex items-center justify-between w-full">
                                 <div>
-                                  <span className="font-medium">{player.playerName}</span>
+                                  <span className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
                                   <span className="text-sm text-muted-foreground ml-2">
                                     {player.teamName} - {player.position}
                                   </span>
@@ -1272,7 +1282,7 @@ export default function BestWildcardTeam() {
                               <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
                                 <div className="min-w-0 flex-1">
                                   <div className="font-medium flex items-center gap-1 md:gap-2 text-sm md:text-base">
-                                    <span className="truncate">{player.playerName}</span>
+                                    <span className="truncate">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
                                     {isStarter && (
                                       <Badge variant="outline" className="text-xs whitespace-nowrap">Starting XI</Badge>
                                     )}
@@ -1337,7 +1347,7 @@ export default function BestWildcardTeam() {
                     <Crown className="h-4 w-4 text-yellow-600" />
                     <span className="font-medium text-yellow-800 dark:text-yellow-200">Captain</span>
                   </div>
-                  <div className="font-semibold">{optimalTeam.captain.playerName}</div>
+                  <div className="font-semibold">{playerIdToWebName.get(optimalTeam.captain.playerId) || optimalTeam.captain.playerName}</div>
                   <div className="text-sm text-muted-foreground">
                     {optimalTeam.captain.teamName} • {optimalTeam.captain.totalProjectedPoints.toFixed(1)} pts
                   </div>
@@ -1347,7 +1357,7 @@ export default function BestWildcardTeam() {
                     <Shield className="h-4 w-4 text-blue-600" />
                     <span className="font-medium text-blue-800 dark:text-blue-200">Vice-Captain</span>
                   </div>
-                  <div className="font-semibold">{optimalTeam.viceCaptain.playerName}</div>
+                  <div className="font-semibold">{playerIdToWebName.get(optimalTeam.viceCaptain.playerId) || optimalTeam.viceCaptain.playerName}</div>
                   <div className="text-sm text-muted-foreground">
                     {optimalTeam.viceCaptain.teamName} • {optimalTeam.viceCaptain.totalProjectedPoints.toFixed(1)} pts
                   </div>
@@ -1372,7 +1382,7 @@ export default function BestWildcardTeam() {
                       </div>
                       <div>
                         <div className="font-medium flex items-center gap-2">
-                          {player.playerName}
+                          {playerIdToWebName.get(player.playerId) || player.playerName}
                           {player.playerId === optimalTeam.captain.playerId && (
                             <Crown className="h-4 w-4 text-yellow-600" />
                           )}
@@ -1466,7 +1476,7 @@ export default function BestWildcardTeam() {
                               </div>
                               <div>
                                 <div className="font-medium flex items-center gap-2">
-                                  {player.playerName}
+                                  {playerIdToWebName.get(player.playerId) || player.playerName}
                                   {isCaptain && (
                                     <Crown className="h-3 w-3 text-yellow-600" />
                                   )}

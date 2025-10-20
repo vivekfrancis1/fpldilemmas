@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,6 +79,16 @@ export default function BestFreehitTeam() {
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Create playerIdToWebName mapping for short names
+  const playerIdToWebName = useMemo(() => {
+    if (!bootstrapData?.elements) return new Map<number, string>();
+    const map = new Map<number, string>();
+    bootstrapData.elements.forEach((player: any) => {
+      map.set(player.id, player.web_name);
+    });
+    return map;
+  }, [bootstrapData]);
 
   // Calculate dynamic gameweek range (next 6 gameweeks)
   const currentGameweek = bootstrapData?.events.find((event: any) => event.is_current)?.id || 6;
@@ -1074,7 +1084,7 @@ export default function BestFreehitTeam() {
                     variant="secondary"
                     className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 flex items-center gap-1"
                   >
-                    {player.playerName}
+                    {playerIdToWebName.get(player.playerId) || player.playerName}
                     <X 
                       className="h-3 w-3 cursor-pointer hover:text-green-600" 
                       onClick={() => setIncludedPlayers(prev => prev.filter(p => p.playerId !== player.playerId))}
@@ -1118,7 +1128,7 @@ export default function BestFreehitTeam() {
                             >
                               <div className="flex items-center justify-between w-full">
                                 <div>
-                                  <span className="font-medium">{player.playerName}</span>
+                                  <span className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
                                   <span className="text-sm text-muted-foreground ml-2">
                                     {player.teamName} - {player.position}
                                   </span>
@@ -1151,7 +1161,7 @@ export default function BestFreehitTeam() {
                     variant="secondary"
                     className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 flex items-center gap-1"
                   >
-                    {player.playerName}
+                    {playerIdToWebName.get(player.playerId) || player.playerName}
                     <X 
                       className="h-3 w-3 cursor-pointer hover:text-red-600" 
                       onClick={() => setExcludedPlayers(prev => prev.filter(p => p.playerId !== player.playerId))}
@@ -1195,7 +1205,7 @@ export default function BestFreehitTeam() {
                             >
                               <div className="flex items-center justify-between w-full">
                                 <div>
-                                  <span className="font-medium">{player.playerName}</span>
+                                  <span className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
                                   <span className="text-sm text-muted-foreground ml-2">
                                     {player.teamName} - {player.position}
                                   </span>
@@ -1293,7 +1303,7 @@ export default function BestFreehitTeam() {
                   <p className="text-sm text-muted-foreground">Captain (C)</p>
                   <p className="text-lg font-bold flex items-center gap-1">
                     <Crown className="h-4 w-4 text-yellow-500" />
-                    {optimalTeam.captain.playerName}
+                    {playerIdToWebName.get(optimalTeam.captain.playerId) || optimalTeam.captain.playerName}
                   </p>
                   <p className="text-xs text-green-600 font-medium">
                     {getGameweekPoints(optimalTeam.captain, selectedGameweek).toFixed(1)} × 2 = {(getGameweekPoints(optimalTeam.captain, selectedGameweek) * 2).toFixed(1)} pts
@@ -1303,7 +1313,7 @@ export default function BestFreehitTeam() {
                   <p className="text-sm text-muted-foreground">Vice Captain (V)</p>
                   <p className="text-lg font-bold flex items-center gap-1">
                     <Star className="h-4 w-4 text-blue-500" />
-                    {optimalTeam.viceCaptain?.playerName || 'TBD'}
+                    {(optimalTeam.viceCaptain && (playerIdToWebName.get(optimalTeam.viceCaptain.playerId) || optimalTeam.viceCaptain.playerName)) || 'TBD'}
                   </p>
                   <p className="text-xs text-blue-600 font-medium">
                     {optimalTeam.viceCaptain ? getGameweekPoints(optimalTeam.viceCaptain, selectedGameweek).toFixed(1) : '0.0'} pts
@@ -1377,7 +1387,7 @@ export default function BestFreehitTeam() {
                         <span className="text-sm font-medium w-6">{index + 1}.</span>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{player.playerName}</p>
+                            <p className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</p>
                             {player.playerId === optimalTeam.captain.playerId && (
                               <Crown className="h-4 w-4 text-yellow-500" />
                             )}
@@ -1437,7 +1447,7 @@ export default function BestFreehitTeam() {
                       <div className="flex items-center gap-3">
                         <Shield className="h-4 w-4 text-yellow-600" />
                         <div>
-                          <p className="font-medium">{player.playerName}</p>
+                          <p className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</p>
                           <p className="text-sm text-muted-foreground">{player.teamName}</p>
                         </div>
                       </div>
@@ -1482,7 +1492,7 @@ export default function BestFreehitTeam() {
                             {index + 1}
                           </span>
                           <div>
-                            <p className="font-medium">{player.playerName}</p>
+                            <p className="font-medium">{playerIdToWebName.get(player.playerId) || player.playerName}</p>
                             <p className="text-sm text-muted-foreground">{player.teamName}</p>
                           </div>
                         </div>

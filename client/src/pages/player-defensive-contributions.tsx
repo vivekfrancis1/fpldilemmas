@@ -11,7 +11,7 @@ import { Shield, Filter, Clock, Target, Search } from "lucide-react";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean }>;
-  elements: Array<{ id: number; first_name: string; second_name: string; team: number; element_type: number; form: number; minutes: number; clearances_blocks_interceptions: number; tackles: number; recoveries: number }>;
+  elements: Array<{ id: number; first_name: string; second_name: string; web_name: string; team: number; element_type: number; form: number; minutes: number; clearances_blocks_interceptions: number; tackles: number; recoveries: number }>;
   teams: Array<{ id: number; name: string; short_name: string; code: number }>;
   element_types: Array<{ id: number; singular_name: string; singular_name_short: string }>;
 }
@@ -50,6 +50,16 @@ export default function PlayerDefensiveContributions() {
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Create playerIdToWebName mapping for short names
+  const playerIdToWebName = useMemo(() => {
+    if (!bootstrapData?.elements) return null;
+    const map = new Map<number, string>();
+    bootstrapData.elements.forEach(player => {
+      map.set(player.id, player.web_name);
+    });
+    return map;
+  }, [bootstrapData]);
 
   // Calculate current gameweek and upcoming gameweeks
   const currentGameweek = useMemo(() => {
@@ -552,7 +562,7 @@ export default function PlayerDefensiveContributions() {
                   <TableRow key={player.playerId}>
                     <TableCell className="font-medium sticky left-0 bg-background z-10">
                       <div className="flex flex-col">
-                        <span>{player.playerName}</span>
+                        <span>{(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}</span>
                         <div className="flex items-center gap-1 mt-1">
                           <Badge variant="outline" className="text-xs">
                             {player.position.slice(0, 3).toUpperCase()}
@@ -644,7 +654,7 @@ export default function PlayerDefensiveContributions() {
                   <TableRow key={player.playerId}>
                     <TableCell className="font-medium sticky left-0 bg-background z-10">
                       <div className="flex flex-col">
-                        <span>{player.playerName}</span>
+                        <span>{(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}</span>
                         <div className="flex items-center gap-1 mt-1">
                           <Badge variant="outline" className="text-xs">
                             {player.position.slice(0, 3).toUpperCase()}
