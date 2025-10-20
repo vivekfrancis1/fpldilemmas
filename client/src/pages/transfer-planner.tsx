@@ -4574,26 +4574,26 @@ export default function TransferPlanner() {
                           </div>
                           {/* Bench Reorder Arrows - Only for non-GK bench players - moved below jersey */}
                           {benchIndex > 0 && plannerMode === "manual" && (
-                            <div className="flex gap-1 justify-center mt-1">
+                            <div className="flex gap-1.5 md:gap-1 justify-center mt-1">
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-5 w-5 p-0 bg-white/80"
+                                className="h-8 w-8 md:h-6 md:w-6 p-0 bg-white/90 hover:bg-white border border-gray-300 shadow-sm"
                                 onClick={() => moveBenchPlayer(benchIndex, 'up')}
                                 disabled={benchIndex === 1}
                                 data-testid={`pitch-bench-move-up-${pick.element}`}
                               >
-                                <ChevronUp className="h-3 w-3" />
+                                <ChevronUp className="h-4 w-4 md:h-3.5 md:w-3.5" />
                               </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-5 w-5 p-0 bg-white/80"
+                                className="h-8 w-8 md:h-6 md:w-6 p-0 bg-white/90 hover:bg-white border border-gray-300 shadow-sm"
                                 onClick={() => moveBenchPlayer(benchIndex, 'down')}
                                 disabled={benchIndex === 3}
                                 data-testid={`pitch-bench-move-down-${pick.element}`}
                               >
-                                <ChevronDown className="h-3 w-3" />
+                                <ChevronDown className="h-4 w-4 md:h-3.5 md:w-3.5" />
                               </Button>
                             </div>
                           )}
