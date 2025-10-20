@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, ArrowUpDown, ArrowUp, ArrowDown, Settings, RotateCcw } from "lucide-react";
-import { BootstrapData, PREMIER_LEAGUE_TEAMS } from "@shared/schema";
+import { BootstrapData } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -261,7 +261,8 @@ export default function Fixtures() {
 
   // Sort teams based on selected sort option
   const sortedTeams = useMemo(() => {
-    const teams = [...PREMIER_LEAGUE_TEAMS];
+    if (!bootstrapData?.teams) return [];
+    const teams = [...bootstrapData.teams];
     
     switch (sortBy) {
       case 'team':
@@ -290,7 +291,7 @@ export default function Fixtures() {
         }
         return teams.sort((a, b) => a.short_name.localeCompare(b.short_name));
     }
-  }, [fixtureMatrix, teamAverageFDR, sortBy, sortDirection]);
+  }, [bootstrapData, fixtureMatrix, teamAverageFDR, sortBy, sortDirection]);
 
   if (error) {
     return (
@@ -422,7 +423,7 @@ export default function Fixtures() {
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {PREMIER_LEAGUE_TEAMS.map(team => {
+                      {bootstrapData?.teams.map(team => {
                         const teamDefaultFDR = defaultFDR[team.id] || { home: 3, away: 3 };
                         const hasCustom = !!customFDR[team.id];
                         
