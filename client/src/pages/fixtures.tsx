@@ -198,7 +198,7 @@ export default function Fixtures() {
 
     // Fill matrix with fixtures
     fixturesData.forEach(fixture => {
-      if (fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end && !fixture.finished) {
+      if (fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end) {
         const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
         const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
         
