@@ -368,7 +368,7 @@ export default function ProjectedGoalsCS() {
                 <Target className="h-4 w-4" />
                 Goals and Clean Sheet Projections
                 <Badge className="bg-white/20 text-white border-white/30 ml-auto text-xs">
-                  {filteredProjections.length} matches
+                  {filteredProjections.length} {filteredProjections.length === 1 ? 'match' : 'matches'}
                 </Badge>
               </CardTitle>
             </CardHeader>
@@ -385,11 +385,11 @@ export default function ProjectedGoalsCS() {
                           <span className="font-bold text-sm text-gray-800">
                             GW{projections[0]?.gameweek}
                           </span>
-                          <span className="text-xs text-gray-600 font-medium">{projections.length} matches</span>
+                          <span className="text-xs text-gray-600 font-medium">{projections.length} {projections.length === 1 ? 'match' : 'matches'}</span>
                         </div>
                       </div>
                       
-                      {/* Column Headers - Mobile: single row, Desktop: dual columns */}
+                      {/* Column Headers - Mobile: single row, Desktop: single or dual columns based on match count */}
                       <div className="px-2 pt-2 pb-1">
                         {/* Mobile header - single set of labels */}
                         <div className="lg:hidden flex items-center justify-end px-3 space-x-2">
@@ -408,9 +408,9 @@ export default function ProjectedGoalsCS() {
                           )}
                         </div>
                         
-                        {/* Desktop header - dual columns */}
-                        <div className="hidden lg:grid lg:grid-cols-2 gap-3">
-                          <div className="flex items-center justify-end px-3 space-x-2">
+                        {/* Desktop header - single column when only 1 match */}
+                        {projections.length === 1 && (
+                          <div className="hidden lg:flex items-center justify-end px-3 space-x-2">
                             <div className="text-center w-[45px]">
                               <span className="text-xs font-bold text-gray-600">GOALS</span>
                             </div>
@@ -425,22 +425,43 @@ export default function ProjectedGoalsCS() {
                               </div>
                             )}
                           </div>
-                          <div className="flex items-center justify-end px-3 space-x-2">
-                            <div className="text-center w-[45px]">
-                              <span className="text-xs font-bold text-gray-600">GOALS</span>
+                        )}
+                        
+                        {/* Desktop header - dual columns when multiple matches */}
+                        {projections.length > 1 && (
+                          <div className="hidden lg:grid lg:grid-cols-2 gap-3">
+                            <div className="flex items-center justify-end px-3 space-x-2">
+                              <div className="text-center w-[45px]">
+                                <span className="text-xs font-bold text-gray-600">GOALS</span>
+                              </div>
+                              {projections.some(p => !p.finished) && (
+                                <div className="text-center w-[45px]">
+                                  <span className="text-xs font-bold text-gray-600">CS%</span>
+                                </div>
+                              )}
+                              {projections.some(p => p.finished) && (
+                                <div className="text-center w-[45px]">
+                                  <span className="text-xs font-bold text-gray-600">RESULT</span>
+                                </div>
+                              )}
                             </div>
-                            {projections.some(p => !p.finished) && (
+                            <div className="flex items-center justify-end px-3 space-x-2">
                               <div className="text-center w-[45px]">
-                                <span className="text-xs font-bold text-gray-600">CS%</span>
+                                <span className="text-xs font-bold text-gray-600">GOALS</span>
                               </div>
-                            )}
-                            {projections.some(p => p.finished) && (
-                              <div className="text-center w-[45px]">
-                                <span className="text-xs font-bold text-gray-600">RESULT</span>
-                              </div>
-                            )}
+                              {projections.some(p => !p.finished) && (
+                                <div className="text-center w-[45px]">
+                                  <span className="text-xs font-bold text-gray-600">CS%</span>
+                                </div>
+                              )}
+                              {projections.some(p => p.finished) && (
+                                <div className="text-center w-[45px]">
+                                  <span className="text-xs font-bold text-gray-600">RESULT</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
 
                       {/* Matches arranged in pairs - 2 matches per row - Compact Size */}
@@ -448,9 +469,10 @@ export default function ProjectedGoalsCS() {
                         {Array.from({ length: Math.ceil(projections.length / 2) }, (_, pairIndex) => {
                           const match1 = projections[pairIndex * 2];
                           const match2 = projections[pairIndex * 2 + 1];
+                          const hasTwoMatches = match1 && match2;
                           
                           return (
-                            <div key={`pair-${pairIndex}`} className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                            <div key={`pair-${pairIndex}`} className={`grid grid-cols-1 gap-3 ${hasTwoMatches ? 'lg:grid-cols-2' : ''}`}>
                               {/* First Match */}
                               {match1 && (
                                 <div 
