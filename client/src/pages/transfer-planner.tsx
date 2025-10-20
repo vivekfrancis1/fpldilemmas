@@ -621,7 +621,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   </Button>
                 </th>
                 {nextGameweeks.map((gw, idx) => {
-                  const colCls = idx < 2 ? "table-cell" : idx < 4 ? "hidden sm:table-cell" : "hidden lg:table-cell";
+                  const colCls = idx < 4 ? "table-cell" : "hidden lg:table-cell";
                   return (
                     <th key={gw} className={`text-center py-1 px-1 md:p-2 ${colCls}`}>
                       <Button
@@ -779,7 +779,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         textColor = 'text-orange-800 dark:text-orange-300';
                       }
                       
-                      const colCls = idx < 2 ? "table-cell" : idx < 4 ? "hidden sm:table-cell" : "hidden lg:table-cell";
+                      const colCls = idx < 4 ? "table-cell" : "hidden lg:table-cell";
                       
                       return (
                         <td key={gw} className={`py-1 px-1 md:p-2 text-center ${bgColor} ${colCls}`}>
