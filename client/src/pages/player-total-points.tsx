@@ -702,19 +702,19 @@ function createPlayerTotalPointsColumns(
       key: 'name',
       header: 'Player',
       sortable: true,
-      className: 'sticky left-0 bg-white z-10 min-w-[100px] md:min-w-[180px]',
+      className: 'sticky left-0 bg-white z-10 min-w-[80px] md:min-w-[160px]',
       render: (_, player) => (
-        <div className="min-w-[100px] md:min-w-[180px]">
-          <div className="flex items-center gap-1 flex-wrap">
+        <div className="min-w-[80px] md:min-w-[160px]">
+          <div className="flex items-center gap-0.5 flex-wrap">
             <PlayerNameCell name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name} />
             <PlayerAvailabilityBadge player={player} />
           </div>
-          <div className="flex items-center gap-0.5 md:gap-1 mt-0.5 mb-0.5">
+          <div className="flex items-center gap-0.5 mt-0.5 mb-0.5">
             <PositionBadge position={player.position} compact={true} />
             <TeamBadge team={(teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamName || player.team} compact={true} />
           </div>
-          <div className="text-[10px] md:text-xs text-gray-500 space-x-1">
-            <span className="font-medium">£{(typeof player.price === 'number') ? player.price.toFixed(1) : '0.0'}m</span>
+          <div className="text-[10px] md:text-xs text-gray-500 space-x-0.5 md:space-x-1">
+            <span className="font-medium">£{(typeof player.price === 'number') ? player.price.toFixed(1) : '0.0'}</span>
             <span className="text-gray-400">•</span>
             <span>{(typeof player.ownership === 'number') ? player.ownership.toFixed(1) : '0.0'}%</span>
           </div>
