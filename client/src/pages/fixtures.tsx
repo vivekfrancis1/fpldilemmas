@@ -88,6 +88,8 @@ export default function Fixtures() {
   });
 
   // Calculate default FDR values from official FPL API ratings
+  // Note: "home" = facing this team when YOU are at home (they are away)
+  //       "away" = facing this team when YOU are away (they are at home)
   const defaultFDR = useMemo(() => {
     if (!fixturesData || !bootstrapData?.teams) return {};
     
@@ -100,13 +102,13 @@ export default function Fixtures() {
     
     // Collect official FPL difficulty ratings for each team as an opponent
     fixturesData.forEach(fixture => {
-      // When team plays at HOME, the away team's difficulty rating tells us how hard this team is as a home opponent
-      if (fixture.team_h && fixture.team_a_difficulty) {
-        fdrMap[fixture.team_h].home.push(fixture.team_a_difficulty);
-      }
-      // When team plays AWAY, the home team's difficulty rating tells us how hard this team is as an away opponent
+      // When this team is AWAY (you face them at HOME), use home team's difficulty
       if (fixture.team_a && fixture.team_h_difficulty) {
-        fdrMap[fixture.team_a].away.push(fixture.team_h_difficulty);
+        fdrMap[fixture.team_a].home.push(fixture.team_h_difficulty);
+      }
+      // When this team is HOME (you face them AWAY), use away team's difficulty
+      if (fixture.team_h && fixture.team_a_difficulty) {
+        fdrMap[fixture.team_h].away.push(fixture.team_a_difficulty);
       }
     });
     
@@ -388,7 +390,7 @@ export default function Fixtures() {
                   <DialogHeader>
                     <DialogTitle>Customize Fixture Difficulty Ratings</DialogTitle>
                     <DialogDescription>
-                      Set custom FDR values (1-5) for each team, separately for Home and Away fixtures.
+                      Set custom FDR values (1-5) for each opponent. (H) = when YOU play at home vs them. (A) = when YOU play away vs them.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 mt-4">
@@ -417,7 +419,7 @@ export default function Fixtures() {
                             <div className="grid grid-cols-2 gap-3">
                               <div>
                                 <Label htmlFor={`home-${team.id}`} className="text-xs text-gray-600">
-                                  Home FDR <span className="text-gray-400">(Default: {teamDefaultFDR.home})</span>
+                                  {team.short_name} (H) <span className="text-gray-400">(Default: {teamDefaultFDR.home})</span>
                                 </Label>
                                 <Input
                                   id={`home-${team.id}`}
@@ -438,7 +440,7 @@ export default function Fixtures() {
                               </div>
                               <div>
                                 <Label htmlFor={`away-${team.id}`} className="text-xs text-gray-600">
-                                  Away FDR <span className="text-gray-400">(Default: {teamDefaultFDR.away})</span>
+                                  {team.short_name} (A) <span className="text-gray-400">(Default: {teamDefaultFDR.away})</span>
                                 </Label>
                                 <Input
                                   id={`away-${team.id}`}
