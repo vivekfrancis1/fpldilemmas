@@ -685,11 +685,15 @@ export default function Top50ManagerTeam() {
                 
                 {/* Pitch View */}
                 {teamView === "pitch" && (
-                  <PitchView 
-                    players={pitchPlayers}
-                    benchPlayers={benchPlayers}
-                    showFixtures={false}
-                  />
+                  <Card className="bg-white shadow-lg border border-gray-200 overflow-hidden">
+                    <CardContent className="p-4 sm:p-6">
+                      <PitchView 
+                        players={pitchPlayers}
+                        benchPlayers={benchPlayers}
+                        showFixtures={false}
+                      />
+                    </CardContent>
+                  </Card>
                 )}
                 
                 {/* List View - Team Formation Display */}
