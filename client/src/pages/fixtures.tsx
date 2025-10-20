@@ -87,7 +87,7 @@ export default function Fixtures() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Calculate default FDR values from fixture data
+  // Calculate default FDR values from official FPL API ratings
   const defaultFDR = useMemo(() => {
     if (!fixturesData || !bootstrapData?.teams) return {};
     
@@ -98,19 +98,19 @@ export default function Fixtures() {
       fdrMap[team.id] = { home: [], away: [] };
     });
     
-    // Collect FDR ratings for each team playing at home and away
+    // Collect official FPL difficulty ratings for each team as an opponent
     fixturesData.forEach(fixture => {
-      // Home team difficulty when playing at home
-      if (fixture.team_h && fixture.team_h_difficulty) {
-        fdrMap[fixture.team_h].home.push(fixture.team_h_difficulty);
+      // When team plays at HOME, the away team's difficulty rating tells us how hard this team is as a home opponent
+      if (fixture.team_h && fixture.team_a_difficulty) {
+        fdrMap[fixture.team_h].home.push(fixture.team_a_difficulty);
       }
-      // Away team difficulty when playing away
-      if (fixture.team_a && fixture.team_a_difficulty) {
-        fdrMap[fixture.team_a].away.push(fixture.team_a_difficulty);
+      // When team plays AWAY, the home team's difficulty rating tells us how hard this team is as an away opponent
+      if (fixture.team_a && fixture.team_h_difficulty) {
+        fdrMap[fixture.team_a].away.push(fixture.team_h_difficulty);
       }
     });
     
-    // Calculate average FDR for home and away
+    // Calculate average official FPL FDR for home and away
     const avgFDR: Record<number, { home: number, away: number }> = {};
     Object.entries(fdrMap).forEach(([teamId, ratings]) => {
       const homeAvg = ratings.home.length > 0 
