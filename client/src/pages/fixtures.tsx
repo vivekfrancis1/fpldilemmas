@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, ArrowUpDown, ArrowUp, ArrowDown, Settings } from "lucide-react";
+import { Calendar, ArrowUpDown, ArrowUp, ArrowDown, Settings, RotateCcw } from "lucide-react";
 import { BootstrapData, PREMIER_LEAGUE_TEAMS } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,8 +58,8 @@ export default function Fixtures() {
       ...prev,
       [teamId]: {
         ...prev[teamId],
-        home: venue === 'home' ? value : (prev[teamId]?.home || 3),
-        away: venue === 'away' ? value : (prev[teamId]?.away || 3)
+        home: venue === 'home' ? value : (prev[teamId]?.home),
+        away: venue === 'away' ? value : (prev[teamId]?.away)
       }
     }));
   };
@@ -67,6 +67,14 @@ export default function Fixtures() {
   const resetCustomFDR = () => {
     setCustomFDR({});
     localStorage.removeItem('fpl-custom-fdr');
+  };
+  
+  const resetTeamFDR = (teamId: number) => {
+    setCustomFDR(prev => {
+      const updated = { ...prev };
+      delete updated[teamId];
+      return updated;
+    });
   };
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
@@ -78,6 +86,44 @@ export default function Fixtures() {
     queryKey: ["/api/fixtures"],
     staleTime: 5 * 60 * 1000,
   });
+
+  // Calculate default FDR values from fixture data
+  const defaultFDR = useMemo(() => {
+    if (!fixturesData || !bootstrapData?.teams) return {};
+    
+    const fdrMap: Record<number, { home: number[], away: number[] }> = {};
+    
+    // Initialize for all teams
+    bootstrapData.teams.forEach(team => {
+      fdrMap[team.id] = { home: [], away: [] };
+    });
+    
+    // Collect FDR ratings for each team playing at home and away
+    fixturesData.forEach(fixture => {
+      // Home team difficulty when playing at home
+      if (fixture.team_h && fixture.team_h_difficulty) {
+        fdrMap[fixture.team_h].home.push(fixture.team_h_difficulty);
+      }
+      // Away team difficulty when playing away
+      if (fixture.team_a && fixture.team_a_difficulty) {
+        fdrMap[fixture.team_a].away.push(fixture.team_a_difficulty);
+      }
+    });
+    
+    // Calculate average FDR for home and away
+    const avgFDR: Record<number, { home: number, away: number }> = {};
+    Object.entries(fdrMap).forEach(([teamId, ratings]) => {
+      const homeAvg = ratings.home.length > 0 
+        ? Math.round(ratings.home.reduce((a, b) => a + b, 0) / ratings.home.length)
+        : 3;
+      const awayAvg = ratings.away.length > 0
+        ? Math.round(ratings.away.reduce((a, b) => a + b, 0) / ratings.away.length)
+        : 3;
+      avgFDR[parseInt(teamId)] = { home: homeAvg, away: awayAvg };
+    });
+    
+    return avgFDR;
+  }, [fixturesData, bootstrapData]);
 
   // Get current gameweek and available gameweeks
   const { currentGameweek, availableGameweeks } = useMemo(() => {
@@ -347,55 +393,74 @@ export default function Fixtures() {
                   </DialogHeader>
                   <div className="space-y-4 mt-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {PREMIER_LEAGUE_TEAMS.map(team => (
-                        <div key={team.id} className="border rounded-lg p-3 space-y-2">
-                          <div className="font-semibold text-sm">{team.name}</div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <Label htmlFor={`home-${team.id}`} className="text-xs">
-                                Home FDR
-                              </Label>
-                              <Input
-                                id={`home-${team.id}`}
-                                type="number"
-                                min="1"
-                                max="5"
-                                value={customFDR[team.id]?.home || ''}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value);
-                                  if (val >= 1 && val <= 5) {
-                                    updateCustomFDR(team.id, 'home', val);
-                                  }
-                                }}
-                                placeholder="Default"
-                                className="h-8"
-                                data-testid={`input-fdr-home-${team.id}`}
-                              />
+                      {PREMIER_LEAGUE_TEAMS.map(team => {
+                        const teamDefaultFDR = defaultFDR[team.id] || { home: 3, away: 3 };
+                        const hasCustom = !!customFDR[team.id];
+                        
+                        return (
+                          <div key={team.id} className={`border rounded-lg p-3 space-y-2 ${hasCustom ? 'border-blue-300 bg-blue-50/30' : ''}`}>
+                            <div className="flex items-center justify-between">
+                              <div className="font-semibold text-sm">{team.name}</div>
+                              {hasCustom && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => resetTeamFDR(team.id)}
+                                  className="h-6 px-2 text-xs"
+                                  data-testid={`button-reset-team-${team.id}`}
+                                >
+                                  <RotateCcw className="h-3 w-3 mr-1" />
+                                  Reset
+                                </Button>
+                              )}
                             </div>
-                            <div>
-                              <Label htmlFor={`away-${team.id}`} className="text-xs">
-                                Away FDR
-                              </Label>
-                              <Input
-                                id={`away-${team.id}`}
-                                type="number"
-                                min="1"
-                                max="5"
-                                value={customFDR[team.id]?.away || ''}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value);
-                                  if (val >= 1 && val <= 5) {
-                                    updateCustomFDR(team.id, 'away', val);
-                                  }
-                                }}
-                                placeholder="Default"
-                                className="h-8"
-                                data-testid={`input-fdr-away-${team.id}`}
-                              />
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label htmlFor={`home-${team.id}`} className="text-xs text-gray-600">
+                                  Home FDR <span className="text-gray-400">(Default: {teamDefaultFDR.home})</span>
+                                </Label>
+                                <Input
+                                  id={`home-${team.id}`}
+                                  type="number"
+                                  min="1"
+                                  max="5"
+                                  value={customFDR[team.id]?.home ?? ''}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (val >= 1 && val <= 5) {
+                                      updateCustomFDR(team.id, 'home', val);
+                                    }
+                                  }}
+                                  placeholder={teamDefaultFDR.home.toString()}
+                                  className={`h-8 ${customFDR[team.id]?.home ? 'border-blue-400 bg-blue-50' : ''}`}
+                                  data-testid={`input-fdr-home-${team.id}`}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`away-${team.id}`} className="text-xs text-gray-600">
+                                  Away FDR <span className="text-gray-400">(Default: {teamDefaultFDR.away})</span>
+                                </Label>
+                                <Input
+                                  id={`away-${team.id}`}
+                                  type="number"
+                                  min="1"
+                                  max="5"
+                                  value={customFDR[team.id]?.away ?? ''}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (val >= 1 && val <= 5) {
+                                      updateCustomFDR(team.id, 'away', val);
+                                    }
+                                  }}
+                                  placeholder={teamDefaultFDR.away.toString()}
+                                  className={`h-8 ${customFDR[team.id]?.away ? 'border-blue-400 bg-blue-50' : ''}`}
+                                  data-testid={`input-fdr-away-${team.id}`}
+                                />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     <div className="flex justify-between pt-4 border-t">
                       <Button 
