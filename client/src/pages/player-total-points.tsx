@@ -704,43 +704,46 @@ function createPlayerTotalPointsColumns(
       sortable: true,
       className: 'sticky left-0 bg-white z-10 min-w-[140px] md:min-w-[200px]',
       render: (_, player) => (
-        <div className="flex items-center gap-1 md:gap-2 min-w-[140px] md:min-w-[200px]">
-          <div className="flex-1">
-            <div className="flex items-center gap-1 md:gap-2 flex-wrap">
-              <PlayerNameCell name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name} />
-              <PlayerAvailabilityBadge player={player} />
-            </div>
-            <div className="flex items-center gap-1 mt-0.5 md:mt-1 mb-0.5 md:mb-1">
-              <PositionBadge position={player.position} compact={true} />
-              <TeamBadge team={(teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamName || player.team} compact={true} />
-            </div>
-            <div className="text-xs text-gray-500 space-x-1 md:space-x-2">
-              <span className="font-medium">£{(typeof player.price === 'number') ? player.price.toFixed(1) : '0.0'}m</span>
-              <span className="text-gray-400">•</span>
-              <span>{(typeof player.ownership === 'number') ? player.ownership.toFixed(1) : '0.0'}%</span>
-            </div>
+        <div className="min-w-[140px] md:min-w-[200px]">
+          <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+            <PlayerNameCell name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name} />
+            <PlayerAvailabilityBadge player={player} />
           </div>
-          {onPlayerCompareClick && (
-            <div className="flex-shrink-0">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onPlayerCompareClick(player)}
-                disabled={maxCompareReached && !compareList?.some(p => (p.playerId || p.id) === (player.playerId || player.id))}
-                className={`h-6 w-6 md:h-8 md:w-8 p-0 hover:bg-blue-50 ${
-                  compareList?.some(p => (p.playerId || p.id) === (player.playerId || player.id))
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-400 hover:text-blue-600'
-                }`}
-                data-testid={`button-compare-${player.playerId || player.id}`}
-              >
-                <UserPlus className="h-3 w-3 md:h-4 md:w-4" />
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center gap-1 mt-0.5 md:mt-1 mb-0.5 md:mb-1">
+            <PositionBadge position={player.position} compact={true} />
+            <TeamBadge team={(teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamName || player.team} compact={true} />
+          </div>
+          <div className="text-xs text-gray-500 space-x-1 md:space-x-2">
+            <span className="font-medium">£{(typeof player.price === 'number') ? player.price.toFixed(1) : '0.0'}m</span>
+            <span className="text-gray-400">•</span>
+            <span>{(typeof player.ownership === 'number') ? player.ownership.toFixed(1) : '0.0'}%</span>
+          </div>
         </div>
       )
     },
+    ...(onPlayerCompareClick ? [{
+      key: 'compare',
+      header: '',
+      sortable: false,
+      align: 'center' as const,
+      className: 'min-w-[40px]',
+      render: (_: any, player: PlayerTotalPointsData) => (
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => onPlayerCompareClick(player)}
+          disabled={maxCompareReached && !compareList?.some(p => (p.playerId || p.id) === (player.playerId || player.id))}
+          className={`h-6 w-6 md:h-8 md:w-8 p-0 hover:bg-blue-50 ${
+            compareList?.some(p => (p.playerId || p.id) === (player.playerId || player.id))
+              ? 'bg-blue-100 text-blue-700'
+              : 'text-gray-400 hover:text-blue-600'
+          }`}
+          data-testid={`button-compare-${player.playerId || player.id}`}
+        >
+          <UserPlus className="h-3 w-3 md:h-4 md:w-4" />
+        </Button>
+      )
+    }] : []),
     ...gameweekRange.map(gw => {
       const gwKey = `gw${gw}`;
       const numericGwKey = gw.toString();
