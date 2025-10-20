@@ -337,6 +337,16 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     queryKey: ["/api/bootstrap-static"],
   });
 
+  // Create playerId to web_name mapping
+  const playerIdToWebName = useMemo(() => {
+    if (!bootstrapData?.elements) return new Map<number, string>();
+    const map = new Map<number, string>();
+    bootstrapData.elements.forEach(element => {
+      map.set(element.id, element.web_name);
+    });
+    return map;
+  }, [bootstrapData]);
+
   // Apply availability adjustments to all players - MUST BE BEFORE EARLY RETURNS
   const adjustedPlayersData = useMemo(() => {
     if (!bootstrapData || !allPlayersData) return allPlayersData || [];
@@ -693,7 +703,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                   >
                     <td className="py-1 px-1 md:p-2 sticky left-0 bg-white dark:bg-gray-950 z-10 w-[160px] min-w-[160px] max-w-[200px]">
                       <div className="flex items-center gap-1.5">
-                        <div className="font-medium text-xs md:text-sm truncate max-w-[100px]">{player.name}</div>
+                        <div className="font-medium text-xs md:text-sm truncate max-w-[100px]">
+                          {(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.name}
+                        </div>
                         <TooltipProvider>
                           <PlayerAvailabilityBadge player={player} />
                         </TooltipProvider>
