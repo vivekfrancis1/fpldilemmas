@@ -489,7 +489,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
 }
 
 // Range Total Point Breakdown Tooltip Component
-function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData }) {
+function RangeTotalBreakdownTooltip({ player, gameweekCount }: { player: PlayerTotalPointsData; gameweekCount: number }) {
   const hasBreakdownData = player.totalPointsFromGoals !== undefined;
   
   if (!hasBreakdownData) {
@@ -520,7 +520,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
       <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
         <div className="space-y-2">
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
-            {player.name} - 6GW Total Breakdown
+            {player.name} - {gameweekCount}GW Total Breakdown
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="flex justify-between items-center">
@@ -626,7 +626,7 @@ function RangeTotalBreakdownTooltip({ player }: { player: PlayerTotalPointsData 
           </div>
           <div className="border-t pt-2 mt-3">
             <div className="flex justify-between items-center font-semibold">
-              <span className="text-gray-800">6GW Total:</span>
+              <span className="text-gray-800">{gameweekCount}GW Total:</span>
               <ValueCell 
                 value={player.totalExpectedPoints || 0} 
                 format="points" 
@@ -764,11 +764,11 @@ function createPlayerTotalPointsColumns(
     }),
     {
       key: 'totalExpectedPoints',
-      header: '6GW Total',
+      header: `${gameweekRange.length}GW Total`,
       sortable: true,
       align: 'center',
       className: 'min-w-[90px] md:min-w-[100px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300',
-      render: (_, player) => <RangeTotalBreakdownTooltip player={player} />
+      render: (_, player) => <RangeTotalBreakdownTooltip player={player} gameweekCount={gameweekRange.length} />
     },
     {
       key: 'averagePerGameweek',
