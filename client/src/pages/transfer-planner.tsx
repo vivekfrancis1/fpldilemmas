@@ -1272,6 +1272,27 @@ export default function TransferPlanner() {
     return names[chipType] || chipType;
   };
 
+  // Get chip display name with number (e.g., "Bench Boost 1", "Wildcard 2")
+  const getChipDisplayNameWithNumber = (chipType: ChipType): string => {
+    const baseName = getChipDisplayName(chipType);
+    const used = historyData?.chips?.filter(chip => chip.name === chipType).length || 0;
+    const remaining = getRemainingChips()[chipType];
+    
+    // Calculate which number this chip is (1 or 2)
+    const chipNumber = used + remaining > 0 ? (used + 1) : 1;
+    
+    return `${baseName} ${chipNumber}`;
+  };
+
+  // Get used chip display name with number
+  const getUsedChipDisplayName = (chipType: string, usedIndex: number): string => {
+    const baseName = getChipDisplayName(chipType as ChipType);
+    const totalUsed = historyData?.chips?.filter(chip => chip.name === chipType).length || 0;
+    
+    // For the first use, show "1", for second use show "2"
+    return `${baseName} ${usedIndex + 1}`;
+  };
+
   // Get chip description
   const getChipDescription = (chipType: ChipType): string => {
     const descriptions: Record<ChipType, string> = {
@@ -3462,11 +3483,20 @@ export default function TransferPlanner() {
                   Chips Already Used
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {historyData.chips.map((chip, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {getChipDisplayName(chip.name as ChipType)} - GW{chip.event}
-                    </Badge>
-                  ))}
+                  {(() => {
+                    const chipCounts: Record<string, number> = {};
+                    return historyData.chips.map((chip, index) => {
+                      const chipType = chip.name;
+                      const usedIndex = chipCounts[chipType] || 0;
+                      chipCounts[chipType] = usedIndex + 1;
+                      
+                      return (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          {getUsedChipDisplayName(chipType, usedIndex)} - GW{chip.event}
+                        </Badge>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             )}
@@ -3474,14 +3504,14 @@ export default function TransferPlanner() {
             {/* Chip Planning for Upcoming Gameweeks */}
             <div className="border-t pt-3">
               <h4 className="text-xs md:text-sm font-semibold mb-3">Plan Chips for Upcoming Gameweeks</h4>
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {getNextGameweeks().map((gw) => {
                   const remainingChips = getRemainingChips();
                   const selectedChip = plannedChips[gw.id];
                   
                   return (
-                    <div key={gw.id} className="flex items-center gap-2 md:gap-3">
-                      <span className="text-xs md:text-sm font-medium min-w-[60px] md:min-w-[80px]">GW {gw.id}:</span>
+                    <div key={gw.id} className="flex items-center gap-2">
+                      <span className="text-xs md:text-sm font-medium min-w-[50px]">GW {gw.id}:</span>
                       <Select
                         value={selectedChip || "none"}
                         onValueChange={(value) => {
@@ -3492,7 +3522,7 @@ export default function TransferPlanner() {
                           }
                         }}
                       >
-                        <SelectTrigger className="h-8 md:h-9 text-xs md:text-sm" data-testid={`chip-selector-gw${gw.id}`}>
+                        <SelectTrigger className="h-8 text-xs flex-1" data-testid={`chip-selector-gw${gw.id}`}>
                           <SelectValue placeholder="No chip planned" />
                         </SelectTrigger>
                         <SelectContent>
@@ -3502,7 +3532,7 @@ export default function TransferPlanner() {
                               key={chipType}
                               value={chipType}
                             >
-                              {getChipDisplayName(chipType)}
+                              {getChipDisplayNameWithNumber(chipType)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -3536,7 +3566,7 @@ export default function TransferPlanner() {
                     .filter(([_, chipType]) => chipType !== null)
                     .map(([gameweek, chipType]) => (
                       <Badge key={gameweek} className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                        GW{gameweek}: {getChipDisplayName(chipType as ChipType)}
+                        GW{gameweek}: {getChipDisplayNameWithNumber(chipType as ChipType)}
                       </Badge>
                     ))}
                 </div>
