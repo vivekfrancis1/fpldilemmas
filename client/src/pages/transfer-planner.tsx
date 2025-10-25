@@ -871,6 +871,36 @@ interface GameweekTransfers {
   };
 }
 
+interface ManagerHistory {
+  current: Array<{
+    event: number;
+    points: number;
+    total_points: number;
+    rank: number;
+    overall_rank: number;
+    bank: number;
+    value: number;
+    event_transfers: number;
+    event_transfers_cost: number;
+  }>;
+  past: Array<{
+    season_name: string;
+    total_points: number;
+    rank: number;
+  }>;
+  chips: Array<{
+    name: string;
+    time: string;
+    event: number;
+  }>;
+}
+
+type ChipType = 'wildcard' | '3xc' | 'bboost' | 'freehit';
+
+interface PlannedChips {
+  [gameweek: number]: ChipType | null;
+}
+
 export default function TransferPlanner() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
@@ -902,6 +932,9 @@ export default function TransferPlanner() {
   const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [comparisonFilter, setComparisonFilter] = useState<"all" | "manual" | "auto">("all");
+  
+  // Chip planning state
+  const [plannedChips, setPlannedChips] = useState<PlannedChips>({});
   
   // Sell price editing state
   const [editingSellPrice, setEditingSellPrice] = useState<number | null>(null);
@@ -961,6 +994,14 @@ export default function TransferPlanner() {
     enabled: !!searchedId,
     staleTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false, // Prevent auto-refetch that would reset transfers
+  });
+
+  // Fetch manager history to get used chips
+  const { data: historyData } = useQuery<ManagerHistory>({
+    queryKey: ["/api/manager", searchedId, "history"],
+    enabled: !!searchedId,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Fetch buy prices for all players in the team
