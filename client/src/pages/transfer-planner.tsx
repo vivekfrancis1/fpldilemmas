@@ -2012,6 +2012,36 @@ export default function TransferPlanner() {
     newLineup[startingIndex].position = startingIndex + 1;
     newLineup[11 + benchIndex].position = 11 + benchIndex + 1;
     
+    // Handle captain/vice captain transfers
+    const wasCaptain = temp.is_captain;
+    const wasViceCaptain = temp.is_vice_captain;
+    
+    if (wasCaptain) {
+      // Starting player was captain - current vice captain becomes captain, new player becomes vice captain
+      const currentViceCaptain = newLineup.find(p => p.is_vice_captain);
+      
+      newLineup.forEach((pick, index) => {
+        if (index === startingIndex) {
+          // New starting player becomes vice captain
+          newLineup[index] = { ...pick, is_vice_captain: true, is_captain: false };
+        } else if (currentViceCaptain && pick.element === currentViceCaptain.element) {
+          // Current vice captain becomes captain
+          newLineup[index] = { ...pick, is_captain: true, is_vice_captain: false };
+        } else if (index === 11 + benchIndex) {
+          // Player going to bench loses captain status
+          newLineup[index] = { ...pick, is_captain: false, is_vice_captain: false };
+        }
+      });
+    } else if (wasViceCaptain) {
+      // Starting player was vice captain - new player becomes vice captain
+      newLineup[startingIndex] = { ...newLineup[startingIndex], is_vice_captain: true, is_captain: false };
+      newLineup[11 + benchIndex] = { ...newLineup[11 + benchIndex], is_vice_captain: false, is_captain: false };
+    } else {
+      // Regular swap - preserve captain/vice captain flags
+      newLineup[startingIndex] = { ...newLineup[startingIndex], is_captain: false, is_vice_captain: false };
+      newLineup[11 + benchIndex] = { ...newLineup[11 + benchIndex], is_captain: false, is_vice_captain: false };
+    }
+    
     setManualLineup(newLineup);
     
     // Show detailed swap confirmation (bench priority excludes GK, so subtract 1)
@@ -2019,9 +2049,18 @@ export default function TransferPlanner() {
     const newBenchPlayer = getPlayerById(newLineup[11 + benchIndex].element)?.web_name;
     const benchPriority = benchIndex; // Outfield bench priority (1, 2, 3)
     
+    let extraInfo = '';
+    if (wasCaptain) {
+      const newCaptain = newLineup.find(p => p.is_captain);
+      const newCaptainName = newCaptain ? getPlayerById(newCaptain.element)?.web_name : '';
+      extraInfo = ` ${newCaptainName} is now captain and ${newStartingPlayer} is now vice captain.`;
+    } else if (wasViceCaptain) {
+      extraInfo = ` ${newStartingPlayer} is now vice captain.`;
+    }
+    
     toast({
       title: "Players Swapped",
-      description: `${newStartingPlayer} has been moved to Starting 11, instead of ${newBenchPlayer} who is now in bench position ${benchPriority}`
+      description: `${newStartingPlayer} has been moved to Starting 11, instead of ${newBenchPlayer} who is now in bench position ${benchPriority}.${extraInfo}`
     });
   };
 
