@@ -4547,8 +4547,8 @@ export default function TransferPlanner() {
                                         <path d="M 295 52 L 298 61 L 308 61 L 300 67 L 303 76 L 295 70 L 287 76 L 290 67 L 282 61 L 292 61 Z" fill="white" />
                                       </g>
                                     )}
-                                    <text x="202" y="115" fontSize="28" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                    <text x="202" y="160" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                    <text x="202" y="108" fontSize="28" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                    <text x="202" y="150" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
                                     <text x="202" y="225" fontSize="52" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                       {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                       {pick.is_captain && projectedPoints !== null && (
@@ -4752,11 +4752,11 @@ export default function TransferPlanner() {
                                   <path d="M 295 52 L 298 61 L 308 61 L 300 67 L 303 76 L 295 70 L 287 76 L 290 67 L 282 61 L 292 61 Z" fill="white" />
                                 </g>
                               )}
-                              <text x="202" y="100" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                              <text x="202" y="130" fontSize="24" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                              <text x="202" y="175" fontSize="46" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
+                              <text x="202" y="108" fontSize="28" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                              <text x="202" y="150" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                              <text x="202" y="225" fontSize="52" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
                               {fixture && (
-                                <text x="202" y="205" fontSize="18" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                <text x="202" y="270" fontSize="24" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                               )}
                             </svg>
                           </div>
