@@ -1339,6 +1339,32 @@ export default function TransferPlanner() {
       }
     }
     
+    // For triple captain, apply the same gameweek constraints
+    if (chipType === '3xc') {
+      // Count how many triple captains have been used
+      const tripleCaptainsUsed = historyData?.chips?.filter(chip => chip.name === '3xc').length || 0;
+      
+      // If no triple captains used, the first triple captain can be used up to GW19
+      if (tripleCaptainsUsed === 0) {
+        return gameweek <= 19;
+      }
+      
+      // If one triple captain used, check which one based on when it was used
+      if (tripleCaptainsUsed === 1) {
+        const firstTripleCaptainGW = historyData?.chips?.find(chip => chip.name === '3xc')?.event || 0;
+        
+        // If first triple captain was used in GW19 or earlier, the second triple captain can only be used from GW20 onwards
+        if (firstTripleCaptainGW <= 19) {
+          return gameweek >= 20;
+        }
+        
+        // If first triple captain was used in GW20 or later, the second triple captain (first one) can be used up to GW19
+        if (firstTripleCaptainGW >= 20) {
+          return gameweek <= 19;
+        }
+      }
+    }
+    
     // All other chips can be used in any gameweek if they're available
     return true;
   };
