@@ -1478,7 +1478,7 @@ export default function TransferPlanner() {
       return;
     }
 
-    const pick = [...teamPicks, ...benchPicks].find(p => p.element === editBuyPriceDialog.playerId);
+    const pick = manualLineup.find(p => p.element === editBuyPriceDialog.playerId);
     if (!pick) return;
 
     // Verify new sell price is valid
@@ -1494,16 +1494,12 @@ export default function TransferPlanner() {
       return;
     }
 
-    // Update the pick
-    const updatedPick = { ...pick, selling_price: Math.round(newPrice * 10) };
+    // Update the pick with the new purchase price
+    const updatedPick = { ...pick, purchase_price: Math.round(newPrice * 10) };
     
-    if (teamPicks.some(p => p.element === pick.element)) {
-      const newTeamPicks = teamPicks.map(p => p.element === pick.element ? updatedPick : p);
-      setTeamPicks(newTeamPicks);
-    } else {
-      const newBenchPicks = benchPicks.map(p => p.element === pick.element ? updatedPick : p);
-      setBenchPicks(newBenchPicks);
-    }
+    // Update manualLineup
+    const newManualLineup = manualLineup.map(p => p.element === pick.element ? updatedPick : p);
+    setManualLineup(newManualLineup);
 
     setEditBuyPriceDialog(null);
     setEditBuyPriceValue("");
@@ -5598,7 +5594,7 @@ export default function TransferPlanner() {
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Current sell price: £{editBuyPriceDialog ? getSellingPrice([...teamPicks, ...benchPicks].find(p => p.element === editBuyPriceDialog.playerId)!).toFixed(1) : '0.0'}m
+              Current sell price: £{editBuyPriceDialog ? getSellingPrice(manualLineup.find(p => p.element === editBuyPriceDialog.playerId)!).toFixed(1) : '0.0'}m
             </p>
           </div>
           <AlertDialogFooter>
