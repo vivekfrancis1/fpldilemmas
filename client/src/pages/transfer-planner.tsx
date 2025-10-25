@@ -911,6 +911,9 @@ export default function TransferPlanner() {
   const [captainConfirmation, setCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
   const [viceCaptainConfirmation, setViceCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
   
+  // Selected player for pitch view actions
+  const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
+  
   const { toast } = useToast();
 
   // Cache manager ID functionality
@@ -4372,22 +4375,27 @@ export default function TransferPlanner() {
                               <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
                                   {/* Jersey Card */}
-                                  <svg viewBox="0 0 403 302" className="w-full drop-shadow-xl">
+                                  <svg 
+                                    viewBox="0 0 403 302" 
+                                    className={`w-full drop-shadow-xl cursor-pointer transition-all ${selectedPlayer === pick.element ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg' : ''}`}
+                                    onClick={() => setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element)}
+                                    data-testid={`pitch-jersey-${pick.element}`}
+                                  >
                                     <defs><clipPath id={`jersey-manual-${player.id}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
                                     <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-manual-${player.id})`} />
                                     <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
                                     <path d="M 130 14 L 144 26 L 158 36 L 173 42 Q 187 42 202 42 L 216 42 Q 230 42 245 36 L 259 26 L 274 14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
                                     {isPlayerTransferredIn(pick) && (<g><circle cx="295" cy="70" r="17" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="295" y="78" fontSize="16" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
-                                    {!pick.is_captain && plannerMode === "manual" ? (
-                                      <g onClick={() => handleSetCaptain(pick.element)} style={{ cursor: 'pointer' }} data-testid={`pitch-set-captain-${pick.element}`}>
+                                    {selectedPlayer === pick.element && !pick.is_captain && plannerMode === "manual" ? (
+                                      <g onClick={(e) => { e.stopPropagation(); handleSetCaptain(pick.element); }} style={{ cursor: 'pointer' }} data-testid={`pitch-set-captain-${pick.element}`}>
                                         <rect x="96" y="55" width="29" height="29" fill="rgb(254 252 232)" stroke="rgb(161 98 7)" strokeWidth="1" rx="4" />
                                         <text x="110" y="76" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">👑</text>
                                       </g>
                                     ) : pick.is_captain ? (
                                       <g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>
                                     ) : null}
-                                    {!pick.is_vice_captain && plannerMode === "manual" ? (
-                                      <g onClick={() => handleSetViceCaptain(pick.element)} style={{ cursor: 'pointer' }} data-testid={`pitch-set-vice-${pick.element}`}>
+                                    {selectedPlayer === pick.element && !pick.is_vice_captain && plannerMode === "manual" ? (
+                                      <g onClick={(e) => { e.stopPropagation(); handleSetViceCaptain(pick.element); }} style={{ cursor: 'pointer' }} data-testid={`pitch-set-vice-${pick.element}`}>
                                         <rect x="278" y="55" width="29" height="29" fill="rgb(239 246 255)" stroke="rgb(29 78 216)" strokeWidth="1" rx="4" />
                                         <text x="293" y="76" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">👑</text>
                                       </g>
@@ -4435,30 +4443,32 @@ export default function TransferPlanner() {
                                         )}
                                       </div>
                                     </foreignObject>
-                                    <foreignObject x="86" y="242" width="230" height="50">
-                                      <div className="flex justify-center gap-1.5">
-                                        <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
-                                          <SelectTrigger className="h-5 w-[60px] px-1.5 py-0 text-[10px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
-                                          <SelectContent>
-                                            {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
-                                              const benchPlayer = getPlayerById(benchPick.element);
-                                              const startingPlayer = getPlayerById(pick.element);
-                                              if (startingPlayer?.element_type === 1 && benchPlayer?.element_type !== 1) return null;
-                                              if (startingPlayer?.element_type !== 1 && benchPlayer?.element_type === 1) return null;
-                                              if (startingPlayer?.element_type === 2 && benchPlayer?.element_type !== 2) {
-                                                const starting11 = manualLineup.slice(0, 11);
-                                                const defendersInStarting = starting11.filter(p => { const pl = getPlayerById(p.element); return pl?.element_type === 2; }).length;
-                                                if (defendersInStarting <= 3) return null;
-                                              }
-                                              return (<SelectItem key={benchPick.element} value={benchIndex.toString()}>{benchPlayer?.web_name}</SelectItem>);
-                                            })}
-                                          </SelectContent>
-                                        </Select>
-                                        {plannerMode === "manual" && (
-                                          <Button size="sm" variant="ghost" className="h-12 w-[103px] text-[14px] font-semibold text-red-600 bg-white/90 hover:bg-red-50 mt-1" onClick={() => handleTransferOut(pick)} data-testid={`pitch-transfer-out-${pick.element}`} title="Transfer Out"><X className="h-4 w-4 mr-1" />Out</Button>
-                                        )}
-                                      </div>
-                                    </foreignObject>
+                                    {selectedPlayer === pick.element && (
+                                      <foreignObject x="86" y="242" width="230" height="50">
+                                        <div className="flex justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                          <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
+                                            <SelectTrigger className="h-5 w-[60px] px-1.5 py-0 text-[10px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-swap-${pick.element}`} title="Swap with bench"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
+                                            <SelectContent>
+                                              {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
+                                                const benchPlayer = getPlayerById(benchPick.element);
+                                                const startingPlayer = getPlayerById(pick.element);
+                                                if (startingPlayer?.element_type === 1 && benchPlayer?.element_type !== 1) return null;
+                                                if (startingPlayer?.element_type !== 1 && benchPlayer?.element_type === 1) return null;
+                                                if (startingPlayer?.element_type === 2 && benchPlayer?.element_type !== 2) {
+                                                  const starting11 = manualLineup.slice(0, 11);
+                                                  const defendersInStarting = starting11.filter(p => { const pl = getPlayerById(p.element); return pl?.element_type === 2; }).length;
+                                                  if (defendersInStarting <= 3) return null;
+                                                }
+                                                return (<SelectItem key={benchPick.element} value={benchIndex.toString()}>{benchPlayer?.web_name}</SelectItem>);
+                                              })}
+                                            </SelectContent>
+                                          </Select>
+                                          {plannerMode === "manual" && (
+                                            <Button size="sm" variant="ghost" className="h-12 w-[103px] text-[14px] font-semibold text-red-600 bg-white/90 hover:bg-red-50 mt-1" onClick={() => handleTransferOut(pick)} data-testid={`pitch-transfer-out-${pick.element}`} title="Transfer Out"><X className="h-4 w-4 mr-1" />Out</Button>
+                                          )}
+                                        </div>
+                                      </foreignObject>
+                                    )}
                                   </svg>
                                 </div>
                               </div>
@@ -4537,7 +4547,12 @@ export default function TransferPlanner() {
                       return (
                         <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`pitch-bench-${player.id}`}>
                           <div className="relative w-full opacity-90">
-                            <svg viewBox="0 0 403 302" className="w-full drop-shadow-lg">
+                            <svg 
+                              viewBox="0 0 403 302" 
+                              className={`w-full drop-shadow-lg cursor-pointer transition-all ${selectedPlayer === pick.element ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg' : ''}`}
+                              onClick={() => setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element)}
+                              data-testid={`pitch-bench-jersey-${pick.element}`}
+                            >
                               <defs><clipPath id={`jersey-bench-manual-${player.id}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
                               <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-bench-manual-${player.id})`} />
                               <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
@@ -4568,29 +4583,31 @@ export default function TransferPlanner() {
                                   )}
                                 </div>
                               </foreignObject>
-                              <foreignObject x="86" y="242" width="230" height="50">
-                                <div className="flex justify-center gap-1.5">
-                                  <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
-                                    <SelectTrigger className="h-5 w-[60px] px-1.5 py-0 text-[10px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
-                                    <SelectContent>
-                                      {manualLineup.slice(0, 11).map((startPick, startIndex) => {
-                                        const startPlayer = getPlayerById(startPick.element);
-                                        const benchPlayer = getPlayerById(pick.element);
-                                        if (benchPlayer?.element_type === 1 && startPlayer?.element_type !== 1) return null;
-                                        if (benchPlayer?.element_type !== 1 && startPlayer?.element_type === 1) return null;
-                                        return (<SelectItem key={startPick.element} value={startIndex.toString()}>{startPlayer?.web_name}</SelectItem>);
-                                      })}
-                                    </SelectContent>
-                                  </Select>
-                                  {plannerMode === "manual" && (
-                                    <Button size="sm" variant="ghost" className="h-12 w-[103px] text-[14px] font-semibold text-red-600 bg-white/90 hover:bg-red-50 mt-1" onClick={() => handleTransferOut(pick)} data-testid={`pitch-bench-transfer-out-${pick.element}`} title="Transfer Out"><X className="h-4 w-4 mr-1" />Out</Button>
-                                  )}
-                                </div>
-                              </foreignObject>
+                              {selectedPlayer === pick.element && (
+                                <foreignObject x="86" y="242" width="230" height="50">
+                                  <div className="flex justify-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                    <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
+                                      <SelectTrigger className="h-5 w-[60px] px-1.5 py-0 text-[10px] font-normal bg-white/60 hover:bg-white/80 border border-gray-200 rounded [&>svg]:hidden" data-testid={`pitch-bench-swap-${pick.element}`} title="Swap with starting XI"><div className="flex items-center justify-center w-full"><span className="whitespace-nowrap">Swap</span></div></SelectTrigger>
+                                      <SelectContent>
+                                        {manualLineup.slice(0, 11).map((startPick, startIndex) => {
+                                          const startPlayer = getPlayerById(startPick.element);
+                                          const benchPlayer = getPlayerById(pick.element);
+                                          if (benchPlayer?.element_type === 1 && startPlayer?.element_type !== 1) return null;
+                                          if (benchPlayer?.element_type !== 1 && startPlayer?.element_type === 1) return null;
+                                          return (<SelectItem key={startPick.element} value={startIndex.toString()}>{startPlayer?.web_name}</SelectItem>);
+                                        })}
+                                      </SelectContent>
+                                    </Select>
+                                    {plannerMode === "manual" && (
+                                      <Button size="sm" variant="ghost" className="h-12 w-[103px] text-[14px] font-semibold text-red-600 bg-white/90 hover:bg-red-50 mt-1" onClick={() => handleTransferOut(pick)} data-testid={`pitch-bench-transfer-out-${pick.element}`} title="Transfer Out"><X className="h-4 w-4 mr-1" />Out</Button>
+                                    )}
+                                  </div>
+                                </foreignObject>
+                              )}
                             </svg>
                           </div>
                           {/* Bench Reorder Arrows - Only for non-GK bench players - moved below jersey */}
-                          {benchIndex > 0 && plannerMode === "manual" && (
+                          {benchIndex > 0 && plannerMode === "manual" && selectedPlayer === pick.element && (
                             <div className="flex gap-1 justify-center mt-1">
                               <Button
                                 size="sm"
