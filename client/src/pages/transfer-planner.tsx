@@ -2039,6 +2039,14 @@ export default function TransferPlanner() {
     newLineup[swapIndex].position = swapIndex + 1;
     
     setManualLineup(newLineup);
+    
+    // Show confirmation toast
+    const playerName = getPlayerById(temp.element)?.web_name;
+    const newPriority = swapIndex - 10; // Bench positions are 1-4 (12-11=1, 13-11=2, etc.)
+    toast({
+      title: "Bench Priority Changed",
+      description: `${playerName} is now bench priority ${newPriority}`
+    });
   };
 
   // Handle captain selection
