@@ -695,7 +695,7 @@ export default function MyDashboard() {
             {/* Main Dashboard Tabs */}
             <Tabs defaultValue="overview" className="w-full">
               {/* Mobile: Show only 3 main tabs */}
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg sm:mobile-tabs-list">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg sm:mobile-tabs-list">
                 <TabsTrigger 
                   value="overview" 
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger"
@@ -720,6 +720,13 @@ export default function MyDashboard() {
                   data-testid="tab-transfers"
                 >
                   Transfers
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="chips" 
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger hidden sm:flex"
+                  data-testid="tab-chips"
+                >
+                  Chips
                 </TabsTrigger>
                 <TabsTrigger 
                   value="performance" 
@@ -1720,6 +1727,42 @@ export default function MyDashboard() {
                     <div className="text-lg">Loading transfer data...</div>
                   </div>
                 )}
+              </TabsContent>
+
+              {/* Chips Tab */}
+              <TabsContent value="chips" className="fpl-section-spacing mt-8">
+                <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Star className="h-5 w-5" />
+                      Chips Used
+                    </CardTitle>
+                    <CardDescription>Special chips played this season</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {historyData?.chips && historyData.chips.length > 0 ? (
+                      <div className="space-y-2">
+                        {historyData.chips.map((chip, index) => (
+                          <div key={index} className="flex items-center gap-4 p-3 border rounded-lg bg-white/70">
+                            <Badge variant="outline" className="capitalize">{chip.name.replace('_', ' ')}</Badge>
+                            <span className="text-sm text-gray-600">Gameweek {chip.event}</span>
+                            <span className="text-xs text-gray-500 ml-auto">
+                              {new Date(chip.time).toLocaleDateString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <div className="p-4 bg-amber-100 rounded-full w-fit mx-auto mb-4">
+                          <Star className="h-8 w-8 text-amber-600" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-800 mb-2">No Chips Used Yet</h3>
+                        <p className="text-gray-600">No chips used yet this season</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </TabsContent>
 
               {/* Performance Tab */}
