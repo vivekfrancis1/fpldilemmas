@@ -1113,7 +1113,7 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-[23.4vw] sm:w-[9.1rem] md:w-[11.7rem] lg:w-[14.3rem]" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       {/* Jersey-Shaped Card */}
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
