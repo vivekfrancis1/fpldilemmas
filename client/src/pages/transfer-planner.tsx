@@ -4420,7 +4420,7 @@ export default function TransferPlanner() {
                             }
                             
                             return (
-                              <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`pitch-player-${player.id}`}>
+                              <div key={pick.element} className={`flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
                                   {/* Action Buttons Popup */}
                                   {selectedPlayer === pick.element && (
@@ -4630,7 +4630,7 @@ export default function TransferPlanner() {
                       }
                       
                       return (
-                        <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`pitch-bench-${player.id}`}>
+                        <div key={pick.element} className={`flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-bench-${player.id}`}>
                           <div className="relative w-full opacity-90">
                             {/* Action Buttons Popup */}
                             {selectedPlayer === pick.element && (
