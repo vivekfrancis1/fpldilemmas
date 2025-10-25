@@ -4398,7 +4398,7 @@ export default function TransferPlanner() {
                                             <span>•</span>
                                             <span>{player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD'}</span>
                                             <span>•</span>
-                                            <span>£{(player.selling_price / 10).toFixed(1)}m</span>
+                                            <span>£{getSellingPrice(pick).toFixed(1)}m</span>
                                             <span>•</span>
                                             <span>{player.selected_by_percent}%</span>
                                           </div>
@@ -4483,32 +4483,22 @@ export default function TransferPlanner() {
                                     <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
                                     <path d="M 130 14 L 144 26 L 158 36 L 173 42 Q 187 42 202 42 L 216 42 Q 230 42 245 36 L 259 26 L 274 14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
                                     {isPlayerTransferredIn(pick) && (<g><circle cx="295" cy="70" r="17" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="295" y="78" fontSize="16" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
-                                    {selectedPlayer === pick.element && !pick.is_captain && plannerMode === "manual" ? (
-                                      <g onClick={(e) => { e.stopPropagation(); handleSetCaptain(pick.element); }} style={{ cursor: 'pointer' }} data-testid={`pitch-set-captain-${pick.element}`}>
-                                        <rect x="96" y="55" width="29" height="29" fill="rgb(254 252 232)" stroke="rgb(161 98 7)" strokeWidth="1" rx="4" />
-                                        <text x="110" y="76" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">👑</text>
-                                      </g>
-                                    ) : pick.is_captain ? (
+                                    {pick.is_captain ? (
                                       <g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>
                                     ) : null}
-                                    {selectedPlayer === pick.element && !pick.is_vice_captain && plannerMode === "manual" ? (
-                                      <g onClick={(e) => { e.stopPropagation(); handleSetViceCaptain(pick.element); }} style={{ cursor: 'pointer' }} data-testid={`pitch-set-vice-${pick.element}`}>
-                                        <rect x="278" y="55" width="29" height="29" fill="rgb(239 246 255)" stroke="rgb(29 78 216)" strokeWidth="1" rx="4" />
-                                        <text x="293" y="76" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">👑</text>
-                                      </g>
-                                    ) : pick.is_vice_captain ? (
+                                    {pick.is_vice_captain ? (
                                       <g><rect x="274" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="293" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>
                                     ) : null}
-                                    <text x="202" y="105" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                    <text x="202" y="150" fontSize="36" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                    <text x="202" y="210" fontSize="58" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                    <text x="202" y="115" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                    <text x="202" y="165" fontSize="36" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                    <text x="202" y="230" fontSize="58" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                       {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                       {pick.is_captain && projectedPoints !== null && (
                                         <tspan fontSize="26" dx="5">({(projectedPoints * 2).toFixed(1)})</tspan>
                                       )}
                                     </text>
                                     {fixture && (
-                                      <text x="202" y="245" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                      <text x="202" y="265" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                                     )}
                                   </svg>
                                 </div>
@@ -4612,7 +4602,7 @@ export default function TransferPlanner() {
                                       <span>•</span>
                                       <span>{player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD'}</span>
                                       <span>•</span>
-                                      <span>£{(player.selling_price / 10).toFixed(1)}m</span>
+                                      <span>£{getSellingPrice(pick).toFixed(1)}m</span>
                                       <span>•</span>
                                       <span>{player.selected_by_percent}%</span>
                                     </div>
