@@ -1355,7 +1355,7 @@ export default function MyDashboard() {
                       {/* Bench Display */}
                       <div className="mt-6 pt-6 border-t-2 border-white/30">
                         <h3 className="text-white font-bold text-center mb-4">BENCH</h3>
-                        <div className="flex justify-center gap-2 sm:gap-4 flex-wrap">
+                        <div className="flex justify-center gap-0.5 sm:gap-1 md:gap-1.5 flex-wrap">
                           {sortBenchPlayers(teamData.picks.filter(pick => pick.position > 11)).map((pick, index) => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
