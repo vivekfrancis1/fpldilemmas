@@ -1235,7 +1235,7 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-[23.4vw] sm:w-[9.1rem] md:w-[11.7rem] lg:w-[14.3rem]" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-clip-def-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -1280,7 +1280,7 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-[23.4vw] sm:w-[9.1rem] md:w-[11.7rem] lg:w-[14.3rem]" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-clip-mid-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -1325,7 +1325,7 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-[23.4vw] sm:w-[9.1rem] md:w-[11.7rem] lg:w-[14.3rem]" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-clip-fwd-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -1365,7 +1365,7 @@ export default function MyDashboard() {
                             const textColor = getTextColor(jerseyColor);
                             
                             return (
-                              <div key={pick.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44 opacity-90" data-testid={`pitch-bench-${player.id}`}>
+                              <div key={pick.element} className="flex flex-col items-center w-[23.4vw] sm:w-[9.1rem] md:w-[11.7rem] lg:w-[14.3rem] opacity-90" data-testid={`pitch-bench-${player.id}`}>
                                 <div className="relative w-full">
                                   <svg viewBox="0 0 280 190" className="w-full drop-shadow-lg">
                                     <defs><clipPath id={`jersey-clip-bench-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
