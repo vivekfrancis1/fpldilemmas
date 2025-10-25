@@ -4377,12 +4377,25 @@ export default function TransferPlanner() {
                                   {/* Action Buttons Popup */}
                                   {selectedPlayer === pick.element && (
                                     <div 
-                                      className="absolute -top-2 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border-2 border-blue-400 overflow-hidden min-w-[200px]"
+                                      className="absolute -top-2 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-300 dark:border-gray-600 overflow-hidden min-w-[220px]"
                                       onClick={(e) => e.stopPropagation()}
                                       data-testid={`pitch-actions-${pick.element}`}
                                     >
+                                      {/* Close button */}
+                                      <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-700 dark:to-blue-800 px-4 py-2">
+                                        <div className="text-white text-sm font-semibold text-center">{player.web_name}</div>
+                                        <button
+                                          className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:text-gray-200 transition-colors"
+                                          onClick={() => setSelectedPlayer(null)}
+                                          data-testid={`pitch-close-${pick.element}`}
+                                          aria-label="Close"
+                                        >
+                                          <X className="h-5 w-5" />
+                                        </button>
+                                      </div>
+                                      
                                       <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
-                                        <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 bg-sky-100 hover:bg-sky-200 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-gray-900 dark:text-white [&>svg]:hidden" data-testid={`pitch-swap-${pick.element}`}>
+                                        <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white [&>svg]:hidden" data-testid={`pitch-swap-${pick.element}`}>
                                           <span className="w-full text-center">Swap</span>
                                         </SelectTrigger>
                                         <SelectContent>
@@ -4403,7 +4416,7 @@ export default function TransferPlanner() {
                                       {plannerMode === "manual" && (
                                         <>
                                           <button 
-                                            className="w-full h-12 border-b border-gray-200 bg-sky-100 hover:bg-sky-200 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-gray-900 dark:text-white transition-colors" 
+                                            className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
                                             onClick={() => handleTransferOut(pick)} 
                                             data-testid={`pitch-transfer-out-${pick.element}`}
                                           >
@@ -4411,7 +4424,7 @@ export default function TransferPlanner() {
                                           </button>
                                           {!pick.is_captain && (
                                             <button 
-                                              className="w-full h-12 border-b border-gray-200 bg-sky-100 hover:bg-sky-200 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-gray-900 dark:text-white transition-colors" 
+                                              className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
                                               onClick={() => handleSetCaptain(pick.element)} 
                                               data-testid={`pitch-make-captain-${pick.element}`}
                                             >
@@ -4420,7 +4433,7 @@ export default function TransferPlanner() {
                                           )}
                                           {!pick.is_vice_captain && (
                                             <button 
-                                              className="w-full h-12 bg-sky-100 hover:bg-sky-200 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-gray-900 dark:text-white transition-colors" 
+                                              className="w-full h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
                                               onClick={() => handleSetViceCaptain(pick.element)} 
                                               data-testid={`pitch-make-vice-${pick.element}`}
                                             >
@@ -4582,12 +4595,25 @@ export default function TransferPlanner() {
                             {/* Action Buttons Popup */}
                             {selectedPlayer === pick.element && (
                               <div 
-                                className="absolute -top-2 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-lg shadow-2xl border-2 border-blue-400 overflow-hidden min-w-[200px]"
+                                className="absolute -top-2 left-1/2 -translate-x-1/2 z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-300 dark:border-gray-600 overflow-hidden min-w-[220px]"
                                 onClick={(e) => e.stopPropagation()}
                                 data-testid={`pitch-bench-actions-${pick.element}`}
                               >
+                                {/* Close button */}
+                                <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-700 dark:to-blue-800 px-4 py-2">
+                                  <div className="text-white text-sm font-semibold text-center">{player.web_name}</div>
+                                  <button
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-white hover:text-gray-200 transition-colors"
+                                    onClick={() => setSelectedPlayer(null)}
+                                    data-testid={`pitch-bench-close-${pick.element}`}
+                                    aria-label="Close"
+                                  >
+                                    <X className="h-5 w-5" />
+                                  </button>
+                                </div>
+                                
                                 <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
-                                  <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 bg-sky-100 hover:bg-sky-200 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-gray-900 dark:text-white [&>svg]:hidden" data-testid={`pitch-bench-swap-${pick.element}`}>
+                                  <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white [&>svg]:hidden" data-testid={`pitch-bench-swap-${pick.element}`}>
                                     <span className="w-full text-center">Swap</span>
                                   </SelectTrigger>
                                   <SelectContent>
@@ -4603,7 +4629,7 @@ export default function TransferPlanner() {
                                 {plannerMode === "manual" && (
                                   <>
                                     <button 
-                                      className="w-full h-12 border-b border-gray-200 bg-sky-100 hover:bg-sky-200 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-gray-900 dark:text-white transition-colors" 
+                                      className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
                                       onClick={() => handleTransferOut(pick)} 
                                       data-testid={`pitch-bench-transfer-out-${pick.element}`}
                                     >
@@ -4612,7 +4638,7 @@ export default function TransferPlanner() {
                                     {benchIndex > 0 && (
                                       <>
                                         <button 
-                                          className="w-full h-12 border-b border-gray-200 bg-sky-100 hover:bg-sky-200 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                                          className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
                                           onClick={() => moveBenchPlayer(benchIndex, 'up')} 
                                           disabled={benchIndex === 1} 
                                           data-testid={`pitch-bench-move-up-${pick.element}`}
@@ -4620,7 +4646,7 @@ export default function TransferPlanner() {
                                           Move Up
                                         </button>
                                         <button 
-                                          className="w-full h-12 bg-sky-100 hover:bg-sky-200 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                                          className="w-full h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
                                           onClick={() => moveBenchPlayer(benchIndex, 'down')} 
                                           disabled={benchIndex === 3} 
                                           data-testid={`pitch-bench-move-down-${pick.element}`}
