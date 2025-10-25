@@ -2244,9 +2244,10 @@ export default function TransferPlanner() {
         : p
     ));
 
+    const positionName = player.element_type === 1 ? 'Goalkeeper' : player.element_type === 2 ? 'Defender' : player.element_type === 3 ? 'Midfielder' : 'Forward';
     toast({
       title: "Player Transferred Out",
-      description: `${player.web_name} has been transferred out (£${sellingPrice.toFixed(1)}m). Click "Replace" to select a replacement.`
+      description: `${player.web_name} (${positionName}) has been transferred out for £${sellingPrice.toFixed(1)}m. Select a replacement ${positionName.toLowerCase()}.`
     });
   };
 
@@ -2351,8 +2352,8 @@ export default function TransferPlanner() {
     }));
 
     toast({
-      title: "Player Transferred In",
-      description: `${player.web_name} has been added to your team (£${buyingPrice.toFixed(1)}m)`
+      title: "Transfer Completed",
+      description: `Transferred out ${transferredOut.playerName} for ${player.web_name} (Sold for £${transferredOut.sellingPrice.toFixed(1)}m, Bought for £${buyingPrice.toFixed(1)}m)`
     });
 
     // If in Auto mode, trigger re-optimization with the updated lineup
