@@ -3365,6 +3365,144 @@ export default function TransferPlanner() {
         </Card>
       )}
 
+      {/* Chips Planning */}
+      {searchedId && teamData && selectedGameweek && (
+        <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background">
+          <CardHeader className="pb-2 md:pb-4">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+              <Sparkles className="h-4 w-4 md:h-5 md:w-5 text-amber-600" />
+              <span>Chips Planning</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="inline-flex items-center">
+                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="w-80 p-4">
+                    <div className="space-y-2 text-sm">
+                      <p className="font-semibold">About FPL Chips:</p>
+                      <p>Each chip can be used twice per season. Plan ahead to maximize their impact!</p>
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 md:space-y-4 pt-2 md:pt-4">
+            {/* Chips Availability Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+              {(['wildcard', '3xc', 'bboost', 'freehit'] as ChipType[]).map(chipType => {
+                const remaining = getRemainingChips()[chipType];
+                const used = 2 - remaining;
+                return (
+                  <div key={chipType} className="p-3 rounded-lg border bg-white dark:bg-background">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs md:text-sm font-semibold">{getChipDisplayName(chipType)}</span>
+                      <Badge variant={remaining > 0 ? "default" : "secondary"} className="text-xs">
+                        {remaining} left
+                      </Badge>
+                    </div>
+                    <p className="text-[10px] md:text-xs text-muted-foreground">{getChipDescription(chipType)}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Chips Used This Season */}
+            {historyData?.chips && historyData.chips.length > 0 && (
+              <div className="border-t pt-3">
+                <h4 className="text-xs md:text-sm font-semibold mb-2 flex items-center gap-2">
+                  <Check className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
+                  Chips Already Used
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {historyData.chips.map((chip, index) => (
+                    <Badge key={index} variant="outline" className="text-xs">
+                      {getChipDisplayName(chip.name as ChipType)} - GW{chip.event}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Chip Planning for Upcoming Gameweeks */}
+            <div className="border-t pt-3">
+              <h4 className="text-xs md:text-sm font-semibold mb-3">Plan Chips for Upcoming Gameweeks</h4>
+              <div className="space-y-2">
+                {getNextGameweeks().map((gw) => {
+                  const remainingChips = getRemainingChips();
+                  const selectedChip = plannedChips[gw.id];
+                  
+                  return (
+                    <div key={gw.id} className="flex items-center gap-2 md:gap-3">
+                      <span className="text-xs md:text-sm font-medium min-w-[60px] md:min-w-[80px]">GW {gw.id}:</span>
+                      <Select
+                        value={selectedChip || "none"}
+                        onValueChange={(value) => {
+                          if (value === "none") {
+                            handleChipSelection(gw.id, null);
+                          } else {
+                            handleChipSelection(gw.id, value as ChipType);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-8 md:h-9 text-xs md:text-sm" data-testid={`chip-selector-gw${gw.id}`}>
+                          <SelectValue placeholder="No chip planned" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No chip planned</SelectItem>
+                          {(['wildcard', '3xc', 'bboost', 'freehit'] as ChipType[]).map(chipType => (
+                            <SelectItem
+                              key={chipType}
+                              value={chipType}
+                              disabled={remainingChips[chipType] === 0 && selectedChip !== chipType}
+                            >
+                              {getChipDisplayName(chipType)} 
+                              {remainingChips[chipType] === 0 && selectedChip !== chipType && ' (none left)'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedChip && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleChipSelection(gw.id, null)}
+                          className="h-7 w-7 p-0"
+                          data-testid={`clear-chip-gw${gw.id}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Planned Chips Summary */}
+            {Object.keys(plannedChips).length > 0 && (
+              <div className="border-t pt-3">
+                <h4 className="text-xs md:text-sm font-semibold mb-2 flex items-center gap-2">
+                  <Calendar className="h-3 w-3 md:h-4 md:w-4 text-amber-600" />
+                  Planned Chips Summary
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(plannedChips)
+                    .filter(([_, chipType]) => chipType !== null)
+                    .map(([gameweek, chipType]) => (
+                      <Badge key={gameweek} className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                        GW{gameweek}: {getChipDisplayName(chipType as ChipType)}
+                      </Badge>
+                    ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Draft Comparison Table */}
       {searchedId && teamData && playerProjections && playerProjections6GW && (
         <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">

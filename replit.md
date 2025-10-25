@@ -25,7 +25,7 @@ Navigation Cleanup: Hidden Player Yellow Cards, Red Cards, Goals Conceded, and B
 - **Styling**: Tailwind CSS with a custom FPL-themed design system.
 - **Navigation**: Side navigation bar.
 - **Component Structure**: Modular components with reusable UI elements.
-- **UI/UX Decisions**: Enhanced UI design for My Team section; color-coded defensive metrics in Player Statistics; streamlined interfaces for Transfer Tracker and Open FPL Projections. Standardized header system across all application pages.
+- **UI/UX Decisions**: Enhanced UI design for My Team section; color-coded defensive metrics in Player Statistics; streamlined interfaces for Transfer Tracker and Open FPL Projections. Standardized header system across all application pages. Unified pitch view styling across all pages (My Dashboard, Top 25/50 Managers, Content Creators) with 403x302 SVG canvas, 19% jersey width, consistent text sizes (team: 28px, name: 32px, points: 52px), and single opponent display with (H/A) indicators.
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js.
