@@ -1497,6 +1497,12 @@ export default function TransferPlanner() {
     // Update the pick with the new purchase price
     const updatedPick = { ...pick, purchase_price: Math.round(newPrice * 10) };
     
+    // Calculate the new sell price
+    const player = getPlayerById(pick.element);
+    const currentPrice = player?.now_cost || 0;
+    const profitPerRise = Math.floor((currentPrice - updatedPick.purchase_price) / 2);
+    const newSellPrice = (updatedPick.purchase_price + profitPerRise) / 10;
+    
     // Update manualLineup
     const newManualLineup = manualLineup.map(p => p.element === pick.element ? updatedPick : p);
     setManualLineup(newManualLineup);
@@ -1504,6 +1510,12 @@ export default function TransferPlanner() {
     setEditBuyPriceDialog(null);
     setEditBuyPriceValue("");
     setHasUnsavedChanges(true);
+    
+    // Show confirmation toast
+    toast({ 
+      title: "Buy Price Updated", 
+      description: `Buy price changed to £${newPrice.toFixed(1)}m. Sell price auto-calculated to £${newSellPrice.toFixed(1)}m.`
+    });
   };
 
   // Cancel editing sell price
@@ -4441,14 +4453,19 @@ export default function TransferPlanner() {
                                         {/* Header with player info */}
                                         <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-700 dark:to-blue-800 px-4 py-3">
                                           <div className="text-white text-base font-bold text-center mb-1">{player.web_name}</div>
-                                          <div className="flex justify-center items-center gap-3 text-white/90 text-xs">
+                                          <div className="flex justify-center items-center gap-3 text-white/90 text-xs mb-2">
                                             <span>{playerTeam?.short_name || 'UNK'}</span>
                                             <span>•</span>
                                             <span>{player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD'}</span>
                                             <span>•</span>
-                                            <span>£{getSellingPrice(pick).toFixed(1)}m</span>
-                                            <span>•</span>
                                             <span>{player.selected_by_percent}%</span>
+                                          </div>
+                                          <div className="flex justify-center items-center gap-4 text-white/95 text-[11px] font-medium">
+                                            <span>Buy: £{(pick.purchase_price ? pick.purchase_price / 10 : player.now_cost / 10).toFixed(1)}m</span>
+                                            <span>•</span>
+                                            <span>Current: £{(player.now_cost / 10).toFixed(1)}m</span>
+                                            <span>•</span>
+                                            <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                           </div>
                                           <button
                                             className="absolute right-2 top-3 text-white hover:text-gray-200 transition-colors"
@@ -4651,14 +4668,19 @@ export default function TransferPlanner() {
                                   {/* Header with player info */}
                                   <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-700 dark:to-blue-800 px-4 py-3">
                                     <div className="text-white text-base font-bold text-center mb-1">{player.web_name}</div>
-                                    <div className="flex justify-center items-center gap-3 text-white/90 text-xs">
+                                    <div className="flex justify-center items-center gap-3 text-white/90 text-xs mb-2">
                                       <span>{playerTeam?.short_name || 'UNK'}</span>
                                       <span>•</span>
                                       <span>{player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD'}</span>
                                       <span>•</span>
-                                      <span>£{getSellingPrice(pick).toFixed(1)}m</span>
-                                      <span>•</span>
                                       <span>{player.selected_by_percent}%</span>
+                                    </div>
+                                    <div className="flex justify-center items-center gap-4 text-white/95 text-[11px] font-medium">
+                                      <span>Buy: £{(pick.purchase_price ? pick.purchase_price / 10 : player.now_cost / 10).toFixed(1)}m</span>
+                                      <span>•</span>
+                                      <span>Current: £{(player.now_cost / 10).toFixed(1)}m</span>
+                                      <span>•</span>
+                                      <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
                                     </div>
                                     <button
                                       className="absolute right-2 top-3 text-white hover:text-gray-200 transition-colors"
