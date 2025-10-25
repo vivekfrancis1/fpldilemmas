@@ -2013,9 +2013,15 @@ export default function TransferPlanner() {
     newLineup[11 + benchIndex].position = 11 + benchIndex + 1;
     
     setManualLineup(newLineup);
+    
+    // Show detailed swap confirmation (bench priority excludes GK, so subtract 1)
+    const newStartingPlayer = getPlayerById(newLineup[startingIndex].element)?.web_name;
+    const newBenchPlayer = getPlayerById(newLineup[11 + benchIndex].element)?.web_name;
+    const benchPriority = benchIndex; // Outfield bench priority (1, 2, 3)
+    
     toast({
       title: "Players Swapped",
-      description: `${getPlayerById(newLineup[startingIndex].element)?.web_name} moved to starting 11`
+      description: `${newStartingPlayer} has been moved to Starting 11, instead of ${newBenchPlayer} who is now in bench position ${benchPriority}`
     });
   };
 
@@ -2030,9 +2036,10 @@ export default function TransferPlanner() {
     if (swapIndex === 11 || swapIndex > 14) return;
     
     const newLineup = [...manualLineup];
-    const temp = newLineup[actualIndex];
-    newLineup[actualIndex] = newLineup[swapIndex];
-    newLineup[swapIndex] = temp;
+    const movedPlayer = newLineup[actualIndex];
+    const swappedPlayer = newLineup[swapIndex];
+    newLineup[actualIndex] = swappedPlayer;
+    newLineup[swapIndex] = movedPlayer;
     
     // Update positions
     newLineup[actualIndex].position = actualIndex + 1;
@@ -2040,12 +2047,15 @@ export default function TransferPlanner() {
     
     setManualLineup(newLineup);
     
-    // Show confirmation toast
-    const playerName = getPlayerById(temp.element)?.web_name;
-    const newPriority = swapIndex - 10; // Bench positions are 1-4 (12-11=1, 13-11=2, etc.)
+    // Show confirmation toast with both players (bench priority excludes GK, so subtract 1)
+    const movedPlayerName = getPlayerById(movedPlayer.element)?.web_name;
+    const swappedPlayerName = getPlayerById(swappedPlayer.element)?.web_name;
+    const movedPlayerNewPriority = swapIndex - 11; // Outfield bench priority (1, 2, 3)
+    const swappedPlayerNewPriority = actualIndex - 11; // Outfield bench priority (1, 2, 3)
+    
     toast({
       title: "Bench Priority Changed",
-      description: `${playerName} is now bench priority ${newPriority}`
+      description: `Bench priority of ${movedPlayerName} has been moved ${direction === 'up' ? 'up' : 'down'} to ${movedPlayerNewPriority}, and bench priority of ${swappedPlayerName} has been moved ${direction === 'up' ? 'down' : 'up'} to ${swappedPlayerNewPriority}`
     });
   };
 
