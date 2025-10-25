@@ -4456,7 +4456,7 @@ export default function TransferPlanner() {
                                           </div>
                                           <button
                                             className="absolute right-2 top-3 text-white hover:text-gray-200 transition-colors"
-                                            onClick={() => setSelectedPlayer(null)}
+                                            onClick={(e) => { e.stopPropagation(); setSelectedPlayer(null); }}
                                             data-testid={`pitch-close-${pick.element}`}
                                             aria-label="Close"
                                           >
@@ -4464,7 +4464,7 @@ export default function TransferPlanner() {
                                           </button>
                                         </div>
                                         
-                                        <Select onValueChange={(value) => swapPlayers(actualIndex, parseInt(value))}>
+                                        <Select onValueChange={(value) => { swapPlayers(actualIndex, parseInt(value)); setSelectedPlayer(null); }}>
                                           <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`pitch-swap-${pick.element}`}>
                                             <span className="w-full text-center text-base font-semibold">Swap</span>
                                           </SelectTrigger>
@@ -4487,13 +4487,6 @@ export default function TransferPlanner() {
                                           <>
                                             <button 
                                               className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
-                                              onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, getSellingPrice(pick)); }} 
-                                              data-testid={`pitch-edit-buy-price-${pick.element}`}
-                                            >
-                                              Edit Buy Price
-                                            </button>
-                                            <button 
-                                              className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
                                               onClick={() => handleTransferOut(pick)} 
                                               data-testid={`pitch-transfer-out-${pick.element}`}
                                             >
@@ -4510,13 +4503,20 @@ export default function TransferPlanner() {
                                             )}
                                             {!pick.is_vice_captain && (
                                               <button 
-                                                className="w-full h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
+                                                className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
                                                 onClick={() => handleSetViceCaptain(pick.element)} 
                                                 data-testid={`pitch-make-vice-${pick.element}`}
                                               >
                                                 Make Vice Captain
                                               </button>
                                             )}
+                                            <button 
+                                              className="w-full h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
+                                              onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, getSellingPrice(pick)); }} 
+                                              data-testid={`pitch-edit-buy-price-${pick.element}`}
+                                            >
+                                              Edit Buy Price
+                                            </button>
                                           </>
                                         )}
                                       </div>
@@ -4543,14 +4543,14 @@ export default function TransferPlanner() {
                                     ) : null}
                                     <text x="202" y="115" fontSize="32" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
                                     <text x="202" y="165" fontSize="36" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                    <text x="202" y="230" fontSize="58" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                    <text x="202" y="240" fontSize="52" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                       {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                       {pick.is_captain && projectedPoints !== null && (
-                                        <tspan fontSize="26" dx="5">({(projectedPoints * 2).toFixed(1)})</tspan>
+                                        <tspan fontSize="24" dx="5">({(projectedPoints * 2).toFixed(1)})</tspan>
                                       )}
                                     </text>
                                     {fixture && (
-                                      <text x="202" y="265" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                      <text x="202" y="275" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                                     )}
                                   </svg>
                                 </div>
@@ -4660,7 +4660,7 @@ export default function TransferPlanner() {
                                     </div>
                                     <button
                                       className="absolute right-2 top-3 text-white hover:text-gray-200 transition-colors"
-                                      onClick={() => setSelectedPlayer(null)}
+                                      onClick={(e) => { e.stopPropagation(); setSelectedPlayer(null); }}
                                       data-testid={`pitch-bench-close-${pick.element}`}
                                       aria-label="Close"
                                     >
@@ -4668,7 +4668,7 @@ export default function TransferPlanner() {
                                     </button>
                                   </div>
                                   
-                                  <Select onValueChange={(value) => swapPlayers(parseInt(value), benchIndex)}>
+                                  <Select onValueChange={(value) => { swapPlayers(parseInt(value), benchIndex); setSelectedPlayer(null); }}>
                                     <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`pitch-bench-swap-${pick.element}`}>
                                       <span className="w-full text-center text-base font-semibold">Swap</span>
                                     </SelectTrigger>
@@ -4684,13 +4684,6 @@ export default function TransferPlanner() {
                                   </Select>
                                   {plannerMode === "manual" && (
                                     <>
-                                      <button 
-                                        className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
-                                        onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, getSellingPrice(pick)); }} 
-                                        data-testid={`pitch-bench-edit-buy-price-${pick.element}`}
-                                      >
-                                        Edit Buy Price
-                                      </button>
                                       <button 
                                         className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
                                         onClick={() => handleTransferOut(pick)} 
@@ -4709,7 +4702,7 @@ export default function TransferPlanner() {
                                             Move Up
                                           </button>
                                           <button 
-                                            className="w-full h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                                            className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
                                             onClick={() => moveBenchPlayer(benchIndex, 'down')} 
                                             disabled={benchIndex === 3} 
                                             data-testid={`pitch-bench-move-down-${pick.element}`}
@@ -4718,6 +4711,13 @@ export default function TransferPlanner() {
                                           </button>
                                         </>
                                       )}
+                                      <button 
+                                        className="w-full h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
+                                        onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, getSellingPrice(pick)); }} 
+                                        data-testid={`pitch-bench-edit-buy-price-${pick.element}`}
+                                      >
+                                        Edit Buy Price
+                                      </button>
                                     </>
                                   )}
                                 </div>
