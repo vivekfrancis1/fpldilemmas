@@ -1216,6 +1216,73 @@ export default function TransferPlanner() {
     return nextGameweeks;
   };
 
+  // Get remaining chips available for planning
+  const getRemainingChips = (): Record<ChipType, number> => {
+    const chipLimits: Record<ChipType, number> = {
+      'wildcard': 2,
+      '3xc': 2,
+      'bboost': 2,
+      'freehit': 2
+    };
+    
+    const remaining = { ...chipLimits };
+    
+    // Subtract chips already used (from history)
+    if (historyData?.chips) {
+      historyData.chips.forEach(chip => {
+        const chipType = chip.name as ChipType;
+        if (remaining[chipType] !== undefined) {
+          remaining[chipType] = Math.max(0, remaining[chipType] - 1);
+        }
+      });
+    }
+    
+    // Subtract chips planned in future gameweeks
+    Object.values(plannedChips).forEach(chipType => {
+      if (chipType && remaining[chipType] !== undefined) {
+        remaining[chipType] = Math.max(0, remaining[chipType] - 1);
+      }
+    });
+    
+    return remaining;
+  };
+
+  // Handle chip selection for a gameweek
+  const handleChipSelection = (gameweek: number, chipType: ChipType | null) => {
+    setPlannedChips(prev => {
+      const updated = { ...prev };
+      if (chipType === null) {
+        delete updated[gameweek];
+      } else {
+        updated[gameweek] = chipType;
+      }
+      return updated;
+    });
+    setHasUnsavedChanges(true);
+  };
+
+  // Get chip display name
+  const getChipDisplayName = (chipType: ChipType): string => {
+    const names: Record<ChipType, string> = {
+      'wildcard': 'Wildcard',
+      '3xc': 'Triple Captain',
+      'bboost': 'Bench Boost',
+      'freehit': 'Free Hit'
+    };
+    return names[chipType] || chipType;
+  };
+
+  // Get chip description
+  const getChipDescription = (chipType: ChipType): string => {
+    const descriptions: Record<ChipType, string> = {
+      'wildcard': 'Transfer entire squad for free',
+      '3xc': 'Captain gets 3x points instead of 2x',
+      'bboost': 'Points from bench players count',
+      'freehit': 'Make unlimited transfers for one gameweek'
+    };
+    return descriptions[chipType] || '';
+  };
+
   // Set default gameweek when bootstrap data loads
   useEffect(() => {
     if (bootstrapData && !selectedGameweek) {
