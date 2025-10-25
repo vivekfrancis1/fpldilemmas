@@ -4535,12 +4535,12 @@ export default function TransferPlanner() {
                                       <g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>
                                     ) : null}
                                     {pick.is_vice_captain ? (
-                                      <g><rect x="140" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="159" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>
+                                      <g><rect x="96" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="115" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>
                                     ) : null}
                                     {player.in_dreamteam && (
                                       <g>
-                                        <circle cx="295" cy="65" r="18" fill="rgb(234 179 8)" stroke="white" strokeWidth="2.5" />
-                                        <path d="M 295 52 L 298 61 L 308 61 L 300 67 L 303 76 L 295 70 L 287 76 L 290 67 L 282 61 L 292 61 Z" fill="white" />
+                                        <circle cx="307" cy="72" r="18" fill="rgb(234 179 8)" stroke="white" strokeWidth="2.5" />
+                                        <path d="M 307 59 L 310 68 L 320 68 L 312 74 L 315 83 L 307 77 L 299 83 L 302 74 L 294 68 L 304 68 Z" fill="white" />
                                       </g>
                                     )}
                                     <text x="202" y="108" fontSize="28" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
@@ -4740,12 +4740,12 @@ export default function TransferPlanner() {
                                 <g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>
                               ) : null}
                               {pick.is_vice_captain ? (
-                                <g><rect x="140" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="159" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>
+                                <g><rect x="96" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="115" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>
                               ) : null}
                               {player.in_dreamteam && (
                                 <g>
-                                  <circle cx="295" cy="65" r="18" fill="rgb(234 179 8)" stroke="white" strokeWidth="2.5" />
-                                  <path d="M 295 52 L 298 61 L 308 61 L 300 67 L 303 76 L 295 70 L 287 76 L 290 67 L 282 61 L 292 61 Z" fill="white" />
+                                  <circle cx="307" cy="72" r="18" fill="rgb(234 179 8)" stroke="white" strokeWidth="2.5" />
+                                  <path d="M 307 59 L 310 68 L 320 68 L 312 74 L 315 83 L 307 77 L 299 83 L 302 74 L 294 68 L 304 68 Z" fill="white" />
                                 </g>
                               )}
                               <text x="202" y="108" fontSize="28" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
