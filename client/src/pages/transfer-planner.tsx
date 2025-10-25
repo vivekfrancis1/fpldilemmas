@@ -1283,6 +1283,51 @@ export default function TransferPlanner() {
     return descriptions[chipType] || '';
   };
 
+  // Check if a chip can be used in a specific gameweek
+  const canChipBeUsedInGameweek = (chipType: ChipType, gameweek: number): boolean => {
+    const remainingChips = getRemainingChips();
+    
+    // If no chips remaining, it can't be used
+    if (remainingChips[chipType] === 0) {
+      return false;
+    }
+    
+    // For wildcards, apply gameweek constraints
+    if (chipType === 'wildcard') {
+      // Count how many wildcards have been used
+      const wildcardsUsed = historyData?.chips?.filter(chip => chip.name === 'wildcard').length || 0;
+      
+      // If no wildcards used, the first wildcard can be used up to GW19
+      if (wildcardsUsed === 0) {
+        return gameweek <= 19;
+      }
+      
+      // If one wildcard used, check which one based on when it was used
+      if (wildcardsUsed === 1) {
+        const firstWildcardGW = historyData?.chips?.find(chip => chip.name === 'wildcard')?.event || 0;
+        
+        // If first wildcard was used in GW19 or earlier, the second wildcard can only be used from GW20 onwards
+        if (firstWildcardGW <= 19) {
+          return gameweek >= 20;
+        }
+        
+        // If first wildcard was used in GW20 or later, the second wildcard (first one) can be used up to GW19
+        if (firstWildcardGW >= 20) {
+          return gameweek <= 19;
+        }
+      }
+    }
+    
+    // All other chips can be used in any gameweek if they're available
+    return true;
+  };
+
+  // Get available chips for a specific gameweek (filters based on constraints)
+  const getAvailableChipsForGameweek = (gameweek: number): ChipType[] => {
+    const allChips: ChipType[] = ['wildcard', '3xc', 'bboost', 'freehit'];
+    return allChips.filter(chipType => canChipBeUsedInGameweek(chipType, gameweek));
+  };
+
   // Set default gameweek when bootstrap data loads
   useEffect(() => {
     if (bootstrapData && !selectedGameweek) {
@@ -3452,14 +3497,12 @@ export default function TransferPlanner() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">No chip planned</SelectItem>
-                          {(['wildcard', '3xc', 'bboost', 'freehit'] as ChipType[]).map(chipType => (
+                          {getAvailableChipsForGameweek(gw.id).map(chipType => (
                             <SelectItem
                               key={chipType}
                               value={chipType}
-                              disabled={remainingChips[chipType] === 0 && selectedChip !== chipType}
                             >
-                              {getChipDisplayName(chipType)} 
-                              {remainingChips[chipType] === 0 && selectedChip !== chipType && ' (none left)'}
+                              {getChipDisplayName(chipType)}
                             </SelectItem>
                           ))}
                         </SelectContent>
