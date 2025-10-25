@@ -1599,6 +1599,11 @@ export const transferPlannerDrafts = pgTable("transfer_planner_drafts", {
   // Structure: { [gameweek: number]: { transferredOut: TransferOut[], completed: CompletedTransfer[] } }
   gameweekTransfers: jsonb("gameweek_transfers").notNull(),
   
+  // Store planned chips for each gameweek as JSON
+  // Structure: { [gameweek: number]: ChipType | null }
+  // ChipType: 'wildcard' | '3xc' | 'bboost' | 'freehit'
+  plannedChips: jsonb("planned_chips").notNull().default(sql`'{}'::jsonb`),
+  
   // Store mode (auto/manual)
   mode: varchar("mode", { length: 20 }).notNull().default("manual"),
   
