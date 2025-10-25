@@ -4481,7 +4481,7 @@ export default function TransferPlanner() {
                                           <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`pitch-swap-${pick.element}`}>
                                             <span className="w-full text-center text-base font-semibold">Swap</span>
                                           </SelectTrigger>
-                                          <SelectContent className="z-[80]">
+                                          <SelectContent className="z-[200]">
                                             {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
                                               const benchPlayer = getPlayerById(benchPick.element);
                                               const startingPlayer = getPlayerById(pick.element);
@@ -4696,7 +4696,7 @@ export default function TransferPlanner() {
                                     <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`pitch-bench-swap-${pick.element}`}>
                                       <span className="w-full text-center text-base font-semibold">Swap</span>
                                     </SelectTrigger>
-                                    <SelectContent className="z-[80]">
+                                    <SelectContent className="z-[200]">
                                       {manualLineup.slice(0, 11).map((startPick, startIndex) => {
                                         const startPlayer = getPlayerById(startPick.element);
                                         const benchPlayer = getPlayerById(pick.element);
