@@ -2730,6 +2730,7 @@ export default function TransferPlanner() {
           managerId: parseInt(searchedId),
           draftLetter: draftLetter,
           gameweekTransfers: structuredClone(transfersData), // Deep clone to prevent shared references
+          plannedChips: structuredClone(plannedChips), // Include planned chips
           mode: plannerMode,
           teamBank: calculateBankAfterTransfers(),
           teamValue: 0,
@@ -2761,6 +2762,7 @@ export default function TransferPlanner() {
       setGameweekTransfers({});
       setTransferredOutPlayers([]);
       setCompletedTransfers([]);
+      setPlannedChips({}); // Reset planned chips
       setActiveDraft("Base");
       setHasUnsavedChanges(false);
       if (teamData?.picks) {
@@ -2777,6 +2779,7 @@ export default function TransferPlanner() {
           // Reset ALL state for complete draft isolation
           // CRITICAL: Deep clone to prevent shared references between drafts
           setGameweekTransfers(structuredClone(draft.gameweekTransfers || {}));
+          setPlannedChips(structuredClone(draft.plannedChips || {})); // Load planned chips
           setPlannerMode(draft.mode);
           setActiveDraft(draftLetter);
           setHasUnsavedChanges(false);
