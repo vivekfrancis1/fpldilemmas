@@ -3707,8 +3707,17 @@ export default function TransferPlanner() {
                               return draft.gameweekTransfers[gw.id] || draft.gameweekTransfers[gw.id.toString()];
                             };
                             
+                            // Get planned chip for this draft and gameweek
+                            const getPlannedChip = () => {
+                              if (row.draftKey === 'Base') return null;
+                              const draft = savedDrafts.find(d => d.draftLetter === row.draftKey);
+                              if (!draft || !draft.plannedChips) return null;
+                              return draft.plannedChips[gw.id] || draft.plannedChips[gw.id.toString()];
+                            };
+                            
                             const gwTransfers = getDraftTransfers();
                             const hasTransfers = gwTransfers && gwTransfers.completed && gwTransfers.completed.length > 0;
+                            const plannedChip = getPlannedChip();
                             
                             return (
                               <td 
@@ -3716,31 +3725,53 @@ export default function TransferPlanner() {
                                 className="text-center p-2 text-sm"
                                 data-testid={`cell-${row.draftKey}-gw${gw.id}`}
                               >
-                                {hasTransfers ? (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span className="cursor-help underline decoration-dotted">
-                                          {row.gameweeks[gw.id]?.toFixed(1) || '0.0'}
-                                        </span>
-                                      </TooltipTrigger>
-                                      <TooltipContent className="max-w-xs">
-                                        <div className="text-sm">
-                                          <p className="font-semibold mb-1">GW{gw.id} Transfers:</p>
-                                          {gwTransfers.completed.map((transfer: any, idx: number) => (
-                                            <p key={idx} className="text-xs">
-                                              <span className="text-red-400">Out:</span> {transfer.outPlayerName} (£{transfer.sellingPrice.toFixed(1)}m)
-                                              <br />
-                                              <span className="text-green-400">In:</span> {transfer.inPlayerName} (£{transfer.buyingPrice.toFixed(1)}m)
-                                            </p>
-                                          ))}
-                                        </div>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                ) : (
-                                  <span>{row.gameweeks[gw.id]?.toFixed(1) || '0.0'}</span>
-                                )}
+                                <div className="flex flex-col items-center gap-1">
+                                  {hasTransfers ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="cursor-help underline decoration-dotted">
+                                            {row.gameweeks[gw.id]?.toFixed(1) || '0.0'}
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs">
+                                          <div className="text-sm">
+                                            <p className="font-semibold mb-1">GW{gw.id} Transfers:</p>
+                                            {gwTransfers.completed.map((transfer: any, idx: number) => (
+                                              <p key={idx} className="text-xs">
+                                                <span className="text-red-400">Out:</span> {transfer.outPlayerName} (£{transfer.sellingPrice.toFixed(1)}m)
+                                                <br />
+                                                <span className="text-green-400">In:</span> {transfer.inPlayerName} (£{transfer.buyingPrice.toFixed(1)}m)
+                                              </p>
+                                            ))}
+                                          </div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    <span>{row.gameweeks[gw.id]?.toFixed(1) || '0.0'}</span>
+                                  )}
+                                  {plannedChip && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge 
+                                            variant="outline" 
+                                            className="text-[10px] px-1 py-0 h-4 bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-700"
+                                            data-testid={`chip-badge-${row.draftKey}-gw${gw.id}`}
+                                          >
+                                            <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                                            {plannedChip === '3xc' ? '3xC' : plannedChip === 'bboost' ? 'BB' : plannedChip === 'freehit' ? 'FH' : 'WC'}
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p className="text-xs">{getChipDisplayName(plannedChip)}</p>
+                                          <p className="text-xs text-muted-foreground">{getChipDescription(plannedChip)}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
                               </td>
                             );
                           })}
@@ -3759,10 +3790,11 @@ export default function TransferPlanner() {
               );
             })()}
             
-            <div className="mt-4 text-xs text-muted-foreground">
+            <div className="mt-4 text-xs text-muted-foreground space-y-1">
               <p>● = Currently active draft (Manual mode)</p>
               <p><strong>Manual:</strong> Projected points based on your saved lineup and transfers.</p>
               <p><strong>Auto:</strong> Optimized lineup with best formation and captain for maximum points.</p>
+              <p><Sparkles className="h-3 w-3 inline mr-1 text-amber-600" /><strong>Chip Badges:</strong> 3xC (Triple Captain), BB (Bench Boost), FH (Free Hit), WC (Wildcard)</p>
             </div>
           </CardContent>
         </Card>
