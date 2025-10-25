@@ -1354,17 +1354,12 @@ export default function TransferPlanner() {
     return baselinePick ? pick.element !== baselinePick.element : false;
   };
 
-  // Get selling price - prioritize API's selling_price which reflects live market data
+  // Get selling price - prioritize calculation from buy price (editable) over API data
   const getSellingPrice = (pick: TeamPick): number => {
     const player = getPlayerById(pick.element);
     if (!player) return 0;
     
-    // Priority 1: Use selling_price from FPL API (most accurate, reflects live prices)
-    if (pick.selling_price !== undefined && !isNaN(pick.selling_price)) {
-      return pick.selling_price / 10;
-    }
-    
-    // Priority 2: Calculate using FPL formula if we have purchase_price
+    // Priority 1: Calculate using FPL formula if we have purchase_price (from user edit or API)
     // For every 0.2m rise (2 in API units), you get 0.1m profit (1 in API units)
     if (pick.purchase_price !== undefined && !isNaN(pick.purchase_price)) {
       const purchasePrice = pick.purchase_price;
@@ -1372,6 +1367,11 @@ export default function TransferPlanner() {
       const profitPerRise = Math.floor((currentPrice - purchasePrice) / 2);
       const sellingPrice = purchasePrice + profitPerRise;
       return sellingPrice / 10;
+    }
+    
+    // Priority 2: Use selling_price from FPL API if calculation not possible
+    if (pick.selling_price !== undefined && !isNaN(pick.selling_price)) {
+      return pick.selling_price / 10;
     }
     
     // Final fallback to current price
