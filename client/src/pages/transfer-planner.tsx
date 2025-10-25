@@ -907,6 +907,10 @@ export default function TransferPlanner() {
   const [editingSellPrice, setEditingSellPrice] = useState<number | null>(null);
   const [editSellPriceValue, setEditSellPriceValue] = useState<string>("");
   
+  // Buy price editing dialog
+  const [editBuyPriceDialog, setEditBuyPriceDialog] = useState<{ playerId: number; currentPrice: number } | null>(null);
+  const [editBuyPriceValue, setEditBuyPriceValue] = useState<string>("");
+  
   // Captain confirmation dialogs
   const [captainConfirmation, setCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
   const [viceCaptainConfirmation, setViceCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
@@ -1456,6 +1460,54 @@ export default function TransferPlanner() {
   const startEditingSellPrice = (playerId: number, currentSellPrice: number) => {
     setEditingSellPrice(playerId);
     setEditSellPriceValue(currentSellPrice.toFixed(1));
+  };
+
+  // Open buy price editing dialog
+  const openBuyPriceDialog = (playerId: number, currentPrice: number) => {
+    setEditBuyPriceDialog({ playerId, currentPrice });
+    setEditBuyPriceValue(currentPrice.toFixed(1));
+  };
+
+  // Save buy price from dialog
+  const saveBuyPriceFromDialog = () => {
+    if (!editBuyPriceDialog) return;
+    
+    const newPrice = parseFloat(editBuyPriceValue);
+    if (isNaN(newPrice) || newPrice < 0) {
+      toast({ title: "Invalid Price", description: "Please enter a valid price.", variant: "destructive" });
+      return;
+    }
+
+    const pick = [...teamPicks, ...benchPicks].find(p => p.element === editBuyPriceDialog.playerId);
+    if (!pick) return;
+
+    // Verify new sell price is valid
+    const originalBuyPrice = (bootstrapData?.elements.find(e => e.id === pick.element)?.now_cost || 0) / 10;
+    const maxAllowedSellPrice = originalBuyPrice;
+    
+    if (newPrice > maxAllowedSellPrice) {
+      toast({ 
+        title: "Invalid Price", 
+        description: `Buy price cannot exceed original price of £${maxAllowedSellPrice.toFixed(1)}m.`, 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    // Update the pick
+    const updatedPick = { ...pick, selling_price: Math.round(newPrice * 10) };
+    
+    if (teamPicks.some(p => p.element === pick.element)) {
+      const newTeamPicks = teamPicks.map(p => p.element === pick.element ? updatedPick : p);
+      setTeamPicks(newTeamPicks);
+    } else {
+      const newBenchPicks = benchPicks.map(p => p.element === pick.element ? updatedPick : p);
+      setBenchPicks(newBenchPicks);
+    }
+
+    setEditBuyPriceDialog(null);
+    setEditBuyPriceValue("");
+    setHasUnsavedChanges(true);
   };
 
   // Cancel editing sell price
@@ -4416,7 +4468,7 @@ export default function TransferPlanner() {
                                           <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`pitch-swap-${pick.element}`}>
                                             <span className="w-full text-center text-base font-semibold">Swap</span>
                                           </SelectTrigger>
-                                          <SelectContent>
+                                          <SelectContent className="z-[80]">
                                             {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
                                               const benchPlayer = getPlayerById(benchPick.element);
                                               const startingPlayer = getPlayerById(pick.element);
@@ -4435,7 +4487,7 @@ export default function TransferPlanner() {
                                           <>
                                             <button 
                                               className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
-                                              onClick={() => { setSelectedPlayer(null); startEditingSellPrice(pick.element, getSellingPrice(pick)); }} 
+                                              onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, getSellingPrice(pick)); }} 
                                               data-testid={`pitch-edit-buy-price-${pick.element}`}
                                             >
                                               Edit Buy Price
@@ -4620,7 +4672,7 @@ export default function TransferPlanner() {
                                     <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`pitch-bench-swap-${pick.element}`}>
                                       <span className="w-full text-center text-base font-semibold">Swap</span>
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="z-[80]">
                                       {manualLineup.slice(0, 11).map((startPick, startIndex) => {
                                         const startPlayer = getPlayerById(startPick.element);
                                         const benchPlayer = getPlayerById(pick.element);
@@ -4634,7 +4686,7 @@ export default function TransferPlanner() {
                                     <>
                                       <button 
                                         className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
-                                        onClick={() => { setSelectedPlayer(null); startEditingSellPrice(pick.element, getSellingPrice(pick)); }} 
+                                        onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, getSellingPrice(pick)); }} 
                                         data-testid={`pitch-bench-edit-buy-price-${pick.element}`}
                                       >
                                         Edit Buy Price
@@ -5514,6 +5566,47 @@ export default function TransferPlanner() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => viceCaptainConfirmation && confirmSetViceCaptain(viceCaptainConfirmation.playerId)}>
               Confirm Vice Captain
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Buy Price Dialog */}
+      <AlertDialog open={!!editBuyPriceDialog} onOpenChange={() => setEditBuyPriceDialog(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Edit Buy Price</AlertDialogTitle>
+            <AlertDialogDescription>
+              Set the price you paid for this player. This affects the selling price and available budget.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Buy Price (£m):</label>
+              <Input
+                type="number"
+                step="0.1"
+                min="0"
+                max="15"
+                value={editBuyPriceValue}
+                onChange={(e) => setEditBuyPriceValue(e.target.value)}
+                className="w-32"
+                data-testid="input-buy-price"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    saveBuyPriceFromDialog();
+                  }
+                }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Current sell price: £{editBuyPriceDialog ? getSellingPrice([...teamPicks, ...benchPicks].find(p => p.element === editBuyPriceDialog.playerId)!).toFixed(1) : '0.0'}m
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setEditBuyPriceDialog(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={saveBuyPriceFromDialog} data-testid="button-save-buy-price">
+              Save
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
