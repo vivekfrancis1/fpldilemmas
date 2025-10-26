@@ -4037,6 +4037,9 @@ export default function TransferPlanner() {
                       const lineupForGW = getBaselineLineup(gw);
                       
                       if (plannerMode === "auto") {
+                        // Check if Bench Boost is planned for this gameweek
+                        const isBenchBoostActive = plannedChips[gw] === 'bboost';
+                        
                         // For auto mode: simulate auto-optimization for THIS specific gameweek
                         // Get all 15 players with their projections for this gameweek
                         const playersWithPoints = lineupForGW.map(pick => {
@@ -4051,45 +4054,57 @@ export default function TransferPlanner() {
                           };
                         });
                         
-                        // Group by position
-                        const gkps = playersWithPoints.filter(p => p.position === 1).sort((a, b) => b.projectedPoints - a.projectedPoints);
-                        const defs = playersWithPoints.filter(p => p.position === 2).sort((a, b) => b.projectedPoints - a.projectedPoints);
-                        const mids = playersWithPoints.filter(p => p.position === 3).sort((a, b) => b.projectedPoints - a.projectedPoints);
-                        const fwds = playersWithPoints.filter(p => p.position === 4).sort((a, b) => b.projectedPoints - a.projectedPoints);
-                        
-                        // Try all valid formations and find best for this gameweek
-                        const validFormations = [
-                          { def: 3, mid: 4, fwd: 3 }, { def: 3, mid: 5, fwd: 2 },
-                          { def: 4, mid: 3, fwd: 3 }, { def: 4, mid: 4, fwd: 2 },
-                          { def: 4, mid: 5, fwd: 1 }, { def: 5, mid: 3, fwd: 2 },
-                          { def: 5, mid: 4, fwd: 1 }, { def: 5, mid: 2, fwd: 3 }
-                        ];
-                        
-                        let bestPoints = 0;
-                        validFormations.forEach(formation => {
-                          if (defs.length >= formation.def && mids.length >= formation.mid && fwds.length >= formation.fwd) {
-                            const starting11 = [
-                              gkps[0],
-                              ...defs.slice(0, formation.def),
-                              ...mids.slice(0, formation.mid),
-                              ...fwds.slice(0, formation.fwd)
-                            ].filter(Boolean);
-                            
-                            const formationPoints = starting11.reduce((sum, p) => sum + p.projectedPoints, 0);
-                            // Add captain bonus (best player gets 2x)
-                            const captain = starting11.reduce((best, p) => p.projectedPoints > best.projectedPoints ? p : best, starting11[0]);
-                            const totalWithCaptain = formationPoints + (captain?.projectedPoints || 0);
-                            
-                            if (totalWithCaptain > bestPoints) {
-                              bestPoints = totalWithCaptain;
+                        if (isBenchBoostActive) {
+                          // With Bench Boost, all 15 players score points
+                          const allPlayersPoints = playersWithPoints.reduce((sum, p) => sum + p.projectedPoints, 0);
+                          // Add captain bonus (best player gets 2x)
+                          const captain = playersWithPoints.reduce((best, p) => p.projectedPoints > best.projectedPoints ? p : best, playersWithPoints[0]);
+                          grandTotal += allPlayersPoints + (captain?.projectedPoints || 0);
+                        } else {
+                          // Group by position
+                          const gkps = playersWithPoints.filter(p => p.position === 1).sort((a, b) => b.projectedPoints - a.projectedPoints);
+                          const defs = playersWithPoints.filter(p => p.position === 2).sort((a, b) => b.projectedPoints - a.projectedPoints);
+                          const mids = playersWithPoints.filter(p => p.position === 3).sort((a, b) => b.projectedPoints - a.projectedPoints);
+                          const fwds = playersWithPoints.filter(p => p.position === 4).sort((a, b) => b.projectedPoints - a.projectedPoints);
+                          
+                          // Try all valid formations and find best for this gameweek
+                          const validFormations = [
+                            { def: 3, mid: 4, fwd: 3 }, { def: 3, mid: 5, fwd: 2 },
+                            { def: 4, mid: 3, fwd: 3 }, { def: 4, mid: 4, fwd: 2 },
+                            { def: 4, mid: 5, fwd: 1 }, { def: 5, mid: 3, fwd: 2 },
+                            { def: 5, mid: 4, fwd: 1 }, { def: 5, mid: 2, fwd: 3 }
+                          ];
+                          
+                          let bestPoints = 0;
+                          validFormations.forEach(formation => {
+                            if (defs.length >= formation.def && mids.length >= formation.mid && fwds.length >= formation.fwd) {
+                              const starting11 = [
+                                gkps[0],
+                                ...defs.slice(0, formation.def),
+                                ...mids.slice(0, formation.mid),
+                                ...fwds.slice(0, formation.fwd)
+                              ].filter(Boolean);
+                              
+                              const formationPoints = starting11.reduce((sum, p) => sum + p.projectedPoints, 0);
+                              // Add captain bonus (best player gets 2x)
+                              const captain = starting11.reduce((best, p) => p.projectedPoints > best.projectedPoints ? p : best, starting11[0]);
+                              const totalWithCaptain = formationPoints + (captain?.projectedPoints || 0);
+                              
+                              if (totalWithCaptain > bestPoints) {
+                                bestPoints = totalWithCaptain;
+                              }
                             }
-                          }
-                        });
-                        
-                        grandTotal += bestPoints;
+                          });
+                          
+                          grandTotal += bestPoints;
+                        }
                       } else {
                         // For manual mode: use the manual lineup for this gameweek
-                        lineupForGW.slice(0, 11).forEach(pick => {
+                        // Check if Bench Boost is planned for this gameweek
+                        const isBenchBoostActive = plannedChips[gw] === 'bboost';
+                        const playersToInclude = isBenchBoostActive ? lineupForGW : lineupForGW.slice(0, 11);
+                        
+                        playersToInclude.forEach(pick => {
                           const playerData = playerProjections6GW.find((p: any) => p.playerId === pick.element);
                           const gwPoints = playerData?.gameweekProjections?.[gw.toString()] || 0;
                           // Apply captain multiplier if this is the selected GW
