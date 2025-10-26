@@ -1293,23 +1293,57 @@ export default function TransferPlanner() {
   };
 
   // Create and save a new draft with current state (called AFTER changes are applied)
-  const finalizeNewDraft = (draftLetter: string) => {
+  const finalizeNewDraft = async (draftLetter: string) => {
     if (activeDraft === draftLetter) {
       // Already in the target draft
       return;
     }
     
-    // Switch to the new draft
-    setActiveDraft(draftLetter);
-    setHasUnsavedChanges(true);
+    if (!searchedId) return;
     
-    toast({
-      title: `Draft ${draftLetter} Created`,
-      description: `Your changes will be saved to Draft ${draftLetter}. Remember to save!`,
-    });
+    // First, save the draft with the current state (including captain/vice-captain)
+    const captainPick = manualLineup.find(p => p.is_captain);
+    const viceCaptainPick = manualLineup.find(p => p.is_vice_captain);
     
-    // Save the draft after a delay to ensure state has settled
-    setTimeout(() => saveCurrentDraft(undefined, draftLetter), 150);
+    try {
+      await fetch("/api/transfer-planner/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          managerId: parseInt(searchedId),
+          draftLetter: draftLetter,
+          gameweekTransfers: structuredClone(gameweekTransfers),
+          plannedChips: structuredClone(plannedChips),
+          mode: plannerMode,
+          teamBank: calculateBankAfterTransfers(),
+          teamValue: 0,
+          totalProjectedPoints: 0,
+          totalTransfersUsed: Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0),
+          captainPlayerId: captainPick?.element || null,
+          captainPlayerName: captainPick ? getPlayerById(captainPick.element)?.web_name : null,
+          viceCaptainPlayerId: viceCaptainPick?.element || null,
+          viceCaptainPlayerName: viceCaptainPick ? getPlayerById(viceCaptainPick.element)?.web_name : null
+        })
+      });
+      
+      // Reload drafts
+      await loadDrafts();
+      
+      // Now switch to the draft using the proper function (which loads it correctly)
+      await switchToDraft(draftLetter);
+      
+      toast({
+        title: `Draft ${draftLetter} Created`,
+        description: `Your changes have been saved to Draft ${draftLetter}`,
+      });
+    } catch (error) {
+      console.error("Error finalizing draft:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create draft",
+        variant: "destructive"
+      });
+    }
   };
 
   // Handle chip selection for a gameweek
@@ -2586,9 +2620,9 @@ export default function TransferPlanner() {
     setCaptainConfirmation(null);
     setSelectedPlayer(null);
     
-    // If we were in Base, finalize the new draft after state settles
+    // If we were in Base, finalize the new draft
     if (wasInBase) {
-      setTimeout(() => finalizeNewDraft(targetDraft), 100);
+      finalizeNewDraft(targetDraft);
     } else {
       // Already in a draft, just save
       setHasUnsavedChanges(true);
@@ -2644,9 +2678,9 @@ export default function TransferPlanner() {
     setViceCaptainConfirmation(null);
     setSelectedPlayer(null);
     
-    // If we were in Base, finalize the new draft after state settles
+    // If we were in Base, finalize the new draft
     if (wasInBase) {
-      setTimeout(() => finalizeNewDraft(targetDraft), 100);
+      finalizeNewDraft(targetDraft);
     } else {
       // Already in a draft, just save
       setHasUnsavedChanges(true);
