@@ -1268,11 +1268,12 @@ export default function TransferPlanner() {
   };
 
   // Helper to create new draft when making changes from Base
-  const ensureDraftForChanges = (): boolean => {
+  // Returns the target draft letter (current draft or newly created draft)
+  const ensureDraftForChanges = (): string | null => {
     if (activeDraft !== "Base") {
       // Already in a draft, just mark as changed
       setHasUnsavedChanges(true);
-      return true;
+      return activeDraft;
     }
     
     // We're in Base - need to create a new draft
@@ -1286,7 +1287,7 @@ export default function TransferPlanner() {
         description: "You have 5 drafts already. Please delete a draft first, or make changes in an existing draft instead of Base.",
         variant: "destructive"
       });
-      return false;
+      return null;
     }
     
     // Switch to the new draft
@@ -1298,13 +1299,14 @@ export default function TransferPlanner() {
       description: `Your changes will be saved to Draft ${nextLetter}. Remember to save!`,
     });
     
-    return true;
+    return nextLetter;
   };
 
   // Handle chip selection for a gameweek
   const handleChipSelection = (gameweek: number, chipType: ChipType | null) => {
     // Ensure we have a draft for changes
-    if (!ensureDraftForChanges()) return;
+    const targetDraft = ensureDraftForChanges();
+    if (!targetDraft) return;
     
     setPlannedChips(prev => {
       const updated = { ...prev };
@@ -2350,7 +2352,8 @@ export default function TransferPlanner() {
   // Swap a starting 11 player with a bench player
   const swapPlayers = (startingIndex: number, benchIndex: number) => {
     // Ensure we have a draft for changes
-    if (!ensureDraftForChanges()) return;
+    const targetDraft = ensureDraftForChanges();
+    if (!targetDraft) return;
     
     const startingPick = manualLineup[startingIndex];
     const benchPick = manualLineup[11 + benchIndex];
@@ -2463,7 +2466,8 @@ export default function TransferPlanner() {
   // Move bench player up or down (excluding GK)
   const moveBenchPlayer = (benchIndex: number, direction: 'up' | 'down') => {
     // Ensure we have a draft for changes
-    if (!ensureDraftForChanges()) return;
+    const targetDraft = ensureDraftForChanges();
+    if (!targetDraft) return;
     
     if (benchIndex === 0) return; // Can't move GK
     
@@ -2511,7 +2515,8 @@ export default function TransferPlanner() {
   // Confirm captain selection
   const confirmSetCaptain = async (playerId: number) => {
     // Ensure we have a draft for changes
-    if (!ensureDraftForChanges()) {
+    const targetDraft = ensureDraftForChanges();
+    if (!targetDraft) {
       setCaptainConfirmation(null);
       setSelectedPlayer(null);
       return;
@@ -2541,11 +2546,8 @@ export default function TransferPlanner() {
     setCaptainConfirmation(null);
     setSelectedPlayer(null);
     
-    // Auto-save draft if not on Base
-    if (activeDraft !== "Base") {
-      // Small delay to ensure state is updated
-      setTimeout(() => saveCurrentDraft(), 100);
-    }
+    // Auto-save draft with explicit target draft letter
+    setTimeout(() => saveCurrentDraft(undefined, targetDraft), 100);
   };
 
   // Handle vice captain selection
@@ -2562,7 +2564,8 @@ export default function TransferPlanner() {
   // Confirm vice captain selection
   const confirmSetViceCaptain = async (playerId: number) => {
     // Ensure we have a draft for changes
-    if (!ensureDraftForChanges()) {
+    const targetDraft = ensureDraftForChanges();
+    if (!targetDraft) {
       setViceCaptainConfirmation(null);
       setSelectedPlayer(null);
       return;
@@ -2592,11 +2595,8 @@ export default function TransferPlanner() {
     setViceCaptainConfirmation(null);
     setSelectedPlayer(null);
     
-    // Auto-save draft if not on Base
-    if (activeDraft !== "Base") {
-      // Small delay to ensure state is updated
-      setTimeout(() => saveCurrentDraft(), 100);
-    }
+    // Auto-save draft with explicit target draft letter
+    setTimeout(() => saveCurrentDraft(undefined, targetDraft), 100);
   };
 
   // Handle transferring a player out
