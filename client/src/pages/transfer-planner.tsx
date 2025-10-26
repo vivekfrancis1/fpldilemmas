@@ -5584,25 +5584,12 @@ export default function TransferPlanner() {
                   // Find transferred in players - compare finalLineup (after transfers) against gwLineup (before transfers)
                   // If previous GW had Free Hit, don't mark any players as transfers (they're reverting back)
                   const baselinePlayerIds = new Set(gwLineup.map(p => p.element));
-                  const finalPlayerIds = new Set(finalLineup.map(p => p.element));
                   const transferredInIds = new Set<number>();
-                  
-                  console.log(`GW${gw.id} Transfer Debug:`, {
-                    gwTransfersCompleted: gwTransfers.completed.length,
-                    transfers: gwTransfers.completed.map(t => ({ 
-                      out: getPlayerById(t.outPlayerId)?.web_name, 
-                      in: getPlayerById(t.inPlayerId)?.web_name 
-                    })),
-                    baselinePlayerIds: Array.from(baselinePlayerIds),
-                    finalPlayerIds: Array.from(finalPlayerIds),
-                    prevHadFreeHit,
-                  });
                   
                   if (!prevHadFreeHit) {
                     finalLineup.forEach(pick => {
                       if (!baselinePlayerIds.has(pick.element)) {
                         transferredInIds.add(pick.element);
-                        console.log(`GW${gw.id}: Marking ${getPlayerById(pick.element)?.web_name} (ID: ${pick.element}) as transferred in`);
                       }
                     });
                   }
@@ -5652,9 +5639,11 @@ export default function TransferPlanner() {
                             <div
                               key={idx}
                               className={`px-2 py-0.5 rounded text-[10px] font-medium relative ${
+                                isTransferredIn && isCaptain ? 'bg-yellow-400 text-yellow-900 border-2 border-green-500' :
+                                isTransferredIn && isViceCaptain ? 'bg-blue-400 text-blue-900 border-2 border-green-500' :
+                                isTransferredIn ? 'bg-green-100 text-green-900 border-2 border-green-500 dark:bg-green-950/40 dark:text-green-300' :
                                 isCaptain ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-500' :
                                 isViceCaptain ? 'bg-blue-400 text-blue-900' :
-                                isTransferredIn ? 'bg-green-100 text-green-900 border-2 border-green-500 dark:bg-green-950/40 dark:text-green-300' :
                                 player.element_type === 1 ? 'bg-indigo-600 text-white' :
                                 player.element_type === 2 ? 'bg-cyan-600 text-white' :
                                 player.element_type === 3 ? 'bg-emerald-600 text-white' :
