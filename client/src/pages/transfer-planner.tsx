@@ -2622,15 +2622,21 @@ export default function TransferPlanner() {
     const wasInBase = activeDraft === "Base";
     
     if (wasInBase) {
-      // If in Base: Create draft, switch to it, then apply captain change
+      // If in Base: Create draft, switch to it, save, apply captain change, save again
       try {
-        // Step 1: Create the draft with current Base team (old captain)
+        // Step 1: Create the draft with current Base team
         await finalizeNewDraft(targetDraft);
         
-        // Step 2: Wait for draft to be created and switched
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Step 2: Wait for draft to be fully created and switched
+        await new Promise(resolve => setTimeout(resolve, 400));
         
-        // Step 3: Apply the captain change
+        // Step 3: Explicitly save the draft (ensures it's persisted after switch)
+        await saveCurrentDraft();
+        
+        // Step 4: Wait for save to complete
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Step 5: Apply the captain change
         setManualLineup(prev => {
           const currentCaptain = prev.find(p => p.is_captain);
           const currentViceCaptain = prev.find(p => p.is_vice_captain);
@@ -2652,7 +2658,7 @@ export default function TransferPlanner() {
         setCaptainConfirmation(null);
         setSelectedPlayer(null);
         
-        // Step 4: Save the updated draft
+        // Step 6: Save the draft again with the updated captain info
         setHasUnsavedChanges(true);
         setTimeout(() => saveCurrentDraft(), 100);
       } catch (error) {
@@ -2717,15 +2723,21 @@ export default function TransferPlanner() {
     const wasInBase = activeDraft === "Base";
     
     if (wasInBase) {
-      // If in Base: Create draft, switch to it, then apply vice captain change
+      // If in Base: Create draft, switch to it, save, apply vice captain change, save again
       try {
-        // Step 1: Create the draft with current Base team (old vice-captain)
+        // Step 1: Create the draft with current Base team
         await finalizeNewDraft(targetDraft);
         
-        // Step 2: Wait for draft to be created and switched
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // Step 2: Wait for draft to be fully created and switched
+        await new Promise(resolve => setTimeout(resolve, 400));
         
-        // Step 3: Apply the vice captain change
+        // Step 3: Explicitly save the draft (ensures it's persisted after switch)
+        await saveCurrentDraft();
+        
+        // Step 4: Wait for save to complete
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Step 5: Apply the vice captain change
         setManualLineup(prev => {
           const currentCaptain = prev.find(p => p.is_captain);
           const currentViceCaptain = prev.find(p => p.is_vice_captain);
@@ -2747,7 +2759,7 @@ export default function TransferPlanner() {
         setViceCaptainConfirmation(null);
         setSelectedPlayer(null);
         
-        // Step 4: Save the updated draft
+        // Step 6: Save the draft again with the updated vice captain info
         setHasUnsavedChanges(true);
         setTimeout(() => saveCurrentDraft(), 100);
       } catch (error) {
