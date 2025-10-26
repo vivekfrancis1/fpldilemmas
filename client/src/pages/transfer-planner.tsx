@@ -5496,8 +5496,9 @@ export default function TransferPlanner() {
                   
                   return (
                     <div className="flex-shrink-0 w-48 rounded-lg border-2 border-indigo-300 bg-indigo-50 dark:bg-indigo-950/20 p-3">
-                      <div className="text-center font-bold mb-3 text-indigo-700 dark:text-indigo-300">Base</div>
-                      <div className="space-y-1">
+                      <div className="text-center font-bold mb-2 text-indigo-700 dark:text-indigo-300">Base</div>
+                      <div className="space-y-0.5">
+                        {/* Starting 11 */}
                         {baseLineup.slice(0, 11).map((pick, idx) => {
                           const player = getPlayerById(pick.element);
                           if (!player) return null;
@@ -5507,7 +5508,7 @@ export default function TransferPlanner() {
                           return (
                             <div
                               key={idx}
-                              className={`px-2 py-1 rounded text-xs font-medium ${
+                              className={`px-2 py-0.5 rounded text-[10px] font-medium ${
                                 isCaptain ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-500' :
                                 isViceCaptain ? 'bg-blue-400 text-blue-900' :
                                 player.element_type === 1 ? 'bg-indigo-600 text-white' :
@@ -5519,8 +5520,30 @@ export default function TransferPlanner() {
                             >
                               <div className="flex items-center justify-between">
                                 <span className="truncate">{player.web_name}</span>
-                                {isCaptain && <Crown className="h-3 w-3 flex-shrink-0 ml-1" />}
+                                {isCaptain && <Crown className="h-2.5 w-2.5 flex-shrink-0 ml-1" />}
                               </div>
+                            </div>
+                          );
+                        })}
+                        {/* Bench separator */}
+                        <div className="border-t border-indigo-400 my-1"></div>
+                        {/* Bench */}
+                        {baseLineup.slice(11, 15).map((pick, idx) => {
+                          const player = getPlayerById(pick.element);
+                          if (!player) return null;
+                          
+                          return (
+                            <div
+                              key={idx + 11}
+                              className={`px-2 py-0.5 rounded text-[10px] font-medium opacity-70 ${
+                                player.element_type === 1 ? 'bg-indigo-600 text-white' :
+                                player.element_type === 2 ? 'bg-cyan-600 text-white' :
+                                player.element_type === 3 ? 'bg-emerald-600 text-white' :
+                                'bg-red-600 text-white'
+                              }`}
+                              data-testid={`evolution-base-bench-${pick.element}`}
+                            >
+                              <span className="truncate">{player.web_name}</span>
                             </div>
                           );
                         })}
@@ -5577,11 +5600,22 @@ export default function TransferPlanner() {
                     });
                   }
                   
-                  // Find transferred in/out players by comparing positions
-                  const transferredIn = finalLineup.slice(0, 11).filter((pick, idx) => {
-                    const prevPick = prevFinalLineup[idx];
-                    return pick.element !== prevPick?.element;
-                  });
+                  // Check if previous gameweek had Free Hit chip
+                  const prevGameweekId = gwIndex === 0 ? null : getNextGameweeks()[gwIndex - 1].id;
+                  const prevHadFreeHit = prevGameweekId && (plannedChips[prevGameweekId] === 'freehit' || plannedChips[prevGameweekId] === 'freehit_2');
+                  
+                  // Find transferred in players - compare player IDs in entire squad
+                  // If previous GW had Free Hit, don't mark any players as transfers (they're reverting back)
+                  const prevPlayerIds = new Set(prevFinalLineup.map(p => p.element));
+                  const transferredInIds = new Set<number>();
+                  
+                  if (!prevHadFreeHit) {
+                    finalLineup.forEach(pick => {
+                      if (!prevPlayerIds.has(pick.element)) {
+                        transferredInIds.add(pick.element);
+                      }
+                    });
+                  }
                   
                   // Get chip for this gameweek
                   const plannedChip = plannedChips[gw.id];
@@ -5598,7 +5632,7 @@ export default function TransferPlanner() {
                   
                   return (
                     <div key={gw.id} className="flex-shrink-0 w-48 rounded-lg border-2 border-gray-300 bg-white dark:bg-gray-900 p-3">
-                      <div className="text-center font-bold mb-1 flex items-center justify-center gap-1">
+                      <div className="text-center font-bold mb-2 flex items-center justify-center gap-1">
                         <span>GW{gw.id}</span>
                         {plannedChip && (
                           <Tooltip>
@@ -5611,7 +5645,8 @@ export default function TransferPlanner() {
                           </Tooltip>
                         )}
                       </div>
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
+                        {/* Starting 11 */}
                         {finalLineup.slice(0, 11).map((pick, idx) => {
                           const player = getPlayerById(pick.element);
                           if (!player) return null;
@@ -5621,12 +5656,12 @@ export default function TransferPlanner() {
                           const isViceCaptain = plannerMode === "auto" && selectedGameweek === gw.id && optimizedLineup
                             ? viceCaptain?.element === pick.element
                             : pick.element === viceCaptain?.element;
-                          const isTransferredIn = transferredIn.some(t => t.element === pick.element);
+                          const isTransferredIn = transferredInIds.has(pick.element);
                           
                           return (
                             <div
                               key={idx}
-                              className={`px-2 py-1 rounded text-xs font-medium relative ${
+                              className={`px-2 py-0.5 rounded text-[10px] font-medium relative ${
                                 isCaptain ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-500' :
                                 isViceCaptain ? 'bg-blue-400 text-blue-900' :
                                 isTransferredIn ? 'bg-green-100 text-green-900 border-2 border-green-500 dark:bg-green-950/40 dark:text-green-300' :
@@ -5639,8 +5674,32 @@ export default function TransferPlanner() {
                             >
                               <div className="flex items-center justify-between">
                                 <span className="truncate">{player.web_name}</span>
-                                {isCaptain && <Crown className="h-3 w-3 flex-shrink-0 ml-1" />}
+                                {isCaptain && <Crown className="h-2.5 w-2.5 flex-shrink-0 ml-1" />}
                               </div>
+                            </div>
+                          );
+                        })}
+                        {/* Bench separator */}
+                        <div className="border-t border-gray-400 my-1"></div>
+                        {/* Bench */}
+                        {finalLineup.slice(11, 15).map((pick, idx) => {
+                          const player = getPlayerById(pick.element);
+                          if (!player) return null;
+                          const isTransferredIn = transferredInIds.has(pick.element);
+                          
+                          return (
+                            <div
+                              key={idx + 11}
+                              className={`px-2 py-0.5 rounded text-[10px] font-medium opacity-70 ${
+                                isTransferredIn ? 'bg-green-100 text-green-900 border-2 border-green-500 dark:bg-green-950/40 dark:text-green-300' :
+                                player.element_type === 1 ? 'bg-indigo-600 text-white' :
+                                player.element_type === 2 ? 'bg-cyan-600 text-white' :
+                                player.element_type === 3 ? 'bg-emerald-600 text-white' :
+                                'bg-red-600 text-white'
+                              }`}
+                              data-testid={`evolution-gw${gw.id}-bench-${pick.element}`}
+                            >
+                              <span className="truncate">{player.web_name}</span>
                             </div>
                           );
                         })}
