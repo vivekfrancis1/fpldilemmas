@@ -5476,6 +5476,199 @@ export default function TransferPlanner() {
         </Card>
       )}
 
+      {/* Multi-Gameweek Evolution View */}
+      {searchedId && teamData && (
+        <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-background">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-indigo-600" />
+              Team Evolution - {activeDraft === "Base" ? "Base Draft" : `Draft ${activeDraft}`}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto pb-4">
+              <div className="flex gap-4 min-w-max">
+                {/* Base Column */}
+                {(() => {
+                  const baseLineup = teamData.picks;
+                  const captain = baseLineup.find(p => p.is_captain);
+                  const viceCaptain = baseLineup.find(p => p.is_vice_captain);
+                  
+                  return (
+                    <div className="flex-shrink-0 w-48 rounded-lg border-2 border-indigo-300 bg-indigo-50 dark:bg-indigo-950/20 p-3">
+                      <div className="text-center font-bold mb-3 text-indigo-700 dark:text-indigo-300">Base</div>
+                      <div className="space-y-1">
+                        {baseLineup.slice(0, 11).map((pick, idx) => {
+                          const player = getPlayerById(pick.element);
+                          if (!player) return null;
+                          const isCaptain = pick.element === captain?.element;
+                          const isViceCaptain = pick.element === viceCaptain?.element;
+                          
+                          return (
+                            <div
+                              key={idx}
+                              className={`px-2 py-1 rounded text-xs font-medium ${
+                                isCaptain ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-500' :
+                                isViceCaptain ? 'bg-blue-400 text-blue-900' :
+                                player.element_type === 1 ? 'bg-indigo-600 text-white' :
+                                player.element_type === 2 ? 'bg-cyan-600 text-white' :
+                                player.element_type === 3 ? 'bg-emerald-600 text-white' :
+                                'bg-red-600 text-white'
+                              }`}
+                              data-testid={`evolution-base-player-${pick.element}`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="truncate">{player.web_name}</span>
+                                {isCaptain && <Crown className="h-3 w-3 flex-shrink-0 ml-1" />}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Gameweek Columns */}
+                {getNextGameweeks().slice(0, 6).map((gw, gwIndex) => {
+                  // Calculate lineup for this gameweek
+                  const gwLineup = getBaselineLineup(gw.id);
+                  const gwTransfers = gameweekTransfers[gw.id] || { transferredOut: [], completed: [] };
+                  
+                  // Apply current gameweek's transfers
+                  let finalLineup = [...gwLineup];
+                  gwTransfers.completed.forEach(transfer => {
+                    finalLineup = finalLineup.map(pick => {
+                      if (pick.element === transfer.outPlayerId) {
+                        const inPlayer = getPlayerById(transfer.inPlayerId);
+                        if (inPlayer) {
+                          return {
+                            ...pick,
+                            element: transfer.inPlayerId,
+                            selling_price: inPlayer.now_cost,
+                            purchase_price: inPlayer.now_cost,
+                          };
+                        }
+                      }
+                      return pick;
+                    });
+                  });
+                  
+                  // Get previous gameweek lineup for comparison
+                  const prevGW = gwIndex === 0 ? teamData.picks : getBaselineLineup(getNextGameweeks()[gwIndex - 1].id);
+                  let prevFinalLineup = [...prevGW];
+                  if (gwIndex > 0) {
+                    const prevTransfers = gameweekTransfers[getNextGameweeks()[gwIndex - 1].id] || { transferredOut: [], completed: [] };
+                    prevTransfers.completed.forEach(transfer => {
+                      prevFinalLineup = prevFinalLineup.map(pick => {
+                        if (pick.element === transfer.outPlayerId) {
+                          const inPlayer = getPlayerById(transfer.inPlayerId);
+                          if (inPlayer) {
+                            return {
+                              ...pick,
+                              element: transfer.inPlayerId,
+                              selling_price: inPlayer.now_cost,
+                              purchase_price: inPlayer.now_cost,
+                            };
+                          }
+                        }
+                        return pick;
+                      });
+                    });
+                  }
+                  
+                  // Find transferred in/out players by comparing positions
+                  const transferredIn = finalLineup.slice(0, 11).filter((pick, idx) => {
+                    const prevPick = prevFinalLineup[idx];
+                    return pick.element !== prevPick?.element;
+                  });
+                  
+                  // Get chip for this gameweek
+                  const plannedChip = plannedChips[gw.id];
+                  
+                  // Determine captain (for auto mode, use optimized; for manual, use current lineup)
+                  let captain, viceCaptain;
+                  if (plannerMode === "auto" && selectedGameweek === gw.id && optimizedLineup) {
+                    captain = optimizedLineup.starting11.find(p => p.isCaptain);
+                    viceCaptain = optimizedLineup.starting11.find(p => p.isViceCaptain);
+                  } else {
+                    captain = finalLineup.find(p => p.is_captain);
+                    viceCaptain = finalLineup.find(p => p.is_vice_captain);
+                  }
+                  
+                  return (
+                    <div key={gw.id} className="flex-shrink-0 w-48 rounded-lg border-2 border-gray-300 bg-white dark:bg-gray-900 p-3">
+                      <div className="text-center font-bold mb-1 flex items-center justify-center gap-1">
+                        <span>GW{gw.id}</span>
+                        {plannedChip && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Sparkles className="h-3 w-3 text-amber-600" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">{getChipDisplayName(plannedChip)} {getChipNumber(plannedChip)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        {finalLineup.slice(0, 11).map((pick, idx) => {
+                          const player = getPlayerById(pick.element);
+                          if (!player) return null;
+                          const isCaptain = plannerMode === "auto" && selectedGameweek === gw.id && optimizedLineup
+                            ? captain?.element === pick.element
+                            : pick.element === captain?.element;
+                          const isViceCaptain = plannerMode === "auto" && selectedGameweek === gw.id && optimizedLineup
+                            ? viceCaptain?.element === pick.element
+                            : pick.element === viceCaptain?.element;
+                          const isTransferredIn = transferredIn.some(t => t.element === pick.element);
+                          
+                          return (
+                            <div
+                              key={idx}
+                              className={`px-2 py-1 rounded text-xs font-medium relative ${
+                                isCaptain ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-500' :
+                                isViceCaptain ? 'bg-blue-400 text-blue-900' :
+                                isTransferredIn ? 'bg-green-100 text-green-900 border-2 border-green-500 dark:bg-green-950/40 dark:text-green-300' :
+                                player.element_type === 1 ? 'bg-indigo-600 text-white' :
+                                player.element_type === 2 ? 'bg-cyan-600 text-white' :
+                                player.element_type === 3 ? 'bg-emerald-600 text-white' :
+                                'bg-red-600 text-white'
+                              }`}
+                              data-testid={`evolution-gw${gw.id}-player-${pick.element}`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="truncate">{player.web_name}</span>
+                                {isCaptain && <Crown className="h-3 w-3 flex-shrink-0 ml-1" />}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div className="mt-4 text-xs text-muted-foreground space-y-1 border-t pt-3">
+              <p className="flex items-center gap-2">
+                <span className="inline-block w-4 h-4 rounded bg-yellow-400 border-2 border-yellow-500"></span>
+                <strong>Captain</strong>
+              </p>
+              <p className="flex items-center gap-2">
+                <span className="inline-block w-4 h-4 rounded bg-green-100 border-2 border-green-500 dark:bg-green-950/40"></span>
+                <strong>Transferred In</strong>
+              </p>
+              <p className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-600" />
+                <strong>Chip Active</strong>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Auto-Optimization Section */}
       {searchedId && teamData && selectedGameweek && plannerMode === "auto" && (
         <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
