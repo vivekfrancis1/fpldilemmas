@@ -5577,41 +5577,18 @@ export default function TransferPlanner() {
                     });
                   });
                   
-                  // Get previous gameweek lineup for comparison
-                  const prevGW = gwIndex === 0 ? teamData.picks : getBaselineLineup(getNextGameweeks()[gwIndex - 1].id);
-                  let prevFinalLineup = [...prevGW];
-                  if (gwIndex > 0) {
-                    const prevTransfers = gameweekTransfers[getNextGameweeks()[gwIndex - 1].id] || { transferredOut: [], completed: [] };
-                    prevTransfers.completed.forEach(transfer => {
-                      prevFinalLineup = prevFinalLineup.map(pick => {
-                        if (pick.element === transfer.outPlayerId) {
-                          const inPlayer = getPlayerById(transfer.inPlayerId);
-                          if (inPlayer) {
-                            return {
-                              ...pick,
-                              element: transfer.inPlayerId,
-                              selling_price: inPlayer.now_cost,
-                              purchase_price: inPlayer.now_cost,
-                            };
-                          }
-                        }
-                        return pick;
-                      });
-                    });
-                  }
-                  
                   // Check if previous gameweek had Free Hit chip
                   const prevGameweekId = gwIndex === 0 ? null : getNextGameweeks()[gwIndex - 1].id;
                   const prevHadFreeHit = prevGameweekId && (plannedChips[prevGameweekId] === 'freehit' || plannedChips[prevGameweekId] === 'freehit_2');
                   
-                  // Find transferred in players - compare player IDs in entire squad
+                  // Find transferred in players - compare finalLineup (after transfers) against gwLineup (before transfers)
                   // If previous GW had Free Hit, don't mark any players as transfers (they're reverting back)
-                  const prevPlayerIds = new Set(prevFinalLineup.map(p => p.element));
+                  const baselinePlayerIds = new Set(gwLineup.map(p => p.element));
                   const transferredInIds = new Set<number>();
                   
                   if (!prevHadFreeHit) {
                     finalLineup.forEach(pick => {
-                      if (!prevPlayerIds.has(pick.element)) {
+                      if (!baselinePlayerIds.has(pick.element)) {
                         transferredInIds.add(pick.element);
                       }
                     });
