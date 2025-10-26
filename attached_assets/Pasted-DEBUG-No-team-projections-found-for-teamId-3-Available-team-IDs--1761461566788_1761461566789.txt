@@ -1,0 +1,1053 @@
+DEBUG: No team projections found for teamId 3. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 19. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 16. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 20. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: Generated pure assist projections for 0 players for future gameweeks only
+6:47:34 AM [express] GET /api/player-assist-projections-full-calculation 200 in 1237ms :: []
+🔄 Processing gameweek 2...
+📥 Retrieved 0 assist projections for GW10-15
+✅ Defensive projections cached successfully (0 records)
+DEBUG: Team Goals Conceded Projections - Limiting to next 6 gameweeks: GW10-15
+DEBUG: Team Goals Conceded Projections - Generated gameweek data for 20 teams (next 6 gameweeks only: GW10-15)
+6:47:34 AM [express] GET /api/team-goals-against-projections 200 in 1335ms :: [{"id":1,"team":"ARS",…
+📊 Inserted minutes batch 9/53
+📅 Dynamic gameweek range detected: GWundefined-undefined (0 gameweeks)
+✅ Goal projections calculated using goal share × team goals - inherently balanced, no normalization needed
+🔄 Applying position-based capping to goal shares...
+📊 POSITION CAPPING SUMMARY:
+   - Team-gameweek groups processed: 0
+   - Position capping disabled - using raw shares
+   - No normalization applied - shares may exceed position limits
+✅ Position-based capping completed
+✅ Using raw goal projections without minutes scaling (0 records)
+✅ Goals projections cached successfully (0 records, 0 adjustments applied)
+DEBUG: Team Goals Conceded Projections - Limiting to next 6 gameweeks: GW10-15
+DEBUG: Team Goals Conceded Projections - Generated gameweek data for 20 teams (next 6 gameweeks only: GW10-15)
+6:47:34 AM [express] GET /api/team-goals-against-projections 200 in 1092ms :: [{"id":1,"team":"ARS",…
+✅ LIVE SUCCESS: Generated pure goals conceded projections for 332 players (GKP/DEF) for future gameweeks only
+6:47:34 AM [express] GET /api/player-goals-conceded-projections 200 in 1691ms :: [{"playerId":1,"pla…
+DEBUG: Processing next 6 gameweeks for clean sheets (GW10 to GW15), current GW: 9
+6:47:34 AM [express] GET /api/team-cs-projections 200 in 1476ms :: [{"id":1,"team":"ARS","teamShort"…
+📥 Retrieved 20 team CS projections
+📊 Inserted minutes batch 10/53
+📊 Inserted minutes batch 11/53
+DEBUG: Player Total Points API - aggregating data from individual projection APIs
+DEBUG: Player Total Points API - aggregating data from individual projection APIs
+✅ Assist projections calculated using assist share × team assists - inherently balanced, no normalization needed
+🔄 Applying position-based capping to assist shares...
+📊 ASSIST POSITION CAPPING SUMMARY:
+   - Team-gameweek groups processed: 0
+   - Assist position capping disabled - using raw shares
+   - No normalization applied - shares may exceed position limits
+✅ Position-based assist capping completed
+✅ Using raw assist projections without minutes scaling (0 records)
+✅ Assist projections cached successfully (0 records, 0 adjustments applied)
+📊 Inserted minutes batch 12/53
+🔄 Processing gameweek 3...
+🔄 Processing gameweek 3...
+✅ Cached 439 player bonus points records
+📊 Inserted minutes batch 13/53
+🌐 Internal API call: http://localhost:5000/api/player-goals-scored-projections?startGameweek=10&endGameweek=10
+🌐 Internal API call: http://localhost:5000/api/player-assist-projections?startGameweek=10&endGameweek=10
+🌐 Internal API call: http://localhost:5000/api/player-minutes-projections
+🌐 Internal API call: http://localhost:5000/api/player-cleansheet-points?startGameweek=10&endGameweek=10
+🌐 Internal API call: http://localhost:5000/api/player-goals-conceded-projections?startGameweek=10&endGameweek=10
+🌐 Internal API call: http://localhost:5000/api/player-yellow-cards-projections?startGameweek=10&endGameweek=10
+🌐 Internal API call: http://localhost:5000/api/player-red-cards-projections?startGameweek=10&endGameweek=10
+🌐 Internal API call: http://localhost:5000/api/player-bonus-points-projections?startGameweek=10&endGameweek=10
+🌐 Internal API call: http://localhost:5000/api/player-saves-projections?startGameweek=10&endGameweek=10
+🌐 Internal API call: http://localhost:5000/api/player-defensive-contributions-projections?startGameweek=10&endGameweek=10
+🌐 Internal API call: http://localhost:5000/api/player-goals-scored-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-assist-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-minutes-projections
+🌐 Internal API call: http://localhost:5000/api/player-cleansheet-points?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-goals-conceded-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-yellow-cards-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-red-cards-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-bonus-points-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-saves-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-defensive-contributions-projections?startGameweek=10&endGameweek=15
+🚀 API-FIRST: Attempting live calculation for Player Goals = Goal Share × Team Goal Projections
+🌐 Internal API call: http://localhost:5000/api/goal-share-season
+🌐 Internal API call: http://localhost:5000/api/team-goal-projections
+🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections
+🌐 Internal API call: http://localhost:5000/api/assist-share-season
+🌐 Internal API call: http://localhost:5000/api/team-assist-projections
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+🚀 API-FIRST: Attempting live calculation for player clean sheet points
+DEBUG: Fetching data for clean sheet points projections for GW10-10
+🚀 API-FIRST: Attempting live calculation for player goals conceded projections
+DEBUG: Player Goals Conceded Projections API called - using pure projections for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player yellow cards projections
+DEBUG: Player Yellow Cards Projections API called - using pure projections for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player red cards projections
+DEBUG: Player Red Cards Projections API called - using pure projections for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player bonus points projections
+DEBUG: Player Bonus Points Projections API called - simplified calculation for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player saves projections
+DEBUG: Player Saves Projections API called - using formula: Average saves/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game
+🚀 API-FIRST: Attempting live calculation for player defensive contributions projections
+DEBUG: Player Defensive Contributions API called - using formula: Average DC/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game
+🚀 API-FIRST: Attempting live calculation for Player Goals = Goal Share × Team Goal Projections
+🌐 Internal API call: http://localhost:5000/api/goal-share-season
+🌐 Internal API call: http://localhost:5000/api/team-goal-projections
+🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections
+🌐 Internal API call: http://localhost:5000/api/assist-share-season
+🌐 Internal API call: http://localhost:5000/api/team-assist-projections
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+🚀 API-FIRST: Attempting live calculation for player clean sheet points
+DEBUG: Fetching data for clean sheet points projections for GW10-15
+🚀 API-FIRST: Attempting live calculation for player goals conceded projections
+DEBUG: Player Goals Conceded Projections API called - using pure projections for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player yellow cards projections
+DEBUG: Player Yellow Cards Projections API called - using pure projections for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player red cards projections
+DEBUG: Player Red Cards Projections API called - using pure projections for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player bonus points projections
+DEBUG: Player Bonus Points Projections API called - simplified calculation for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player saves projections
+DEBUG: Player Saves Projections API called - using formula: Average saves/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game
+🚀 API-FIRST: Attempting live calculation for player defensive contributions projections
+DEBUG: Player Defensive Contributions API called - using formula: Average DC/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game
+✅ Team clean sheet projections cached successfully (120 records)
+📊 Inserted minutes batch 14/53
+✅ Serving goal share data from cache
+6:47:35 AM [express] GET /api/goal-share-season 200 in 1ms :: [{"teamId":12,"teamName":"Liverpool","…
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+✅ Serving assist share data from cache
+6:47:35 AM [express] GET /api/assist-share-season 200 in 1ms :: [{"teamId":13,"teamName":"Man City",…
+🔄 Processing gameweek 3...
+📊 Current GW: 9, serving next 6 gameweeks: GW10-15
+📦 CACHED: No memory cache, checking aggregated database cache...
+DEBUG: Team Assist Projections API called - generating next 6 gameweeks only
+✅ Cached 86 player saves records
+DEBUG: Team CS Projections API called - generating next 6 gameweeks only
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+✅ Serving goal share data from cache
+6:47:35 AM [express] GET /api/goal-share-season 200 in 1ms :: [{"teamId":12,"teamName":"Liverpool","…
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+✅ Serving assist share data from cache
+6:47:35 AM [express] GET /api/assist-share-season 200 in 1ms :: [{"teamId":13,"teamName":"Man City",…
+DEBUG: Team Assist Projections API called - generating next 6 gameweeks only
+DEBUG: Team CS Projections API called - generating next 6 gameweeks only
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping
+📊 Inserted minutes batch 15/53
+DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+📊 Inserted minutes batch 16/53
+📊 Inserted minutes batch 17/53
+📊 Inserted minutes batch 18/53
+🔄 Processing gameweek 4...
+DEBUG: Current gameweek: 9, starting projections from GW10
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:35 AM [express] GET /api/player-minutes-projections 200 in 577ms :: [{"playerId":101,"playerNam…
+✅ LIVE SUCCESS: Generated pure yellow card projections for 746 players for future gameweeks only
+✅ LIVE SUCCESS: Generated red card projections for 746 players using historical data for next 6 gameweeks
+6:47:35 AM [express] GET /api/player-yellow-cards-projections 200 in 620ms :: [{"playerId":1,"player…
+6:47:35 AM [express] GET /api/player-red-cards-projections 200 in 617ms :: [{"playerId":1,"playerNam…
+🔄 Processing gameweek 4...
+DEBUG: Current gameweek: 9, starting projections from GW10
+✅ LIVE SUCCESS: Generated red card projections for 746 players using historical data for next 6 gameweeks
+✅ LIVE SUCCESS: Generated pure yellow card projections for 746 players for future gameweeks only
+6:47:35 AM [express] GET /api/player-red-cards-projections 200 in 735ms :: [{"playerId":1,"playerNam…
+6:47:35 AM [express] GET /api/player-yellow-cards-projections 200 in 732ms :: [{"playerId":1,"player…
+📊 Inserted minutes batch 19/53
+✅ Cached 332 player goals conceded records
+DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping
+🔄 Processing gameweek 4...
+DEBUG: Current gameweek: 9, starting projections from GW10
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:35 AM [express] GET /api/player-minutes-projections 200 in 806ms :: [{"playerId":101,"playerNam…
+DEBUG: Current gameweek: 9, starting projections from GW10
+⚠️ CACHE PROTECTION: Detected corrupted cached data with empty component breakdowns - serving fresh data instead
+🔄 No valid cached data available - falling back to live API calculation
+🌐 Internal API call: http://localhost:5000/api/player-total-points?startGameweek=10&endGameweek=15
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+📊 Inserted minutes batch 20/53
+✅ Cached 746 player yellow cards records
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+DEBUG: Player Total Points API - aggregating data from individual projection APIs
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:36 AM [express] GET /api/player-minutes-projections 200 in 895ms :: [{"playerId":101,"playerNam…
+✅ LIVE SUCCESS: Generated simplified bonus points projections for 439 players for future gameweeks only
+6:47:36 AM [express] GET /api/player-bonus-points-projections 200 in 1033ms :: [{"playerId":1,"playe…
+✅ LIVE SUCCESS: Generated simplified bonus points projections for 439 players for future gameweeks only
+6:47:36 AM [express] GET /api/player-bonus-points-projections 200 in 1061ms :: [{"playerId":1,"playe…
+📊 Inserted minutes batch 21/53
+✅ Cached 746 player red cards records
+DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW10-15
+📊 Serving team goals from cache for range 10-15
+6:47:36 AM [express] GET /api/team-assist-projections 200 in 1089ms :: [{"teamId":1,"teamName":"Arse…
+✅ LIVE SUCCESS: Calculated 389 player assist projections using live APIs
+6:47:36 AM [express] GET /api/player-assist-projections 200 in 1167ms :: [{"playerId":582,"playerNam…
+📊 Inserted minutes batch 22/53
+DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW10-15
+📊 Serving team goals from cache for range 10-15
+6:47:36 AM [express] GET /api/team-assist-projections 200 in 1153ms :: [{"teamId":1,"teamName":"Arse…
+✅ LIVE SUCCESS: Calculated 389 player assist projections using live APIs
+6:47:36 AM [express] GET /api/player-assist-projections 200 in 1216ms :: [{"playerId":582,"playerNam…
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:36 AM [express] GET /api/player-minutes-projections 200 in 1153ms :: [{"playerId":101,"playerNa…
+📊 Populated goal share tracking table (338 records)
+📊 Inserted minutes batch 23/53
+📊 Inserted minutes batch 24/53
+📊 Populated assist share tracking table (389 records)
+✅ Goal/Assist share data cached successfully
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+📊 Serving team goals from cache for range 10-15
+6:47:36 AM [express] GET /api/team-goal-projections 200 in 1416ms :: [{"teamId":1,"teamName":"Arsena…
+6:47:36 AM [express] GET /api/team-goal-projections 200 in 1464ms :: [{"teamId":1,"teamName":"Arsena…
+📊 Inserted minutes batch 25/53
+✅ LIVE SUCCESS: Calculated 338 player goal projections using live APIs
+6:47:36 AM [express] GET /api/player-goals-scored-projections 200 in 1492ms :: [{"playerId":430,"pla…
+✅ LIVE SUCCESS: Calculated 338 player goal projections using live APIs
+6:47:36 AM [express] GET /api/player-goals-scored-projections 200 in 1504ms :: [{"playerId":430,"pla…
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+📊 Inserted minutes batch 26/53
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+6:47:36 AM [express] GET /api/team-goal-projections 200 in 1578ms :: [{"teamId":1,"teamName":"Arsena…
+📊 Inserted minutes batch 27/53
+🔄 Processing gameweek 5...
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+6:47:36 AM [express] GET /api/team-goal-projections 200 in 1584ms :: [{"teamId":1,"teamName":"Arsena…
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:36 AM [express] GET /api/player-minutes-projections 200 in 866ms :: [{"playerId":101,"playerNam…
+🔄 Processing gameweek 5...
+🌐 Internal API call: http://localhost:5000/api/player-goals-scored-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-assist-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-minutes-projections
+🌐 Internal API call: http://localhost:5000/api/player-cleansheet-points?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-goals-conceded-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-yellow-cards-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-red-cards-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-bonus-points-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-saves-projections?startGameweek=10&endGameweek=15
+🌐 Internal API call: http://localhost:5000/api/player-defensive-contributions-projections?startGameweek=10&endGameweek=15
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:36 AM [express] GET /api/player-minutes-projections 200 in 839ms :: [{"playerId":101,"playerNam…
+🔄 Processing gameweek 5...
+🚀 API-FIRST: Attempting live calculation for Player Goals = Goal Share × Team Goal Projections
+🌐 Internal API call: http://localhost:5000/api/goal-share-season
+🌐 Internal API call: http://localhost:5000/api/team-goal-projections
+🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections
+🌐 Internal API call: http://localhost:5000/api/assist-share-season
+🌐 Internal API call: http://localhost:5000/api/team-assist-projections
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+🚀 API-FIRST: Attempting live calculation for player clean sheet points
+DEBUG: Fetching data for clean sheet points projections for GW10-15
+🚀 API-FIRST: Attempting live calculation for player goals conceded projections
+DEBUG: Player Goals Conceded Projections API called - using pure projections for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player yellow cards projections
+DEBUG: Player Yellow Cards Projections API called - using pure projections for future gameweeks only
+📊 Inserted minutes batch 28/53
+🚀 API-FIRST: Attempting live calculation for player red cards projections
+DEBUG: Player Red Cards Projections API called - using pure projections for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player bonus points projections
+DEBUG: Player Bonus Points Projections API called - simplified calculation for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player saves projections
+DEBUG: Player Saves Projections API called - using formula: Average saves/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game
+🚀 API-FIRST: Attempting live calculation for player defensive contributions projections
+DEBUG: Player Defensive Contributions API called - using formula: Average DC/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game
+✅ Serving goal share data from cache
+6:47:36 AM [express] GET /api/goal-share-season 200 in 1ms :: [{"teamId":12,"teamName":"Liverpool","…
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+✅ Serving assist share data from cache
+6:47:36 AM [express] GET /api/assist-share-season 200 in 1ms :: [{"teamId":13,"teamName":"Man City",…
+DEBUG: Team Assist Projections API called - generating next 6 gameweeks only
+DEBUG: Team CS Projections API called - generating next 6 gameweeks only
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+📊 Serving team goals from cache for range 10-15
+6:47:37 AM [express] GET /api/team-goal-projections 200 in 906ms :: [{"teamId":1,"teamName":"Arsenal…
+6:47:37 AM [express] GET /api/team-goal-projections 200 in 898ms :: [{"teamId":1,"teamName":"Arsenal…
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:37 AM [express] GET /api/player-minutes-projections 200 in 475ms :: [{"playerId":101,"playerNam…
+📊 Inserted minutes batch 29/53
+DEBUG: Team completed fixtures calculated for saves. Example: Team 1 has played 8 games
+✅ LIVE SUCCESS: Generated saves projections for 86 goalkeepers using formula: Average saves/game × AGR of opponent/1.25
+6:47:37 AM [express] GET /api/player-saves-projections 200 in 1886ms :: [{"playerId":1,"playerName":…
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:37 AM [express] GET /api/player-minutes-projections 200 in 434ms :: [{"playerId":101,"playerNam…
+DEBUG: Team completed fixtures calculated for saves. Example: Team 1 has played 8 games
+✅ LIVE SUCCESS: Generated saves projections for 86 goalkeepers using formula: Average saves/game × AGR of opponent/1.25
+6:47:37 AM [express] GET /api/player-saves-projections 200 in 1900ms :: [{"playerId":1,"playerName":…
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:37 AM [express] GET /api/player-minutes-projections 200 in 369ms :: [{"playerId":101,"playerNam…
+DEBUG: Using current season FPL data with proper DC calculation...
+DEBUG: 426 players have current season defensive data
+DEBUG: Team completed fixtures calculated. Example: Team 1 has played 8 games
+✅ LIVE SUCCESS: Generated defensive contributions projections for 426 players using current season FPL data
+6:47:37 AM [express] GET /api/player-defensive-contributions-projections 200 in 1933ms :: [{"playerI…
+📊 Inserted minutes batch 30/53
+DEBUG: Team Goals Conceded Projections - Limiting to next 6 gameweeks: GW10-15
+DEBUG: Team Goals Conceded Projections - Generated gameweek data for 20 teams (next 6 gameweeks only: GW10-15)
+6:47:37 AM [express] GET /api/team-goals-against-projections 200 in 1945ms :: [{"id":1,"team":"ARS",…
+DEBUG: Team Goals Conceded Projections - Limiting to next 6 gameweeks: GW10-15
+DEBUG: Team Goals Conceded Projections - Generated gameweek data for 20 teams (next 6 gameweeks only: GW10-15)
+6:47:37 AM [express] GET /api/team-goals-against-projections 200 in 1935ms :: [{"id":1,"team":"ARS",…
+📊 Inserted minutes batch 31/53
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:37 AM [express] GET /api/player-minutes-projections 200 in 359ms :: [{"playerId":101,"playerNam…
+DEBUG: Using current season FPL data with proper DC calculation...
+DEBUG: 426 players have current season defensive data
+DEBUG: Team completed fixtures calculated. Example: Team 1 has played 8 games
+✅ LIVE SUCCESS: Generated defensive contributions projections for 426 players using current season FPL data
+6:47:37 AM [express] GET /api/player-defensive-contributions-projections 200 in 2098ms :: [{"playerI…
+📊 Inserted minutes batch 32/53
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:37 AM [express] GET /api/player-minutes-projections 200 in 398ms :: [{"playerId":101,"playerNam…
+DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+DEBUG: Current gameweek: 9, starting projections from GW10
+DEBUG: Current gameweek: 9, starting projections from GW10
+📊 Inserted minutes batch 33/53
+🔄 Processing gameweek 6...
+✅ LIVE SUCCESS: Generated pure yellow card projections for 746 players for future gameweeks only
+6:47:37 AM [express] GET /api/player-yellow-cards-projections 200 in 488ms :: [{"playerId":1,"player…
+✅ LIVE SUCCESS: Generated red card projections for 746 players using historical data for next 6 gameweeks
+6:47:37 AM [express] GET /api/player-red-cards-projections 200 in 541ms :: [{"playerId":1,"playerNam…
+🔄 Processing gameweek 6...
+🔄 Processing gameweek 6...
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:37 AM [express] GET /api/player-minutes-projections 200 in 560ms :: [{"playerId":101,"playerNam…
+📊 Inserted minutes batch 34/53
+DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW10-15
+📊 Serving team goals from cache for range 10-15
+6:47:37 AM [express] GET /api/team-assist-projections 200 in 609ms :: [{"teamId":1,"teamName":"Arsen…
+✅ LIVE SUCCESS: Calculated 389 player assist projections using live APIs
+6:47:37 AM [express] GET /api/player-assist-projections 200 in 629ms :: [{"playerId":582,"playerName…
+📊 Inserted minutes batch 35/53
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+6:47:37 AM [express] GET /api/team-goal-projections 200 in 683ms :: [{"teamId":1,"teamName":"Arsenal…
+✅ LIVE SUCCESS: Generated simplified bonus points projections for 439 players for future gameweeks only
+6:47:37 AM [express] GET /api/player-bonus-points-projections 200 in 780ms :: [{"playerId":1,"player…
+✅ LIVE SUCCESS: Calculated 338 player goal projections using live APIs
+6:47:37 AM [express] GET /api/player-goals-scored-projections 200 in 818ms :: [{"playerId":430,"play…
+📊 Inserted minutes batch 36/53
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+6:47:37 AM [express] GET /api/team-goal-projections 200 in 822ms :: [{"teamId":1,"teamName":"Arsenal…
+📊 Inserted minutes batch 37/53
+DEBUG: Team Goals Conceded Projections - Limiting to next 6 gameweeks: GW10-15
+DEBUG: Team Goals Conceded Projections - Generated gameweek data for 20 teams (next 6 gameweeks only: GW10-15)
+6:47:37 AM [express] GET /api/team-goals-against-projections 200 in 1982ms :: [{"id":1,"team":"ARS",…
+✅ LIVE SUCCESS: Generated pure goals conceded projections for 332 players (GKP/DEF) for future gameweeks only
+6:47:37 AM [express] GET /api/player-goals-conceded-projections 200 in 2744ms :: [{"playerId":1,"pla…
+📊 Inserted minutes batch 38/53
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+DEBUG: Team Goals Conceded Projections - Limiting to next 6 gameweeks: GW10-15
+DEBUG: Team Goals Conceded Projections - Generated gameweek data for 20 teams (next 6 gameweeks only: GW10-15)
+6:47:38 AM [express] GET /api/team-goals-against-projections 200 in 1996ms :: [{"id":1,"team":"ARS",…
+✅ LIVE SUCCESS: Generated pure goals conceded projections for 332 players (GKP/DEF) for future gameweeks only
+6:47:38 AM [express] GET /api/player-goals-conceded-projections 200 in 2941ms :: [{"playerId":1,"pla…
+📊 Inserted minutes batch 39/53
+DEBUG: Processing next 6 gameweeks for clean sheets (GW10 to GW15), current GW: 9
+6:47:38 AM [express] GET /api/team-cs-projections 200 in 2931ms :: [{"id":1,"team":"ARS","teamShort"…
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:38 AM [express] GET /api/player-minutes-projections 200 in 800ms :: [{"playerId":101,"playerNam…
+📊 Inserted minutes batch 40/53
+DEBUG: Processing next 6 gameweeks for clean sheets (GW10 to GW15), current GW: 9
+6:47:38 AM [express] GET /api/team-cs-projections 200 in 3029ms :: [{"id":1,"team":"ARS","teamShort"…
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+6:47:38 AM [express] GET /api/team-goal-projections 200 in 921ms :: [{"teamId":1,"teamName":"Arsenal…
+🔄 Processing gameweek 7...
+📊 Inserted minutes batch 41/53
+🔄 Processing gameweek 7...
+DEBUG: Team Goals Conceded Projections - Limiting to next 6 gameweeks: GW10-15
+DEBUG: Team Goals Conceded Projections - Generated gameweek data for 20 teams (next 6 gameweeks only: GW10-15)
+6:47:38 AM [express] GET /api/team-goals-against-projections 200 in 1380ms :: [{"id":1,"team":"ARS",…
+🔄 Processing gameweek 7...
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:38 AM [express] GET /api/player-minutes-projections 200 in 295ms :: [{"playerId":101,"playerNam…
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 439 players
+6:47:38 AM [express] GET /api/player-minutes-projections 200 in 318ms :: [{"playerId":101,"playerNam…
+DEBUG: Team completed fixtures calculated for saves. Example: Team 1 has played 8 games
+✅ LIVE SUCCESS: Generated saves projections for 86 goalkeepers using formula: Average saves/game × AGR of opponent/1.25
+6:47:38 AM [express] GET /api/player-saves-projections 200 in 1453ms :: [{"playerId":1,"playerName":…
+📊 Inserted minutes batch 42/53
+DEBUG: Using current season FPL data with proper DC calculation...
+DEBUG: 426 players have current season defensive data
+DEBUG: Team completed fixtures calculated. Example: Team 1 has played 8 games
+✅ LIVE SUCCESS: Generated defensive contributions projections for 426 players using current season FPL data
+6:47:38 AM [express] GET /api/player-defensive-contributions-projections 200 in 1474ms :: [{"playerI…
+DEBUG: Current gameweek: 9
+✅ LIVE SUCCESS: Generated simplified clean sheet projections for 387 players for GW10-10
+6:47:38 AM [express] GET /api/player-cleansheet-points 200 in 3357ms :: [{"playerId":670,"playerName…
+DEBUG: Retrieved data from 10 APIs - Goals: 338, Assists: 389, Minutes: 439, Cleansheet: 387, Goals Conceded: 332, Yellow Cards: 746, Red Cards: 746, Bonus: 439, Saves: 86, Defensive: 426
+DEBUG: Aggregated 437 player total points in 3644ms from 10 individual APIs
+6:47:38 AM [express] GET /api/player-total-points 200 in 3652ms :: [{"playerId":430,"playerName":"Er…
+📊 Inserted minutes batch 43/53
+DEBUG: Current gameweek: 9
+✅ LIVE SUCCESS: Generated simplified clean sheet projections for 387 players for GW10-15
+6:47:38 AM [express] GET /api/player-cleansheet-points 200 in 3429ms :: [{"playerId":469,"playerName…
+DEBUG: Retrieved data from 10 APIs - Goals: 338, Assists: 389, Minutes: 439, Cleansheet: 387, Goals Conceded: 332, Yellow Cards: 746, Red Cards: 746, Bonus: 439, Saves: 86, Defensive: 426
+DEBUG: Aggregated 438 player total points in 3739ms from 10 individual APIs
+6:47:38 AM [express] GET /api/player-total-points 200 in 3756ms :: [{"playerId":430,"playerName":"Er…
+📊 Inserted minutes batch 44/53
+DEBUG: Team Goals Conceded Projections - Limiting to next 6 gameweeks: GW10-15
+DEBUG: Team Goals Conceded Projections - Generated gameweek data for 20 teams (next 6 gameweeks only: GW10-15)
+6:47:38 AM [express] GET /api/team-goals-against-projections 200 in 1311ms :: [{"id":1,"team":"ARS",…
+✅ LIVE SUCCESS: Generated pure goals conceded projections for 332 players (GKP/DEF) for future gameweeks only
+6:47:38 AM [express] GET /api/player-goals-conceded-projections 200 in 1737ms :: [{"playerId":1,"pla…
+DEBUG: Processing next 6 gameweeks for clean sheets (GW10 to GW15), current GW: 9
+6:47:38 AM [express] GET /api/team-cs-projections 200 in 1747ms :: [{"id":1,"team":"ARS","teamShort"…
+DEBUG: Current gameweek: 9
+✅ LIVE SUCCESS: Generated simplified clean sheet projections for 387 players for GW10-15
+6:47:38 AM [express] GET /api/player-cleansheet-points 200 in 1798ms :: [{"playerId":469,"playerName…
+📊 Inserted minutes batch 45/53
+DEBUG: Retrieved data from 10 APIs - Goals: 338, Assists: 389, Minutes: 439, Cleansheet: 387, Goals Conceded: 332, Yellow Cards: 746, Red Cards: 746, Bonus: 439, Saves: 86, Defensive: 426
+DEBUG: Aggregated 438 player total points in 2698ms from 10 individual APIs
+6:47:38 AM [express] GET /api/player-total-points 200 in 2742ms :: [{"playerId":430,"playerName":"Er…
+✅ LIVE FALLBACK: Generated fresh Player Total Points for GW10-15 (438 players)
+6:47:38 AM [express] GET /api/cached/player-total-points 200 in 3974ms :: [{"playerId":430,"playerNa…
+📊 Inserted minutes batch 46/53
+🔄 Processing gameweek 8...
+🔄 Processing gameweek 8...
+🔄 Processing gameweek 8...
+📊 Inserted minutes batch 47/53
+📊 Inserted minutes batch 48/53
+📊 Inserted minutes batch 49/53
+📊 Inserted minutes batch 50/53
+📊 Inserted minutes batch 51/53
+📊 Inserted minutes batch 52/53
+📊 Inserted minutes batch 53/53
+✅ Minutes projections cached successfully (2634 records)
+✅ Projection cache update completed: 8 successful, 0 failed (6593ms)
+🔍 DEBUG: Checking Player Goals API status...
+🚀 API-FIRST: Attempting live calculation for Player Goals = Goal Share × Team Goal Projections
+🌐 Internal API call: http://localhost:5000/api/goal-share-season
+🌐 Internal API call: http://localhost:5000/api/team-goal-projections
+✅ Serving goal share data from cache
+6:47:39 AM [express] GET /api/goal-share-season 200 in 1ms :: [{"teamId":12,"teamName":"Liverpool","…
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+✅ Cached 86 goalkeeper save points records
+📊 Serving team goals from cache for range 10-15
+6:47:39 AM [express] GET /api/team-goal-projections 200 in 122ms :: [{"teamId":1,"teamName":"Arsenal…
+✅ LIVE SUCCESS: Calculated 338 player goal projections using live APIs
+6:47:40 AM [express] GET /api/player-goals-scored-projections 200 in 137ms :: [{"playerId":430,"play…
+🔍 DEBUG: Player Goals API working - 338 players, 140ms response time
+🔍 DEBUG: Checking Player Assists API status...
+🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections
+🌐 Internal API call: http://localhost:5000/api/assist-share-season
+🌐 Internal API call: http://localhost:5000/api/team-assist-projections
+✅ Serving assist share data from cache
+6:47:40 AM [express] GET /api/assist-share-season 200 in 1ms :: [{"teamId":13,"teamName":"Man City",…
+DEBUG: Team Assist Projections API called - generating next 6 gameweeks only
+DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW10-15
+📊 Serving team goals from cache for range 10-15
+6:47:40 AM [express] GET /api/team-assist-projections 200 in 62ms :: [{"teamId":1,"teamName":"Arsena…
+✅ LIVE SUCCESS: Calculated 389 player assist projections using live APIs
+6:47:40 AM [express] GET /api/player-assist-projections 200 in 72ms :: [{"playerId":582,"playerName"…
+🔍 DEBUG: Player Assists API working - 389 players, 75ms response time
+🔍 DEBUG: Player Total Points DB cache - count: 746, lastUpdated: 2025-10-26 06:43:51.667, isStale: false
+✅ full projection cache update completed in 7s
+📊 Cache stats: [
+  {
+    type: 'Goals',
+    count: 338,
+    lastUpdated: '2025-10-26T06:47:40.009Z',
+    isStale: false
+  },
+  {
+    type: 'Assists',
+    count: 389,
+    lastUpdated: '2025-10-26T06:47:40.086Z',
+    isStale: false
+  },
+  {
+    type: 'Team Clean Sheets',
+    count: '120',
+    lastUpdated: '2025-10-26 06:47:34.874',
+    isStale: false
+  },
+  {
+    type: 'Minutes',
+    count: '2634',
+    lastUpdated: '2025-10-26 06:47:33.422',
+    isStale: false
+  },
+  { type: 'Defensive', count: '0', lastUpdated: null, isStale: true },
+  {
+    type: 'Team Projections',
+    count: '20',
+    lastUpdated: '2025-10-26 06:47:34.294765',
+    isStale: false
+  },
+  {
+    type: 'Goal Share',
+    count: '6142',
+    lastUpdated: '2025-10-26 06:47:36.385207',
+    isStale: false
+  },
+  {
+    type: 'Assist Share',
+    count: '5328',
+    lastUpdated: '2025-10-26 06:47:36.494707',
+    isStale: false
+  },
+  {
+    type: 'Player Total Points',
+    count: 746,
+    lastUpdated: '2025-10-26 06:43:51.667',
+    isStale: false
+  },
+  {
+    type: 'Player Saves',
+    count: '86',
+    lastUpdated: '2025-10-26 06:47:35.145',
+    isStale: false
+  },
+  {
+    type: 'Goals Conceded',
+    count: '332',
+    lastUpdated: '2025-10-26 06:47:35.543',
+    isStale: false
+  },
+  {
+    type: 'Yellow Cards',
+    count: '746',
+    lastUpdated: '2025-10-26 06:47:35.927',
+    isStale: false
+  },
+  {
+    type: 'Red Cards',
+    count: '746',
+    lastUpdated: '2025-10-26 06:47:36.076',
+    isStale: false
+  },
+  {
+    type: 'Bonus Points',
+    count: '439',
+    lastUpdated: '2025-10-26 06:47:34.952',
+    isStale: false
+  },
+  {
+    type: 'Player CBIT Points',
+    count: '745',
+    lastUpdated: '2025-10-26 06:43:49.104',
+    isStale: false
+  },
+  {
+    type: 'Player Minutes Points',
+    count: '745',
+    lastUpdated: '2025-10-26 06:43:48.999997',
+    isStale: false
+  }
+]
+✅ Cached 745 player minutes points records
+✅ Cached 745 player CBIT points records
+✅ FPL scoring component cache update completed successfully
+🔧 Starting Player Total Points aggregation...
+🔧 Starting Player Total Points aggregation for GW10-15...
+🌐 Internal API call: http://localhost:5000/api/cached/player-goals-projections
+🌐 Internal API call: http://localhost:5000/api/cached/player-assists-projections
+📊 Serving cached player goals data from database
+📊 Serving cached player assists data from database
+⚠️ No cached player goals data found, falling back to live API
+🌐 Internal API call: http://localhost:5000/api/player-goals-scored-projections
+⚠️ No cached player assists data found, falling back to live API
+🌐 Internal API call: http://localhost:5000/api/player-assist-projections
+🚀 API-FIRST: Attempting live calculation for Player Goals = Goal Share × Team Goal Projections
+🌐 Internal API call: http://localhost:5000/api/goal-share-season
+🌐 Internal API call: http://localhost:5000/api/team-goal-projections
+🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections
+🌐 Internal API call: http://localhost:5000/api/assist-share-season
+🌐 Internal API call: http://localhost:5000/api/team-assist-projections
+✅ Serving goal share data from cache
+6:47:41 AM [express] GET /api/goal-share-season 200 in 1ms :: [{"teamId":12,"teamName":"Liverpool","…
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+✅ Serving assist share data from cache
+6:47:41 AM [express] GET /api/assist-share-season 200 in 1ms :: [{"teamId":13,"teamName":"Man City",…
+DEBUG: Team Assist Projections API called - generating next 6 gameweeks only
+DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW10-15
+📊 Serving team goals from cache for range 10-15
+6:47:41 AM [express] GET /api/team-assist-projections 200 in 59ms :: [{"teamId":1,"teamName":"Arsena…
+✅ LIVE SUCCESS: Calculated 389 player assist projections using live APIs
+6:47:41 AM [express] GET /api/player-assist-projections 200 in 69ms :: [{"playerId":582,"playerName"…
+✅ Fallback successful, returning 389 players from live API
+6:47:41 AM [express] GET /api/cached/player-assists-projections 200 in 170ms :: [{"playerId":582,"pl…
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+6:47:41 AM [express] GET /api/team-goal-projections 200 in 123ms :: [{"teamId":1,"teamName":"Arsenal…
+✅ LIVE SUCCESS: Calculated 338 player goal projections using live APIs
+6:47:41 AM [express] GET /api/player-goals-scored-projections 200 in 133ms :: [{"playerId":430,"play…
+✅ Fallback successful, returning 338 players from live API
+6:47:41 AM [express] GET /api/cached/player-goals-projections 200 in 224ms :: [{"playerId":430,"play…
+📊 Component data fetched - Saves: 86, Goals Conceded: 332, Cards: 1492, Bonus: 439, CBIT: 745, Save Points: 86, Minutes: 745, Goals: 338, Assists: 389
+🔄 Aggregated data for 746 players
+✅ Player Total Points aggregation completed successfully - 746 players cached
+💾 Saving Player Total Points to database storage (GW10-15)...
+📊 Using existing active window: 75839650-d798-4aa3-9593-b92b015c460d
+🌐 Internal API call: http://localhost:5000/api/bootstrap-static
+DEBUG: Serving bootstrap-static from cache
+6:47:43 AM [express] GET /api/bootstrap-static 200 in 38ms :: {"chips":[{"id":1,"name":"wildcard","n…
+💾 Saving 746 Player Total Points snapshots for window 75839650-d798-4aa3-9593-b92b015c460d
+✅ Successfully saved 746 Player Total Points snapshots
+✅ Successfully saved 746 Player Total Points snapshots to database storage
+✅ Scheduled FPL scoring cache update completed in 11745ms
+🗑️ Deleting draft A for manager 8146296
+🗑️ Deleting draft A for manager 8146296
+✅ Draft A deleted successfully
+6:47:46 AM [express] DELETE /api/transfer-planner/drafts/8146296/A 200 in 78ms :: {"success":true}
+📋 Fetching all drafts for manager 8146296
+6:47:46 AM [express] GET /api/transfer-planner/drafts/8146296 200 in 73ms :: {"success":true,"drafts…
+💾 Saving draft A for manager 8146296
+💾 Creating draft A for manager 8146296
+✅ Draft A saved successfully
+6:47:56 AM [express] POST /api/transfer-planner/drafts 200 in 157ms :: {"success":true,"draft":{"id"…
+📋 Fetching all drafts for manager 8146296
+6:47:56 AM [express] GET /api/transfer-planner/drafts/8146296 200 in 75ms :: {"success":true,"drafts…
+📄 Fetching draft A for manager 8146296
+6:47:57 AM [express] GET /api/transfer-planner/drafts/8146296/A 200 in 73ms :: {"success":true,"draf…
+6:49:11 AM [vite] hmr update /src/pages/transfer-planner.tsx, /src/index.css?v=EuOFhIEUOLczhxeZ75eWE
+📋 Fetching all drafts for manager 8146296
+6:49:26 AM [express] GET /api/transfer-planner/drafts/8146296 304 in 2742ms :: {"success":true,"draf…
+🗑️ Deleting draft A for manager 8146296
+🗑️ Deleting draft A for manager 8146296
+✅ Draft A deleted successfully
+6:49:27 AM [express] DELETE /api/transfer-planner/drafts/8146296/A 200 in 88ms :: {"success":true}
+📋 Fetching all drafts for manager 8146296
+6:49:27 AM [express] GET /api/transfer-planner/drafts/8146296 200 in 91ms :: {"success":true,"drafts…
+💾 Saving draft A for manager 8146296
+💾 Creating draft A for manager 8146296
+✅ Draft A saved successfully
+6:49:42 AM [express] POST /api/transfer-planner/drafts 200 in 2395ms :: {"success":true,"draft":{"id…
+📋 Fetching all drafts for manager 8146296
+6:49:42 AM [express] GET /api/transfer-planner/drafts/8146296 200 in 79ms :: {"success":true,"drafts…
+📄 Fetching draft A for manager 8146296
+6:49:43 AM [express] GET /api/transfer-planner/drafts/8146296/A 200 in 77ms :: {"success":true,"draf…
+6:50:39 AM [vite] hmr update /src/pages/transfer-planner.tsx, /src/index.css?v=EuOFhIEUOLczhxeZ75eWE (x2)
+📋 Fetching all drafts for manager 8146296
+6:50:45 AM [express] GET /api/transfer-planner/drafts/8146296 304 in 316ms :: {"success":true,"draft…
+🗑️ Deleting draft A for manager 8146296
+🗑️ Deleting draft A for manager 8146296
+✅ Draft A deleted successfully
+6:50:55 AM [express] DELETE /api/transfer-planner/drafts/8146296/A 200 in 329ms :: {"success":true}
+📋 Fetching all drafts for manager 8146296
+6:50:56 AM [express] GET /api/transfer-planner/drafts/8146296 200 in 78ms :: {"success":true,"drafts…
+💾 Saving draft A for manager 8146296
+💾 Creating draft A for manager 8146296
+✅ Draft A saved successfully
+6:51:04 AM [express] POST /api/transfer-planner/drafts 200 in 158ms :: {"success":true,"draft":{"id"…
+📋 Fetching all drafts for manager 8146296
+6:51:05 AM [express] GET /api/transfer-planner/drafts/8146296 200 in 79ms :: {"success":true,"drafts…
+📄 Fetching draft A for manager 8146296
+6:51:05 AM [express] GET /api/transfer-planner/drafts/8146296/A 200 in 89ms :: {"success":true,"draf…
+6:52:15 AM [vite] hmr update /src/pages/transfer-planner.tsx, /src/index.css?v=EuOFhIEUOLczhxeZ75eWE (x3)
+📋 Fetching all drafts for manager 8146296
+6:52:21 AM [express] GET /api/transfer-planner/drafts/8146296 304 in 309ms :: {"success":true,"draft…
+file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:395
+0&&(o=t[0]),o instanceof Error)throw o;var u=new Error("Unhandled error."+(o?" ("+
+                               ^
+
+error: terminating connection due to administrator command
+    at cn.parseErrorMessage (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1182:6)
+    at cn.handlePacket (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1143:13)
+    at cn.parse (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1127:36)
+    at v.<anonymous> (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1190:16)
+    at v.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:397:12)
+    at WebSocket.<anonymous> (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:987:80)
+    at callListener (/home/runner/workspace/node_modules/ws/lib/event-target.js:290:14)
+    at WebSocket.onMessage (/home/runner/workspace/node_modules/ws/lib/event-target.js:209:9)
+    at WebSocket.emit (node:events:524:28)
+    at Receiver.receiverOnMessage (/home/runner/workspace/node_modules/ws/lib/websocket.js:1220:20)
+    at Receiver.emit (node:events:524:28)
+    at Receiver.dataMessage (/home/runner/workspace/node_modules/ws/lib/receiver.js:569:14)
+    at Receiver.getData (/home/runner/workspace/node_modules/ws/lib/receiver.js:496:10)
+    at Receiver.startLoop (/home/runner/workspace/node_modules/ws/lib/receiver.js:167:16)
+    at Receiver._write (/home/runner/workspace/node_modules/ws/lib/receiver.js:94:10)
+    at writeOrBuffer (node:internal/streams/writable:572:12)
+    at _write (node:internal/streams/writable:501:10)
+    at Writable.write (node:internal/streams/writable:510:10)
+    at TLSSocket.socketOnData (/home/runner/workspace/node_modules/ws/lib/websocket.js:1355:35)
+    at TLSSocket.emit (node:events:524:28)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at TLSWrap.onStreamRead (node:internal/stream_base_commons:191:23) {
+  length: 116,
+  severity: 'FATAL',
+  code: '57P01',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'postgres.c',
+  line: '3289',
+  routine: 'ProcessInterrupts',
+  client: NeonClient {
+    _events: [Object: null prototype] { error: [Function (anonymous)] },
+    _eventsCount: 1,
+    _maxListeners: undefined,
+    connectionParameters: ConnectionParameters {
+      user: 'neondb_owner',
+      database: 'neondb',
+      port: 5432,
+      host: 'ep-little-feather-af8wx8vi.c-2.us-west-2.aws.neon.tech',
+      binary: false,
+      options: undefined,
+      ssl: {},
+      client_encoding: '',
+      replication: undefined,
+      isDomainSocket: false,
+      application_name: undefined,
+      fallback_application_name: undefined,
+      statement_timeout: false,
+      lock_timeout: false,
+      idle_in_transaction_session_timeout: false,
+      query_timeout: false,
+      connect_timeout: 0
+    },
+    user: 'neondb_owner',
+    database: 'neondb',
+    port: 5432,
+    host: 'ep-little-feather-af8wx8vi.c-2.us-west-2.aws.neon.tech',
+    replication: undefined,
+    _Promise: [Function: Promise],
+    _types: TypeOverrides {
+      _types: {
+        getTypeParser: [Function: getTypeParser],
+        setTypeParser: [Function: setTypeParser],
+        arrayParser: { create: [Function: create] },
+        builtins: {
+          BOOL: 16,
+          BYTEA: 17,
+          CHAR: 18,
+          INT8: 20,
+          INT2: 21,
+          INT4: 23,
+          REGPROC: 24,
+          TEXT: 25,
+          OID: 26,
+          TID: 27,
+          XID: 28,
+          CID: 29,
+          JSON: 114,
+          XML: 142,
+          PG_NODE_TREE: 194,
+          SMGR: 210,
+          PATH: 602,
+          POLYGON: 604,
+          CIDR: 650,
+          FLOAT4: 700,
+          FLOAT8: 701,
+          ABSTIME: 702,
+          RELTIME: 703,
+          TINTERVAL: 704,
+          CIRCLE: 718,
+          MACADDR8: 774,
+          MONEY: 790,
+          MACADDR: 829,
+          INET: 869,
+          ACLITEM: 1033,
+          BPCHAR: 1042,
+          VARCHAR: 1043,
+          DATE: 1082,
+          TIME: 1083,
+          TIMESTAMP: 1114,
+          TIMESTAMPTZ: 1184,
+          INTERVAL: 1186,
+          TIMETZ: 1266,
+          BIT: 1560,
+          VARBIT: 1562,
+          NUMERIC: 1700,
+          REFCURSOR: 1790,
+          REGPROCEDURE: 2202,
+          REGOPER: 2203,
+          REGOPERATOR: 2204,
+          REGCLASS: 2205,
+          REGTYPE: 2206,
+          UUID: 2950,
+          TXID_SNAPSHOT: 2970,
+          PG_LSN: 3220,
+          PG_NDISTINCT: 3361,
+          PG_DEPENDENCIES: 3402,
+          TSVECTOR: 3614,
+          TSQUERY: 3615,
+          GTSVECTOR: 3642,
+          REGCONFIG: 3734,
+          REGDICTIONARY: 3769,
+          JSONB: 3802,
+          REGNAMESPACE: 4089,
+          REGROLE: 4096
+        }
+      },
+      text: {},
+      binary: {}
+    },
+    _ending: true,
+    _connecting: false,
+    _connected: true,
+    _connectionError: false,
+    _queryable: false,
+    connection: Connection {
+      _events: [Object: null prototype] {
+        newListener: [Function (anonymous)],
+        connect: [ [Function (anonymous)], [Function (anonymous)] ],
+        sslconnect: [Function (anonymous)],
+        authenticationMD5Password: [Function: bound _handleAuthMD5Password],
+        authenticationSASL: [Function: bound _handleAuthSASL],
+        authenticationSASLContinue: [Function: bound _handleAuthSASLContinue] AsyncFunction,
+        authenticationSASLFinal: [Function: bound _handleAuthSASLFinal],
+        backendKeyData: [Function: bound _handleBackendKeyData],
+        error: [Function: bound _handleErrorEvent],
+        errorMessage: [Function: bound _handleErrorMessage],
+        notice: [Function: bound _handleNotice],
+        rowDescription: [Function: bound _handleRowDescription],
+        dataRow: [Function: bound _handleDataRow],
+        portalSuspended: [Function: bound _handlePortalSuspended],
+        emptyQuery: [Function: bound _handleEmptyQuery],
+        commandComplete: [Function: bound _handleCommandComplete],
+        parseComplete: [Function: bound _handleParseComplete],
+        copyInResponse: [Function: bound _handleCopyInResponse],
+        copyData: [Function: bound _handleCopyData],
+        notification: [Function: bound _handleNotification],
+        end: [
+          [Function: bound onceWrapper] {
+            listener: [Function (anonymous)]
+          },
+          [Function: bound onceWrapper] {
+            listener: [Function (anonymous)]
+          }
+        ],
+        readyForQuery: [Function: bound _handleReadyForQuery]
+      },
+      _eventsCount: 22,
+      _maxListeners: undefined,
+      stream: Socket {
+        _events: [Object: null prototype] {
+          error: [Function: reportStreamError],
+          close: [Function (anonymous)],
+          end: [ [Function (anonymous)], [Function (anonymous)] ],
+          data: [Function (anonymous)]
+        },
+        _eventsCount: 4,
+        _maxListeners: undefined,
+        opts: {},
+        connecting: false,
+        pending: false,
+        writable: true,
+        encrypted: false,
+        authorized: false,
+        destroyed: true,
+        ws: <ref *1> WebSocket {
+          _events: [Object: null prototype] {
+            error: [Function],
+            message: [Function],
+            close: [Function],
+            open: [Function]
+          },
+          _eventsCount: 4,
+          _maxListeners: undefined,
+          _binaryType: 'arraybuffer',
+          _closeCode: 1006,
+          _closeFrameReceived: false,
+          _closeFrameSent: false,
+          _closeMessage: Buffer(0) [Uint8Array] [],
+          _closeTimer: Timeout {
+            _idleTimeout: 30000,
+            _idlePrev: [TimersList],
+            _idleNext: [Timeout],
+            _idleStart: 339743,
+            _onTimeout: [Function: bound ],
+            _timerArgs: undefined,
+            _repeat: null,
+            _destroyed: false,
+            [Symbol(refed)]: true,
+            [Symbol(kHasPrimitive)]: false,
+            [Symbol(asyncId)]: 302192,
+            [Symbol(triggerId)]: 302161
+          },
+          _errorEmitted: false,
+          _extensions: {},
+          _paused: false,
+          _protocol: '',
+          _readyState: 2,
+          _receiver: Receiver {
+            _events: [Object],
+            _writableState: [WritableState],
+            _maxListeners: undefined,
+            _allowSynchronousEvents: true,
+            _binaryType: 'arraybuffer',
+            _extensions: {},
+            _isServer: false,
+            _maxPayload: 104857600,
+            _skipUTF8Validation: false,
+            _bufferedBytes: 0,
+            _buffers: [],
+            _compressed: false,
+            _payloadLength: 117,
+            _mask: undefined,
+            _fragmented: 0,
+            _masked: false,
+            _fin: true,
+            _opcode: 2,
+            _totalPayloadLength: 0,
+            _messageLength: 0,
+            _fragments: [],
+            _errored: false,
+            _loop: true,
+            _state: 4,
+            _eventsCount: 6,
+            [Symbol(shapeMode)]: true,
+            [Symbol(kCapture)]: false,
+            [Symbol(websocket)]: [Circular *1]
+          },
+          _sender: Sender {
+            _extensions: {},
+            _socket: [TLSSocket],
+            _firstFragment: true,
+            _compress: false,
+            _bufferedBytes: 0,
+            _queue: [],
+            _state: 0,
+            onerror: [Function: senderOnError],
+            [Symbol(websocket)]: [Circular *1]
+          },
+          _socket: TLSSocket {
+            _tlsOptions: [Object],
+            _secureEstablished: true,
+            _securePending: false,
+            _newSessionPending: false,
+            _controlReleased: true,
+            secureConnecting: false,
+            _SNICallback: null,
+            servername: 'ep-little-feather-af8wx8vi.c-2.us-west-2.aws.neon.tech',
+            alpnProtocol: false,
+            authorized: true,
+            authorizationError: null,
+            encrypted: true,
+            _events: [Object: null prototype],
+            _eventsCount: 6,
+            connecting: false,
+            _hadError: false,
+            _parent: null,
+            _host: 'ep-little-feather-af8wx8vi.c-2.us-west-2.aws.neon.tech',
+            _closeAfterHandlingError: false,
+            _readableState: [ReadableState],
+            _writableState: [WritableState],
+            allowHalfOpen: false,
+            _maxListeners: undefined,
+            _sockname: null,
+            _pendingData: null,
+            _pendingEncoding: '',
+            server: undefined,
+            _server: null,
+            ssl: [TLSWrap],
+            _requestCert: true,
+            _rejectUnauthorized: true,
+            parser: null,
+            _httpMessage: null,
+            autoSelectFamilyAttemptedAddresses: [Array],
+            timeout: 0,
+            [Symbol(alpncallback)]: null,
+            [Symbol(res)]: [TLSWrap],
+            [Symbol(verified)]: true,
+            [Symbol(pendingSession)]: null,
+            [Symbol(async_id_symbol)]: 302161,
+            [Symbol(kHandle)]: [TLSWrap],
+            [Symbol(lastWriteQueueSize)]: 6,
+            [Symbol(timeout)]: null,
+            [Symbol(kBuffer)]: null,
+            [Symbol(kBufferCb)]: null,
+            [Symbol(kBufferGen)]: null,
+            [Symbol(shapeMode)]: true,
+            [Symbol(kCapture)]: false,
+            [Symbol(kSetNoDelay)]: true,
+            [Symbol(kSetKeepAlive)]: false,
+            [Symbol(kSetKeepAliveInitialDelay)]: 0,
+            [Symbol(kBytesRead)]: 0,
+            [Symbol(kBytesWritten)]: 0,
+            [Symbol(connect-options)]: [Object],
+            [Symbol(websocket)]: [Circular *1]
+          },
+          _bufferedAmount: 0,
+          _isServer: false,
+          _redirects: 0,
+          _autoPong: true,
+          _url: 'wss://ep-little-feather-af8wx8vi.c-2.us-west-2.aws.neon.tech/v2',
+          _req: null,
+          [Symbol(shapeMode)]: false,
+          [Symbol(kCapture)]: false
+        },
+        writeBuffer: undefined,
+        tlsState: 0,
+        tlsRead: undefined,
+        tlsWrite: undefined
+      },
+      _keepAlive: false,
+      _keepAliveInitialDelayMillis: 0,
+      lastBuffer: false,
+      parsedStatements: {},
+      ssl: false,
+      _ending: true,
+      _emitMessage: false,
+      _connecting: true
+    },
+    queryQueue: [],
+    binary: false,
+    processID: 1361372320,
+    secretKey: -1176218847,
+    ssl: false,
+    _connectionTimeoutMillis: 0,
+    config: {
+      connectionString: 'postgresql://neondb_owner:npg_0CbZ8LGSRWHy@ep-little-feather-af8wx8vi.c-2.us-west-2.aws.neon.tech/neondb?sslmode=require',
+      max: 10,
+      maxUses: Infinity,
+      allowExitOnIdle: false,
+      maxLifetimeSeconds: 0,
+      idleTimeoutMillis: 10000
+    },
+    _connectionCallback: null,
+    release: [Function (anonymous)],
+    activeQuery: null,
+    readyForQuery: true,
+    hasExecuted: true,
+    _poolUseCount: 1
+  }
+}
+
+Node.js v20.19.3
