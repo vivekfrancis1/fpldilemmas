@@ -2358,7 +2358,19 @@ export default function TransferPlanner() {
     };
     
     nextGWs.forEach(gw => {
-      const squad = getSquadAtGameweek({}, gw.id); // Empty transfers = base team
+      let squad = getSquadAtGameweek({}, gw.id); // Empty transfers = base team
+      
+      // Apply captain info from current manual lineup (for Base draft)
+      const captainPick = manualLineup.find(p => p.is_captain);
+      const viceCaptainPick = manualLineup.find(p => p.is_vice_captain);
+      if (captainPick || viceCaptainPick) {
+        squad = squad.map(pick => ({
+          ...pick,
+          is_captain: pick.element === captainPick?.element,
+          is_vice_captain: pick.element === viceCaptainPick?.element
+        }));
+      }
+      
       const chipForGW = plannedChips[gw.id] || null;
       const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
       baseManualRow.gameweeks[gw.id] = points;
@@ -2399,7 +2411,17 @@ export default function TransferPlanner() {
       };
       
       nextGWs.forEach(gw => {
-        const squad = getSquadAtGameweek(draftTransfers, gw.id);
+        let squad = getSquadAtGameweek(draftTransfers, gw.id);
+        
+        // Apply captain info from draft
+        if (draft.captainPlayerId || draft.viceCaptainPlayerId) {
+          squad = squad.map(pick => ({
+            ...pick,
+            is_captain: pick.element === draft.captainPlayerId,
+            is_vice_captain: pick.element === draft.viceCaptainPlayerId
+          }));
+        }
+        
         const chipForGW = draftChips[gw.id] || draftChips[gw.id.toString()] || null;
         const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
         draftManualRow.gameweeks[gw.id] = points;
@@ -5890,6 +5912,18 @@ export default function TransferPlanner() {
                   
                   // Get chip for this gameweek
                   const plannedChip = plannedChips[gw.id];
+                  
+                  // Apply saved captain info from draft if viewing a saved draft
+                  if (activeDraft !== "Base") {
+                    const savedDraft = savedDrafts.find(d => d.draftLetter === activeDraft);
+                    if (savedDraft && (savedDraft.captainPlayerId || savedDraft.viceCaptainPlayerId)) {
+                      finalLineup = finalLineup.map(pick => ({
+                        ...pick,
+                        is_captain: pick.element === savedDraft.captainPlayerId,
+                        is_vice_captain: pick.element === savedDraft.viceCaptainPlayerId
+                      }));
+                    }
+                  }
                   
                   // Determine captain (for auto mode, use optimized; for manual, use current lineup)
                   let captain, viceCaptain;
