@@ -1615,6 +1615,10 @@ export const transferPlannerDrafts = pgTable("transfer_planner_drafts", {
   totalProjectedPoints: decimal("total_projected_points", { precision: 7, scale: 2 }).default("0"),
   totalTransfersUsed: integer("total_transfers_used").notNull().default(0),
   
+  // Captain selections
+  captainPlayerId: integer("captain_player_id"),
+  viceCaptainPlayerId: integer("vice_captain_player_id"),
+  
   // Timestamps
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
