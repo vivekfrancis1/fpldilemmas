@@ -947,6 +947,12 @@ export default function TransferPlanner() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [comparisonFilter, setComparisonFilter] = useState<"all" | "manual" | "auto">("all");
   
+  // Store saved captain/vice-captain from draft (to apply after lineup rebuild)
+  const [savedCaptainInfo, setSavedCaptainInfo] = useState<{
+    captainPlayerId: number | null;
+    viceCaptainPlayerId: number | null;
+  } | null>(null);
+  
   // Chip planning state
   const [plannedChips, setPlannedChips] = useState<PlannedChips>({});
   
@@ -1636,8 +1642,17 @@ export default function TransferPlanner() {
     // Apply buy price overrides before setting state
     lineupWithTransfers = applyBuyPriceOverrides(lineupWithTransfers);
     
+    // Apply saved captain/vice-captain if available (from draft loading)
+    if (savedCaptainInfo && (savedCaptainInfo.captainPlayerId || savedCaptainInfo.viceCaptainPlayerId)) {
+      lineupWithTransfers = lineupWithTransfers.map(pick => ({
+        ...pick,
+        is_captain: pick.element === savedCaptainInfo.captainPlayerId,
+        is_vice_captain: pick.element === savedCaptainInfo.viceCaptainPlayerId
+      }));
+    }
+    
     setManualLineup(lineupWithTransfers);
-  }, [selectedGameweek, activeDraft, gameweekTransfers, buyPriceOverridesData, buyPricesData]);
+  }, [selectedGameweek, activeDraft, gameweekTransfers, buyPriceOverridesData, buyPricesData, savedCaptainInfo]);
 
   // Auto-run optimization when Auto mode is selected
   useEffect(() => {
@@ -3243,6 +3258,7 @@ export default function TransferPlanner() {
       setTransferredOutPlayers([]);
       setCompletedTransfers([]);
       setPlannedChips({}); // Reset planned chips
+      setSavedCaptainInfo(null); // Clear saved captain info
       setActiveDraft("Base");
       setHasUnsavedChanges(false);
       if (teamData?.picks) {
@@ -3261,30 +3277,20 @@ export default function TransferPlanner() {
           setGameweekTransfers(structuredClone(draft.gameweekTransfers || {}));
           setPlannedChips(structuredClone(draft.plannedChips || {})); // Load planned chips
           setPlannerMode(draft.mode);
+          
+          // Save captain/vice-captain info to be applied AFTER useEffect rebuilds lineup
+          setSavedCaptainInfo({
+            captainPlayerId: draft.captainPlayerId || null,
+            viceCaptainPlayerId: draft.viceCaptainPlayerId || null
+          });
+          
+          // Set active draft - this will trigger useEffect to rebuild lineup
           setActiveDraft(draftLetter);
           setHasUnsavedChanges(false);
           
           // Reset transferred out players and completed transfers
           setTransferredOutPlayers([]);
           setCompletedTransfers([]);
-          
-          // Reset lineup to base team, transfers will be applied via useEffect
-          // Also restore captain and vice-captain selections from draft
-          if (teamData?.picks) {
-            const baseLineup = [...teamData.picks];
-            
-            // Apply saved captain/vice-captain if available
-            if (draft.captainPlayerId || draft.viceCaptainPlayerId) {
-              const updatedLineup = baseLineup.map(pick => ({
-                ...pick,
-                is_captain: pick.element === draft.captainPlayerId,
-                is_vice_captain: pick.element === draft.viceCaptainPlayerId
-              }));
-              setManualLineup(updatedLineup);
-            } else {
-              setManualLineup(baseLineup);
-            }
-          }
           
           toast({ title: "Draft Loaded", description: `Switched to Draft ${draftLetter}` });
         }
