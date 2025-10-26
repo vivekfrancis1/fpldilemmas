@@ -4068,9 +4068,18 @@ export default function TransferPlanner() {
               {/* Total Projected Points for Selected GW */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
-                  <span>GW {selectedGameweek} Proj Pts</span>
+                  <span>GW {selectedGameweek} xPts</span>
                   {plannedChips[selectedGameweek] && (
-                    <Sparkles className="h-3 w-3 text-amber-600" />
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Sparkles className="h-3 w-3 text-amber-600 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="font-medium">{getChipDisplayName(plannedChips[selectedGameweek]!)} {getChipNumber(plannedChips[selectedGameweek]!)} applied in GW {selectedGameweek}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </div>
                 <div className="text-2xl font-bold text-green-600">
@@ -4116,8 +4125,8 @@ export default function TransferPlanner() {
                 <div className="text-sm text-muted-foreground mb-1 flex items-center gap-2">
                   <span>
                     {nextGameweeks.length > 0 
-                      ? `GW ${nextGameweeks[0].id}-${nextGameweeks[nextGameweeks.length - 1].id} Proj Pts`
-                      : 'Next 6 GWs Proj Pts'}
+                      ? `GW ${nextGameweeks[0].id}-${nextGameweeks[nextGameweeks.length - 1].id} xPts`
+                      : 'Next 6 GWs xPts'}
                   </span>
                   {Object.keys(plannedChips).length > 0 && (
                     <TooltipProvider>
