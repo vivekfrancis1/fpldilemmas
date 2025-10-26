@@ -1267,12 +1267,11 @@ export default function TransferPlanner() {
     return remaining;
   };
 
-  // Helper to create new draft when making changes from Base
-  // Returns the target draft letter (current draft or newly created draft)
-  const ensureDraftForChanges = (): string | null => {
+  // Helper to check if a new draft is needed
+  // Returns the target draft letter or null if limit reached
+  const getTargetDraftForChanges = (): string | null => {
     if (activeDraft !== "Base") {
-      // Already in a draft, just mark as changed
-      setHasUnsavedChanges(true);
+      // Already in a draft
       return activeDraft;
     }
     
@@ -1290,24 +1289,38 @@ export default function TransferPlanner() {
       return null;
     }
     
+    return nextLetter;
+  };
+
+  // Create and save a new draft with current state (called AFTER changes are applied)
+  const finalizeNewDraft = (draftLetter: string) => {
+    if (activeDraft === draftLetter) {
+      // Already in the target draft
+      return;
+    }
+    
     // Switch to the new draft
-    setActiveDraft(nextLetter);
+    setActiveDraft(draftLetter);
     setHasUnsavedChanges(true);
     
     toast({
-      title: `Draft ${nextLetter} Created`,
-      description: `Your changes will be saved to Draft ${nextLetter}. Remember to save!`,
+      title: `Draft ${draftLetter} Created`,
+      description: `Your changes will be saved to Draft ${draftLetter}. Remember to save!`,
     });
     
-    return nextLetter;
+    // Save the draft after a delay to ensure state has settled
+    setTimeout(() => saveCurrentDraft(undefined, draftLetter), 150);
   };
 
   // Handle chip selection for a gameweek
   const handleChipSelection = (gameweek: number, chipType: ChipType | null) => {
-    // Ensure we have a draft for changes
-    const targetDraft = ensureDraftForChanges();
+    // Check if we can create a draft
+    const targetDraft = getTargetDraftForChanges();
     if (!targetDraft) return;
     
+    const wasInBase = activeDraft === "Base";
+    
+    // Apply the chip change
     setPlannedChips(prev => {
       const updated = { ...prev };
       if (chipType === null) {
@@ -1317,7 +1330,13 @@ export default function TransferPlanner() {
       }
       return updated;
     });
-    setHasUnsavedChanges(true);
+    
+    // If we were in Base, finalize the new draft
+    if (wasInBase) {
+      setTimeout(() => finalizeNewDraft(targetDraft), 100);
+    } else {
+      setHasUnsavedChanges(true);
+    }
   };
 
   // Get chip display name
@@ -2351,9 +2370,11 @@ export default function TransferPlanner() {
 
   // Swap a starting 11 player with a bench player
   const swapPlayers = (startingIndex: number, benchIndex: number) => {
-    // Ensure we have a draft for changes
-    const targetDraft = ensureDraftForChanges();
+    // Check if we can create a draft
+    const targetDraft = getTargetDraftForChanges();
     if (!targetDraft) return;
+    
+    const wasInBase = activeDraft === "Base";
     
     const startingPick = manualLineup[startingIndex];
     const benchPick = manualLineup[11 + benchIndex];
@@ -2461,13 +2482,22 @@ export default function TransferPlanner() {
       title: "Players Swapped",
       description: `${newStartingPlayer} has been moved to Starting 11, instead of ${newBenchPlayer} who is now in bench position ${benchPriority}.${extraInfo}`
     });
+    
+    // If we were in Base, finalize the new draft
+    if (wasInBase) {
+      setTimeout(() => finalizeNewDraft(targetDraft), 100);
+    } else {
+      setHasUnsavedChanges(true);
+    }
   };
 
   // Move bench player up or down (excluding GK)
   const moveBenchPlayer = (benchIndex: number, direction: 'up' | 'down') => {
-    // Ensure we have a draft for changes
-    const targetDraft = ensureDraftForChanges();
+    // Check if we can create a draft
+    const targetDraft = getTargetDraftForChanges();
     if (!targetDraft) return;
+    
+    const wasInBase = activeDraft === "Base";
     
     if (benchIndex === 0) return; // Can't move GK
     
@@ -2499,6 +2529,13 @@ export default function TransferPlanner() {
       title: "Bench Priority Changed",
       description: `Bench priority of ${movedPlayerName} has been moved ${direction === 'up' ? 'up' : 'down'} to ${movedPlayerNewPriority}, and bench priority of ${swappedPlayerName} has been moved ${direction === 'up' ? 'down' : 'up'} to ${swappedPlayerNewPriority}`
     });
+    
+    // If we were in Base, finalize the new draft
+    if (wasInBase) {
+      setTimeout(() => finalizeNewDraft(targetDraft), 100);
+    } else {
+      setHasUnsavedChanges(true);
+    }
   };
 
   // Handle captain selection
@@ -2514,14 +2551,17 @@ export default function TransferPlanner() {
   
   // Confirm captain selection
   const confirmSetCaptain = async (playerId: number) => {
-    // Ensure we have a draft for changes
-    const targetDraft = ensureDraftForChanges();
+    // Check if we can create a draft
+    const targetDraft = getTargetDraftForChanges();
     if (!targetDraft) {
       setCaptainConfirmation(null);
       setSelectedPlayer(null);
       return;
     }
     
+    const wasInBase = activeDraft === "Base";
+    
+    // Apply the captain change
     setManualLineup(prev => {
       // Find current captain and vice-captain
       const currentCaptain = prev.find(p => p.is_captain);
@@ -2546,8 +2586,14 @@ export default function TransferPlanner() {
     setCaptainConfirmation(null);
     setSelectedPlayer(null);
     
-    // Auto-save draft with explicit target draft letter
-    setTimeout(() => saveCurrentDraft(undefined, targetDraft), 100);
+    // If we were in Base, finalize the new draft after state settles
+    if (wasInBase) {
+      setTimeout(() => finalizeNewDraft(targetDraft), 100);
+    } else {
+      // Already in a draft, just save
+      setHasUnsavedChanges(true);
+      setTimeout(() => saveCurrentDraft(), 100);
+    }
   };
 
   // Handle vice captain selection
@@ -2563,14 +2609,17 @@ export default function TransferPlanner() {
   
   // Confirm vice captain selection
   const confirmSetViceCaptain = async (playerId: number) => {
-    // Ensure we have a draft for changes
-    const targetDraft = ensureDraftForChanges();
+    // Check if we can create a draft
+    const targetDraft = getTargetDraftForChanges();
     if (!targetDraft) {
       setViceCaptainConfirmation(null);
       setSelectedPlayer(null);
       return;
     }
     
+    const wasInBase = activeDraft === "Base";
+    
+    // Apply the vice captain change
     setManualLineup(prev => {
       // Find current captain and vice-captain
       const currentCaptain = prev.find(p => p.is_captain);
@@ -2595,8 +2644,14 @@ export default function TransferPlanner() {
     setViceCaptainConfirmation(null);
     setSelectedPlayer(null);
     
-    // Auto-save draft with explicit target draft letter
-    setTimeout(() => saveCurrentDraft(undefined, targetDraft), 100);
+    // If we were in Base, finalize the new draft after state settles
+    if (wasInBase) {
+      setTimeout(() => finalizeNewDraft(targetDraft), 100);
+    } else {
+      // Already in a draft, just save
+      setHasUnsavedChanges(true);
+      setTimeout(() => saveCurrentDraft(), 100);
+    }
   };
 
   // Handle transferring a player out
