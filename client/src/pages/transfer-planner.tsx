@@ -1644,11 +1644,14 @@ export default function TransferPlanner() {
     
     // Apply saved captain/vice-captain if available (from draft loading)
     if (savedCaptainInfo && (savedCaptainInfo.captainPlayerId || savedCaptainInfo.viceCaptainPlayerId)) {
+      console.log("DEBUG: Applying saved captain info:", savedCaptainInfo);
       lineupWithTransfers = lineupWithTransfers.map(pick => ({
         ...pick,
         is_captain: pick.element === savedCaptainInfo.captainPlayerId,
         is_vice_captain: pick.element === savedCaptainInfo.viceCaptainPlayerId
       }));
+    } else {
+      console.log("DEBUG: No saved captain info to apply, savedCaptainInfo:", savedCaptainInfo);
     }
     
     setManualLineup(lineupWithTransfers);
