@@ -14240,7 +14240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Save or update a draft
   app.post("/api/transfer-planner/drafts", async (req, res) => {
     try {
-      const { managerId, draftLetter, gameweekTransfers, plannedChips, mode, teamBank, teamValue, totalProjectedPoints, totalTransfersUsed } = req.body;
+      const { managerId, draftLetter, gameweekTransfers, plannedChips, mode, teamBank, teamValue, totalProjectedPoints, totalTransfersUsed, captainPlayerId, viceCaptainPlayerId } = req.body;
 
       // Validation
       if (!managerId || !draftLetter || !gameweekTransfers) {
@@ -14252,7 +14252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Draft letter must be A-J" });
       }
 
-      console.log(`💾 Saving draft ${draftLetter} for manager ${managerId}`);
+      console.log(`💾 Saving draft ${draftLetter} for manager ${managerId} with captain ${captainPlayerId} and vice ${viceCaptainPlayerId}`);
 
       // Check if draft already exists
       const existing = await storage.getTransferPlannerDraft(managerId, draftLetter);
@@ -14268,6 +14268,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamValue: teamValue || 0,
           totalProjectedPoints: totalProjectedPoints || 0,
           totalTransfersUsed: totalTransfersUsed || 0,
+          captainPlayerId: captainPlayerId || null,
+          viceCaptainPlayerId: viceCaptainPlayerId || null,
         });
       } else {
         // Create new draft
@@ -14281,6 +14283,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamValue: teamValue || 0,
           totalProjectedPoints: totalProjectedPoints || 0,
           totalTransfersUsed: totalTransfersUsed || 0,
+          captainPlayerId: captainPlayerId || null,
+          viceCaptainPlayerId: viceCaptainPlayerId || null,
         });
       }
 
