@@ -3283,6 +3283,12 @@ export default function TransferPlanner() {
           const data = await response.json();
           const draft = data.draft;
           
+          console.log("DEBUG switchToDraft - Fetched draft data:", draft);
+          console.log("DEBUG switchToDraft - Captain info from draft:", {
+            captainPlayerId: draft.captainPlayerId,
+            viceCaptainPlayerId: draft.viceCaptainPlayerId
+          });
+          
           // Reset ALL state for complete draft isolation
           // CRITICAL: Deep clone to prevent shared references between drafts
           setGameweekTransfers(structuredClone(draft.gameweekTransfers || {}));
@@ -3290,10 +3296,13 @@ export default function TransferPlanner() {
           setPlannerMode(draft.mode);
           
           // Save captain/vice-captain info to be applied AFTER useEffect rebuilds lineup
-          setSavedCaptainInfo({
+          const captainInfo = {
             captainPlayerId: draft.captainPlayerId || null,
             viceCaptainPlayerId: draft.viceCaptainPlayerId || null
-          });
+          };
+          
+          console.log("DEBUG switchToDraft - Setting savedCaptainInfo to:", captainInfo);
+          setSavedCaptainInfo(captainInfo);
           
           // Set active draft - this will trigger useEffect to rebuild lineup
           setActiveDraft(draftLetter);
