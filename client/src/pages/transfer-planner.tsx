@@ -446,13 +446,27 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   const teams = bootstrapData?.teams || [];
   const uniqueTeams = teams.map(t => t.name).sort();
 
+  // Helper to normalize team name to full name
+  const normalizeTeamName = (teamName: string): string => {
+    // First try to find by full name
+    const byName = bootstrapData?.teams.find(t => t.name === teamName);
+    if (byName) return byName.name;
+    
+    // Then try to find by short name
+    const byShortName = bootstrapData?.teams.find(t => t.short_name === teamName);
+    if (byShortName) return byShortName.name;
+    
+    return teamName;
+  };
+
   // Filter and sort players
   let filteredPlayers = adjustedPlayersData
     .filter(player => {
       const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            player.team.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesPosition = positionFilter === "all" || player.position === positionFilter;
-      const matchesTeam = teamFilter === "all" || player.team === teamFilter;
+      const normalizedPlayerTeam = normalizeTeamName(player.team);
+      const matchesTeam = teamFilter === "all" || normalizedPlayerTeam === teamFilter;
       const matchesPrice = player.price >= minPrice && player.price <= maxPrice;
       const isAffordable = !onlyAffordable || player.price <= currentBank;
       
