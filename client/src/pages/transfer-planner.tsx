@@ -1272,6 +1272,12 @@ export default function TransferPlanner() {
     return names[chipType] || chipType;
   };
 
+  // Get chip number (1 or 2) based on how many have been used
+  const getChipNumber = (chipType: ChipType): number => {
+    const used = historyData?.chips?.filter(chip => chip.name === chipType).length || 0;
+    return used + 1;
+  };
+
   // Get chip display name with number (e.g., "Bench Boost 1", "Wildcard 2")
   const getChipDisplayNameWithNumber = (chipType: ChipType): string => {
     const baseName = getChipDisplayName(chipType);
