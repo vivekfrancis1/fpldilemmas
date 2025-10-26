@@ -1913,57 +1913,47 @@ export default function TransferPlanner() {
     let squad = [...teamData.picks];
     const nextGWs = getNextGameweeks();
     
-    // Track squad state before Free Hit gameweeks
-    let preFreeHitSquad: TeamPick[] | null = null;
-    let lastFreeHitGW: number | null = null;
+    // Track Free Hit gameweeks to handle squad reversion
+    const freeHitGameweeks = new Set<number>();
+    nextGWs.forEach(gw => {
+      if (gw.id <= targetGW && plannedChips[gw.id] === 'freehit') {
+        freeHitGameweeks.add(gw.id);
+      }
+    });
     
     // Apply all completed transfers from first planning GW up to and including targetGW
     nextGWs.forEach(gw => {
       if (gw.id <= targetGW) {
-        const isFreeHitGW = plannedChips[gw.id] === 'freehit';
-        const isWildcardGW = plannedChips[gw.id] === 'wildcard';
+        const isFreeHitGW = freeHitGameweeks.has(gw.id);
         
-        // If this is a Free Hit gameweek, save the current squad state
-        if (isFreeHitGW) {
-          preFreeHitSquad = [...squad];
-          lastFreeHitGW = gw.id;
-        }
-        
-        // If we just passed a Free Hit gameweek (and we're not in it), revert to pre-Free Hit squad
-        if (lastFreeHitGW !== null && gw.id > lastFreeHitGW && preFreeHitSquad) {
-          squad = [...preFreeHitSquad];
-          preFreeHitSquad = null;
-          lastFreeHitGW = null;
+        // For Free Hit gameweeks:
+        // - If we're viewing the Free Hit GW itself (gw.id === targetGW), apply transfers temporarily
+        // - If we're viewing a later GW, skip this Free Hit GW entirely (don't apply transfers)
+        if (isFreeHitGW && gw.id !== targetGW) {
+          // Skip Free Hit transfers when viewing future gameweeks
+          return;
         }
         
         // Apply transfers for this gameweek
-        // Free Hit: Only apply if we're viewing that exact gameweek
-        // Wildcard: Apply normally (permanent transfers)
-        // Regular: Apply normally (permanent transfers)
-        const shouldApplyTransfers = !isFreeHitGW || gw.id === targetGW;
+        const gwTransfers = draftTransfers[gw.id] || draftTransfers[gw.id.toString() as any];
         
-        if (shouldApplyTransfers) {
-          // Try both string and numeric keys for compatibility
-          const gwTransfers = draftTransfers[gw.id] || draftTransfers[gw.id.toString() as any];
-          
-          if (gwTransfers?.completed) {
-            gwTransfers.completed.forEach(transfer => {
-              squad = squad.map(pick => {
-                if (pick.element === transfer.outPlayerId) {
-                  const inPlayer = getPlayerById(transfer.inPlayerId);
-                  if (inPlayer) {
-                    return {
-                      ...pick,
-                      element: transfer.inPlayerId,
-                      selling_price: inPlayer.now_cost,
-                      purchase_price: inPlayer.now_cost,
-                    };
-                  }
+        if (gwTransfers?.completed) {
+          gwTransfers.completed.forEach(transfer => {
+            squad = squad.map(pick => {
+              if (pick.element === transfer.outPlayerId) {
+                const inPlayer = getPlayerById(transfer.inPlayerId);
+                if (inPlayer) {
+                  return {
+                    ...pick,
+                    element: transfer.inPlayerId,
+                    selling_price: inPlayer.now_cost,
+                    purchase_price: inPlayer.now_cost,
+                  };
                 }
-                return pick;
-              });
+              }
+              return pick;
             });
-          }
+          });
         }
       }
     });
