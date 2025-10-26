@@ -1843,8 +1843,20 @@ export default function TransferPlanner() {
   };
 
   // Calculate initial transfers available for a given gameweek (cumulative logic)
-  const calculateInitialTransfers = (): number => {
+  const calculateInitialTransfers = (): number | string => {
     if (!teamData?.transfers || !selectedGameweek || !bootstrapData) return 0;
+    
+    // Check if Free Hit is active for this gameweek
+    const isFreeHitActive = plannedChips[selectedGameweek] === 'freehit';
+    if (isFreeHitActive) {
+      return '∞'; // Unlimited transfers with Free Hit
+    }
+    
+    // Check if Wildcard is active for this gameweek
+    const isWildcardActive = plannedChips[selectedGameweek] === 'wildcard';
+    if (isWildcardActive) {
+      return '∞'; // Unlimited transfers with Wildcard
+    }
     
     // Get current gameweek and the first planning gameweek
     const currentEvent = bootstrapData.events.find(e => e.is_current);
@@ -1872,10 +1884,16 @@ export default function TransferPlanner() {
   };
 
   // Calculate transfers remaining (initial - used, can be negative)
-  const calculateTransfersRemaining = (): number => {
+  const calculateTransfersRemaining = (): number | string => {
     const initial = calculateInitialTransfers();
     const used = calculateTransfersUsed();
-    return initial - used;
+    
+    // If initial is infinite (Free Hit or Wildcard), remaining is also infinite
+    if (initial === '∞') {
+      return '∞';
+    }
+    
+    return (initial as number) - used;
   };
 
   // ===== DRAFT COMPARISON HELPERS =====
@@ -4213,7 +4231,12 @@ export default function TransferPlanner() {
 
               {/* Transfers Available */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">Transfers Available</div>
+                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                  <span>Transfers Available</span>
+                  {(plannedChips[selectedGameweek] === 'freehit' || plannedChips[selectedGameweek] === 'wildcard') && (
+                    <Sparkles className="h-3 w-3 text-amber-600" />
+                  )}
+                </div>
                 <div className="text-2xl font-bold text-purple-600">
                   {calculateInitialTransfers()}
                 </div>
@@ -4222,22 +4245,36 @@ export default function TransferPlanner() {
               {/* Transfers Used */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1">Transfers Used</div>
-                <div className={`text-2xl font-bold ${calculateTransfersRemaining() < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                <div className={`text-2xl font-bold ${(() => {
+                  const remaining = calculateTransfersRemaining();
+                  return typeof remaining === 'number' && remaining < 0 ? 'text-red-600' : 'text-green-600';
+                })()}`}>
                   {calculateTransfersUsed()}
                 </div>
               </div>
 
               {/* Transfers Remaining */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">Transfers Remaining</div>
-                <div className={`text-2xl font-bold ${calculateTransfersRemaining() < 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                  <span>Transfers Remaining</span>
+                  {(plannedChips[selectedGameweek] === 'freehit' || plannedChips[selectedGameweek] === 'wildcard') && (
+                    <Sparkles className="h-3 w-3 text-amber-600" />
+                  )}
+                </div>
+                <div className={`text-2xl font-bold ${(() => {
+                  const remaining = calculateTransfersRemaining();
+                  return typeof remaining === 'number' && remaining < 0 ? 'text-red-600' : 'text-blue-600';
+                })()}`}>
                   {calculateTransfersRemaining()}
                 </div>
-                {calculateTransfersRemaining() < 0 && (
-                  <div className="text-xs text-red-600 mt-1">
-                    This will result in {Math.abs(calculateTransfersRemaining()) * 4} points penalty
-                  </div>
-                )}
+                {(() => {
+                  const remaining = calculateTransfersRemaining();
+                  return typeof remaining === 'number' && remaining < 0 && (
+                    <div className="text-xs text-red-600 mt-1">
+                      This will result in {Math.abs(remaining) * 4} points penalty
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           </CardContent>
