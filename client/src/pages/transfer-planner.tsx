@@ -4085,7 +4085,10 @@ export default function TransferPlanner() {
                     variant={selectedGameweek === gw.id ? "default" : "outline"}
                     size="sm"
                     className="text-sm md:text-lg font-semibold min-w-[2.5rem] md:min-w-[3rem]"
-                    onClick={() => setSelectedGameweek(gw.id)}
+                    onClick={() => {
+                      setSelectedPlayer(null);
+                      setSelectedGameweek(gw.id);
+                    }}
                     data-testid={`gw-button-${gw.id}`}
                   >
                     {gw.id}
