@@ -1688,11 +1688,14 @@ export class DatabaseStorage implements IStorage {
           managerId: draft.managerId,
           draftLetter: draft.draftLetter,
           gameweekTransfers: draft.gameweekTransfers,
+          plannedChips: draft.plannedChips || {},
           mode: draft.mode || 'manual',
           teamBank: draft.teamBank.toString(),
           teamValue: draft.teamValue.toString(),
           totalProjectedPoints: draft.totalProjectedPoints?.toString() || '0',
           totalTransfersUsed: draft.totalTransfersUsed || 0,
+          captainPlayerId: draft.captainPlayerId,
+          viceCaptainPlayerId: draft.viceCaptainPlayerId,
         })
         .returning();
       
@@ -1746,6 +1749,9 @@ export class DatabaseStorage implements IStorage {
       if (updates.gameweekTransfers !== undefined) {
         updateData.gameweekTransfers = updates.gameweekTransfers;
       }
+      if (updates.plannedChips !== undefined) {
+        updateData.plannedChips = updates.plannedChips;
+      }
       if (updates.mode !== undefined) {
         updateData.mode = updates.mode;
       }
@@ -1760,6 +1766,12 @@ export class DatabaseStorage implements IStorage {
       }
       if (updates.totalTransfersUsed !== undefined) {
         updateData.totalTransfersUsed = updates.totalTransfersUsed;
+      }
+      if (updates.captainPlayerId !== undefined) {
+        updateData.captainPlayerId = updates.captainPlayerId;
+      }
+      if (updates.viceCaptainPlayerId !== undefined) {
+        updateData.viceCaptainPlayerId = updates.viceCaptainPlayerId;
       }
       
       const [result] = await db
