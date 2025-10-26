@@ -1911,18 +1911,22 @@ export default function TransferPlanner() {
   };
 
   // Calculate manual mode points for a draft at a specific gameweek
-  const calculateManualPointsForGameweek = (squad: TeamPick[], gameweek: number, projections6GW: any[]): number => {
+  const calculateManualPointsForGameweek = (squad: TeamPick[], gameweek: number, projections6GW: any[], chipForGameweek?: ChipType | null): number => {
     if (!projections6GW || !Array.isArray(projections6GW)) return 0;
     
-    // Get starting 11 (positions 1-11, more robust than slice)
-    const starting11 = squad.filter(pick => pick.position <= 11);
+    const isBenchBoostActive = chipForGameweek === 'bboost';
+    
+    // With Bench Boost, all 15 players score. Otherwise just starting 11
+    const activePlayers = isBenchBoostActive 
+      ? squad 
+      : squad.filter(pick => pick.position <= 11);
     
     let totalPoints = 0;
-    starting11.forEach(pick => {
+    activePlayers.forEach(pick => {
       const projection = projections6GW.find((p: any) => p.playerId === pick.element);
       const gwPoints = projection?.gameweekProjections?.[gameweek.toString()] || 0;
       
-      // Double points for captain
+      // Only captain gets multiplier (no multiplier for bench players even with Bench Boost)
       const multiplier = pick.is_captain ? 2 : 1;
       totalPoints += gwPoints * multiplier;
     });
@@ -1931,8 +1935,10 @@ export default function TransferPlanner() {
   };
 
   // Calculate auto mode points for a draft at a specific gameweek
-  const calculateAutoPointsForGameweek = (squad: TeamPick[], gameweek: number, projections6GW: any[]): number => {
+  const calculateAutoPointsForGameweek = (squad: TeamPick[], gameweek: number, projections6GW: any[], chipForGameweek?: ChipType | null): number => {
     if (!projections6GW || !Array.isArray(projections6GW)) return 0;
+    
+    const isBenchBoostActive = chipForGameweek === 'bboost';
     
     // Get all 15 players with their projections for this gameweek
     const playersWithPoints = squad.map(pick => {
@@ -1947,6 +1953,15 @@ export default function TransferPlanner() {
       };
     });
     
+    if (isBenchBoostActive) {
+      // With Bench Boost, all 15 players score
+      const allPlayersPoints = playersWithPoints.reduce((sum, p) => sum + p.projectedPoints, 0);
+      // Add captain bonus (best player gets 2x)
+      const captain = playersWithPoints.reduce((best, p) => p.projectedPoints > best.projectedPoints ? p : best, playersWithPoints[0]);
+      return allPlayersPoints + (captain?.projectedPoints || 0);
+    }
+    
+    // Normal auto mode: optimize formation
     // Group by position and sort by points
     const gkps = playersWithPoints.filter(p => p.position === 1).sort((a, b) => b.projectedPoints - a.projectedPoints);
     const defs = playersWithPoints.filter(p => p.position === 2).sort((a, b) => b.projectedPoints - a.projectedPoints);
@@ -2090,7 +2105,8 @@ export default function TransferPlanner() {
     
     nextGWs.forEach(gw => {
       const squad = getSquadAtGameweek({}, gw.id); // Empty transfers = base team
-      const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW);
+      const chipForGW = plannedChips[gw.id] || null;
+      const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
       baseManualRow.gameweeks[gw.id] = points;
       baseManualRow.total += points;
     });
@@ -2106,7 +2122,8 @@ export default function TransferPlanner() {
     
     nextGWs.forEach(gw => {
       const squad = getSquadAtGameweek({}, gw.id);
-      const points = calculateAutoPointsForGameweek(squad, gw.id, playerProjections6GW);
+      const chipForGW = plannedChips[gw.id] || null;
+      const points = calculateAutoPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
       baseAutoRow.gameweeks[gw.id] = points;
       baseAutoRow.total += points;
     });
@@ -2117,6 +2134,7 @@ export default function TransferPlanner() {
       // Always use the saved gameweekTransfers from database for accurate comparison
       // This ensures each draft shows its own saved transfers, not mixed with current editing state
       const draftTransfers = draft.gameweekTransfers || {};
+      const draftChips = draft.plannedChips || {};
       
       // Manual mode row
       const draftManualRow = {
@@ -2128,7 +2146,8 @@ export default function TransferPlanner() {
       
       nextGWs.forEach(gw => {
         const squad = getSquadAtGameweek(draftTransfers, gw.id);
-        const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW);
+        const chipForGW = draftChips[gw.id] || draftChips[gw.id.toString()] || null;
+        const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
         draftManualRow.gameweeks[gw.id] = points;
         draftManualRow.total += points;
       });
@@ -2144,7 +2163,8 @@ export default function TransferPlanner() {
       
       nextGWs.forEach(gw => {
         const squad = getSquadAtGameweek(draftTransfers, gw.id);
-        const points = calculateAutoPointsForGameweek(squad, gw.id, playerProjections6GW);
+        const chipForGW = draftChips[gw.id] || draftChips[gw.id.toString()] || null;
+        const points = calculateAutoPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
         draftAutoRow.gameweeks[gw.id] = points;
         draftAutoRow.total += points;
       });
@@ -3991,12 +4011,19 @@ export default function TransferPlanner() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
               {/* Total Projected Points for Selected GW */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">GW {selectedGameweek} Proj Pts</div>
+                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                  <span>GW {selectedGameweek} Proj Pts</span>
+                  {plannedChips[selectedGameweek] && (
+                    <Sparkles className="h-3 w-3 text-amber-600" />
+                  )}
+                </div>
                 <div className="text-2xl font-bold text-green-600">
                   {(() => {
+                    const isBenchBoostActive = plannedChips[selectedGameweek] === 'bboost';
                     let total = 0;
                     if (plannerMode === "manual") {
-                      manualLineup.slice(0, 11).forEach((pick: TeamPick) => {
+                      const activePlayers = isBenchBoostActive ? manualLineup : manualLineup.slice(0, 11);
+                      activePlayers.forEach((pick: TeamPick) => {
                         const points = getPlayerProjectedPoints(pick.element);
                         if (points !== null) {
                           const multiplier = pick.is_captain ? 2 : 1;
@@ -4004,13 +4031,24 @@ export default function TransferPlanner() {
                         }
                       });
                     } else if (optimizedLineup) {
-                      optimizedLineup.starting11.forEach((pick: any) => {
-                        const points = getPlayerProjectedPoints(pick.element);
-                        if (points !== null) {
-                          const multiplier = pick.isCaptain ? 2 : 1;
-                          total += points * multiplier;
-                        }
-                      });
+                      if (isBenchBoostActive) {
+                        // With Bench Boost, include all 15 players
+                        [...optimizedLineup.starting11, ...optimizedLineup.bench].forEach((pick: any) => {
+                          const points = getPlayerProjectedPoints(pick.element);
+                          if (points !== null) {
+                            const multiplier = pick.isCaptain ? 2 : 1;
+                            total += points * multiplier;
+                          }
+                        });
+                      } else {
+                        optimizedLineup.starting11.forEach((pick: any) => {
+                          const points = getPlayerProjectedPoints(pick.element);
+                          if (points !== null) {
+                            const multiplier = pick.isCaptain ? 2 : 1;
+                            total += points * multiplier;
+                          }
+                        });
+                      }
                     }
                     return total.toFixed(2);
                   })()}
