@@ -1475,7 +1475,8 @@ export default function TransferPlanner() {
   useEffect(() => {
     if (!selectedGameweek || !teamData?.picks) return;
     
-    // Clear optimized lineup when gameweek changes
+    // Clear player popup and optimized lineup when gameweek changes
+    setSelectedPlayer(null);
     setOptimizedLineup(null);
     
     // Helper to apply buy price overrides to lineup
