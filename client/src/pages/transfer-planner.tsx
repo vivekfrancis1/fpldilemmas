@@ -5584,12 +5584,25 @@ export default function TransferPlanner() {
                   // Find transferred in players - compare finalLineup (after transfers) against gwLineup (before transfers)
                   // If previous GW had Free Hit, don't mark any players as transfers (they're reverting back)
                   const baselinePlayerIds = new Set(gwLineup.map(p => p.element));
+                  const finalPlayerIds = new Set(finalLineup.map(p => p.element));
                   const transferredInIds = new Set<number>();
+                  
+                  console.log(`GW${gw.id} Transfer Debug:`, {
+                    gwTransfersCompleted: gwTransfers.completed.length,
+                    transfers: gwTransfers.completed.map(t => ({ 
+                      out: getPlayerById(t.outPlayerId)?.web_name, 
+                      in: getPlayerById(t.inPlayerId)?.web_name 
+                    })),
+                    baselinePlayerIds: Array.from(baselinePlayerIds),
+                    finalPlayerIds: Array.from(finalPlayerIds),
+                    prevHadFreeHit,
+                  });
                   
                   if (!prevHadFreeHit) {
                     finalLineup.forEach(pick => {
                       if (!baselinePlayerIds.has(pick.element)) {
                         transferredInIds.add(pick.element);
+                        console.log(`GW${gw.id}: Marking ${getPlayerById(pick.element)?.web_name} (ID: ${pick.element}) as transferred in`);
                       }
                     });
                   }
