@@ -1040,8 +1040,13 @@ export default function TransferPlanner() {
     // Get the starting gameweek
     const firstGW = getNextGameweeks()[0]?.id || 7;
     
-    // Apply all transfers from previous gameweeks
+    // Apply all transfers from previous gameweeks (skip Free Hit gameweeks)
     for (let gw = firstGW; gw < targetGameweek; gw++) {
+      // Skip this gameweek if Free Hit was active (transfers don't carry over)
+      if (plannedChips[gw] === 'freehit') {
+        continue;
+      }
+      
       const transfers = gameweekTransfers[gw];
       if (transfers && transfers.completed) {
         // Apply each completed transfer
