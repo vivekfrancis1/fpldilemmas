@@ -5559,8 +5559,8 @@ export default function TransferPlanner() {
                             </div>
                           );
                         })}
-                        {/* Bench separator */}
-                        <div className="border-t-2 border-indigo-500 my-2 py-2"></div>
+                        {/* Bench spacing */}
+                        <div className="my-1 py-1"></div>
                         {/* Bench */}
                         {baseLineup.slice(11, 15).map((pick, idx) => {
                           const player = getPlayerById(pick.element);
@@ -5689,8 +5689,8 @@ export default function TransferPlanner() {
                             </div>
                           );
                         })}
-                        {/* Bench separator */}
-                        <div className="border-t-2 border-gray-500 my-2 py-2"></div>
+                        {/* Bench spacing */}
+                        <div className="my-1 py-1"></div>
                         {/* Bench */}
                         {finalLineup.slice(11, 15).map((pick, idx) => {
                           const player = getPlayerById(pick.element);
