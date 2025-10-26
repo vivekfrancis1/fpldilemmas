@@ -1870,14 +1870,21 @@ export default function TransferPlanner() {
     
     // For subsequent gameweeks: Initial for GW_N = max(1, 1 + Transfers remaining for GW_(N-1))
     // Where Transfers remaining = Initial - Used
+    // EXCEPTION: Free Hit gameweeks don't affect rollover (transfers don't carry over)
     let currentInitial = teamData.transfers.limit || 1;
     
     for (let gw = firstPlanningGW; gw < selectedGameweek; gw++) {
-      const used = calculateTransfersUsedForGameweek(gw);
-      // Calculate remaining for this gameweek
-      const remaining = currentInitial - used;
-      // Next gameweek's initial = max(1, 1 + this gameweek's remaining)
-      currentInitial = Math.max(1, 1 + remaining);
+      // Skip Free Hit gameweeks - they don't affect transfer rollover
+      const isFreeHitGW = plannedChips[gw] === 'freehit';
+      
+      if (!isFreeHitGW) {
+        const used = calculateTransfersUsedForGameweek(gw);
+        // Calculate remaining for this gameweek
+        const remaining = currentInitial - used;
+        // Next gameweek's initial = max(1, 1 + this gameweek's remaining)
+        currentInitial = Math.max(1, 1 + remaining);
+      }
+      // If it's a Free Hit gameweek, keep currentInitial unchanged (no rollover effect)
     }
     
     return currentInitial;
@@ -1906,29 +1913,57 @@ export default function TransferPlanner() {
     let squad = [...teamData.picks];
     const nextGWs = getNextGameweeks();
     
-    // Apply all completed transfers from GW7 up to and including targetGW
+    // Track squad state before Free Hit gameweeks
+    let preFreeHitSquad: TeamPick[] | null = null;
+    let lastFreeHitGW: number | null = null;
+    
+    // Apply all completed transfers from first planning GW up to and including targetGW
     nextGWs.forEach(gw => {
       if (gw.id <= targetGW) {
-        // Try both string and numeric keys for compatibility
-        const gwTransfers = draftTransfers[gw.id] || draftTransfers[gw.id.toString() as any];
+        const isFreeHitGW = plannedChips[gw.id] === 'freehit';
+        const isWildcardGW = plannedChips[gw.id] === 'wildcard';
         
-        if (gwTransfers?.completed) {
-          gwTransfers.completed.forEach(transfer => {
-            squad = squad.map(pick => {
-              if (pick.element === transfer.outPlayerId) {
-                const inPlayer = getPlayerById(transfer.inPlayerId);
-                if (inPlayer) {
-                  return {
-                    ...pick,
-                    element: transfer.inPlayerId,
-                    selling_price: inPlayer.now_cost,
-                    purchase_price: inPlayer.now_cost,
-                  };
+        // If this is a Free Hit gameweek, save the current squad state
+        if (isFreeHitGW) {
+          preFreeHitSquad = [...squad];
+          lastFreeHitGW = gw.id;
+        }
+        
+        // If we just passed a Free Hit gameweek (and we're not in it), revert to pre-Free Hit squad
+        if (lastFreeHitGW !== null && gw.id > lastFreeHitGW && preFreeHitSquad) {
+          squad = [...preFreeHitSquad];
+          preFreeHitSquad = null;
+          lastFreeHitGW = null;
+        }
+        
+        // Apply transfers for this gameweek
+        // Free Hit: Only apply if we're viewing that exact gameweek
+        // Wildcard: Apply normally (permanent transfers)
+        // Regular: Apply normally (permanent transfers)
+        const shouldApplyTransfers = !isFreeHitGW || gw.id === targetGW;
+        
+        if (shouldApplyTransfers) {
+          // Try both string and numeric keys for compatibility
+          const gwTransfers = draftTransfers[gw.id] || draftTransfers[gw.id.toString() as any];
+          
+          if (gwTransfers?.completed) {
+            gwTransfers.completed.forEach(transfer => {
+              squad = squad.map(pick => {
+                if (pick.element === transfer.outPlayerId) {
+                  const inPlayer = getPlayerById(transfer.inPlayerId);
+                  if (inPlayer) {
+                    return {
+                      ...pick,
+                      element: transfer.inPlayerId,
+                      selling_price: inPlayer.now_cost,
+                      purchase_price: inPlayer.now_cost,
+                    };
+                  }
                 }
-              }
-              return pick;
+                return pick;
+              });
             });
-          });
+          }
         }
       }
     });
