@@ -442,9 +442,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     return team?.short_name || teamFullName;
   };
 
-  // Get unique teams for filter
+  // Get unique teams for filter - use official team names from bootstrap
   const teams = bootstrapData?.teams || [];
-  const uniqueTeams = Array.from(new Set(adjustedPlayersData.map(p => p.team))).sort();
+  const uniqueTeams = teams.map(t => t.name).sort();
 
   // Filter and sort players
   let filteredPlayers = adjustedPlayersData
