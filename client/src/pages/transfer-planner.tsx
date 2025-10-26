@@ -4019,12 +4019,35 @@ export default function TransferPlanner() {
 
               {/* Total Projected Points for Next 6 GWs */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">
-                  {nextGameweeks.length > 0 
-                    ? `GW ${nextGameweeks[0].id}-${nextGameweeks[nextGameweeks.length - 1].id} Proj Pts`
-                    : 'Next 6 GWs Proj Pts'}
+                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-2">
+                  <span>
+                    {nextGameweeks.length > 0 
+                      ? `GW ${nextGameweeks[0].id}-${nextGameweeks[nextGameweeks.length - 1].id} Proj Pts`
+                      : 'Next 6 GWs Proj Pts'}
+                  </span>
+                  {Object.keys(plannedChips).length > 0 && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button className="inline-flex">
+                            <Sparkles className="h-3 w-3 text-amber-600" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs font-semibold mb-1">Chips Applied:</p>
+                          {Object.entries(plannedChips)
+                            .filter(([_, chip]) => chip !== null)
+                            .map(([gw, chip]) => (
+                              <p key={gw} className="text-xs">
+                                GW{gw}: {getChipDisplayName(chip as ChipType)}
+                              </p>
+                            ))}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </div>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-blue-600" key={JSON.stringify(plannedChips)}>
                   {(() => {
                     if (!playerProjections6GW || !Array.isArray(playerProjections6GW) || !teamData?.picks) return '0.0';
                     
@@ -4059,7 +4082,9 @@ export default function TransferPlanner() {
                           const allPlayersPoints = playersWithPoints.reduce((sum, p) => sum + p.projectedPoints, 0);
                           // Add captain bonus (best player gets 2x)
                           const captain = playersWithPoints.reduce((best, p) => p.projectedPoints > best.projectedPoints ? p : best, playersWithPoints[0]);
-                          grandTotal += allPlayersPoints + (captain?.projectedPoints || 0);
+                          const gwTotal = allPlayersPoints + (captain?.projectedPoints || 0);
+                          console.log(`GW${gw} Bench Boost ACTIVE - All 15 players: ${allPlayersPoints.toFixed(2)}, Captain bonus: ${captain?.projectedPoints.toFixed(2)}, Total: ${gwTotal.toFixed(2)}`);
+                          grandTotal += gwTotal;
                         } else {
                           // Group by position
                           const gkps = playersWithPoints.filter(p => p.position === 1).sort((a, b) => b.projectedPoints - a.projectedPoints);
