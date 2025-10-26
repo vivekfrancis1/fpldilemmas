@@ -1405,7 +1405,33 @@ export default function TransferPlanner() {
       }
     }
     
-    // Free Hit can be used in any gameweek if available
+    // For free hit, apply the same gameweek constraints
+    if (chipType === 'freehit') {
+      // Count how many free hits have been used
+      const freeHitsUsed = historyData?.chips?.filter(chip => chip.name === 'freehit').length || 0;
+      
+      // If no free hits used, the first free hit can be used up to GW19
+      if (freeHitsUsed === 0) {
+        return gameweek <= 19;
+      }
+      
+      // If one free hit used, check which one based on when it was used
+      if (freeHitsUsed === 1) {
+        const firstFreeHitGW = historyData?.chips?.find(chip => chip.name === 'freehit')?.event || 0;
+        
+        // If first free hit was used in GW19 or earlier, the second free hit can only be used from GW20 onwards
+        if (firstFreeHitGW <= 19) {
+          return gameweek >= 20;
+        }
+        
+        // If first free hit was used in GW20 or later, the second free hit (first one) can be used up to GW19
+        if (firstFreeHitGW >= 20) {
+          return gameweek <= 19;
+        }
+      }
+    }
+    
+    // All constraints passed
     return true;
   };
 
