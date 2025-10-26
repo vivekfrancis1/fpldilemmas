@@ -5509,8 +5509,6 @@ export default function TransferPlanner() {
                             <div
                               key={idx}
                               className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                                isCaptain ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-500' :
-                                isViceCaptain ? 'bg-blue-400 text-blue-900' :
                                 player.element_type === 1 ? 'bg-indigo-600 text-white' :
                                 player.element_type === 2 ? 'bg-cyan-600 text-white' :
                                 player.element_type === 3 ? 'bg-emerald-600 text-white' :
@@ -5520,13 +5518,14 @@ export default function TransferPlanner() {
                             >
                               <div className="flex items-center justify-between">
                                 <span className="truncate">{player.web_name}</span>
-                                {isCaptain && <Crown className="h-2.5 w-2.5 flex-shrink-0 ml-1" />}
+                                {isCaptain && <span className="text-[9px] font-bold flex-shrink-0 ml-1">(C)</span>}
+                                {isViceCaptain && <span className="text-[9px] font-bold flex-shrink-0 ml-1">(V)</span>}
                               </div>
                             </div>
                           );
                         })}
                         {/* Bench separator */}
-                        <div className="border-t border-indigo-400 my-1"></div>
+                        <div className="border-t-2 border-indigo-500 my-2"></div>
                         {/* Bench */}
                         {baseLineup.slice(11, 15).map((pick, idx) => {
                           const player = getPlayerById(pick.element);
@@ -5639,11 +5638,7 @@ export default function TransferPlanner() {
                             <div
                               key={idx}
                               className={`px-2 py-0.5 rounded text-[10px] font-medium relative ${
-                                isTransferredIn && isCaptain ? 'bg-yellow-400 text-yellow-900 border-2 border-green-500' :
-                                isTransferredIn && isViceCaptain ? 'bg-blue-400 text-blue-900 border-2 border-green-500' :
                                 isTransferredIn ? 'bg-green-100 text-green-900 border-2 border-green-500 dark:bg-green-950/40 dark:text-green-300' :
-                                isCaptain ? 'bg-yellow-400 text-yellow-900 border-2 border-yellow-500' :
-                                isViceCaptain ? 'bg-blue-400 text-blue-900' :
                                 player.element_type === 1 ? 'bg-indigo-600 text-white' :
                                 player.element_type === 2 ? 'bg-cyan-600 text-white' :
                                 player.element_type === 3 ? 'bg-emerald-600 text-white' :
@@ -5653,13 +5648,14 @@ export default function TransferPlanner() {
                             >
                               <div className="flex items-center justify-between">
                                 <span className="truncate">{player.web_name}</span>
-                                {isCaptain && <Crown className="h-2.5 w-2.5 flex-shrink-0 ml-1" />}
+                                {isCaptain && <span className="text-[9px] font-bold flex-shrink-0 ml-1">(C)</span>}
+                                {isViceCaptain && <span className="text-[9px] font-bold flex-shrink-0 ml-1">(V)</span>}
                               </div>
                             </div>
                           );
                         })}
                         {/* Bench separator */}
-                        <div className="border-t border-gray-400 my-1"></div>
+                        <div className="border-t-2 border-gray-500 my-2"></div>
                         {/* Bench */}
                         {finalLineup.slice(11, 15).map((pick, idx) => {
                           const player = getPlayerById(pick.element);
@@ -5691,8 +5687,11 @@ export default function TransferPlanner() {
             
             <div className="mt-4 text-xs text-muted-foreground space-y-1 border-t pt-3">
               <p className="flex items-center gap-2">
-                <span className="inline-block w-4 h-4 rounded bg-yellow-400 border-2 border-yellow-500"></span>
+                <span className="text-sm font-bold">(C)</span>
                 <strong>Captain</strong>
+                <span className="mx-2">•</span>
+                <span className="text-sm font-bold">(V)</span>
+                <strong>Vice Captain</strong>
               </p>
               <p className="flex items-center gap-2">
                 <span className="inline-block w-4 h-4 rounded bg-green-100 border-2 border-green-500 dark:bg-green-950/40"></span>
