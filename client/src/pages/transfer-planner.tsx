@@ -1311,25 +1311,33 @@ export default function TransferPlanner() {
     const captainPick = manualLineup.find(p => p.is_captain);
     const viceCaptainPick = manualLineup.find(p => p.is_vice_captain);
     
+    console.log("DEBUG finalizeNewDraft - manualLineup:", manualLineup);
+    console.log("DEBUG finalizeNewDraft - captainPick:", captainPick);
+    console.log("DEBUG finalizeNewDraft - viceCaptainPick:", viceCaptainPick);
+    
     try {
+      const draftData = {
+        managerId: parseInt(searchedId),
+        draftLetter: draftLetter,
+        gameweekTransfers: structuredClone(gameweekTransfers),
+        plannedChips: structuredClone(plannedChips),
+        mode: plannerMode,
+        teamBank: calculateBankAfterTransfers(),
+        teamValue: 0,
+        totalProjectedPoints: 0,
+        totalTransfersUsed: Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0),
+        captainPlayerId: captainPick?.element || null,
+        captainPlayerName: captainPick ? getPlayerById(captainPick.element)?.web_name : null,
+        viceCaptainPlayerId: viceCaptainPick?.element || null,
+        viceCaptainPlayerName: viceCaptainPick ? getPlayerById(viceCaptainPick.element)?.web_name : null
+      };
+      
+      console.log("DEBUG finalizeNewDraft - Saving draft with data:", draftData);
+      
       await fetch("/api/transfer-planner/drafts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          managerId: parseInt(searchedId),
-          draftLetter: draftLetter,
-          gameweekTransfers: structuredClone(gameweekTransfers),
-          plannedChips: structuredClone(plannedChips),
-          mode: plannerMode,
-          teamBank: calculateBankAfterTransfers(),
-          teamValue: 0,
-          totalProjectedPoints: 0,
-          totalTransfersUsed: Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0),
-          captainPlayerId: captainPick?.element || null,
-          captainPlayerName: captainPick ? getPlayerById(captainPick.element)?.web_name : null,
-          viceCaptainPlayerId: viceCaptainPick?.element || null,
-          viceCaptainPlayerName: viceCaptainPick ? getPlayerById(viceCaptainPick.element)?.web_name : null
-        })
+        body: JSON.stringify(draftData)
       });
       
       // Reload drafts
