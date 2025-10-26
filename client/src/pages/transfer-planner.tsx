@@ -2666,6 +2666,23 @@ export default function TransferPlanner() {
       return;
     }
 
+    // Check team count limit (max 3 players from same team)
+    const playersFromSameTeam = manualLineup.filter(pick => {
+      if (pick.is_transferred_out) return false;
+      const pickPlayer = getPlayerById(pick.element);
+      return pickPlayer && pickPlayer.team === player.team;
+    });
+
+    if (playersFromSameTeam.length >= 3) {
+      const teamName = bootstrapData?.teams.find(t => t.id === player.team)?.name || 'this team';
+      toast({
+        title: "Team Limit Reached",
+        description: `You already have 3 players from ${teamName}. Maximum allowed is 3 players per team.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Find the matching transferred out player
     const transferOutIndex = transferredOutPlayers.findIndex(
       t => t.elementType === playerElementType
