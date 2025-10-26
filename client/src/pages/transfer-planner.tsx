@@ -1379,7 +1379,33 @@ export default function TransferPlanner() {
       }
     }
     
-    // All other chips can be used in any gameweek if they're available
+    // For bench boost, apply the same gameweek constraints
+    if (chipType === 'bboost') {
+      // Count how many bench boosts have been used
+      const benchBoostsUsed = historyData?.chips?.filter(chip => chip.name === 'bboost').length || 0;
+      
+      // If no bench boosts used, the first bench boost can be used up to GW19
+      if (benchBoostsUsed === 0) {
+        return gameweek <= 19;
+      }
+      
+      // If one bench boost used, check which one based on when it was used
+      if (benchBoostsUsed === 1) {
+        const firstBenchBoostGW = historyData?.chips?.find(chip => chip.name === 'bboost')?.event || 0;
+        
+        // If first bench boost was used in GW19 or earlier, the second bench boost can only be used from GW20 onwards
+        if (firstBenchBoostGW <= 19) {
+          return gameweek >= 20;
+        }
+        
+        // If first bench boost was used in GW20 or later, the second bench boost (first one) can be used up to GW19
+        if (firstBenchBoostGW >= 20) {
+          return gameweek <= 19;
+        }
+      }
+    }
+    
+    // Free Hit can be used in any gameweek if available
     return true;
   };
 
