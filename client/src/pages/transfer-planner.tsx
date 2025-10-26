@@ -6439,7 +6439,7 @@ export default function TransferPlanner() {
 
       {/* Captain Confirmation Dialog */}
       <AlertDialog open={!!captainConfirmation} onOpenChange={() => setCaptainConfirmation(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[100]">
           <AlertDialogHeader>
             <AlertDialogTitle>Set {captainConfirmation?.playerName} as Captain?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
@@ -6458,7 +6458,7 @@ export default function TransferPlanner() {
 
       {/* Vice Captain Confirmation Dialog */}
       <AlertDialog open={!!viceCaptainConfirmation} onOpenChange={() => setViceCaptainConfirmation(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="z-[100]">
           <AlertDialogHeader>
             <AlertDialogTitle>Set {viceCaptainConfirmation?.playerName} as Vice Captain?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
