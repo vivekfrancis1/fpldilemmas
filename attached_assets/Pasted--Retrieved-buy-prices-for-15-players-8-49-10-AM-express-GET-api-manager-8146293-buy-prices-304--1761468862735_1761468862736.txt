@@ -1,0 +1,82 @@
+
+✅ Retrieved buy prices for 15 players
+8:49:10 AM [express] GET /api/manager/8146293/buy-prices 304 in 195ms :: {"buyPrices":{}}
+DEBUG: Serving cached Player Total Points for GW10-15 (438 players)
+8:49:10 AM [express] GET /api/player-total-points 200 in 219ms :: [{"playerId":430,"playerName":"Erl…
+DEBUG: Entry last_deadline_bank: 22
+DEBUG: Entry last_deadline_value: 1005
+DEBUG: Entry last_deadline_total_transfers: 4
+DEBUG: Final transfers object: {"cost":0,"status":"complete","limit":1,"made":0,"bank":22,"value":1005}
+8:49:10 AM [express] GET /api/manager/8146293/team 304 in 239ms :: {"active_chip":null,"automatic_su…
+✅ Retrieved 0 buy price override(s)
+8:49:10 AM [express] GET /api/manager/8146293/buy-price-overrides 304 in 328ms :: {"overrides":{}}
+📋 Fetching all drafts for manager 8146293
+8:49:10 AM [express] GET /api/transfer-planner/drafts/8146293 304 in 75ms :: {"success":true,"drafts…
+📊 Current GW: 9, serving next 6 gameweeks: GW10-15
+🔍 CACHE DEBUG: Player "Erling Haaland" - Goals keys: 6, Assists keys: 6, CS keys: 6, Valid: true
+⚡ CACHE HIT: Serving cached Player Total Points for GW10-15 (438 players)
+8:49:11 AM [express] GET /api/cached/player-total-points 200 in 63ms :: [{"playerId":430,"playerName…
+💾 Saving draft A for manager 8146293 with captain 661 and vice 236
+💾 Creating draft A for manager 8146293
+✅ Draft A saved successfully
+8:49:29 AM [express] POST /api/transfer-planner/drafts 200 in 381ms :: {"success":true,"draft":{"id"…
+📋 Fetching all drafts for manager 8146293
+8:49:29 AM [express] GET /api/transfer-planner/drafts/8146293 200 in 75ms :: {"success":true,"drafts…
+📄 Fetching draft A for manager 8146293
+8:49:30 AM [express] GET /api/transfer-planner/drafts/8146293/A 200 in 74ms :: {"success":true,"draf…
+8:51:45 AM [vite] hmr update /src/pages/transfer-planner.tsx, /src/index.css?v=ZX067Q6BO6c53s2jhRgZg (x3)
+📋 Fetching all drafts for manager 8146293
+8:52:15 AM [express] GET /api/transfer-planner/drafts/8146293 304 in 327ms :: {"success":true,"draft…
+🗑️ Deleting all drafts for manager 8146293
+🗑️ Deleting all drafts for manager 8146293
+✅ Deleted 1 drafts successfully
+8:53:51 AM [express] DELETE /api/transfer-planner/drafts/8146293 200 in 2701ms :: {"success":true,"d…
+💾 Saving draft A for manager 8146293 with captain 661 and vice 236
+💾 Creating draft A for manager 8146293
+✅ Draft A saved successfully
+8:53:59 AM [express] POST /api/transfer-planner/drafts 200 in 174ms :: {"success":true,"draft":{"id"…
+📋 Fetching all drafts for manager 8146293
+8:53:59 AM [express] GET /api/transfer-planner/drafts/8146293 200 in 82ms :: {"success":true,"drafts…
+📄 Fetching draft A for manager 8146293
+8:53:59 AM [express] GET /api/transfer-planner/drafts/8146293/A 200 in 75ms :: {"success":true,"draf…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -2414,20 +2414,16 @@ export default function TransferPlanner() {
         let squad = getSquadAtGameweek(draftTransfers, gw.id);
         
         // Apply captain info from draft
-        console.log(`Draft ${draft.draftLetter} - captain from DB:`, draft.captainPlayerId, draft.viceCaptainPlayerId);
         if (draft.captainPlayerId || draft.viceCaptainPlayerId) {
           squad = squad.map(pick => ({
             ...pick,
             is_captain: pick.element === draft.captainPlayerId,
             is_vice_captain: pick.element === draft.viceCaptainPlayerId
           }));
-          const captain = squad.find(p => p.is_captain);
-          console.log(`Draft ${draft.draftLetter} GW${gw.id} - Captain in squad after mapping:`, captain?.element, captain);
         }
         
         const chipForGW = draftChips[gw.id] || draftChips[gw.id.toString()] || null;
         const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
-        console.log(`Draft ${draft.draftLetter} GW${gw.id} - Points calculated:`, points);
         draftManualRow.gameweeks[gw.id] = points;
         draftManualRow.total += points;
       });
