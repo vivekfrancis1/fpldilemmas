@@ -1508,6 +1508,7 @@ export default function TransferPlanner() {
               element: transfer.inPlayerId,
               selling_price: inPlayer.now_cost,
               purchase_price: inPlayer.now_cost,
+              is_transferred_out: false, // Clear transferred out flag for the new player
             };
           }
         }
