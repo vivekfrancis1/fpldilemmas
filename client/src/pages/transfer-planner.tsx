@@ -1313,6 +1313,14 @@ export default function TransferPlanner() {
       return false;
     }
     
+    // Check if this chip type has already been planned for another gameweek
+    const chipAlreadyPlannedElsewhere = Object.entries(plannedChips).some(
+      ([gw, chip]) => chip === chipType && parseInt(gw) !== gameweek
+    );
+    if (chipAlreadyPlannedElsewhere) {
+      return false;
+    }
+    
     // For wildcards, apply gameweek constraints
     if (chipType === 'wildcard') {
       // Count how many wildcards have been used
