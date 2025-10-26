@@ -1024,7 +1024,7 @@ export default function TransferPlanner() {
   const getBaselineLineup = (targetGameweek: number): TeamPick[] => {
     if (!teamData?.picks) return [];
     
-    // Start with original team with buy price overrides applied
+    // Start with original team with buy price overrides applied and clear transferred out status
     let baseline = teamData.picks.map(pick => {
       const player = getPlayerById(pick.element);
       const currentPrice = player?.now_cost || pick.selling_price;
@@ -1033,7 +1033,8 @@ export default function TransferPlanner() {
       
       return {
         ...pick,
-        purchase_price: overridePrice || apiPrice || pick.purchase_price || currentPrice
+        purchase_price: overridePrice || apiPrice || pick.purchase_price || currentPrice,
+        is_transferred_out: false // Clear any transferred out flags
       };
     });
     
