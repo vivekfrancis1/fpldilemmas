@@ -197,22 +197,23 @@ export default function CreatorTeam() {
     queryKey: ['/api/fixtures'],
   });
 
-  // Function to get completed gameweeks (1-3 only)
+  // Function to get completed gameweeks
   const getCompletedGameweeks = () => {
-    if (!bootstrapData?.events) return [1, 2, 3]; // Default fallback to show 1-3
+    if (!bootstrapData?.events) return [];
     
-    // For now, since we're early in the season, show gameweeks 1-3 regardless of finished status
-    // We can make this more dynamic later when more gameweeks are completed
-    return [1, 2, 3];
+    // Return all gameweeks that are finished
+    return bootstrapData.events
+      .filter((event: any) => event.finished)
+      .map((event: any) => event.id);
   };
 
-  // Filter manager history to only show completed gameweeks 1-3
+  // Filter manager history to only show completed gameweeks
   const filteredManagerHistory = managerHistory?.current?.filter((gw: HistoryEntry) => {
     const completedGameweeks = getCompletedGameweeks();
     return completedGameweeks.includes(gw.event);
   });
 
-  // Filter creator history to only show completed gameweeks 1-3
+  // Filter creator history to only show completed gameweeks
   const filteredCreatorHistory = creatorHistory?.filter((gw: any) => {
     const completedGameweeks = getCompletedGameweeks();
     return completedGameweeks.includes(gw.gameweek);
