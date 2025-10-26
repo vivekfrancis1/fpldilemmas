@@ -2489,6 +2489,7 @@ export default function TransferPlanner() {
       });
     });
     setCaptainConfirmation(null);
+    setSelectedPlayer(null);
     
     // Auto-save draft if not on Base
     if (activeDraft !== "Base") {
@@ -2532,6 +2533,7 @@ export default function TransferPlanner() {
       });
     });
     setViceCaptainConfirmation(null);
+    setSelectedPlayer(null);
     
     // Auto-save draft if not on Base
     if (activeDraft !== "Base") {
