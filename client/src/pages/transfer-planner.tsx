@@ -5525,7 +5525,7 @@ export default function TransferPlanner() {
                           );
                         })}
                         {/* Bench separator */}
-                        <div className="border-t-2 border-indigo-500 my-2"></div>
+                        <div className="border-t-2 border-indigo-500 my-4"></div>
                         {/* Bench */}
                         {baseLineup.slice(11, 15).map((pick, idx) => {
                           const player = getPlayerById(pick.element);
@@ -5655,7 +5655,7 @@ export default function TransferPlanner() {
                           );
                         })}
                         {/* Bench separator */}
-                        <div className="border-t-2 border-gray-500 my-2"></div>
+                        <div className="border-t-2 border-gray-500 my-4"></div>
                         {/* Bench */}
                         {finalLineup.slice(11, 15).map((pick, idx) => {
                           const player = getPlayerById(pick.element);
