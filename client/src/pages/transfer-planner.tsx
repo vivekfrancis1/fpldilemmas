@@ -2621,36 +2621,73 @@ export default function TransferPlanner() {
     
     const wasInBase = activeDraft === "Base";
     
-    // Apply the captain change
-    setManualLineup(prev => {
-      // Find current captain and vice-captain
-      const currentCaptain = prev.find(p => p.is_captain);
-      const currentViceCaptain = prev.find(p => p.is_vice_captain);
-      const newCaptainIsCurrentViceCaptain = currentViceCaptain?.element === playerId;
-      
-      return prev.map(pick => {
-        if (pick.element === playerId) {
-          // Set as new captain
-          return { ...pick, is_captain: true, is_vice_captain: false };
-        } else if (newCaptainIsCurrentViceCaptain && pick.element === currentCaptain?.element) {
-          // If new captain was vice-captain, swap old captain to vice-captain
-          return { ...pick, is_captain: false, is_vice_captain: true };
-        } else if (pick.is_captain) {
-          // Remove captain flag from old captain (if not being swapped to vice)
-          return { ...pick, is_captain: false };
-        } else {
-          return pick;
-        }
-      });
-    });
-    setCaptainConfirmation(null);
-    setSelectedPlayer(null);
-    
-    // If we were in Base, finalize the new draft
+    // If in Base, create and switch to the draft FIRST, then apply the change
     if (wasInBase) {
-      finalizeNewDraft(targetDraft);
+      try {
+        // Create the new draft with the Base team
+        await finalizeNewDraft(targetDraft);
+        
+        // Wait for draft to be created and switched
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Now apply the captain change to the active draft
+        setManualLineup(prev => {
+          const currentCaptain = prev.find(p => p.is_captain);
+          const currentViceCaptain = prev.find(p => p.is_vice_captain);
+          const newCaptainIsCurrentViceCaptain = currentViceCaptain?.element === playerId;
+          
+          return prev.map(pick => {
+            if (pick.element === playerId) {
+              return { ...pick, is_captain: true, is_vice_captain: false };
+            } else if (newCaptainIsCurrentViceCaptain && pick.element === currentCaptain?.element) {
+              return { ...pick, is_captain: false, is_vice_captain: true };
+            } else if (pick.is_captain) {
+              return { ...pick, is_captain: false };
+            } else {
+              return pick;
+            }
+          });
+        });
+        
+        setCaptainConfirmation(null);
+        setSelectedPlayer(null);
+        
+        // Save the updated draft
+        setHasUnsavedChanges(true);
+        setTimeout(() => saveCurrentDraft(), 100);
+      } catch (error) {
+        console.error("Error creating draft before captain change:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create draft. Please try again.",
+          variant: "destructive"
+        });
+        setCaptainConfirmation(null);
+        setSelectedPlayer(null);
+      }
     } else {
-      // Already in a draft, just save
+      // Already in a draft, apply the change directly
+      setManualLineup(prev => {
+        const currentCaptain = prev.find(p => p.is_captain);
+        const currentViceCaptain = prev.find(p => p.is_vice_captain);
+        const newCaptainIsCurrentViceCaptain = currentViceCaptain?.element === playerId;
+        
+        return prev.map(pick => {
+          if (pick.element === playerId) {
+            return { ...pick, is_captain: true, is_vice_captain: false };
+          } else if (newCaptainIsCurrentViceCaptain && pick.element === currentCaptain?.element) {
+            return { ...pick, is_captain: false, is_vice_captain: true };
+          } else if (pick.is_captain) {
+            return { ...pick, is_captain: false };
+          } else {
+            return pick;
+          }
+        });
+      });
+      setCaptainConfirmation(null);
+      setSelectedPlayer(null);
+      
+      // Save the changes
       setHasUnsavedChanges(true);
       setTimeout(() => saveCurrentDraft(), 100);
     }
@@ -2679,36 +2716,73 @@ export default function TransferPlanner() {
     
     const wasInBase = activeDraft === "Base";
     
-    // Apply the vice captain change
-    setManualLineup(prev => {
-      // Find current captain and vice-captain
-      const currentCaptain = prev.find(p => p.is_captain);
-      const currentViceCaptain = prev.find(p => p.is_vice_captain);
-      const newViceCaptainIsCurrentCaptain = currentCaptain?.element === playerId;
-      
-      return prev.map(pick => {
-        if (pick.element === playerId) {
-          // Set as new vice-captain
-          return { ...pick, is_vice_captain: true, is_captain: false };
-        } else if (newViceCaptainIsCurrentCaptain && pick.element === currentViceCaptain?.element) {
-          // If new vice-captain was captain, swap old vice-captain to captain
-          return { ...pick, is_vice_captain: false, is_captain: true };
-        } else if (pick.is_vice_captain) {
-          // Remove vice-captain flag from old vice-captain (if not being swapped to captain)
-          return { ...pick, is_vice_captain: false };
-        } else {
-          return pick;
-        }
-      });
-    });
-    setViceCaptainConfirmation(null);
-    setSelectedPlayer(null);
-    
-    // If we were in Base, finalize the new draft
+    // If in Base, create and switch to the draft FIRST, then apply the change
     if (wasInBase) {
-      finalizeNewDraft(targetDraft);
+      try {
+        // Create the new draft with the Base team
+        await finalizeNewDraft(targetDraft);
+        
+        // Wait for draft to be created and switched
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Now apply the vice captain change to the active draft
+        setManualLineup(prev => {
+          const currentCaptain = prev.find(p => p.is_captain);
+          const currentViceCaptain = prev.find(p => p.is_vice_captain);
+          const newViceCaptainIsCurrentCaptain = currentCaptain?.element === playerId;
+          
+          return prev.map(pick => {
+            if (pick.element === playerId) {
+              return { ...pick, is_vice_captain: true, is_captain: false };
+            } else if (newViceCaptainIsCurrentCaptain && pick.element === currentViceCaptain?.element) {
+              return { ...pick, is_vice_captain: false, is_captain: true };
+            } else if (pick.is_vice_captain) {
+              return { ...pick, is_vice_captain: false };
+            } else {
+              return pick;
+            }
+          });
+        });
+        
+        setViceCaptainConfirmation(null);
+        setSelectedPlayer(null);
+        
+        // Save the updated draft
+        setHasUnsavedChanges(true);
+        setTimeout(() => saveCurrentDraft(), 100);
+      } catch (error) {
+        console.error("Error creating draft before vice captain change:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create draft. Please try again.",
+          variant: "destructive"
+        });
+        setViceCaptainConfirmation(null);
+        setSelectedPlayer(null);
+      }
     } else {
-      // Already in a draft, just save
+      // Already in a draft, apply the change directly
+      setManualLineup(prev => {
+        const currentCaptain = prev.find(p => p.is_captain);
+        const currentViceCaptain = prev.find(p => p.is_vice_captain);
+        const newViceCaptainIsCurrentCaptain = currentCaptain?.element === playerId;
+        
+        return prev.map(pick => {
+          if (pick.element === playerId) {
+            return { ...pick, is_vice_captain: true, is_captain: false };
+          } else if (newViceCaptainIsCurrentCaptain && pick.element === currentViceCaptain?.element) {
+            return { ...pick, is_vice_captain: false, is_captain: true };
+          } else if (pick.is_vice_captain) {
+            return { ...pick, is_vice_captain: false };
+          } else {
+            return pick;
+          }
+        });
+      });
+      setViceCaptainConfirmation(null);
+      setSelectedPlayer(null);
+      
+      // Save the changes
       setHasUnsavedChanges(true);
       setTimeout(() => saveCurrentDraft(), 100);
     }
