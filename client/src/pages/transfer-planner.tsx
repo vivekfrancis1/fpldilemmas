@@ -1267,8 +1267,45 @@ export default function TransferPlanner() {
     return remaining;
   };
 
+  // Helper to create new draft when making changes from Base
+  const ensureDraftForChanges = (): boolean => {
+    if (activeDraft !== "Base") {
+      // Already in a draft, just mark as changed
+      setHasUnsavedChanges(true);
+      return true;
+    }
+    
+    // We're in Base - need to create a new draft
+    const usedLetters = savedDrafts.map(d => d.draftLetter);
+    const allLetters = 'ABCDE'.split('');
+    const nextLetter = allLetters.find(l => !usedLetters.includes(l));
+    
+    if (!nextLetter) {
+      toast({
+        title: "Draft Limit Reached",
+        description: "You have 5 drafts already. Please delete a draft first, or make changes in an existing draft instead of Base.",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    // Switch to the new draft
+    setActiveDraft(nextLetter);
+    setHasUnsavedChanges(true);
+    
+    toast({
+      title: `Draft ${nextLetter} Created`,
+      description: `Your changes will be saved to Draft ${nextLetter}. Remember to save!`,
+    });
+    
+    return true;
+  };
+
   // Handle chip selection for a gameweek
   const handleChipSelection = (gameweek: number, chipType: ChipType | null) => {
+    // Ensure we have a draft for changes
+    if (!ensureDraftForChanges()) return;
+    
     setPlannedChips(prev => {
       const updated = { ...prev };
       if (chipType === null) {
@@ -2312,6 +2349,9 @@ export default function TransferPlanner() {
 
   // Swap a starting 11 player with a bench player
   const swapPlayers = (startingIndex: number, benchIndex: number) => {
+    // Ensure we have a draft for changes
+    if (!ensureDraftForChanges()) return;
+    
     const startingPick = manualLineup[startingIndex];
     const benchPick = manualLineup[11 + benchIndex];
     
@@ -2422,6 +2462,9 @@ export default function TransferPlanner() {
 
   // Move bench player up or down (excluding GK)
   const moveBenchPlayer = (benchIndex: number, direction: 'up' | 'down') => {
+    // Ensure we have a draft for changes
+    if (!ensureDraftForChanges()) return;
+    
     if (benchIndex === 0) return; // Can't move GK
     
     const actualIndex = 11 + benchIndex;
@@ -2467,6 +2510,13 @@ export default function TransferPlanner() {
   
   // Confirm captain selection
   const confirmSetCaptain = async (playerId: number) => {
+    // Ensure we have a draft for changes
+    if (!ensureDraftForChanges()) {
+      setCaptainConfirmation(null);
+      setSelectedPlayer(null);
+      return;
+    }
+    
     setManualLineup(prev => {
       // Find current captain and vice-captain
       const currentCaptain = prev.find(p => p.is_captain);
@@ -2511,6 +2561,13 @@ export default function TransferPlanner() {
   
   // Confirm vice captain selection
   const confirmSetViceCaptain = async (playerId: number) => {
+    // Ensure we have a draft for changes
+    if (!ensureDraftForChanges()) {
+      setViceCaptainConfirmation(null);
+      setSelectedPlayer(null);
+      return;
+    }
+    
     setManualLineup(prev => {
       // Find current captain and vice-captain
       const currentCaptain = prev.find(p => p.is_captain);
