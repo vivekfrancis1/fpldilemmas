@@ -4091,13 +4091,15 @@ export default function TransferPlanner() {
                 <div className="text-2xl font-bold text-green-600">
                   {(() => {
                     const isBenchBoostActive = plannedChips[selectedGameweek] === 'bboost';
+                    const isTripleCaptainActive = plannedChips[selectedGameweek] === '3xc';
+                    const captainMultiplier = isTripleCaptainActive ? 3 : 2;
                     let total = 0;
                     if (plannerMode === "manual") {
                       const activePlayers = isBenchBoostActive ? manualLineup : manualLineup.slice(0, 11);
                       activePlayers.forEach((pick: TeamPick) => {
                         const points = getPlayerProjectedPoints(pick.element);
                         if (points !== null) {
-                          const multiplier = pick.is_captain ? 2 : 1;
+                          const multiplier = pick.is_captain ? captainMultiplier : 1;
                           total += points * multiplier;
                         }
                       });
@@ -4107,7 +4109,7 @@ export default function TransferPlanner() {
                         [...optimizedLineup.starting11, ...optimizedLineup.bench].forEach((pick: any) => {
                           const points = getPlayerProjectedPoints(pick.element);
                           if (points !== null) {
-                            const multiplier = pick.isCaptain ? 2 : 1;
+                            const multiplier = pick.isCaptain ? captainMultiplier : 1;
                             total += points * multiplier;
                           }
                         });
@@ -4115,7 +4117,7 @@ export default function TransferPlanner() {
                         optimizedLineup.starting11.forEach((pick: any) => {
                           const points = getPlayerProjectedPoints(pick.element);
                           if (points !== null) {
-                            const multiplier = pick.isCaptain ? 2 : 1;
+                            const multiplier = pick.isCaptain ? captainMultiplier : 1;
                             total += points * multiplier;
                           }
                         });
