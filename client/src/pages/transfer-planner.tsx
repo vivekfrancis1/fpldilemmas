@@ -1976,6 +1976,7 @@ export default function TransferPlanner() {
     if (!projections6GW || !Array.isArray(projections6GW)) return 0;
     
     const isBenchBoostActive = chipForGameweek === 'bboost';
+    const isTripleCaptainActive = chipForGameweek === '3xc';
     
     // With Bench Boost, all 15 players score. Otherwise just starting 11
     const activePlayers = isBenchBoostActive 
@@ -1987,8 +1988,8 @@ export default function TransferPlanner() {
       const projection = projections6GW.find((p: any) => p.playerId === pick.element);
       const gwPoints = projection?.gameweekProjections?.[gameweek.toString()] || 0;
       
-      // Only captain gets multiplier (no multiplier for bench players even with Bench Boost)
-      const multiplier = pick.is_captain ? 2 : 1;
+      // Captain gets 2x normally, 3x with Triple Captain (no multiplier for bench players even with Bench Boost)
+      const multiplier = pick.is_captain ? (isTripleCaptainActive ? 3 : 2) : 1;
       totalPoints += gwPoints * multiplier;
     });
     
@@ -2000,6 +2001,7 @@ export default function TransferPlanner() {
     if (!projections6GW || !Array.isArray(projections6GW)) return 0;
     
     const isBenchBoostActive = chipForGameweek === 'bboost';
+    const isTripleCaptainActive = chipForGameweek === '3xc';
     
     // Get all 15 players with their projections for this gameweek
     const playersWithPoints = squad.map(pick => {
@@ -2017,9 +2019,10 @@ export default function TransferPlanner() {
     if (isBenchBoostActive) {
       // With Bench Boost, all 15 players score
       const allPlayersPoints = playersWithPoints.reduce((sum, p) => sum + p.projectedPoints, 0);
-      // Add captain bonus (best player gets 2x)
+      // Add captain bonus (best player gets 2x normally, 3x with Triple Captain)
       const captain = playersWithPoints.reduce((best, p) => p.projectedPoints > best.projectedPoints ? p : best, playersWithPoints[0]);
-      return allPlayersPoints + (captain?.projectedPoints || 0);
+      const captainBonus = isTripleCaptainActive ? (captain?.projectedPoints || 0) * 2 : (captain?.projectedPoints || 0);
+      return allPlayersPoints + captainBonus;
     }
     
     // Normal auto mode: optimize formation
@@ -2054,7 +2057,9 @@ export default function TransferPlanner() {
           (p?.projectedPoints || 0) > (max?.projectedPoints || 0) ? p : max
         , selected[1]);
         
-        const totalWithCaptain = formationPoints + (captain?.projectedPoints || 0);
+        // Captain bonus: 1x normally (for 2x total), 2x with Triple Captain (for 3x total)
+        const captainBonus = isTripleCaptainActive ? (captain?.projectedPoints || 0) * 2 : (captain?.projectedPoints || 0);
+        const totalWithCaptain = formationPoints + captainBonus;
         
         if (totalWithCaptain > bestPoints) {
           bestPoints = totalWithCaptain;
