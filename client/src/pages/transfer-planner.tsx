@@ -1486,6 +1486,27 @@ export default function TransferPlanner() {
     return `${baseName} ${usedIndex + 1}`;
   };
 
+  // Get chips for a specific draft
+  const getDraftChips = (draftLetter: string): PlannedChips => {
+    if (draftLetter === "Base") {
+      return {};
+    }
+    
+    const draft = savedDrafts.find(d => d.draftLetter === draftLetter);
+    return draft?.plannedChips || {};
+  };
+
+  // Get chip icon color based on chip type
+  const getChipIconColor = (chipType: ChipType): string => {
+    const colors: Record<ChipType, string> = {
+      'wildcard': 'text-purple-600',
+      '3xc': 'text-amber-600',
+      'bboost': 'text-blue-600',
+      'freehit': 'text-green-600'
+    };
+    return colors[chipType] || 'text-gray-600';
+  };
+
   // Get chip description
   const getChipDescription = (chipType: ChipType): string => {
     const descriptions: Record<ChipType, string> = {
@@ -3878,26 +3899,55 @@ export default function TransferPlanner() {
               </Button>
 
               {/* Saved Drafts */}
-              {savedDrafts.map((draft: any) => (
-                <TooltipProvider key={draft.draftLetter}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        onClick={() => switchToDraft(draft.draftLetter)}
-                        size="sm"
-                        variant={activeDraft === draft.draftLetter ? "default" : "outline"}
-                        data-testid={`button-switch-draft-${draft.draftLetter}`}
-                      >
-                        {draft.draftLetter}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-md whitespace-pre-line text-left">
-                      <div className="font-semibold mb-1">Draft {draft.draftLetter} Transfers</div>
-                      <div className="text-sm">{getDraftTooltipContent(draft)}</div>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              ))}
+              {savedDrafts.map((draft: any) => {
+                const draftChips = getDraftChips(draft.draftLetter);
+                const chipCount = Object.keys(draftChips).filter(gw => draftChips[parseInt(gw)] !== null).length;
+                
+                return (
+                  <TooltipProvider key={draft.draftLetter}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={() => switchToDraft(draft.draftLetter)}
+                          size="sm"
+                          variant={activeDraft === draft.draftLetter ? "default" : "outline"}
+                          className="relative"
+                          data-testid={`button-switch-draft-${draft.draftLetter}`}
+                        >
+                          {draft.draftLetter}
+                          {chipCount > 0 && (
+                            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-amber-500 text-white text-[9px] flex items-center justify-center font-bold">
+                              {chipCount}
+                            </span>
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-md whitespace-pre-line text-left">
+                        <div className="font-semibold mb-1">Draft {draft.draftLetter}</div>
+                        <div className="text-sm mb-2">{getDraftTooltipContent(draft)}</div>
+                        {chipCount > 0 && (
+                          <div className="border-t pt-2 mt-2">
+                            <div className="font-semibold text-xs mb-1">Planned Chips:</div>
+                            <div className="space-y-1">
+                              {Object.entries(draftChips)
+                                .filter(([_, chipType]) => chipType !== null)
+                                .sort(([gwA], [gwB]) => parseInt(gwA) - parseInt(gwB))
+                                .map(([gameweek, chipType]) => (
+                                  <div key={gameweek} className="text-xs flex items-center gap-1">
+                                    <span className={`font-semibold ${getChipIconColor(chipType as ChipType)}`}>
+                                      GW{gameweek}:
+                                    </span>
+                                    <span>{getChipDisplayNameWithNumber(chipType as ChipType)}</span>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              })}
 
               {/* New Draft Button */}
               {savedDrafts.length < 5 && (
@@ -4769,9 +4819,38 @@ export default function TransferPlanner() {
       {searchedId && teamData && selectedGameweek && plannerMode === "manual" && (
         <Card ref={teamLineupRef} className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-600" />
-              {activeDraft === "Base" ? "Base Draft Manual Team Selection" : `Draft ${activeDraft} Manual Team Selection`}
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600" />
+                {activeDraft === "Base" ? "Base Draft Manual Team Selection" : `Draft ${activeDraft} Manual Team Selection`}
+              </div>
+              {(() => {
+                const currentChip = plannedChips[selectedGameweek];
+                if (currentChip) {
+                  return (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help">
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs px-2 py-1 ${getChipIconColor(currentChip)} bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-700`}
+                            >
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              {getChipDisplayNameWithNumber(currentChip)} - GW{selectedGameweek}
+                            </Badge>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs font-semibold">{getChipDisplayName(currentChip)}</p>
+                          <p className="text-xs text-muted-foreground">{getChipDescription(currentChip)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                }
+                return null;
+              })()}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -6100,9 +6179,38 @@ export default function TransferPlanner() {
       {searchedId && teamData && selectedGameweek && plannerMode === "auto" && (
         <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-purple-600" />
-              {activeDraft === "Base" ? "Base Draft Auto Team Selection" : `Draft ${activeDraft} Auto Team Selection`}
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                {activeDraft === "Base" ? "Base Draft Auto Team Selection" : `Draft ${activeDraft} Auto Team Selection`}
+              </div>
+              {(() => {
+                const currentChip = plannedChips[selectedGameweek];
+                if (currentChip) {
+                  return (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help">
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs px-2 py-1 ${getChipIconColor(currentChip)} bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-700`}
+                            >
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              {getChipDisplayNameWithNumber(currentChip)} - GW{selectedGameweek}
+                            </Badge>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs font-semibold">{getChipDisplayName(currentChip)}</p>
+                          <p className="text-xs text-muted-foreground">{getChipDescription(currentChip)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                }
+                return null;
+              })()}
             </CardTitle>
           </CardHeader>
           <CardContent>
