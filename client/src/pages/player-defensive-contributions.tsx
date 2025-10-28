@@ -300,9 +300,6 @@ export default function PlayerDefensiveContributions() {
 
 
   const handleGameweekSort = (gameweek: number) => {
-    // Clear general sorting when sorting by gameweek
-    setSortBy("");
-    
     if (gameweekSortColumn === gameweek) {
       setGameweekSortOrder(gameweekSortOrder === "desc" ? "asc" : "desc");
     } else {
