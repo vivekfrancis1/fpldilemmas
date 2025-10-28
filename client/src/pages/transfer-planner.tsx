@@ -2155,7 +2155,7 @@ export default function TransferPlanner() {
     // Where Transfers remaining = Initial - Used
     // EXCEPTIONS:
     // - Free Hit gameweeks don't affect rollover (transfers don't carry over)
-    // - Wildcard gameweeks reset the transfer bank (next GW gets 1 FT fresh)
+    // - Wildcard gameweeks: you don't get +1 FT for that GW, but existing FTs carry through
     // - Maximum of 5 free transfers can be banked
     let currentInitial = teamData.transfers.limit || 1;
     
@@ -2164,10 +2164,14 @@ export default function TransferPlanner() {
       const isFreeHitGW = plannedChips[gw] === 'freehit';
       const isWildcardGW = plannedChips[gw] === 'wildcard';
       
-      if (isWildcardGW) {
-        // Wildcard resets transfer bank - next GW gets 1 FT regardless of previous banking
-        currentInitial = 1;
-      } else if (!isFreeHitGW) {
+      if (isFreeHitGW) {
+        // Free Hit: keep currentInitial unchanged (no rollover effect)
+        continue;
+      } else if (isWildcardGW) {
+        // Wildcard GW: transfers carry through unchanged (you don't get +1 FT for the Wildcard GW itself)
+        // currentInitial stays the same for next GW, then gets +1 normally
+        // So do nothing here, just maintain currentInitial
+      } else {
         // Normal transfer rollover calculation
         const used = calculateTransfersUsedForGameweek(gw);
         // Calculate remaining for this gameweek
@@ -2176,7 +2180,6 @@ export default function TransferPlanner() {
         // Cap at 5 FT maximum as per FPL rules
         currentInitial = Math.max(1, Math.min(5, 1 + remaining));
       }
-      // If it's a Free Hit gameweek, keep currentInitial unchanged (no rollover effect)
     }
     
     return currentInitial;
