@@ -4572,6 +4572,9 @@ export default function TransferPlanner() {
                       if (plannerMode === "auto") {
                         // Check if Bench Boost is planned for this gameweek
                         const isBenchBoostActive = plannedChips[gw] === 'bboost';
+                        // Check if Triple Captain is active for this gameweek
+                        const isTripleCaptainActive = plannedChips[gw] === '3xc';
+                        const captainMultiplier = isTripleCaptainActive ? 2 : 1; // Additional multiplier (captain always gets 2x base, TC adds another 1x)
                         
                         // For auto mode: simulate auto-optimization for THIS specific gameweek
                         // Get all 15 players with their projections for this gameweek
@@ -4590,10 +4593,9 @@ export default function TransferPlanner() {
                         if (isBenchBoostActive) {
                           // With Bench Boost, all 15 players score points
                           const allPlayersPoints = playersWithPoints.reduce((sum, p) => sum + p.projectedPoints, 0);
-                          // Add captain bonus (best player gets 2x)
+                          // Add captain bonus (best player gets 2x or 3x with TC)
                           const captain = playersWithPoints.reduce((best, p) => p.projectedPoints > best.projectedPoints ? p : best, playersWithPoints[0]);
-                          const gwTotal = allPlayersPoints + (captain?.projectedPoints || 0);
-                          console.log(`GW${gw} Bench Boost ACTIVE - All 15 players: ${allPlayersPoints.toFixed(2)}, Captain bonus: ${captain?.projectedPoints.toFixed(2)}, Total: ${gwTotal.toFixed(2)}`);
+                          const gwTotal = allPlayersPoints + (captain?.projectedPoints || 0) * captainMultiplier;
                           grandTotal += gwTotal;
                         } else {
                           // Group by position
@@ -4621,9 +4623,9 @@ export default function TransferPlanner() {
                               ].filter(Boolean);
                               
                               const formationPoints = starting11.reduce((sum, p) => sum + p.projectedPoints, 0);
-                              // Add captain bonus (best player gets 2x)
+                              // Add captain bonus (best player gets 2x or 3x with TC)
                               const captain = starting11.reduce((best, p) => p.projectedPoints > best.projectedPoints ? p : best, starting11[0]);
-                              const totalWithCaptain = formationPoints + (captain?.projectedPoints || 0);
+                              const totalWithCaptain = formationPoints + (captain?.projectedPoints || 0) * captainMultiplier;
                               
                               if (totalWithCaptain > bestPoints) {
                                 bestPoints = totalWithCaptain;
@@ -4639,11 +4641,19 @@ export default function TransferPlanner() {
                         const isBenchBoostActive = plannedChips[gw] === 'bboost';
                         const playersToInclude = isBenchBoostActive ? lineupForGW : lineupForGW.slice(0, 11);
                         
+                        // Check if Triple Captain is active for THIS gameweek
+                        const isTripleCaptainActive = plannedChips[gw] === '3xc';
+                        
                         playersToInclude.forEach(pick => {
                           const playerData = playerProjections6GW.find((p: any) => p.playerId === pick.element);
                           const gwPoints = playerData?.gameweekProjections?.[gw.toString()] || 0;
-                          // Apply captain multiplier if this is the selected GW
-                          const multiplier = (gw === selectedGameweek && pick.is_captain) ? 2 : 1;
+                          
+                          // Apply captain multiplier for each gameweek (not just selected GW)
+                          let multiplier = 1;
+                          if (pick.is_captain) {
+                            multiplier = isTripleCaptainActive ? 3 : 2;
+                          }
+                          
                           grandTotal += gwPoints * multiplier;
                         });
                       }
