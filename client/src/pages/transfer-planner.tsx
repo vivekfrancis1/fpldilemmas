@@ -3821,7 +3821,7 @@ export default function TransferPlanner() {
   };
 
   return (
-    <div className="container mx-auto p-2 md:p-4 lg:p-6 space-y-3 md:space-y-4 overflow-x-hidden">
+    <div className="container mx-auto p-2 md:p-4 lg:p-6 space-y-3 md:space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
         <div className="p-2 md:p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
