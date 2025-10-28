@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { computeNextRange } from "@shared/gameweek-utils";
+import { computeNextRange, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 
 interface Fixture {
   id: number;
@@ -127,35 +127,35 @@ export default function Fixtures() {
     return avgFDR;
   }, [fixturesData, bootstrapData]);
 
-  // Get current gameweek and available gameweeks (next 12 gameweeks)
-  const { currentGameweek, nextGameweek, availableGameweeks } = useMemo(() => {
-    if (!bootstrapData?.events) return { currentGameweek: 1, nextGameweek: 2, availableGameweeks: [] };
-    
-    const firstUnfinished = bootstrapData.events.find(event => !event.finished);
-    const current = firstUnfinished ? firstUnfinished.id : 1;
-    const next = current + 1;
-    
-    // Show next 12 gameweeks starting from next gameweek
-    const maxGameweek = Math.min(next + 11, 38); // next + 11 gives us 12 total gameweeks
-    const available = bootstrapData.events
-      .filter(event => event.id >= next && event.id <= maxGameweek)
-      .map(event => event.id)
-      .sort((a, b) => a - b);
-    
-    return { currentGameweek: current, nextGameweek: next, availableGameweeks: available };
-  }, [bootstrapData]);
+  // Calculate dynamic gameweek defaults using shared utilities
+  const defaultGameweekRange = useMemo(() => {
+    if (!bootstrapData?.events) {
+      return { startGameweek: "10", endGameweek: "15" }; // Fallback
+    }
+    return getDefaultGameweekRange(bootstrapData.events, 6);
+  }, [bootstrapData?.events]);
+
+  // Extract next gameweek for highlighting purposes
+  const nextGameweek = parseInt(defaultGameweekRange.startGameweek);
+
+  // Get available gameweeks for dropdown options (next 12 gameweeks)
+  const availableGameweeks = useMemo(() => {
+    if (!bootstrapData?.events) {
+      return Array.from({ length: 12 }, (_, i) => i + 10); // Fallback
+    }
+    return getNextGameweeksForDropdown(bootstrapData.events, 12);
+  }, [bootstrapData?.events]);
 
   // Update gameweek range when bootstrap data changes (default next 6 gameweeks)
   useEffect(() => {
-    if (bootstrapData?.events && availableGameweeks.length > 0) {
-      const start = availableGameweeks[0]; // Next gameweek
-      const end = Math.min(start + 5, availableGameweeks[availableGameweeks.length - 1]); // 6 gameweeks total
+    if (bootstrapData?.events) {
+      const range = getDefaultGameweekRange(bootstrapData.events, 6);
       setGameweekRange({
-        start: start,
-        end: end
+        start: parseInt(range.startGameweek),
+        end: parseInt(range.endGameweek)
       });
     }
-  }, [bootstrapData, availableGameweeks]);
+  }, [bootstrapData?.events]);
 
   // Get difficulty rating color class
   const getDifficultyColor = (difficulty: number) => {
