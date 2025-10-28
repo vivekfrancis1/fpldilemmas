@@ -2151,11 +2151,12 @@ export default function TransferPlanner() {
       return teamData.transfers.limit || 1;
     }
     
-    // For subsequent gameweeks: Initial for GW_N = max(1, 1 + Transfers remaining for GW_(N-1))
+    // For subsequent gameweeks: Initial for GW_N = max(1, min(5, 1 + Transfers remaining for GW_(N-1)))
     // Where Transfers remaining = Initial - Used
     // EXCEPTIONS:
     // - Free Hit gameweeks don't affect rollover (transfers don't carry over)
     // - Wildcard gameweeks reset the transfer bank (next GW gets 1 FT fresh)
+    // - Maximum of 5 free transfers can be banked
     let currentInitial = teamData.transfers.limit || 1;
     
     for (let gw = firstPlanningGW; gw < selectedGameweek; gw++) {
@@ -2171,8 +2172,9 @@ export default function TransferPlanner() {
         const used = calculateTransfersUsedForGameweek(gw);
         // Calculate remaining for this gameweek
         const remaining = currentInitial - used;
-        // Next gameweek's initial = max(1, 1 + this gameweek's remaining)
-        currentInitial = Math.max(1, 1 + remaining);
+        // Next gameweek's initial = max(1, min(5, 1 + this gameweek's remaining))
+        // Cap at 5 FT maximum as per FPL rules
+        currentInitial = Math.max(1, Math.min(5, 1 + remaining));
       }
       // If it's a Free Hit gameweek, keep currentInitial unchanged (no rollover effect)
     }
