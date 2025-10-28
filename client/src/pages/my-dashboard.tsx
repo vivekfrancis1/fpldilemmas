@@ -1177,12 +1177,12 @@ export default function MyDashboard() {
                                         </text>
                                         
                                         {/* Player Name */}
-                                        <text x="140" y="95" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {player.web_name}
                                         </text>
                                         
                                         {/* Points */}
-                                        <text x="140" y="130" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </text>
                                         
