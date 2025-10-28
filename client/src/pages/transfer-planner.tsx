@@ -2364,14 +2364,14 @@ export default function TransferPlanner() {
     });
     
     // Include transfers for each gameweek in signature
+    // Only use COMPLETED transfers - ignore in-progress transferredOut
     signature.transfers = {};
     nextGWs.forEach(gw => {
-      const gwTransfers = draftTransfers[gw.id] || { transferredOut: [], completed: [] };
+      const gwTransfers = draftTransfers[gw.id] || { completed: [] };
       signature.transfers[gw.id] = {
-        transferredOut: [...gwTransfers.transferredOut].sort(),
         completed: [...gwTransfers.completed].sort((a, b) => {
-          if (a.playerOut !== b.playerOut) return a.playerOut - b.playerOut;
-          return a.playerIn - b.playerIn;
+          if (a.outPlayerId !== b.outPlayerId) return a.outPlayerId - b.outPlayerId;
+          return a.inPlayerId - b.inPlayerId;
         })
       };
     });
@@ -2406,13 +2406,21 @@ export default function TransferPlanner() {
       }))
     ];
     
+    // Debug: Log chip data for each draft
+    console.log('🔍 DUPLICATE DETECTION DEBUG:');
+    allDrafts.forEach(draft => {
+      console.log(`Draft ${draft.draftKey} chips:`, JSON.stringify(draft.chips));
+    });
+    
     // Process each draft
     allDrafts.forEach(draft => {
       const signature = computeDraftSignature(draft.transfers, nextGWs, draft.chips);
+      console.log(`Draft ${draft.draftKey} signature length:`, signature.length);
       
       if (signatureMap.has(signature)) {
         // This is a duplicate
         const originalKey = signatureMap.get(signature)!;
+        console.log(`✅ Draft ${draft.draftKey} is DUPLICATE of ${originalKey}`);
         duplicates[draft.draftKey] = {
           isDuplicate: true,
           duplicateOfKey: originalKey
@@ -2420,6 +2428,7 @@ export default function TransferPlanner() {
       } else {
         // First draft with this signature
         signatureMap.set(signature, draft.draftKey);
+        console.log(`📝 Draft ${draft.draftKey} is UNIQUE`);
         duplicates[draft.draftKey] = {
           isDuplicate: false,
           duplicateOfKey: ''
