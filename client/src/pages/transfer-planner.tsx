@@ -3766,12 +3766,79 @@ export default function TransferPlanner() {
     }
   }, [gameweekTransfers]);
 
-  // Load drafts when manager changes
+  // Load drafts when manager changes and auto-select/create Draft A
   useEffect(() => {
-    if (searchedId) {
-      loadDrafts();
-      setActiveDraft("Base");
-    }
+    if (!searchedId) return;
+    
+    let isActive = true;
+    
+    const initializeDrafts = async () => {
+      try {
+        await loadDrafts();
+        
+        if (!isActive) return;
+        
+        // After loading drafts, check if Draft A exists
+        const response = await fetch(`/api/transfer-planner/drafts/${searchedId}`);
+        if (!response.ok) {
+          if (isActive) setActiveDraft("Base");
+          return;
+        }
+        
+        const data = await response.json();
+        const drafts = data.drafts || [];
+        const draftAExists = drafts.some((d: any) => d.draftLetter === 'A');
+        
+        if (!isActive) return;
+        
+        if (draftAExists) {
+          // Draft A exists, switch to it
+          await switchToDraft('A');
+        } else {
+          // Draft A doesn't exist, create it
+          const createResponse = await fetch("/api/transfer-planner/drafts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              managerId: parseInt(searchedId),
+              draftLetter: "A",
+              gameweekTransfers: {},
+              plannedChips: {},
+              mode: plannerMode,
+              teamBank: teamData?.transfers.bank || 0,
+              teamValue: 0,
+              totalProjectedPoints: 0,
+              totalTransfersUsed: 0,
+              captainPlayerId: null,
+              captainPlayerName: null,
+              viceCaptainPlayerId: null,
+              viceCaptainPlayerName: null
+            })
+          });
+          
+          if (!isActive) return;
+          
+          if (createResponse.ok) {
+            await loadDrafts();
+            if (isActive) {
+              await switchToDraft('A');
+              toast({ title: "Draft A Created", description: "Draft A has been created and selected" });
+            }
+          } else {
+            if (isActive) setActiveDraft("Base");
+          }
+        }
+      } catch (error) {
+        console.error("Error initializing drafts:", error);
+        if (isActive) setActiveDraft("Base");
+      }
+    };
+    
+    initializeDrafts();
+    
+    return () => {
+      isActive = false;
+    };
   }, [searchedId]);
 
   // Check if there are empty slots (transferred out players)
