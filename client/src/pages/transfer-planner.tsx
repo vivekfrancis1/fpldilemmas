@@ -956,6 +956,9 @@ export default function TransferPlanner() {
   // Chip planning state
   const [plannedChips, setPlannedChips] = useState<PlannedChips>({});
   
+  // Track chip changes for autosave (to avoid saving on initial load or draft switch)
+  const chipChangeForAutosaveRef = useRef(false);
+  
   // Sell price editing state
   const [editingSellPrice, setEditingSellPrice] = useState<number | null>(null);
   const [editSellPriceValue, setEditSellPriceValue] = useState<string>("");
@@ -999,6 +1002,62 @@ export default function TransferPlanner() {
       setSearchedId(cachedId);
     }
   }, []);
+
+  // Autosave draft when chips are changed
+  useEffect(() => {
+    // Only autosave if:
+    // 1. This is a user-initiated chip change (not initial load or draft switch)
+    // 2. We're in an actual draft (not Base)
+    // 3. We have a manager ID
+    if (chipChangeForAutosaveRef.current && activeDraft !== "Base" && searchedId) {
+      // Reset the flag
+      chipChangeForAutosaveRef.current = false;
+      
+      // Trigger autosave
+      const autoSave = async () => {
+        try {
+          const captainPick = manualLineup.find(p => p.is_captain);
+          const viceCaptainPick = manualLineup.find(p => p.is_vice_captain);
+          const captainPlayer = captainPick ? getPlayerById(captainPick.element) : null;
+          const viceCaptainPlayer = viceCaptainPick ? getPlayerById(viceCaptainPick.element) : null;
+
+          const response = await fetch("/api/transfer-planner/drafts", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              managerId: parseInt(searchedId),
+              draftLetter: activeDraft,
+              gameweekTransfers: structuredClone(gameweekTransfers),
+              plannedChips: structuredClone(plannedChips),
+              mode: plannerMode,
+              teamBank: calculateBankAfterTransfers(),
+              teamValue: 0,
+              totalProjectedPoints: 0,
+              totalTransfersUsed: Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0),
+              captainPlayerId: captainPick?.element || null,
+              captainPlayerName: captainPlayer?.web_name || null,
+              viceCaptainPlayerId: viceCaptainPick?.element || null,
+              viceCaptainPlayerName: viceCaptainPlayer?.web_name || null
+            })
+          });
+
+          if (response.ok) {
+            setHasUnsavedChanges(false);
+            toast({ 
+              title: "Chip Selection Saved", 
+              description: `Draft ${activeDraft} updated automatically`,
+              duration: 2000
+            });
+            await loadDrafts();
+          }
+        } catch (error) {
+          console.error("Autosave failed:", error);
+        }
+      };
+
+      autoSave();
+    }
+  }, [plannedChips]);
 
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -1383,6 +1442,8 @@ export default function TransferPlanner() {
     if (wasInBase) {
       setTimeout(() => finalizeNewDraft(targetDraft), 100);
     } else {
+      // Set flag to trigger autosave
+      chipChangeForAutosaveRef.current = true;
       setHasUnsavedChanges(true);
     }
   };
