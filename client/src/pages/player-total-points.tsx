@@ -1072,7 +1072,9 @@ export default function PlayerTotalPoints() {
 
   const positions = useMemo(() => {
     if (!totalPointsData) return [];
-    return Array.from(new Set(totalPointsData.map(p => p.position))).sort();
+    return Array.from(new Set(totalPointsData.map(p => p.position)))
+      .filter(pos => pos !== 'FWD') // Remove FWD since Forward already exists
+      .sort();
   }, [totalPointsData]);
 
   // Filter and sort data
