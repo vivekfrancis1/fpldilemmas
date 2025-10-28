@@ -701,7 +701,8 @@ export default function Top25ManagerTeam() {
                       <PitchView 
                         players={pitchPlayers}
                         benchPlayers={benchPlayers}
-                        showFixtures={false}
+                        getNextFixtures={getNextFixtures}
+                        showFixtures={true}
                       />
                     </CardContent>
                   </Card>

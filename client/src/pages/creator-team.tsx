@@ -626,7 +626,8 @@ export default function CreatorTeam() {
                       <PitchView 
                         players={pitchPlayers}
                         benchPlayers={benchPlayers}
-                        showFixtures={false}
+                        getNextFixtures={getNextFixtures}
+                        showFixtures={true}
                       />
                     </CardContent>
                   </Card>
