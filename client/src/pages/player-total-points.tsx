@@ -1067,7 +1067,9 @@ export default function PlayerTotalPoints() {
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
     if (!totalPointsData) return [];
-    return Array.from(new Set(totalPointsData.map(p => p.team))).sort();
+    return Array.from(new Set(totalPointsData.map(p => p.team)))
+      .filter(team => team.length > 3) // Remove short forms (e.g., ARS, LIV), keep full names
+      .sort();
   }, [totalPointsData]);
 
   const positions = useMemo(() => {
