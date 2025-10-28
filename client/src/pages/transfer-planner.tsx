@@ -5654,7 +5654,7 @@ export default function TransferPlanner() {
       )}
 
       {/* Multi-Gameweek Evolution View */}
-      {searchedId && teamData && (
+      {searchedId && teamData && activeDraft !== "Base" && (
         <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-background">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
