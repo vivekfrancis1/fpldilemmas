@@ -11282,8 +11282,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Get opponent's AGR (Average Goals Received/Against per game)
             const opponentAGR = getOpponentAGR(opponentId);
             
-            // Apply user's exact formula: Expected DC = Average DC/game × AGR of opponent/1.25
-            const projectedDC = dcPerTeamGame * (opponentAGR / 1.25);
+            // Apply user's exact formula: Expected DC = Average DC/game × AGR of opponent/1.35
+            const projectedDC = dcPerTeamGame * (opponentAGR / 1.35);
             
             // Calculate points (2 points if DC >= threshold based on position)
             let points = 0;
