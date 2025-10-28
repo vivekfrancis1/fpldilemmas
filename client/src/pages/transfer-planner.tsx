@@ -2470,7 +2470,8 @@ export default function TransferPlanner() {
         }));
       }
       
-      const chipForGW = plannedChips[gw.id] || null;
+      // Base Draft always has no chips
+      const chipForGW = null;
       const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
       baseManualRow.gameweeks[gw.id] = points;
       baseManualRow.total += points;
@@ -2487,7 +2488,8 @@ export default function TransferPlanner() {
     
     nextGWs.forEach(gw => {
       const squad = getSquadAtGameweek({}, gw.id);
-      const chipForGW = plannedChips[gw.id] || null;
+      // Base Draft always has no chips
+      const chipForGW = null;
       const points = calculateAutoPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
       baseAutoRow.gameweeks[gw.id] = points;
       baseAutoRow.total += points;
@@ -3628,6 +3630,11 @@ export default function TransferPlanner() {
       return;
     }
 
+    if (activeDraft === "A") {
+      toast({ title: "Cannot Delete", description: "Draft A cannot be deleted. Use 'Reset to Base' instead.", variant: "destructive" });
+      return;
+    }
+
     try {
       const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${activeDraft}`, {
         method: "DELETE"
@@ -3641,6 +3648,48 @@ export default function TransferPlanner() {
       }
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete draft", variant: "destructive" });
+    }
+  };
+
+  const resetDraftAToBase = async () => {
+    if (!teamData?.picks || !searchedId) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to reset Draft A to match the Base Draft? This will remove all transfers and chips from Draft A."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      // Get captain and vice-captain from the current team data
+      const captainPick = teamData.picks.find(p => p.is_captain);
+      const viceCaptainPick = teamData.picks.find(p => p.is_vice_captain);
+
+      const response = await fetch("/api/transfer-planner/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          managerId: parseInt(searchedId),
+          draftLetter: "A",
+          gameweekTransfers: {}, // Empty transfers
+          plannedChips: {}, // No chips
+          captainPlayerId: captainPick?.element || null,
+          viceCaptainPlayerId: viceCaptainPick?.element || null,
+          mode: plannerMode,
+          teamBank: teamData.transfers.bank / 10,
+          teamValue: 0,
+          totalProjectedPoints: 0,
+          totalTransfersUsed: 0
+        })
+      });
+
+      if (response.ok) {
+        await loadDrafts();
+        switchToDraft("A");
+        toast({ title: "Draft A Reset", description: "Draft A has been reset to match the Base Draft" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to reset Draft A", variant: "destructive" });
     }
   };
 
@@ -4078,16 +4127,29 @@ export default function TransferPlanner() {
                   Duplicate
                 </Button>
                 
-                <Button
-                  onClick={deleteCurrentDraft}
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs px-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
-                  data-testid="button-delete-draft"
-                >
-                  <Trash2 className="h-3 w-3 mr-1" />
-                  Delete
-                </Button>
+                {activeDraft === "A" ? (
+                  <Button
+                    onClick={resetDraftAToBase}
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs px-2 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                    data-testid="button-reset-draft-a"
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    Reset to Base
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={deleteCurrentDraft}
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs px-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                    data-testid="button-delete-draft"
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Delete
+                  </Button>
+                )}
               </div>
             )}
 
