@@ -4252,6 +4252,13 @@ export default function TransferPlanner() {
                     <div className="space-y-2 text-sm">
                       <p className="font-semibold">About FPL Chips:</p>
                       <p>Each chip can be used twice per season. Plan ahead to maximize their impact!</p>
+                      <div className="border-t pt-2 mt-2 space-y-1">
+                        <p className="font-semibold text-xs">Chip Availability Windows:</p>
+                        <ul className="text-xs space-y-0.5 pl-3 list-disc">
+                          <li>First set of chips must be used before GW 19</li>
+                          <li>Second set of chips available from GW 20 onwards</li>
+                        </ul>
+                      </div>
                     </div>
                   </TooltipContent>
                 </Tooltip>
@@ -4259,6 +4266,18 @@ export default function TransferPlanner() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 md:space-y-4 pt-2 md:pt-4">
+            {/* Important Chip Information */}
+            <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+              <Info className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-xs md:text-sm">
+                <div className="space-y-1">
+                  <p><strong>Chips Used:</strong> Wildcard 1, Triple Captain 1</p>
+                  <p><strong>⚠️ Deadline:</strong> Bench Boost 1 and Free Hit 1 must be used before GW 19</p>
+                  <p><strong>Coming Soon:</strong> Second set of chips available from GW 20 onwards</p>
+                </div>
+              </AlertDescription>
+            </Alert>
+
             {/* Chips Availability Summary */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
               {(['wildcard', '3xc', 'bboost', 'freehit'] as ChipType[]).map(chipType => {
