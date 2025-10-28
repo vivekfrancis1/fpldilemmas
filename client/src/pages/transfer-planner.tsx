@@ -3694,27 +3694,60 @@ export default function TransferPlanner() {
   };
 
   const deleteAllDrafts = async () => {
-    if (!searchedId) return;
+    if (!searchedId || !teamData?.picks) return;
 
+    const draftsToDelete = savedDrafts.filter(d => d.draftLetter !== 'A');
+    
     // Confirmation dialog
     const confirmed = window.confirm(
-      `Are you sure you want to delete all ${savedDrafts.length} draft(s)? This action cannot be undone.`
+      `This will:\n• Reset Draft A to match Base Draft\n• Delete ${draftsToDelete.length} other draft(s) (${draftsToDelete.map(d => d.draftLetter).join(', ')})\n\nThis action cannot be undone. Continue?`
     );
 
     if (!confirmed) return;
 
     try {
-      const response = await fetch(`/api/transfer-planner/drafts/${searchedId}`, {
-        method: "DELETE"
+      // Step 1: Delete drafts B-E
+      if (draftsToDelete.length > 0) {
+        const deletePromises = draftsToDelete.map(draft =>
+          fetch(`/api/transfer-planner/drafts/${searchedId}/${draft.draftLetter}`, {
+            method: "DELETE"
+          })
+        );
+        await Promise.all(deletePromises);
+      }
+
+      // Step 2: Reset Draft A to Base
+      const captainPick = teamData.picks.find(p => p.is_captain);
+      const viceCaptainPick = teamData.picks.find(p => p.is_vice_captain);
+
+      const resetResponse = await fetch("/api/transfer-planner/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          managerId: parseInt(searchedId),
+          draftLetter: "A",
+          gameweekTransfers: {},
+          plannedChips: {},
+          captainPlayerId: captainPick?.element || null,
+          viceCaptainPlayerId: viceCaptainPick?.element || null,
+          mode: plannerMode,
+          teamBank: teamData.transfers.bank / 10,
+          teamValue: 0,
+          totalProjectedPoints: 0,
+          totalTransfersUsed: 0
+        })
       });
 
-      if (response.ok) {
+      if (resetResponse.ok) {
         switchToDraft("Base");
-        setSavedDrafts([]);
-        toast({ title: "All Drafts Deleted", description: "All saved drafts have been deleted" });
+        await loadDrafts();
+        toast({ 
+          title: "Drafts Reset", 
+          description: `Draft A reset to Base. ${draftsToDelete.length} other draft(s) deleted.` 
+        });
       }
     } catch (error) {
-      toast({ title: "Error", description: "Failed to delete all drafts", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to reset drafts", variant: "destructive" });
     }
   };
 
