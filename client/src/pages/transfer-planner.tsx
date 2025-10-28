@@ -971,6 +971,9 @@ export default function TransferPlanner() {
   const [captainConfirmation, setCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
   const [viceCaptainConfirmation, setViceCaptainConfirmation] = useState<{ playerId: number; playerName: string } | null>(null);
   
+  // Delete all drafts confirmation dialog
+  const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+  
   // Selected player for pitch view actions
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   
@@ -3693,17 +3696,16 @@ export default function TransferPlanner() {
     }
   };
 
-  const deleteAllDrafts = async () => {
+  const deleteAllDrafts = () => {
+    setShowDeleteAllDialog(true);
+  };
+
+  const confirmDeleteAllDrafts = async () => {
     if (!searchedId || !teamData?.picks) return;
 
     const draftsToDelete = savedDrafts.filter(d => d.draftLetter !== 'A');
     
-    // Confirmation dialog
-    const confirmed = window.confirm(
-      `This will:\n• Reset Draft A to match Base Draft\n• Delete ${draftsToDelete.length} other draft(s) (${draftsToDelete.map(d => d.draftLetter).join(', ')})\n\nThis action cannot be undone. Continue?`
-    );
-
-    if (!confirmed) return;
+    setShowDeleteAllDialog(false);
 
     try {
       // Step 1: Delete drafts B-E
@@ -7189,6 +7191,34 @@ export default function TransferPlanner() {
             <AlertDialogCancel onClick={() => setEditBuyPriceDialog(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={saveBuyPriceFromDialog} data-testid="button-save-buy-price">
               Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete All Drafts Confirmation Dialog */}
+      <AlertDialog open={showDeleteAllDialog} onOpenChange={setShowDeleteAllDialog}>
+        <AlertDialogContent className="z-[100]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset All Drafts?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>This will:</p>
+              <ul className="list-disc list-inside space-y-1 pl-2">
+                <li>Reset Draft A to match Base Draft</li>
+                {savedDrafts.filter(d => d.draftLetter !== 'A').length > 0 && (
+                  <li>Delete {savedDrafts.filter(d => d.draftLetter !== 'A').length} other draft(s) ({savedDrafts.filter(d => d.draftLetter !== 'A').map(d => d.draftLetter).join(', ')})</li>
+                )}
+              </ul>
+              <p className="text-sm font-semibold text-destructive">This action cannot be undone.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteAllDrafts}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Continue
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
