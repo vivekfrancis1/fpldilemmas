@@ -2341,8 +2341,8 @@ export default function TransferPlanner() {
   };
 
   // Compute a canonical signature for a draft to detect duplicates
-  // Signature includes: squad composition at each GW, captain/vice, and transfers
-  const computeDraftSignature = (draftTransfers: any, nextGWs: any[]) => {
+  // Signature includes: squad composition at each GW, captain/vice, transfers, and planned chips
+  const computeDraftSignature = (draftTransfers: any, nextGWs: any[], draftChips?: PlannedChips) => {
     const signature: any = {
       gameweeks: {}
     };
@@ -2376,6 +2376,13 @@ export default function TransferPlanner() {
       };
     });
     
+    // Include planned chips in signature
+    signature.chips = {};
+    nextGWs.forEach(gw => {
+      const chipForGw = draftChips?.[gw.id] || null;
+      signature.chips[gw.id] = chipForGw;
+    });
+    
     return JSON.stringify(signature);
   };
 
@@ -2390,17 +2397,18 @@ export default function TransferPlanner() {
     
     // Array of all drafts in creation order (Base first, then saved drafts)
     const allDrafts = [
-      { draftKey: 'Base', transfers: {} },
+      { draftKey: 'Base', transfers: {}, chips: {} },
       ...savedDrafts.map((draft: any) => ({
         draftKey: draft.draftLetter,
         // Always use the saved gameweekTransfers from the draft object for accurate comparison
-        transfers: draft.gameweekTransfers || {}
+        transfers: draft.gameweekTransfers || {},
+        chips: draft.plannedChips || {}
       }))
     ];
     
     // Process each draft
     allDrafts.forEach(draft => {
-      const signature = computeDraftSignature(draft.transfers, nextGWs);
+      const signature = computeDraftSignature(draft.transfers, nextGWs, draft.chips);
       
       if (signatureMap.has(signature)) {
         // This is a duplicate
