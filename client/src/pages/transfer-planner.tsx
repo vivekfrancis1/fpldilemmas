@@ -4271,7 +4271,28 @@ export default function TransferPlanner() {
               <Info className="h-4 w-4 text-blue-600" />
               <AlertDescription className="text-xs md:text-sm">
                 <div className="space-y-1">
-                  <p><strong>Chips Used:</strong> Wildcard 1, Triple Captain 1</p>
+                  {historyData?.chips && historyData.chips.length > 0 ? (
+                    <p>
+                      <strong>Chips Used:</strong>{' '}
+                      {(() => {
+                        const chipCounts: Record<string, number> = {};
+                        return historyData.chips.map((chip, index) => {
+                          const chipType = chip.name;
+                          const usedIndex = chipCounts[chipType] || 0;
+                          chipCounts[chipType] = usedIndex + 1;
+                          const displayName = getUsedChipDisplayName(chipType, usedIndex);
+                          return (
+                            <span key={index}>
+                              {index > 0 && ', '}
+                              {displayName} (GW{chip.event})
+                            </span>
+                          );
+                        });
+                      })()}
+                    </p>
+                  ) : (
+                    <p><strong>Chips Used:</strong> None yet</p>
+                  )}
                   <p><strong>⚠️ Deadline:</strong> Bench Boost 1 and Free Hit 1 must be used before GW 19</p>
                   <p><strong>Coming Soon:</strong> Second set of chips available from GW 20 onwards</p>
                 </div>
@@ -4296,32 +4317,6 @@ export default function TransferPlanner() {
                 );
               })}
             </div>
-
-            {/* Chips Used This Season */}
-            {historyData?.chips && historyData.chips.length > 0 && (
-              <div className="border-t pt-3">
-                <h4 className="text-xs md:text-sm font-semibold mb-2 flex items-center gap-2">
-                  <Check className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
-                  Chips Already Used
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {(() => {
-                    const chipCounts: Record<string, number> = {};
-                    return historyData.chips.map((chip, index) => {
-                      const chipType = chip.name;
-                      const usedIndex = chipCounts[chipType] || 0;
-                      chipCounts[chipType] = usedIndex + 1;
-                      
-                      return (
-                        <Badge key={index} variant="outline" className="text-xs">
-                          {getUsedChipDisplayName(chipType, usedIndex)} - GW{chip.event}
-                        </Badge>
-                      );
-                    });
-                  })()}
-                </div>
-              </div>
-            )}
 
             {/* Chip Planning for Upcoming Gameweeks */}
             <div className="border-t pt-3">
