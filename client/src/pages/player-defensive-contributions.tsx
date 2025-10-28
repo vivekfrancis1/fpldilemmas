@@ -79,6 +79,8 @@ export default function PlayerDefensiveContributions() {
   const [endGameweek, setEndGameweek] = useState<number>(0); // Will be set to current + 6
   const [gameweekSortColumn, setGameweekSortColumn] = useState<number | null>(null);
   const [gameweekSortOrder, setGameweekSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortByCurrentDC, setSortByCurrentDC] = useState<boolean>(false);
+  const [currentDCSortOrder, setCurrentDCSortOrder] = useState<"asc" | "desc">("desc");
 
   // Dynamic gameweek range state
   const [gameweekRange, setGameweekRange] = useState(() => {
@@ -269,13 +271,16 @@ export default function PlayerDefensiveContributions() {
       filtered = filtered.filter(p => p.teamName === selectedTeam);
     }
 
-    // Default sort by total DC
-    filtered.sort((a, b) => {
-      return b.totalDC - a.totalDC; // Always sort by total DC descending
-    });
-
+    // Sort by current DC/game if specified
+    if (sortByCurrentDC) {
+      filtered.sort((a, b) => {
+        const aValue = a.currentSeasonStats.dcPer90;
+        const bValue = b.currentSeasonStats.dcPer90;
+        return currentDCSortOrder === "desc" ? bValue - aValue : aValue - bValue;
+      });
+    }
     // Sort by gameweek column if specified
-    if (gameweekSortColumn !== null) {
+    else if (gameweekSortColumn !== null) {
       filtered.sort((a, b) => {
         const aGameweek = a.gameweekProjections.find(gw => gw.gameweek === gameweekSortColumn);
         const bGameweek = b.gameweekProjections.find(gw => gw.gameweek === gameweekSortColumn);
@@ -290,9 +295,15 @@ export default function PlayerDefensiveContributions() {
         return gameweekSortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
     }
+    // Default sort by total DC
+    else {
+      filtered.sort((a, b) => {
+        return b.totalDC - a.totalDC; // Always sort by total DC descending
+      });
+    }
 
     return filtered;
-  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, gameweekSortColumn, gameweekSortOrder, activeTab]);
+  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, gameweekSortColumn, gameweekSortOrder, activeTab, sortByCurrentDC, currentDCSortOrder]);
 
   // Get unique values for filters
   const positions = Array.from(new Set(players.map(p => p.position).filter(Boolean)));
@@ -300,11 +311,22 @@ export default function PlayerDefensiveContributions() {
 
 
   const handleGameweekSort = (gameweek: number) => {
+    setSortByCurrentDC(false); // Clear current DC sorting
     if (gameweekSortColumn === gameweek) {
       setGameweekSortOrder(gameweekSortOrder === "desc" ? "asc" : "desc");
     } else {
       setGameweekSortColumn(gameweek);
       setGameweekSortOrder("desc");
+    }
+  };
+
+  const handleCurrentDCSort = () => {
+    setGameweekSortColumn(null); // Clear gameweek sorting
+    if (sortByCurrentDC) {
+      setCurrentDCSortOrder(currentDCSortOrder === "desc" ? "asc" : "desc");
+    } else {
+      setSortByCurrentDC(true);
+      setCurrentDCSortOrder("desc");
     }
   };
 
@@ -527,8 +549,18 @@ export default function PlayerDefensiveContributions() {
                     Player
                   </TableHead>
 
-                  <TableHead className="sticky left-[150px] bg-background z-10 min-w-[100px]">
-                    Current DC/game
+                  <TableHead 
+                    className="sticky left-[150px] bg-background z-10 min-w-[100px] cursor-pointer hover:bg-muted/50"
+                    onClick={handleCurrentDCSort}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Current DC/game
+                      {sortByCurrentDC && (
+                        <span className="text-xs">
+                          {currentDCSortOrder === "desc" ? "↓" : "↑"}
+                        </span>
+                      )}
+                    </div>
                   </TableHead>
                   {gameweeks.map(gw => (
                     <TableHead 
@@ -619,8 +651,18 @@ export default function PlayerDefensiveContributions() {
                     Player
                   </TableHead>
 
-                  <TableHead className="sticky left-[310px] bg-background z-10 min-w-[100px]">
-                    Current DC/game
+                  <TableHead 
+                    className="sticky left-[310px] bg-background z-10 min-w-[100px] cursor-pointer hover:bg-muted/50"
+                    onClick={handleCurrentDCSort}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Current DC/game
+                      {sortByCurrentDC && (
+                        <span className="text-xs">
+                          {currentDCSortOrder === "desc" ? "↓" : "↑"}
+                        </span>
+                      )}
+                    </div>
                   </TableHead>
                   {gameweeks.map(gw => (
                     <TableHead 
