@@ -2412,7 +2412,12 @@ export default function TransferPlanner() {
     
     // Array of all drafts in creation order (Base first, then saved drafts)
     const allDrafts = [
-      { draftKey: 'Base', transfers: {}, chips: plannedChips }, // Use current plannedChips for Base
+      { 
+        draftKey: 'Base', 
+        transfers: {}, 
+        // For Base: use plannedChips only if Base is the active draft, otherwise use empty object
+        chips: activeDraft === 'Base' ? plannedChips : {}
+      },
       ...savedDrafts.map((draft: any) => ({
         draftKey: draft.draftLetter,
         // Always use the saved gameweekTransfers from the draft object for accurate comparison
