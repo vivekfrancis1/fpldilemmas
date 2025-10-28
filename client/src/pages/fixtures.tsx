@@ -127,7 +127,7 @@ export default function Fixtures() {
     return avgFDR;
   }, [fixturesData, bootstrapData]);
 
-  // Get current gameweek and available gameweeks (current gameweek onwards, max 12)
+  // Get current gameweek and available gameweeks (next 12 gameweeks)
   const { currentGameweek, nextGameweek, availableGameweeks } = useMemo(() => {
     if (!bootstrapData?.events) return { currentGameweek: 1, nextGameweek: 2, availableGameweeks: [] };
     
@@ -135,20 +135,20 @@ export default function Fixtures() {
     const current = firstUnfinished ? firstUnfinished.id : 1;
     const next = current + 1;
     
-    // Show from current gameweek onwards, maximum 12 gameweeks
-    const maxGameweek = Math.min(current + 11, 38); // current + 11 gives us 12 total gameweeks
+    // Show next 12 gameweeks starting from next gameweek
+    const maxGameweek = Math.min(next + 11, 38); // next + 11 gives us 12 total gameweeks
     const available = bootstrapData.events
-      .filter(event => event.id >= current && event.id <= maxGameweek)
+      .filter(event => event.id >= next && event.id <= maxGameweek)
       .map(event => event.id)
       .sort((a, b) => a - b);
     
     return { currentGameweek: current, nextGameweek: next, availableGameweeks: available };
   }, [bootstrapData]);
 
-  // Update gameweek range when bootstrap data changes (default 6 gameweeks from current)
+  // Update gameweek range when bootstrap data changes (default next 6 gameweeks)
   useEffect(() => {
     if (bootstrapData?.events && availableGameweeks.length > 0) {
-      const start = availableGameweeks[0]; // Current gameweek
+      const start = availableGameweeks[0]; // Next gameweek
       const end = Math.min(start + 5, availableGameweeks[availableGameweeks.length - 1]); // 6 gameweeks total
       setGameweekRange({
         start: start,
