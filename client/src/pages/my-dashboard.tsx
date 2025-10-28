@@ -1182,7 +1182,7 @@ export default function MyDashboard() {
                                         </text>
                                         
                                         {/* Points */}
-                                        <text x="140" y="130" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="130" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </text>
                                         
