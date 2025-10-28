@@ -51,7 +51,7 @@ export default function Layout({ children }: LayoutProps) {
   }, [isMobile, isSidebarOpen]);
 
   return (
-    <div className="min-h-screen bg-fpl-light flex overflow-x-hidden">
+    <div className="min-h-screen bg-fpl-light flex">
       <Sidebar isOpen={isSidebarOpen} onToggle={toggleSidebar} />
       
       <div className="flex-1 flex flex-col min-w-0 w-full lg:ml-0">
