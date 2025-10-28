@@ -3886,7 +3886,7 @@ export default function TransferPlanner() {
 
       {/* Draft Management */}
       {searchedId && teamData && selectedGameweek && (
-        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
+        <Card className="sticky top-0 z-20 border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background shadow-md">
           <CardHeader className="pb-2 md:pb-4">
             <CardTitle className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -4042,7 +4042,7 @@ export default function TransferPlanner() {
 
       {/* Gameweek Selection */}
       {searchedId && teamData && (
-        <Card>
+        <Card className="sticky top-[170px] md:top-[150px] z-10 bg-background shadow-md">
           <CardContent className="pt-6">
             <div>
               <div className="text-sm font-medium mb-2">Select GW</div>
