@@ -2153,14 +2153,21 @@ export default function TransferPlanner() {
     
     // For subsequent gameweeks: Initial for GW_N = max(1, 1 + Transfers remaining for GW_(N-1))
     // Where Transfers remaining = Initial - Used
-    // EXCEPTION: Free Hit gameweeks don't affect rollover (transfers don't carry over)
+    // EXCEPTIONS:
+    // - Free Hit gameweeks don't affect rollover (transfers don't carry over)
+    // - Wildcard gameweeks reset the transfer bank (next GW gets 1 FT fresh)
     let currentInitial = teamData.transfers.limit || 1;
     
     for (let gw = firstPlanningGW; gw < selectedGameweek; gw++) {
-      // Skip Free Hit gameweeks - they don't affect transfer rollover
+      // Check for chips that affect transfer banking
       const isFreeHitGW = plannedChips[gw] === 'freehit';
+      const isWildcardGW = plannedChips[gw] === 'wildcard';
       
-      if (!isFreeHitGW) {
+      if (isWildcardGW) {
+        // Wildcard resets transfer bank - next GW gets 1 FT regardless of previous banking
+        currentInitial = 1;
+      } else if (!isFreeHitGW) {
+        // Normal transfer rollover calculation
         const used = calculateTransfersUsedForGameweek(gw);
         // Calculate remaining for this gameweek
         const remaining = currentInitial - used;
