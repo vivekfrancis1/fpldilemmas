@@ -68,19 +68,30 @@ export default function ProjectedGoalsCS() {
     }
   }, [bootstrapData?.events]);
 
-  // Fetch team goal projections
+  // Fetch team goal projections with gameweek range
   const { data: teamGoalData, isLoading: goalsLoading } = useQuery<any[]>({
-    queryKey: ["/api/team-goal-projections"],
+    queryKey: [`/api/team-goal-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`],
+    enabled: !!bootstrapData?.events, // Only fetch when bootstrap data is ready
   });
 
-  // Fetch team clean sheet projections  
+  // Fetch team clean sheet projections with gameweek range
   const { data: teamCSData, isLoading: csLoading } = useQuery<any[]>({
-    queryKey: ["/api/team-cs-projections"],
+    queryKey: [`/api/team-cs-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`],
+    enabled: !!bootstrapData?.events, // Only fetch when bootstrap data is ready
   });
 
-  // Fetch fixtures data to get actual match information
+  // Fetch fixtures data to get actual match information (only for selected gameweek range)
   const { data: fixturesData, isLoading: fixturesLoading } = useQuery<any[]>({
-    queryKey: ["/api/fixtures"],
+    queryKey: [`/api/fixtures`],
+    enabled: !!bootstrapData?.events, // Only fetch when bootstrap data is ready
+    select: (data) => {
+      // Filter fixtures client-side to only include the selected range
+      const startGW = parseInt(startGameweek);
+      const endGW = parseInt(endGameweek);
+      return data.filter((fixture: any) => 
+        fixture.event >= startGW && fixture.event <= endGW
+      );
+    },
   });
 
   // Process data from separate endpoints to create match projections
@@ -106,12 +117,8 @@ export default function ProjectedGoalsCS() {
       }
     });
 
-    // Filter fixtures for the selected gameweek range
-    const relevantFixtures = (fixturesData || []).filter((fixture: any) => 
-      fixture.event >= startGW && fixture.event <= endGW
-    );
-
-    relevantFixtures.forEach((fixture: any) => {
+    // fixturesData is already filtered by the select function above
+    (fixturesData || []).forEach((fixture: any) => {
       const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
       const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
 
