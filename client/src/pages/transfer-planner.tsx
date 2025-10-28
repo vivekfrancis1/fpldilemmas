@@ -4040,6 +4040,34 @@ export default function TransferPlanner() {
         </Card>
       )}
 
+      {/* Gameweek Selection */}
+      {searchedId && teamData && (
+        <Card>
+          <CardContent className="pt-6">
+            <div>
+              <div className="text-sm font-medium mb-2">Select GW</div>
+              <div className="flex gap-1 md:gap-2 flex-wrap">
+                {nextGameweeks.map(gw => (
+                  <Button
+                    key={gw.id}
+                    variant={selectedGameweek === gw.id ? "default" : "outline"}
+                    size="sm"
+                    className="text-sm md:text-lg font-semibold min-w-[2.5rem] md:min-w-[3rem]"
+                    onClick={() => {
+                      setSelectedPlayer(null);
+                      setSelectedGameweek(gw.id);
+                    }}
+                    data-testid={`gw-button-${gw.id}`}
+                  >
+                    {gw.id}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Chips Planning */}
       {searchedId && teamData && selectedGameweek && (
         <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background">
@@ -4477,34 +4505,6 @@ export default function TransferPlanner() {
               <p><strong>Manual:</strong> Projected points based on your saved lineup and transfers.</p>
               <p><strong>Auto:</strong> Optimized lineup with best formation and captain for maximum points.</p>
               <p><Sparkles className="h-3 w-3 inline mr-1 text-amber-600" /><strong>Chip Badges:</strong> 3xC (Triple Captain), BB (Bench Boost), FH (Free Hit), WC (Wildcard)</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Gameweek Selection */}
-      {searchedId && teamData && (
-        <Card>
-          <CardContent className="pt-6">
-            <div>
-              <div className="text-sm font-medium mb-2">Select GW</div>
-              <div className="flex gap-1 md:gap-2 flex-wrap">
-                {nextGameweeks.map(gw => (
-                  <Button
-                    key={gw.id}
-                    variant={selectedGameweek === gw.id ? "default" : "outline"}
-                    size="sm"
-                    className="text-sm md:text-lg font-semibold min-w-[2.5rem] md:min-w-[3rem]"
-                    onClick={() => {
-                      setSelectedPlayer(null);
-                      setSelectedGameweek(gw.id);
-                    }}
-                    data-testid={`gw-button-${gw.id}`}
-                  >
-                    {gw.id}
-                  </Button>
-                ))}
-              </div>
             </div>
           </CardContent>
         </Card>
