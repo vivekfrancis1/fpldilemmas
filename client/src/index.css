@@ -3,9 +3,8 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Prevent horizontal scrolling globally and optimize for all screen sizes */
+/* Optimize for all screen sizes */
 html, body, #root {
-  overflow-x: hidden;
   max-width: 100vw;
 }
 
@@ -293,7 +292,6 @@ html {
 .fpl-page-wrapper {
   min-height: 100vh;
   background: var(--fpl-bg-gradient);
-  @apply overflow-x-hidden;
 }
 
 .fpl-content-area {
