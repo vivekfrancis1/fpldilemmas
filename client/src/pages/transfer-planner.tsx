@@ -3387,7 +3387,7 @@ export default function TransferPlanner() {
       }
     });
 
-    return tooltipLines.length > 0 ? tooltipLines.join('\n') : "No completed transfers";
+    return tooltipLines.length > 0 ? tooltipLines.join('\n') : "No transfers in this draft";
   };
 
   // Draft management functions
