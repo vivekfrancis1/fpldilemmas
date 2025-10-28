@@ -81,6 +81,10 @@ export default function PlayerDefensiveContributions() {
   const [gameweekSortOrder, setGameweekSortOrder] = useState<"asc" | "desc">("desc");
   const [sortByCurrentDC, setSortByCurrentDC] = useState<boolean>(false);
   const [currentDCSortOrder, setCurrentDCSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortByTotal, setSortByTotal] = useState<boolean>(false);
+  const [totalSortOrder, setTotalSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortByAvg, setSortByAvg] = useState<boolean>(false);
+  const [avgSortOrder, setAvgSortOrder] = useState<"asc" | "desc">("desc");
 
   // Dynamic gameweek range state
   const [gameweekRange, setGameweekRange] = useState(() => {
@@ -279,6 +283,22 @@ export default function PlayerDefensiveContributions() {
         return currentDCSortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
     }
+    // Sort by Total if specified
+    else if (sortByTotal) {
+      filtered.sort((a, b) => {
+        const aValue = activeTab === "points" ? a.totalDCPoints : a.totalDC;
+        const bValue = activeTab === "points" ? b.totalDCPoints : b.totalDC;
+        return totalSortOrder === "desc" ? bValue - aValue : aValue - bValue;
+      });
+    }
+    // Sort by Avg if specified
+    else if (sortByAvg) {
+      filtered.sort((a, b) => {
+        const aValue = activeTab === "points" ? a.avgDCPoints : a.avgDC;
+        const bValue = activeTab === "points" ? b.avgDCPoints : b.avgDC;
+        return avgSortOrder === "desc" ? bValue - aValue : aValue - bValue;
+      });
+    }
     // Sort by gameweek column if specified
     else if (gameweekSortColumn !== null) {
       filtered.sort((a, b) => {
@@ -303,7 +323,7 @@ export default function PlayerDefensiveContributions() {
     }
 
     return filtered;
-  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, gameweekSortColumn, gameweekSortOrder, activeTab, sortByCurrentDC, currentDCSortOrder]);
+  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, gameweekSortColumn, gameweekSortOrder, activeTab, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, sortByAvg, avgSortOrder]);
 
   // Get unique values for filters
   const positions = Array.from(new Set(players.map(p => p.position).filter(Boolean)));
@@ -311,7 +331,9 @@ export default function PlayerDefensiveContributions() {
 
 
   const handleGameweekSort = (gameweek: number) => {
-    setSortByCurrentDC(false); // Clear current DC sorting
+    setSortByCurrentDC(false);
+    setSortByTotal(false);
+    setSortByAvg(false);
     if (gameweekSortColumn === gameweek) {
       setGameweekSortOrder(gameweekSortOrder === "desc" ? "asc" : "desc");
     } else {
@@ -321,12 +343,38 @@ export default function PlayerDefensiveContributions() {
   };
 
   const handleCurrentDCSort = () => {
-    setGameweekSortColumn(null); // Clear gameweek sorting
+    setGameweekSortColumn(null);
+    setSortByTotal(false);
+    setSortByAvg(false);
     if (sortByCurrentDC) {
       setCurrentDCSortOrder(currentDCSortOrder === "desc" ? "asc" : "desc");
     } else {
       setSortByCurrentDC(true);
       setCurrentDCSortOrder("desc");
+    }
+  };
+
+  const handleTotalSort = () => {
+    setGameweekSortColumn(null);
+    setSortByCurrentDC(false);
+    setSortByAvg(false);
+    if (sortByTotal) {
+      setTotalSortOrder(totalSortOrder === "desc" ? "asc" : "desc");
+    } else {
+      setSortByTotal(true);
+      setTotalSortOrder("desc");
+    }
+  };
+
+  const handleAvgSort = () => {
+    setGameweekSortColumn(null);
+    setSortByCurrentDC(false);
+    setSortByTotal(false);
+    if (sortByAvg) {
+      setAvgSortOrder(avgSortOrder === "desc" ? "asc" : "desc");
+    } else {
+      setSortByAvg(true);
+      setAvgSortOrder("desc");
     }
   };
 
@@ -578,11 +626,31 @@ export default function PlayerDefensiveContributions() {
                       </div>
                     </TableHead>
                   ))}
-                  <TableHead className="text-center min-w-[80px] font-bold">
-                    Total
+                  <TableHead 
+                    className="text-center min-w-[80px] font-bold cursor-pointer hover:bg-muted/50"
+                    onClick={handleTotalSort}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Total
+                      {sortByTotal && (
+                        <span className="text-xs">
+                          {totalSortOrder === "desc" ? "↓" : "↑"}
+                        </span>
+                      )}
+                    </div>
                   </TableHead>
-                  <TableHead className="text-center min-w-[80px]">
-                    Avg
+                  <TableHead 
+                    className="text-center min-w-[80px] cursor-pointer hover:bg-muted/50"
+                    onClick={handleAvgSort}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Avg
+                      {sortByAvg && (
+                        <span className="text-xs">
+                          {avgSortOrder === "desc" ? "↓" : "↑"}
+                        </span>
+                      )}
+                    </div>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -680,11 +748,31 @@ export default function PlayerDefensiveContributions() {
                       </div>
                     </TableHead>
                   ))}
-                  <TableHead className="cursor-pointer hover:bg-muted/50 text-center min-w-[80px] font-bold">
-                    Total Pts
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 text-center min-w-[80px] font-bold"
+                    onClick={handleTotalSort}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Total Pts
+                      {sortByTotal && (
+                        <span className="text-xs">
+                          {totalSortOrder === "desc" ? "↓" : "↑"}
+                        </span>
+                      )}
+                    </div>
                   </TableHead>
-                  <TableHead className="text-center min-w-[80px]">
-                    Avg Pts
+                  <TableHead 
+                    className="text-center min-w-[80px] cursor-pointer hover:bg-muted/50"
+                    onClick={handleAvgSort}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Avg Pts
+                      {sortByAvg && (
+                        <span className="text-xs">
+                          {avgSortOrder === "desc" ? "↓" : "↑"}
+                        </span>
+                      )}
+                    </div>
                   </TableHead>
                 </TableRow>
               </TableHeader>
