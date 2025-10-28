@@ -3795,24 +3795,30 @@ export default function TransferPlanner() {
           // Draft A exists, switch to it
           await switchToDraft('A');
         } else {
-          // Draft A doesn't exist, create it
+          // Draft A doesn't exist, create it as a duplicate of Base
+          // Get captain and vice-captain from current team
+          const captainPick = teamData?.picks.find(p => p.is_captain);
+          const viceCaptainPick = teamData?.picks.find(p => p.is_vice_captain);
+          const captainPlayer = captainPick ? getPlayerById(captainPick.element) : null;
+          const viceCaptainPlayer = viceCaptainPick ? getPlayerById(viceCaptainPick.element) : null;
+          
           const createResponse = await fetch("/api/transfer-planner/drafts", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               managerId: parseInt(searchedId),
               draftLetter: "A",
-              gameweekTransfers: {},
-              plannedChips: {},
+              gameweekTransfers: {}, // Start with no transfers (same as Base)
+              plannedChips: {}, // Start with no chips (same as Base)
               mode: plannerMode,
               teamBank: teamData?.transfers.bank || 0,
               teamValue: 0,
               totalProjectedPoints: 0,
               totalTransfersUsed: 0,
-              captainPlayerId: null,
-              captainPlayerName: null,
-              viceCaptainPlayerId: null,
-              viceCaptainPlayerName: null
+              captainPlayerId: captainPick?.element || null,
+              captainPlayerName: captainPlayer?.web_name || null,
+              viceCaptainPlayerId: viceCaptainPick?.element || null,
+              viceCaptainPlayerName: viceCaptainPlayer?.web_name || null
             })
           });
           
@@ -3822,7 +3828,7 @@ export default function TransferPlanner() {
             await loadDrafts();
             if (isActive) {
               await switchToDraft('A');
-              toast({ title: "Draft A Created", description: "Draft A has been created and selected" });
+              toast({ title: "Draft A Created", description: "Draft A created as a copy of your current team" });
             }
           } else {
             if (isActive) setActiveDraft("Base");
