@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye, UserPlus, UserMinus, ZoomIn, ZoomOut } from "lucide-react";
 import { BootstrapData, Player, Team, ElementType } from "@shared/schema";
 import { FilterState, SortState, SortableField } from "@/lib/types";
@@ -77,6 +77,15 @@ export default function PlayerStatsTable({
   const [displayMode, setDisplayMode] = useState<'totals' | 'per_match' | 'per_start' | 'per_90'>('totals');
   const [venueFilter, setVenueFilter] = useState<'all' | 'home' | 'away'>('all');
   const [zoomLevel, setZoomLevel] = useState(100);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Reset scroll position to top-left when zoom changes
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+      scrollContainerRef.current.scrollLeft = 0;
+    }
+  }, [zoomLevel]);
   
   // Check if we're viewing historical data - current season shows defensive contribution fields
   const isHistoricalSeason = season && season !== "2025/26" && season !== "current";
@@ -565,8 +574,18 @@ export default function PlayerStatsTable({
       </div>
 
       {/* Comprehensive Player Statistics Table */}
-      <div className="overflow-x-auto" style={{ transformOrigin: 'top left' }}>
-        <div style={{ transform: `scale(${zoomLevel / 100})` }}>
+      <div 
+        ref={scrollContainerRef}
+        className="overflow-x-auto overflow-y-auto max-h-[800px]" 
+        style={{ position: 'relative' }}
+      >
+        <div 
+          style={{ 
+            transform: `scale(${zoomLevel / 100})`,
+            transformOrigin: 'top left',
+            width: `${100 / (zoomLevel / 100)}%`,
+          }}
+        >
         <table className="fpl-table text-xs min-w-[800px] w-full lg:min-w-full xl:min-w-full">
           <thead className="fpl-table-header">
             <tr>
