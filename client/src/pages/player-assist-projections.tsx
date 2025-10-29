@@ -508,7 +508,7 @@ export default function PlayerAssistProjections() {
                             </td>
                             <td className="text-center py-3 px-1 font-semibold bg-blue-50">
                               <span className="text-lg font-bold text-blue-900">
-                                {pointsTotal.toFixed(1)}
+                                {pointsTotal.toFixed(2)}
                               </span>
                             </td>
                           </tr>
