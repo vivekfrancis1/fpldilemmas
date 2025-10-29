@@ -1362,6 +1362,95 @@ export default function TransferPlanner() {
     return remaining;
   };
 
+  // Calculate chip recommendations for the current draft
+  const getChipRecommendations = (): { bboost: number | null, tripleC: number | null, freehit: number | null } | null => {
+    if (!selectedGameweek || !playerProjections || !teamData?.picks || !manualLineup.length) {
+      return null;
+    }
+
+    const nextGWs = getNextGameweeks();
+    const remaining = getRemainingChips();
+    const recommendations = { bboost: null as number | null, tripleC: null as number | null, freehit: null as number | null };
+
+    // Best Bench Boost: Find gameweek with maximum bench points
+    if (remaining.bboost > 0) {
+      let bestBBoostGW = null;
+      let maxBenchPoints = -1;
+
+      nextGWs.forEach(gw => {
+        const lineup = getBaselineLineup(gw.id);
+        const benchPlayers = lineup.filter(pick => pick.position > 11);
+        let benchPoints = 0;
+
+        benchPlayers.forEach(pick => {
+          const projection = playerProjections.find(p => p.playerId === pick.element);
+          if (projection?.gameweekProjections) {
+            benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+          }
+        });
+
+        if (benchPoints > maxBenchPoints) {
+          maxBenchPoints = benchPoints;
+          bestBBoostGW = gw.id;
+        }
+      });
+
+      recommendations.bboost = bestBBoostGW;
+    }
+
+    // Best Triple Captain: Find gameweek where captain has highest points
+    if (remaining['3xc'] > 0) {
+      const captainPick = manualLineup.find(p => p.is_captain);
+      if (captainPick) {
+        let bestTCGW = null;
+        let maxCaptainPoints = -1;
+
+        nextGWs.forEach(gw => {
+          const projection = playerProjections.find(p => p.playerId === captainPick.element);
+          if (projection?.gameweekProjections) {
+            const points = projection.gameweekProjections[gw.id.toString()] || 0;
+            if (points > maxCaptainPoints) {
+              maxCaptainPoints = points;
+              bestTCGW = gw.id;
+            }
+          }
+        });
+
+        recommendations.tripleC = bestTCGW;
+      }
+    }
+
+    // Best Free Hit: Find gameweek with lowest current squad points (biggest improvement opportunity)
+    // This identifies the week where you'd benefit most from a complete team refresh
+    if (remaining.freehit > 0) {
+      let bestFHGW = null;
+      let minStartingPoints = Infinity;
+
+      nextGWs.forEach(gw => {
+        const lineup = getBaselineLineup(gw.id);
+        const startingPlayers = lineup.filter(pick => pick.position <= 11);
+        let startingPoints = 0;
+
+        startingPlayers.forEach(pick => {
+          const projection = playerProjections.find(p => p.playerId === pick.element);
+          if (projection?.gameweekProjections) {
+            startingPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+          }
+        });
+
+        // Find the gameweek with LOWEST points (best improvement opportunity)
+        if (startingPoints < minStartingPoints) {
+          minStartingPoints = startingPoints;
+          bestFHGW = gw.id;
+        }
+      });
+
+      recommendations.freehit = bestFHGW;
+    }
+
+    return recommendations;
+  };
+
   // Helper to check if a new draft is needed
   // Returns the target draft letter or null if limit reached
   const getTargetDraftForChanges = (): string | null => {
@@ -4490,6 +4579,44 @@ export default function TransferPlanner() {
                 })}
               </div>
             </div>
+
+            {/* Chip Recommendations */}
+            {(() => {
+              const recommendations = getChipRecommendations();
+              const hasRecommendations = recommendations && (recommendations.bboost || recommendations.tripleC || recommendations.freehit);
+              
+              return hasRecommendations ? (
+                <div className="border-t pt-3">
+                  <h4 className="text-xs md:text-sm font-semibold mb-2 flex items-center gap-2">
+                    <Sparkles className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
+                    Chip Recommendations
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {recommendations.bboost && (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                        <span className="text-xs font-medium text-green-700 dark:text-green-300">
+                          Bench Boost → GW{recommendations.bboost}
+                        </span>
+                      </div>
+                    )}
+                    {recommendations.tripleC && (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                        <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
+                          Triple Captain → GW{recommendations.tripleC}
+                        </span>
+                      </div>
+                    )}
+                    {recommendations.freehit && (
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                        <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                          Free Hit → GW{recommendations.freehit}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null;
+            })()}
 
             {/* Planned Chips Summary */}
             {Object.keys(plannedChips).length > 0 && (
