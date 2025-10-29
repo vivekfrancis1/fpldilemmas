@@ -299,9 +299,10 @@ interface AllPlayersProjectionsTabProps {
   initialPositionFilter?: string;
   scrollToView?: boolean;
   onScrollComplete?: () => void;
+  teamData?: TeamData;
 }
 
-function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank, initialPositionFilter = "all", scrollToView = false, onScrollComplete }: AllPlayersProjectionsTabProps) {
+function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank, initialPositionFilter = "all", scrollToView = false, onScrollComplete, teamData }: AllPlayersProjectionsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState(initialPositionFilter);
   const [teamFilter, setTeamFilter] = useState("all");
@@ -507,6 +508,14 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     filteredPlayers = [...filteredPlayers]
       .sort((a, b) => (b.averageValue || 0) - (a.averageValue || 0))
       .slice(0, 50);
+  } else if (loadGroupFilter === "Current Team") {
+    // Filter to only show players in the base draft team
+    if (teamData?.picks) {
+      const currentTeamPlayerIds = new Set(teamData.picks.map(pick => pick.element));
+      filteredPlayers = filteredPlayers.filter(player => currentTeamPlayerIds.has(player.id));
+    } else {
+      filteredPlayers = [];
+    }
   }
 
   const handleSort = (field: string) => {
@@ -561,6 +570,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               <SelectItem value="All">All Players</SelectItem>
               <SelectItem value="Top 50">Top 50</SelectItem>
               <SelectItem value="Value 50">Value 50</SelectItem>
+              <SelectItem value="Current Team">Current Team</SelectItem>
             </SelectContent>
           </Select>
           <div className="flex items-center gap-1">
@@ -7142,6 +7152,7 @@ export default function TransferPlanner() {
             initialPositionFilter={projectionPositionFilter}
             scrollToView={scrollToProjections}
             onScrollComplete={() => setScrollToProjections(false)}
+            teamData={teamData}
           />
         </div>
       )}
