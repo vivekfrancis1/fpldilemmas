@@ -150,12 +150,12 @@ export default function PlayerStats() {
       <div className="fpl-section-spacing">
         {/* Season Selector */}
         <Card className="mb-6 shadow-md border-0 bg-white">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-center gap-3 flex-wrap">
-              <Calendar className="h-5 w-5 text-purple-600" />
-              <span className="text-sm font-semibold text-gray-700">Season:</span>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+              <span className="text-xs sm:text-sm font-semibold text-gray-700">Season:</span>
               <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-                <SelectTrigger className="w-48 bg-white" data-testid="select-season">
+                <SelectTrigger className="w-full sm:w-48 bg-white text-sm" data-testid="select-season">
                   <SelectValue placeholder="Select season" />
                 </SelectTrigger>
                 <SelectContent>
@@ -180,8 +180,8 @@ export default function PlayerStats() {
 
         {/* Quick Stats Overview */}
         <Card className="mb-6 shadow-md border-0">
-          <CardContent className="p-4">
-            <h2 className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-quick-stats-title">
+          <CardContent className="p-3 sm:p-4">
+            <h2 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2 sm:mb-3" data-testid="text-quick-stats-title">
               Quick Stats Overview
             </h2>
             <StatsCards data={selectedSeason === "current" ? bootstrapData : undefined} isLoading={isLoading} />
@@ -190,7 +190,7 @@ export default function PlayerStats() {
 
         {/* Filters */}
         <Card className="mb-6 shadow-md border-0 bg-white">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <FiltersPanel 
               filters={filters}
               setFilters={setFilters}
@@ -225,7 +225,7 @@ export default function PlayerStats() {
 
       {/* Comparison Panel */}
       {compareList.length > 0 && (
-        <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-3 z-40 max-w-xs">
+        <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-2 sm:p-3 z-40 max-w-[90vw] sm:max-w-xs">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-semibold text-gray-900">Compare Players ({compareList.length}/5)</h3>
             <button
