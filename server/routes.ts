@@ -1566,64 +1566,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Calculate composite scores for ranking
-      const teamScores: { teamId: number; homeScore: number; awayScore: number }[] = [];
+      // Calculate PPG-based FDR ratings
+      const fdrRatings: Record<number, { home: number; away: number }> = {};
+      
+      // Helper function to determine FDR tier from PPG
+      const getPPGTier = (ppg: number): number => {
+        if (ppg <= 0.6) return 1; // Very Easy
+        if (ppg <= 1.2) return 2; // Easy
+        if (ppg <= 1.8) return 3; // Medium
+        if (ppg <= 2.4) return 4; // Hard
+        return 5; // Very Hard (>2.4)
+      };
       
       bootstrap.teams.forEach((team: any) => {
         const stats = teamStats[team.id];
         
-        // Calculate per-game metrics with Bayesian priors (4 virtual games at league avg)
-        const leagueAvgGoalsFor = 1.4;
-        const leagueAvgGoalsAgainst = 1.4;
-        const priorGames = 4;
+        // Calculate PPG for home and away
+        const homePPG = stats.home.gamesPlayed > 0 
+          ? stats.home.points / stats.home.gamesPlayed 
+          : 1.0; // Default to medium if no games
         
-        // Home metrics
-        const homeGames = stats.home.gamesPlayed + priorGames;
-        const homeGoalsPerGame = (stats.home.goalsScored + priorGames * leagueAvgGoalsFor) / homeGames;
-        const homeConcededPerGame = (stats.home.goalsConceded + priorGames * leagueAvgGoalsAgainst) / homeGames;
-        const homePPG = stats.home.gamesPlayed > 0 ? stats.home.points / stats.home.gamesPlayed : 1.0;
+        const awayPPG = stats.away.gamesPlayed > 0 
+          ? stats.away.points / stats.away.gamesPlayed 
+          : 1.0; // Default to medium if no games
         
-        // Away metrics  
-        const awayGames = stats.away.gamesPlayed + priorGames;
-        const awayGoalsPerGame = (stats.away.goalsScored + priorGames * leagueAvgGoalsFor) / awayGames;
-        const awayConcededPerGame = (stats.away.goalsConceded + priorGames * leagueAvgGoalsAgainst) / awayGames;
-        const awayPPG = stats.away.gamesPlayed > 0 ? stats.away.points / stats.away.gamesPlayed : 1.0;
-        
-        // Composite score (higher = harder opponent)
-        // Offense: 40% goals/game, Defense: 40% inverse conceded/game, Form: 20% PPG
-        const homeScore = (
-          0.4 * homeGoalsPerGame +
-          0.4 * (3.0 - homeConcededPerGame) + // Inverse: fewer conceded = better defense = harder
-          0.2 * homePPG
-        );
-        
-        const awayScore = (
-          0.4 * awayGoalsPerGame +
-          0.4 * (3.0 - awayConcededPerGame) +
-          0.2 * awayPPG
-        );
-        
-        teamScores.push({ teamId: team.id, homeScore, awayScore });
-      });
-
-      // Rank teams and assign to 5 tiers (4 teams per tier)
-      const homeRanked = [...teamScores].sort((a, b) => b.homeScore - a.homeScore);
-      const awayRanked = [...teamScores].sort((a, b) => b.awayScore - a.awayScore);
-      
-      const fdrRatings: Record<number, { home: number; away: number }> = {};
-      
-      // Assign FDR tiers: top 4 = tier 5 (hardest), bottom 4 = tier 1 (easiest)
-      // Teams are sorted best to worst, so we invert the tier assignment
-      homeRanked.forEach((team, index) => {
-        const tier = Math.max(1, 5 - Math.floor(index / 4));
-        if (!fdrRatings[team.teamId]) fdrRatings[team.teamId] = { home: 3, away: 3 };
-        fdrRatings[team.teamId].home = tier;
-      });
-      
-      awayRanked.forEach((team, index) => {
-        const tier = Math.max(1, 5 - Math.floor(index / 4));
-        if (!fdrRatings[team.teamId]) fdrRatings[team.teamId] = { home: 3, away: 3 };
-        fdrRatings[team.teamId].away = tier;
+        // Assign FDR tiers based on PPG thresholds
+        fdrRatings[team.id] = {
+          home: getPPGTier(homePPG),
+          away: getPPGTier(awayPPG)
+        };
       });
 
       res.json(fdrRatings);
