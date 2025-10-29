@@ -4255,7 +4255,7 @@ export default function TransferPlanner() {
 
       {/* Combined Selection Section */}
       {searchedId && teamData && selectedGameweek && (
-        <Card className="sticky top-0 z-20 bg-background shadow-md">
+        <Card className="sticky top-0 z-40 bg-background shadow-md">
           <CardContent className="pt-6 pb-4 space-y-4">
             {/* Draft Subsection */}
             <div>
