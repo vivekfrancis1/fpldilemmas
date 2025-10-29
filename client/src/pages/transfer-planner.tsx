@@ -3533,6 +3533,9 @@ export default function TransferPlanner() {
   };
 
   const switchToDraft = async (draftLetter: string) => {
+    // Always clear optimized lineup when switching drafts
+    setOptimizedLineup(null);
+    
     if (draftLetter === "Base") {
       // Switch to Base Draft - reset to original team
       setGameweekTransfers({});
