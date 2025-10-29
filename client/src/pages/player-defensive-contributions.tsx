@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -92,7 +92,7 @@ export default function PlayerDefensiveContributions() {
   });
   
   // Update range when current gameweek changes
-  React.useEffect(() => {
+  useEffect(() => {
     const start = nextGameweek;
     const end = Math.min(nextGameweek + 5, 38);
     setGameweekRange({ start, end });
