@@ -363,23 +363,6 @@ export default function Fixtures() {
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="text-sm font-medium text-gray-700">Sort by:</label>
-                <select 
-                  value={sortBy} 
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSortBy(value);
-                    setSortDirection('asc');
-                  }}
-                  className="px-3 py-1 border border-gray-300 rounded text-sm"
-                  data-testid="select-sort-by"
-                >
-                  <option value="team">Team Name</option>
-                  <option value="fdr-avg">FDR (Easiest First)</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
                 <Dialog open={customFDROpen} onOpenChange={setCustomFDROpen}>
                   <DialogTrigger asChild>
                     <Button 
