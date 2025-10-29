@@ -4471,30 +4471,6 @@ export default function TransferPlanner() {
             {/* Divider */}
             <div className="border-t" />
 
-            {/* Gameweek Subsection */}
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="text-base font-semibold min-w-[120px]">Select Gameweek</div>
-              <div className="flex gap-2 flex-wrap items-center">
-                {nextGameweeks.map(gw => (
-                  <Button
-                    key={gw.id}
-                    variant={selectedGameweek === gw.id ? "default" : "outline"}
-                    className="h-9 text-base font-semibold min-w-[2.5rem] md:min-w-[3rem] px-3"
-                    onClick={() => {
-                      setSelectedPlayer(null);
-                      setSelectedGameweek(gw.id);
-                    }}
-                    data-testid={`gw-button-${gw.id}`}
-                  >
-                    {gw.id}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="border-t" />
-
             {/* Lineup Subsection */}
             <div className="flex items-center gap-4 flex-wrap">
               <div className="text-base font-semibold min-w-[120px]">Select Lineup</div>
@@ -4515,6 +4491,30 @@ export default function TransferPlanner() {
                 >
                   Auto lineup
                 </Button>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t" />
+
+            {/* Gameweek Subsection */}
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="text-base font-semibold min-w-[120px]">Select Gameweek</div>
+              <div className="flex gap-2 flex-wrap items-center">
+                {nextGameweeks.map(gw => (
+                  <Button
+                    key={gw.id}
+                    variant={selectedGameweek === gw.id ? "default" : "outline"}
+                    className="h-9 text-base font-semibold min-w-[2.5rem] md:min-w-[3rem] px-3"
+                    onClick={() => {
+                      setSelectedPlayer(null);
+                      setSelectedGameweek(gw.id);
+                    }}
+                    data-testid={`gw-button-${gw.id}`}
+                  >
+                    {gw.id}
+                  </Button>
+                ))}
               </div>
             </div>
           </CardContent>
