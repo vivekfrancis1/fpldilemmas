@@ -6393,7 +6393,7 @@ export default function TransferPlanner() {
           </CardHeader>
           <CardContent>
             {/* View Toggle Buttons */}
-            <div className="flex gap-2 mb-4">
+            <div className="flex justify-center gap-2 mb-4">
               <Button
                 variant={teamView === "pitch" ? "default" : "outline"}
                 onClick={() => setTeamView("pitch")}
