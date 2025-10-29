@@ -1478,26 +1478,87 @@ export default function TransferPlanner() {
       recommendations.bboost = gwScores.slice(0, 2).map(s => s.gw);
     }
 
-    // Best Triple Captain: Find top 2 gameweeks where captain has highest points
+    // Best Triple Captain: Find top 2 gameweeks where captain has highest points for selected draft and lineup mode
     const tcInstance = getChipInstance('3xc');
     if (tcInstance) {
       const validGWs = getValidGameweeks(tcInstance);
-      const captainPick = manualLineup.find(p => p.is_captain);
-      if (captainPick) {
-        const gwScores: { gw: number; points: number }[] = [];
+      const gwScores: { gw: number; points: number }[] = [];
 
-        validGWs.forEach(gw => {
-          const projection = playerProjections6GW.find((p: any) => p.playerId === captainPick.element);
-          if (projection?.gameweekProjections) {
-            const points = projection.gameweekProjections[gw.id.toString()] || 0;
-            gwScores.push({ gw: gw.id, points });
+      validGWs.forEach(gw => {
+        const squad = getSquadAtGameweek(gameweekTransfers, gw.id);
+        let captainPoints = 0;
+
+        if (plannerMode === "manual") {
+          // For Manual mode: find the designated captain in the squad
+          const captainPick = squad.find(p => p.is_captain);
+          if (captainPick) {
+            const projection = playerProjections6GW.find((p: any) => p.playerId === captainPick.element);
+            if (projection?.gameweekProjections) {
+              captainPoints = projection.gameweekProjections[gw.id.toString()] || 0;
+            }
           }
-        });
+        } else {
+          // For Auto mode: find the highest projected player in the optimal starting 11
+          const playersWithPoints = squad.map(pick => {
+            const player = getPlayerById(pick.element);
+            const projection = playerProjections6GW.find((p: any) => p.playerId === pick.element);
+            const projectedPoints = projection?.gameweekProjections?.[gw.id.toString()] || 0;
+            
+            return {
+              ...pick,
+              element_type: player?.element_type || 0,
+              projectedPoints
+            };
+          });
 
-        // Sort by points descending and take top 2
-        gwScores.sort((a, b) => b.points - a.points);
-        recommendations.tripleC = gwScores.slice(0, 2).map(s => s.gw);
-      }
+          // Try all valid FPL formations and find the one with highest total points
+          const validFormations = [
+            [1, 3, 4, 3], [1, 3, 5, 2], [1, 4, 3, 3], [1, 4, 4, 2], [1, 4, 5, 1],
+            [1, 5, 3, 2], [1, 5, 4, 1]
+          ];
+
+          let bestCaptainPoints = 0;
+          
+          validFormations.forEach(formation => {
+            const [gk, def, mid, fwd] = formation;
+            
+            // Get players by position sorted by projected points
+            const gkPlayers = playersWithPoints.filter(p => p.element_type === 1).sort((a, b) => b.projectedPoints - a.projectedPoints);
+            const defPlayers = playersWithPoints.filter(p => p.element_type === 2).sort((a, b) => b.projectedPoints - a.projectedPoints);
+            const midPlayers = playersWithPoints.filter(p => p.element_type === 3).sort((a, b) => b.projectedPoints - a.projectedPoints);
+            const fwdPlayers = playersWithPoints.filter(p => p.element_type === 4).sort((a, b) => b.projectedPoints - a.projectedPoints);
+            
+            // Check if formation is valid with available players
+            if (gkPlayers.length >= gk && defPlayers.length >= def && 
+                midPlayers.length >= mid && fwdPlayers.length >= fwd) {
+              
+              const starting11 = [
+                ...gkPlayers.slice(0, gk),
+                ...defPlayers.slice(0, def),
+                ...midPlayers.slice(0, mid),
+                ...fwdPlayers.slice(0, fwd)
+              ];
+              
+              // Find the highest projected player (captain)
+              const captain = starting11.reduce((best, player) => 
+                (player.projectedPoints > best.projectedPoints) ? player : best
+              , starting11[0]);
+              
+              if (captain.projectedPoints > bestCaptainPoints) {
+                bestCaptainPoints = captain.projectedPoints;
+              }
+            }
+          });
+          
+          captainPoints = bestCaptainPoints;
+        }
+
+        gwScores.push({ gw: gw.id, points: captainPoints });
+      });
+
+      // Sort by points descending and take top 2
+      gwScores.sort((a, b) => b.points - a.points);
+      recommendations.tripleC = gwScores.slice(0, 2).map(s => s.gw);
     }
 
     // Best Free Hit: Find top 2 gameweeks with lowest starting 11 points for selected draft and lineup mode
