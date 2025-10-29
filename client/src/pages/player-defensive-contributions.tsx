@@ -207,7 +207,7 @@ export default function PlayerDefensiveContributions() {
     : Array.from({ length: 6 }, (_, i) => gameweekRange.start + i).filter(gw => gw <= 38);
   
   // Set default gameweek range based on current API query
-  React.useEffect(() => {
+  useEffect(() => {
     setStartGameweek(gameweekRange.start);
     setEndGameweek(gameweekRange.end);
   }, [gameweekRange]);
