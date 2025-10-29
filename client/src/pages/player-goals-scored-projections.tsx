@@ -146,6 +146,14 @@ export default function PlayerGoalsScoredProjections() {
               return (bPeriodTotal - aPeriodTotal) * multiplier;
             }
           }
+          case "totalPoints": {
+            // Sort by total points from goals in selected gameweeks
+            const aGoalsTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw.toString()] || 0), 0);
+            const bGoalsTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw.toString()] || 0), 0);
+            const aPointsTotal = getPointsFromGoals(aGoalsTotal, a.position);
+            const bPointsTotal = getPointsFromGoals(bGoalsTotal, b.position);
+            return (bPointsTotal - aPointsTotal) * multiplier;
+          }
           case "season": {
             if (activeTab === "points") {
               const aSeasonPoints = getPointsFromGoals(a.totalProjectedGoals, a.position);
@@ -512,11 +520,21 @@ export default function PlayerGoalsScoredProjections() {
                         {sortBy !== "total" && <ArrowUpDown className="h-3 w-3 opacity-50" />}
                       </div>
                     </th>
+                    <th className="px-2 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors min-w-[100px]">
+                      <div className="flex items-center justify-center gap-1" onClick={() => handleSort("totalPoints")}>
+                        Total Pts from Goals
+                        {sortBy === "totalPoints" && (
+                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
+                        )}
+                        {sortBy !== "totalPoints" && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                      </div>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredProjections.map((player, index) => {
                     const selectedTotal = selectedGameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw.toString()] || 0), 0);
+                    const totalPoints = getPointsFromGoals(selectedTotal, player.position);
                     
                     return (
                       <tr key={player.playerId} className="hover:bg-gray-50">
@@ -541,6 +559,11 @@ export default function PlayerGoalsScoredProjections() {
                             {selectedTotal.toFixed(2)}
                           </span>
                         </td>
+                        <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-blue-50">
+                          <span className="text-lg font-bold text-blue-900">
+                            {totalPoints.toFixed(1)}
+                          </span>
+                        </td>
                       </tr>
                     );
                   })}
@@ -558,6 +581,11 @@ export default function PlayerGoalsScoredProjections() {
                     <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100">
                       <span className="text-lg font-bold text-orange-900">
                         {totalGoals.overallTotal.toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-blue-100">
+                      <span className="text-lg font-bold text-blue-900">
+                        {totalGoals.pointsOverallTotal.toFixed(1)}
                       </span>
                     </td>
                   </tr>
