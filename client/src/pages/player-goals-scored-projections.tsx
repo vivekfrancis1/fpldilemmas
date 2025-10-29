@@ -1,11 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Target, Filter, BarChart3, Trophy, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw } from "lucide-react";
+import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { computeCurrentGameweek } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,6 @@ export default function PlayerGoalsScoredProjections() {
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>("goals");
   
   const queryClient = useQueryClient();
 
@@ -456,22 +454,8 @@ export default function PlayerGoalsScoredProjections() {
         </Card>
 
 
-        {/* Tab Navigation and Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-3 md:mb-4">
-            <TabsTrigger value="goals" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
-              <Target className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Goals Scored</span>
-              <span className="sm:hidden">Goals</span>
-            </TabsTrigger>
-            <TabsTrigger value="points" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm">
-              <Trophy className="h-3 w-3 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Goal Points</span>
-              <span className="sm:hidden">Points</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="goals">
+        {/* Main Content */}
+        <div className="w-full">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -595,126 +579,7 @@ export default function PlayerGoalsScoredProjections() {
                 </div>
           </CardContent>
         </Card>
-      </TabsContent>
-      
-      <TabsContent value="points">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5" />
-              Points from Goals - {selectedGameweeks.length} Gameweeks ({filteredProjections.length} players)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <div className="min-w-full inline-block align-middle">
-                <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-                  <tr>
-                    <th className="text-left py-3 px-2 sm:px-4 font-semibold sticky left-0 bg-gradient-to-r from-blue-600 to-indigo-700 border-r border-blue-500 z-10 min-w-[140px] sm:min-w-[180px]">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white"
-                        onClick={() => handleSort("name")}
-                        data-testid="sort-player-name-points"
-                      >
-                        Player
-                        {sortBy === "name" && (
-                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
-                        )}
-                        {sortBy !== "name" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                      </Button>
-                    </th>
-                    {selectedGameweeks.map(gw => (
-                      <th key={gw} className="text-center py-3 px-2 font-semibold text-white min-w-[60px]">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white"
-                          onClick={() => handleSort(`gw${gw}`)}
-                          data-testid={`sort-gw${gw}-points`}
-                        >
-                          GW{gw}
-                          {sortBy === `gw${gw}` && (
-                            sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
-                          )}
-                          {sortBy !== `gw${gw}` && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                        </Button>
-                      </th>
-                    ))}
-                    <th className="text-center py-3 px-2 font-semibold text-white border-l border-blue-500 min-w-[80px]">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-0 font-semibold text-white hover:bg-blue-700/50 hover:text-white"
-                        onClick={() => handleSort("total")}
-                        data-testid="sort-total-points"
-                      >
-                        {selectedGameweeks.length} GW Pts
-                        {sortBy === "total" && (
-                          sortDirection === 'desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />
-                        )}
-                        {sortBy !== "total" && <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />}
-                      </Button>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProjections.map((player, index) => {
-                    const selectedTotal = selectedGameweeks.reduce((sum, gw) => {
-                      const goals = player.gameweekProjections[gw.toString()] || 0;
-                      return sum + getPointsFromGoals(goals, player.position);
-                    }, 0);
-                    
-                    return (
-                      <tr key={`${player.playerId}-points`} className={`border-b border-gray-100 hover:bg-blue-50/50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
-                        <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-200 z-10">
-                          <PlayerNameCell 
-                            name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}
-                            position={player.position}
-                            team={player.teamShort}
-                            compact={false}
-                          />
-                        </td>
-                        {selectedGameweeks.map(gw => {
-                          const goals = player.gameweekProjections[gw.toString()] || 0;
-                          const points = getPointsFromGoals(goals, player.position);
-                          return (
-                            <td key={gw} className="py-2 sm:py-3 px-2 text-center">
-                              {points > 0 ? points.toFixed(2) : "-"}
-                            </td>
-                          );
-                        })}
-                        <td className="py-2 sm:py-3 px-2 text-center border-l border-gray-200">
-                          {selectedTotal.toFixed(1)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t border-gray-200 bg-blue-50">
-                    <td className="py-2 sm:py-3 px-2 sm:px-4 font-bold text-gray-900 sticky left-0 bg-blue-50 border-r border-gray-200 z-10" colSpan={1}>
-                      {selectedGameweeks.length} GW TOTAL
-                    </td>
-                    {selectedGameweeks.map(gw => (
-                      <td key={gw} className="py-2 sm:py-3 px-2 text-center font-bold text-blue-600">
-                        {(totalGoals.pointsGameweekTotals[gw] || 0) > 0 ? (totalGoals.pointsGameweekTotals[gw] || 0).toFixed(2) : "-"}
-                      </td>
-                    ))}
-                    <td className="py-2 sm:py-3 px-2 text-center font-bold text-blue-600">
-                      {totalGoals.pointsOverallTotal.toFixed(1)}
-                    </td>
-                  </tr>
-                </tfoot>
-                </table>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
+        </div>
       </div>
     </div>
   );

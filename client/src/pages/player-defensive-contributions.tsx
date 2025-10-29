@@ -5,7 +5,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Shield, Filter, Clock, Target, Search } from "lucide-react";
 
@@ -74,7 +73,6 @@ export default function PlayerDefensiveContributions() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [activeTab, setActiveTab] = useState<string>("defensive-contributions");
   const [startGameweek, setStartGameweek] = useState<number>(0); // Will be set to current + 1
   const [endGameweek, setEndGameweek] = useState<number>(0); // Will be set to current + 6
   const [gameweekSortColumn, setGameweekSortColumn] = useState<number | null>(null);
@@ -286,16 +284,16 @@ export default function PlayerDefensiveContributions() {
     // Sort by Total if specified
     else if (sortByTotal) {
       filtered.sort((a, b) => {
-        const aValue = activeTab === "points" ? a.totalDCPoints : a.totalDC;
-        const bValue = activeTab === "points" ? b.totalDCPoints : b.totalDC;
+        const aValue = a.totalDC;
+        const bValue = b.totalDC;
         return totalSortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
     }
     // Sort by Avg if specified
     else if (sortByAvg) {
       filtered.sort((a, b) => {
-        const aValue = activeTab === "points" ? a.avgDCPoints : a.avgDC;
-        const bValue = activeTab === "points" ? b.avgDCPoints : b.avgDC;
+        const aValue = a.avgDC;
+        const bValue = b.avgDC;
         return avgSortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
     }
@@ -305,12 +303,8 @@ export default function PlayerDefensiveContributions() {
         const aGameweek = a.gameweekProjections.find(gw => gw.gameweek === gameweekSortColumn);
         const bGameweek = b.gameweekProjections.find(gw => gw.gameweek === gameweekSortColumn);
         
-        const aValue = activeTab === "points" 
-          ? (aGameweek?.dcPoints || 0)
-          : (aGameweek?.defensiveContribution || 0);
-        const bValue = activeTab === "points"
-          ? (bGameweek?.dcPoints || 0) 
-          : (bGameweek?.defensiveContribution || 0);
+        const aValue = (aGameweek?.defensiveContribution || 0);
+        const bValue = (bGameweek?.defensiveContribution || 0);
         
         return gameweekSortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
@@ -323,7 +317,7 @@ export default function PlayerDefensiveContributions() {
     }
 
     return filtered;
-  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, gameweekSortColumn, gameweekSortOrder, activeTab, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, sortByAvg, avgSortOrder]);
+  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, gameweekSortColumn, gameweekSortOrder, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, sortByAvg, avgSortOrder]);
 
   // Get unique values for filters
   const positions = Array.from(new Set(players.map(p => p.position).filter(Boolean)));
@@ -567,7 +561,7 @@ export default function PlayerDefensiveContributions() {
         </CardContent>
       </Card>
 
-      {/* Main Content with Tabs */}
+      {/* Main Content */}
       <Card>
         <CardHeader>
           <CardTitle>Defensive Contributions by Gameweek</CardTitle>
@@ -576,19 +570,7 @@ export default function PlayerDefensiveContributions() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="defensive-contributions" className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Defensive Contributions
-              </TabsTrigger>
-              <TabsTrigger value="points" className="flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                DC Points
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="defensive-contributions" className="mt-4">
+          <div className="w-full mt-4">
           <div className="overflow-x-auto -mx-4 sm:mx-0">
             <Table>
               <TableHeader>
@@ -711,134 +693,7 @@ export default function PlayerDefensiveContributions() {
               </TableBody>
             </Table>
           </div>
-        </TabsContent>
-        
-        <TabsContent value="points" className="mt-4">
-          <div className="mb-4">
-            <div className="bg-muted/50 p-4 rounded-lg">
-              <h4 className="font-semibold mb-2">FPL Defensive Contribution Points Rules:</h4>
-              <ul className="text-sm space-y-1">
-                <li>• <strong>Defenders:</strong> 2 points for 10+ Defensive Contributions (CBI + Tackles)</li>
-                <li>• <strong>Midfielders/Forwards:</strong> 2 points for 12+ Defensive Contributions (CBI + Tackles + Recoveries)</li>
-                <li>• <strong>Goalkeepers:</strong> Do not receive Defensive Contribution points</li>
-              </ul>
-            </div>
           </div>
-          
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="cursor-pointer hover:bg-muted/50 sticky left-0 bg-background z-10 min-w-[150px]">
-                    Player
-                  </TableHead>
-
-                  <TableHead 
-                    className="sticky left-[310px] bg-background z-10 min-w-[100px] cursor-pointer hover:bg-muted/50"
-                    onClick={handleCurrentDCSort}
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      Current DC/game
-                      {sortByCurrentDC && (
-                        <span className="text-xs">
-                          {currentDCSortOrder === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </TableHead>
-                  {gameweeks.map(gw => (
-                    <TableHead 
-                      key={gw} 
-                      className="text-center min-w-[100px] cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleGameweekSort(gw)}
-                    >
-                      <div className="flex items-center justify-center gap-1">
-                        GW{gw}
-                        {gameweekSortColumn === gw && (
-                          <span className="text-xs">
-                            {gameweekSortOrder === "desc" ? "↓" : "↑"}
-                          </span>
-                        )}
-                      </div>
-                    </TableHead>
-                  ))}
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50 text-center min-w-[80px] font-bold"
-                    onClick={handleTotalSort}
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      Total Pts
-                      {sortByTotal && (
-                        <span className="text-xs">
-                          {totalSortOrder === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="text-center min-w-[80px] cursor-pointer hover:bg-muted/50"
-                    onClick={handleAvgSort}
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      Avg Pts
-                      {sortByAvg && (
-                        <span className="text-xs">
-                          {avgSortOrder === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPlayers.map((player) => (
-                  <TableRow key={player.playerId}>
-                    <TableCell className="font-medium sticky left-0 bg-background z-10">
-                      <div className="flex flex-col">
-                        <span>{(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}</span>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Badge variant="outline" className="text-xs">
-                            {player.position.slice(0, 3).toUpperCase()}
-                          </Badge>
-                          <Badge variant="outline" className="text-xs">
-                            {player.teamName.slice(0, 3).toUpperCase()}
-                          </Badge>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-mono sticky left-[150px] bg-background z-10">
-                      {player.currentSeasonStats.dcPer90.toFixed(1)}
-                    </TableCell>
-                    {player.gameweekProjections.map((gw) => (
-                      <TableCell key={gw.gameweek} className="text-center">
-                        <div className={`p-2 rounded text-sm ${getOpponentColor(gw.opponentTier)} ${gw.isActual ? 'border-2 border-blue-400' : ''}`}>
-                          <div className="font-bold text-lg">
-                            {gw.dcPoints}
-                            {gw.isActual && <span className="text-xs ml-1 text-blue-600">✓</span>}
-                          </div>
-                          <div className="text-xs">
-                            DC: {gw.defensiveContribution.toFixed(1)}
-                          </div>
-                          <div className="text-xs">
-                            vs {gw.opponent}
-                          </div>
-                        </div>
-                      </TableCell>
-                    ))}
-                    <TableCell className="text-center font-bold text-lg">
-                      {player.totalDCPoints}
-                    </TableCell>
-                    <TableCell className="text-center font-mono">
-                      {player.avgDCPoints.toFixed(1)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </TabsContent>
-        
-        </Tabs>
         </CardContent>
       </Card>
 

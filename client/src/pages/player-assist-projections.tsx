@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 
@@ -438,13 +437,7 @@ export default function PlayerAssistProjections() {
 
         {/* Results */}
         {!isLoading && filteredAndSortedData.length > 0 && (
-          <Tabs defaultValue="assists" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="assists">Assists</TabsTrigger>
-              <TabsTrigger value="points">Assist Points</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="assists">
+          <div className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -520,71 +513,7 @@ export default function PlayerAssistProjections() {
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
-
-            <TabsContent value="points">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="h-5 w-5 text-green-600" />
-                    Points from Assists (3 pts per assist)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-scroll" style={{ overflowX: 'scroll', overflowY: 'visible', width: '100%', maxWidth: '100%', height: 'auto', display: 'block', scrollbarWidth: 'auto', scrollSnapType: 'none', overscrollBehaviorX: 'contain' }} onDoubleClick={(e) => { const target = e.currentTarget as HTMLElement; target.scrollLeft = 0; }}>
-                    <table className="w-full" style={{ minWidth: '1200px', tableLayout: 'auto' }}>
-                      <thead className="bg-gray-50 border-b">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              Player {getSortIcon('name')}
-                            </Button>
-                          </th>
-                          {dynamicGameweekColumns.map((gw) => (
-                            <th key={`points-header-gw${gw}`} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              <Button variant="ghost" size="sm" onClick={() => handleSort(`gw${gw}`)} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                                GW{gw} {getSortIcon(`gw${gw}`)}
-                              </Button>
-                            </th>
-                          ))}
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('rangeTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              {rangeLabel} {getSortIcon('rangeTotal')}
-                            </Button>
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredAndSortedData.map((player, index) => {
-                          const filteredGwPoints = Math.round(getFilteredTotal(player) * 3 * 10) / 10; // 3 points per assist
-                          return (
-                          <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
-                            <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
-                              <PlayerNameCell 
-                                name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}
-                                position={player.position}
-                                team={player.teamShort}
-                                compact={true}
-                              />
-                            </td>
-                            {dynamicGameweekColumns.map((gw) => (
-                              <td key={`points-cell-${player.playerId}-gw${gw}`} className="text-center py-3 px-1">
-                                {((player.gameweekProjections[gw.toString()] || 0) * 3) > 0 ? ((player.gameweekProjections[gw.toString()] || 0) * 3).toFixed(2) : "-"}
-                              </td>
-                            ))}
-                            <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {filteredGwPoints.toFixed(2)}
-                            </td>
-                          </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+          </div>
         )}
 
         {/* No Results */}
