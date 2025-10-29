@@ -79,10 +79,9 @@ export default function PlayerStatsTable({
   const [zoomLevel, setZoomLevel] = useState(100);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
-  // Reset scroll position to top-left when zoom changes
+  // Reset horizontal scroll position when zoom changes
   useEffect(() => {
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = 0;
       scrollContainerRef.current.scrollLeft = 0;
     }
   }, [zoomLevel]);
@@ -576,7 +575,7 @@ export default function PlayerStatsTable({
       {/* Comprehensive Player Statistics Table */}
       <div 
         ref={scrollContainerRef}
-        className="overflow-x-auto overflow-y-auto max-h-[800px]" 
+        className="overflow-x-auto" 
         style={{ position: 'relative' }}
       >
         <div 
