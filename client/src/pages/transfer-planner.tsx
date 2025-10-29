@@ -6117,8 +6117,8 @@ export default function TransferPlanner() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-purple-600" />
-                {activeDraft === "Base" ? "Base Draft Auto Team Selection" : `Draft ${activeDraft} Auto Team Selection`}
+                <Calendar className="h-5 w-5 text-indigo-600" />
+                Team Evolution - {activeDraft === "Base" ? "Base Draft" : `Draft ${activeDraft}`}
               </div>
               {(() => {
                 const currentChip = plannedChips[selectedGameweek];
@@ -6386,9 +6386,38 @@ export default function TransferPlanner() {
       {searchedId && teamData && activeDraft !== "Base" && (
         <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-background">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-indigo-600" />
-              Team Evolution - {activeDraft === "Base" ? "Base Draft" : `Draft ${activeDraft}`}
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                {activeDraft === "Base" ? "Base Draft Auto Team Selection" : `Draft ${activeDraft} Auto Team Selection`}
+              </div>
+              {(() => {
+                const currentChip = plannedChips[selectedGameweek];
+                if (currentChip) {
+                  return (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="cursor-help">
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs px-2 py-1 ${getChipIconColor(currentChip)} bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-700`}
+                            >
+                              <Sparkles className="h-3 w-3 mr-1" />
+                              {getChipDisplayNameWithNumber(currentChip)} - GW{selectedGameweek}
+                            </Badge>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs font-semibold">{getChipDisplayName(currentChip)}</p>
+                          <p className="text-xs text-muted-foreground">{getChipDescription(currentChip)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  );
+                }
+                return null;
+              })()}
             </CardTitle>
           </CardHeader>
           <CardContent>
