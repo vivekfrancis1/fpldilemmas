@@ -23,7 +23,7 @@ interface PlayerAssistProjection {
   assistShare: number;
 }
 
-type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'rangeTotal' | 'assistShare' | string; // string allows dynamic gameweek fields like 'gw4', 'gw5', etc.
+type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'rangeTotal' | 'rangePoints' | 'assistShare' | string; // string allows dynamic gameweek fields like 'gw4', 'gw5', etc.
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerAssistProjections() {
@@ -220,6 +220,10 @@ export default function PlayerAssistProjections() {
         case 'rangeTotal':
           aValue = getFilteredTotal(a);
           bValue = getFilteredTotal(b);
+          break;
+        case 'rangePoints':
+          aValue = getFilteredTotal(a) * 3;
+          bValue = getFilteredTotal(b) * 3;
           break;
         case 'assistShare':
           aValue = a.assistShare;
@@ -466,15 +470,22 @@ export default function PlayerAssistProjections() {
                               </Button>
                             </th>
                           ))}
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort('rangeTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              {rangeLabel} {getSortIcon('rangeTotal')}
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-orange-50">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('rangeTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-orange-100 hover:text-gray-700">
+                              6 GW Assists {getSortIcon('rangeTotal')}
+                            </Button>
+                          </th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort('rangePoints')} className="h-auto p-0 font-medium text-gray-500 hover:bg-blue-100 hover:text-gray-700">
+                              6 GW Pts {getSortIcon('rangePoints')}
                             </Button>
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         {filteredAndSortedData.map((player, index) => {
+                          const assistsTotal = getFilteredTotal(player);
+                          const pointsTotal = assistsTotal * 3;
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
                             <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
@@ -490,8 +501,15 @@ export default function PlayerAssistProjections() {
                                 {(player.gameweekProjections[gw.toString()] || 0) > 0 ? (player.gameweekProjections[gw.toString()] || 0).toFixed(2) : "-"}
                               </td>
                             ))}
-                            <td className="text-center py-3 px-1 font-semibold text-green-700">
-                              {getFilteredTotal(player).toFixed(2)}
+                            <td className="text-center py-3 px-1 font-semibold bg-orange-50">
+                              <span className="text-lg font-bold text-orange-900">
+                                {assistsTotal.toFixed(2)}
+                              </span>
+                            </td>
+                            <td className="text-center py-3 px-1 font-semibold bg-blue-50">
+                              <span className="text-lg font-bold text-blue-900">
+                                {pointsTotal.toFixed(1)}
+                              </span>
                             </td>
                           </tr>
                           );
