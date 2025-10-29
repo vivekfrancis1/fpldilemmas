@@ -627,16 +627,23 @@ export default function PlayerDefensiveContributions() {
                     </TableHead>
                   ))}
                   <TableHead 
-                    className="text-center min-w-[80px] font-bold cursor-pointer hover:bg-muted/50"
+                    className="text-center min-w-[80px] font-bold cursor-pointer hover:bg-muted/50 bg-orange-50"
                     onClick={handleTotalSort}
                   >
                     <div className="flex items-center justify-center gap-1">
-                      Total
+                      6 GW DC
                       {sortByTotal && (
                         <span className="text-xs">
                           {totalSortOrder === "desc" ? "↓" : "↑"}
                         </span>
                       )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-center min-w-[80px] font-bold cursor-pointer hover:bg-muted/50 bg-blue-50"
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      6 GW Pts
                     </div>
                   </TableHead>
                   <TableHead 
@@ -686,8 +693,15 @@ export default function PlayerDefensiveContributions() {
                         </div>
                       </TableCell>
                     ))}
-                    <TableCell className="text-center font-bold">
-                      {player.totalDC.toFixed(1)}
+                    <TableCell className="text-center font-bold bg-orange-50">
+                      <span className="text-lg font-bold text-orange-900">
+                        {player.totalDC.toFixed(1)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-center font-bold bg-blue-50">
+                      <span className="text-lg font-bold text-blue-900">
+                        {player.totalDCPoints}
+                      </span>
                     </TableCell>
                     <TableCell className="text-center font-mono">
                       {player.avgDC.toFixed(1)}
