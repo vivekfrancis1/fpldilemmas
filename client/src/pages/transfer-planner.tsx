@@ -7049,7 +7049,19 @@ export default function TransferPlanner() {
                       <div className="mt-8 pt-4 border-t border-white/30">
                         <h4 className="text-xs font-semibold text-white mb-3 text-center">Bench</h4>
                         <div className="flex justify-center gap-0.5 sm:gap-1 md:gap-1.5">
-                          {optimizedLineup.bench.map((player) => {
+                          {(() => {
+                            const gkBench = optimizedLineup.bench.find(player => {
+                              const fullPlayer = getPlayerById(player.element);
+                              return fullPlayer?.element_type === 1;
+                            });
+                            const outfieldBench = optimizedLineup.bench
+                              .filter(player => {
+                                const fullPlayer = getPlayerById(player.element);
+                                return fullPlayer?.element_type !== 1;
+                              })
+                              .sort((a, b) => b.projectedPoints - a.projectedPoints);
+                            const reorderedBench = gkBench ? [gkBench, ...outfieldBench] : outfieldBench;
+                            return reorderedBench.map((player) => {
                             const fullPlayer = getPlayerById(player.element);
                             const pick = manualLineup.find(p => p.element === player.element);
                             
@@ -7100,7 +7112,8 @@ export default function TransferPlanner() {
                                 </div>
                               </div>
                             );
-                          })}
+                          });
+                          })()}
                         </div>
                       </div>
                     </div>
