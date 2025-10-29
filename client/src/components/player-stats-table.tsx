@@ -818,7 +818,7 @@ export default function PlayerStatsTable({
                         {player.web_name}
                       </span>
                       <div className="flex items-center gap-0.5">
-                        <Badge className={`text-xs px-1 py-0 h-4 ${
+                        <Badge className={`text-[9px] px-0.5 py-0 h-3.5 ${
                           position === 'GKP' ? 'bg-yellow-100 text-yellow-800' :
                           position === 'DEF' ? 'bg-green-100 text-green-800' :
                           position === 'MID' ? 'bg-blue-100 text-blue-800' :
@@ -826,7 +826,7 @@ export default function PlayerStatsTable({
                         }`}>
                           {position}
                         </Badge>
-                        <Badge variant="outline" className="text-xs px-0.5 py-0 h-4 text-gray-600">
+                        <Badge variant="outline" className="text-[9px] px-0.5 py-0 h-3.5 text-gray-600">
                           {teamName}
                         </Badge>
                       </div>
@@ -837,11 +837,11 @@ export default function PlayerStatsTable({
                       variant="outline"
                       size="sm"
                       onClick={() => onPlayerDetailsClick?.(player)}
-                      className="h-5 w-5 p-0 hover:bg-blue-50 hover:border-blue-300"
+                      className="h-4 w-4 p-0 hover:bg-blue-50 hover:border-blue-300"
                       title="View detailed gameweek statistics"
                       data-testid={`button-player-details-${player.id}`}
                     >
-                      <Eye className="h-2 w-2" />
+                      <Eye className="h-1.5 w-1.5" />
                     </Button>
                   </td>
                   {onPlayerCompareClick && (
@@ -851,23 +851,23 @@ export default function PlayerStatsTable({
                           variant="outline"
                           size="sm"
                           onClick={() => onPlayerCompareClick?.(player)}
-                          className="h-5 w-5 p-0 hover:bg-red-50 hover:border-red-300 border-red-300 text-red-600"
+                          className="h-4 w-4 p-0 hover:bg-red-50 hover:border-red-300 border-red-300 text-red-600"
                           title="Remove from comparison"
                           data-testid={`button-player-remove-compare-${player.id}`}
                         >
-                          <UserMinus className="h-2 w-2" />
+                          <UserMinus className="h-1.5 w-1.5" />
                         </Button>
                       ) : (
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => onPlayerCompareClick?.(player)}
-                          className="h-5 w-5 p-0 hover:bg-green-50 hover:border-green-300"
+                          className="h-4 w-4 p-0 hover:bg-green-50 hover:border-green-300"
                           title="Add to comparison"
                           disabled={maxCompareReached}
                           data-testid={`button-player-add-compare-${player.id}`}
                         >
-                          <UserPlus className="h-2 w-2" />
+                          <UserPlus className="h-1.5 w-1.5" />
                         </Button>
                       )}
                     </td>
