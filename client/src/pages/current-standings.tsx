@@ -214,9 +214,9 @@ export default function CurrentStandings() {
     return Math.round(value);
   };
 
-  const SortableHeader = ({ field, children, tooltip }: { field: SortField; children: React.ReactNode; tooltip: string }) => (
+  const SortableHeader = ({ field, children, tooltip, hideOnMobile = false }: { field: SortField; children: React.ReactNode; tooltip: string; hideOnMobile?: boolean }) => (
     <th 
-      className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+      className={`px-2 sm:px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors ${hideOnMobile ? 'hidden lg:table-cell' : ''}`}
       onClick={() => handleSort(field)}
       data-testid={`sort-${field}`}
     >
@@ -364,7 +364,7 @@ export default function CurrentStandings() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1400px]">
+              <table className="w-full min-w-[800px] lg:min-w-[1400px]">
                 <thead className="bg-gray-50">
                   <tr>
                     {/* Position & Team Info */}
@@ -386,7 +386,7 @@ export default function CurrentStandings() {
                         </TooltipContent>
                       </Tooltip>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-16 bg-gray-50 z-10 border-r min-w-[140px] cursor-pointer hover:bg-gray-100 transition-colors"
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 sm:left-16 bg-gray-50 z-10 border-r min-w-[100px] sm:min-w-[140px] cursor-pointer hover:bg-gray-100 transition-colors"
                         onClick={() => handleSort('name')}
                         data-testid="sort-name">
                       <Tooltip>
@@ -454,14 +454,14 @@ export default function CurrentStandings() {
                     </th>
                     
                     {/* Expected Goals - After Points */}
-                    <SortableHeader field="expectedGoalsFor" tooltip="Expected Goals For - statistical model of scoring chances">xGF</SortableHeader>
-                    <SortableHeader field="expectedGoalsAgainst" tooltip="Expected Goals Against - statistical model of chances conceded">xGA</SortableHeader>
-                    <SortableHeader field="adjustedGoalRate" tooltip="Adjusted Goal Rate: 0.5 × (Goals For + xGF) per game">AGR</SortableHeader>
-                    <SortableHeader field="adjustedGoalsAgainstRate" tooltip="Adjusted Goals Against Rate: 0.5 × (Goals Against + xGA) per game">AGAR</SortableHeader>
+                    <SortableHeader field="expectedGoalsFor" tooltip="Expected Goals For - statistical model of scoring chances" hideOnMobile={true}>xGF</SortableHeader>
+                    <SortableHeader field="expectedGoalsAgainst" tooltip="Expected Goals Against - statistical model of chances conceded" hideOnMobile={true}>xGA</SortableHeader>
+                    <SortableHeader field="adjustedGoalRate" tooltip="Adjusted Goal Rate: 0.5 × (Goals For + xGF) per game" hideOnMobile={true}>AGR</SortableHeader>
+                    <SortableHeader field="adjustedGoalsAgainstRate" tooltip="Adjusted Goals Against Rate: 0.5 × (Goals Against + xGA) per game" hideOnMobile={true}>AGAR</SortableHeader>
                     
                     {/* Defensive Stats - After xGA */}
-                    <SortableHeader field="tackles" tooltip="Total tackles made by the team">T</SortableHeader>
-                    <SortableHeader field="defensiveActions" tooltip="Defensive actions (interceptions, blocks, clearances)">DA</SortableHeader>
+                    <SortableHeader field="tackles" tooltip="Total tackles made by the team" hideOnMobile={true}>T</SortableHeader>
+                    <SortableHeader field="defensiveActions" tooltip="Defensive actions (interceptions, blocks, clearances)" hideOnMobile={true}>DA</SortableHeader>
                     
                     {/* Enhanced Statistics */}
                     <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l cursor-pointer hover:bg-gray-100 transition-colors"
@@ -482,12 +482,12 @@ export default function CurrentStandings() {
                         </TooltipContent>
                       </Tooltip>
                     </th>
-                    <SortableHeader field="yellowCards" tooltip="Yellow cards received by team players">YC</SortableHeader>
-                    <SortableHeader field="redCards" tooltip="Red cards received by team players">RC</SortableHeader>
-                    <SortableHeader field="saves" tooltip="Goalkeeper saves made by the team">Saves</SortableHeader>
-                    <SortableHeader field="penaltiesSaved" tooltip="Penalties saved by team goalkeepers">PS</SortableHeader>
-                    <SortableHeader field="ownGoals" tooltip="Own goals scored by team players">OG</SortableHeader>
-                    <SortableHeader field="penaltiesMissed" tooltip="Penalties missed by team players">PM</SortableHeader>
+                    <SortableHeader field="yellowCards" tooltip="Yellow cards received by team players" hideOnMobile={true}>YC</SortableHeader>
+                    <SortableHeader field="redCards" tooltip="Red cards received by team players" hideOnMobile={true}>RC</SortableHeader>
+                    <SortableHeader field="saves" tooltip="Goalkeeper saves made by the team" hideOnMobile={true}>Saves</SortableHeader>
+                    <SortableHeader field="penaltiesSaved" tooltip="Penalties saved by team goalkeepers" hideOnMobile={true}>PS</SortableHeader>
+                    <SortableHeader field="ownGoals" tooltip="Own goals scored by team players" hideOnMobile={true}>OG</SortableHeader>
+                    <SortableHeader field="penaltiesMissed" tooltip="Penalties missed by team players" hideOnMobile={true}>PM</SortableHeader>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -500,7 +500,7 @@ export default function CurrentStandings() {
                         </div>
                       </td>
                       
-                      <td className="px-4 py-4 sticky left-16 bg-white hover:bg-gray-50 border-r min-w-[140px]">
+                      <td className="px-2 sm:px-4 py-4 sticky left-12 sm:left-16 bg-white hover:bg-gray-50 border-r min-w-[100px] sm:min-w-[140px]">
                         <div className="flex items-center">
                           <div>
                             <div className="text-sm font-medium text-gray-900" data-testid={`team-name-${team.shortName}`}>
@@ -544,24 +544,24 @@ export default function CurrentStandings() {
                       </td>
                       
                       {/* Expected Goals - After Points */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600" data-testid={`expected-goals-for-${team.shortName}`}>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-indigo-600" data-testid={`expected-goals-for-${team.shortName}`}>
                         {formatStat(team.expectedGoalsFor)}
                       </td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-500" data-testid={`expected-goals-against-${team.shortName}`}>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-indigo-500" data-testid={`expected-goals-against-${team.shortName}`}>
                         {formatStat(team.expectedGoalsAgainst)}
                       </td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-purple-600" data-testid={`adjusted-goal-rate-${team.shortName}`}>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-purple-600" data-testid={`adjusted-goal-rate-${team.shortName}`}>
                         {team.adjustedGoalRate ? team.adjustedGoalRate.toFixed(2) : '0.00'}
                       </td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-orange-600" data-testid={`adjusted-goals-against-rate-${team.shortName}`}>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-orange-600" data-testid={`adjusted-goals-against-rate-${team.shortName}`}>
                         {team.adjustedGoalsAgainstRate ? team.adjustedGoalsAgainstRate.toFixed(2) : '0.00'}
                       </td>
                       
                       {/* Defensive Stats - After xGA */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-600" data-testid={`tackles-${team.shortName}`}>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-teal-600" data-testid={`tackles-${team.shortName}`}>
                         {formatStat(team.tackles)}
                       </td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-500" data-testid={`defensive-actions-${team.shortName}`}>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-teal-500" data-testid={`defensive-actions-${team.shortName}`}>
                         {formatStat(team.defensiveActions)}
                       </td>
                       
@@ -571,26 +571,26 @@ export default function CurrentStandings() {
                       </td>
                       
                       {/* Cards */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-yellow-600" data-testid={`yellow-cards-${team.shortName}`}>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-yellow-600" data-testid={`yellow-cards-${team.shortName}`}>
                         {formatStat(team.yellowCards)}
                       </td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-red-600" data-testid={`red-cards-${team.shortName}`}>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-red-600" data-testid={`red-cards-${team.shortName}`}>
                         {formatStat(team.redCards)}
                       </td>
                       
                       {/* GK Stats */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-purple-600 border-l" data-testid={`saves-${team.shortName}`}>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-purple-600 border-l" data-testid={`saves-${team.shortName}`}>
                         {formatStat(team.saves)}
                       </td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-green-600" data-testid={`penalties-saved-${team.shortName}`}>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-green-600" data-testid={`penalties-saved-${team.shortName}`}>
                         {formatStat(team.penaltiesSaved)}
                       </td>
                       
                       {/* Other Events */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-orange-600 border-l" data-testid={`own-goals-${team.shortName}`}>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-orange-600 border-l" data-testid={`own-goals-${team.shortName}`}>
                         {formatStat(team.ownGoals)}
                       </td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-red-500" data-testid={`penalties-missed-${team.shortName}`}>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-red-500" data-testid={`penalties-missed-${team.shortName}`}>
                         {formatStat(team.penaltiesMissed)}
                       </td>
                     </tr>
@@ -603,7 +603,7 @@ export default function CurrentStandings() {
                       <td className="px-3 py-4 text-center sticky left-0 bg-gray-100 border-r">
                         <div className="text-xs font-bold text-gray-700">TOT</div>
                       </td>
-                      <td className="px-4 py-4 sticky left-16 bg-gray-100 border-r min-w-[140px]">
+                      <td className="px-2 sm:px-4 py-4 sticky left-12 sm:left-16 bg-gray-100 border-r min-w-[100px] sm:min-w-[140px]">
                         <div className="text-sm font-bold text-gray-900">TOTAL</div>
                       </td>
                       
@@ -626,23 +626,23 @@ export default function CurrentStandings() {
                       <td className="px-3 py-4 text-center text-sm font-bold text-gray-900 border-l bg-blue-100">{summaryStats.totals.points.toFixed(2)}</td>
                       
                       {/* Expected Goals */}
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-600">{summaryStats.totals.expectedGoalsFor.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-indigo-500">{summaryStats.totals.expectedGoalsAgainst.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-purple-600">{summaryStats.totals.adjustedGoalRate.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-orange-600">{summaryStats.totals.adjustedGoalsAgainstRate.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-semibold text-indigo-600">{summaryStats.totals.expectedGoalsFor.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-semibold text-indigo-500">{summaryStats.totals.expectedGoalsAgainst.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-semibold text-purple-600">{summaryStats.totals.adjustedGoalRate.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-semibold text-orange-600">{summaryStats.totals.adjustedGoalsAgainstRate.toFixed(2)}</td>
                       
                       {/* Defensive Stats */}
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-teal-600">{summaryStats.totals.tackles.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-teal-500">{summaryStats.totals.defensiveActions.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-semibold text-teal-600">{summaryStats.totals.tackles.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-semibold text-teal-500">{summaryStats.totals.defensiveActions.toFixed(2)}</td>
                       
                       {/* Enhanced Statistics */}
                       <td className="px-2 py-4 text-center text-sm font-semibold text-blue-600 border-l">{summaryStats.totals.cleanSheets.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-yellow-600">{summaryStats.totals.yellowCards.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-red-600">{summaryStats.totals.redCards.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-purple-600 border-l">{summaryStats.totals.saves.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-green-600">{summaryStats.totals.penaltiesSaved.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-orange-600 border-l">{summaryStats.totals.ownGoals.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-red-500">{summaryStats.totals.penaltiesMissed.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-semibold text-yellow-600">{summaryStats.totals.yellowCards.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-semibold text-red-600">{summaryStats.totals.redCards.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-semibold text-purple-600 border-l">{summaryStats.totals.saves.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-semibold text-green-600">{summaryStats.totals.penaltiesSaved.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-semibold text-orange-600 border-l">{summaryStats.totals.ownGoals.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-semibold text-red-500">{summaryStats.totals.penaltiesMissed.toFixed(2)}</td>
                     </tr>
                   )}
                   
@@ -653,7 +653,7 @@ export default function CurrentStandings() {
                       <td className="px-3 py-4 text-center sticky left-0 bg-blue-50 border-r">
                         <div className="text-xs font-bold text-blue-700">AVG</div>
                       </td>
-                      <td className="px-4 py-4 sticky left-16 bg-blue-50 border-r min-w-[140px]">
+                      <td className="px-2 sm:px-4 py-4 sticky left-12 sm:left-16 bg-blue-50 border-r min-w-[100px] sm:min-w-[140px]">
                         <div className="text-sm font-bold text-blue-900">AVERAGE</div>
                       </td>
                       
@@ -676,25 +676,25 @@ export default function CurrentStandings() {
                       <td className="px-3 py-4 text-center text-sm font-bold text-blue-900 border-l bg-blue-100">{summaryStats.averages.points.toFixed(1)}</td>
                       
                       {/* Expected Goals */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-700">{summaryStats.averages.expectedGoalsFor.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600">{summaryStats.averages.expectedGoalsAgainst.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-purple-700">{summaryStats.averages.adjustedGoalRate.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-orange-700">{summaryStats.averages.adjustedGoalsAgainstRate.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-emerald-700">1.00</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-rose-700">1.00</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-indigo-700">{summaryStats.averages.expectedGoalsFor.toFixed(1)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-indigo-600">{summaryStats.averages.expectedGoalsAgainst.toFixed(1)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-purple-700">{summaryStats.averages.adjustedGoalRate.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-orange-700">{summaryStats.averages.adjustedGoalsAgainstRate.toFixed(2)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-emerald-700">1.00</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-rose-700">1.00</td>
                       
                       {/* Defensive Stats */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-700">{summaryStats.averages.tackles.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-600">{summaryStats.averages.defensiveActions.toFixed(1)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-teal-700">{summaryStats.averages.tackles.toFixed(1)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-teal-600">{summaryStats.averages.defensiveActions.toFixed(1)}</td>
                       
                       {/* Enhanced Statistics */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-blue-700 border-l">{summaryStats.averages.cleanSheets.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-yellow-700">{summaryStats.averages.yellowCards.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-red-700">{summaryStats.averages.redCards.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-purple-700 border-l">{summaryStats.averages.saves.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-green-700">{summaryStats.averages.penaltiesSaved.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-orange-700 border-l">{summaryStats.averages.ownGoals.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{summaryStats.averages.penaltiesMissed.toFixed(1)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-yellow-700">{summaryStats.averages.yellowCards.toFixed(1)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-red-700">{summaryStats.averages.redCards.toFixed(1)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-purple-700 border-l">{summaryStats.averages.saves.toFixed(1)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-green-700">{summaryStats.averages.penaltiesSaved.toFixed(1)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-orange-700 border-l">{summaryStats.averages.ownGoals.toFixed(1)}</td>
+                      <td className="hidden lg:table-cell px-2 py-4 text-center text-sm font-medium text-red-600">{summaryStats.averages.penaltiesMissed.toFixed(1)}</td>
                     </tr>
                   )}
                 </tbody>
