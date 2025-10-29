@@ -1793,10 +1793,10 @@ export default function TransferPlanner() {
 
   // Auto-run optimization when Auto mode is selected
   useEffect(() => {
-    if (plannerMode === "auto" && selectedGameweek && teamData && !optimizeMutation.isPending) {
+    if (plannerMode === "auto" && selectedGameweek && teamData && manualLineup.length > 0 && !optimizeMutation.isPending) {
       optimizeMutation.mutate();
     }
-  }, [plannerMode, selectedGameweek, teamData]);
+  }, [plannerMode, selectedGameweek, teamData, manualLineup]);
 
   const handleSearch = () => {
     if (managerId.trim()) {
