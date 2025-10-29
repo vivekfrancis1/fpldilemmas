@@ -4149,7 +4149,7 @@ export default function TransferPlanner() {
       {/* Combined Selection Section */}
       {searchedId && teamData && selectedGameweek && (
         <Card className="sticky top-0 z-20 bg-background shadow-md">
-          <CardContent className="py-4 space-y-4">
+          <CardContent className="pt-6 pb-4 space-y-4">
             {/* Draft Subsection */}
             <div>
               <div className="flex items-center gap-4 flex-wrap mb-2">
@@ -4162,13 +4162,12 @@ export default function TransferPlanner() {
                     <span className="ml-2 text-base text-green-600 font-semibold">✓ Saved</span>
                   )}
                 </div>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap items-center">
               {/* Switch to Base */}
               <Button
                 onClick={() => switchToDraft("Base")}
-                size="sm"
                 variant={activeDraft === "Base" ? "default" : "outline"}
-                className="gap-1 text-base"
+                className="h-9 text-base px-3"
                 data-testid="button-switch-base"
               >
                 Base
@@ -4185,9 +4184,8 @@ export default function TransferPlanner() {
                       <TooltipTrigger asChild>
                         <Button
                           onClick={() => switchToDraft(draft.draftLetter)}
-                          size="sm"
                           variant={activeDraft === draft.draftLetter ? "default" : "outline"}
-                          className="relative text-base"
+                          className="relative h-9 text-base px-3"
                           data-testid={`button-switch-draft-${draft.draftLetter}`}
                         >
                           {draft.draftLetter}
@@ -4229,9 +4227,8 @@ export default function TransferPlanner() {
                 {savedDrafts.length < 5 && (
                   <Button
                     onClick={createNewDraft}
-                    size="sm"
                     variant="outline"
-                    className="gap-1 border-dashed text-base"
+                    className="h-9 gap-1 border-dashed text-base px-3"
                     data-testid="button-new-draft"
                   >
                     <Plus className="h-4 w-4" />
@@ -4243,50 +4240,46 @@ export default function TransferPlanner() {
 
               {/* Action Buttons - Below selectors */}
               {activeDraft !== "Base" && (
-                <div className="flex gap-2 flex-wrap pl-[140px]">
+                <div className="flex gap-2 flex-wrap pl-[140px] items-center">
                   <Button
                     onClick={() => saveCurrentDraft()}
-                    size="sm"
                     variant="default"
                     disabled={!hasUnsavedChanges}
-                    className="text-base"
+                    className="h-8 text-sm px-3"
                     data-testid="button-save-draft"
                   >
-                    <Save className="h-4 w-4 mr-1" />
+                    <Save className="h-3.5 w-3.5 mr-1" />
                     Save {hasUnsavedChanges && "●"}
                   </Button>
                   
                   <Button
                     onClick={duplicateCurrentDraft}
-                    size="sm"
                     variant="outline"
-                    className="text-base"
+                    className="h-8 text-sm px-3"
                     data-testid="button-duplicate-draft"
                   >
-                    <Copy className="h-4 w-4 mr-1" />
+                    <Copy className="h-3.5 w-3.5 mr-1" />
                     Duplicate
                   </Button>
                   
                   {activeDraft === "A" ? (
                     <Button
                       onClick={resetDraftAToBase}
-                      size="sm"
                       variant="outline"
-                      className="text-base text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                      className="h-8 text-sm px-3 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
                       data-testid="button-reset-draft-a"
                     >
-                      <RotateCcw className="h-4 w-4 mr-1" />
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
                       Reset to Base
                     </Button>
                   ) : (
                     <Button
                       onClick={deleteCurrentDraft}
-                      size="sm"
                       variant="outline"
-                      className="text-base text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                      className="h-8 text-sm px-3 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
                       data-testid="button-delete-draft"
                     >
-                      <Trash2 className="h-4 w-4 mr-1" />
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />
                       Delete
                     </Button>
                   )}
@@ -4295,12 +4288,11 @@ export default function TransferPlanner() {
 
               {/* Bulk Actions */}
               {savedDrafts.length > 0 && activeDraft === "Base" && (
-                <div className="flex gap-2 flex-wrap pl-[140px]">
+                <div className="flex gap-2 flex-wrap pl-[140px] items-center">
                   <Button
                     onClick={deleteAllDrafts}
-                    size="sm"
                     variant="outline"
-                    className="text-base text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                    className="h-8 text-sm px-3 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
                     data-testid="button-delete-all-drafts"
                   >
                     Delete All Drafts
@@ -4315,13 +4307,12 @@ export default function TransferPlanner() {
             {/* Gameweek Subsection */}
             <div className="flex items-center gap-4 flex-wrap">
               <div className="text-base font-semibold min-w-[120px]">Select Gameweek</div>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
                 {nextGameweeks.map(gw => (
                   <Button
                     key={gw.id}
                     variant={selectedGameweek === gw.id ? "default" : "outline"}
-                    size="sm"
-                    className="text-base font-semibold min-w-[2.5rem] md:min-w-[3rem]"
+                    className="h-9 text-base font-semibold min-w-[2.5rem] md:min-w-[3rem] px-3"
                     onClick={() => {
                       setSelectedPlayer(null);
                       setSelectedGameweek(gw.id);
@@ -4340,11 +4331,10 @@ export default function TransferPlanner() {
             {/* Lineup Subsection */}
             <div className="flex items-center gap-4 flex-wrap">
               <div className="text-base font-semibold min-w-[120px]">Select Lineup</div>
-              <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap items-center">
                 <Button
                   variant={plannerMode === "manual" ? "default" : "outline"}
-                  size="sm"
-                  className="text-base"
+                  className="h-9 text-base px-3"
                   onClick={() => setPlannerMode("manual")}
                   data-testid="mode-button-manual"
                 >
@@ -4352,8 +4342,7 @@ export default function TransferPlanner() {
                 </Button>
                 <Button
                   variant={plannerMode === "auto" ? "default" : "outline"}
-                  size="sm"
-                  className="text-base"
+                  className="h-9 text-base px-3"
                   onClick={() => setPlannerMode("auto")}
                   data-testid="mode-button-auto"
                 >
