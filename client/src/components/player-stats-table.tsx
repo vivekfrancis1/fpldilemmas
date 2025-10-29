@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye, UserPlus, UserMinus } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye, UserPlus, UserMinus, ZoomIn, ZoomOut } from "lucide-react";
 import { BootstrapData, Player, Team, ElementType } from "@shared/schema";
 import { FilterState, SortState, SortableField } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { useQuery } from "@tanstack/react-query";
 
 interface PlayerStatsTableProps {
@@ -75,6 +76,7 @@ export default function PlayerStatsTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [displayMode, setDisplayMode] = useState<'totals' | 'per_match' | 'per_start' | 'per_90'>('totals');
   const [venueFilter, setVenueFilter] = useState<'all' | 'home' | 'away'>('all');
+  const [zoomLevel, setZoomLevel] = useState(100);
   
   // Check if we're viewing historical data - current season shows defensive contribution fields
   const isHistoricalSeason = season && season !== "2025/26" && season !== "current";
@@ -530,8 +532,41 @@ export default function PlayerStatsTable({
         </div>
       )}
 
+      {/* Zoom Control */}
+      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+        <div className="flex items-center gap-4 max-w-md">
+          <div className="flex items-center gap-2">
+            <ZoomOut className="h-4 w-4 text-gray-600" />
+            <span className="text-xs font-medium text-gray-700 whitespace-nowrap">Table Zoom:</span>
+          </div>
+          <Slider
+            value={[zoomLevel]}
+            onValueChange={(value) => setZoomLevel(value[0])}
+            min={50}
+            max={200}
+            step={10}
+            className="flex-1"
+            data-testid="slider-table-zoom"
+          />
+          <ZoomIn className="h-4 w-4 text-gray-600" />
+          <span className="text-xs font-semibold text-gray-900 w-12 text-center" data-testid="text-zoom-level">
+            {zoomLevel}%
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setZoomLevel(100)}
+            className="h-7 px-2 text-xs"
+            data-testid="button-reset-zoom"
+          >
+            Reset
+          </Button>
+        </div>
+      </div>
+
       {/* Comprehensive Player Statistics Table */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" style={{ transformOrigin: 'top left' }}>
+        <div style={{ transform: `scale(${zoomLevel / 100})` }}>
         <table className="fpl-table text-xs min-w-[800px] w-full lg:min-w-full xl:min-w-full">
           <thead className="fpl-table-header">
             <tr>
@@ -985,6 +1020,7 @@ export default function PlayerStatsTable({
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Table Footer with Pagination */}
