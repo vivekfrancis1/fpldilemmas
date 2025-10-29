@@ -1487,7 +1487,7 @@ export default function TransferPlanner() {
         const gwScores: { gw: number; points: number }[] = [];
 
         validGWs.forEach(gw => {
-          const projection = playerProjections.find(p => p.playerId === captainPick.element);
+          const projection = playerProjections6GW.find((p: any) => p.playerId === captainPick.element);
           if (projection?.gameweekProjections) {
             const points = projection.gameweekProjections[gw.id.toString()] || 0;
             gwScores.push({ gw: gw.id, points });
@@ -1500,23 +1500,91 @@ export default function TransferPlanner() {
       }
     }
 
-    // Best Free Hit: Find top 2 gameweeks with lowest current squad points
+    // Best Free Hit: Find top 2 gameweeks with lowest starting 11 points for selected draft and lineup mode
     const fhInstance = getChipInstance('freehit');
     if (fhInstance) {
       const validGWs = getValidGameweeks(fhInstance);
       const gwScores: { gw: number; points: number }[] = [];
 
       validGWs.forEach(gw => {
-        const lineup = getBaselineLineup(gw.id);
-        const startingPlayers = lineup.filter(pick => pick.position <= 11);
+        const squad = getSquadAtGameweek(gameweekTransfers, gw.id);
         let startingPoints = 0;
 
-        startingPlayers.forEach(pick => {
-          const projection = playerProjections.find(p => p.playerId === pick.element);
-          if (projection?.gameweekProjections) {
-            startingPoints += projection.gameweekProjections[gw.id.toString()] || 0;
-          }
-        });
+        if (plannerMode === "manual") {
+          // For Manual mode: use the squad's position property (maintained through transfers)
+          // Starting 11 are positions 1-11
+          const startingPlayers = squad.filter(pick => pick.position <= 11);
+
+          startingPlayers.forEach(pick => {
+            const projection = playerProjections6GW.find((p: any) => p.playerId === pick.element);
+            if (projection?.gameweekProjections) {
+              const points = projection.gameweekProjections[gw.id.toString()] || 0;
+              // Apply captain multiplier
+              const multiplier = pick.is_captain ? 2 : 1;
+              startingPoints += points * multiplier;
+            }
+          });
+        } else {
+          // For Auto mode: calculate which players would be in starting 11 after auto-optimization
+          const playersWithPoints = squad.map(pick => {
+            const player = getPlayerById(pick.element);
+            const projection = playerProjections6GW.find((p: any) => p.playerId === pick.element);
+            const projectedPoints = projection?.gameweekProjections?.[gw.id.toString()] || 0;
+            
+            return {
+              ...pick,
+              element_type: player?.element_type || 0,
+              projectedPoints
+            };
+          });
+
+          // Try all valid FPL formations and find the one with highest total points
+          const validFormations = [
+            [1, 3, 4, 3], [1, 3, 5, 2], [1, 4, 3, 3], [1, 4, 4, 2], [1, 4, 5, 1],
+            [1, 5, 3, 2], [1, 5, 4, 1]
+          ];
+
+          let bestFormationPoints = 0;
+          
+          validFormations.forEach(formation => {
+            const [gk, def, mid, fwd] = formation;
+            
+            // Get players by position sorted by projected points
+            const gkPlayers = playersWithPoints.filter(p => p.element_type === 1).sort((a, b) => b.projectedPoints - a.projectedPoints);
+            const defPlayers = playersWithPoints.filter(p => p.element_type === 2).sort((a, b) => b.projectedPoints - a.projectedPoints);
+            const midPlayers = playersWithPoints.filter(p => p.element_type === 3).sort((a, b) => b.projectedPoints - a.projectedPoints);
+            const fwdPlayers = playersWithPoints.filter(p => p.element_type === 4).sort((a, b) => b.projectedPoints - a.projectedPoints);
+            
+            // Check if formation is valid with available players
+            if (gkPlayers.length >= gk && defPlayers.length >= def && 
+                midPlayers.length >= mid && fwdPlayers.length >= fwd) {
+              
+              const starting11 = [
+                ...gkPlayers.slice(0, gk),
+                ...defPlayers.slice(0, def),
+                ...midPlayers.slice(0, mid),
+                ...fwdPlayers.slice(0, fwd)
+              ];
+              
+              // Calculate points with captain multiplier
+              // Find the captain (highest projected player in starting 11)
+              const captain = starting11.reduce((best, player) => 
+                (player.projectedPoints > best.projectedPoints) ? player : best
+              , starting11[0]);
+              
+              const formationPoints = starting11.reduce((total, player) => {
+                const multiplier = (player.element === captain.element) ? 2 : 1;
+                return total + (player.projectedPoints * multiplier);
+              }, 0);
+              
+              if (formationPoints > bestFormationPoints) {
+                bestFormationPoints = formationPoints;
+              }
+            }
+          });
+          
+          startingPoints = bestFormationPoints;
+        }
 
         gwScores.push({ gw: gw.id, points: startingPoints });
       });
