@@ -521,7 +521,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   return (
     <Card ref={sectionRef} className="border-0 shadow-none">
       <CardHeader className="pb-2 pt-3 px-2 md:px-4">
-        <CardTitle className="text-base md:text-lg">All Players - Next 6 Gameweeks</CardTitle>
+        <CardTitle className="text-base md:text-lg">Projected Points - Next 6 Gameweeks</CardTitle>
         <div className="flex flex-col sm:flex-row gap-2 mt-2 flex-wrap items-start sm:items-center">
           <Input
             placeholder="Search players or teams..."
