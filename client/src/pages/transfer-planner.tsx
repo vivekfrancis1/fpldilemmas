@@ -4104,21 +4104,19 @@ export default function TransferPlanner() {
 
       {/* Draft Management */}
       {searchedId && teamData && selectedGameweek && (
-        <Card className="sticky top-0 z-20 border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background shadow-md">
-          <CardHeader className="pb-1 pt-3">
-            <CardTitle className="flex items-center justify-between gap-2 text-sm">
-              <div className="flex items-center gap-1.5">
-                <Save className="h-3.5 w-3.5 text-purple-600" />
-                <span>Drafts</span>
-              </div>
-              <span className="text-xs font-normal text-muted-foreground">
+        <Card className="sticky top-0 z-20 bg-background shadow-md">
+          <CardContent className="pt-6">
+            <div className="mb-2">
+              <div className="text-sm font-medium mb-1">Select Draft</div>
+              <div className="text-xs text-muted-foreground">
                 Active: <span className="font-bold text-purple-600">{activeDraft === "Base" ? "Base" : activeDraft}</span>
-                {hasUnsavedChanges && activeDraft !== "Base" && <span className="ml-1 text-orange-600">●</span>}
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="py-2">
-            {/* Draft Controls */}
+                {hasUnsavedChanges && activeDraft !== "Base" && (
+                  <span className="ml-1.5 inline-flex items-center gap-1 text-orange-600 font-semibold">
+                    ● Unsaved
+                  </span>
+                )}
+              </div>
+            </div>
             <div className="flex gap-2 flex-wrap">
               {/* Switch to Base */}
               <Button
@@ -4272,7 +4270,7 @@ export default function TransferPlanner() {
         <Card className="sticky top-[90px] md:top-[80px] z-10 bg-background shadow-md">
           <CardContent className="pt-6">
             <div>
-              <div className="text-sm font-medium mb-2">Select GW</div>
+              <div className="text-sm font-medium mb-2">Select Gameweek</div>
               <div className="flex gap-1 md:gap-2 flex-wrap">
                 {nextGameweeks.map(gw => (
                   <Button
