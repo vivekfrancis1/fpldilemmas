@@ -114,7 +114,7 @@ export default function PlayerStats() {
   if (error) {
     return (
       <div className="fpl-page-wrapper">
-        <div className="fpl-container fpl-content-area">
+        <div className="w-full fpl-content-area">
           <div className="fpl-error" data-testid="error-state">
             <h1 className="fpl-error-title">Failed to load player data</h1>
             <p className="fpl-error-message">Unable to connect to FPL API. Please check your connection and try again.</p>
@@ -133,7 +133,7 @@ export default function PlayerStats() {
 
   return (
     <div className="fpl-page-wrapper">
-      <div className="fpl-container fpl-content-area fpl-section-spacing px-2 sm:px-4">
+      <div className="w-full fpl-content-area fpl-section-spacing px-2 sm:px-4">
         {/* Page Header */}
         <div className="fpl-page-header">
           <div className="fpl-page-header-content">
