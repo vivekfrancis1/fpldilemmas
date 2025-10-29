@@ -592,12 +592,12 @@ export default function PlayerStatsTable({
               <th className="px-3 py-3 text-left min-w-[100px] text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 border-r">
                 Player
               </th>
-              <th className="px-2 py-3 text-center min-w-[50px] text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Details
+              <th className="px-1 py-2 text-center min-w-[40px] text-xs font-medium text-gray-500 uppercase tracking-wider">
+                D
               </th>
               {onPlayerCompareClick && (
-                <th className="px-2 py-3 text-center min-w-[50px] text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Compare
+                <th className="px-1 py-2 text-center min-w-[40px] text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  C
                 </th>
               )}
               {/* Priority columns first */}
@@ -832,7 +832,7 @@ export default function PlayerStatsTable({
                       </div>
                     </div>
                   </td>
-                  <td className="px-2 py-4 text-center">
+                  <td className="px-1 py-2 text-center">
                     <Button
                       variant="outline"
                       size="sm"
@@ -845,7 +845,7 @@ export default function PlayerStatsTable({
                     </Button>
                   </td>
                   {onPlayerCompareClick && (
-                    <td className="px-2 py-4 text-center">
+                    <td className="px-1 py-2 text-center">
                       {compareList.some(p => p.id === player.id) ? (
                         <Button
                           variant="outline"
