@@ -4731,7 +4731,25 @@ export default function TransferPlanner() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              {/* Formation */}
+              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-sm text-muted-foreground mb-1">Formation</div>
+                <div className="text-2xl font-bold text-indigo-600">
+                  {(() => {
+                    if (plannerMode === "auto" && optimizedLineup) {
+                      return optimizedLineup.formation;
+                    } else {
+                      const starting11 = manualLineup.slice(0, 11);
+                      const defs = starting11.filter(p => getPlayerById(p.element)?.element_type === 2).length;
+                      const mids = starting11.filter(p => getPlayerById(p.element)?.element_type === 3).length;
+                      const fwds = starting11.filter(p => getPlayerById(p.element)?.element_type === 4).length;
+                      return `${defs}-${mids}-${fwds}`;
+                    }
+                  })()}
+                </div>
+              </div>
+
               {/* Total Projected Points for Selected GW */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
@@ -4947,49 +4965,25 @@ export default function TransferPlanner() {
                 )}
               </div>
 
-              {/* Transfers Available */}
+              {/* Transfers */}
               <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
-                  <span>Transfers Available</span>
-                  {(plannedChips[selectedGameweek] === 'freehit' || plannedChips[selectedGameweek] === 'wildcard') && (
-                    <Sparkles className="h-3 w-3 text-amber-600" />
-                  )}
-                </div>
-                <div className="text-2xl font-bold text-purple-600">
-                  {calculateInitialTransfers()}
-                </div>
-              </div>
-
-              {/* Transfers Used */}
-              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">Transfers Used</div>
-                <div className={`text-2xl font-bold ${(() => {
-                  const remaining = calculateTransfersRemaining();
-                  return typeof remaining === 'number' && remaining < 0 ? 'text-red-600' : 'text-green-600';
-                })()}`}>
-                  {calculateTransfersUsed()}
-                </div>
-              </div>
-
-              {/* Transfers Remaining */}
-              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
-                  <span>Transfers Remaining</span>
+                  <span>Transfers</span>
                   {(plannedChips[selectedGameweek] === 'freehit' || plannedChips[selectedGameweek] === 'wildcard') && (
                     <Sparkles className="h-3 w-3 text-amber-600" />
                   )}
                 </div>
                 <div className={`text-2xl font-bold ${(() => {
                   const remaining = calculateTransfersRemaining();
-                  return typeof remaining === 'number' && remaining < 0 ? 'text-red-600' : 'text-blue-600';
+                  return typeof remaining === 'number' && remaining < 0 ? 'text-red-600' : 'text-purple-600';
                 })()}`}>
-                  {calculateTransfersRemaining()}
+                  {calculateTransfersUsed()}/{calculateInitialTransfers()}
                 </div>
                 {(() => {
                   const remaining = calculateTransfersRemaining();
                   return typeof remaining === 'number' && remaining < 0 && (
                     <div className="text-xs text-red-600 mt-1">
-                      This will result in {Math.abs(remaining) * 4} points penalty
+                      {Math.abs(remaining) * 4} pts penalty
                     </div>
                   );
                 })()}
