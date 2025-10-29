@@ -99,6 +99,10 @@ export default function CurrentStandings() {
     if (statsView === 'per-game' && team.played > 0) {
       return {
         ...team,
+        goalsFor: team.goalsFor / team.played,
+        goalsAgainst: team.goalsAgainst / team.played,
+        goalDifference: team.goalDifference / team.played,
+        points: team.points / team.played,
         cleanSheets: team.cleanSheets / team.played,
         yellowCards: team.yellowCards / team.played,
         redCards: team.redCards / team.played,
@@ -523,20 +527,20 @@ export default function CurrentStandings() {
                       
                       {/* Goals */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-gray-900 border-l" data-testid={`goals-for-${team.shortName}`}>
-                        {team.goalsFor}
+                        {formatStat(team.goalsFor)}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-gray-900" data-testid={`goals-against-${team.shortName}`}>
-                        {team.goalsAgainst}
+                        {formatStat(team.goalsAgainst)}
                       </td>
                       <td className="px-2 py-4 text-center text-sm font-medium" data-testid={`goal-difference-${team.shortName}`}>
                         <span className={team.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}>
-                          {team.goalDifference >= 0 ? '+' : ''}{team.goalDifference}
+                          {team.goalDifference >= 0 ? '+' : ''}{formatStat(team.goalDifference)}
                         </span>
                       </td>
                       
                       {/* Points */}
                       <td className="px-3 py-4 text-center text-sm font-bold text-gray-900 border-l bg-blue-50" data-testid={`points-${team.shortName}`}>
-                        {team.points}
+                        {formatStat(team.points)}
                       </td>
                       
                       {/* Expected Goals - After Points */}
