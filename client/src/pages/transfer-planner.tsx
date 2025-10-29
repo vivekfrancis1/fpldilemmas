@@ -5886,7 +5886,19 @@ export default function TransferPlanner() {
                     <div className="mt-8 pt-4 border-t border-white/30">
                       <h4 className="text-xs font-semibold text-white mb-3 text-center">Bench</h4>
                       <div className="flex justify-center gap-0.5 sm:gap-1 md:gap-1.5">
-                    {manualLineup.slice(11, 15).map((pick, benchIndex) => {
+                    {(() => {
+                      const benchPlayers = manualLineup.slice(11, 15);
+                      const gkBench = benchPlayers.find(pick => {
+                        const player = getPlayerById(pick.element);
+                        return player?.element_type === 1;
+                      });
+                      const outfieldBench = benchPlayers.filter(pick => {
+                        const player = getPlayerById(pick.element);
+                        return player?.element_type !== 1;
+                      });
+                      const reorderedBench = gkBench ? [gkBench, ...outfieldBench] : outfieldBench;
+                      return reorderedBench.map((pick) => {
+                        const benchIndex = manualLineup.indexOf(pick) - 11;
                       const player = getPlayerById(pick.element);
                       if (!player) return null;
                       
@@ -6082,7 +6094,8 @@ export default function TransferPlanner() {
                           </div>
                         </div>
                       );
-                    })}
+                    });
+                    })()}
                       </div>
                     </div>
                   </div>
