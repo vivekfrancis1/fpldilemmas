@@ -10,6 +10,7 @@ import { FilterState, SortState } from "@/lib/types";
 import { BootstrapData } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function PlayerStats() {
   const [filters, setFilters] = useState<FilterState>({
@@ -147,9 +148,9 @@ export default function PlayerStats() {
       </div>
 
       <div className="fpl-section-spacing">
-        {/* Season Selector - Compact Card */}
-        <div className="bg-white rounded-lg shadow-md border-0 mb-6">
-          <div className="p-4">
+        {/* Season Selector */}
+        <Card className="mb-6 shadow-md border-0 bg-white">
+          <CardContent className="p-4">
             <div className="flex items-center justify-center gap-3 flex-wrap">
               <Calendar className="h-5 w-5 text-purple-600" />
               <span className="text-sm font-semibold text-gray-700">Season:</span>
@@ -174,20 +175,22 @@ export default function PlayerStats() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Quick Stats Overview - Compact */}
-        <div className="bg-white rounded-lg shadow-md border-0 p-4 mb-6">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-quick-stats-title">
-            Quick Stats Overview
-          </h2>
-          <StatsCards data={selectedSeason === "current" ? bootstrapData : undefined} isLoading={isLoading} />
-        </div>
+        {/* Quick Stats Overview */}
+        <Card className="mb-6 shadow-md border-0">
+          <CardContent className="p-4">
+            <h2 className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-quick-stats-title">
+              Quick Stats Overview
+            </h2>
+            <StatsCards data={selectedSeason === "current" ? bootstrapData : undefined} isLoading={isLoading} />
+          </CardContent>
+        </Card>
 
-        {/* Filters - Compact Card */}
-        <div className="bg-white rounded-lg shadow-md border-0 mb-6">
-          <div className="p-4">
+        {/* Filters */}
+        <Card className="mb-6 shadow-md border-0 bg-white">
+          <CardContent className="p-4">
             <FiltersPanel 
               filters={filters}
               setFilters={setFilters}
@@ -196,25 +199,27 @@ export default function PlayerStats() {
               isLoading={isLoading}
               isHistorical={selectedSeason !== "current"}
             />
-          </div>
-        </div>
+          </CardContent>
+        </Card>
           
         {/* Player Statistics Table */}
-        <div className="bg-white rounded-lg shadow-lg border-0 overflow-hidden">
-          <PlayerStatsTable 
-            data={selectedSeason === "current" ? bootstrapData : undefined}
-            historicalData={selectedSeason !== "current" ? (historicalData || []) : undefined}
-            filters={filters}
-            sort={sort}
-            setSort={setSort}
-            isLoading={isLoading}
-            season={selectedSeason}
-            onPlayerDetailsClick={selectedSeason === "current" ? handlePlayerDetailsClick : undefined}
-            onPlayerCompareClick={selectedSeason === "current" ? handlePlayerCompareClick : undefined}
-            compareList={compareList}
-            maxCompareReached={maxCompareReached}
-          />
-        </div>
+        <Card className="overflow-hidden shadow-lg border-0">
+          <CardContent className="p-0">
+            <PlayerStatsTable 
+              data={selectedSeason === "current" ? bootstrapData : undefined}
+              historicalData={selectedSeason !== "current" ? (historicalData || []) : undefined}
+              filters={filters}
+              sort={sort}
+              setSort={setSort}
+              isLoading={isLoading}
+              season={selectedSeason}
+              onPlayerDetailsClick={selectedSeason === "current" ? handlePlayerDetailsClick : undefined}
+              onPlayerCompareClick={selectedSeason === "current" ? handlePlayerCompareClick : undefined}
+              compareList={compareList}
+              maxCompareReached={maxCompareReached}
+            />
+          </CardContent>
+        </Card>
       </div>
 
 
