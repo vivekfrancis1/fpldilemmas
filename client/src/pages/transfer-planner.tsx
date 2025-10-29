@@ -4105,25 +4105,21 @@ export default function TransferPlanner() {
       {/* Draft Management */}
       {searchedId && teamData && selectedGameweek && (
         <Card className="sticky top-0 z-20 bg-background shadow-md">
-          <CardContent className="pt-6">
-            <div className="mb-2">
-              <div className="text-sm font-medium mb-1">Select Draft</div>
-              <div className="text-xs text-muted-foreground">
-                Active: <span className="font-bold text-purple-600">{activeDraft === "Base" ? "Base" : activeDraft}</span>
+          <CardContent className="py-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="text-base font-semibold min-w-[120px]">
+                Select Draft
                 {hasUnsavedChanges && activeDraft !== "Base" && (
-                  <span className="ml-1.5 inline-flex items-center gap-1 text-orange-600 font-semibold">
-                    ● Unsaved
-                  </span>
+                  <span className="ml-2 text-base text-orange-600 font-semibold">● Unsaved</span>
                 )}
               </div>
-            </div>
-            <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-2 flex-wrap">
               {/* Switch to Base */}
               <Button
                 onClick={() => switchToDraft("Base")}
                 size="sm"
                 variant={activeDraft === "Base" ? "default" : "outline"}
-                className="gap-1"
+                className="gap-1 text-base"
                 data-testid="button-switch-base"
               >
                 Base
@@ -4142,7 +4138,7 @@ export default function TransferPlanner() {
                           onClick={() => switchToDraft(draft.draftLetter)}
                           size="sm"
                           variant={activeDraft === draft.draftLetter ? "default" : "outline"}
-                          className="relative"
+                          className="relative text-base"
                           data-testid={`button-switch-draft-${draft.draftLetter}`}
                         >
                           {draft.draftLetter}
@@ -4186,27 +4182,27 @@ export default function TransferPlanner() {
                   onClick={createNewDraft}
                   size="sm"
                   variant="outline"
-                  className="gap-1 border-dashed"
+                  className="gap-1 border-dashed text-base"
                   data-testid="button-new-draft"
                 >
                   <Plus className="h-4 w-4" />
                   New
                 </Button>
               )}
-            </div>
+              </div>
 
-            {/* Action Buttons */}
-            {activeDraft !== "Base" && (
-              <div className="flex gap-1.5 flex-wrap pt-1.5 mt-1.5 border-t">
+              {/* Action Buttons */}
+              {activeDraft !== "Base" && (
+                <div className="flex gap-2 flex-wrap">
                 <Button
                   onClick={() => saveCurrentDraft()}
                   size="sm"
                   variant="default"
                   disabled={!hasUnsavedChanges}
-                  className="h-7 text-xs px-2"
+                  className="text-base"
                   data-testid="button-save-draft"
                 >
-                  <Save className="h-3 w-3 mr-1" />
+                  <Save className="h-4 w-4 mr-1" />
                   Save {hasUnsavedChanges && "●"}
                 </Button>
                 
@@ -4214,10 +4210,10 @@ export default function TransferPlanner() {
                   onClick={duplicateCurrentDraft}
                   size="sm"
                   variant="outline"
-                  className="h-7 text-xs px-2"
+                  className="text-base"
                   data-testid="button-duplicate-draft"
                 >
-                  <Copy className="h-3 w-3 mr-1" />
+                  <Copy className="h-4 w-4 mr-1" />
                   Duplicate
                 </Button>
                 
@@ -4226,10 +4222,10 @@ export default function TransferPlanner() {
                     onClick={resetDraftAToBase}
                     size="sm"
                     variant="outline"
-                    className="h-7 text-xs px-2 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                    className="text-base text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
                     data-testid="button-reset-draft-a"
                   >
-                    <RotateCcw className="h-3 w-3 mr-1" />
+                    <RotateCcw className="h-4 w-4 mr-1" />
                     Reset to Base
                   </Button>
                 ) : (
@@ -4237,30 +4233,31 @@ export default function TransferPlanner() {
                     onClick={deleteCurrentDraft}
                     size="sm"
                     variant="outline"
-                    className="h-7 text-xs px-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                    className="text-base text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
                     data-testid="button-delete-draft"
                   >
-                    <Trash2 className="h-3 w-3 mr-1" />
+                    <Trash2 className="h-4 w-4 mr-1" />
                     Delete
                   </Button>
                 )}
               </div>
             )}
 
-            {/* Bulk Actions */}
-            {savedDrafts.length > 0 && activeDraft === "Base" && (
-              <div className="flex gap-1.5 flex-wrap pt-1.5 mt-1.5 border-t">
-                <Button
-                  onClick={deleteAllDrafts}
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs px-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
-                  data-testid="button-delete-all-drafts"
-                >
-                  Delete All Drafts
-                </Button>
-              </div>
-            )}
+              {/* Bulk Actions */}
+              {savedDrafts.length > 0 && activeDraft === "Base" && (
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    onClick={deleteAllDrafts}
+                    size="sm"
+                    variant="outline"
+                    className="text-base text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                    data-testid="button-delete-all-drafts"
+                  >
+                    Delete All Drafts
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -4268,16 +4265,16 @@ export default function TransferPlanner() {
       {/* Gameweek Selection */}
       {searchedId && teamData && (
         <Card className="sticky top-[90px] md:top-[80px] z-10 bg-background shadow-md">
-          <CardContent className="pt-6">
-            <div>
-              <div className="text-sm font-medium mb-2">Select Gameweek</div>
-              <div className="flex gap-1 md:gap-2 flex-wrap">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="text-base font-semibold min-w-[120px]">Select Gameweek</div>
+              <div className="flex gap-2 flex-wrap">
                 {nextGameweeks.map(gw => (
                   <Button
                     key={gw.id}
                     variant={selectedGameweek === gw.id ? "default" : "outline"}
                     size="sm"
-                    className="text-sm md:text-lg font-semibold min-w-[2.5rem] md:min-w-[3rem]"
+                    className="text-base font-semibold min-w-[2.5rem] md:min-w-[3rem]"
                     onClick={() => {
                       setSelectedPlayer(null);
                       setSelectedGameweek(gw.id);
@@ -4296,14 +4293,14 @@ export default function TransferPlanner() {
       {/* Lineup Selection */}
       {searchedId && teamData && selectedGameweek && (
         <Card className="sticky top-[145px] md:top-[135px] z-10 bg-background shadow-md">
-          <CardContent className="pt-6">
-            <div>
-              <div className="text-sm font-medium mb-2">Select Lineup</div>
-              <div className="flex gap-1 md:gap-2">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="text-base font-semibold min-w-[120px]">Select Lineup</div>
+              <div className="flex gap-2 flex-wrap">
                 <Button
                   variant={plannerMode === "manual" ? "default" : "outline"}
                   size="sm"
-                  className="h-8 md:h-9 px-3 md:px-4 text-sm md:text-base"
+                  className="text-base"
                   onClick={() => setPlannerMode("manual")}
                   data-testid="mode-button-manual"
                 >
@@ -4312,7 +4309,7 @@ export default function TransferPlanner() {
                 <Button
                   variant={plannerMode === "auto" ? "default" : "outline"}
                   size="sm"
-                  className="h-8 md:h-9 px-3 md:px-4 text-sm md:text-base"
+                  className="text-base"
                   onClick={() => setPlannerMode("auto")}
                   data-testid="mode-button-auto"
                 >
