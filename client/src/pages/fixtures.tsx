@@ -407,6 +407,7 @@ export default function Fixtures() {
                   </select>
                 </div>
 
+                {fdrMode === 'custom' && (
                 <div className="flex items-center gap-2">
                 <Dialog open={customFDROpen} onOpenChange={setCustomFDROpen}>
                   <DialogTrigger asChild>
@@ -552,6 +553,7 @@ export default function Fixtures() {
                   </Button>
                 )}
                 </div>
+                )}
               </div>
             </div>
           </div>
