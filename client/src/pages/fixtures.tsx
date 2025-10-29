@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { computeNextRange, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 
 interface Fixture {
@@ -34,6 +35,7 @@ export default function Fixtures() {
   const [sortBy, setSortBy] = useState<'team' | 'fdr-avg' | string>('fdr-avg');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [customFDROpen, setCustomFDROpen] = useState(false);
+  const [fdrMode, setFdrMode] = useState<'official' | 'form' | 'custom'>('official');
   
   // Load custom FDR from localStorage
   const [customFDR, setCustomFDR] = useState<CustomFDR>(() => {
@@ -85,6 +87,13 @@ export default function Fixtures() {
   const { data: fixturesData } = useQuery<Fixture[]>({
     queryKey: ["/api/fixtures"],
     staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch form-based FDR ratings
+  const { data: formBasedFDR } = useQuery<Record<number, { home: number; away: number }>>({
+    queryKey: ["/api/form-based-fdr"],
+    staleTime: 5 * 60 * 1000,
+    enabled: fdrMode === 'form',
   });
 
   // Calculate default FDR values from official FPL API ratings
@@ -184,19 +193,30 @@ export default function Fixtures() {
       matrix[team.id] = {};
     });
 
-    // Helper function to get overall FDR (with custom FDR support)
+    // Helper function to get overall FDR based on selected mode
     const getOverallFDR = (originalDifficulty: number, opponentId: number, isHome: boolean) => {
-      // Check if custom FDR exists for this opponent
-      const customRating = customFDR[opponentId];
-      if (customRating) {
-        const customValue = isHome ? customRating.home : customRating.away;
-        // Only use custom value if it's actually defined and valid
-        if (customValue !== undefined && customValue > 0) {
-          return customValue;
+      // Mode 1: Custom FDR (if custom values exist)
+      if (fdrMode === 'custom') {
+        const customRating = customFDR[opponentId];
+        if (customRating) {
+          const customValue = isHome ? customRating.home : customRating.away;
+          if (customValue !== undefined && customValue > 0) {
+            return customValue;
+          }
+        }
+        // Fall back to official if no custom value set
+        return originalDifficulty > 0 ? originalDifficulty : 3;
+      }
+      
+      // Mode 2: Form-based FDR
+      if (fdrMode === 'form' && formBasedFDR) {
+        const formRating = formBasedFDR[opponentId];
+        if (formRating) {
+          return isHome ? formRating.home : formRating.away;
         }
       }
       
-      // Ensure we return a valid difficulty (default to 3 if invalid)
+      // Mode 3: Official FPL ratings (default)
       return originalDifficulty > 0 ? originalDifficulty : 3;
     };
 
@@ -239,7 +259,7 @@ export default function Fixtures() {
       fixtureMatrix: matrix, 
       teamAverageFDR: avgFDR
     };
-  }, [bootstrapData, fixturesData, gameweekRange, customFDR]);
+  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR]);
 
   const gameweeks = useMemo(() => {
     const gws = [];
@@ -336,33 +356,54 @@ export default function Fixtures() {
             </div>
           </div>
           <div className="fpl-card-content">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center">
-              <div className="flex items-center gap-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-700">Gameweeks:</label>
-                <select 
-                  value={gameweekRange.start} 
-                  onChange={(e) => setGameweekRange(prev => ({ ...prev, start: parseInt(e.target.value) }))}
-                  className="px-3 py-1 border border-gray-300 rounded text-sm"
-                  data-testid="select-start-gameweek"
-                >
-                  {availableGameweeks.map(gw => (
-                    <option key={gw} value={gw}>GW{gw}</option>
-                  ))}
-                </select>
-                <span className="text-gray-500">to</span>
-                <select 
-                  value={gameweekRange.end} 
-                  onChange={(e) => setGameweekRange(prev => ({ ...prev, end: parseInt(e.target.value) }))}
-                  className="px-3 py-1 border border-gray-300 rounded text-sm"
-                  data-testid="select-end-gameweek"
-                >
-                  {availableGameweeks.filter(gw => gw >= gameweekRange.start).map(gw => (
-                    <option key={gw} value={gw}>GW{gw}</option>
-                  ))}
-                </select>
+            <div className="flex flex-col gap-4">
+              {/* FDR Mode Selector */}
+              <div className="flex flex-col items-center gap-2">
+                <Label className="text-sm font-semibold text-gray-700">FDR Calculation Mode</Label>
+                <RadioGroup value={fdrMode} onValueChange={(value: 'official' | 'form' | 'custom') => setFdrMode(value)} className="flex flex-wrap gap-4 justify-center">
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="official" id="fdr-official" data-testid="radio-fdr-official" />
+                    <Label htmlFor="fdr-official" className="text-sm cursor-pointer">Official FPL Ratings</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="form" id="fdr-form" data-testid="radio-fdr-form" />
+                    <Label htmlFor="fdr-form" className="text-sm cursor-pointer">Current Season Form</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="custom" id="fdr-custom" data-testid="radio-fdr-custom" />
+                    <Label htmlFor="fdr-custom" className="text-sm cursor-pointer">Custom FDR</Label>
+                  </div>
+                </RadioGroup>
               </div>
 
-              <div className="flex items-center gap-2">
+              {/* Gameweek Range and Customize Button */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs sm:text-sm font-medium text-gray-700">Gameweeks:</label>
+                  <select 
+                    value={gameweekRange.start} 
+                    onChange={(e) => setGameweekRange(prev => ({ ...prev, start: parseInt(e.target.value) }))}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm"
+                    data-testid="select-start-gameweek"
+                  >
+                    {availableGameweeks.map(gw => (
+                      <option key={gw} value={gw}>GW{gw}</option>
+                    ))}
+                  </select>
+                  <span className="text-gray-500">to</span>
+                  <select 
+                    value={gameweekRange.end} 
+                    onChange={(e) => setGameweekRange(prev => ({ ...prev, end: parseInt(e.target.value) }))}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm"
+                    data-testid="select-end-gameweek"
+                  >
+                    {availableGameweeks.filter(gw => gw >= gameweekRange.start).map(gw => (
+                      <option key={gw} value={gw}>GW{gw}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-2">
                 <Dialog open={customFDROpen} onOpenChange={setCustomFDROpen}>
                   <DialogTrigger asChild>
                     <Button 
@@ -506,6 +547,7 @@ export default function Fixtures() {
                     Reset to Default FDR
                   </Button>
                 )}
+                </div>
               </div>
             </div>
           </div>

@@ -1510,6 +1510,131 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Form-based FDR calculation endpoint
+  app.get("/api/form-based-fdr", async (req, res) => {
+    try {
+      // Fetch bootstrap and fixtures data
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+        fetch("https://fantasy.premierleague.com/api/fixtures/")
+      ]);
+
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch FPL API data");
+      }
+
+      const bootstrap = await bootstrapResponse.json();
+      const fixtures = await fixturesResponse.json();
+      
+      // Calculate form-based FDR for each team
+      const teamStats: Record<number, {
+        home: { goalsScored: number; goalsConceded: number; gamesPlayed: number; points: number };
+        away: { goalsScored: number; goalsConceded: number; gamesPlayed: number; points: number };
+      }> = {};
+
+      // Initialize stats for all teams
+      bootstrap.teams.forEach((team: any) => {
+        teamStats[team.id] = {
+          home: { goalsScored: 0, goalsConceded: 0, gamesPlayed: 0, points: 0 },
+          away: { goalsScored: 0, goalsConceded: 0, gamesPlayed: 0, points: 0 }
+        };
+      });
+
+      // Process completed fixtures
+      fixtures.filter((f: any) => f.finished).forEach((fixture: any) => {
+        const homeId = fixture.team_h;
+        const awayId = fixture.team_a;
+        
+        // Home team stats
+        teamStats[homeId].home.goalsScored += fixture.team_h_score;
+        teamStats[homeId].home.goalsConceded += fixture.team_a_score;
+        teamStats[homeId].home.gamesPlayed += 1;
+        
+        // Away team stats
+        teamStats[awayId].away.goalsScored += fixture.team_a_score;
+        teamStats[awayId].away.goalsConceded += fixture.team_h_score;
+        teamStats[awayId].away.gamesPlayed += 1;
+        
+        // Calculate points
+        if (fixture.team_h_score > fixture.team_a_score) {
+          teamStats[homeId].home.points += 3; // Home win
+        } else if (fixture.team_h_score < fixture.team_a_score) {
+          teamStats[awayId].away.points += 3; // Away win
+        } else {
+          teamStats[homeId].home.points += 1; // Draw
+          teamStats[awayId].away.points += 1;
+        }
+      });
+
+      // Calculate composite scores for ranking
+      const teamScores: { teamId: number; homeScore: number; awayScore: number }[] = [];
+      
+      bootstrap.teams.forEach((team: any) => {
+        const stats = teamStats[team.id];
+        
+        // Calculate per-game metrics with Bayesian priors (4 virtual games at league avg)
+        const leagueAvgGoalsFor = 1.4;
+        const leagueAvgGoalsAgainst = 1.4;
+        const priorGames = 4;
+        
+        // Home metrics
+        const homeGames = stats.home.gamesPlayed + priorGames;
+        const homeGoalsPerGame = (stats.home.goalsScored + priorGames * leagueAvgGoalsFor) / homeGames;
+        const homeConcededPerGame = (stats.home.goalsConceded + priorGames * leagueAvgGoalsAgainst) / homeGames;
+        const homePPG = stats.home.gamesPlayed > 0 ? stats.home.points / stats.home.gamesPlayed : 1.0;
+        
+        // Away metrics  
+        const awayGames = stats.away.gamesPlayed + priorGames;
+        const awayGoalsPerGame = (stats.away.goalsScored + priorGames * leagueAvgGoalsFor) / awayGames;
+        const awayConcededPerGame = (stats.away.goalsConceded + priorGames * leagueAvgGoalsAgainst) / awayGames;
+        const awayPPG = stats.away.gamesPlayed > 0 ? stats.away.points / stats.away.gamesPlayed : 1.0;
+        
+        // Composite score (higher = harder opponent)
+        // Offense: 40% goals/game, Defense: 40% inverse conceded/game, Form: 20% PPG
+        const homeScore = (
+          0.4 * homeGoalsPerGame +
+          0.4 * (3.0 - homeConcededPerGame) + // Inverse: fewer conceded = better defense = harder
+          0.2 * homePPG
+        );
+        
+        const awayScore = (
+          0.4 * awayGoalsPerGame +
+          0.4 * (3.0 - awayConcededPerGame) +
+          0.2 * awayPPG
+        );
+        
+        teamScores.push({ teamId: team.id, homeScore, awayScore });
+      });
+
+      // Rank teams and assign to 5 tiers (4 teams per tier)
+      const homeRanked = [...teamScores].sort((a, b) => b.homeScore - a.homeScore);
+      const awayRanked = [...teamScores].sort((a, b) => b.awayScore - a.awayScore);
+      
+      const fdrRatings: Record<number, { home: number; away: number }> = {};
+      
+      // Assign FDR tiers: top 4 = tier 5 (hardest), bottom 4 = tier 1 (easiest)
+      homeRanked.forEach((team, index) => {
+        const tier = Math.min(5, Math.floor(index / 4) + 1);
+        if (!fdrRatings[team.teamId]) fdrRatings[team.teamId] = { home: 3, away: 3 };
+        fdrRatings[team.teamId].home = tier;
+      });
+      
+      awayRanked.forEach((team, index) => {
+        const tier = Math.min(5, Math.floor(index / 4) + 1);
+        if (!fdrRatings[team.teamId]) fdrRatings[team.teamId] = { home: 3, away: 3 };
+        fdrRatings[team.teamId].away = tier;
+      });
+
+      res.json(fdrRatings);
+    } catch (error) {
+      console.error("Error calculating form-based FDR:", error);
+      res.status(500).json({
+        error: "Failed to calculate form-based FDR",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Live FPL entry data (for league analysis)
   app.get("/api/entry/:entryId", async (req, res) => {
     try {
