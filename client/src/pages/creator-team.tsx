@@ -852,7 +852,7 @@ export default function CreatorTeam() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-3">
                   {transfersData
                     .slice()
                     .sort((a, b) => {
@@ -867,28 +867,28 @@ export default function CreatorTeam() {
                     const playerOut = bootstrapData?.elements.find((p: any) => p.id === transfer.element_out);
                     
                     return (
-                      <div key={index} className="flex items-center justify-between p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200">
+                      <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200 gap-3">
                         <div className="flex-1">
-                          <div className="text-lg font-semibold text-gray-800 mb-2">Gameweek {transfer.event}</div>
+                          <div className="text-base sm:text-lg font-semibold text-gray-800 mb-2">Gameweek {transfer.event}</div>
                           
                           {/* Transfer Details */}
                           <div className="space-y-2">
                             {/* Player In */}
-                            <div className="flex items-center gap-3">
-                              <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
-                                <TrendingUp className="h-3 w-3 text-green-600" />
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                                <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600" />
                               </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-green-800">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium text-green-800 text-sm sm:text-base truncate">
                                     {playerIn ? playerIn.web_name : `Player ${transfer.element_in}`}
                                   </span>
-                                  <Badge className="bg-green-100 text-green-800 text-xs">
+                                  <Badge className="bg-green-100 text-green-800 text-xs shrink-0">
                                     {formatPrice(transfer.element_in_cost)}
                                   </Badge>
                                 </div>
                                 {playerIn && (
-                                  <div className="text-sm text-gray-600">
+                                  <div className="text-xs sm:text-sm text-gray-600 truncate">
                                     {bootstrapData?.teams.find((t: any) => t.id === playerIn.team)?.short_name || 'Unknown'} • {bootstrapData?.element_types.find((et: any) => et.id === playerIn.element_type)?.singular_name || 'Unknown'}
                                   </div>
                                 )}
@@ -896,21 +896,21 @@ export default function CreatorTeam() {
                             </div>
                             
                             {/* Player Out */}
-                            <div className="flex items-center gap-3">
-                              <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
-                                <TrendingDown className="h-3 w-3 text-red-600" />
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+                                <TrendingDown className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-600" />
                               </div>
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-red-800">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium text-red-800 text-sm sm:text-base truncate">
                                     {playerOut ? playerOut.web_name : `Player ${transfer.element_out}`}
                                   </span>
-                                  <Badge variant="outline" className="border-red-200 text-red-800 text-xs">
+                                  <Badge variant="outline" className="border-red-200 text-red-800 text-xs shrink-0">
                                     {formatPrice(transfer.element_out_cost)}
                                   </Badge>
                                 </div>
                                 {playerOut && (
-                                  <div className="text-sm text-gray-600">
+                                  <div className="text-xs sm:text-sm text-gray-600 truncate">
                                     {bootstrapData?.teams.find((t: any) => t.id === playerOut.team)?.short_name || 'Unknown'} • {bootstrapData?.element_types.find((et: any) => et.id === playerOut.element_type)?.singular_name || 'Unknown'}
                                   </div>
                                 )}
@@ -919,8 +919,8 @@ export default function CreatorTeam() {
                           </div>
                         </div>
                         
-                        <div className="text-right ml-4">
-                          <div className="text-sm text-gray-600">
+                        <div className="flex sm:flex-col justify-between sm:text-right sm:ml-4 pt-2 sm:pt-0 border-t sm:border-t-0">
+                          <div className="text-xs sm:text-sm text-gray-600">
                             {new Date(transfer.time).toLocaleDateString()}
                           </div>
                           <div className="text-xs text-gray-500">

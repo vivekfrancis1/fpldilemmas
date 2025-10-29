@@ -872,19 +872,19 @@ export default function Top50ManagerTeam() {
                     })
                     .slice(0, 10)
                     .map((transfer, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <Badge variant="outline">GW{transfer.event}</Badge>
-                        <div className="text-sm">
-                          <p className="text-gray-600 font-medium">{new Date(transfer.time).toLocaleDateString()}</p>
+                    <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-gray-50 rounded-lg gap-3">
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <Badge variant="outline" className="shrink-0">GW{transfer.event}</Badge>
+                        <div className="text-xs sm:text-sm min-w-0">
+                          <p className="text-gray-600 font-medium truncate">{new Date(transfer.time).toLocaleDateString()}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm">
-                          <span className="text-red-600">Out:</span> {getPlayerName(transfer.element_out)} (£{(transfer.element_out_cost / 10).toFixed(1)}m)
+                      <div className="sm:text-right space-y-1">
+                        <p className="text-xs sm:text-sm truncate">
+                          <span className="text-red-600 font-medium">Out:</span> {getPlayerName(transfer.element_out)} (£{(transfer.element_out_cost / 10).toFixed(1)}m)
                         </p>
-                        <p className="text-sm">
-                          <span className="text-green-600">In:</span> {getPlayerName(transfer.element_in)} (£{(transfer.element_in_cost / 10).toFixed(1)}m)
+                        <p className="text-xs sm:text-sm truncate">
+                          <span className="text-green-600 font-medium">In:</span> {getPlayerName(transfer.element_in)} (£{(transfer.element_in_cost / 10).toFixed(1)}m)
                         </p>
                       </div>
                     </div>
