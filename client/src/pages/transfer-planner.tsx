@@ -1354,8 +1354,9 @@ export default function TransferPlanner() {
     
     // Subtract chips planned in future gameweeks
     Object.values(plannedChips).forEach(chipType => {
-      if (chipType && remaining[chipType] !== undefined) {
-        remaining[chipType] = Math.max(0, remaining[chipType] - 1);
+      if (chipType && (chipType === 'wildcard' || chipType === '3xc' || chipType === 'bboost' || chipType === 'freehit')) {
+        const validChip = chipType as ChipType;
+        remaining[validChip] = Math.max(0, remaining[validChip] - 1);
       }
     });
     
@@ -1372,12 +1373,33 @@ export default function TransferPlanner() {
     const remaining = getRemainingChips();
     const recommendations = { bboost: null as number | null, tripleC: null as number | null, freehit: null as number | null };
 
+    // Helper to determine which instance of a chip is available (1st or 2nd)
+    const getChipInstance = (chipType: ChipType): 1 | 2 | null => {
+      const usedCount = historyData?.chips?.filter(c => c.name === chipType).length || 0;
+      const plannedCount = Object.values(plannedChips).filter(c => c === chipType).length;
+      const totalUsed = usedCount + plannedCount;
+      
+      if (totalUsed === 0) return 1; // First instance available
+      if (totalUsed === 1) return 2; // Second instance available
+      return null; // Both used
+    };
+
+    // Helper to filter gameweeks based on chip instance
+    // Second set of chips only available from GW 20+
+    const getValidGameweeks = (instance: 1 | 2 | null) => {
+      if (!instance) return [];
+      if (instance === 1) return nextGWs; // First instance: all next 6 GWs
+      return nextGWs.filter(gw => gw.id >= 20); // Second instance: only GW 20+
+    };
+
     // Best Bench Boost: Find gameweek with maximum bench points
-    if (remaining.bboost > 0) {
+    const bboostInstance = getChipInstance('bboost');
+    if (bboostInstance) {
+      const validGWs = getValidGameweeks(bboostInstance);
       let bestBBoostGW = null;
       let maxBenchPoints = -1;
 
-      nextGWs.forEach(gw => {
+      validGWs.forEach(gw => {
         const lineup = getBaselineLineup(gw.id);
         const benchPlayers = lineup.filter(pick => pick.position > 11);
         let benchPoints = 0;
@@ -1399,13 +1421,15 @@ export default function TransferPlanner() {
     }
 
     // Best Triple Captain: Find gameweek where captain has highest points
-    if (remaining['3xc'] > 0) {
+    const tcInstance = getChipInstance('3xc');
+    if (tcInstance) {
+      const validGWs = getValidGameweeks(tcInstance);
       const captainPick = manualLineup.find(p => p.is_captain);
       if (captainPick) {
         let bestTCGW = null;
         let maxCaptainPoints = -1;
 
-        nextGWs.forEach(gw => {
+        validGWs.forEach(gw => {
           const projection = playerProjections.find(p => p.playerId === captainPick.element);
           if (projection?.gameweekProjections) {
             const points = projection.gameweekProjections[gw.id.toString()] || 0;
@@ -1421,12 +1445,13 @@ export default function TransferPlanner() {
     }
 
     // Best Free Hit: Find gameweek with lowest current squad points (biggest improvement opportunity)
-    // This identifies the week where you'd benefit most from a complete team refresh
-    if (remaining.freehit > 0) {
+    const fhInstance = getChipInstance('freehit');
+    if (fhInstance) {
+      const validGWs = getValidGameweeks(fhInstance);
       let bestFHGW = null;
       let minStartingPoints = Infinity;
 
-      nextGWs.forEach(gw => {
+      validGWs.forEach(gw => {
         const lineup = getBaselineLineup(gw.id);
         const startingPlayers = lineup.filter(pick => pick.position <= 11);
         let startingPoints = 0;
@@ -6169,7 +6194,7 @@ export default function TransferPlanner() {
                   
                   // Check if previous gameweek had Free Hit chip
                   const prevGameweekId = gwIndex === 0 ? null : getNextGameweeks()[gwIndex - 1].id;
-                  const prevHadFreeHit = prevGameweekId && (plannedChips[prevGameweekId] === 'freehit' || plannedChips[prevGameweekId] === 'freehit_2');
+                  const prevHadFreeHit = prevGameweekId && plannedChips[prevGameweekId] === 'freehit';
                   
                   // Find transferred in players - compare finalLineup (after transfers) against gwLineup (before transfers)
                   // If previous GW had Free Hit, don't mark any players as transfers (they're reverting back)
