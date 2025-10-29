@@ -988,6 +988,12 @@ export default function TransferPlanner() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [comparisonFilter, setComparisonFilter] = useState<"all" | "manual" | "auto">("all");
   
+  // Auto-save state
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isLoadingDraftRef = useRef(false);
+  
   // Store saved captain/vice-captain from draft (to apply after lineup rebuild)
   const [savedCaptainInfo, setSavedCaptainInfo] = useState<{
     captainPlayerId: number | null;
@@ -1047,61 +1053,41 @@ export default function TransferPlanner() {
     }
   }, []);
 
-  // Autosave draft when chips are changed
+  // Comprehensive autosave effect - watches all draft state changes
   useEffect(() => {
-    // Only autosave if:
-    // 1. This is a user-initiated chip change (not initial load or draft switch)
-    // 2. We're in an actual draft (not Base)
-    // 3. We have a manager ID
-    if (chipChangeForAutosaveRef.current && activeDraft !== "Base" && searchedId) {
-      // Reset the flag
-      chipChangeForAutosaveRef.current = false;
-      
-      // Trigger autosave
-      const autoSave = async () => {
-        try {
-          const captainPick = manualLineup.find(p => p.is_captain);
-          const viceCaptainPick = manualLineup.find(p => p.is_vice_captain);
-          const captainPlayer = captainPick ? getPlayerById(captainPick.element) : null;
-          const viceCaptainPlayer = viceCaptainPick ? getPlayerById(viceCaptainPick.element) : null;
-
-          const response = await fetch("/api/transfer-planner/drafts", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              managerId: parseInt(searchedId),
-              draftLetter: activeDraft,
-              gameweekTransfers: structuredClone(gameweekTransfers),
-              plannedChips: structuredClone(plannedChips),
-              mode: plannerMode,
-              teamBank: calculateBankAfterTransfers(),
-              teamValue: 0,
-              totalProjectedPoints: 0,
-              totalTransfersUsed: Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0),
-              captainPlayerId: captainPick?.element || null,
-              captainPlayerName: captainPlayer?.web_name || null,
-              viceCaptainPlayerId: viceCaptainPick?.element || null,
-              viceCaptainPlayerName: viceCaptainPlayer?.web_name || null
-            })
-          });
-
-          if (response.ok) {
-            setHasUnsavedChanges(false);
-            toast({ 
-              title: "Chip Selection Saved", 
-              description: `Draft ${activeDraft} updated automatically`,
-              duration: 2000
-            });
-            await loadDrafts();
-          }
-        } catch (error) {
-          console.error("Autosave failed:", error);
-        }
-      };
-
-      autoSave();
+    // Skip autosave if:
+    // - We're loading a draft
+    // - We're on Base draft
+    // - We don't have a manager ID
+    // - Initial mount
+    if (isLoadingDraftRef.current || activeDraft === "Base" || !searchedId) {
+      return;
     }
-  }, [plannedChips]);
+
+    // Queue autosave on any state change
+    queueAutosave();
+
+    // Cleanup pending autosave on unmount
+    return () => {
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
+  }, [
+    // Watch all state that should trigger autosave
+    JSON.stringify(gameweekTransfers),
+    JSON.stringify(plannedChips),
+    JSON.stringify(manualLineup.map(p => ({ 
+      element: p.element, 
+      position: p.position, 
+      is_captain: p.is_captain, 
+      is_vice_captain: p.is_vice_captain,
+      multiplier: p.multiplier
+    }))),
+    plannerMode,
+    activeDraft,
+    searchedId
+  ]);
 
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -3484,7 +3470,7 @@ export default function TransferPlanner() {
     }
   };
 
-  const saveCurrentDraft = async (transfersToSave?: typeof gameweekTransfers, targetDraftLetter?: string) => {
+  const saveCurrentDraft = async (transfersToSave?: typeof gameweekTransfers, targetDraftLetter?: string, silent = false) => {
     // Capture the draft letter to save - use explicit parameter or current activeDraft
     const draftLetter = targetDraftLetter || activeDraft;
     
@@ -3497,6 +3483,10 @@ export default function TransferPlanner() {
     const viceCaptainPick = manualLineup.find(p => p.is_vice_captain);
     const captainPlayer = captainPick ? getPlayerById(captainPick.element) : null;
     const viceCaptainPlayer = viceCaptainPick ? getPlayerById(viceCaptainPick.element) : null;
+
+    if (!silent) {
+      setIsSaving(true);
+    }
 
     try {
       const response = await fetch("/api/transfer-planner/drafts", {
@@ -3523,18 +3513,66 @@ export default function TransferPlanner() {
         // Only update UI state if we're still on the same draft
         if (draftLetter === activeDraft) {
           setHasUnsavedChanges(false);
+          setLastSavedAt(new Date());
         }
-        toast({ title: "Draft Saved", description: `Draft ${draftLetter} saved successfully` });
+        if (!silent) {
+          toast({ title: "Draft Saved", description: `Draft ${draftLetter} saved successfully` });
+        }
         await loadDrafts();
       }
     } catch (error) {
-      toast({ title: "Error", description: "Failed to save draft", variant: "destructive" });
+      if (!silent) {
+        toast({ title: "Error", description: "Failed to save draft", variant: "destructive" });
+      }
+    } finally {
+      if (!silent) {
+        setIsSaving(false);
+      }
+    }
+  };
+
+  // Auto-save function with debouncing
+  const queueAutosave = () => {
+    // Clear any pending autosave
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+    }
+
+    // Don't autosave if we're loading a draft or on Base
+    if (isLoadingDraftRef.current || activeDraft === "Base" || !searchedId) {
+      return;
+    }
+
+    // Set new timeout for autosave (750ms debounce)
+    autosaveTimeoutRef.current = setTimeout(async () => {
+      setIsSaving(true);
+      await saveCurrentDraft(undefined, undefined, true);
+      setIsSaving(false);
+    }, 750);
+  };
+
+  // Flush pending autosave immediately
+  const flushAutosave = async () => {
+    if (autosaveTimeoutRef.current) {
+      clearTimeout(autosaveTimeoutRef.current);
+      autosaveTimeoutRef.current = null;
+    }
+
+    // Save immediately if there are unsaved changes
+    if (hasUnsavedChanges && activeDraft !== "Base" && searchedId) {
+      await saveCurrentDraft(undefined, undefined, true);
     }
   };
 
   const switchToDraft = async (draftLetter: string) => {
+    // Flush any pending autosave before switching
+    await flushAutosave();
+    
     // Always clear optimized lineup when switching drafts
     setOptimizedLineup(null);
+    
+    // Mark that we're loading a draft to prevent autosave during load
+    isLoadingDraftRef.current = true;
     
     if (draftLetter === "Base") {
       // Switch to Base Draft - reset to original team
@@ -3548,6 +3586,7 @@ export default function TransferPlanner() {
       if (teamData?.picks) {
         setManualLineup([...teamData.picks]);
       }
+      isLoadingDraftRef.current = false;
       toast({ title: "Base Draft", description: "Switched to base team (no transfers)" });
     } else {
       try {
@@ -3584,6 +3623,11 @@ export default function TransferPlanner() {
           // Reset transferred out players and completed transfers
           setTransferredOutPlayers([]);
           setCompletedTransfers([]);
+          
+          // Allow autosave again after a short delay (to let state settle)
+          setTimeout(() => {
+            isLoadingDraftRef.current = false;
+          }, 1000);
           
           toast({ title: "Draft Loaded", description: `Switched to Draft ${draftLetter}` });
         }
@@ -4111,8 +4155,11 @@ export default function TransferPlanner() {
               <div className="flex items-center gap-4 flex-wrap mb-2">
                 <div className="text-base font-semibold min-w-[120px]">
                   Select Draft
-                  {hasUnsavedChanges && activeDraft !== "Base" && (
-                    <span className="ml-2 text-base text-orange-600 font-semibold">● Unsaved</span>
+                  {isSaving && activeDraft !== "Base" && (
+                    <span className="ml-2 text-base text-blue-600 font-semibold animate-pulse">● Saving...</span>
+                  )}
+                  {!isSaving && lastSavedAt && activeDraft !== "Base" && (
+                    <span className="ml-2 text-base text-green-600 font-semibold">✓ Saved</span>
                   )}
                 </div>
                 <div className="flex gap-2 flex-wrap">
