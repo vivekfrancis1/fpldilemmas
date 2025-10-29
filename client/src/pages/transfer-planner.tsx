@@ -4605,10 +4605,15 @@ export default function TransferPlanner() {
               
               return hasRecommendations ? (
                 <div className="border-t pt-3">
-                  <h4 className="text-xs md:text-sm font-semibold mb-2 flex items-center gap-2">
-                    <Sparkles className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
-                    Chip Recommendations
-                  </h4>
+                  <div className="mb-2">
+                    <h4 className="text-xs md:text-sm font-semibold flex items-center gap-2">
+                      <Sparkles className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
+                      Chip Recommendations
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Based on next 6 gameweek projections
+                    </p>
+                  </div>
                   <div className="space-y-2">
                     {recommendations.bboost.length > 0 && (
                       <div className="flex items-center gap-2 flex-wrap">
