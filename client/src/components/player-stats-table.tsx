@@ -388,29 +388,31 @@ export default function PlayerStatsTable({
     return `£${(cost / 10).toFixed(1)}m`;
   };
 
-  // Helper function to create sortable column headers
-  const SortableHeader = ({ field, label, className = "" }: { 
+  // Helper function to create sortable column headers with tooltips
+  const SortableHeader = ({ field, label, tooltip, className = "" }: { 
     field: SortableField; 
     label: string; 
+    tooltip?: string;
     className?: string;
   }) => (
     <button
       onClick={() => handleSort(field)}
-      className={`flex items-center justify-center gap-1 hover:text-blue-600 transition-colors font-semibold text-gray-900 text-xs sm:text-sm ${className}`}
+      className={`flex items-center justify-center gap-0.5 hover:text-blue-600 transition-colors text-gray-700 text-xs ${className}`}
       data-testid={`sort-${field}`}
+      title={tooltip || label}
     >
       <span className="truncate">{label}</span>
       {sort.field === field && (
         <div className="flex-shrink-0">
           {sort.direction === "asc" ? (
-            <ArrowUp className="h-3 w-3" />
+            <ArrowUp className="h-2.5 w-2.5" />
           ) : (
-            <ArrowDown className="h-3 w-3" />
+            <ArrowDown className="h-2.5 w-2.5" />
           )}
         </div>
       )}
       {sort.field !== field && (
-        <ArrowUpDown className="h-3 w-3 opacity-50" />
+        <ArrowUpDown className="h-2.5 w-2.5 opacity-30" />
       )}
     </button>
   );
@@ -533,213 +535,213 @@ export default function PlayerStatsTable({
         <table className="fpl-table text-xs min-w-[800px] w-full lg:min-w-full xl:min-w-full">
           <thead className="fpl-table-header">
             <tr>
-              <th className="px-2 py-2 text-left min-w-[120px] font-semibold text-gray-900 text-xs sticky left-0 bg-gray-50 z-10 border-r border-gray-200">
+              <th className="px-2 py-1.5 text-left min-w-[110px] text-gray-700 text-xs sticky left-0 bg-gray-50 z-10 border-r border-gray-200">
                 Player
               </th>
-              <th className="px-2 py-2 text-center min-w-[60px] font-semibold text-gray-900 text-xs">
+              <th className="px-1.5 py-1.5 text-center min-w-[55px] text-gray-700 text-xs">
                 Details
               </th>
               {onPlayerCompareClick && (
-                <th className="px-2 py-2 text-center min-w-[60px] font-semibold text-gray-900 text-xs">
+                <th className="px-1.5 py-1.5 text-center min-w-[55px] text-gray-700 text-xs">
                   Compare
                 </th>
               )}
               {/* Priority columns first */}
-              <th className="px-1 py-2 text-center min-w-[60px]">
-                <SortableHeader field="now_cost" label="Price" />
+              <th className="px-1 py-1.5 text-center min-w-[55px]">
+                <SortableHeader field="now_cost" label="£" tooltip="Price" />
               </th>
               {displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="games_played" label="Matches" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="games_played" label="MP" tooltip="Matches Played" />
                 </th>
               )}
-              <th className="px-2 py-2 text-center min-w-[70px]">
-                <SortableHeader field="total_points" label="Pts" />
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                <SortableHeader field="total_points" label="Pts" tooltip="Total Points" />
               </th>
               {/* Key Performance Stats - immediately after points */}
-              <th className="px-2 py-2 text-center min-w-[70px]">
-                <SortableHeader field="goals_scored" label="Goals" />
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                <SortableHeader field="goals_scored" label="G" tooltip="Goals Scored" />
               </th>
-              <th className="px-2 py-2 text-center min-w-[70px]">
-                <SortableHeader field="assists" label="Assists" />
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                <SortableHeader field="assists" label="A" tooltip="Assists" />
               </th>
-              <th className="px-2 py-2 text-center min-w-[70px]">
-                <SortableHeader field="clean_sheets" label="CS" />
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                <SortableHeader field="clean_sheets" label="CS" tooltip="Clean Sheets" />
               </th>
               {/* Defensive Contribution Fields - positioned after Clean Sheets */}
               {!isHistoricalSeason && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="defensive_contribution" label="Def Con" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="defensive_contribution" label="DC" tooltip="Defensive Contribution" />
                 </th>
               )}
               {!isHistoricalSeason && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="defensive_contribution_points" label="Def Con Pts" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="defensive_contribution_points" label="DCP" tooltip="Defensive Contribution Points" />
                 </th>
               )}
               {/* Key Performance Metrics - positioned after Defensive Contributions */}
-              <th className="px-2 py-2 text-center min-w-[70px]">
-                <SortableHeader field="value_season" label="Value" />
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                <SortableHeader field="value_season" label="Val" tooltip="Value (Points per Million)" />
               </th>
               {displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="points_per_game" label="Pts/Match" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="points_per_game" label="PPG" tooltip="Points Per Game" />
                 </th>
               )}
               {!isHistoricalSeason && displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="form" label="Form" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="form" label="Form" tooltip="Form (Last 5 Gameweeks)" />
                 </th>
               )}
               {!isHistoricalSeason && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="selected_by_percent" label="Own%" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="selected_by_percent" label="Own%" tooltip="Ownership Percentage" />
                 </th>
               )}
               {/* Expected Stats */}
               {!isHistoricalSeason && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="expected_goals" label="xG" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="expected_goals" label="xG" tooltip="Expected Goals" />
                 </th>
               )}
               {!isHistoricalSeason && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="expected_assists" label="xA" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="expected_assists" label="xA" tooltip="Expected Assists" />
                 </th>
               )}
               {!isHistoricalSeason && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="expected_goal_involvements" label="xGI" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="expected_goal_involvements" label="xGI" tooltip="Expected Goal Involvements" />
                 </th>
               )}
               {!isHistoricalSeason && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="expected_goals_conceded" label="xGC" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="expected_goals_conceded" label="xGC" tooltip="Expected Goals Conceded" />
                 </th>
               )}
-              <th className="px-2 py-2 text-center min-w-[70px]">
-                <SortableHeader field="minutes" label="Minutes" />
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                <SortableHeader field="minutes" label="Min" tooltip="Minutes Played" />
               </th>
-              <th className="px-2 py-2 text-center min-w-[70px]">
-                <SortableHeader field="goals_conceded" label="GC" />
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                <SortableHeader field="goals_conceded" label="GC" tooltip="Goals Conceded" />
               </th>
-              <th className="px-2 py-2 text-center min-w-[70px]">
-                <SortableHeader field="saves" label="Saves" />
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                <SortableHeader field="saves" label="Sav" tooltip="Saves" />
               </th>
               {!isHistoricalSeason && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="save_points" label="Save Pts" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="save_points" label="SavP" tooltip="Save Points" />
                 </th>
               )}
               {!isHistoricalSeason && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="minutes_points" label="Min Pts" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="minutes_points" label="MinP" tooltip="Minutes Points" />
                 </th>
               )}
               {!isHistoricalSeason && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="tackles" label="Tackles" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="tackles" label="Tck" tooltip="Tackles" />
                 </th>
               )}
               {!isHistoricalSeason && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="recoveries" label="Recoveries" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="recoveries" label="Rec" tooltip="Recoveries" />
                 </th>
               )}
               {!isHistoricalSeason && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
-                  <SortableHeader field="clearances_blocks_interceptions" label="CBI" />
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
+                  <SortableHeader field="clearances_blocks_interceptions" label="CBI" tooltip="Clearances, Blocks, Interceptions" />
                 </th>
               )}
               {!isHistoricalSeason && displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="starts" label="Starts" />
                 </th>
               )}
               {/* All other data points */}
-              <th className="px-2 py-2 text-center min-w-[70px]">
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                 <SortableHeader field="bonus" label="Bonus" />
               </th>
-              <th className="px-2 py-2 text-center min-w-[70px]">
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                 <SortableHeader field="bps" label="BPS" />
               </th>
               {!isHistoricalSeason && displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="event_points" label="GW Pts" />
                 </th>
               )}
               {!isHistoricalSeason && displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="transfers_in_event" label="GW In" />
                 </th>
               )}
               {!isHistoricalSeason && displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="transfers_out_event" label="GW Out" />
                 </th>
               )}
               {!isHistoricalSeason && displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="transfers_in" label="Total In" />
                 </th>
               )}
               {!isHistoricalSeason && displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="transfers_out" label="Total Out" />
                 </th>
               )}
               {!isHistoricalSeason && displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="value_form" label="Val Form" />
                 </th>
               )}
               {displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="influence" label="Influence" />
                 </th>
               )}
               {displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="creativity" label="Creativity" />
                 </th>
               )}
               {displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="threat" label="Threat" />
                 </th>
               )}
               {displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="ict_index" label="ICT" />
                 </th>
               )}
               {!isHistoricalSeason && displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="dreamteam_count" label="Dream Team" />
                 </th>
               )}
-              <th className="px-2 py-2 text-center min-w-[70px]">
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                 <SortableHeader field="penalties_saved" label="Pen Saved" />
               </th>
-              <th className="px-2 py-2 text-center min-w-[70px]">
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                 <SortableHeader field="penalties_missed" label="Pen Missed" />
               </th>
-              <th className="px-2 py-2 text-center min-w-[70px]">
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                 <SortableHeader field="yellow_cards" label="Yellow" />
               </th>
-              <th className="px-2 py-2 text-center min-w-[70px]">
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                 <SortableHeader field="red_cards" label="Red" />
               </th>
-              <th className="px-2 py-2 text-center min-w-[70px]">
+              <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                 <SortableHeader field="own_goals" label="Own Goals" />
               </th>
               {!isHistoricalSeason && displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="cost_change_event" label="Price Δ GW" />
                 </th>
               )}
               {displayMode === 'totals' && (
-                <th className="px-2 py-2 text-center min-w-[70px]">
+                <th className="px-1.5 py-1.5 text-center min-w-[60px]">
                   <SortableHeader field="cost_change_start" label="Price Δ Start" />
                 </th>
               )}
@@ -817,28 +819,28 @@ export default function PlayerStatsTable({
                     </td>
                   )}
                   {/* Priority columns first */}
-                  <td className="px-2 py-2 text-center text-xs font-medium text-gray-900">
+                  <td className="px-1.5 py-1.5 text-center text-xs font-medium text-gray-900">
                     <span className="text-xs sm:text-sm font-medium">£{((player.now_cost || player.end_cost || 0) / 10).toFixed(1)}m</span>
                   </td>
                   {displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs font-medium text-gray-900">
+                    <td className="px-1.5 py-1.5 text-center text-xs font-medium text-gray-900">
                       {(() => {
                         const pointsPerGame = parseFloat(player.points_per_game) || 0;
                         return pointsPerGame > 0 ? Math.round(player.total_points / pointsPerGame) : 0;
                       })()}
                     </td>
                   )}
-                  <td className="px-2 py-2 text-center text-xs font-bold text-fpl-purple">{calculateStat(player, player.total_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs font-bold text-fpl-purple">{calculateStat(player, player.total_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   {/* Key Performance Stats - immediately after points */}
-                  <td className="px-2 py-2 text-center text-xs font-bold text-green-600">{calculateStat(player, player.goals_scored || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-2 text-center text-xs font-bold text-blue-600">{calculateStat(player, player.assists || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-2 text-center text-xs font-bold text-green-600">{calculateStat(player, player.clean_sheets || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs font-bold text-green-600">{calculateStat(player, player.goals_scored || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs font-bold text-blue-600">{calculateStat(player, player.assists || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs font-bold text-green-600">{calculateStat(player, player.clean_sheets || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   {/* Defensive Contribution Fields - positioned after Clean Sheets */}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-2 text-center text-xs font-bold text-orange-600">{calculateStat(player, player.defensive_contribution || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs font-bold text-orange-600">{calculateStat(player, player.defensive_contribution || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-2 text-center text-xs font-bold text-yellow-600" data-testid={`text-cbit-points-${player.id}`}>
+                    <td className="px-1.5 py-1.5 text-center text-xs font-bold text-yellow-600" data-testid={`text-cbit-points-${player.id}`}>
                       {(() => {
                         if (isCbitPointsLoading) {
                           return <span className="text-gray-400">...</span>;
@@ -850,34 +852,34 @@ export default function PlayerStatsTable({
                       })()}
                     </td>
                   )}
-                  <td className="px-2 py-2 text-center text-xs text-green-700 font-semibold">{calculateStat(player, parseFloat(player.value_season || player.value_form || 0)).toFixed(1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs text-green-700 font-semibold">{calculateStat(player, parseFloat(player.value_season || player.value_form || 0)).toFixed(1)}</td>
                   {displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs text-gray-900">{calculateStat(player, parseFloat(player.points_per_game || player.form || 0)).toFixed(1)}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-gray-900">{calculateStat(player, parseFloat(player.points_per_game || player.form || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs text-gray-900">{calculateStat(player, parseFloat(player.form || 0)).toFixed(1)}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-gray-900">{calculateStat(player, parseFloat(player.form || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-2 text-center text-xs font-medium text-purple-700">{formatValue(player.selected_by_percent || 0, 'decimal')}%</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs font-medium text-purple-700">{formatValue(player.selected_by_percent || 0, 'decimal')}%</td>
                   )}
                   {/* Expected Stats */}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-2 text-center text-xs font-bold text-purple-600">{calculateStat(player, parseFloat(player.expected_goals || 0)).toFixed(1)}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs font-bold text-purple-600">{calculateStat(player, parseFloat(player.expected_goals || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-2 text-center text-xs font-bold text-blue-600">{calculateStat(player, parseFloat(player.expected_assists || 0)).toFixed(1)}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs font-bold text-blue-600">{calculateStat(player, parseFloat(player.expected_assists || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-2 text-center text-xs font-bold text-indigo-600">{calculateStat(player, parseFloat(player.expected_goal_involvements || 0)).toFixed(1)}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs font-bold text-indigo-600">{calculateStat(player, parseFloat(player.expected_goal_involvements || 0)).toFixed(1)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-2 text-center text-xs font-bold text-red-600">{calculateStat(player, parseFloat(player.expected_goals_conceded || 0)).toFixed(1)}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs font-bold text-red-600">{calculateStat(player, parseFloat(player.expected_goals_conceded || 0)).toFixed(1)}</td>
                   )}
-                  <td className="px-2 py-2 text-center text-xs text-gray-900">{displayMode === 'totals' ? (player.minutes || 0) : calculateStat(player, player.minutes || 0).toFixed(0)}</td>
-                  <td className="px-2 py-2 text-center text-xs text-red-600">{calculateStat(player, player.goals_conceded || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-2 text-center text-xs text-gray-900">{calculateStat(player, player.saves || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs text-gray-900">{displayMode === 'totals' ? (player.minutes || 0) : calculateStat(player, player.minutes || 0).toFixed(0)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs text-red-600">{calculateStat(player, player.goals_conceded || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs text-gray-900">{calculateStat(player, player.saves || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-2 text-center text-xs font-bold text-blue-600" data-testid={`text-save-points-${player.id}`}>
+                    <td className="px-1.5 py-1.5 text-center text-xs font-bold text-blue-600" data-testid={`text-save-points-${player.id}`}>
                       {(() => {
                         const position = getPositionName(player);
                         if (position !== 'GKP') {
@@ -894,7 +896,7 @@ export default function PlayerStatsTable({
                     </td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-2 text-center text-xs font-bold text-orange-600" data-testid={`text-minutes-points-${player.id}`}>
+                    <td className="px-1.5 py-1.5 text-center text-xs font-bold text-orange-600" data-testid={`text-minutes-points-${player.id}`}>
                       {(() => {
                         if (isMinutesPointsLoading) {
                           return <span className="text-gray-400">...</span>;
@@ -907,60 +909,60 @@ export default function PlayerStatsTable({
                     </td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-2 text-center text-xs text-blue-700">{calculateStat(player, player.tackles || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-blue-700">{calculateStat(player, player.tackles || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-2 text-center text-xs text-green-700">{calculateStat(player, player.recoveries || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-green-700">{calculateStat(player, player.recoveries || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
                   {!isHistoricalSeason && (
-                    <td className="px-2 py-2 text-center text-xs text-purple-700">{calculateStat(player, player.clearances_blocks_interceptions || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-purple-700">{calculateStat(player, player.clearances_blocks_interceptions || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
                   {!isHistoricalSeason && displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs text-gray-900">{player.starts || 0}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-gray-900">{player.starts || 0}</td>
                   )}
                   {/* All other data points */}
-                  <td className="px-2 py-2 text-center text-xs text-gray-900">{calculateStat(player, player.bonus || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-2 text-center text-xs text-gray-900">{calculateStat(player, player.bps || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs text-gray-900">{calculateStat(player, player.bonus || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs text-gray-900">{calculateStat(player, player.bps || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   {!isHistoricalSeason && displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs font-bold text-fpl-purple">{calculateStat(player, player.event_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs font-bold text-fpl-purple">{calculateStat(player, player.event_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
                   {!isHistoricalSeason && displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs text-green-600">{(player.transfers_in_event || 0).toLocaleString()}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-green-600">{(player.transfers_in_event || 0).toLocaleString()}</td>
                   )}
                   {!isHistoricalSeason && displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs text-red-600">{(player.transfers_out_event || 0).toLocaleString()}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-red-600">{(player.transfers_out_event || 0).toLocaleString()}</td>
                   )}
                   {!isHistoricalSeason && displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs text-green-600">{(player.transfers_in || 0).toLocaleString()}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-green-600">{(player.transfers_in || 0).toLocaleString()}</td>
                   )}
                   {!isHistoricalSeason && displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs text-red-600">{(player.transfers_out || 0).toLocaleString()}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-red-600">{(player.transfers_out || 0).toLocaleString()}</td>
                   )}
                   {!isHistoricalSeason && displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs text-green-700 font-semibold">{formatValue(player.value_form || 0, 'decimal')}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-green-700 font-semibold">{formatValue(player.value_form || 0, 'decimal')}</td>
                   )}
                   {displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs text-gray-900">{formatValue(player.influence || 0, 'decimal')}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-gray-900">{formatValue(player.influence || 0, 'decimal')}</td>
                   )}
                   {displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs text-gray-900">{formatValue(player.creativity || 0, 'decimal')}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-gray-900">{formatValue(player.creativity || 0, 'decimal')}</td>
                   )}
                   {displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs text-gray-900">{formatValue(player.threat || 0, 'decimal')}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-gray-900">{formatValue(player.threat || 0, 'decimal')}</td>
                   )}
                   {displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs font-medium text-fpl-purple">{formatValue(player.ict_index || 0, 'decimal')}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs font-medium text-fpl-purple">{formatValue(player.ict_index || 0, 'decimal')}</td>
                   )}
                   {!isHistoricalSeason && displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs text-yellow-600">{player.dreamteam_count || 0}</td>
+                    <td className="px-1.5 py-1.5 text-center text-xs text-yellow-600">{player.dreamteam_count || 0}</td>
                   )}
-                  <td className="px-2 py-2 text-center text-xs text-green-600">{calculateStat(player, player.penalties_saved || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-2 text-center text-xs text-red-600">{calculateStat(player, player.penalties_missed || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-2 text-center text-xs text-yellow-600">{calculateStat(player, player.yellow_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-2 text-center text-xs text-red-600">{calculateStat(player, player.red_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-2 text-center text-xs text-red-600">{calculateStat(player, player.own_goals || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs text-green-600">{calculateStat(player, player.penalties_saved || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs text-red-600">{calculateStat(player, player.penalties_missed || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs text-yellow-600">{calculateStat(player, player.yellow_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs text-red-600">{calculateStat(player, player.red_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  <td className="px-1.5 py-1.5 text-center text-xs text-red-600">{calculateStat(player, player.own_goals || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   {!isHistoricalSeason && displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs">
+                    <td className="px-1.5 py-1.5 text-center text-xs">
                       <div className="flex items-center justify-center">
                         <span className={(player.cost_change_event || 0) > 0 ? 'text-green-600' : (player.cost_change_event || 0) < 0 ? 'text-red-600' : 'text-gray-900'}>
                           {(player.cost_change_event || 0) > 0 ? '+' : ''}{formatValue((player.cost_change_event || 0) / 10, 'decimal')}
@@ -969,7 +971,7 @@ export default function PlayerStatsTable({
                     </td>
                   )}
                   {displayMode === 'totals' && (
-                    <td className="px-2 py-2 text-center text-xs">
+                    <td className="px-1.5 py-1.5 text-center text-xs">
                       <div className="flex items-center justify-center">
                         <span className={(player.cost_change_start || 0) > 0 ? 'text-green-600' : (player.cost_change_start || 0) < 0 ? 'text-red-600' : 'text-gray-900'}>
                           {(player.cost_change_start || 0) > 0 ? '+' : ''}{formatValue((player.cost_change_start || 0) / 10, 'decimal')}
