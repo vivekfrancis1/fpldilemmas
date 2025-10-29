@@ -1,0 +1,1067 @@
+11:09:36 AM [express] GET /api/current-standings 200 in 13466ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:36 AM [express] GET /api/current-standings 200 in 13072ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:36 AM [express] GET /api/current-standings 200 in 13317ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:36 AM [express] GET /api/current-standings 200 in 13035ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:37 AM [express] GET /api/current-standings 200 in 13345ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:37 AM [express] GET /api/current-standings 200 in 13877ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+⚠️ No cached player assists data found, falling back to live API
+🌐 Internal API call: http://localhost:5000/api/player-assist-projections
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:37 AM [express] GET /api/current-standings 200 in 13568ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:37 AM [express] GET /api/current-standings 200 in 13562ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:37 AM [express] GET /api/current-standings 200 in 13812ms :: [{"id":1,"name":"Arsenal","shortNa…
+🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections
+🌐 Internal API call: http://localhost:5000/api/assist-share-season
+🌐 Internal API call: http://localhost:5000/api/team-assist-projections
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+✅ Serving assist share data from cache
+11:09:38 AM [express] GET /api/assist-share-season 200 in 1ms :: [{"teamId":13,"teamName":"Man City",…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:38 AM [express] GET /api/current-standings 200 in 14597ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:38 AM [express] GET /api/current-standings 200 in 14031ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Team Assist Projections API called - generating next 6 gameweeks only
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:38 AM [express] GET /api/current-standings 200 in 14378ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:38 AM [express] GET /api/current-standings 200 in 14129ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:38 AM [express] GET /api/current-standings 200 in 14705ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:38 AM [express] GET /api/current-standings 200 in 14721ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:38 AM [express] GET /api/current-standings 200 in 14822ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:38 AM [express] GET /api/current-standings 200 in 14415ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:38 AM [express] GET /api/current-standings 200 in 15055ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:38 AM [express] GET /api/current-standings 200 in 14581ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:38 AM [express] GET /api/current-standings 200 in 14872ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:39 AM [express] GET /api/current-standings 200 in 15317ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:39 AM [express] GET /api/current-standings 200 in 14815ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:39 AM [express] GET /api/current-standings 200 in 14981ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:39 AM [express] GET /api/current-standings 200 in 15196ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:39 AM [express] GET /api/current-standings 200 in 15184ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:39 AM [express] GET /api/current-standings 200 in 16391ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:39 AM [express] GET /api/current-standings 200 in 15834ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:39 AM [express] GET /api/current-standings 200 in 15417ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:39 AM [express] GET /api/current-standings 200 in 15311ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 15604ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 15961ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 15468ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 15532ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 16343ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 16118ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 16206ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 15673ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 16163ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 16273ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 16163ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 16182ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 16189ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 16290ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 16284ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:40 AM [express] GET /api/current-standings 200 in 16236ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:41 AM [express] GET /api/current-standings 200 in 16328ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:41 AM [express] GET /api/current-standings 200 in 16795ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:41 AM [express] GET /api/current-standings 200 in 16389ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:41 AM [express] GET /api/current-standings 200 in 16395ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:41 AM [express] GET /api/current-standings 200 in 16491ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:41 AM [express] GET /api/current-standings 200 in 16824ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:41 AM [express] GET /api/current-standings 200 in 16561ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:41 AM [express] GET /api/current-standings 200 in 16561ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:41 AM [express] GET /api/current-standings 200 in 16758ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:41 AM [express] GET /api/current-standings 200 in 16816ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:41 AM [express] GET /api/current-standings 200 in 16917ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:42 AM [express] GET /api/current-standings 200 in 17059ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:42 AM [express] GET /api/current-standings 200 in 17121ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:42 AM [express] GET /api/current-standings 200 in 17504ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:42 AM [express] GET /api/current-standings 200 in 17210ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:42 AM [express] GET /api/current-standings 200 in 17222ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:42 AM [express] GET /api/current-standings 200 in 17256ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:42 AM [express] GET /api/current-standings 200 in 18202ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+✅ Calculated team goals for 20 teams
+11:09:42 AM [express] GET /api/team-assist-projections 200 in 20629ms :: [{"teamId":1,"teamName":"Ars…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:42 AM [express] GET /api/current-standings 200 in 17277ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:42 AM [express] GET /api/current-standings 200 in 18233ms :: [{"id":1,"name":"Arsenal","shortNa…
+⚠️ LIVE API FAILED: terminated, attempting cache fallback...
+🌐 Internal API call: http://localhost:5000/api/cached/player-assists-projections
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:43 AM [express] GET /api/current-standings 200 in 17995ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:43 AM [express] GET /api/current-standings 200 in 17475ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:43 AM [express] GET /api/current-standings 200 in 17510ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+📊 Serving cached player assists data from database
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:43 AM [express] GET /api/current-standings 200 in 17567ms :: [{"id":1,"name":"Arsenal","shortNa…
+⚠️ No cached player assists data found, falling back to live API
+🌐 Internal API call: http://localhost:5000/api/player-assist-projections
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:43 AM [express] GET /api/current-standings 200 in 17548ms :: [{"id":1,"name":"Arsenal","shortNa…
+🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections
+🌐 Internal API call: http://localhost:5000/api/assist-share-season
+🌐 Internal API call: http://localhost:5000/api/team-assist-projections
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:43 AM [express] GET /api/current-standings 200 in 17527ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:43 AM [express] GET /api/current-standings 200 in 17481ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:43 AM [express] GET /api/current-standings 200 in 17551ms :: [{"id":1,"name":"Arsenal","shortNa…
+✅ Serving assist share data from cache
+11:09:43 AM [express] GET /api/assist-share-season 200 in 2ms :: [{"teamId":13,"teamName":"Man City",…
+DEBUG: Found 90 completed fixtures for enhanced standings
+DEBUG: Fetching live data for 9 completed gameweeks
+DEBUG: Fetching live data for 9 completed gameweeks for per-gameweek xG calculation
+DEBUG: Team Assist Projections API called - generating next 6 gameweeks only
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:43 AM [express] GET /api/current-standings 200 in 18742ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:43 AM [express] GET /api/current-standings 200 in 17511ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 17610ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 17639ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 17671ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 18824ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 19047ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 17635ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 17621ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 17606ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 18369ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 18799ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 17710ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 17685ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 18877ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 17716ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 19606ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 17749ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 17744ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 18915ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:44 AM [express] GET /api/current-standings 200 in 17714ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 17637ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 19728ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 17652ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 17644ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 19176ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 17627ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 17638ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 17672ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 17493ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 17513ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 17515ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 17464ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 17419ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 17303ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 19041ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Enhanced current standings calculated for 20 teams based on 90 completed matches with detailed statistics (venue: all)
+11:09:45 AM [express] GET /api/current-standings 200 in 18534ms :: [{"id":1,"name":"Arsenal","shortNa…
+DEBUG: Cached fresh bootstrap-static data
+11:09:45 AM [express] GET /api/bootstrap-static 200 in 9540ms :: {"chips":[{"id":1,"name":"wildcard",…
+✅ Calculated team goals for 20 teams
+11:09:45 AM [express] GET /api/team-goal-projections 200 in 23503ms :: [{"teamId":1,"teamName":"Arsen…
+⚠️ LIVE API FAILED: terminated, attempting cache fallback...
+🌐 Internal API call: http://localhost:5000/api/cached/player-goals-projections
+📊 Serving cached player goals data from database
+DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW10-15
+📊 Serving team goals from cache for range 10-15
+11:09:45 AM [express] GET /api/team-assist-projections 200 in 7540ms :: [{"teamId":1,"teamName":"Arse…
+⚠️ LIVE API FAILED: terminated, attempting cache fallback...
+🌐 Internal API call: http://localhost:5000/api/cached/player-assists-projections
+📊 Serving cached player assists data from database
+DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW10-15
+📊 Serving team goals from cache for range 10-15
+11:09:45 AM [express] GET /api/team-assist-projections 200 in 2064ms :: [{"teamId":1,"teamName":"Arse…
+✅ LIVE SUCCESS: Calculated 393 player assist projections using live APIs
+11:09:45 AM [express] GET /api/player-assist-projections 200 in 2268ms :: [{"playerId":582,"playerNam…
+✅ Fallback successful, returning 393 players from live API
+11:09:45 AM [express] GET /api/cached/player-assists-projections 200 in 2547ms :: [{"playerId":582,"p…
+⚠️ No cached player goals data found, falling back to live API
+🌐 Internal API call: http://localhost:5000/api/player-goals-scored-projections
+🔄 CACHE SUCCESS: Serving 393 player assist projections from cache
+11:09:45 AM [express] GET /api/player-assist-projections 200 in 23593ms :: [{"playerId":582,"playerNa…
+🚀 API-FIRST: Attempting live calculation for Player Goals = Goal Share × Team Goal Projections
+🌐 Internal API call: http://localhost:5000/api/goal-share-season
+🌐 Internal API call: http://localhost:5000/api/team-goal-projections
+✅ Assists cache populated
+✅ Completed job: Team Assist Projections (23606ms)
+✅ Serving goal share data from cache
+11:09:45 AM [express] GET /api/goal-share-season 200 in 2ms :: [{"teamId":12,"teamName":"Liverpool","…
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+11:09:45 AM [express] GET /api/team-goal-projections 200 in 53ms :: [{"teamId":1,"teamName":"Arsenal"…
+✅ LIVE SUCCESS: Calculated 339 player goal projections using live APIs
+11:09:45 AM [express] GET /api/player-goals-scored-projections 200 in 62ms :: [{"playerId":430,"playe…
+✅ Fallback successful, returning 339 players from live API
+11:09:45 AM [express] GET /api/cached/player-goals-projections 200 in 155ms :: [{"playerId":430,"play…
+🔄 CACHE SUCCESS: Serving 339 player goal projections from cache
+11:09:45 AM [express] GET /api/player-goals-scored-projections 200 in 23671ms :: [{"playerId":430,"pl…
+✅ Goals cache populated
+✅ Completed job: Team Goal Projections (23680ms)
+🔄 Starting job: Player Total Points Aggregation (player-total-points)
+🎯 Populating player total points cache...
+🌐 Internal API call: http://localhost:5000/api/player-total-points-projections/full-calculation
+11:09:45 AM [express] GET /api/player-total-points-projections/full-calculation 200 in 8ms
+✅ Player total points cache populated
+✅ Completed job: Player Total Points Aggregation (9ms)
+✅ Dependency-aware initialization completed in 33468ms
+✅ Global dependency orchestrator execution completed
+🚀 Starting schedulers...
+🔄 Starting gameweek cache scheduler (checks every 2 hours)
+🔍 Gameweek cache scheduler: Checking for completed gameweeks...
+🔍 Checking for completed gameweeks to cache...
+✓ Gameweek cache scheduler started
+🔄 Starting projection cache scheduler...
+🚀 Starting scheduled full projection cache update...
+🔄 Starting projection cache update...
+🚀 GOALS CACHER: position caps enabled
+📊 Caching goals projections with set piece adjustments...
+🌐 Internal API call: http://localhost:5000/api/player-goals-scored-projections-full-calculation
+📊 Caching assist projections with set piece adjustments...
+📊 Caching team clean sheet projections...
+📊 Caching minutes projections...
+📊 Caching defensive contributions projections...
+🌐 Internal API call: http://localhost:5000/api/player-defensive-contributions-projections
+📊 Caching team projections...
+🌐 Internal API call: http://localhost:5000/api/team-goal-projections
+📊 Caching goal and assist share data...
+🌐 Internal API call: http://localhost:5000/api/goal-share-season
+📊 Caching FPL scoring components...
+✅ Projection cache scheduler started (runs every hour)
+✓ Projection cache scheduler started
+🕐 Starting FPL Scoring Cache Scheduler (twice daily updates)
+🚀 Starting scheduled FPL scoring cache update...
+✅ FPL Scoring Cache Scheduler started successfully
+✓ FPL scoring cache scheduler started
+DEBUG: Player Goals Scored Projections API called - using pure projections for next 6 gameweeks only
+🚀 API-FIRST: Attempting live calculation for player defensive contributions projections
+DEBUG: Player Defensive Contributions API called - using formula: Average DC/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+✅ Serving goal share data from cache
+11:09:45 AM [express] GET /api/goal-share-season 200 in 1ms :: [{"teamId":12,"teamName":"Liverpool","…
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+🌐 Internal API call: http://localhost:5000/api/assist-share-season
+🌐 Internal API call: http://localhost:5000/api/bootstrap-static
+✅ Serving assist share data from cache
+11:09:45 AM [express] GET /api/assist-share-season 200 in 1ms :: [{"teamId":13,"teamName":"Man City",…
+🕐 Starting Daily Projections Scheduler with Static Cache (3 AM daily)...
+⏰ Next daily projections run scheduled for: 2025-10-30T03:00:00.000Z
+✓ Daily projections scheduler started
+📥 Retrieved goal share data for 20 teams
+📥 Retrieved assist share data for 20 teams
+DEBUG: Serving bootstrap-static from cache
+11:09:46 AM [express] GET /api/bootstrap-static 200 in 15ms :: {"chips":[{"id":1,"name":"wildcard","n…
+🚀 Starting FPL scoring component cache update...
+📊 Caching player saves data...
+🌐 Internal API call: http://localhost:5000/api/player-saves-projections?startGameweek=10&endGameweek=15
+📊 Caching player goals conceded data...
+🌐 Internal API call: http://localhost:5000/api/player-goals-conceded-projections?startGameweek=10&endGameweek=15
+📊 Caching player yellow cards data...
+🌐 Internal API call: http://localhost:5000/api/player-yellow-cards-projections?startGameweek=10&endGameweek=15
+📊 Caching player red cards data...
+🌐 Internal API call: http://localhost:5000/api/player-red-cards-projections?startGameweek=10&endGameweek=15
+📊 Caching player bonus points data...
+🌐 Internal API call: http://localhost:5000/api/player-bonus-points-projections?startGameweek=10&endGameweek=15
+📊 Caching player CBIT points data...
+📊 Caching player save points data...
+📊 Caching player minutes points data...
+🚀 API-FIRST: Attempting live calculation for player saves projections
+DEBUG: Player Saves Projections API called - using formula: Average saves/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game
+🚀 API-FIRST: Attempting live calculation for player goals conceded projections
+DEBUG: Player Goals Conceded Projections API called - using pure projections for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player red cards projections
+DEBUG: Player Red Cards Projections API called - using pure projections for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player yellow cards projections
+DEBUG: Player Yellow Cards Projections API called - using pure projections for future gameweeks only
+🚀 API-FIRST: Attempting live calculation for player bonus points projections
+DEBUG: Player Bonus Points Projections API called - simplified calculation for future gameweeks only
+✅ Found 20 team projections for today
+⚠️ No cached player assists data found, falling back to live API
+🌐 Internal API call: http://localhost:5000/api/player-assist-projections
+🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections
+🌐 Internal API call: http://localhost:5000/api/assist-share-season
+🌐 Internal API call: http://localhost:5000/api/team-assist-projections
+✅ Serving assist share data from cache
+11:09:46 AM [express] GET /api/assist-share-season 200 in 1ms :: [{"teamId":13,"teamName":"Man City",…
+DEBUG: Team Assist Projections API called - generating next 6 gameweeks only
+📊 Dynamically fetching assist projections for GW10-15 (next 6 gameweeks)
+🌐 Internal API call: http://localhost:5000/api/player-assist-projections-full-calculation?startGameweek=10&endGameweek=15
+📥 Retrieved 746 players from bootstrap
+🌐 Internal API call: http://localhost:5000/api/team-cs-projections?startGameweek=10&endGameweek=15
+DEBUG: Current gameweek: 9, starting projections from GW10
+DEBUG: Player Assist Projections API called - using pure projections for next 6 gameweeks only
+DEBUG: Team CS Projections API called - generating next 6 gameweeks only
+✅ Serving assist share data from cache
+11:09:46 AM [express] GET /api/assist-share-season 200 in 2ms :: [{"teamId":13,"teamName":"Man City",…
+DEBUG: Team Assist Projections API called - generating next 6 gameweeks only
+DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping
+🎯 Found 9 completed gameweeks to process for 86 goalkeepers
+🔄 Processing gameweek 1...
+🎯 Found 9 completed gameweeks to process for 746 players
+🔄 Processing gameweek 1...
+DEBUG: Current gameweek: 9, starting projections from GW10
+✅ All completed gameweeks are already cached
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+📊 FPL Scoring Cache: Current GW: 9, caching scoring data for GW10-15
+⏳ Cache update already in progress, skipping duplicate request
+✅ FPL scoring components cached successfully for GW10-15
+✅ LIVE SUCCESS: Generated red card projections for 746 players using historical data for next 6 gameweeks
+11:09:46 AM [express] GET /api/player-red-cards-projections 200 in 504ms :: [{"playerId":1,"playerNam…
+📊 Inserted minutes batch 1/54
+DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+🎯 Found 9 completed gameweeks to process
+🔄 Processing gameweek 1...
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+✅ LIVE SUCCESS: Generated pure yellow card projections for 746 players for future gameweeks only
+11:09:46 AM [express] GET /api/player-yellow-cards-projections 200 in 618ms :: [{"playerId":1,"player…
+📊 Inserted minutes batch 2/54
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+11:09:46 AM [express] GET /api/team-goal-projections 200 in 812ms :: [{"teamId":1,"teamName":"Arsenal…
+📥 Retrieved 20 team projections
+📊 Inserted minutes batch 3/54
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+11:09:46 AM [express] GET /api/team-goal-projections 200 in 843ms :: [{"teamId":1,"teamName":"Arsenal…
+DEBUG: Using saved data from savedGoalShareData
+DEBUG: Using saved data - 20 teams with goal share data
+DEBUG: Current gameweek: 9, starting projections from GW10
+DEBUG: Generated pure projections for 0 players for future gameweeks only
+11:09:46 AM [express] GET /api/player-goals-scored-projections-full-calculation 200 in 849ms :: []
+✅ LIVE SUCCESS: Generated simplified bonus points projections for 442 players for future gameweeks only
+11:09:46 AM [express] GET /api/player-bonus-points-projections 200 in 797ms :: [{"playerId":1,"player…
+📊 Inserted minutes batch 4/54
+📊 Inserted minutes batch 5/54
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+🚀 API-FIRST: Attempting live calculation for player minutes projections
+📊 Inserted minutes batch 6/54
+DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW10-15
+📊 Serving team goals from cache for range 10-15
+11:09:47 AM [express] GET /api/team-assist-projections 200 in 887ms :: [{"teamId":1,"teamName":"Arsen…
+✅ LIVE SUCCESS: Calculated 393 player assist projections using live APIs
+11:09:47 AM [express] GET /api/player-assist-projections 200 in 903ms :: [{"playerId":582,"playerName…
+✅ Fallback successful, returning 393 players from live API
+11:09:47 AM [express] GET /api/cached/player-assists-projections 200 in 1286ms :: [{"playerId":582,"p…
+🔄 CACHE SUCCESS: Serving 393 player assist projections from cache
+11:09:47 AM [express] GET /api/player-assist-projections 200 in 9235ms :: [{"playerId":582,"playerNam…
+✅ Fallback successful, returning 393 players from live API
+11:09:47 AM [express] GET /api/cached/player-assists-projections 304 in 10784ms :: [{"playerId":582,"…
+📊 Inserted minutes batch 7/54
+DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW10-15
+📊 Serving team goals from cache for range 10-15
+11:09:47 AM [express] GET /api/team-assist-projections 200 in 800ms :: [{"teamId":1,"teamName":"Arsen…
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 442 players
+11:09:47 AM [express] GET /api/player-minutes-projections 200 in 626ms :: [{"playerId":1,"playerName"…
+📊 Inserted minutes batch 8/54
+✅ Team projections cached successfully (20 records)
+📥 Retrieved 0 goal projections
+📊 Inserted minutes batch 9/54
+🔄 Processing gameweek 2...
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+🔄 Processing gameweek 2...
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+11:09:47 AM [express] GET /api/team-goal-projections 200 in 730ms :: [{"teamId":1,"teamName":"Arsenal…
+📊 Serving team goals from cache for range 10-15
+11:09:47 AM [express] GET /api/team-goal-projections 200 in 842ms :: [{"teamId":1,"teamName":"Arsenal…
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 442 players
+11:09:47 AM [express] GET /api/player-minutes-projections 200 in 403ms :: [{"playerId":1,"playerName"…
+📅 Dynamic gameweek range detected: GWundefined-undefined (0 gameweeks)
+✅ Goal projections calculated using goal share × team goals - inherently balanced, no normalization needed
+🔄 Applying position-based capping to goal shares...
+📊 POSITION CAPPING SUMMARY:
+   - Team-gameweek groups processed: 0
+   - Position capping disabled - using raw shares
+   - No normalization applied - shares may exceed position limits
+✅ Position-based capping completed
+✅ Using raw goal projections without minutes scaling (0 records)
+✅ Goals projections cached successfully (0 records, 0 adjustments applied)
+📊 Inserted minutes batch 10/54
+DEBUG: Using current season FPL data with proper DC calculation...
+DEBUG: 429 players have current season defensive data
+DEBUG: Team completed fixtures calculated. Example: Team 1 has played 9 games
+✅ LIVE SUCCESS: Generated defensive contributions projections for 429 players using current season FPL data
+11:09:47 AM [express] GET /api/player-defensive-contributions-projections 200 in 1481ms :: [{"playerI…
+🔄 Processing gameweek 2...
+📥 Retrieved 429 defensive projections
+📊 Inserted minutes batch 11/54
+DEBUG: Current gameweek detected as: 9
+✅ LIVE SUCCESS: Generated minutes projections for 442 players
+11:09:47 AM [express] GET /api/player-minutes-projections 200 in 513ms :: [{"playerId":1,"playerName"…
+✅ Defensive projections cached successfully (0 records)
+DEBUG: Team completed fixtures calculated for saves. Example: Team 1 has played 9 games
+✅ LIVE SUCCESS: Generated saves projections for 86 goalkeepers using formula: Average saves/game × AGR of opponent/1.25
+11:09:47 AM [express] GET /api/player-saves-projections 200 in 1509ms :: [{"playerId":1,"playerName":…
+📊 Inserted minutes batch 12/54
+DEBUG: Current gameweek: 9, starting projections from GW10
+DEBUG: No team projections found for teamId 13. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 1. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 7. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 12. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 14. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 18. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 4. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 8. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 6. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 5. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 9. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 3. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 15. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 10. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 11. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 17. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 2. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 19. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 20. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: No team projections found for teamId 16. Available team IDs: , , , , , , , , , , , , , , , , , , , 
+DEBUG: Generated pure assist projections for 0 players for future gameweeks only
+11:09:47 AM [express] GET /api/player-assist-projections-full-calculation 200 in 1289ms :: []
+📥 Retrieved 0 assist projections for GW10-15
+DEBUG: Team Goals Conceded Projections - Limiting to next 6 gameweeks: GW10-15
+DEBUG: Team Goals Conceded Projections - Generated gameweek data for 20 teams (next 6 gameweeks only: GW10-15)
+11:09:47 AM [express] GET /api/team-goals-against-projections 200 in 1105ms :: [{"id":1,"team":"ARS",…
+✅ LIVE SUCCESS: Generated pure goals conceded projections for 332 players (GKP/DEF) for future gameweeks only
+11:09:47 AM [express] GET /api/player-goals-conceded-projections 200 in 1629ms :: [{"playerId":1,"pla…
+📊 Inserted minutes batch 13/54
+DEBUG: Team Goals Conceded Projections - Limiting to next 6 gameweeks: GW10-15
+DEBUG: Team Goals Conceded Projections - Generated gameweek data for 20 teams (next 6 gameweeks only: GW10-15)
+11:09:47 AM [express] GET /api/team-goals-against-projections 200 in 1318ms :: [{"id":1,"team":"ARS",…
+📊 Inserted minutes batch 14/54
+📊 Inserted minutes batch 15/54
+DEBUG: Processing next 6 gameweeks for clean sheets (GW10 to GW15), current GW: 9
+✅ Cached 86 player saves records
+11:09:47 AM [express] GET /api/team-cs-projections 200 in 1562ms :: [{"id":1,"team":"ARS","teamShort"…
+📥 Retrieved 20 team CS projections
+📊 Inserted minutes batch 16/54
+✅ Assist projections calculated using assist share × team assists - inherently balanced, no normalization needed
+🔄 Applying position-based capping to assist shares...
+📊 ASSIST POSITION CAPPING SUMMARY:
+   - Team-gameweek groups processed: 0
+   - Assist position capping disabled - using raw shares
+   - No normalization applied - shares may exceed position limits
+✅ Position-based assist capping completed
+✅ Using raw assist projections without minutes scaling (0 records)
+✅ Assist projections cached successfully (0 records, 0 adjustments applied)
+🔄 Processing gameweek 3...
+🔄 Processing gameweek 3...
+📊 Inserted minutes batch 17/54
+🔄 Processing gameweek 3...
+📊 Inserted minutes batch 18/54
+✅ Cached 746 player red cards records
+✅ Cached 442 player bonus points records
+📊 Inserted minutes batch 19/54
+✅ Team clean sheet projections cached successfully (120 records)
+📊 Inserted minutes batch 20/54
+📊 Inserted minutes batch 21/54
+📊 Inserted minutes batch 22/54
+🔄 Processing gameweek 4...
+📊 Inserted minutes batch 23/54
+🔄 Processing gameweek 4...
+✅ Cached 746 player yellow cards records
+📊 Inserted minutes batch 24/54
+🔄 Processing gameweek 4...
+📊 Populated goal share tracking table (339 records)
+✅ Cached 332 player goals conceded records
+📊 Inserted minutes batch 25/54
+📊 Populated assist share tracking table (393 records)
+✅ Goal/Assist share data cached successfully
+📊 Inserted minutes batch 26/54
+📊 Inserted minutes batch 27/54
+📊 Inserted minutes batch 28/54
+📊 Inserted minutes batch 29/54
+🔄 Processing gameweek 5...
+🔄 Processing gameweek 5...
+📊 Inserted minutes batch 30/54
+📊 Inserted minutes batch 31/54
+🔄 Processing gameweek 5...
+📊 Inserted minutes batch 32/54
+📊 Inserted minutes batch 33/54
+📊 Inserted minutes batch 34/54
+📊 Inserted minutes batch 35/54
+📊 Inserted minutes batch 36/54
+🔄 Processing gameweek 6...
+🔄 Processing gameweek 6...
+📊 Inserted minutes batch 37/54
+📊 Inserted minutes batch 38/54
+🔄 Processing gameweek 6...
+📊 Inserted minutes batch 39/54
+📊 Inserted minutes batch 40/54
+📊 Inserted minutes batch 41/54
+📊 Inserted minutes batch 42/54
+📊 Inserted minutes batch 43/54
+🔄 Processing gameweek 7...
+🔄 Processing gameweek 7...
+📊 Inserted minutes batch 44/54
+🔄 Processing gameweek 7...
+📊 Inserted minutes batch 45/54
+📊 Inserted minutes batch 46/54
+📊 Inserted minutes batch 47/54
+📊 Inserted minutes batch 48/54
+📊 Inserted minutes batch 49/54
+📊 Inserted minutes batch 50/54
+🔄 Processing gameweek 8...
+🔄 Processing gameweek 8...
+📊 Inserted minutes batch 51/54
+🔄 Processing gameweek 8...
+📊 Inserted minutes batch 52/54
+📊 Inserted minutes batch 53/54
+📊 Inserted minutes batch 54/54
+✅ Minutes projections cached successfully (2652 records)
+✅ Projection cache update completed: 8 successful, 0 failed (4993ms)
+🔄 Processing gameweek 9...
+🔄 Processing gameweek 9...
+🔍 DEBUG: Checking Player Goals API status...
+🚀 API-FIRST: Attempting live calculation for Player Goals = Goal Share × Team Goal Projections
+🌐 Internal API call: http://localhost:5000/api/goal-share-season
+🌐 Internal API call: http://localhost:5000/api/team-goal-projections
+✅ Serving goal share data from cache
+11:09:51 AM [express] GET /api/goal-share-season 200 in 1ms :: [{"teamId":12,"teamName":"Liverpool","…
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+🔄 Processing gameweek 9...
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+11:09:51 AM [express] GET /api/team-goal-projections 200 in 53ms :: [{"teamId":1,"teamName":"Arsenal"…
+✅ LIVE SUCCESS: Calculated 339 player goal projections using live APIs
+11:09:51 AM [express] GET /api/player-goals-scored-projections 200 in 59ms :: [{"playerId":430,"playe…
+🔍 DEBUG: Player Goals API working - 339 players, 63ms response time
+🔍 DEBUG: Checking Player Assists API status...
+🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections
+🌐 Internal API call: http://localhost:5000/api/assist-share-season
+🌐 Internal API call: http://localhost:5000/api/team-assist-projections
+✅ Serving assist share data from cache
+11:09:51 AM [express] GET /api/assist-share-season 200 in 1ms :: [{"teamId":13,"teamName":"Man City",…
+DEBUG: Team Assist Projections API called - generating next 6 gameweeks only
+DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW10-15
+📊 Serving team goals from cache for range 10-15
+11:09:51 AM [express] GET /api/team-assist-projections 200 in 44ms :: [{"teamId":1,"teamName":"Arsena…
+✅ LIVE SUCCESS: Calculated 393 player assist projections using live APIs
+11:09:51 AM [express] GET /api/player-assist-projections 200 in 50ms :: [{"playerId":582,"playerName"…
+🔍 DEBUG: Player Assists API working - 393 players, 53ms response time
+🔍 DEBUG: Player Total Points DB cache - count: 746, lastUpdated: 2025-10-29 11:07:24.579, isStale: false
+✅ full projection cache update completed in 5s
+📊 Cache stats: [
+  {
+    type: 'Goals',
+    count: 339,
+    lastUpdated: '2025-10-29T11:09:51.330Z',
+    isStale: false
+  },
+  {
+    type: 'Assists',
+    count: 393,
+    lastUpdated: '2025-10-29T11:09:51.384Z',
+    isStale: false
+  },
+  {
+    type: 'Team Clean Sheets',
+    count: '120',
+    lastUpdated: '2025-10-29 11:09:47.997',
+    isStale: false
+  },
+  {
+    type: 'Minutes',
+    count: '2652',
+    lastUpdated: '2025-10-29 11:09:46.401',
+    isStale: false
+  },
+  { type: 'Defensive', count: '0', lastUpdated: null, isStale: true },
+  {
+    type: 'Team Projections',
+    count: '20',
+    lastUpdated: '2025-10-29 11:09:47.194731',
+    isStale: false
+  },
+  {
+    type: 'Goal Share',
+    count: '6489',
+    lastUpdated: '2025-10-29 11:09:48.567806',
+    isStale: false
+  },
+  {
+    type: 'Assist Share',
+    count: '5357',
+    lastUpdated: '2025-10-29 11:09:48.707932',
+    isStale: false
+  },
+  {
+    type: 'Player Total Points',
+    count: 746,
+    lastUpdated: '2025-10-29 11:07:24.579',
+    isStale: false
+  },
+  {
+    type: 'Player Saves',
+    count: '86',
+    lastUpdated: '2025-10-29 11:09:47.833',
+    isStale: false
+  },
+  {
+    type: 'Goals Conceded',
+    count: '332',
+    lastUpdated: '2025-10-29 11:09:48.604',
+    isStale: false
+  },
+  {
+    type: 'Yellow Cards',
+    count: '746',
+    lastUpdated: '2025-10-29 11:09:48.483',
+    isStale: false
+  },
+  {
+    type: 'Red Cards',
+    count: '746',
+    lastUpdated: '2025-10-29 11:09:48.096',
+    isStale: false
+  },
+  {
+    type: 'Bonus Points',
+    count: '442',
+    lastUpdated: '2025-10-29 11:09:48.108',
+    isStale: false
+  },
+  {
+    type: 'Player CBIT Points',
+    count: '746',
+    lastUpdated: '2025-10-29 11:07:21.148',
+    isStale: false
+  },
+  {
+    type: 'Player Minutes Points',
+    count: '746',
+    lastUpdated: '2025-10-29 11:07:20.928426',
+    isStale: false
+  }
+]
+✅ Cached 86 goalkeeper save points records
+🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections
+🌐 Internal API call: http://localhost:5000/api/assist-share-season
+🌐 Internal API call: http://localhost:5000/api/team-assist-projections
+✅ Serving assist share data from cache
+11:09:52 AM [express] GET /api/assist-share-season 200 in 2ms :: [{"teamId":13,"teamName":"Man City",…
+DEBUG: Team Assist Projections API called - generating next 6 gameweeks only
+DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW10-15
+📊 Serving team goals from cache for range 10-15
+11:09:52 AM [express] GET /api/team-assist-projections 200 in 39ms :: [{"teamId":1,"teamName":"Arsena…
+✅ LIVE SUCCESS: Calculated 393 player assist projections using live APIs
+11:09:52 AM [express] GET /api/player-assist-projections 200 in 46ms :: [{"playerId":582,"playerName"…
+✅ Cached 746 player minutes points records
+✅ Cached 746 player CBIT points records
+✅ FPL scoring component cache update completed successfully
+🔧 Starting Player Total Points aggregation...
+🔧 Starting Player Total Points aggregation for GW10-15...
+🌐 Internal API call: http://localhost:5000/api/cached/player-goals-projections
+🌐 Internal API call: http://localhost:5000/api/cached/player-assists-projections
+📊 Serving cached player goals data from database
+📊 Serving cached player assists data from database
+⚠️ No cached player goals data found, falling back to live API
+🌐 Internal API call: http://localhost:5000/api/player-goals-scored-projections
+🚀 API-FIRST: Attempting live calculation for Player Goals = Goal Share × Team Goal Projections
+🌐 Internal API call: http://localhost:5000/api/goal-share-season
+🌐 Internal API call: http://localhost:5000/api/team-goal-projections
+✅ Serving goal share data from cache
+11:09:53 AM [express] GET /api/goal-share-season 200 in 1ms :: [{"teamId":12,"teamName":"Liverpool","…
+DEBUG: Team Goal Projections API called - generating next 6 gameweeks only
+⚠️ No cached player assists data found, falling back to live API
+🌐 Internal API call: http://localhost:5000/api/player-assist-projections
+🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections
+🌐 Internal API call: http://localhost:5000/api/assist-share-season
+🌐 Internal API call: http://localhost:5000/api/team-assist-projections
+✅ Serving assist share data from cache
+11:09:53 AM [express] GET /api/assist-share-season 200 in 1ms :: [{"teamId":13,"teamName":"Man City",…
+DEBUG: Team Assist Projections API called - generating next 6 gameweeks only
+DEBUG: Processing next 6 gameweeks (GW10-15) for team goal projections, current GW: 9
+📊 Serving team goals from cache for range 10-15
+11:09:53 AM [express] GET /api/team-goal-projections 200 in 43ms :: [{"teamId":1,"teamName":"Arsenal"…
+✅ LIVE SUCCESS: Calculated 339 player goal projections using live APIs
+11:09:53 AM [express] GET /api/player-goals-scored-projections 200 in 50ms :: [{"playerId":430,"playe…
+✅ Fallback successful, returning 339 players from live API
+11:09:53 AM [express] GET /api/cached/player-goals-projections 200 in 134ms :: [{"playerId":430,"play…
+DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW10-15
+📊 Serving team goals from cache for range 10-15
+11:09:53 AM [express] GET /api/team-assist-projections 200 in 103ms :: [{"teamId":1,"teamName":"Arsen…
+✅ LIVE SUCCESS: Calculated 393 player assist projections using live APIs
+11:09:53 AM [express] GET /api/player-assist-projections 200 in 111ms :: [{"playerId":582,"playerName…
+✅ Fallback successful, returning 393 players from live API
+11:09:53 AM [express] GET /api/cached/player-assists-projections 200 in 208ms :: [{"playerId":582,"pl…
+📊 Component data fetched - Saves: 86, Goals Conceded: 332, Cards: 1492, Bonus: 442, CBIT: 746, Save Points: 86, Minutes: 746, Goals: 339, Assists: 393
+🔄 Aggregated data for 746 players
+✅ Player Total Points aggregation completed successfully - 746 players cached
+💾 Saving Player Total Points to database storage (GW10-15)...
+📊 Using existing active window: 75839650-d798-4aa3-9593-b92b015c460d
+🌐 Internal API call: http://localhost:5000/api/bootstrap-static
+DEBUG: Serving bootstrap-static from cache
+11:09:55 AM [express] GET /api/bootstrap-static 200 in 13ms :: {"chips":[{"id":1,"name":"wildcard","n…
+💾 Saving 746 Player Total Points snapshots for window 75839650-d798-4aa3-9593-b92b015c460d
+✅ Successfully saved 746 Player Total Points snapshots
+✅ Successfully saved 746 Player Total Points snapshots to database storage
+✅ Scheduled FPL scoring cache update completed in 9778ms
+11:11:13 AM [vite] hmr update /src/pages/player-stats.tsx, /src/index.css?v=DTAERh2OYAihA2Zpfzs0c
+11:11:14 AM [vite] Internal server error: /home/runner/workspace/client/src/pages/player-stats.tsx: Adjacent JSX elements must be wrapped in an enclosing tag. Did you want a JSX fragment <>...</>? (287:6)
+
+  285 |           />
+  286 |         </div>
+> 287 |       </div>
+      |       ^
+  288 |     
+  289 |   );
+  290 | }
+  Plugin: vite:react-babel
+  File: /home/runner/workspace/client/src/pages/player-stats.tsx:287:6
+  285|            />
+  286|          </div>
+  287|        </div>
+     |        ^
+  288|      
+  289|    );
+      at toParseError (/home/runner/workspace/node_modules/@babel/parser/src/parse-error.ts:95:45)
+      at raise (/home/runner/workspace/node_modules/@babel/parser/src/tokenizer/index.ts:1497:19)
+      at jsxParseElementAt (/home/runner/workspace/node_modules/@babel/parser/src/plugins/jsx/index.ts:543:20)
+      at jsxParseElement (/home/runner/workspace/node_modules/@babel/parser/src/plugins/jsx/index.ts:559:19)
+      at parseExprAtom (/home/runner/workspace/node_modules/@babel/parser/src/plugins/jsx/index.ts:573:21)
+      at parseExprSubscripts (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:714:23)
+      at parseUpdate (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:693:21)
+      at parseMaybeUnary (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:655:23)
+      at parseMaybeUnary (/home/runner/workspace/node_modules/@babel/parser/src/plugins/typescript/index.ts:3735:20)
+      at parseMaybeUnaryOrPrivate (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:389:14)
+      at parseExprOps (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:401:23)
+      at parseMaybeConditional (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:356:23)
+      at parseMaybeAssign (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:298:21)
+      at fn (/home/runner/workspace/node_modules/@babel/parser/src/plugins/typescript/index.ts:3588:23)
+      at tryParse (/home/runner/workspace/node_modules/@babel/parser/src/parser/util.ts:174:20)
+      at parseMaybeAssign (/home/runner/workspace/node_modules/@babel/parser/src/plugins/typescript/index.ts:3587:20)
+      at callback (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:252:12)
+      at allowInAnd (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:3117:12)
+      at parseMaybeAssignAllowIn (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:251:17)
+      at parseParenAndDistinguishExpression (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:1771:16)
+      at parseExprAtom (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:1131:21)
+      at parseExprAtom (/home/runner/workspace/node_modules/@babel/parser/src/plugins/jsx/index.ts:583:22)
+      at parseExprSubscripts (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:714:23)
+      at parseUpdate (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:693:21)
+      at parseMaybeUnary (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:655:23)
+      at parseMaybeUnary (/home/runner/workspace/node_modules/@babel/parser/src/plugins/typescript/index.ts:3735:20)
+      at parseMaybeUnaryOrPrivate (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:389:14)
+      at parseExprOps (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:401:23)
+      at parseMaybeConditional (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:356:23)
+      at parseMaybeAssign (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:298:21)
+      at parseMaybeAssign (/home/runner/workspace/node_modules/@babel/parser/src/plugins/typescript/index.ts:3607:22)
+      at parseExpressionBase (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:221:23)
+      at callback (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:212:39)
+      at allowInAnd (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:3112:16)
+      at parseExpression (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:212:17)
+      at parseReturnStatement (/home/runner/workspace/node_modules/@babel/parser/src/parser/statement.ts:1091:28)
+      at parseStatementContent (/home/runner/workspace/node_modules/@babel/parser/src/parser/statement.ts:498:21)
+      at parseStatementContent (/home/runner/workspace/node_modules/@babel/parser/src/plugins/typescript/index.ts:3056:20)
+      at parseStatementLike (/home/runner/workspace/node_modules/@babel/parser/src/parser/statement.ts:437:17)
+      at parseStatementListItem (/home/runner/workspace/node_modules/@babel/parser/src/parser/statement.ts:386:17)
+      at parseBlockOrModuleBlockBody (/home/runner/workspace/node_modules/@babel/parser/src/parser/statement.ts:1420:16)
+      at parseBlockBody (/home/runner/workspace/node_modules/@babel/parser/src/parser/statement.ts:1393:10)
+      at parseBlock (/home/runner/workspace/node_modules/@babel/parser/src/parser/statement.ts:1361:10)
+      at parseFunctionBody (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:2557:24)
+      at parseFunctionBodyAndFinish (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:2526:10)
+      at parseFunctionBodyAndFinish (/home/runner/workspace/node_modules/@babel/parser/src/plugins/typescript/index.ts:2538:20)
+      at callback (/home/runner/workspace/node_modules/@babel/parser/src/parser/statement.ts:1667:12)
+      at withSmartMixTopicForbiddingContext (/home/runner/workspace/node_modules/@babel/parser/src/parser/expression.ts:3091:14)
+      at parseFunction (/home/runner/workspace/node_modules/@babel/parser/src/parser/statement.ts:1665:10)
+      at parseExportDefaultExpression (/home/runner/workspace/node_modules/@babel/parser/src/parser/statement.ts:2536:19)
