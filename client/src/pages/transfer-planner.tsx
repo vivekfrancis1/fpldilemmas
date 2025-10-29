@@ -512,7 +512,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     // Filter to only show players in the base draft team
     if (teamData?.picks) {
       const currentTeamPlayerIds = new Set(teamData.picks.map(pick => pick.element));
-      filteredPlayers = filteredPlayers.filter(player => currentTeamPlayerIds.has(player.id));
+      filteredPlayers = filteredPlayers.filter(player => currentTeamPlayerIds.has(player.playerId));
     } else {
       filteredPlayers = [];
     }
