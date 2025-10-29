@@ -1364,14 +1364,14 @@ export default function TransferPlanner() {
   };
 
   // Calculate chip recommendations for the current draft
-  const getChipRecommendations = (): { bboost: number | null, tripleC: number | null, freehit: number | null } | null => {
+  const getChipRecommendations = (): { bboost: number[], tripleC: number[], freehit: number[] } | null => {
     if (!selectedGameweek || !playerProjections || !teamData?.picks || !manualLineup.length) {
       return null;
     }
 
     const nextGWs = getNextGameweeks();
     const remaining = getRemainingChips();
-    const recommendations = { bboost: null as number | null, tripleC: null as number | null, freehit: null as number | null };
+    const recommendations = { bboost: [] as number[], tripleC: [] as number[], freehit: [] as number[] };
 
     // Helper to determine which instance of a chip is available (1st or 2nd)
     const getChipInstance = (chipType: ChipType): 1 | 2 | null => {
@@ -1392,12 +1392,11 @@ export default function TransferPlanner() {
       return nextGWs.filter(gw => gw.id >= 20); // Second instance: only GW 20+
     };
 
-    // Best Bench Boost: Find gameweek with maximum bench points
+    // Best Bench Boost: Find top 3 gameweeks with maximum bench points
     const bboostInstance = getChipInstance('bboost');
     if (bboostInstance) {
       const validGWs = getValidGameweeks(bboostInstance);
-      let bestBBoostGW = null;
-      let maxBenchPoints = -1;
+      const gwScores: { gw: number; points: number }[] = [];
 
       validGWs.forEach(gw => {
         const lineup = getBaselineLineup(gw.id);
@@ -1411,45 +1410,41 @@ export default function TransferPlanner() {
           }
         });
 
-        if (benchPoints > maxBenchPoints) {
-          maxBenchPoints = benchPoints;
-          bestBBoostGW = gw.id;
-        }
+        gwScores.push({ gw: gw.id, points: benchPoints });
       });
 
-      recommendations.bboost = bestBBoostGW;
+      // Sort by points descending and take top 3
+      gwScores.sort((a, b) => b.points - a.points);
+      recommendations.bboost = gwScores.slice(0, 3).map(s => s.gw);
     }
 
-    // Best Triple Captain: Find gameweek where captain has highest points
+    // Best Triple Captain: Find top 3 gameweeks where captain has highest points
     const tcInstance = getChipInstance('3xc');
     if (tcInstance) {
       const validGWs = getValidGameweeks(tcInstance);
       const captainPick = manualLineup.find(p => p.is_captain);
       if (captainPick) {
-        let bestTCGW = null;
-        let maxCaptainPoints = -1;
+        const gwScores: { gw: number; points: number }[] = [];
 
         validGWs.forEach(gw => {
           const projection = playerProjections.find(p => p.playerId === captainPick.element);
           if (projection?.gameweekProjections) {
             const points = projection.gameweekProjections[gw.id.toString()] || 0;
-            if (points > maxCaptainPoints) {
-              maxCaptainPoints = points;
-              bestTCGW = gw.id;
-            }
+            gwScores.push({ gw: gw.id, points });
           }
         });
 
-        recommendations.tripleC = bestTCGW;
+        // Sort by points descending and take top 3
+        gwScores.sort((a, b) => b.points - a.points);
+        recommendations.tripleC = gwScores.slice(0, 3).map(s => s.gw);
       }
     }
 
-    // Best Free Hit: Find gameweek with lowest current squad points (biggest improvement opportunity)
+    // Best Free Hit: Find top 3 gameweeks with lowest current squad points
     const fhInstance = getChipInstance('freehit');
     if (fhInstance) {
       const validGWs = getValidGameweeks(fhInstance);
-      let bestFHGW = null;
-      let minStartingPoints = Infinity;
+      const gwScores: { gw: number; points: number }[] = [];
 
       validGWs.forEach(gw => {
         const lineup = getBaselineLineup(gw.id);
@@ -1463,14 +1458,12 @@ export default function TransferPlanner() {
           }
         });
 
-        // Find the gameweek with LOWEST points (best improvement opportunity)
-        if (startingPoints < minStartingPoints) {
-          minStartingPoints = startingPoints;
-          bestFHGW = gw.id;
-        }
+        gwScores.push({ gw: gw.id, points: startingPoints });
       });
 
-      recommendations.freehit = bestFHGW;
+      // Sort by points ascending (lowest first) and take top 3
+      gwScores.sort((a, b) => a.points - b.points);
+      recommendations.freehit = gwScores.slice(0, 3).map(s => s.gw);
     }
 
     return recommendations;
@@ -4608,7 +4601,7 @@ export default function TransferPlanner() {
             {/* Chip Recommendations */}
             {(() => {
               const recommendations = getChipRecommendations();
-              const hasRecommendations = recommendations && (recommendations.bboost || recommendations.tripleC || recommendations.freehit);
+              const hasRecommendations = recommendations && (recommendations.bboost.length > 0 || recommendations.tripleC.length > 0 || recommendations.freehit.length > 0);
               
               return hasRecommendations ? (
                 <div className="border-t pt-3">
@@ -4616,26 +4609,53 @@ export default function TransferPlanner() {
                     <Sparkles className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
                     Chip Recommendations
                   </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {recommendations.bboost && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                        <span className="text-xs font-medium text-green-700 dark:text-green-300">
-                          Bench Boost → GW{recommendations.bboost}
+                  <div className="space-y-2">
+                    {recommendations.bboost.length > 0 && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold text-green-700 dark:text-green-300 min-w-[100px]">
+                          Bench Boost:
                         </span>
+                        <div className="flex gap-1.5">
+                          {recommendations.bboost.map((gw, index) => (
+                            <div key={gw} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                              <span className="text-xs font-medium text-green-700 dark:text-green-300">
+                                Option {index + 1}: GW{gw}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
-                    {recommendations.tripleC && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
-                        <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
-                          Triple Captain → GW{recommendations.tripleC}
+                    {recommendations.tripleC.length > 0 && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold text-purple-700 dark:text-purple-300 min-w-[100px]">
+                          Triple Captain:
                         </span>
+                        <div className="flex gap-1.5">
+                          {recommendations.tripleC.map((gw, index) => (
+                            <div key={gw} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                              <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
+                                Option {index + 1}: GW{gw}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
-                    {recommendations.freehit && (
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                        <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
-                          Free Hit → GW{recommendations.freehit}
+                    {recommendations.freehit.length > 0 && (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-semibold text-blue-700 dark:text-blue-300 min-w-[100px]">
+                          Free Hit:
                         </span>
+                        <div className="flex gap-1.5">
+                          {recommendations.freehit.map((gw, index) => (
+                            <div key={gw} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                              <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
+                                Option {index + 1}: GW{gw}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
