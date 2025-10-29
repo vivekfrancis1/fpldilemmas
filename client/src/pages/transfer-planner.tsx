@@ -1392,7 +1392,7 @@ export default function TransferPlanner() {
       return nextGWs.filter(gw => gw.id >= 20); // Second instance: only GW 20+
     };
 
-    // Best Bench Boost: Find top 3 gameweeks with maximum bench points
+    // Best Bench Boost: Find top 2 gameweeks with maximum bench points
     const bboostInstance = getChipInstance('bboost');
     if (bboostInstance) {
       const validGWs = getValidGameweeks(bboostInstance);
@@ -1413,12 +1413,12 @@ export default function TransferPlanner() {
         gwScores.push({ gw: gw.id, points: benchPoints });
       });
 
-      // Sort by points descending and take top 3
+      // Sort by points descending and take top 2
       gwScores.sort((a, b) => b.points - a.points);
-      recommendations.bboost = gwScores.slice(0, 3).map(s => s.gw);
+      recommendations.bboost = gwScores.slice(0, 2).map(s => s.gw);
     }
 
-    // Best Triple Captain: Find top 3 gameweeks where captain has highest points
+    // Best Triple Captain: Find top 2 gameweeks where captain has highest points
     const tcInstance = getChipInstance('3xc');
     if (tcInstance) {
       const validGWs = getValidGameweeks(tcInstance);
@@ -1434,13 +1434,13 @@ export default function TransferPlanner() {
           }
         });
 
-        // Sort by points descending and take top 3
+        // Sort by points descending and take top 2
         gwScores.sort((a, b) => b.points - a.points);
-        recommendations.tripleC = gwScores.slice(0, 3).map(s => s.gw);
+        recommendations.tripleC = gwScores.slice(0, 2).map(s => s.gw);
       }
     }
 
-    // Best Free Hit: Find top 3 gameweeks with lowest current squad points
+    // Best Free Hit: Find top 2 gameweeks with lowest current squad points
     const fhInstance = getChipInstance('freehit');
     if (fhInstance) {
       const validGWs = getValidGameweeks(fhInstance);
@@ -1461,9 +1461,9 @@ export default function TransferPlanner() {
         gwScores.push({ gw: gw.id, points: startingPoints });
       });
 
-      // Sort by points ascending (lowest first) and take top 3
+      // Sort by points ascending (lowest first) and take top 2
       gwScores.sort((a, b) => a.points - b.points);
-      recommendations.freehit = gwScores.slice(0, 3).map(s => s.gw);
+      recommendations.freehit = gwScores.slice(0, 2).map(s => s.gw);
     }
 
     return recommendations;
