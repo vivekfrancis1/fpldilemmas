@@ -300,9 +300,10 @@ interface AllPlayersProjectionsTabProps {
   scrollToView?: boolean;
   onScrollComplete?: () => void;
   teamData?: TeamData;
+  savedDrafts?: any[];
 }
 
-function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank, initialPositionFilter = "all", scrollToView = false, onScrollComplete, teamData }: AllPlayersProjectionsTabProps) {
+function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank, initialPositionFilter = "all", scrollToView = false, onScrollComplete, teamData, savedDrafts }: AllPlayersProjectionsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState(initialPositionFilter);
   const [teamFilter, setTeamFilter] = useState("all");
@@ -516,6 +517,35 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     } else {
       filteredPlayers = [];
     }
+  } else if (loadGroupFilter === "All Drafts") {
+    // Filter to show all players across all drafts (current team + all transferred in players)
+    const allDraftPlayerIds = new Set<number>();
+    
+    // Add all players from current team
+    if (teamData?.picks) {
+      teamData.picks.forEach(pick => allDraftPlayerIds.add(pick.element));
+    }
+    
+    // Add all transferred in players from all saved drafts
+    if (savedDrafts && savedDrafts.length > 0) {
+      savedDrafts.forEach((draft: any) => {
+        if (draft.gameweekTransfers) {
+          // Iterate through all gameweeks in this draft
+          Object.values(draft.gameweekTransfers).forEach((gwTransfers: any) => {
+            // Add all transferred in players from completed transfers
+            if (gwTransfers.completed && Array.isArray(gwTransfers.completed)) {
+              gwTransfers.completed.forEach((transfer: any) => {
+                if (transfer.inPlayerId) {
+                  allDraftPlayerIds.add(transfer.inPlayerId);
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+    
+    filteredPlayers = filteredPlayers.filter(player => allDraftPlayerIds.has(player.playerId));
   }
 
   const handleSort = (field: string) => {
@@ -571,6 +601,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               <SelectItem value="Top 50">Top 50</SelectItem>
               <SelectItem value="Value 50">Value 50</SelectItem>
               <SelectItem value="Current Team">Current Team</SelectItem>
+              <SelectItem value="All Drafts">All Drafts</SelectItem>
             </SelectContent>
           </Select>
           <div className="flex items-center gap-1">
@@ -7153,6 +7184,7 @@ export default function TransferPlanner() {
             scrollToView={scrollToProjections}
             onScrollComplete={() => setScrollToProjections(false)}
             teamData={teamData}
+            savedDrafts={savedDrafts}
           />
         </div>
       )}
