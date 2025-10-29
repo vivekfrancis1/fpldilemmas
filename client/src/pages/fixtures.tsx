@@ -199,7 +199,9 @@ export default function Fixtures() {
       if (fdrMode === 'custom') {
         const customRating = customFDR[opponentId];
         if (customRating) {
-          const customValue = isHome ? customRating.home : customRating.away;
+          // If you're playing at home, opponent is away (use their away rating)
+          // If you're playing away, opponent is at home (use their home rating)
+          const customValue = isHome ? customRating.away : customRating.home;
           if (customValue !== undefined && customValue > 0) {
             return customValue;
           }
@@ -212,7 +214,9 @@ export default function Fixtures() {
       if (fdrMode === 'form' && formBasedFDR) {
         const formRating = formBasedFDR[opponentId];
         if (formRating) {
-          return isHome ? formRating.home : formRating.away;
+          // If you're playing at home, opponent is away (use their away rating)
+          // If you're playing away, opponent is at home (use their home rating)
+          return isHome ? formRating.away : formRating.home;
         }
       }
       
