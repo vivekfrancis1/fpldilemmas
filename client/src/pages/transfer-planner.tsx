@@ -6788,7 +6788,7 @@ export default function TransferPlanner() {
                                   return (
                                     <div
                                       key={player.element}
-                                      className="w-24 p-2 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-center"
+                                      className="w-40 p-2 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-center"
                                       data-testid={`auto-pitch-empty-${player.element}`}
                                     >
                                       <div className="text-xs font-medium text-red-600">Empty Slot</div>
@@ -6804,7 +6804,7 @@ export default function TransferPlanner() {
                                 const textColor = hexTextColor === '#000000' ? 'text-black' : 'text-white';
 
                                 return (
-                                  <div key={player.element} className="flex flex-col items-center w-[19%]" data-testid={`auto-pitch-player-${player.element}`}>
+                                  <div key={player.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`auto-pitch-player-${player.element}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 403 302" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-auto-${player.element}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
@@ -6861,7 +6861,7 @@ export default function TransferPlanner() {
                               return (
                                 <div
                                   key={player.element}
-                                  className="w-20 p-2 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-center"
+                                  className="w-40 p-2 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-center"
                                   data-testid={`auto-pitch-bench-empty-${player.element}`}
                                 >
                                   <div className="text-xs font-medium text-red-600">Empty</div>
@@ -6877,7 +6877,7 @@ export default function TransferPlanner() {
                             const textColor = hexTextColor === '#000000' ? 'text-black' : 'text-white';
 
                             return (
-                              <div key={player.element} className="flex flex-col items-center w-[19%] opacity-90" data-testid={`auto-pitch-bench-${player.element}`}>
+                              <div key={player.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44 opacity-90" data-testid={`auto-pitch-bench-${player.element}`}>
                                 <div className="relative w-full">
                                   <svg viewBox="0 0 403 302" className="w-full drop-shadow-lg">
                                     <defs><clipPath id={`jersey-bench-auto-${player.element}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
