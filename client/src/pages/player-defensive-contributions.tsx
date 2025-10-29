@@ -580,7 +580,7 @@ export default function PlayerDefensiveContributions() {
                   </TableHead>
 
                   <TableHead 
-                    className="sticky left-[150px] bg-background z-10 min-w-[100px] cursor-pointer hover:bg-muted/50"
+                    className="sticky left-[150px] bg-background z-10 min-w-[80px] cursor-pointer hover:bg-muted/50 px-1 py-2"
                     onClick={handleCurrentDCSort}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -659,7 +659,7 @@ export default function PlayerDefensiveContributions() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="font-mono sticky left-[150px] bg-background z-10">
+                    <TableCell className="font-mono sticky left-[150px] bg-background z-10 px-1 py-2">
                       {player.currentSeasonStats.dcPer90.toFixed(1)}
                     </TableCell>
                     {player.gameweekProjections.map((gw) => (
