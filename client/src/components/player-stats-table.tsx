@@ -586,7 +586,7 @@ export default function PlayerStatsTable({
             width: `${100 / (zoomLevel / 100)}%`,
           }}
         >
-        <table className="fpl-table text-xs min-w-[800px] w-full lg:min-w-full xl:min-w-full">
+        <table className="fpl-table text-sm min-w-[800px] w-full lg:min-w-full xl:min-w-full">
           <thead className="fpl-table-header">
             <tr>
               <th className="px-1 py-1 text-left min-w-[100px] text-gray-700 text-xs sticky left-0 bg-gray-50 z-10 border-r border-gray-200">
