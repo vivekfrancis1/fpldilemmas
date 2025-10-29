@@ -127,22 +127,10 @@ export default function PlayerGoalsScoredProjections() {
         
         switch (sortBy) {
           case "total": {
-            // Calculate selected gameweeks total for sorting (goals or points based on active tab)
-            if (activeTab === "points") {
-              const aPointsTotal = selectedGameweeks.reduce((sum, gw) => {
-                const goals = a.gameweekProjections[gw.toString()] || 0;
-                return sum + getPointsFromGoals(goals, a.position);
-              }, 0);
-              const bPointsTotal = selectedGameweeks.reduce((sum, gw) => {
-                const goals = b.gameweekProjections[gw.toString()] || 0;
-                return sum + getPointsFromGoals(goals, b.position);
-              }, 0);
-              return (bPointsTotal - aPointsTotal) * multiplier;
-            } else {
-              const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw.toString()] || 0), 0);
-              const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw.toString()] || 0), 0);
-              return (bPeriodTotal - aPeriodTotal) * multiplier;
-            }
+            // Sort by total goals in selected gameweeks
+            const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw.toString()] || 0), 0);
+            const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw.toString()] || 0), 0);
+            return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
           case "totalPoints": {
             // Sort by total points from goals in selected gameweeks
@@ -153,37 +141,19 @@ export default function PlayerGoalsScoredProjections() {
             return (bPointsTotal - aPointsTotal) * multiplier;
           }
           case "season": {
-            if (activeTab === "points") {
-              const aSeasonPoints = getPointsFromGoals(a.totalProjectedGoals, a.position);
-              const bSeasonPoints = getPointsFromGoals(b.totalProjectedGoals, b.position);
-              return (bSeasonPoints - aSeasonPoints) * multiplier;
-            } else {
-              return (b.totalProjectedGoals - a.totalProjectedGoals) * multiplier;
-            }
+            return (b.totalProjectedGoals - a.totalProjectedGoals) * multiplier;
           }
           case "name": return a.playerName.localeCompare(b.playerName) * multiplier;
           case "team": return a.teamName.localeCompare(b.teamName) * multiplier;
           case "position": return a.position.localeCompare(b.position) * multiplier;
           default: {
-            if (activeTab === "points") {
-              const aPointsTotal = selectedGameweeks.reduce((sum, gw) => {
-                const goals = a.gameweekProjections[gw.toString()] || 0;
-                return sum + getPointsFromGoals(goals, a.position);
-              }, 0);
-              const bPointsTotal = selectedGameweeks.reduce((sum, gw) => {
-                const goals = b.gameweekProjections[gw.toString()] || 0;
-                return sum + getPointsFromGoals(goals, b.position);
-              }, 0);
-              return (bPointsTotal - aPointsTotal) * multiplier;
-            } else {
-              const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw.toString()] || 0), 0);
-              const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw.toString()] || 0), 0);
-              return (bPeriodTotal - aPeriodTotal) * multiplier;
-            }
+            const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw.toString()] || 0), 0);
+            const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw.toString()] || 0), 0);
+            return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
         }
       });
-  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy, sortDirection, selectedGameweeks, activeTab]);
+  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy, sortDirection, selectedGameweeks]);
 
   const totalGoals = useMemo(() => {
     if (!filteredProjections.length) return { 
@@ -497,7 +467,7 @@ export default function PlayerGoalsScoredProjections() {
                     ))}
                     <th className="px-2 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors min-w-[80px]">
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("total")}>
-                        6 GW Goals
+                        {selectedGameweeks.length} GW Goals
                         {sortBy === "total" && (
                           sortDirection === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
                         )}
@@ -506,7 +476,7 @@ export default function PlayerGoalsScoredProjections() {
                     </th>
                     <th className="px-2 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors min-w-[100px]">
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("totalPoints")}>
-                        6 GW Pts
+                        {selectedGameweeks.length} GW Pts
                         {sortBy === "totalPoints" && (
                           sortDirection === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
                         )}

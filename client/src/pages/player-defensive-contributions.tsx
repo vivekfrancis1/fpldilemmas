@@ -613,7 +613,7 @@ export default function PlayerDefensiveContributions() {
                     onClick={handleTotalSort}
                   >
                     <div className="flex items-center justify-center gap-1">
-                      6 GW DC
+                      {gameweeks.length} GW DC
                       {sortByTotal && (
                         <span className="text-xs">
                           {totalSortOrder === "desc" ? "↓" : "↑"}
@@ -625,7 +625,7 @@ export default function PlayerDefensiveContributions() {
                     className="text-center min-w-[80px] font-bold cursor-pointer hover:bg-muted/50 bg-blue-50"
                   >
                     <div className="flex items-center justify-center gap-1">
-                      6 GW Pts
+                      {gameweeks.length} GW Pts
                     </div>
                   </TableHead>
                   <TableHead 
