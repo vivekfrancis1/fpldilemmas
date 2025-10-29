@@ -1613,14 +1613,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fdrRatings: Record<number, { home: number; away: number }> = {};
       
       // Assign FDR tiers: top 4 = tier 5 (hardest), bottom 4 = tier 1 (easiest)
+      // Teams are sorted best to worst, so we invert the tier assignment
       homeRanked.forEach((team, index) => {
-        const tier = Math.min(5, Math.floor(index / 4) + 1);
+        const tier = Math.max(1, 5 - Math.floor(index / 4));
         if (!fdrRatings[team.teamId]) fdrRatings[team.teamId] = { home: 3, away: 3 };
         fdrRatings[team.teamId].home = tier;
       });
       
       awayRanked.forEach((team, index) => {
-        const tier = Math.min(5, Math.floor(index / 4) + 1);
+        const tier = Math.max(1, 5 - Math.floor(index / 4));
         if (!fdrRatings[team.teamId]) fdrRatings[team.teamId] = { home: 3, away: 3 };
         fdrRatings[team.teamId].away = tier;
       });
