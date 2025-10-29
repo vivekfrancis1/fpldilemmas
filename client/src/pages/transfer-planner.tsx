@@ -4102,18 +4102,20 @@ export default function TransferPlanner() {
         </CardContent>
       </Card>
 
-      {/* Draft Management */}
+      {/* Combined Selection Section */}
       {searchedId && teamData && selectedGameweek && (
         <Card className="sticky top-0 z-20 bg-background shadow-md">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="text-base font-semibold min-w-[120px]">
-                Select Draft
-                {hasUnsavedChanges && activeDraft !== "Base" && (
-                  <span className="ml-2 text-base text-orange-600 font-semibold">● Unsaved</span>
-                )}
-              </div>
-              <div className="flex gap-2 flex-wrap">
+          <CardContent className="py-4 space-y-4">
+            {/* Draft Subsection */}
+            <div>
+              <div className="flex items-center gap-4 flex-wrap mb-2">
+                <div className="text-base font-semibold min-w-[120px]">
+                  Select Draft
+                  {hasUnsavedChanges && activeDraft !== "Base" && (
+                    <span className="ml-2 text-base text-orange-600 font-semibold">● Unsaved</span>
+                  )}
+                </div>
+                <div className="flex gap-2 flex-wrap">
               {/* Switch to Base */}
               <Button
                 onClick={() => switchToDraft("Base")}
@@ -4176,76 +4178,77 @@ export default function TransferPlanner() {
                 );
               })}
 
-              {/* New Draft Button */}
-              {savedDrafts.length < 5 && (
-                <Button
-                  onClick={createNewDraft}
-                  size="sm"
-                  variant="outline"
-                  className="gap-1 border-dashed text-base"
-                  data-testid="button-new-draft"
-                >
-                  <Plus className="h-4 w-4" />
-                  New
-                </Button>
-              )}
-              </div>
-
-              {/* Action Buttons */}
-              {activeDraft !== "Base" && (
-                <div className="flex gap-2 flex-wrap">
-                <Button
-                  onClick={() => saveCurrentDraft()}
-                  size="sm"
-                  variant="default"
-                  disabled={!hasUnsavedChanges}
-                  className="text-base"
-                  data-testid="button-save-draft"
-                >
-                  <Save className="h-4 w-4 mr-1" />
-                  Save {hasUnsavedChanges && "●"}
-                </Button>
-                
-                <Button
-                  onClick={duplicateCurrentDraft}
-                  size="sm"
-                  variant="outline"
-                  className="text-base"
-                  data-testid="button-duplicate-draft"
-                >
-                  <Copy className="h-4 w-4 mr-1" />
-                  Duplicate
-                </Button>
-                
-                {activeDraft === "A" ? (
+                {/* New Draft Button */}
+                {savedDrafts.length < 5 && (
                   <Button
-                    onClick={resetDraftAToBase}
+                    onClick={createNewDraft}
                     size="sm"
                     variant="outline"
-                    className="text-base text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
-                    data-testid="button-reset-draft-a"
+                    className="gap-1 border-dashed text-base"
+                    data-testid="button-new-draft"
                   >
-                    <RotateCcw className="h-4 w-4 mr-1" />
-                    Reset to Base
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={deleteCurrentDraft}
-                    size="sm"
-                    variant="outline"
-                    className="text-base text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
-                    data-testid="button-delete-draft"
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
+                    <Plus className="h-4 w-4" />
+                    New
                   </Button>
                 )}
+                </div>
               </div>
-            )}
+
+              {/* Action Buttons - Below selectors */}
+              {activeDraft !== "Base" && (
+                <div className="flex gap-2 flex-wrap pl-[140px]">
+                  <Button
+                    onClick={() => saveCurrentDraft()}
+                    size="sm"
+                    variant="default"
+                    disabled={!hasUnsavedChanges}
+                    className="text-base"
+                    data-testid="button-save-draft"
+                  >
+                    <Save className="h-4 w-4 mr-1" />
+                    Save {hasUnsavedChanges && "●"}
+                  </Button>
+                  
+                  <Button
+                    onClick={duplicateCurrentDraft}
+                    size="sm"
+                    variant="outline"
+                    className="text-base"
+                    data-testid="button-duplicate-draft"
+                  >
+                    <Copy className="h-4 w-4 mr-1" />
+                    Duplicate
+                  </Button>
+                  
+                  {activeDraft === "A" ? (
+                    <Button
+                      onClick={resetDraftAToBase}
+                      size="sm"
+                      variant="outline"
+                      className="text-base text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                      data-testid="button-reset-draft-a"
+                    >
+                      <RotateCcw className="h-4 w-4 mr-1" />
+                      Reset to Base
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={deleteCurrentDraft}
+                      size="sm"
+                      variant="outline"
+                      className="text-base text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                      data-testid="button-delete-draft"
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
+                    </Button>
+                  )}
+                </div>
+              )}
 
               {/* Bulk Actions */}
               {savedDrafts.length > 0 && activeDraft === "Base" && (
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap pl-[140px]">
                   <Button
                     onClick={deleteAllDrafts}
                     size="sm"
@@ -4258,14 +4261,11 @@ export default function TransferPlanner() {
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Gameweek Selection */}
-      {searchedId && teamData && (
-        <Card className="sticky top-[90px] md:top-[80px] z-10 bg-background shadow-md">
-          <CardContent className="py-4">
+            {/* Divider */}
+            <div className="border-t" />
+
+            {/* Gameweek Subsection */}
             <div className="flex items-center gap-4 flex-wrap">
               <div className="text-base font-semibold min-w-[120px]">Select Gameweek</div>
               <div className="flex gap-2 flex-wrap">
@@ -4286,14 +4286,11 @@ export default function TransferPlanner() {
                 ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Lineup Selection */}
-      {searchedId && teamData && selectedGameweek && (
-        <Card className="sticky top-[145px] md:top-[135px] z-10 bg-background shadow-md">
-          <CardContent className="py-4">
+            {/* Divider */}
+            <div className="border-t" />
+
+            {/* Lineup Subsection */}
             <div className="flex items-center gap-4 flex-wrap">
               <div className="text-base font-semibold min-w-[120px]">Select Lineup</div>
               <div className="flex gap-2 flex-wrap">
