@@ -622,13 +622,6 @@ export default function PlayerDefensiveContributions() {
                     </div>
                   </TableHead>
                   <TableHead 
-                    className="text-center min-w-[80px] font-bold cursor-pointer hover:bg-muted/50 bg-blue-50"
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      {gameweeks.length} GW Pts
-                    </div>
-                  </TableHead>
-                  <TableHead 
                     className="text-center min-w-[80px] cursor-pointer hover:bg-muted/50"
                     onClick={handleAvgSort}
                   >
@@ -639,6 +632,13 @@ export default function PlayerDefensiveContributions() {
                           {avgSortOrder === "desc" ? "↓" : "↑"}
                         </span>
                       )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="text-center min-w-[80px] font-bold cursor-pointer hover:bg-muted/50 bg-blue-50"
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      {gameweeks.length} GW Pts
                     </div>
                   </TableHead>
                 </TableRow>
@@ -680,13 +680,13 @@ export default function PlayerDefensiveContributions() {
                         {player.totalDC.toFixed(1)}
                       </span>
                     </TableCell>
+                    <TableCell className="text-center font-mono">
+                      {player.avgDC.toFixed(1)}
+                    </TableCell>
                     <TableCell className="text-center font-bold bg-blue-50">
                       <span className="text-lg font-bold text-blue-900">
                         {player.totalDCPoints}
                       </span>
-                    </TableCell>
-                    <TableCell className="text-center font-mono">
-                      {player.avgDC.toFixed(1)}
                     </TableCell>
                   </TableRow>
                 ))}
