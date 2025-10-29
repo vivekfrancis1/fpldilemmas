@@ -4440,15 +4440,15 @@ export default function TransferPlanner() {
 
             {/* Chip Planning for Upcoming Gameweeks */}
             <div className="border-t pt-3">
-              <h4 className="text-xs md:text-sm font-semibold mb-3">Plan Chips for Upcoming Gameweeks</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <h4 className="text-xs md:text-sm font-semibold mb-2">Plan Chips for Upcoming Gameweeks</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 {getNextGameweeks().map((gw) => {
                   const remainingChips = getRemainingChips();
                   const selectedChip = plannedChips[gw.id];
                   
                   return (
                     <div key={gw.id} className="flex items-center gap-2">
-                      <span className="text-xs md:text-sm font-medium min-w-[50px]">GW {gw.id}:</span>
+                      <span className="text-xs font-medium min-w-[45px]">GW {gw.id}:</span>
                       <Select
                         value={selectedChip || "none"}
                         onValueChange={(value) => {
