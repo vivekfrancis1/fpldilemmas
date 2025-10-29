@@ -14,6 +14,7 @@ Most popular tools: Player Statistics, My Live Rank, and Fixture Analyzer.
 Fixture Analyzer display: Shows 6 gameweeks by default with user customization up to GW38.
 FPL Content Creators Admin: Streamlined admin interface with only essential fields: Name, Manager ID, Description, Twitter Handle, and YouTube URL. Both Twitter and YouTube fields are optional and can be left blank. Complete CRUD functionality implemented including delete feature. Admin URL updated to /admin-content-creators.
 Navigation Cleanup: Hidden Player Yellow Cards, Red Cards, Goals Conceded, and Bonus Points tools from sidebar navigation. These components are now integrated into the comprehensive Player Total Points tool.
+Mobile Optimization: Comprehensive responsive design implemented across major pages (Current Standings, Player Statistics, Transfer Planner) with adaptive column hiding, responsive grids, and mobile-friendly touch targets. Current Standings hides 10 non-essential columns on mobile (xGF, xGA, AGR, AGAR, tackles, defensive actions, cards, saves, penalties) while maintaining core stats visibility.
 
 ## System Architecture
 
