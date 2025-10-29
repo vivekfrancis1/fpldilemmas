@@ -6146,303 +6146,6 @@ export default function TransferPlanner() {
         </Card>
       )}
 
-      {/* Draft Comparison Table */}
-      {searchedId && teamData && playerProjections && playerProjections6GW && (
-        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
-          <CardHeader>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-blue-600" />
-                  Draft Comparison
-                </CardTitle>
-                {(() => {
-                  const duplicateInfo = identifyDuplicateDrafts();
-                  const duplicateCount = Object.values(duplicateInfo).filter(info => info.isDuplicate).length;
-                  
-                  if (duplicateCount > 0) {
-                    return (
-                      <Button
-                        onClick={deleteAllDuplicateDrafts}
-                        size="sm"
-                        variant="outline"
-                        className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
-                        data-testid="button-delete-all-duplicates"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete All Duplicates ({duplicateCount})
-                      </Button>
-                    );
-                  }
-                  return null;
-                })()}
-              </div>
-              
-              {/* Filter Buttons */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Show:</span>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant={comparisonFilter === "all" ? "default" : "outline"}
-                    onClick={() => setComparisonFilter("all")}
-                    className="h-7 px-3 text-xs"
-                    data-testid="filter-all"
-                  >
-                    All Lineups
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={comparisonFilter === "manual" ? "default" : "outline"}
-                    onClick={() => setComparisonFilter("manual")}
-                    className="h-7 px-3 text-xs"
-                    data-testid="filter-manual"
-                  >
-                    Manual Only
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={comparisonFilter === "auto" ? "default" : "outline"}
-                    onClick={() => setComparisonFilter("auto")}
-                    className="h-7 px-3 text-xs"
-                    data-testid="filter-auto"
-                  >
-                    Auto Only
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {(() => {
-              const comparisonData = buildDraftComparisonData();
-              const nextGWs = getNextGameweeks();
-              
-              if (comparisonData.length === 0 || nextGWs.length === 0) {
-                return <p className="text-muted-foreground text-sm">No comparison data available</p>;
-              }
-              
-              // Filter comparison data based on selected filter
-              const filteredComparisonData = comparisonData.filter(row => {
-                if (comparisonFilter === "all") return true;
-                if (comparisonFilter === "manual") return row.mode === "Manual lineup";
-                if (comparisonFilter === "auto") return row.mode === "Auto lineup";
-                return true;
-              });
-              
-              // Find the maximum total points from filtered data
-              const maxTotal = filteredComparisonData.length > 0 
-                ? Math.max(...filteredComparisonData.map(row => row.total))
-                : 0;
-              
-              // Identify duplicate drafts
-              const duplicateInfo = identifyDuplicateDrafts();
-              
-              return (
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-2 font-semibold" data-testid="header-draft">Draft</th>
-                        {nextGWs.map(gw => (
-                          <th key={gw.id} className="text-center p-2 font-semibold" data-testid={`header-gw${gw.id}`}>
-                            GW{gw.id}
-                          </th>
-                        ))}
-                        <th className="text-center p-2 font-semibold bg-blue-50 dark:bg-blue-950/20" data-testid="header-total">
-                          Total
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredComparisonData.map((row, idx) => {
-                        const isMaxTotal = row.total === maxTotal;
-                        const isDuplicate = row.mode === 'Manual lineup' && duplicateInfo[row.draftKey]?.isDuplicate;
-                        const duplicateOf = duplicateInfo[row.draftKey]?.duplicateOfKey;
-                        
-                        return (
-                          <tr 
-                            key={`${row.draftKey}-${row.mode}`} 
-                            className={`border-b hover:bg-gray-50 dark:hover:bg-gray-900 ${
-                              row.draftKey === activeDraft && row.mode === 'Manual lineup' ? 'bg-blue-50 dark:bg-blue-950/10' : 
-                              row.mode === 'Auto lineup' ? 'bg-purple-50/30 dark:bg-purple-950/10' : ''
-                            }`}
-                            data-testid={`row-${row.draftKey}-${row.mode.toLowerCase()}`}
-                          >
-                            <td className="p-2 font-medium" data-testid={`cell-draft-${row.draftKey}`}>
-                              <div className="flex items-center gap-2">
-                                <span>{row.draftKey}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded ${
-                                  row.mode === 'Manual lineup' 
-                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
-                                    : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                                }`}>
-                                  {row.mode}
-                                </span>
-                                {row.draftKey === activeDraft && row.mode === 'Manual lineup' && <span className="text-blue-600">●</span>}
-                                {isMaxTotal && (
-                                  <Badge 
-                                    variant="default" 
-                                    className="text-xs bg-green-600 text-white dark:bg-green-500"
-                                    data-testid={`badge-best-${row.draftKey}-${row.mode.toLowerCase()}`}
-                                  >
-                                    Best
-                                  </Badge>
-                                )}
-                                
-                                {isDuplicate && (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <button className="inline-flex">
-                                          <Badge 
-                                            variant="outline" 
-                                            className="text-xs border-orange-400 text-orange-700 bg-orange-50 dark:bg-orange-950/20 flex items-center gap-1"
-                                            data-testid={`badge-duplicate-${row.draftKey}`}
-                                          >
-                                            <Copy className="h-3 w-3" />
-                                            Duplicate of {duplicateOf}
-                                          </Badge>
-                                        </button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>This draft matches Draft {duplicateOf} exactly across lineup, captain, and transfers.</p>
-                                        <p className="text-xs mt-1">You can delete it.</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                )}
-                                
-                                {isDuplicate && row.draftKey !== 'Base' && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-5 w-5 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                                    onClick={async () => {
-                                      try {
-                                        const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${row.draftKey}`, {
-                                          method: "DELETE"
-                                        });
-                                        if (response.ok) {
-                                          if (activeDraft === row.draftKey) {
-                                            switchToDraft("Base");
-                                          }
-                                          await loadDrafts();
-                                          toast({ title: "Draft Deleted", description: `Duplicate Draft ${row.draftKey} has been deleted` });
-                                        }
-                                      } catch (error) {
-                                        toast({ title: "Error", description: "Failed to delete draft", variant: "destructive" });
-                                      }
-                                    }}
-                                    data-testid={`button-delete-duplicate-${row.draftKey}`}
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                )}
-                              </div>
-                            </td>
-                          {nextGWs.map(gw => {
-                            // Get transfers for this draft and gameweek
-                            const getDraftTransfers = () => {
-                              if (row.draftKey === 'Base') return null;
-                              const draft = savedDrafts.find(d => d.draftLetter === row.draftKey);
-                              if (!draft || !draft.gameweekTransfers) return null;
-                              return draft.gameweekTransfers[gw.id] || draft.gameweekTransfers[gw.id.toString()];
-                            };
-                            
-                            // Get planned chip for this draft and gameweek
-                            const getPlannedChip = () => {
-                              if (row.draftKey === 'Base') return null;
-                              const draft = savedDrafts.find(d => d.draftLetter === row.draftKey);
-                              if (!draft || !draft.plannedChips) return null;
-                              return draft.plannedChips[gw.id] || draft.plannedChips[gw.id.toString()];
-                            };
-                            
-                            const gwTransfers = getDraftTransfers();
-                            const hasTransfers = gwTransfers && gwTransfers.completed && gwTransfers.completed.length > 0;
-                            const plannedChip = getPlannedChip();
-                            
-                            return (
-                              <td 
-                                key={gw.id} 
-                                className="text-center p-2 text-sm"
-                                data-testid={`cell-${row.draftKey}-gw${gw.id}`}
-                              >
-                                <div className="flex flex-col items-center gap-1">
-                                  {hasTransfers ? (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <span className="cursor-help underline decoration-dotted">
-                                            {row.gameweeks[gw.id]?.toFixed(1) || '0.0'}
-                                          </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="max-w-xs">
-                                          <div className="text-sm">
-                                            <p className="font-semibold mb-1">GW{gw.id} Transfers:</p>
-                                            {gwTransfers.completed.map((transfer: any, idx: number) => (
-                                              <p key={idx} className="text-xs">
-                                                <span className="text-red-400">Out:</span> {transfer.outPlayerName} (£{transfer.sellingPrice.toFixed(1)}m)
-                                                <br />
-                                                <span className="text-green-400">In:</span> {transfer.inPlayerName} (£{transfer.buyingPrice.toFixed(1)}m)
-                                              </p>
-                                            ))}
-                                          </div>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  ) : (
-                                    <span>{row.gameweeks[gw.id]?.toFixed(1) || '0.0'}</span>
-                                  )}
-                                  {plannedChip && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Badge 
-                                            variant="outline" 
-                                            className="text-[10px] px-1 py-0 h-4 bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-700"
-                                            data-testid={`chip-badge-${row.draftKey}-gw${gw.id}`}
-                                          >
-                                            <Sparkles className="h-2.5 w-2.5 mr-0.5" />
-                                            {plannedChip === '3xc' ? '3xC' : plannedChip === 'bboost' ? 'BB' : plannedChip === 'freehit' ? 'FH' : 'WC'}
-                                          </Badge>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p className="text-xs">{getChipDisplayName(plannedChip)}</p>
-                                          <p className="text-xs text-muted-foreground">{getChipDescription(plannedChip)}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                </div>
-                              </td>
-                            );
-                          })}
-                          <td 
-                            className="text-center p-2 font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/20"
-                            data-testid={`cell-${row.draftKey}-total`}
-                          >
-                            {row.total.toFixed(1)}
-                          </td>
-                        </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })()}
-            
-            <div className="mt-4 text-xs text-muted-foreground space-y-1">
-              <p>● = Currently active draft (Manual mode)</p>
-              <p><strong>Manual:</strong> Projected points based on your saved lineup and transfers.</p>
-              <p><strong>Auto:</strong> Optimized lineup with best formation and captain for maximum points.</p>
-              <p><Sparkles className="h-3 w-3 inline mr-1 text-amber-600" /><strong>Chip Badges:</strong> 3xC (Triple Captain), BB (Bench Boost), FH (Free Hit), WC (Wildcard)</p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Auto-Optimization Section */}
       {searchedId && teamData && selectedGameweek && plannerMode === "auto" && (
         <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
@@ -7171,6 +6874,304 @@ export default function TransferPlanner() {
                 )}
             </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+
+      {/* Draft Comparison Table */}
+      {searchedId && teamData && playerProjections && playerProjections6GW && (
+        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
+          <CardHeader>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5 text-blue-600" />
+                  Draft Comparison
+                </CardTitle>
+                {(() => {
+                  const duplicateInfo = identifyDuplicateDrafts();
+                  const duplicateCount = Object.values(duplicateInfo).filter(info => info.isDuplicate).length;
+                  
+                  if (duplicateCount > 0) {
+                    return (
+                      <Button
+                        onClick={deleteAllDuplicateDrafts}
+                        size="sm"
+                        variant="outline"
+                        className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                        data-testid="button-delete-all-duplicates"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete All Duplicates ({duplicateCount})
+                      </Button>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+              
+              {/* Filter Buttons */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Show:</span>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant={comparisonFilter === "all" ? "default" : "outline"}
+                    onClick={() => setComparisonFilter("all")}
+                    className="h-7 px-3 text-xs"
+                    data-testid="filter-all"
+                  >
+                    All Lineups
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={comparisonFilter === "manual" ? "default" : "outline"}
+                    onClick={() => setComparisonFilter("manual")}
+                    className="h-7 px-3 text-xs"
+                    data-testid="filter-manual"
+                  >
+                    Manual Only
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={comparisonFilter === "auto" ? "default" : "outline"}
+                    onClick={() => setComparisonFilter("auto")}
+                    className="h-7 px-3 text-xs"
+                    data-testid="filter-auto"
+                  >
+                    Auto Only
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const comparisonData = buildDraftComparisonData();
+              const nextGWs = getNextGameweeks();
+              
+              if (comparisonData.length === 0 || nextGWs.length === 0) {
+                return <p className="text-muted-foreground text-sm">No comparison data available</p>;
+              }
+              
+              // Filter comparison data based on selected filter
+              const filteredComparisonData = comparisonData.filter(row => {
+                if (comparisonFilter === "all") return true;
+                if (comparisonFilter === "manual") return row.mode === "Manual lineup";
+                if (comparisonFilter === "auto") return row.mode === "Auto lineup";
+                return true;
+              });
+              
+              // Find the maximum total points from filtered data
+              const maxTotal = filteredComparisonData.length > 0 
+                ? Math.max(...filteredComparisonData.map(row => row.total))
+                : 0;
+              
+              // Identify duplicate drafts
+              const duplicateInfo = identifyDuplicateDrafts();
+              
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left p-2 font-semibold" data-testid="header-draft">Draft</th>
+                        {nextGWs.map(gw => (
+                          <th key={gw.id} className="text-center p-2 font-semibold" data-testid={`header-gw${gw.id}`}>
+                            GW{gw.id}
+                          </th>
+                        ))}
+                        <th className="text-center p-2 font-semibold bg-blue-50 dark:bg-blue-950/20" data-testid="header-total">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredComparisonData.map((row, idx) => {
+                        const isMaxTotal = row.total === maxTotal;
+                        const isDuplicate = row.mode === 'Manual lineup' && duplicateInfo[row.draftKey]?.isDuplicate;
+                        const duplicateOf = duplicateInfo[row.draftKey]?.duplicateOfKey;
+                        
+                        return (
+                          <tr 
+                            key={`${row.draftKey}-${row.mode}`} 
+                            className={`border-b hover:bg-gray-50 dark:hover:bg-gray-900 ${
+                              row.draftKey === activeDraft && row.mode === 'Manual lineup' ? 'bg-blue-50 dark:bg-blue-950/10' : 
+                              row.mode === 'Auto lineup' ? 'bg-purple-50/30 dark:bg-purple-950/10' : ''
+                            }`}
+                            data-testid={`row-${row.draftKey}-${row.mode.toLowerCase()}`}
+                          >
+                            <td className="p-2 font-medium" data-testid={`cell-draft-${row.draftKey}`}>
+                              <div className="flex items-center gap-2">
+                                <span>{row.draftKey}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded ${
+                                  row.mode === 'Manual lineup' 
+                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
+                                    : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                                }`}>
+                                  {row.mode}
+                                </span>
+                                {row.draftKey === activeDraft && row.mode === 'Manual lineup' && <span className="text-blue-600">●</span>}
+                                {isMaxTotal && (
+                                  <Badge 
+                                    variant="default" 
+                                    className="text-xs bg-green-600 text-white dark:bg-green-500"
+                                    data-testid={`badge-best-${row.draftKey}-${row.mode.toLowerCase()}`}
+                                  >
+                                    Best
+                                  </Badge>
+                                )}
+                                
+                                {isDuplicate && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button className="inline-flex">
+                                          <Badge 
+                                            variant="outline" 
+                                            className="text-xs border-orange-400 text-orange-700 bg-orange-50 dark:bg-orange-950/20 flex items-center gap-1"
+                                            data-testid={`badge-duplicate-${row.draftKey}`}
+                                          >
+                                            <Copy className="h-3 w-3" />
+                                            Duplicate of {duplicateOf}
+                                          </Badge>
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>This draft matches Draft {duplicateOf} exactly across lineup, captain, and transfers.</p>
+                                        <p className="text-xs mt-1">You can delete it.</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
+                                
+                                {isDuplicate && row.draftKey !== 'Base' && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-5 w-5 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={async () => {
+                                      try {
+                                        const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${row.draftKey}`, {
+                                          method: "DELETE"
+                                        });
+                                        if (response.ok) {
+                                          if (activeDraft === row.draftKey) {
+                                            switchToDraft("Base");
+                                          }
+                                          await loadDrafts();
+                                          toast({ title: "Draft Deleted", description: `Duplicate Draft ${row.draftKey} has been deleted` });
+                                        }
+                                      } catch (error) {
+                                        toast({ title: "Error", description: "Failed to delete draft", variant: "destructive" });
+                                      }
+                                    }}
+                                    data-testid={`button-delete-duplicate-${row.draftKey}`}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </td>
+                          {nextGWs.map(gw => {
+                            // Get transfers for this draft and gameweek
+                            const getDraftTransfers = () => {
+                              if (row.draftKey === 'Base') return null;
+                              const draft = savedDrafts.find(d => d.draftLetter === row.draftKey);
+                              if (!draft || !draft.gameweekTransfers) return null;
+                              return draft.gameweekTransfers[gw.id] || draft.gameweekTransfers[gw.id.toString()];
+                            };
+                            
+                            // Get planned chip for this draft and gameweek
+                            const getPlannedChip = () => {
+                              if (row.draftKey === 'Base') return null;
+                              const draft = savedDrafts.find(d => d.draftLetter === row.draftKey);
+                              if (!draft || !draft.plannedChips) return null;
+                              return draft.plannedChips[gw.id] || draft.plannedChips[gw.id.toString()];
+                            };
+                            
+                            const gwTransfers = getDraftTransfers();
+                            const hasTransfers = gwTransfers && gwTransfers.completed && gwTransfers.completed.length > 0;
+                            const plannedChip = getPlannedChip();
+                            
+                            return (
+                              <td 
+                                key={gw.id} 
+                                className="text-center p-2 text-sm"
+                                data-testid={`cell-${row.draftKey}-gw${gw.id}`}
+                              >
+                                <div className="flex flex-col items-center gap-1">
+                                  {hasTransfers ? (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <span className="cursor-help underline decoration-dotted">
+                                            {row.gameweeks[gw.id]?.toFixed(1) || '0.0'}
+                                          </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs">
+                                          <div className="text-sm">
+                                            <p className="font-semibold mb-1">GW{gw.id} Transfers:</p>
+                                            {gwTransfers.completed.map((transfer: any, idx: number) => (
+                                              <p key={idx} className="text-xs">
+                                                <span className="text-red-400">Out:</span> {transfer.outPlayerName} (£{transfer.sellingPrice.toFixed(1)}m)
+                                                <br />
+                                                <span className="text-green-400">In:</span> {transfer.inPlayerName} (£{transfer.buyingPrice.toFixed(1)}m)
+                                              </p>
+                                            ))}
+                                          </div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  ) : (
+                                    <span>{row.gameweeks[gw.id]?.toFixed(1) || '0.0'}</span>
+                                  )}
+                                  {plannedChip && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge 
+                                            variant="outline" 
+                                            className="text-[10px] px-1 py-0 h-4 bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-700"
+                                            data-testid={`chip-badge-${row.draftKey}-gw${gw.id}`}
+                                          >
+                                            <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                                            {plannedChip === '3xc' ? '3xC' : plannedChip === 'bboost' ? 'BB' : plannedChip === 'freehit' ? 'FH' : 'WC'}
+                                          </Badge>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p className="text-xs">{getChipDisplayName(plannedChip)}</p>
+                                          <p className="text-xs text-muted-foreground">{getChipDescription(plannedChip)}</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          })}
+                          <td 
+                            className="text-center p-2 font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/20"
+                            data-testid={`cell-${row.draftKey}-total`}
+                          >
+                            {row.total.toFixed(1)}
+                          </td>
+                        </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+            
+            <div className="mt-4 text-xs text-muted-foreground space-y-1">
+              <p>● = Currently active draft (Manual mode)</p>
+              <p><strong>Manual:</strong> Projected points based on your saved lineup and transfers.</p>
+              <p><strong>Auto:</strong> Optimized lineup with best formation and captain for maximum points.</p>
+              <p><Sparkles className="h-3 w-3 inline mr-1 text-amber-600" /><strong>Chip Badges:</strong> 3xC (Triple Captain), BB (Bench Boost), FH (Free Hit), WC (Wildcard)</p>
+            </div>
           </CardContent>
         </Card>
       )}
