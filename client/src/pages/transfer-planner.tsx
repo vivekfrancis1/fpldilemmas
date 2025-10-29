@@ -1365,7 +1365,7 @@ export default function TransferPlanner() {
 
   // Calculate chip recommendations for the current draft
   const getChipRecommendations = (): { bboost: number[], tripleC: number[], freehit: number[] } | null => {
-    if (!selectedGameweek || !playerProjections || !teamData?.picks || !manualLineup.length) {
+    if (!selectedGameweek || !playerProjections || !playerProjections6GW || !teamData?.picks || !manualLineup.length) {
       return null;
     }
 
@@ -1393,22 +1393,82 @@ export default function TransferPlanner() {
     };
 
     // Best Bench Boost: Find top 2 gameweeks with maximum bench points
+    // This now respects the selected draft, mode (Manual/Auto), and checks all 6 gameweeks
     const bboostInstance = getChipInstance('bboost');
     if (bboostInstance) {
       const validGWs = getValidGameweeks(bboostInstance);
       const gwScores: { gw: number; points: number }[] = [];
 
       validGWs.forEach(gw => {
-        const lineup = getBaselineLineup(gw.id);
-        const benchPlayers = lineup.filter(pick => pick.position > 11);
+        const squad = getSquadAtGameweek(gameweekTransfers, gw.id);
         let benchPoints = 0;
 
-        benchPlayers.forEach(pick => {
-          const projection = playerProjections.find(p => p.playerId === pick.element);
-          if (projection?.gameweekProjections) {
-            benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
-          }
-        });
+        if (plannerMode === "manual") {
+          // For Manual mode: use the squad's position property (which is maintained through transfers)
+          // Bench players are those at positions 12-15
+          const benchPlayers = squad.filter(pick => pick.position > 11);
+
+          benchPlayers.forEach(pick => {
+            const projection = playerProjections6GW.find((p: any) => p.playerId === pick.element);
+            if (projection?.gameweekProjections) {
+              benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+            }
+          });
+        } else {
+          // For Auto mode: calculate which players would be benched after auto-optimization
+          // Get all 15 players with their projections for this gameweek
+          const playersWithPoints = squad.map(pick => {
+            const player = getPlayerById(pick.element);
+            const playerData = playerProjections6GW.find((p: any) => p.playerId === pick.element);
+            const gwPoints = playerData?.gameweekProjections?.[gw.id.toString()] || 0;
+            
+            return {
+              element: pick.element,
+              position: player?.element_type || 0,
+              projectedPoints: gwPoints
+            };
+          });
+
+          // Group by position and sort by points
+          const gkps = playersWithPoints.filter(p => p.position === 1).sort((a, b) => b.projectedPoints - a.projectedPoints);
+          const defs = playersWithPoints.filter(p => p.position === 2).sort((a, b) => b.projectedPoints - a.projectedPoints);
+          const mids = playersWithPoints.filter(p => p.position === 3).sort((a, b) => b.projectedPoints - a.projectedPoints);
+          const fwds = playersWithPoints.filter(p => p.position === 4).sort((a, b) => b.projectedPoints - a.projectedPoints);
+
+          // Try all valid formations and find the best starting 11
+          const validFormations = [
+            { def: 3, mid: 4, fwd: 3 }, { def: 3, mid: 5, fwd: 2 },
+            { def: 4, mid: 3, fwd: 3 }, { def: 4, mid: 4, fwd: 2 },
+            { def: 4, mid: 5, fwd: 1 }, { def: 5, mid: 3, fwd: 2 },
+            { def: 5, mid: 4, fwd: 1 }, { def: 5, mid: 2, fwd: 3 }
+          ];
+
+          let bestStarting11: any[] = [];
+          let bestFormationPoints = 0;
+
+          validFormations.forEach(formation => {
+            if (defs.length >= formation.def && mids.length >= formation.mid && fwds.length >= formation.fwd) {
+              const selected = [
+                gkps[0],
+                ...defs.slice(0, formation.def),
+                ...mids.slice(0, formation.mid),
+                ...fwds.slice(0, formation.fwd)
+              ].filter(Boolean);
+              
+              const formationPoints = selected.reduce((sum, p) => sum + (p?.projectedPoints || 0), 0);
+              
+              if (formationPoints > bestFormationPoints) {
+                bestFormationPoints = formationPoints;
+                bestStarting11 = selected;
+              }
+            }
+          });
+
+          // The bench players are those not in the best starting 11
+          const starting11Ids = new Set(bestStarting11.map(p => p.element));
+          const benchPlayers = playersWithPoints.filter(p => !starting11Ids.has(p.element));
+          benchPoints = benchPlayers.reduce((sum, p) => sum + p.projectedPoints, 0);
+        }
 
         gwScores.push({ gw: gw.id, points: benchPoints });
       });
