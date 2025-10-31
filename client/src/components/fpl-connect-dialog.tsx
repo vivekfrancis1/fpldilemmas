@@ -49,10 +49,13 @@ export function FplConnectDialog() {
       setOpen(false);
       setFplPassword("");
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
+      const isAuthError = error.message?.includes("Authentication required") || error.message?.includes("401");
       toast({
         title: "Connection Failed",
-        description: error.message || "Please check your FPL credentials and try again",
+        description: isAuthError 
+          ? "Please log in to your account first. Visit /login to sign in or create an account."
+          : error.message || "Please check your FPL credentials and try again",
         variant: "destructive",
       });
     },
