@@ -699,7 +699,7 @@ export default function Top25ManagerTeam() {
                   <div className="-mx-2 sm:mx-0">
                     <Card className="bg-white shadow-none sm:shadow-lg border-0 sm:border border-gray-200 overflow-hidden">
                       <CardContent className="p-0 sm:p-6">
-                        <div className="min-h-[calc(100vh-6rem)] sm:min-h-0 flex items-center justify-center">
+                        <div className="h-[calc(100vh-6rem)] sm:h-auto">
                           <PitchView 
                             players={pitchPlayers}
                             benchPlayers={benchPlayers}

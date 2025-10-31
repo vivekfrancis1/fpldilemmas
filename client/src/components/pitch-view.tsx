@@ -44,9 +44,9 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
   const sortedBench = sortPlayersByPosition(benchPlayers);
   
   return (
-    <div className="space-y-0 sm:space-y-4">
+    <div className="space-y-0 sm:space-y-4 h-full">
       {/* Pitch */}
-      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-none sm:rounded-lg p-8 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
+      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-none sm:rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden h-full flex flex-col justify-center">
         {/* Pitch Lines and Graphics */}
         <div className="absolute inset-0 opacity-30 pointer-events-none">
           <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
@@ -75,7 +75,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
           <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
         </div>
 
-        <div className="relative space-y-8 sm:space-y-6 md:space-y-8 lg:space-y-10">
+        <div className="relative space-y-6 sm:space-y-6 md:space-y-8 lg:space-y-10">
           {/* Goalkeepers */}
           {(() => {
             const gks = filterPlayersByType(sortedPlayers, 1);
