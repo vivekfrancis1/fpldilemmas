@@ -200,7 +200,7 @@ export default function BestWildcardTeam() {
     };
 
     // 1. Add 1 goalkeeper
-    const includedGK = playersByPosition.Goalkeeper.filter(p => includedPlayerIds.has(p.playerId));
+    const includedGK = playersByPosition.Goalkeeper.filter(p => includedPlayerIds.has(p.playerId) && canAddPlayer(p));
     if (includedGK.length > 0) {
       addPlayer(includedGK[0]);
     } else {
@@ -210,9 +210,8 @@ export default function BestWildcardTeam() {
     }
 
     // 2. Add required defenders
-    const includedDef = playersByPosition.Defender.filter(p => includedPlayerIds.has(p.playerId));
+    const includedDef = playersByPosition.Defender.filter(p => includedPlayerIds.has(p.playerId) && canAddPlayer(p));
     for (const player of includedDef.slice(0, formation.def)) {
-      if (!canAddPlayer(player)) return null;
       addPlayer(player);
     }
     const neededDef = formation.def - includedDef.length;
@@ -225,9 +224,8 @@ export default function BestWildcardTeam() {
     if (startingXI.filter(p => normalizePosition(p.position) === 'Defender').length < formation.def) return null;
 
     // 3. Add required midfielders
-    const includedMid = playersByPosition.Midfielder.filter(p => includedPlayerIds.has(p.playerId));
+    const includedMid = playersByPosition.Midfielder.filter(p => includedPlayerIds.has(p.playerId) && canAddPlayer(p));
     for (const player of includedMid.slice(0, formation.mid)) {
-      if (!canAddPlayer(player)) return null;
       addPlayer(player);
     }
     const neededMid = formation.mid - includedMid.length;
@@ -240,9 +238,8 @@ export default function BestWildcardTeam() {
     if (startingXI.filter(p => normalizePosition(p.position) === 'Midfielder').length < formation.mid) return null;
 
     // 4. Add required forwards
-    const includedFwd = playersByPosition.Forward.filter(p => includedPlayerIds.has(p.playerId));
+    const includedFwd = playersByPosition.Forward.filter(p => includedPlayerIds.has(p.playerId) && canAddPlayer(p));
     for (const player of includedFwd.slice(0, formation.fwd)) {
-      if (!canAddPlayer(player)) return null;
       addPlayer(player);
     }
     const neededFwd = formation.fwd - includedFwd.length;
