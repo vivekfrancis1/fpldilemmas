@@ -59,7 +59,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Player Projections", 
       items: [
-        { path: "/player-goals-scored-projections", label: "Goals Scored", icon: Trophy, description: "Individual player goal projections", popular: false },
+        { path: "/player-goals-scored-projections", label: "Goals", icon: Trophy, description: "Individual player goal projections", popular: false },
         { path: "/player-assist-projections", label: "Assists", icon: Zap, description: "Individual player assist projections", popular: false },
         { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
         { path: "/player-total-points", label: "Total Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: true },
@@ -74,7 +74,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Team Projections", 
       items: [
         { path: "/fixtures", label: "Fixture Difficulty Rating", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
-        { path: "/team-goal-projections", label: "Goals", icon: BarChart3, description: "Expected team goals", popular: false },
+        { path: "/team-goal-projections", label: "Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-goals-against-projections", label: "Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
         { path: "/team-cs-projections", label: "Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
         { path: "/projected-goals-cs", label: "Match Predictions", icon: Target, description: "Projected goals & clean sheets", popular: true },
