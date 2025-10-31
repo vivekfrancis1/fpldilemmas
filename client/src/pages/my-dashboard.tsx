@@ -36,6 +36,7 @@ import {
   ArrowLeftRight
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 
 
 
@@ -630,15 +631,18 @@ export default function MyDashboard() {
                   className="flex-1 border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                   data-testid="input-manager-id"
                 />
-                <Button 
-                  onClick={handleSearch} 
-                  disabled={!managerId.trim()}
-                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200 whitespace-nowrap"
-                  data-testid="button-search-manager"
-                >
-                  <Search className="h-4 w-4 mr-2" />
-                  Search Manager
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleSearch} 
+                    disabled={!managerId.trim()}
+                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200 whitespace-nowrap"
+                    data-testid="button-search-manager"
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    Search Manager
+                  </Button>
+                  <FplConnectDialog />
+                </div>
               </div>
               <div className="text-xs text-gray-500 mt-3">
                 <p className="font-medium">To find your Manager ID, follow these steps:</p>
