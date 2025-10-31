@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7058,14 +7058,14 @@ export default function TransferPlanner() {
         </Card>
       )}
 
-      {/* Auto-Optimization Section */}
-      {searchedId && teamData && selectedGameweek && plannerMode === "auto" && (
-        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
+      {/* Team Evolution Section - Shows for both Manual and Auto modes */}
+      {searchedId && teamData && selectedGameweek && (
+        <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-background">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-indigo-600" />
-                Team Evolution - {activeDraft === "Base" ? "Base Draft" : `Draft ${activeDraft}`}
+                Team Evolution - {activeDraft === "Base" ? "Base Draft" : `Draft ${activeDraft}`} ({plannerMode === "manual" ? "Manual" : "Auto"})
               </div>
               {(() => {
                 const currentChip = plannedChips[selectedGameweek];
@@ -7095,6 +7095,9 @@ export default function TransferPlanner() {
                 return null;
               })()}
             </CardTitle>
+            <CardDescription>
+              Horizontal scrollable view showing how your team evolves across the next 6 gameweeks with all planned transfers
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto pb-4">

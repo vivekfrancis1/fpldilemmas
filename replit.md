@@ -70,7 +70,7 @@ Mobile Optimization: Comprehensive responsive design implemented across major pa
 - **Comprehensive FPL Scoring System**: Implemented probability-based calculations for all official FPL scoring components with hybrid methodology.
 - **Position-Based Share Caps**: Implemented realistic caps for goal and assist share calculations.
 - **Perfect Mathematical Balance**: Enhanced normalization system with redistribution logic ensures team and player totals maintain perfect balance.
-- **Transfer Planner (In Development)**: Foundational infrastructure implemented including database schema, CRUD API endpoints, and frontend page with Manager ID caching, gameweek selector (next 6 GWs), and mode selection (Auto/Manual).
+- **Transfer Planner**: Comprehensive transfer planning tool with database schema, CRUD API endpoints, Manager ID caching, gameweek selector (next 6 GWs), mode selection (Auto/Manual), chip planning, draft management (Base + A-E drafts), Team Evolution visualization (showing team changes across all 6 gameweeks for both Manual and Auto modes), Draft Comparison table, and Projected Points analysis. Section order: Chips Planning → Draft Team Selection (Manual OR Auto based on selected mode) → Team Evolution (visible for both modes) → Draft Comparison → Projected Points.
 
 ### Type Safety & Validation
 - **Schema Validation**: Zod schemas for API responses.
