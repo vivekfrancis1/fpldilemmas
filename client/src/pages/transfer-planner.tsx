@@ -6945,7 +6945,7 @@ export default function TransferPlanner() {
                                         {pick && isPlayerTransferredIn(pick) && (<g><circle cx="295" cy="70" r="17" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="295" y="78" fontSize="16" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
                                         <text x="202" y="108" fontSize="clamp(28px, 5.5vw, 28px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}</text>
                                         <text x="202" y="150" fontSize="clamp(32px, 6vw, 32px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.web_name}</text>
-                                        <text x="202" y="225" fontSize="clamp(52px, 9vw, 52px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.projectedPoints.toFixed(1)}</text>
+                                        <text x="202" y="225" fontSize="clamp(42px, 7.2vw, 42px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.projectedPoints.toFixed(1)}</text>
                                         {(() => {
                                           const fixture = getPlayerFixture(player.element, selectedGameweek);
                                           if (fixture) {
