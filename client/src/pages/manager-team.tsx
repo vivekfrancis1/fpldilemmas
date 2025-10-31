@@ -969,21 +969,6 @@ export default function ManagerTeam() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Performance Analysis
-              </CardTitle>
-              <CardDescription>Detailed performance metrics and trends</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-500">Performance analysis features coming soon...</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
                 Gameweek History
               </CardTitle>
               <CardDescription>Points and rank progression by gameweek</CardDescription>
@@ -1020,6 +1005,44 @@ export default function ManagerTeam() {
                 </Table>
               ) : (
                 <p className="text-gray-500">No gameweek history available</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="history" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Season History
+              </CardTitle>
+              <CardDescription>Performance across previous seasons</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {historyLoading ? (
+                <Skeleton className="h-64 w-full" />
+              ) : managerHistory?.past && managerHistory.past.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Season</TableHead>
+                      <TableHead>Total Points</TableHead>
+                      <TableHead>Overall Rank</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {managerHistory.past.map((season: any, index: number) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-medium">{season.season_name}</TableCell>
+                        <TableCell>{season.total_points?.toLocaleString()}</TableCell>
+                        <TableCell>#{season.rank?.toLocaleString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-gray-500">No season history available</p>
               )}
             </CardContent>
           </Card>
