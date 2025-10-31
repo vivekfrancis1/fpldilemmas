@@ -174,6 +174,68 @@ export default function BestFreehitTeam() {
     return 'Forward';
   };
 
+  // Calculate minimum bench cost for a given formation
+  const calculateMinBenchCost = (
+    formation: typeof VALID_FORMATIONS[0],
+    playersByPosition: Record<string, PlayerSnapshot[]>,
+    startingXI: PlayerSnapshot[] = []
+  ): number => {
+    const usedPlayerIds = new Set(startingXI.map(p => p.playerId));
+    const teamCounts: Record<string, number> = {};
+    startingXI.forEach(p => {
+      const teamName = p.teamName || '';
+      teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
+    });
+
+    // Calculate what positions we need on the bench
+    const startingCounts = startingXI.length > 0 ? {
+      Goalkeeper: startingXI.filter(p => normalizePosition(p.position) === 'Goalkeeper').length,
+      Defender: startingXI.filter(p => normalizePosition(p.position) === 'Defender').length,
+      Midfielder: startingXI.filter(p => normalizePosition(p.position) === 'Midfielder').length,
+      Forward: startingXI.filter(p => normalizePosition(p.position) === 'Forward').length
+    } : {
+      Goalkeeper: 1, // Formation always has 1 GK
+      Defender: formation.def,
+      Midfielder: formation.mid,
+      Forward: formation.fwd
+    };
+
+    const benchNeeds = {
+      Goalkeeper: SQUAD_CONSTRAINTS.goalkeepers - startingCounts.Goalkeeper,
+      Defender: SQUAD_CONSTRAINTS.defenders - startingCounts.Defender,
+      Midfielder: SQUAD_CONSTRAINTS.midfielders - startingCounts.Midfielder,
+      Forward: SQUAD_CONSTRAINTS.forwards - startingCounts.Forward
+    };
+
+    let minCost = 0;
+    const positions: Array<keyof typeof benchNeeds> = ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'];
+
+    for (const position of positions) {
+      const needed = benchNeeds[position];
+      if (needed <= 0) continue;
+
+      // Find cheapest players for this position that respect team constraints
+      const available = playersByPosition[position]
+        .filter(p => {
+          if (usedPlayerIds.has(p.playerId)) return false;
+          const teamName = p.teamName || '';
+          const teamCount = teamCounts[teamName] || 0;
+          return teamCount < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+        })
+        .sort((a, b) => a.price - b.price);
+
+      // Add the cheapest players for this position
+      for (let i = 0; i < needed && i < available.length; i++) {
+        minCost += available[i].price;
+        usedPlayerIds.add(available[i].playerId);
+        const teamName = available[i].teamName || '';
+        teamCounts[teamName] = (teamCounts[teamName] || 0) + 1;
+      }
+    }
+
+    return minCost;
+  };
+
   // Build starting XI for a specific formation
   const buildStartingXIForFormation = (
     formation: typeof VALID_FORMATIONS[0],
@@ -186,8 +248,8 @@ export default function BestFreehitTeam() {
     let totalCost = 0;
     let totalPoints = 0;
 
-    // Reserve budget for minimum bench cost (4 players at ~£4.5m each = £18m minimum)
-    const MIN_BENCH_COST = 18;
+    // Calculate actual minimum bench cost dynamically based on cheapest available players
+    const MIN_BENCH_COST = budget ? calculateMinBenchCost(formation, playersByPosition, []) : 0;
     const maxXIBudget = budget ? budget - MIN_BENCH_COST : undefined;
 
     // Helper to check if player can be added
