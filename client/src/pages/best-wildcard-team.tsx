@@ -174,9 +174,12 @@ export default function BestWildcardTeam() {
     let totalCost = 0;
     let totalPoints = 0;
 
-    // Reserve budget for minimum bench cost (4 players at ~£4.5m each = £18m minimum)
-    const MIN_BENCH_COST = 18;
-    const maxXIBudget = budget ? budget - MIN_BENCH_COST : undefined;
+    // Allocate 80% of total budget to starting XI, 20% for bench
+    const maxXIBudget = budget ? budget * 0.8 : undefined;
+    
+    if (maxXIBudget) {
+      console.log(`Building starting XI with max budget: £${maxXIBudget.toFixed(1)}m (80% of £${budget}m)`);
+    }
 
     // Helper to check if player can be added
     const canAddPlayer = (player: PlayerSnapshot) => {
@@ -255,6 +258,7 @@ export default function BestWildcardTeam() {
   };
 
   // Build bench with remaining budget
+  // Starting XI uses 80% of budget, bench gets whatever remains
   const buildBenchWithBudget = (
     startingXI: PlayerSnapshot[],
     playersByPosition: Record<string, PlayerSnapshot[]>,
@@ -274,6 +278,8 @@ export default function BestWildcardTeam() {
     const startingXICost = startingXI.reduce((sum, p) => sum + p.price, 0);
     let remainingBudget = totalBudget - startingXICost;
     let benchCost = 0;
+
+    console.log(`Building bench with remaining budget: £${remainingBudget.toFixed(1)}m (Total: £${totalBudget}m, XI: £${startingXICost.toFixed(1)}m)`);
 
     // Helper to check if player can be added to bench
     const canAddToBench = (player: PlayerSnapshot) => {
