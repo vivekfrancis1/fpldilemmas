@@ -696,8 +696,8 @@ export default function Top25ManagerTeam() {
 
                 {/* Pitch View */}
                 {teamView === "pitch" && (
-                  <Card className="bg-white shadow-lg border border-gray-200 overflow-hidden">
-                    <CardContent className="p-4 sm:p-6">
+                  <Card className="bg-white shadow-none sm:shadow-lg border-0 sm:border border-gray-200 overflow-hidden -mx-2 sm:mx-0">
+                    <CardContent className="p-0 sm:p-6">
                       <PitchView 
                         players={pitchPlayers}
                         benchPlayers={benchPlayers}
