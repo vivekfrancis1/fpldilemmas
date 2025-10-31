@@ -923,19 +923,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!loginResponse.ok) {
+        const errorText = await loginResponse.text();
+        console.error('FPL login failed:', loginResponse.status, errorText);
         return res.status(401).json({ error: 'Invalid FPL credentials' });
       }
 
       // Extract ALL cookies from response (FPL sends multiple: pl_profile, sessionid, etc.)
-      let cookies: string;
+      let cookies: string = '';
+      
+      // Try getSetCookie() first (modern fetch API)
       if (typeof loginResponse.headers.getSetCookie === 'function') {
-        // Modern fetch API with getSetCookie() support
-        const cookieArray = loginResponse.headers.getSetCookie();
-        cookies = cookieArray.map(cookie => cookie.split(';')[0]).join('; ');
-      } else {
-        // Fallback: try to get all cookies (may not work in all environments)
-        cookies = loginResponse.headers.get('set-cookie') || '';
+        try {
+          const cookieArray = loginResponse.headers.getSetCookie();
+          console.log('DEBUG: getSetCookie() returned:', cookieArray);
+          if (cookieArray && cookieArray.length > 0) {
+            cookies = cookieArray.map(cookie => cookie.split(';')[0]).join('; ');
+          }
+        } catch (e) {
+          console.error('Error using getSetCookie():', e);
+        }
       }
+      
+      // Fallback: iterate through all headers
+      if (!cookies) {
+        const allCookies: string[] = [];
+        loginResponse.headers.forEach((value, key) => {
+          if (key.toLowerCase() === 'set-cookie') {
+            console.log('DEBUG: Found set-cookie header:', value);
+            allCookies.push(value.split(';')[0]);
+          }
+        });
+        if (allCookies.length > 0) {
+          cookies = allCookies.join('; ');
+        }
+      }
+
+      console.log('DEBUG: Final extracted cookies:', cookies ? `${cookies.substring(0, 50)}...` : 'NONE');
 
       if (!cookies) {
         return res.status(500).json({ error: 'Failed to extract authentication cookies from FPL' });
