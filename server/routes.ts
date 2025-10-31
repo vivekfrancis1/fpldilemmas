@@ -898,6 +898,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // FPL Authentication endpoints
+  app.post("/api/fpl/connect", requireAuth, async (req: any, res) => {
+    try {
+      const { fplEmail, fplPassword } = req.body;
+      const userId = req.session.user.id;
+
+      if (!fplEmail || !fplPassword) {
+        return res.status(400).json({ error: 'FPL email and password are required' });
+      }
+
+      // Authenticate with FPL
+      const loginResponse = await fetch('https://users.premierleague.com/accounts/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          password: fplPassword,
+          login: fplEmail,
+          redirect_uri: 'https://fantasy.premierleague.com/a/login',
+          app: 'plfpl-web'
+        })
+      });
+
+      if (!loginResponse.ok) {
+        return res.status(401).json({ error: 'Invalid FPL credentials' });
+      }
+
+      // Extract cookies from response
+      const setCookieHeader = loginResponse.headers.get('set-cookie') || '';
+      const cookies = setCookieHeader;
+
+      // Get manager ID using the cookies
+      const meResponse = await fetch('https://fantasy.premierleague.com/api/me/', {
+        headers: {
+          'Cookie': cookies
+        }
+      });
+
+      if (!meResponse.ok) {
+        return res.status(401).json({ error: 'Failed to fetch FPL manager info' });
+      }
+
+      const meData = await meResponse.json();
+      const fplManagerId = meData.player.entry;
+
+      // Store FPL credentials and cookies in database
+      const cookiesExpiry = new Date();
+      cookiesExpiry.setDate(cookiesExpiry.getDate() + 14); // Cookies typically last 2 weeks
+
+      await db.update(users)
+        .set({
+          fplEmail,
+          fplManagerId,
+          fplSessionCookies: cookies,
+          fplCookiesExpiry: cookiesExpiry
+        })
+        .where(eq(users.id, userId));
+
+      res.json({ 
+        success: true, 
+        fplManagerId,
+        message: 'FPL account connected successfully' 
+      });
+    } catch (error) {
+      console.error('FPL connect error:', error);
+      res.status(500).json({ error: 'Failed to connect FPL account' });
+    }
+  });
+
+  app.get("/api/fpl/status", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.user.id;
+      
+      const [user] = await db.select({
+        fplManagerId: users.fplManagerId,
+        fplEmail: users.fplEmail,
+        fplCookiesExpiry: users.fplCookiesExpiry
+      }).from(users).where(eq(users.id, userId));
+
+      if (!user || !user.fplManagerId) {
+        return res.json({ connected: false });
+      }
+
+      // Check if cookies are expired
+      const isExpired = user.fplCookiesExpiry && new Date(user.fplCookiesExpiry) < new Date();
+
+      res.json({ 
+        connected: !isExpired,
+        fplManagerId: user.fplManagerId,
+        fplEmail: user.fplEmail,
+        needsReauth: isExpired
+      });
+    } catch (error) {
+      console.error('FPL status error:', error);
+      res.status(500).json({ error: 'Failed to check FPL status' });
+    }
+  });
+
+  app.post("/api/fpl/disconnect", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.user.id;
+
+      await db.update(users)
+        .set({
+          fplEmail: null,
+          fplManagerId: null,
+          fplSessionCookies: null,
+          fplCookiesExpiry: null
+        })
+        .where(eq(users.id, userId));
+
+      res.json({ success: true, message: 'FPL account disconnected' });
+    } catch (error) {
+      console.error('FPL disconnect error:', error);
+      res.status(500).json({ error: 'Failed to disconnect FPL account' });
+    }
+  });
+
+  app.get("/api/fpl/my-team", requireAuth, async (req: any, res) => {
+    try {
+      const userId = req.session.user.id;
+
+      // Get user's FPL cookies
+      const [user] = await db.select({
+        fplManagerId: users.fplManagerId,
+        fplSessionCookies: users.fplSessionCookies,
+        fplCookiesExpiry: users.fplCookiesExpiry
+      }).from(users).where(eq(users.id, userId));
+
+      if (!user || !user.fplManagerId || !user.fplSessionCookies) {
+        return res.status(401).json({ error: 'FPL account not connected' });
+      }
+
+      // Check if cookies are expired
+      if (user.fplCookiesExpiry && new Date(user.fplCookiesExpiry) < new Date()) {
+        return res.status(401).json({ error: 'FPL session expired, please reconnect' });
+      }
+
+      // Fetch private team data using cookies
+      const myTeamResponse = await fetch(`https://fantasy.premierleague.com/api/my-team/${user.fplManagerId}/`, {
+        headers: {
+          'Cookie': user.fplSessionCookies
+        }
+      });
+
+      if (!myTeamResponse.ok) {
+        return res.status(401).json({ error: 'Failed to fetch FPL team data, session may be expired' });
+      }
+
+      const myTeamData = await myTeamResponse.json();
+      res.json(myTeamData);
+    } catch (error) {
+      console.error('FPL my-team error:', error);
+      res.status(500).json({ error: 'Failed to fetch FPL team data' });
+    }
+  });
+
   // Dynamic penalty taker adjustment based on FPL metrics
   function getPenaltyTakerAdjustment(playerName: string, playerId: number, bootstrapData?: any): number {
     // Find the player in bootstrap data if available
