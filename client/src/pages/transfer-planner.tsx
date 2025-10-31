@@ -5847,7 +5847,7 @@ export default function TransferPlanner() {
                       if (positionPlayers.length === 0) return null;
                       
                       return (
-                        <div key={posType} className={`flex justify-center flex-wrap ${positionPlayers.length >= 5 ? 'gap-1 sm:gap-2' : 'gap-2 sm:gap-4'}`}>
+                        <div key={posType} className={`flex justify-center flex-wrap ${positionPlayers.length >= 5 ? 'gap-0 sm:gap-2' : 'gap-2 sm:gap-4'}`}>
                           {positionPlayers.map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
@@ -5863,7 +5863,7 @@ export default function TransferPlanner() {
                             if (pick.is_transferred_out) {
                               console.log('DEBUG - Showing empty slot for position:', pick.position, 'pick:', pick);
                               return (
-                                <div key={`empty-${pick.position}`} className="flex flex-col items-center w-40" data-testid={`pitch-empty-${pick.position}`}>
+                                <div key={`empty-${pick.position}`} className="flex flex-col items-center w-[18vw] sm:w-40" data-testid={`pitch-empty-${pick.position}`}>
                                   <div className="relative w-full">
                                     <div className="rounded-lg p-3 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-2">
                                       <div className="text-sm font-bold text-red-600">EMPTY SLOT</div>
@@ -5923,7 +5923,7 @@ export default function TransferPlanner() {
                             }
                             
                             return (
-                              <div key={pick.element} className={`flex flex-col items-center w-[24vw] sm:w-32 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-player-${player.id}`}>
+                              <div key={pick.element} className={`flex flex-col items-center w-[18vw] sm:w-32 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
                                   {/* Action Buttons Popup */}
                                   {selectedPlayer === pick.element && (
@@ -6074,7 +6074,7 @@ export default function TransferPlanner() {
                     {/* Bench */}
                     <div className="mt-4 sm:mt-8 pt-2 sm:pt-4 border-t border-white/30">
                       <h4 className="text-xs font-semibold text-white mb-2 sm:mb-3 text-center">Bench</h4>
-                      <div className="flex justify-center gap-1 sm:gap-1 md:gap-1.5">
+                      <div className="flex justify-center gap-0 sm:gap-1 md:gap-1.5">
                     {(() => {
                       const benchPlayers = manualLineup.slice(11, 15);
                       const gkBench = benchPlayers.find(pick => {
@@ -6101,7 +6101,7 @@ export default function TransferPlanner() {
                       // Check if bench player is transferred out
                       if (pick.is_transferred_out) {
                         return (
-                          <div key={`empty-bench-${pick.position}`} className="flex flex-col items-center w-40" data-testid={`pitch-bench-empty-${pick.position}`}>
+                          <div key={`empty-bench-${pick.position}`} className="flex flex-col items-center w-[18vw] sm:w-40" data-testid={`pitch-bench-empty-${pick.position}`}>
                             <div className="relative w-full">
                               <div className="rounded-lg p-2 text-center shadow-md border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-1.5">
                                 <div className="text-xs font-bold text-red-600">EMPTY SLOT</div>
@@ -6150,7 +6150,7 @@ export default function TransferPlanner() {
                       }
                       
                       return (
-                        <div key={pick.element} className={`flex flex-col items-center w-[24vw] sm:w-32 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-bench-${player.id}`}>
+                        <div key={pick.element} className={`flex flex-col items-center w-[18vw] sm:w-32 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-bench-${player.id}`}>
                           <div className="relative w-full opacity-90">
                             {/* Action Buttons Popup */}
                             {selectedPlayer === pick.element && (
@@ -6905,7 +6905,7 @@ export default function TransferPlanner() {
                           if (positionPlayers.length === 0) return null;
                           
                           return (
-                            <div key={posType} className={`flex justify-center flex-wrap ${positionPlayers.length >= 5 ? 'gap-1 sm:gap-2' : 'gap-2 sm:gap-4'}`}>
+                            <div key={posType} className={`flex justify-center flex-wrap ${positionPlayers.length >= 5 ? 'gap-0 sm:gap-2' : 'gap-2 sm:gap-4'}`}>
                               {positionPlayers.map(player => {
                                 const fullPlayer = getPlayerById(player.element);
                                 const pick = manualLineup.find(p => p.element === player.element);
@@ -6917,7 +6917,7 @@ export default function TransferPlanner() {
                                   return (
                                     <div
                                       key={player.element}
-                                      className="w-40 p-2 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-center"
+                                      className="w-[18vw] sm:w-40 p-2 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-center"
                                       data-testid={`auto-pitch-empty-${player.element}`}
                                     >
                                       <div className="text-xs font-medium text-red-600">Empty Slot</div>
@@ -6933,7 +6933,7 @@ export default function TransferPlanner() {
                                 const textColor = hexTextColor === '#000000' ? 'text-black' : 'text-white';
 
                                 return (
-                                  <div key={player.element} className="flex flex-col items-center w-[24vw] sm:w-32 md:w-36 lg:w-44" data-testid={`auto-pitch-player-${player.element}`}>
+                                  <div key={player.element} className="flex flex-col items-center w-[18vw] sm:w-32 md:w-36 lg:w-44" data-testid={`auto-pitch-player-${player.element}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 403 302" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-auto-${player.element}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
@@ -6966,7 +6966,7 @@ export default function TransferPlanner() {
                       {/* Bench */}
                       <div className="mt-4 sm:mt-8 pt-2 sm:pt-4 border-t border-white/30">
                         <h4 className="text-xs font-semibold text-white mb-2 sm:mb-3 text-center">Bench</h4>
-                        <div className="flex justify-center gap-1 sm:gap-1 md:gap-1.5">
+                        <div className="flex justify-center gap-0 sm:gap-1 md:gap-1.5">
                           {(() => {
                             const gkBench = optimizedLineup.bench.find(player => {
                               const fullPlayer = getPlayerById(player.element);
@@ -6990,7 +6990,7 @@ export default function TransferPlanner() {
                               return (
                                 <div
                                   key={player.element}
-                                  className="w-40 p-2 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-center"
+                                  className="w-[18vw] sm:w-40 p-2 rounded-lg border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-center"
                                   data-testid={`auto-pitch-bench-empty-${player.element}`}
                                 >
                                   <div className="text-xs font-medium text-red-600">Empty</div>
@@ -7006,7 +7006,7 @@ export default function TransferPlanner() {
                             const textColor = hexTextColor === '#000000' ? 'text-black' : 'text-white';
 
                             return (
-                              <div key={player.element} className="flex flex-col items-center w-[24vw] sm:w-32 md:w-36 lg:w-44 opacity-90" data-testid={`auto-pitch-bench-${player.element}`}>
+                              <div key={player.element} className="flex flex-col items-center w-[18vw] sm:w-32 md:w-36 lg:w-44 opacity-90" data-testid={`auto-pitch-bench-${player.element}`}>
                                 <div className="relative w-full">
                                   <svg viewBox="0 0 403 302" className="w-full drop-shadow-lg">
                                     <defs><clipPath id={`jersey-bench-auto-${player.element}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
