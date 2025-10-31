@@ -669,11 +669,11 @@ export default function Top25ManagerTeam() {
           {/* Team Formation */}
           {teamData.picks && teamData.picks.length > 0 && (
             <>
-              <div>
-                <h2 className="text-xl font-semibold mb-4">Team Squad</h2>
+              <div className={teamView === "pitch" ? "sm:block" : ""}>
+                <h2 className={`text-xl font-semibold mb-4 ${teamView === "pitch" ? "hidden sm:block" : ""}`}>Team Squad</h2>
                 
                 {/* View Toggle */}
-                <div className="flex justify-center gap-2 mb-6">
+                <div className={`flex justify-center gap-2 mb-6 ${teamView === "pitch" ? "hidden sm:flex" : ""}`}>
                   <Button
                     variant={teamView === "pitch" ? "default" : "outline"}
                     onClick={() => setTeamView("pitch")}
@@ -696,16 +696,29 @@ export default function Top25ManagerTeam() {
 
                 {/* Pitch View */}
                 {teamView === "pitch" && (
-                  <Card className="bg-white shadow-none sm:shadow-lg border-0 sm:border border-gray-200 overflow-hidden -mx-2 sm:mx-0">
-                    <CardContent className="p-0 sm:p-6">
-                      <PitchView 
-                        players={pitchPlayers}
-                        benchPlayers={benchPlayers}
-                        getNextFixtures={getNextFixtures}
-                        showFixtures={true}
-                      />
-                    </CardContent>
-                  </Card>
+                  <div className="-mx-2 sm:mx-0 relative">
+                    {/* Mobile View Toggle */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTeamView("list")}
+                      className="sm:hidden absolute top-2 right-2 z-10 bg-white/90 backdrop-blur-sm"
+                      data-testid="button-mobile-list-view"
+                    >
+                      <Users className="h-4 w-4" />
+                    </Button>
+                    
+                    <Card className="bg-white shadow-none sm:shadow-lg border-0 sm:border border-gray-200 overflow-hidden">
+                      <CardContent className="p-0 sm:p-6">
+                        <PitchView 
+                          players={pitchPlayers}
+                          benchPlayers={benchPlayers}
+                          getNextFixtures={getNextFixtures}
+                          showFixtures={true}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
                 )}
 
                 {/* List View */}
