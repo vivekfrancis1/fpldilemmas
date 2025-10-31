@@ -491,9 +491,9 @@ export default function Top25ManagerTeam() {
   };
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 space-y-3 sm:space-y-4 md:space-y-6">
+    <div className={`container mx-auto ${teamView === "pitch" ? "px-0 py-0 sm:px-4 sm:py-4 md:px-6 md:py-6" : "px-2 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6"} ${teamView === "pitch" ? "space-y-0 sm:space-y-4 md:space-y-6" : "space-y-3 sm:space-y-4 md:space-y-6"}`}>
       {/* Header */}
-      <div className="flex flex-col space-y-2 sm:space-y-3 md:space-y-4">
+      <div className={`flex flex-col space-y-2 sm:space-y-3 md:space-y-4 ${teamView === "pitch" ? "hidden sm:flex" : ""}`}>
         <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
           <Link href="/top25-managers">
             <Button 
@@ -534,7 +534,7 @@ export default function Top25ManagerTeam() {
 
       {/* Team Statistics */}
       {teamData?.entry_history && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 ${teamView === "pitch" ? "hidden sm:grid" : ""}`}>
           <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -588,7 +588,7 @@ export default function Top25ManagerTeam() {
 
       {/* General Info Fallback */}
       {teamData?.general_info && !teamData.entry_history && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 ${teamView === "pitch" ? "hidden sm:grid" : ""}`}>
           <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -641,8 +641,8 @@ export default function Top25ManagerTeam() {
       )}
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="team" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 bg-gray-100 rounded-lg p-1">
+      <Tabs defaultValue="team" className={teamView === "pitch" ? "space-y-0 sm:space-y-6" : "space-y-6"}>
+        <TabsList className={`grid w-full grid-cols-5 bg-gray-100 rounded-lg p-1 ${teamView === "pitch" ? "hidden sm:grid" : ""}`}>
           <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
             <Users className="h-4 w-4" />
             Team
@@ -665,7 +665,7 @@ export default function Top25ManagerTeam() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="team" className="space-y-6">
+        <TabsContent value="team" className={teamView === "pitch" ? "space-y-0 sm:space-y-6" : "space-y-6"}>
           {/* Team Formation */}
           {teamData.picks && teamData.picks.length > 0 && (
             <>
@@ -696,13 +696,13 @@ export default function Top25ManagerTeam() {
 
                 {/* Pitch View */}
                 {teamView === "pitch" && (
-                  <div className="-mx-2 sm:mx-0 relative">
+                  <div className="sm:mx-0 relative">
                     {/* Mobile View Toggle */}
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setTeamView("list")}
-                      className="sm:hidden absolute top-2 right-2 z-10 bg-white/90 backdrop-blur-sm"
+                      className="sm:hidden fixed top-2 right-2 z-50 bg-white/90 backdrop-blur-sm shadow-lg"
                       data-testid="button-mobile-list-view"
                     >
                       <Users className="h-4 w-4" />
