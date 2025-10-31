@@ -6053,10 +6053,10 @@ export default function TransferPlanner() {
                                     )}
                                     <text x="202" y="112" fontSize="clamp(28px, 5.5vw, 32px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
                                     <text x="202" y="165" fontSize="clamp(32px, 6vw, 34px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                    <text x="202" y="218" fontSize="clamp(52px, 9vw, 52px)" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                    <text x="202" y="210" fontSize="clamp(42px, 7.2vw, 42px)" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                       {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                       {pick.is_captain && projectedPoints !== null && (
-                                        <tspan fontSize="clamp(32px, 5.5vw, 32px)" dx="5">({(projectedPoints * 2).toFixed(1)})</tspan>
+                                        <tspan fontSize="clamp(26px, 4.4vw, 26px)" dx="5">({(projectedPoints * 2).toFixed(1)})</tspan>
                                       )}
                                     </text>
                                     {fixture && (
@@ -6275,7 +6275,7 @@ export default function TransferPlanner() {
                               )}
                               <text x="202" y="112" fontSize="clamp(28px, 5.5vw, 32px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
                               <text x="202" y="165" fontSize="clamp(32px, 6vw, 34px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                              <text x="202" y="218" fontSize="clamp(52px, 9vw, 52px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
+                              <text x="202" y="210" fontSize="clamp(42px, 7.2vw, 42px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
                               {fixture && (
                                 <text x="202" y="268" fontSize="clamp(26px, 5vw, 30px)" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                               )}
