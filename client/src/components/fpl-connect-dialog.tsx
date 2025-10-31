@@ -37,10 +37,8 @@ export function FplConnectDialog() {
   // Connect FPL account mutation
   const connectMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/fpl/connect", {
-        method: "POST",
-        body: JSON.stringify({ fplEmail, fplPassword }),
-      });
+      const res = await apiRequest("POST", "/api/fpl/connect", { fplEmail, fplPassword });
+      return res.json();
     },
     onSuccess: (data: any) => {
       toast({
@@ -63,9 +61,8 @@ export function FplConnectDialog() {
   // Disconnect FPL account mutation
   const disconnectMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/fpl/disconnect", {
-        method: "POST",
-      });
+      const res = await apiRequest("POST", "/api/fpl/disconnect");
+      return res.json();
     },
     onSuccess: () => {
       toast({
