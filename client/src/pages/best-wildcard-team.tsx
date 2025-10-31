@@ -1259,6 +1259,27 @@ export default function BestWildcardTeam() {
               </CardDescription>
             </CardHeader>
             <CardContent>
+              {/* Summary Stats - Moved to top */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</div>
+                  <div className="text-sm text-muted-foreground">Total Points</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</div>
+                  <div className="text-sm text-muted-foreground">Team Value</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-purple-600">{optimalTeam.formation}</div>
+                  <div className="text-sm text-muted-foreground">Formation</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">{optimalTeam.squad.length}</div>
+                  <div className="text-sm text-muted-foreground">Squad Size</div>
+                </div>
+              </div>
+              <Separator className="mb-4" />
+
               <div className="grid gap-3 md:gap-4">
                 {['Goalkeeper', 'Defender', 'Midfielder', 'Forward'].map((position) => {
                   const positionPlayers = optimalTeam.squad.filter(player => {
@@ -1311,25 +1332,6 @@ export default function BestWildcardTeam() {
                     </div>
                   );
                 })}
-              </div>
-              <Separator className="my-4" />
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</div>
-                  <div className="text-sm text-muted-foreground">Total Points</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</div>
-                  <div className="text-sm text-muted-foreground">Team Value</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{optimalTeam.formation}</div>
-                  <div className="text-sm text-muted-foreground">Formation</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-orange-600">{optimalTeam.squad.length}</div>
-                  <div className="text-sm text-muted-foreground">Squad Size</div>
-                </div>
               </div>
             </CardContent>
           </Card>
