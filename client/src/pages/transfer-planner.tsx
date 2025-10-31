@@ -7065,7 +7065,7 @@ export default function TransferPlanner() {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-indigo-600" />
-                {activeDraft === "Base" ? `Team Evolution - Base Draft (${plannerMode === "manual" ? "Manual" : "Auto"} lineup)` : `Team Evolution - Draft ${activeDraft} (${plannerMode === "manual" ? "Manual" : "Auto"} lineup)`}
+                {activeDraft === "Base" ? "Team Evolution - Base Draft" : `Team Evolution - Draft ${activeDraft}`}
               </div>
               {(() => {
                 const currentChip = plannedChips[selectedGameweek];
@@ -7112,53 +7112,38 @@ export default function TransferPlanner() {
                     <div className="flex-shrink-0 w-48 rounded-lg border-2 border-indigo-300 bg-indigo-50 dark:bg-indigo-950/20 p-3">
                       <div className="text-center font-bold mb-2 text-indigo-700 dark:text-indigo-300">Base</div>
                       <div className="space-y-0.5">
-                        {/* Starting 11 */}
-                        {baseLineup.slice(0, 11).map((pick, idx) => {
-                          const player = getPlayerById(pick.element);
-                          if (!player) return null;
-                          const isCaptain = pick.element === captain?.element;
-                          const isViceCaptain = pick.element === viceCaptain?.element;
+                        {/* Group by position: GK, DEF, MID, FWD */}
+                        {[1, 2, 3, 4].map(positionType => {
+                          const playersInPosition = baseLineup.filter(pick => {
+                            const player = getPlayerById(pick.element);
+                            return player?.element_type === positionType;
+                          });
                           
-                          return (
-                            <div
-                              key={idx}
-                              className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                                player.element_type === 1 ? 'bg-indigo-600 text-white' :
-                                player.element_type === 2 ? 'bg-cyan-600 text-white' :
-                                player.element_type === 3 ? 'bg-emerald-600 text-white' :
-                                'bg-red-600 text-white'
-                              }`}
-                              data-testid={`evolution-base-player-${pick.element}`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="truncate">{player.web_name}</span>
-                                {isCaptain && <span className="text-[9px] font-bold flex-shrink-0 ml-1">(C)</span>}
-                                {isViceCaptain && <span className="text-[9px] font-bold flex-shrink-0 ml-1">(V)</span>}
+                          return playersInPosition.map((pick, idx) => {
+                            const player = getPlayerById(pick.element);
+                            if (!player) return null;
+                            const isCaptain = pick.element === captain?.element;
+                            const isViceCaptain = pick.element === viceCaptain?.element;
+                            
+                            return (
+                              <div
+                                key={pick.element}
+                                className={`px-2 py-0.5 rounded text-[10px] font-medium ${
+                                  player.element_type === 1 ? 'bg-indigo-600 text-white' :
+                                  player.element_type === 2 ? 'bg-cyan-600 text-white' :
+                                  player.element_type === 3 ? 'bg-emerald-600 text-white' :
+                                  'bg-red-600 text-white'
+                                }`}
+                                data-testid={`evolution-base-player-${pick.element}`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="truncate">{player.web_name}</span>
+                                  {isCaptain && <span className="text-[9px] font-bold flex-shrink-0 ml-1">(C)</span>}
+                                  {isViceCaptain && <span className="text-[9px] font-bold flex-shrink-0 ml-1">(V)</span>}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                        {/* Bench spacing */}
-                        <div className="my-1 py-1"></div>
-                        {/* Bench */}
-                        {baseLineup.slice(11, 15).map((pick, idx) => {
-                          const player = getPlayerById(pick.element);
-                          if (!player) return null;
-                          
-                          return (
-                            <div
-                              key={idx + 11}
-                              className={`px-2 py-0.5 rounded text-[10px] font-medium opacity-70 ${
-                                player.element_type === 1 ? 'bg-indigo-600 text-white' :
-                                player.element_type === 2 ? 'bg-cyan-600 text-white' :
-                                player.element_type === 3 ? 'bg-emerald-600 text-white' :
-                                'bg-red-600 text-white'
-                              }`}
-                              data-testid={`evolution-base-bench-${pick.element}`}
-                            >
-                              <span className="truncate">{player.web_name}</span>
-                            </div>
-                          );
+                            );
+                          });
                         })}
                       </div>
                     </div>
@@ -7248,61 +7233,44 @@ export default function TransferPlanner() {
                         )}
                       </div>
                       <div className="space-y-0.5">
-                        {/* Starting 11 */}
-                        {finalLineup.slice(0, 11).map((pick, idx) => {
-                          const player = getPlayerById(pick.element);
-                          if (!player) return null;
-                          const isCaptain = plannerMode === "auto" && selectedGameweek === gw.id && optimizedLineup
-                            ? captain?.element === pick.element
-                            : pick.element === captain?.element;
-                          const isViceCaptain = plannerMode === "auto" && selectedGameweek === gw.id && optimizedLineup
-                            ? viceCaptain?.element === pick.element
-                            : pick.element === viceCaptain?.element;
-                          const isTransferredIn = transferredInIds.has(pick.element);
+                        {/* Group by position: GK, DEF, MID, FWD */}
+                        {[1, 2, 3, 4].map(positionType => {
+                          const playersInPosition = finalLineup.filter(pick => {
+                            const player = getPlayerById(pick.element);
+                            return player?.element_type === positionType;
+                          });
                           
-                          return (
-                            <div
-                              key={idx}
-                              className={`px-2 py-0.5 rounded text-[10px] font-medium relative ${
-                                isTransferredIn ? 'bg-green-100 text-green-900 border-2 border-green-500 dark:bg-green-950/40 dark:text-green-300' :
-                                player.element_type === 1 ? 'bg-indigo-600 text-white' :
-                                player.element_type === 2 ? 'bg-cyan-600 text-white' :
-                                player.element_type === 3 ? 'bg-emerald-600 text-white' :
-                                'bg-red-600 text-white'
-                              }`}
-                              data-testid={`evolution-gw${gw.id}-player-${pick.element}`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="truncate">{player.web_name}</span>
-                                {isCaptain && <span className="text-[9px] font-bold flex-shrink-0 ml-1">(C)</span>}
-                                {isViceCaptain && <span className="text-[9px] font-bold flex-shrink-0 ml-1">(V)</span>}
+                          return playersInPosition.map((pick) => {
+                            const player = getPlayerById(pick.element);
+                            if (!player) return null;
+                            const isCaptain = plannerMode === "auto" && selectedGameweek === gw.id && optimizedLineup
+                              ? captain?.element === pick.element
+                              : pick.element === captain?.element;
+                            const isViceCaptain = plannerMode === "auto" && selectedGameweek === gw.id && optimizedLineup
+                              ? viceCaptain?.element === pick.element
+                              : pick.element === viceCaptain?.element;
+                            const isTransferredIn = transferredInIds.has(pick.element);
+                            
+                            return (
+                              <div
+                                key={pick.element}
+                                className={`px-2 py-0.5 rounded text-[10px] font-medium relative ${
+                                  isTransferredIn ? 'bg-green-100 text-green-900 border-2 border-green-500 dark:bg-green-950/40 dark:text-green-300' :
+                                  player.element_type === 1 ? 'bg-indigo-600 text-white' :
+                                  player.element_type === 2 ? 'bg-cyan-600 text-white' :
+                                  player.element_type === 3 ? 'bg-emerald-600 text-white' :
+                                  'bg-red-600 text-white'
+                                }`}
+                                data-testid={`evolution-gw${gw.id}-player-${pick.element}`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <span className="truncate">{player.web_name}</span>
+                                  {isCaptain && <span className="text-[9px] font-bold flex-shrink-0 ml-1">(C)</span>}
+                                  {isViceCaptain && <span className="text-[9px] font-bold flex-shrink-0 ml-1">(V)</span>}
+                                </div>
                               </div>
-                            </div>
-                          );
-                        })}
-                        {/* Bench spacing */}
-                        <div className="my-1 py-1"></div>
-                        {/* Bench */}
-                        {finalLineup.slice(11, 15).map((pick, idx) => {
-                          const player = getPlayerById(pick.element);
-                          if (!player) return null;
-                          const isTransferredIn = transferredInIds.has(pick.element);
-                          
-                          return (
-                            <div
-                              key={idx + 11}
-                              className={`px-2 py-0.5 rounded text-[10px] font-medium opacity-70 ${
-                                isTransferredIn ? 'bg-green-100 text-green-900 border-2 border-green-500 dark:bg-green-950/40 dark:text-green-300' :
-                                player.element_type === 1 ? 'bg-indigo-600 text-white' :
-                                player.element_type === 2 ? 'bg-cyan-600 text-white' :
-                                player.element_type === 3 ? 'bg-emerald-600 text-white' :
-                                'bg-red-600 text-white'
-                              }`}
-                              data-testid={`evolution-gw${gw.id}-bench-${pick.element}`}
-                            >
-                              <span className="truncate">{player.web_name}</span>
-                            </div>
-                          );
+                            );
+                          });
                         })}
                       </div>
                     </div>
