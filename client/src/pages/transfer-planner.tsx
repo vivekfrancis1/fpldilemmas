@@ -5923,7 +5923,7 @@ export default function TransferPlanner() {
                             }
                             
                             return (
-                              <div key={pick.element} className={`flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-player-${player.id}`}>
+                              <div key={pick.element} className={`flex flex-col items-center w-[22vw] sm:w-32 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
                                   {/* Action Buttons Popup */}
                                   {selectedPlayer === pick.element && (
@@ -6051,16 +6051,16 @@ export default function TransferPlanner() {
                                         <path d="M 307 59 L 310 68 L 320 68 L 312 74 L 315 83 L 307 77 L 299 83 L 302 74 L 294 68 L 304 68 Z" fill="white" />
                                       </g>
                                     )}
-                                    <text x="202" y="112" fontSize="clamp(18px, 4vw, 32px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                    <text x="202" y="165" fontSize="clamp(20px, 4.2vw, 34px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                    <text x="202" y="218" fontSize="clamp(22px, 4.5vw, 38px)" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                    <text x="202" y="112" fontSize="clamp(24px, 5vw, 32px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                    <text x="202" y="165" fontSize="clamp(28px, 5.5vw, 34px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                    <text x="202" y="218" fontSize="clamp(44px, 8vw, 52px)" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                       {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                       {pick.is_captain && projectedPoints !== null && (
-                                        <tspan fontSize="clamp(14px, 3vw, 24px)" dx="5">({(projectedPoints * 2).toFixed(1)})</tspan>
+                                        <tspan fontSize="clamp(28px, 5vw, 32px)" dx="5">({(projectedPoints * 2).toFixed(1)})</tspan>
                                       )}
                                     </text>
                                     {fixture && (
-                                      <text x="202" y="268" fontSize="clamp(16px, 3.5vw, 30px)" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                      <text x="202" y="268" fontSize="clamp(22px, 4.5vw, 30px)" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                                     )}
                                   </svg>
                                 </div>
@@ -6150,7 +6150,7 @@ export default function TransferPlanner() {
                       }
                       
                       return (
-                        <div key={pick.element} className={`flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-bench-${player.id}`}>
+                        <div key={pick.element} className={`flex flex-col items-center w-[22vw] sm:w-32 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-bench-${player.id}`}>
                           <div className="relative w-full opacity-90">
                             {/* Action Buttons Popup */}
                             {selectedPlayer === pick.element && (
@@ -6273,11 +6273,11 @@ export default function TransferPlanner() {
                                   <path d="M 307 59 L 310 68 L 320 68 L 312 74 L 315 83 L 307 77 L 299 83 L 302 74 L 294 68 L 304 68 Z" fill="white" />
                                 </g>
                               )}
-                              <text x="202" y="112" fontSize="clamp(18px, 4vw, 32px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                              <text x="202" y="165" fontSize="clamp(20px, 4.2vw, 34px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                              <text x="202" y="218" fontSize="clamp(22px, 4.5vw, 38px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
+                              <text x="202" y="112" fontSize="clamp(24px, 5vw, 32px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                              <text x="202" y="165" fontSize="clamp(28px, 5.5vw, 34px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                              <text x="202" y="218" fontSize="clamp(44px, 8vw, 52px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
                               {fixture && (
-                                <text x="202" y="268" fontSize="clamp(16px, 3.5vw, 30px)" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                <text x="202" y="268" fontSize="clamp(22px, 4.5vw, 30px)" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                               )}
                             </svg>
                           </div>
@@ -6933,7 +6933,7 @@ export default function TransferPlanner() {
                                 const textColor = hexTextColor === '#000000' ? 'text-black' : 'text-white';
 
                                 return (
-                                  <div key={player.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44" data-testid={`auto-pitch-player-${player.element}`}>
+                                  <div key={player.element} className="flex flex-col items-center w-[22vw] sm:w-32 md:w-36 lg:w-44" data-testid={`auto-pitch-player-${player.element}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 403 302" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-auto-${player.element}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
@@ -6943,13 +6943,13 @@ export default function TransferPlanner() {
                                         {player.isCaptain && (<g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>)}
                                         {player.isViceCaptain && (<g><rect x="96" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="115" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>)}
                                         {pick && isPlayerTransferredIn(pick) && (<g><circle cx="295" cy="70" r="17" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="295" y="78" fontSize="16" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
-                                        <text x="202" y="108" fontSize="clamp(16px, 3.5vw, 28px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}</text>
-                                        <text x="202" y="150" fontSize="clamp(18px, 4vw, 32px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.web_name}</text>
-                                        <text x="202" y="225" fontSize="clamp(26px, 6vw, 52px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.projectedPoints.toFixed(1)}</text>
+                                        <text x="202" y="108" fontSize="clamp(24px, 5vw, 28px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}</text>
+                                        <text x="202" y="150" fontSize="clamp(28px, 5.5vw, 32px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.web_name}</text>
+                                        <text x="202" y="225" fontSize="clamp(44px, 8vw, 52px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.projectedPoints.toFixed(1)}</text>
                                         {(() => {
                                           const fixture = getPlayerFixture(player.element, selectedGameweek);
                                           if (fixture) {
-                                            return <text x="202" y="270" fontSize="clamp(14px, 3vw, 24px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>;
+                                            return <text x="202" y="270" fontSize="clamp(22px, 4.5vw, 30px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>;
                                           }
                                           return null;
                                         })()}
@@ -7006,7 +7006,7 @@ export default function TransferPlanner() {
                             const textColor = hexTextColor === '#000000' ? 'text-black' : 'text-white';
 
                             return (
-                              <div key={player.element} className="flex flex-col items-center w-[18vw] sm:w-28 md:w-36 lg:w-44 opacity-90" data-testid={`auto-pitch-bench-${player.element}`}>
+                              <div key={player.element} className="flex flex-col items-center w-[22vw] sm:w-32 md:w-36 lg:w-44 opacity-90" data-testid={`auto-pitch-bench-${player.element}`}>
                                 <div className="relative w-full">
                                   <svg viewBox="0 0 403 302" className="w-full drop-shadow-lg">
                                     <defs><clipPath id={`jersey-bench-auto-${player.element}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
@@ -7016,13 +7016,13 @@ export default function TransferPlanner() {
                                     {pick?.is_captain && (<g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>)}
                                     {pick?.is_vice_captain && (<g><rect x="96" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="115" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>)}
                                     {pick && isPlayerTransferredIn(pick) && (<g><circle cx="295" cy="70" r="17" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="295" y="78" fontSize="16" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
-                                    <text x="202" y="108" fontSize="clamp(16px, 3.5vw, 28px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}</text>
-                                    <text x="202" y="150" fontSize="clamp(18px, 4vw, 32px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.web_name}</text>
-                                    <text x="202" y="225" fontSize="clamp(26px, 6vw, 52px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.projectedPoints.toFixed(1)}</text>
+                                    <text x="202" y="108" fontSize="clamp(24px, 5vw, 28px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{bootstrapData?.teams.find(t => t.id === fullPlayer.team)?.short_name || ''}</text>
+                                    <text x="202" y="150" fontSize="clamp(28px, 5.5vw, 32px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.web_name}</text>
+                                    <text x="202" y="225" fontSize="clamp(44px, 8vw, 52px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>{player.projectedPoints.toFixed(1)}</text>
                                     {(() => {
                                       const fixture = getPlayerFixture(player.element, selectedGameweek);
                                       if (fixture) {
-                                        return <text x="202" y="270" fontSize="clamp(14px, 3vw, 24px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>;
+                                        return <text x="202" y="270" fontSize="clamp(22px, 4.5vw, 30px)" fontWeight="bold" textAnchor="middle" fill={hexTextColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>;
                                       }
                                       return null;
                                     })()}
