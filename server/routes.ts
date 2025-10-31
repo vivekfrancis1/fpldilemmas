@@ -926,9 +926,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Invalid FPL credentials' });
       }
 
-      // Extract cookies from response
-      const setCookieHeader = loginResponse.headers.get('set-cookie') || '';
-      const cookies = setCookieHeader;
+      // Extract ALL cookies from response (FPL sends multiple: pl_profile, sessionid, etc.)
+      let cookies: string;
+      if (typeof loginResponse.headers.getSetCookie === 'function') {
+        // Modern fetch API with getSetCookie() support
+        const cookieArray = loginResponse.headers.getSetCookie();
+        cookies = cookieArray.map(cookie => cookie.split(';')[0]).join('; ');
+      } else {
+        // Fallback: try to get all cookies (may not work in all environments)
+        cookies = loginResponse.headers.get('set-cookie') || '';
+      }
+
+      if (!cookies) {
+        return res.status(500).json({ error: 'Failed to extract authentication cookies from FPL' });
+      }
 
       // Get manager ID using the cookies
       const meResponse = await fetch('https://fantasy.premierleague.com/api/me/', {
