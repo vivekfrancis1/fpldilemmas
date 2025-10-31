@@ -6313,9 +6313,9 @@ export default function TransferPlanner() {
         </Card>
       )}
 
-      {/* Multi-Gameweek Evolution View */}
-      {searchedId && teamData && activeDraft !== "Base" && (
-        <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-background">
+      {/* Auto Team Selection - Only shown when Auto mode is selected */}
+      {searchedId && teamData && plannerMode === "auto" && (
+        <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white dark:from-purple-950/20 dark:to-background">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
