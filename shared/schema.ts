@@ -279,6 +279,10 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   role: varchar("role").notNull().default("user"), // "admin" or "user"
   profileImageUrl: varchar("profile_image_url"),
+  fplEmail: varchar("fpl_email"), // FPL account email
+  fplManagerId: integer("fpl_manager_id"), // FPL manager ID
+  fplSessionCookies: text("fpl_session_cookies"), // Stored as JSON string
+  fplCookiesExpiry: timestamp("fpl_cookies_expiry"), // When cookies expire
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
