@@ -1046,7 +1046,7 @@ export default function MyDashboard() {
                   {teamView === "pitch" && (
                     <div className="space-y-4">
                       {/* Pitch */}
-                      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-2 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
+                      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
                         {/* Pitch Lines and Graphics */}
                         <div className="absolute inset-0 opacity-30 pointer-events-none">
                           {/* Center Line - Horizontal */}
@@ -1100,7 +1100,7 @@ export default function MyDashboard() {
                           <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
                         </div>
 
-                      <div className="relative space-y-2 sm:space-y-6 md:space-y-8 lg:space-y-10">
+                      <div className="relative space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-10">
                         {/* Goalkeepers */}
                         {(() => {
                           const gks = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
@@ -1110,7 +1110,7 @@ export default function MyDashboard() {
                             });
                           
                           return gks.length > 0 && (
-                            <div className="flex justify-center gap-1 sm:gap-2">
+                            <div className="flex justify-center gap-0.5">
                               {gks.map(pick => {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
@@ -1120,7 +1120,7 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-[24vw] sm:w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       {/* Jersey-Shaped Card */}
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
@@ -1172,17 +1172,17 @@ export default function MyDashboard() {
                                         )}
                                         
                                         {/* Team Name */}
-                                        <text x="140" y="68" fontSize="clamp(28px, 5.5vw, 22px)" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {playerTeam?.short_name || 'UNK'}
                                         </text>
                                         
                                         {/* Player Name */}
-                                        <text x="140" y="100" fontSize="clamp(32px, 6vw, 22px)" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {player.web_name}
                                         </text>
                                         
                                         {/* Points */}
-                                        <text x="140" y="140" fontSize="clamp(52px, 9vw, 27px)" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </text>
                                         
@@ -1204,7 +1204,7 @@ export default function MyDashboard() {
                                               <text 
                                                 x={86 + (idx * 53)} 
                                                 y="170" 
-                                                fontSize="clamp(26px, 5vw, 14px)" 
+                                                fontSize="14" 
                                                 fontWeight="bold" 
                                                 textAnchor="middle" 
                                                 fill="white"
@@ -1232,7 +1232,7 @@ export default function MyDashboard() {
                             });
                           
                           return defs.length > 0 && (
-                            <div className="flex justify-center flex-wrap gap-1 sm:gap-2">
+                            <div className="flex justify-center gap-0.5">
                               {defs.map(pick => {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
@@ -1242,7 +1242,7 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-[24vw] sm:w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-clip-def-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -1252,12 +1252,12 @@ export default function MyDashboard() {
                                         {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
                                         {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
                                         {player.in_dreamteam && (<g><circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" /></g>)}
-                                        <text x="140" y="68" fontSize="clamp(28px, 5.5vw, 22px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                        <text x="140" y="100" fontSize="clamp(32px, 6vw, 22px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                        <text x="140" y="140" fontSize="clamp(52px, 9vw, 27px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
+                                        <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                        <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                        <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
                                         {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => {
                                           const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                          return (<g key={idx}><rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} /><text x={86 + (idx * 53)} y="170" fontSize="clamp(26px, 5vw, 14px)" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
+                                          return (<g key={idx}><rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} /><text x={86 + (idx * 53)} y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
                                         })}
                                       </svg>
                                     </div>
@@ -1277,7 +1277,7 @@ export default function MyDashboard() {
                             });
                           
                           return mids.length > 0 && (
-                            <div className="flex justify-center flex-wrap gap-1 sm:gap-2">
+                            <div className="flex justify-center gap-0.5">
                               {mids.map(pick => {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
@@ -1287,7 +1287,7 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-[24vw] sm:w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-clip-mid-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -1297,12 +1297,12 @@ export default function MyDashboard() {
                                         {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
                                         {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
                                         {player.in_dreamteam && (<g><circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" /></g>)}
-                                        <text x="140" y="68" fontSize="clamp(28px, 5.5vw, 22px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                        <text x="140" y="100" fontSize="clamp(32px, 6vw, 22px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                        <text x="140" y="140" fontSize="clamp(52px, 9vw, 27px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
+                                        <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                        <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                        <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
                                         {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => {
                                           const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                          return (<g key={idx}><rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} /><text x={86 + (idx * 53)} y="170" fontSize="clamp(26px, 5vw, 14px)" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
+                                          return (<g key={idx}><rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} /><text x={86 + (idx * 53)} y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
                                         })}
                                       </svg>
                                     </div>
@@ -1322,7 +1322,7 @@ export default function MyDashboard() {
                             });
                           
                           return fwds.length > 0 && (
-                            <div className="flex justify-center flex-wrap gap-1 sm:gap-2">
+                            <div className="flex justify-center gap-0.5">
                               {fwds.map(pick => {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
@@ -1332,7 +1332,7 @@ export default function MyDashboard() {
                                 const textColor = getTextColor(jerseyColor);
                                 
                                 return (
-                                  <div key={pick.element} className="flex flex-col items-center w-[24vw] sm:w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
+                                  <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative w-full">
                                       <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
                                         <defs><clipPath id={`jersey-clip-fwd-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -1342,12 +1342,12 @@ export default function MyDashboard() {
                                         {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
                                         {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
                                         {player.in_dreamteam && (<g><circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" /></g>)}
-                                        <text x="140" y="68" fontSize="clamp(28px, 5.5vw, 22px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                        <text x="140" y="100" fontSize="clamp(32px, 6vw, 22px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                        <text x="140" y="140" fontSize="clamp(52px, 9vw, 27px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
+                                        <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                        <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                        <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
                                         {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => {
                                           const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                          return (<g key={idx}><rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} /><text x={86 + (idx * 53)} y="170" fontSize="clamp(26px, 5vw, 14px)" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
+                                          return (<g key={idx}><rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} /><text x={86 + (idx * 53)} y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
                                         })}
                                       </svg>
                                     </div>
@@ -1360,9 +1360,9 @@ export default function MyDashboard() {
                       </div>
 
                       {/* Bench Display */}
-                      <div className="mt-4 sm:mt-6 pt-2 sm:pt-6 border-t-2 border-white/30">
-                        <h3 className="text-white font-bold text-center mb-2 sm:mb-4">BENCH</h3>
-                        <div className="flex justify-center flex-wrap gap-1 sm:gap-2">
+                      <div className="mt-6 pt-6 border-t-2 border-white/30">
+                        <h3 className="text-white font-bold text-center mb-4">BENCH</h3>
+                        <div className="flex justify-center gap-0.5">
                           {sortBenchPlayers(teamData.picks.filter(pick => pick.position > 11)).map((pick, index) => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
@@ -1372,7 +1372,7 @@ export default function MyDashboard() {
                             const textColor = getTextColor(jerseyColor);
                             
                             return (
-                              <div key={pick.element} className="flex flex-col items-center w-[24vw] sm:w-[19.5%] opacity-90" data-testid={`pitch-bench-${player.id}`}>
+                              <div key={pick.element} className="flex flex-col items-center w-[19.5%] opacity-90" data-testid={`pitch-bench-${player.id}`}>
                                 <div className="relative w-full">
                                   <svg viewBox="0 0 280 190" className="w-full drop-shadow-lg">
                                     <defs><clipPath id={`jersey-clip-bench-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
@@ -1380,12 +1380,12 @@ export default function MyDashboard() {
                                     <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
                                     <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
                                     {player.in_dreamteam && (<g><circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" /></g>)}
-                                    <text x="140" y="68" fontSize="clamp(28px, 5.5vw, 22px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                    <text x="140" y="100" fontSize="clamp(32px, 6vw, 22px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                    <text x="140" y="140" fontSize="clamp(52px, 9vw, 27px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, false)}</text>
+                                    <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                    <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                    <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, false)}</text>
                                     {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => {
                                       const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                      return (<g key={idx}><rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} /><text x={86 + (idx * 53)} y="170" fontSize="clamp(26px, 5vw, 14px)" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
+                                      return (<g key={idx}><rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} /><text x={86 + (idx * 53)} y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
                                     })}
                                   </svg>
                                 </div>
