@@ -4886,7 +4886,7 @@ export default function TransferPlanner() {
             <CardTitle className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-green-600" />
-                {activeDraft === "Base" ? "Base Draft Team Summary" : `Draft ${activeDraft} Team Summary`}
+                {activeDraft === "Base" ? "Team Summary - Base Draft" : `Team Summary - Draft ${activeDraft} (Manual lineup)`}
               </div>
               <div className="flex gap-1 md:gap-2">
                 {(completedTransfers.length > 0 || transferredOutPlayers.length > 0) && (
@@ -5189,7 +5189,7 @@ export default function TransferPlanner() {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-600" />
-                {activeDraft === "Base" ? "Base Draft Manual Team Selection" : `Draft ${activeDraft} Manual Team Selection`}
+                {activeDraft === "Base" ? "Team Selection - Base Draft (Manual lineup)" : `Team Selection - Draft ${activeDraft} (Manual lineup)`}
               </div>
               {(() => {
                 const currentChip = plannedChips[selectedGameweek];
@@ -7065,7 +7065,7 @@ export default function TransferPlanner() {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Calendar className="h-5 w-5 text-indigo-600" />
-                Team Evolution - {activeDraft === "Base" ? "Base Draft" : `Draft ${activeDraft}`} ({plannerMode === "manual" ? "Manual" : "Auto"})
+                {activeDraft === "Base" ? `Team Evolution - Base Draft (${plannerMode === "manual" ? "Manual" : "Auto"} lineup)` : `Team Evolution - Draft ${activeDraft} (${plannerMode === "manual" ? "Manual" : "Auto"} lineup)`}
               </div>
               {(() => {
                 const currentChip = plannedChips[selectedGameweek];
