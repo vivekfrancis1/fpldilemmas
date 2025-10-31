@@ -265,7 +265,7 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
                             const fixtures = getNextFixtures(player.team_id, 1);
                             if (fixtures.length > 0) {
                               const fixture = fixtures[0];
-                              return <text x="202" y="268" fontSize="clamp(20px, 3.5vw, 30px)" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>;
+                              return <text x="202" y="268" className="text-[38px] sm:text-[30px]" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>;
                             }
                             return null;
                           })()}
