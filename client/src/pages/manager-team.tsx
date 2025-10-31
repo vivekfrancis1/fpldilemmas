@@ -233,11 +233,12 @@ export default function ManagerTeam() {
     return [1, 2, 3];
   };
 
-  // Filter manager history to only show completed gameweeks 1-3
-  const filteredManagerHistory = managerHistory?.current?.filter((gw: HistoryEntry) => {
-    const completedGameweeks = getCompletedGameweeks();
-    return completedGameweeks.includes(gw.event);
-  });
+  // Helper function to get chip name for a gameweek
+  const getChipForGameweek = (gameweek: number) => {
+    if (!managerHistory?.chips) return null;
+    const chip = managerHistory.chips.find((c: any) => c.event === gameweek);
+    return chip ? chip.name : null;
+  };
 
   // Helper function to get player data from bootstrap
   const getPlayerData = (playerId: number) => {
@@ -976,7 +977,7 @@ export default function ManagerTeam() {
             <CardContent>
               {historyLoading ? (
                 <Skeleton className="h-64 w-full" />
-              ) : filteredManagerHistory && filteredManagerHistory.length > 0 ? (
+              ) : managerHistory?.current && managerHistory.current.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -987,20 +988,33 @@ export default function ManagerTeam() {
                       <TableHead>Transfers</TableHead>
                       <TableHead>Cost</TableHead>
                       <TableHead>Bench</TableHead>
+                      <TableHead>Chip</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredManagerHistory.map((gw) => (
-                      <TableRow key={gw.event}>
-                        <TableCell className="font-medium">{gw.event}</TableCell>
-                        <TableCell>{gw.points}</TableCell>
-                        <TableCell>{gw.total_points}</TableCell>
-                        <TableCell>#{gw.overall_rank?.toLocaleString()}</TableCell>
-                        <TableCell>{gw.event_transfers}</TableCell>
-                        <TableCell>-{gw.event_transfers_cost}</TableCell>
-                        <TableCell>{gw.points_on_bench}</TableCell>
-                      </TableRow>
-                    ))}
+                    {managerHistory.current.map((gw) => {
+                      const chipName = getChipForGameweek(gw.event);
+                      return (
+                        <TableRow key={gw.event}>
+                          <TableCell className="font-medium">{gw.event}</TableCell>
+                          <TableCell>{gw.points}</TableCell>
+                          <TableCell>{gw.total_points}</TableCell>
+                          <TableCell>#{gw.overall_rank?.toLocaleString()}</TableCell>
+                          <TableCell>{gw.event_transfers}</TableCell>
+                          <TableCell>-{gw.event_transfers_cost}</TableCell>
+                          <TableCell>{gw.points_on_bench}</TableCell>
+                          <TableCell>
+                            {chipName ? (
+                              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
+                                {chipName}
+                              </Badge>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               ) : (
