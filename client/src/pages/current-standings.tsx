@@ -68,13 +68,8 @@ export default function CurrentStandings() {
       }
       const data = await response.json();
       
-      // Calculate AGR and AGAR as per-game averages
-      // AGR = 0.5 * (Goals For + xGF) per game, AGAR = 0.5 * (Goals Against + xGA) per game
-      return data.map((team: any) => ({
-        ...team,
-        adjustedGoalRate: team.played > 0 ? 0.5 * (team.goalsFor + team.expectedGoalsFor) / team.played : 0,
-        adjustedGoalsAgainstRate: team.played > 0 ? 0.5 * (team.goalsAgainst + team.expectedGoalsAgainst) / team.played : 0
-      }));
+      // Return raw data, AGR and AGAR will be calculated based on statsView
+      return data;
     },
   });
 
@@ -94,8 +89,18 @@ export default function CurrentStandings() {
   };
 
   // Transform data based on stats view (totals vs per-game)
-  // Note: AGR and AGAR are already calculated as per-game values
   const displayData = (standingsData || []).map(team => {
+    // Calculate AGR and AGAR based on statsView
+    // For totals: AGR = 0.5 * (Goals For + xGF)
+    // For per-game: AGR = 0.5 * (Goals For + xGF) / played
+    const adjustedGoalRate = statsView === 'per-game' && team.played > 0
+      ? 0.5 * (team.goalsFor + team.expectedGoalsFor) / team.played
+      : 0.5 * (team.goalsFor + team.expectedGoalsFor);
+    
+    const adjustedGoalsAgainstRate = statsView === 'per-game' && team.played > 0
+      ? 0.5 * (team.goalsAgainst + team.expectedGoalsAgainst) / team.played
+      : 0.5 * (team.goalsAgainst + team.expectedGoalsAgainst);
+    
     if (statsView === 'per-game' && team.played > 0) {
       return {
         ...team,
@@ -114,10 +119,15 @@ export default function CurrentStandings() {
         expectedGoalsAgainst: team.expectedGoalsAgainst / team.played,
         tackles: team.tackles / team.played,
         defensiveActions: team.defensiveActions / team.played,
-        // AGR and AGAR are already per-game, no need to divide again
+        adjustedGoalRate,
+        adjustedGoalsAgainstRate,
       };
     }
-    return team;
+    return {
+      ...team,
+      adjustedGoalRate,
+      adjustedGoalsAgainstRate,
+    };
   });
 
   const sortedData = [...displayData].sort((a, b) => {
@@ -456,8 +466,22 @@ export default function CurrentStandings() {
                     {/* Expected Goals - After Points */}
                     <SortableHeader field="expectedGoalsFor" tooltip="Expected Goals For - statistical model of scoring chances" hideOnMobile={true}>xGF</SortableHeader>
                     <SortableHeader field="expectedGoalsAgainst" tooltip="Expected Goals Against - statistical model of chances conceded" hideOnMobile={true}>xGA</SortableHeader>
-                    <SortableHeader field="adjustedGoalRate" tooltip="Adjusted Goal Rate: 0.5 × (Goals For + xGF) per game" hideOnMobile={true}>AGR</SortableHeader>
-                    <SortableHeader field="adjustedGoalsAgainstRate" tooltip="Adjusted Goals Against Rate: 0.5 × (Goals Against + xGA) per game" hideOnMobile={true}>AGAR</SortableHeader>
+                    <SortableHeader 
+                      field="adjustedGoalRate" 
+                      tooltip={statsView === 'per-game' 
+                        ? "Adjusted Goal Rate: 0.5 × (Goals For + xGF) per game" 
+                        : "Adjusted Goal Rate: 0.5 × (Goals For + xGF) season total"} 
+                      hideOnMobile={true}>
+                      AGR
+                    </SortableHeader>
+                    <SortableHeader 
+                      field="adjustedGoalsAgainstRate" 
+                      tooltip={statsView === 'per-game'
+                        ? "Adjusted Goals Against Rate: 0.5 × (Goals Against + xGA) per game"
+                        : "Adjusted Goals Against Rate: 0.5 × (Goals Against + xGA) season total"} 
+                      hideOnMobile={true}>
+                      AGAR
+                    </SortableHeader>
                     
                     {/* Defensive Stats - After xGA */}
                     <SortableHeader field="tackles" tooltip="Total tackles made by the team" hideOnMobile={true}>T</SortableHeader>
