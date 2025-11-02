@@ -173,8 +173,9 @@ export default function ProjectedPoints() {
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<number | null>(null);
   const [plannerMode, setPlannerMode] = useState<"auto" | "manual">("manual");
-  const [optimizedLineup, setOptimizedLineup] = useState<OptimizedLineup | null>(null);
+  const [optimizedLineups, setOptimizedLineups] = useState<Map<number, OptimizedLineup>>(new Map());
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
+  const [isOptimizing, setIsOptimizing] = useState(false);
   
   const { toast } = useToast();
 
@@ -239,42 +240,59 @@ export default function ProjectedPoints() {
     }
   }, [bootstrapData, selectedGameweek]);
 
-  // Auto-optimize mutation
-  const optimizeMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedGameweek || !manualLineup.length) {
-        throw new Error("No lineup or gameweek selected");
-      }
-
-      const response = await fetch("/api/optimize-lineup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          picks: manualLineup,
-          gameweek: selectedGameweek
-        })
+  // Auto-optimize for all 6 gameweeks
+  const optimizeAllGameweeks = async () => {
+    const nextGWs = getNextGameweeks();
+    if (nextGWs.length === 0 || manualLineup.length === 0) {
+      toast({
+        title: "Cannot Optimize",
+        description: "No gameweeks or lineup available",
+        variant: "destructive"
       });
+      return;
+    }
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Optimization failed");
+    setIsOptimizing(true);
+    const newOptimizedLineups = new Map<number, OptimizedLineup>();
+
+    try {
+      // Optimize for each gameweek
+      for (const gw of nextGWs) {
+        const response = await fetch("/api/optimize-lineup", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            picks: manualLineup,
+            gameweek: gw.id
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || `Optimization failed for GW${gw.id}`);
+        }
+
+        const data: OptimizedLineup = await response.json();
+        newOptimizedLineups.set(gw.id, data);
       }
 
-      return response.json();
-    },
-    onSuccess: (data: OptimizedLineup) => {
-      setOptimizedLineup(data);
-    },
-    onError: (error: Error) => {
+      setOptimizedLineups(newOptimizedLineups);
+      toast({
+        title: "Optimization Complete",
+        description: `Optimized lineups for ${nextGWs.length} gameweeks`,
+      });
+    } catch (error: any) {
       toast({
         title: "Optimization Failed",
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsOptimizing(false);
     }
-  });
+  };
 
   // Get next 6 gameweeks
   const getNextGameweeks = () => {
@@ -362,10 +380,10 @@ export default function ProjectedPoints() {
 
   // Trigger auto-optimization when switching to auto mode
   useEffect(() => {
-    if (plannerMode === "auto" && selectedGameweek && manualLineup.length > 0) {
-      optimizeMutation.mutate();
+    if (plannerMode === "auto" && manualLineup.length > 0 && optimizedLineups.size === 0) {
+      optimizeAllGameweeks();
     }
-  }, [plannerMode, selectedGameweek]);
+  }, [plannerMode]);
 
   // Calculate total projected points for all 6 gameweeks
   const calculateTotal6GWProjectedPoints = (): number => {
@@ -384,12 +402,16 @@ export default function ProjectedPoints() {
         });
       });
     } else {
+      // For auto mode, sum up the optimized points for each gameweek
       nextGWs.forEach(gw => {
-        optimizedLineup?.starting11.forEach(pick => {
-          const points = getPlayerProjectedPoints(pick.element, gw.id);
-          const multiplier = pick.isCaptain ? 2 : 1;
-          total += points * multiplier;
-        });
+        const gwLineup = optimizedLineups.get(gw.id);
+        if (gwLineup) {
+          gwLineup.starting11.forEach(pick => {
+            const points = getPlayerProjectedPoints(pick.element, gw.id);
+            const multiplier = pick.isCaptain ? 2 : 1;
+            total += points * multiplier;
+          });
+        }
       });
     }
     
@@ -468,6 +490,69 @@ export default function ProjectedPoints() {
         <TableCell className="text-center">
           <span className="font-bold text-purple-600">
             {projections.reduce((sum, p) => sum + p.points, 0).toFixed(1)}
+          </span>
+        </TableCell>
+      </TableRow>
+    );
+  };
+
+  // Render player row for auto mode (shows only selected gameweek)
+  const renderPlayerRowAutoMode = (pick: any, idx: number | string, gameweek: number) => {
+    const player = getPlayerById(pick.element);
+    if (!player) return null;
+
+    const position = getPositionName(player);
+    const teamName = getTeamName(player);
+    const points = getPlayerProjectedPoints(player.id, gameweek);
+    
+    const isStarting = !pick.benchPosition;
+    const isCaptain = pick.isCaptain;
+    const isViceCaptain = pick.isViceCaptain;
+
+    return (
+      <TableRow key={idx} className={!isStarting ? "bg-gray-50" : ""}>
+        <TableCell className="font-medium">
+          <div className="flex items-center gap-2">
+            <div>
+              <div className="font-semibold text-gray-900">{player.web_name}</div>
+              <div className="flex items-center gap-1.5 mt-1">
+                <Badge className={`text-xs px-1 py-0 h-4 ${
+                  position === 'GKP' ? 'bg-yellow-100 text-yellow-800' :
+                  position === 'DEF' ? 'bg-green-100 text-green-800' :
+                  position === 'MID' ? 'bg-blue-100 text-blue-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {position}
+                </Badge>
+                <Badge variant="outline" className="text-xs px-1 py-0 h-4 text-gray-600">
+                  {teamName}
+                </Badge>
+                {!isStarting && (
+                  <Badge variant="outline" className="text-xs px-1 py-0 h-4 text-orange-600 border-orange-300">
+                    Bench
+                  </Badge>
+                )}
+              </div>
+            </div>
+            {isCaptain && (
+              <Badge className="bg-yellow-500 text-white text-xs px-1.5 py-0.5 h-5 flex items-center gap-1">
+                <Crown className="h-3 w-3" />C
+              </Badge>
+            )}
+            {isViceCaptain && (
+              <Badge variant="outline" className="text-xs px-1.5 py-0.5 h-5 border-yellow-500 text-yellow-600 flex items-center gap-1">
+                <Crown className="h-3 w-3" />V
+              </Badge>
+            )}
+            <PlayerAvailabilityBadge player={player} />
+          </div>
+        </TableCell>
+        <TableCell className="text-center font-medium text-gray-900">
+          £{(player.now_cost / 10).toFixed(1)}m
+        </TableCell>
+        <TableCell className="text-center">
+          <span className="font-bold text-purple-600">
+            {points.toFixed(1)}
           </span>
         </TableCell>
       </TableRow>
@@ -629,20 +714,21 @@ export default function ProjectedPoints() {
               {nextGameweeks.map(gw => {
                 // Calculate total for this gameweek
                 let gwTotal = 0;
-                const lineup = plannerMode === "manual" ? manualLineup : (optimizedLineup?.starting11 || []);
                 
                 if (plannerMode === "manual") {
-                  const starting11 = lineup.filter((p: any) => p.position <= 11);
+                  const starting11 = manualLineup.filter((p: any) => p.position <= 11);
                   starting11.forEach((pick: any) => {
                     const points = getPlayerProjectedPoints(pick.element, gw.id);
                     const multiplier = pick.is_captain ? 2 : 1;
                     gwTotal += points * multiplier;
                   });
                 } else {
-                  optimizedLineup?.starting11.forEach(pick => {
-                    // Recalculate for this GW
+                  // For auto mode, use the gameweek-specific optimized lineup
+                  const gwLineup = optimizedLineups.get(gw.id);
+                  gwLineup?.starting11.forEach(pick => {
                     const points = getPlayerProjectedPoints(pick.element, gw.id);
-                    gwTotal += points;
+                    const multiplier = pick.isCaptain ? 2 : 1;
+                    gwTotal += points * multiplier;
                   });
                 }
 
@@ -672,8 +758,11 @@ export default function ProjectedPoints() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Current Team Lineup
+              {plannerMode === "manual" ? "Current Team Lineup" : `Optimized Lineup for GW${selectedGameweek}`}
             </CardTitle>
+            {plannerMode === "auto" && isOptimizing && (
+              <div className="text-sm text-gray-500 mt-2">Optimizing lineups for all gameweeks...</div>
+            )}
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -682,12 +771,18 @@ export default function ProjectedPoints() {
                   <TableRow>
                     <TableHead>Player</TableHead>
                     <TableHead className="text-center">Price</TableHead>
-                    {nextGameweeks.map(gw => (
-                      <TableHead key={gw.id} className="text-center">
-                        GW{gw.id}
-                      </TableHead>
-                    ))}
-                    <TableHead className="text-center">Total (6GW)</TableHead>
+                    {plannerMode === "manual" ? (
+                      <>
+                        {nextGameweeks.map(gw => (
+                          <TableHead key={gw.id} className="text-center">
+                            GW{gw.id}
+                          </TableHead>
+                        ))}
+                        <TableHead className="text-center">Total (6GW)</TableHead>
+                      </>
+                    ) : (
+                      <TableHead className="text-center">GW{selectedGameweek} Pts</TableHead>
+                    )}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -722,10 +817,11 @@ export default function ProjectedPoints() {
                           </>
                         );
                       })()
-                    : optimizedLineup
+                    : selectedGameweek && optimizedLineups.get(selectedGameweek)
                       ? (() => {
-                          const starting = optimizedLineup.starting11 || [];
-                          const bench = optimizedLineup.bench || [];
+                          const gwLineup = optimizedLineups.get(selectedGameweek)!;
+                          const starting = gwLineup.starting11 || [];
+                          const bench = gwLineup.bench || [];
                           
                           // Sort bench: goalkeeper first, then others
                           const benchSorted = [...bench].sort((a, b) => {
@@ -741,13 +837,13 @@ export default function ProjectedPoints() {
                           
                           return (
                             <>
-                              {starting.map((pick, idx) => renderPlayerRow(pick, idx))}
+                              {starting.map((pick, idx) => renderPlayerRowAutoMode(pick, idx, selectedGameweek))}
                               <TableRow>
-                                <TableCell colSpan={nextGameweeks.length + 3} className="bg-gray-100 text-center font-semibold text-gray-700 py-3">
+                                <TableCell colSpan={3} className="bg-gray-100 text-center font-semibold text-gray-700 py-3">
                                   BENCH
                                 </TableCell>
                               </TableRow>
-                              {benchSorted.map((pick, idx) => renderPlayerRow(pick, `bench-${idx}`))}
+                              {benchSorted.map((pick, idx) => renderPlayerRowAutoMode(pick, `bench-${idx}`, selectedGameweek))}
                             </>
                           );
                         })()
