@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Link2, Unlink, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/hooks/useAuth";
 
 export function FplConnectDialog() {
   const [open, setOpen] = useState(false);
@@ -22,6 +23,7 @@ export function FplConnectDialog() {
   const [fplManagerId, setFplManagerId] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
 
   // Check FPL connection status
   const { data: fplStatus } = useQuery<{
@@ -102,6 +104,11 @@ export function FplConnectDialog() {
     disconnectMutation.mutate();
   };
 
+  // Don't render the button if user is not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -177,7 +184,7 @@ export function FplConnectDialog() {
                   <li><strong>Right-click</strong> any request → Select <strong>"Copy" → "Copy as cURL"</strong></li>
                   <li>Look for <strong>-H 'x-api-authorization: Bearer ...'</strong> in the copied text</li>
                   <li>Copy everything <strong>after "Bearer "</strong> (the long token starting with eyJ...)</li>
-                  <li>Also note your Manager ID from the URL (e.g., entry/<strong>577434</strong>/event/10)</li>
+                  <li>Also note your Manager ID from the URL (e.g., entry/<strong>123456</strong>/event/10)</li>
                 </ol>
               </AlertDescription>
             </Alert>
@@ -187,7 +194,7 @@ export function FplConnectDialog() {
               <Input
                 id="fpl-manager-id"
                 type="number"
-                placeholder="e.g., 577434"
+                placeholder="Enter your Manager ID"
                 value={fplManagerId}
                 onChange={(e) => setFplManagerId(e.target.value)}
                 data-testid="input-fpl-manager-id"
@@ -202,7 +209,7 @@ export function FplConnectDialog() {
               <Input
                 id="fpl-token"
                 type="text"
-                placeholder="eyJhbGciOiJSUzI1NiIsImtpZCI6ImRlZmF1bHQifQ..."
+                placeholder="Paste your Bearer token here"
                 value={fplToken}
                 onChange={(e) => setFplToken(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleConnect()}
