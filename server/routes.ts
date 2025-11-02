@@ -912,7 +912,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create axios instance with cookie jar support
       const jar = new CookieJar();
-      const client = wrapper(axios.create({ jar }));
+      const client = wrapper(axios.create({ 
+        jar,
+        maxRedirects: 5, // Follow redirects
+        withCredentials: true
+      }));
 
       // Authenticate with FPL
       console.log('🔐 Attempting FPL login...');
@@ -924,31 +928,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }, {
         headers: {
           'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         },
-        validateStatus: (status) => status < 500, // Accept 4xx responses
-        maxRedirects: 0 // Don't follow redirects automatically
+        validateStatus: (status) => status < 500 // Accept all non-5xx responses
       });
 
       console.log('📊 FPL login response status:', loginResponse.status);
-      console.log('📊 FPL login response headers:', loginResponse.headers);
-      console.log('📊 FPL login response data:', loginResponse.data);
+      console.log('📊 FPL login final URL:', loginResponse.request?.res?.responseUrl || 'unknown');
 
-      // FPL login returns different status codes based on success
+      // Check if login was successful (should redirect to fantasy.premierleague.com)
       if (loginResponse.status >= 400) {
-        console.error('FPL login failed:', loginResponse.status, loginResponse.data);
+        console.error('FPL login failed:', loginResponse.status);
         return res.status(401).json({ error: 'Invalid FPL credentials' });
       }
 
-      // Try to get cookies from both domains
+      // Try to get cookies from all relevant domains
       const cookiesFPL = await jar.getCookies('https://fantasy.premierleague.com');
       const cookiesUsers = await jar.getCookies('https://users.premierleague.com');
+      const cookiesPL = await jar.getCookies('https://premierleague.com');
       console.log('🍪 Extracted cookies from fantasy.premierleague.com:', cookiesFPL.length);
       console.log('🍪 Extracted cookies from users.premierleague.com:', cookiesUsers.length);
+      console.log('🍪 Extracted cookies from premierleague.com:', cookiesPL.length);
       
-      const allCookies = [...cookiesFPL, ...cookiesUsers];
+      const allCookies = [...cookiesFPL, ...cookiesUsers, ...cookiesPL];
       
       if (allCookies.length === 0) {
-        console.error('❌ No cookies received from FPL');
+        console.error('❌ No cookies received from FPL after login');
+        console.error('❌ This may indicate FPL API blocking or changed login flow');
         return res.status(500).json({ error: 'Failed to extract authentication cookies from FPL' });
       }
       
