@@ -442,7 +442,7 @@ export default function ProjectedPoints() {
 
     return (
       <TableRow key={idx} className={!isStarting ? "bg-gray-50" : ""}>
-        <TableCell className="font-medium">
+        <TableCell className={`sticky left-0 z-10 font-medium min-w-[140px] sm:min-w-[180px] ${!isStarting ? 'bg-gray-50' : 'bg-white'}`}>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="min-w-0 flex-1">
               <div className="font-semibold text-gray-900 text-sm sm:text-base truncate">{player.web_name}</div>
@@ -480,13 +480,13 @@ export default function ProjectedPoints() {
             </div>
           </div>
         </TableCell>
-        <TableCell className="hidden md:table-cell text-center font-medium text-gray-900">
+        <TableCell className="text-center font-medium text-gray-900 text-xs sm:text-sm">
           £{(player.now_cost / 10).toFixed(1)}m
         </TableCell>
-        {projections.map((proj, projIdx) => (
+        {projections.map((proj) => (
           <TableCell 
             key={proj.gw} 
-            className={`text-center ${projIdx > 1 && projIdx < projections.length - 1 ? 'hidden lg:table-cell' : ''}`}
+            className="text-center"
           >
             <span className={`font-medium text-xs sm:text-sm ${
               proj.gw === selectedGameweek ? 'text-purple-600 font-bold' : 'text-gray-700'
@@ -519,7 +519,7 @@ export default function ProjectedPoints() {
 
     return (
       <TableRow key={idx} className={!isStarting ? "bg-gray-50" : ""}>
-        <TableCell className="font-medium">
+        <TableCell className={`sticky left-0 z-10 font-medium min-w-[140px] sm:min-w-[180px] ${!isStarting ? 'bg-gray-50' : 'bg-white'}`}>
           <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="min-w-0 flex-1">
               <div className="font-semibold text-gray-900 text-sm sm:text-base truncate">{player.web_name}</div>
@@ -557,7 +557,7 @@ export default function ProjectedPoints() {
             </div>
           </div>
         </TableCell>
-        <TableCell className="hidden md:table-cell text-center font-medium text-gray-900">
+        <TableCell className="text-center font-medium text-gray-900 text-xs sm:text-sm">
           £{(player.now_cost / 10).toFixed(1)}m
         </TableCell>
         <TableCell className="text-center">
@@ -777,18 +777,18 @@ export default function ProjectedPoints() {
             )}
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto -mx-6 px-6">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-xs sm:text-sm">Player</TableHead>
-                    <TableHead className="hidden md:table-cell text-center text-xs sm:text-sm">Price</TableHead>
+                    <TableHead className="sticky left-0 z-10 bg-white text-xs sm:text-sm min-w-[140px] sm:min-w-[180px]">Player</TableHead>
+                    <TableHead className="text-center text-xs sm:text-sm">Price</TableHead>
                     {plannerMode === "manual" ? (
                       <>
-                        {nextGameweeks.map((gw, idx) => (
+                        {nextGameweeks.map((gw) => (
                           <TableHead 
                             key={gw.id} 
-                            className={`text-center text-xs sm:text-sm ${idx > 1 && idx < nextGameweeks.length - 1 ? 'hidden lg:table-cell' : ''}`}
+                            className="text-center text-xs sm:text-sm"
                           >
                             GW{gw.id}
                           </TableHead>
