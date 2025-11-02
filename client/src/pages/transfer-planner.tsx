@@ -7784,36 +7784,85 @@ export default function TransferPlanner() {
           <AlertDialogHeader>
             <AlertDialogTitle>Edit Buy Price</AlertDialogTitle>
             <AlertDialogDescription>
-              Set the price you paid for this player. This affects the selling price and available budget.
+              Adjust the price you paid for this player. The sell price will be automatically calculated based on FPL rules.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Buy Price (£m):</label>
-              <Input
-                type="number"
-                step="0.1"
-                min="0"
-                max="15"
-                value={editBuyPriceValue}
-                onChange={(e) => setEditBuyPriceValue(e.target.value)}
-                className="w-32"
-                data-testid="input-buy-price"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    saveBuyPriceFromDialog();
-                  }
-                }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Current sell price: £{editBuyPriceDialog ? getSellingPrice(manualLineup.find(p => p.element === editBuyPriceDialog.playerId)!).toFixed(1) : '0.0'}m
-            </p>
+          <div className="py-4 space-y-4">
+            {editBuyPriceDialog && (() => {
+              const pick = manualLineup.find(p => p.element === editBuyPriceDialog.playerId);
+              const player = pick ? getPlayerById(pick.element) : null;
+              const currentBuyPrice = pick ? (pick.purchase_price || 0) / 10 : 0;
+              const currentMarketPrice = player ? player.now_cost / 10 : 0;
+              const currentSellPrice = pick ? getSellingPrice(pick) : 0;
+              
+              // Calculate new sell price based on input value
+              const newBuyPrice = parseFloat(editBuyPriceValue) || 0;
+              const profitPerRise = Math.floor((player?.now_cost || 0) - (newBuyPrice * 10)) / 2;
+              const newSellPrice = (newBuyPrice * 10 + profitPerRise) / 10;
+              
+              return (
+                <>
+                  {/* Current Information */}
+                  <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 space-y-2">
+                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Current Information</h4>
+                    <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <div className="text-muted-foreground">Buy Price</div>
+                        <div className="font-semibold">£{currentBuyPrice.toFixed(1)}m</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Market Price</div>
+                        <div className="font-semibold">£{currentMarketPrice.toFixed(1)}m</div>
+                      </div>
+                      <div>
+                        <div className="text-muted-foreground">Sell Price</div>
+                        <div className="font-semibold">£{currentSellPrice.toFixed(1)}m</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Edit Buy Price */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">New Buy Price (£m)</label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="15"
+                      value={editBuyPriceValue}
+                      onChange={(e) => setEditBuyPriceValue(e.target.value)}
+                      className="w-full"
+                      data-testid="input-buy-price"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          saveBuyPriceFromDialog();
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {/* New Sell Price Preview */}
+                  {!isNaN(newBuyPrice) && newBuyPrice > 0 && (
+                    <div className="bg-green-50 dark:bg-green-950/20 rounded-lg p-3">
+                      <div className="text-sm font-semibold text-green-900 dark:text-green-100 mb-1">
+                        New Calculated Sell Price
+                      </div>
+                      <div className="text-lg font-bold text-green-700 dark:text-green-300">
+                        £{newSellPrice.toFixed(1)}m
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Based on FPL price change rules
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setEditBuyPriceDialog(null)}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={saveBuyPriceFromDialog} data-testid="button-save-buy-price">
-              Save
+              Save Changes
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
