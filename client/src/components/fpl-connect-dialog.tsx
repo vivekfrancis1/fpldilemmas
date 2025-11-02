@@ -18,7 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function FplConnectDialog() {
   const [open, setOpen] = useState(false);
-  const [fplCookies, setFplCookies] = useState("");
+  const [fplToken, setFplToken] = useState("");
   const [fplManagerId, setFplManagerId] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -37,7 +37,7 @@ export function FplConnectDialog() {
   // Connect FPL account mutation
   const connectMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/fpl/connect", { fplCookies, fplManagerId: parseInt(fplManagerId) });
+      const res = await apiRequest("POST", "/api/fpl/connect", { fplToken, fplManagerId: parseInt(fplManagerId) });
       return res.json();
     },
     onSuccess: (data: any) => {
@@ -47,7 +47,7 @@ export function FplConnectDialog() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/fpl/status"] });
       setOpen(false);
-      setFplCookies("");
+      setFplToken("");
       setFplManagerId("");
     },
     onError: (error: any) => {
@@ -74,7 +74,7 @@ export function FplConnectDialog() {
         description: "Your FPL account has been disconnected",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/fpl/status"] });
-      setFplCookies("");
+      setFplToken("");
       setFplManagerId("");
     },
     onError: (error: Error) => {
@@ -87,10 +87,10 @@ export function FplConnectDialog() {
   });
 
   const handleConnect = () => {
-    if (!fplCookies || !fplManagerId) {
+    if (!fplToken || !fplManagerId) {
       toast({
         title: "Missing Information",
-        description: "Please enter your FPL cookies and Manager ID",
+        description: "Please enter your FPL Bearer token and Manager ID",
         variant: "destructive",
       });
       return;
@@ -170,14 +170,14 @@ export function FplConnectDialog() {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                <strong>How to get your FPL cookies:</strong>
+                <strong>How to get your FPL Bearer Token:</strong>
                 <ol className="list-decimal list-inside mt-2 space-y-1">
-                  <li><strong>IMPORTANT:</strong> First, go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a> and <strong>sign in</strong> to your FPL account</li>
-                  <li>Once logged in, open DevTools (F12 or right-click → Inspect)</li>
-                  <li>Click <strong>Network tab</strong> → Refresh the page (F5)</li>
-                  <li>Click any request → Look for <strong>"Request Headers"</strong> section</li>
-                  <li>Find the <strong>"cookie:"</strong> line and copy the entire value</li>
-                  <li>Paste it below (should include pl_profile and sessionid)</li>
+                  <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a> and <strong>sign in</strong></li>
+                  <li>Open DevTools (F12) → <strong>Network tab</strong> → Refresh page (F5)</li>
+                  <li><strong>Right-click</strong> any request → Select <strong>"Copy" → "Copy as cURL"</strong></li>
+                  <li>Look for <strong>-H 'x-api-authorization: Bearer ...'</strong> in the copied text</li>
+                  <li>Copy everything <strong>after "Bearer "</strong> (the long token starting with eyJ...)</li>
+                  <li>Also note your Manager ID from the URL (e.g., entry/<strong>577434</strong>/event/10)</li>
                 </ol>
               </AlertDescription>
             </Alert>
@@ -187,28 +187,31 @@ export function FplConnectDialog() {
               <Input
                 id="fpl-manager-id"
                 type="number"
-                placeholder="e.g., 123456"
+                placeholder="e.g., 577434"
                 value={fplManagerId}
                 onChange={(e) => setFplManagerId(e.target.value)}
                 data-testid="input-fpl-manager-id"
               />
               <p className="text-xs text-muted-foreground">
-                Find this in your FPL URL: fantasy.premierleague.com/entry/[YOUR_ID]/event/10
+                Find in URL: fantasy.premierleague.com/entry/[YOUR_ID]/event/10
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fpl-cookies">FPL Cookies</Label>
+              <Label htmlFor="fpl-token">FPL Bearer Token</Label>
               <Input
-                id="fpl-cookies"
+                id="fpl-token"
                 type="text"
-                placeholder="pl_profile=...; sessionid=..."
-                value={fplCookies}
-                onChange={(e) => setFplCookies(e.target.value)}
+                placeholder="eyJhbGciOiJSUzI1NiIsImtpZCI6ImRlZmF1bHQifQ..."
+                value={fplToken}
+                onChange={(e) => setFplToken(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleConnect()}
-                data-testid="input-fpl-cookies"
+                data-testid="input-fpl-token"
                 className="font-mono text-xs"
               />
+              <p className="text-xs text-muted-foreground">
+                Paste the token from the x-api-authorization header (just the part after "Bearer ")
+              </p>
             </div>
 
             <Button

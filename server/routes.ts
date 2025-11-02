@@ -900,48 +900,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // FPL Authentication endpoints
   app.post("/api/fpl/connect", requireAuth, async (req: any, res) => {
     try {
-      const { fplCookies, fplManagerId } = req.body;
+      const { fplToken, fplManagerId } = req.body;
       const userId = req.session.user.id;
 
-      if (!fplCookies || !fplManagerId) {
-        return res.status(400).json({ error: 'FPL cookies and manager ID are required' });
+      if (!fplToken || !fplManagerId) {
+        return res.status(400).json({ error: 'FPL Bearer token and manager ID are required' });
       }
 
-      console.log('🔐 Validating FPL cookies...');
+      console.log('🔐 Validating FPL Bearer token...');
 
-      // Validate cookies by making an authenticated request
+      // Validate token by making an authenticated request
       const meResponse = await fetch('https://fantasy.premierleague.com/api/me/', {
         headers: {
-          'Cookie': fplCookies,
+          'x-api-authorization': `Bearer ${fplToken}`,
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
       });
 
       if (!meResponse.ok) {
-        console.error('❌ FPL cookie validation failed:', meResponse.status);
-        return res.status(401).json({ error: 'Invalid FPL cookies. Please make sure you are logged in to FPL and copied the correct cookies.' });
+        console.error('❌ FPL token validation failed:', meResponse.status);
+        return res.status(401).json({ error: 'Invalid FPL Bearer token. Please make sure you copied the correct token from the x-api-authorization header.' });
       }
 
       const meData = await meResponse.json();
       const validatedManagerId = meData.player.entry;
       
-      console.log('✅ Cookie validation successful. Manager ID:', validatedManagerId);
+      console.log('✅ Token validation successful. Manager ID:', validatedManagerId);
 
       // Verify manager ID matches
       if (validatedManagerId !== fplManagerId) {
         console.error('❌ Manager ID mismatch');
-        return res.status(400).json({ error: `Manager ID mismatch. Your cookies belong to manager ${validatedManagerId}, but you entered ${fplManagerId}` });
+        return res.status(400).json({ error: `Manager ID mismatch. Your token belongs to manager ${validatedManagerId}, but you entered ${fplManagerId}` });
       }
 
-      // Store FPL cookies in database
-      const cookiesExpiry = new Date();
-      cookiesExpiry.setDate(cookiesExpiry.getDate() + 14); // Cookies typically last 2 weeks
+      // Store FPL token in database - tokens typically expire in hours
+      const tokenExpiry = new Date();
+      tokenExpiry.setHours(tokenExpiry.getHours() + 8); // Tokens typically last ~8 hours
 
       await db.update(users)
         .set({
           fplManagerId,
-          fplSessionCookies: fplCookies,
-          fplCookiesExpiry: cookiesExpiry
+          fplSessionCookies: fplToken, // Reusing the column for Bearer token
+          fplCookiesExpiry: tokenExpiry
         })
         .where(eq(users.id, userId));
 
@@ -1011,7 +1011,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.session.user.id;
 
-      // Get user's FPL cookies
+      // Get user's FPL token
       const [user] = await db.select({
         fplManagerId: users.fplManagerId,
         fplSessionCookies: users.fplSessionCookies,
@@ -1022,15 +1022,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'FPL account not connected' });
       }
 
-      // Check if cookies are expired
+      // Check if token is expired
       if (user.fplCookiesExpiry && new Date(user.fplCookiesExpiry) < new Date()) {
         return res.status(401).json({ error: 'FPL session expired, please reconnect' });
       }
 
-      // Fetch private team data using cookies
+      // Fetch private team data using Bearer token
       const myTeamResponse = await fetch(`https://fantasy.premierleague.com/api/my-team/${user.fplManagerId}/`, {
         headers: {
-          'Cookie': user.fplSessionCookies
+          'x-api-authorization': `Bearer ${user.fplSessionCookies}`
         }
       });
 
