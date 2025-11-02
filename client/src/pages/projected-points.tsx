@@ -333,7 +333,17 @@ export default function ProjectedPoints() {
   // Get player projected points
   const getPlayerProjectedPoints = (playerId: number, gameweek: number): number => {
     const playerData = playerProjections6GW?.find((p: any) => p.playerId === playerId);
-    return playerData?.gameweekProjections?.[gameweek.toString()] || 0;
+    const points = playerData?.gameweekProjections?.[gameweek.toString()];
+    
+    // Debug logging for GW16 issue
+    if (gameweek === 16 && !points && playerData) {
+      console.log(`GW16 Debug - Player ${playerId}:`, {
+        gameweekProjections: playerData.gameweekProjections,
+        availableGWs: Object.keys(playerData.gameweekProjections || {})
+      });
+    }
+    
+    return points || 0;
   };
 
   // Handle search
@@ -606,45 +616,6 @@ export default function ProjectedPoints() {
           </CardContent>
         </Card>
 
-        {/* Current Team */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Current Team ({plannerMode === "manual" ? "Manual" : "Auto-Optimized"})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Player</TableHead>
-                    <TableHead className="text-center">Price</TableHead>
-                    {nextGameweeks.map(gw => (
-                      <TableHead key={gw.id} className="text-center">
-                        GW{gw.id}
-                      </TableHead>
-                    ))}
-                    <TableHead className="text-center">Total (6GW)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {plannerMode === "manual" 
-                    ? manualLineup
-                        .sort((a, b) => a.position - b.position)
-                        .map((pick, idx) => renderPlayerRow(pick, idx))
-                    : optimizedLineup
-                      ? [...optimizedLineup.starting11, ...optimizedLineup.bench]
-                          .map((pick, idx) => renderPlayerRow(pick, idx))
-                      : null
-                  }
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Projected Points by Gameweek */}
         <Card>
           <CardHeader>
@@ -692,6 +663,45 @@ export default function ProjectedPoints() {
                   </Card>
                 );
               })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Current Team */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Current Team ({plannerMode === "manual" ? "Manual" : "Auto-Optimized"})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Player</TableHead>
+                    <TableHead className="text-center">Price</TableHead>
+                    {nextGameweeks.map(gw => (
+                      <TableHead key={gw.id} className="text-center">
+                        GW{gw.id}
+                      </TableHead>
+                    ))}
+                    <TableHead className="text-center">Total (6GW)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {plannerMode === "manual" 
+                    ? manualLineup
+                        .sort((a, b) => a.position - b.position)
+                        .map((pick, idx) => renderPlayerRow(pick, idx))
+                    : optimizedLineup
+                      ? [...optimizedLineup.starting11, ...optimizedLineup.bench]
+                          .map((pick, idx) => renderPlayerRow(pick, idx))
+                      : null
+                  }
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>

@@ -8809,7 +8809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const currentEvent = bootstrapData.events.find((event: any) => event.is_current) || 
                             bootstrapData.events.find((event: any) => event.is_next);
         if (currentEvent) {
-          currentGameweek = currentEvent.id - 1;
+          currentGameweek = currentEvent.id;
           dynamicStart = currentGameweek + 1;
           dynamicEnd = Math.min(dynamicStart + 5, 38); // Next 6 gameweeks
         }
