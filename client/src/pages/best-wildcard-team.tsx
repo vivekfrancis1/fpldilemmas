@@ -36,6 +36,7 @@ interface GameweekTeam {
   viceCaptain: PlayerSnapshot;
   totalPoints: number;
   gameweekPoints: number;
+  formation: string;
 }
 
 interface OptimalTeam {
@@ -429,7 +430,7 @@ export default function BestWildcardTeam() {
   };
 
   // Helper function to optimize starting XI for a specific gameweek
-  const optimizeStartingXIForGameweek = (squad: PlayerSnapshot[], gameweek: number): { starting11: PlayerSnapshot[], captain: PlayerSnapshot, viceCaptain: PlayerSnapshot, gameweekPoints: number } => {
+  const optimizeStartingXIForGameweek = (squad: PlayerSnapshot[], gameweek: number): { starting11: PlayerSnapshot[], captain: PlayerSnapshot, viceCaptain: PlayerSnapshot, gameweekPoints: number, formation: string } => {
     // Group squad by position and sort by gameweek-specific points
     const squadByPosition = {
       Goalkeeper: squad.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP')
@@ -484,6 +485,7 @@ export default function BestWildcardTeam() {
         ...squadByPosition.Midfielder.slice(0, 5),
         squadByPosition.Forward[0]
       ].filter(Boolean);
+      bestFormation = { name: '4-5-1', def: 4, mid: 5, fwd: 1 };
     }
 
     // Captain should be the player with the highest points for this specific gameweek
@@ -507,7 +509,7 @@ export default function BestWildcardTeam() {
       return sum + playerPoints;
     }, 0);
 
-    return { starting11: bestStarting11, captain, viceCaptain, gameweekPoints };
+    return { starting11: bestStarting11, captain, viceCaptain, gameweekPoints, formation: bestFormation?.name || '4-5-1' };
   };
 
   // Helper function to build unlimited budget team with inclusion/exclusion constraints
@@ -958,7 +960,8 @@ export default function BestWildcardTeam() {
           captain: gameweekOptimization.captain,
           viceCaptain: gameweekOptimization.viceCaptain,
           totalPoints: gameweekOptimization.gameweekPoints, // Points for this specific gameweek
-          gameweekPoints: gameweekOptimization.gameweekPoints
+          gameweekPoints: gameweekOptimization.gameweekPoints,
+          formation: gameweekOptimization.formation
         });
         totalOptimizedPoints += gameweekOptimization.gameweekPoints;
       }
@@ -1293,7 +1296,7 @@ export default function BestWildcardTeam() {
             </CardHeader>
             <CardContent>
               {/* Summary Stats - Moved to top */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</div>
                   <div className="text-sm text-muted-foreground">Total Points</div>
@@ -1301,10 +1304,6 @@ export default function BestWildcardTeam() {
                 <div className="text-center">
                   <div className="text-2xl font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</div>
                   <div className="text-sm text-muted-foreground">Team Value</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-purple-600">{optimalTeam.formation}</div>
-                  <div className="text-sm text-muted-foreground">Formation</div>
                 </div>
                 <div className="text-center">
                   <div className="text-2xl font-bold text-orange-600">{optimalTeam.squad.length}</div>
@@ -1402,6 +1401,9 @@ export default function BestWildcardTeam() {
                         <div className="text-lg font-semibold">
                           {gameweekTeam.gameweekPoints.toFixed(1)} points
                         </div>
+                        <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
+                          {gameweekTeam.formation}
+                        </Badge>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
