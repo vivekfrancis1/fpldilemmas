@@ -172,11 +172,12 @@ export function FplConnectDialog() {
               <AlertDescription className="text-sm">
                 <strong>How to get your FPL cookies:</strong>
                 <ol className="list-decimal list-inside mt-2 space-y-1">
-                  <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline">fantasy.premierleague.com</a> and log in</li>
-                  <li>Open browser DevTools (F12 or right-click → Inspect)</li>
-                  <li>Go to Application tab → Cookies → fantasy.premierleague.com</li>
-                  <li>Copy the values of pl_profile and sessionid cookies</li>
-                  <li>Paste them below in this format: pl_profile=...; sessionid=...</li>
+                  <li><strong>IMPORTANT:</strong> First, go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a> and <strong>sign in</strong> to your FPL account</li>
+                  <li>Once logged in, open DevTools (F12 or right-click → Inspect)</li>
+                  <li>Click <strong>Network tab</strong> → Refresh the page (F5)</li>
+                  <li>Click any request → Look for <strong>"Request Headers"</strong> section</li>
+                  <li>Find the <strong>"cookie:"</strong> line and copy the entire value</li>
+                  <li>Paste it below (should include pl_profile and sessionid)</li>
                 </ol>
               </AlertDescription>
             </Alert>
