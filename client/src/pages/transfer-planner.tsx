@@ -5251,8 +5251,8 @@ export default function TransferPlanner() {
             {/* List View */}
             {teamView === "list" && (
             <div>
-              {/* Horizontal Aligned Lineup */}
-              <div className="space-y-3">
+              {/* Desktop Layout - Hidden on mobile */}
+              <div className="hidden lg:block space-y-3">
                 {(() => {
                   // Calculate formation from starting 11
                   const starting11 = manualLineup.slice(0, 11).map(pick => getPlayerById(pick.element)).filter(Boolean);
@@ -5782,6 +5782,178 @@ export default function TransferPlanner() {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Mobile Layout - Shows starting 11 first, then bench */}
+              <div className="lg:hidden space-y-3">
+                {/* Starting 11 Section */}
+                <div>
+                  {(() => {
+                    // Calculate formation from starting 11
+                    const starting11 = manualLineup.slice(0, 11).map(pick => getPlayerById(pick.element)).filter(Boolean);
+                    const defs = starting11.filter(p => p!.element_type === 2).length;
+                    const mids = starting11.filter(p => p!.element_type === 3).length;
+                    const fwds = starting11.filter(p => p!.element_type === 4).length;
+                    const formation = `${defs}-${mids}-${fwds}`;
+                    
+                    return (
+                      <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                        <Crown className="h-3.5 w-3.5 text-yellow-500" />
+                        Starting 11 
+                        <span className="text-xs font-normal text-muted-foreground">({formation})</span>
+                      </h3>
+                    );
+                  })()}
+                  
+                  {/* Starting 11 Players */}
+                  {[1, 2, 3, 4].map((posType) => {
+                    const positionPlayers = manualLineup.slice(0, 11).filter(pick => {
+                      const player = getPlayerById(pick.element);
+                      return player?.element_type === posType;
+                    });
+                    
+                    if (positionPlayers.length === 0) return null;
+                    
+                    return (
+                      <div key={posType}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="text-[10px] font-semibold text-muted-foreground uppercase min-w-[30px]">
+                            {posType === 1 ? 'GKP' : posType === 2 ? 'DEF' : posType === 3 ? 'MID' : 'FWD'}
+                          </div>
+                          <div className="h-px bg-gray-200 flex-1"></div>
+                        </div>
+                        <div className="grid gap-1">
+                          {positionPlayers.map((pick) => {
+                            const player = getPlayerById(pick.element);
+                            const projectedPoints = getPlayerProjectedPoints(pick.element);
+                            if (!player) return null;
+                            const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
+                            
+                            return (
+                              <div
+                                key={pick.element}
+                                className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] ${
+                                  pick.is_captain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
+                                  pick.is_vice_captain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
+                                  isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
+                                  'border-gray-200'
+                                }`}
+                                data-testid={`starting-player-mobile-${pick.element}`}
+                              >
+                                <div className="flex items-center gap-1 flex-1 min-w-0">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
+                                      <span className="truncate">{player.web_name}</span>
+                                      {pick.is_captain && (
+                                        <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-1 py-0.5 rounded">C</span>
+                                      )}
+                                      {pick.is_vice_captain && (
+                                        <span className="text-[10px] font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">VC</span>
+                                      )}
+                                      {isPlayerTransferredIn(pick) && (
+                                        <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
+                                      )}
+                                    </div>
+                                    <div className="text-[10px] text-muted-foreground truncate">
+                                      {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <div className="text-right min-w-[32px]">
+                                    {projectedPoints !== null ? (
+                                      <>
+                                        <div className="text-xs font-bold text-blue-600">{projectedPoints.toFixed(1)}</div>
+                                        {pick.is_captain && (
+                                          <div className="text-[10px] text-muted-foreground">({(projectedPoints * 2).toFixed(1)})</div>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <div className="text-[10px] text-muted-foreground">-</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Bench Section */}
+                <div className="pt-4 border-t">
+                  <h3 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5 text-gray-500" />
+                    Bench
+                  </h3>
+                  
+                  {/* Bench Players - GK first, then outfield sorted by projected points */}
+                  <div className="grid gap-1">
+                    {(() => {
+                      const benchPlayers = manualLineup.slice(11, 15);
+                      const benchGK = benchPlayers.find(pick => {
+                        const player = getPlayerById(pick.element);
+                        return player?.element_type === 1;
+                      });
+                      const benchOutfield = benchPlayers
+                        .filter(pick => {
+                          const player = getPlayerById(pick.element);
+                          return player?.element_type !== 1;
+                        })
+                        .sort((a, b) => {
+                          const aPoints = getPlayerProjectedPoints(a.element) || 0;
+                          const bPoints = getPlayerProjectedPoints(b.element) || 0;
+                          return bPoints - aPoints;
+                        });
+                      
+                      const sortedBench = benchGK ? [benchGK, ...benchOutfield] : benchOutfield;
+                      
+                      return sortedBench.map((pick, index) => {
+                        const player = getPlayerById(pick.element);
+                        const projectedPoints = getPlayerProjectedPoints(pick.element);
+                        if (!player) return null;
+                        
+                        return (
+                          <div
+                            key={pick.element}
+                            className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] ${
+                              isPlayerTransferredIn(pick) 
+                                ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
+                                : 'border-gray-200 bg-gray-50 dark:bg-gray-900'
+                            }`}
+                            data-testid={`bench-player-mobile-${pick.element}`}
+                          >
+                            <div className="flex items-center gap-1 flex-1 min-w-0">
+                              <span className="text-[10px] font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">
+                                {index + 1}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
+                                  <span className="truncate">{player.web_name}</span>
+                                  {isPlayerTransferredIn(pick) && (
+                                    <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-muted-foreground truncate">
+                                  {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right min-w-[32px]">
+                              {projectedPoints !== null ? (
+                                <div className="text-xs font-bold text-blue-600">{projectedPoints.toFixed(1)}</div>
+                              ) : (
+                                <div className="text-[10px] text-muted-foreground">-</div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                  </div>
+                </div>
               </div>
 
               {/* Total Projected Points */}
