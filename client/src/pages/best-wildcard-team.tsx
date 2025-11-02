@@ -1295,17 +1295,33 @@ export default function BestWildcardTeam() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Summary Stats - Moved to top */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                <div className="text-center">
+              {/* Summary Stats - Single line on mobile */}
+              <div className="flex flex-col md:grid md:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-6">
+                <div className="md:hidden flex items-center justify-between px-2 py-1 bg-muted/30 rounded">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <span className="text-sm font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</span>
+                      <span className="text-xs text-muted-foreground ml-1">pts</span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</span>
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-orange-600">{optimalTeam.squad.length}</span>
+                      <span className="text-xs text-muted-foreground ml-1">players</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="hidden md:block text-center">
                   <div className="text-2xl font-bold text-green-600">{optimalTeam.totalPoints.toFixed(1)}</div>
                   <div className="text-sm text-muted-foreground">Total Points</div>
                 </div>
-                <div className="text-center">
+                <div className="hidden md:block text-center">
                   <div className="text-2xl font-bold text-blue-600">£{optimalTeam.totalValue.toFixed(1)}m</div>
                   <div className="text-sm text-muted-foreground">Team Value</div>
                 </div>
-                <div className="text-center">
+                <div className="hidden md:block text-center">
                   <div className="text-2xl font-bold text-orange-600">{optimalTeam.squad.length}</div>
                   <div className="text-sm text-muted-foreground">Squad Size</div>
                 </div>
@@ -1393,31 +1409,26 @@ export default function BestWildcardTeam() {
                   {optimalTeam.gameweekBreakdown.map((gameweekTeam) => (
                     <TabsContent key={gameweekTeam.gameweek} value={gameweekTeam.gameweek.toString()}>
                       <div className="space-y-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="text-lg font-semibold px-3 py-1">
-                          GW{gameweekTeam.gameweek}
-                        </Badge>
-                        <div className="text-lg font-semibold">
-                          {gameweekTeam.gameweekPoints.toFixed(1)} points
-                        </div>
-                        <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">
-                          {gameweekTeam.formation}
-                        </Badge>
+                    {/* Summary - Uniform styling */}
+                    <div className="bg-muted/30 rounded-lg p-3 md:p-4 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2 text-sm">
+                        <span className="font-medium text-purple-600 dark:text-purple-400">{gameweekTeam.formation}</span>
+                        <span className="text-muted-foreground">•</span>
+                        <span className="font-medium">{gameweekTeam.gameweekPoints.toFixed(1)} pts</span>
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                         <div className="flex items-center gap-1">
-                          <Crown className="h-4 w-4 text-yellow-600" />
-                          {gameweekTeam.captain.playerName}
+                          <Crown className="h-3 w-3 md:h-4 md:w-4 text-yellow-600" />
+                          <span className="font-medium">{playerIdToWebName.get(gameweekTeam.captain.playerId) || gameweekTeam.captain.playerName}</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <Shield className="h-4 w-4 text-blue-600" />
-                          {gameweekTeam.viceCaptain.playerName}
+                          <Shield className="h-3 w-3 md:h-4 md:w-4 text-blue-600" />
+                          <span className="font-medium">{playerIdToWebName.get(gameweekTeam.viceCaptain.playerId) || gameweekTeam.viceCaptain.playerName}</span>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="grid gap-2">
+                    <div className="grid gap-1 md:gap-2">
                       {gameweekTeam.starting11.map((player, index) => {
                         const gameweekPoints = getGameweekPoints(player, gameweekTeam.gameweek);
                         const isCaptain = player.playerId === gameweekTeam.captain.playerId;
@@ -1426,7 +1437,7 @@ export default function BestWildcardTeam() {
                         return (
                           <div
                             key={player.playerId}
-                            className={`flex items-center justify-between p-2 rounded ${
+                            className={`flex items-center justify-between p-2 md:p-3 rounded ${
                               isCaptain 
                                 ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700'
                                 : isViceCaptain
@@ -1434,32 +1445,32 @@ export default function BestWildcardTeam() {
                                 : 'bg-muted/30'
                             }`}
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="text-xs text-muted-foreground w-6">
+                            <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                              <div className="text-xs text-muted-foreground w-5 md:w-6 flex-shrink-0">
                                 {index + 1}.
                               </div>
-                              <div>
-                                <div className="font-medium flex items-center gap-2">
-                                  {playerIdToWebName.get(player.playerId) || player.playerName}
+                              <div className="min-w-0 flex-1">
+                                <div className="font-medium flex items-center gap-1 md:gap-2 text-sm md:text-base">
+                                  <span className="truncate">{playerIdToWebName.get(player.playerId) || player.playerName}</span>
                                   {isCaptain && (
-                                    <Crown className="h-3 w-3 text-yellow-600" />
+                                    <Crown className="h-3 w-3 text-yellow-600 flex-shrink-0" />
                                   )}
                                   {isViceCaptain && (
-                                    <Shield className="h-3 w-3 text-blue-600" />
+                                    <Shield className="h-3 w-3 text-blue-600 flex-shrink-0" />
                                   )}
                                 </div>
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs text-muted-foreground truncate">
                                   {player.teamName} - {player.position}
                                 </div>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <div className="font-medium">
+                            <div className="text-right flex-shrink-0">
+                              <div className="font-medium text-sm md:text-base">
                                 {isCaptain ? (gameweekPoints * 2).toFixed(1) : gameweekPoints.toFixed(1)} pts
                               </div>
                               {isCaptain && (
                                 <div className="text-xs text-yellow-600">
-                                  {gameweekPoints.toFixed(1)} × 2 (C)
+                                  {gameweekPoints.toFixed(1)} × 2
                                 </div>
                               )}
                             </div>
@@ -1469,12 +1480,12 @@ export default function BestWildcardTeam() {
                     </div>
 
                     {/* Bench Players for this Gameweek */}
-                    <div className="mt-6">
-                      <h4 className="font-semibold mb-3 text-sm text-muted-foreground">Substitutes</h4>
+                    <div className="mt-4 md:mt-6">
+                      <h4 className="font-semibold mb-2 md:mb-3 text-xs md:text-sm text-muted-foreground">Substitutes</h4>
                       
                       {/* Substitute Goalkeeper */}
-                      <div className="mb-3">
-                        <div className="text-xs font-medium text-muted-foreground mb-2">Substitute Goalkeeper</div>
+                      <div className="mb-2 md:mb-3">
+                        <div className="text-xs font-medium text-muted-foreground mb-1 md:mb-2">Substitute Goalkeeper</div>
                         {(() => {
                           const benchGK = optimalTeam.squad
                             .filter(p => !gameweekTeam.starting11.some(s => s.playerId === p.playerId))
@@ -1487,18 +1498,18 @@ export default function BestWildcardTeam() {
                                 key={player.playerId}
                                 className="flex items-center justify-between p-2 rounded bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700"
                               >
-                                <div className="flex items-center gap-2">
-                                  <Shield className="h-3 w-3 text-yellow-600" />
-                                  <div>
-                                    <div className="text-sm font-medium">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <Shield className="h-3 w-3 text-yellow-600 flex-shrink-0" />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-sm font-medium truncate">
                                       {playerIdToWebName.get(player.playerId) || player.playerName}
                                     </div>
-                                    <div className="text-xs text-muted-foreground">
+                                    <div className="text-xs text-muted-foreground truncate">
                                       {player.teamName} - GKP
                                     </div>
                                   </div>
                                 </div>
-                                <div className="text-sm font-medium">
+                                <div className="text-sm font-medium flex-shrink-0">
                                   {gameweekPoints.toFixed(1)} pts
                                 </div>
                               </div>
@@ -1509,8 +1520,8 @@ export default function BestWildcardTeam() {
 
                       {/* Outfield Substitutes */}
                       <div>
-                        <div className="text-xs font-medium text-muted-foreground mb-2">Outfield Substitutes (Priority Order)</div>
-                        <div className="space-y-2">
+                        <div className="text-xs font-medium text-muted-foreground mb-1 md:mb-2">Outfield Substitutes</div>
+                        <div className="space-y-1 md:space-y-2">
                           {(() => {
                             const benchOutfield = optimalTeam.squad
                               .filter(p => !gameweekTeam.starting11.some(s => s.playerId === p.playerId))
@@ -1524,20 +1535,20 @@ export default function BestWildcardTeam() {
                                   key={player.playerId}
                                   className="flex items-center justify-between p-2 rounded bg-muted/30 border"
                                 >
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
                                     <span className="text-xs font-bold w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0">
                                       {index + 1}
                                     </span>
-                                    <div>
-                                      <div className="text-sm font-medium">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-sm font-medium truncate">
                                         {playerIdToWebName.get(player.playerId) || player.playerName}
                                       </div>
-                                      <div className="text-xs text-muted-foreground">
+                                      <div className="text-xs text-muted-foreground truncate">
                                         {player.teamName} - {player.position}
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="text-sm font-medium">
+                                  <div className="text-sm font-medium flex-shrink-0">
                                     {gameweekPoints.toFixed(1)} pts
                                   </div>
                                 </div>
