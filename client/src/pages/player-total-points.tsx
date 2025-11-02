@@ -726,7 +726,7 @@ function createPlayerTotalPointsColumns(
       header: '',
       sortable: false,
       align: 'center' as const,
-      className: 'min-w-[40px]',
+      className: 'hidden md:table-cell min-w-[40px]',
       render: (_: any, player: PlayerTotalPointsData) => (
         <Button
           size="sm"
