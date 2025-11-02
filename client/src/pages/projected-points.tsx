@@ -397,7 +397,7 @@ export default function ProjectedPoints() {
   };
 
   // Render player row for list view
-  const renderPlayerRow = (pick: any, idx: number) => {
+  const renderPlayerRow = (pick: any, idx: number | string) => {
     const player = getPlayerById(pick.element || pick.element);
     if (!player) return null;
 
@@ -672,7 +672,7 @@ export default function ProjectedPoints() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Current Team ({plannerMode === "manual" ? "Manual" : "Auto-Optimized"})
+              Current Team Lineup
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -692,12 +692,65 @@ export default function ProjectedPoints() {
                 </TableHeader>
                 <TableBody>
                   {plannerMode === "manual" 
-                    ? manualLineup
-                        .sort((a, b) => a.position - b.position)
-                        .map((pick, idx) => renderPlayerRow(pick, idx))
+                    ? (() => {
+                        const sortedLineup = [...manualLineup].sort((a, b) => a.position - b.position);
+                        const starting11 = sortedLineup.filter(p => p.position <= 11);
+                        const bench = sortedLineup.filter(p => p.position > 11);
+                        
+                        // Sort bench: goalkeeper first, then others
+                        const benchSorted = bench.sort((a, b) => {
+                          const playerA = getPlayerById(a.element);
+                          const playerB = getPlayerById(b.element);
+                          const posA = playerA?.element_type || 0;
+                          const posB = playerB?.element_type || 0;
+                          
+                          // element_type 1 = GKP, prioritize it
+                          if (posA === 1 && posB !== 1) return -1;
+                          if (posA !== 1 && posB === 1) return 1;
+                          return a.position - b.position;
+                        });
+                        
+                        return (
+                          <>
+                            {starting11.map((pick, idx) => renderPlayerRow(pick, idx))}
+                            <TableRow>
+                              <TableCell colSpan={nextGameweeks.length + 3} className="bg-gray-100 text-center font-semibold text-gray-700 py-3">
+                                BENCH
+                              </TableCell>
+                            </TableRow>
+                            {benchSorted.map((pick, idx) => renderPlayerRow(pick, `bench-${idx}`))}
+                          </>
+                        );
+                      })()
                     : optimizedLineup
-                      ? [...optimizedLineup.starting11, ...optimizedLineup.bench]
-                          .map((pick, idx) => renderPlayerRow(pick, idx))
+                      ? (() => {
+                          const starting = optimizedLineup.starting11 || [];
+                          const bench = optimizedLineup.bench || [];
+                          
+                          // Sort bench: goalkeeper first, then others
+                          const benchSorted = [...bench].sort((a, b) => {
+                            const playerA = getPlayerById(a.element);
+                            const playerB = getPlayerById(b.element);
+                            const posA = playerA?.element_type || 0;
+                            const posB = playerB?.element_type || 0;
+                            
+                            if (posA === 1 && posB !== 1) return -1;
+                            if (posA !== 1 && posB === 1) return 1;
+                            return (a.benchPosition || 0) - (b.benchPosition || 0);
+                          });
+                          
+                          return (
+                            <>
+                              {starting.map((pick, idx) => renderPlayerRow(pick, idx))}
+                              <TableRow>
+                                <TableCell colSpan={nextGameweeks.length + 3} className="bg-gray-100 text-center font-semibold text-gray-700 py-3">
+                                  BENCH
+                                </TableCell>
+                              </TableRow>
+                              {benchSorted.map((pick, idx) => renderPlayerRow(pick, `bench-${idx}`))}
+                            </>
+                          );
+                        })()
                       : null
                   }
                 </TableBody>
