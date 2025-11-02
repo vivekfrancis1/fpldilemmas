@@ -258,7 +258,7 @@ export default function ProjectedPoints() {
     try {
       // Optimize for each gameweek
       for (const gw of nextGWs) {
-        const response = await fetch("/api/optimize-lineup", {
+        const response = await fetch("/api/transfer-planner/auto-optimize", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
