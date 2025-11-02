@@ -698,43 +698,39 @@ export default function MyDashboard() {
 
             {/* Main Dashboard Tabs */}
             <Tabs defaultValue="overview" className="w-full">
-              {/* Mobile: Show only 3 main tabs */}
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-5 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg sm:mobile-tabs-list">
+              {/* All 5 tabs in one row on mobile */}
+              <TabsList className="grid w-full grid-cols-5 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
                 <TabsTrigger 
                   value="overview" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2 md:py-3 font-medium transition-all duration-200 text-[10px] md:text-sm"
                   data-testid="tab-overview"
                 >
-                  <Activity className="h-4 w-4 sm:hidden" />
-                  <span className="hidden sm:inline">Overview</span>
-                  <span className="sm:hidden text-xs">Overview</span>
+                  Overview
                 </TabsTrigger>
                 <TabsTrigger 
                   value="team" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2 md:py-3 font-medium transition-all duration-200 text-[10px] md:text-sm"
                   data-testid="tab-team"
                 >
-                  <Users className="h-4 w-4 sm:hidden" />
-                  <span className="hidden sm:inline">Team</span>
-                  <span className="sm:hidden text-xs">Team</span>
+                  Team
                 </TabsTrigger>
                 <TabsTrigger 
                   value="transfers" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger hidden sm:flex"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2 md:py-3 font-medium transition-all duration-200 text-[10px] md:text-sm"
                   data-testid="tab-transfers"
                 >
                   Transfers
                 </TabsTrigger>
                 <TabsTrigger 
                   value="chips" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger hidden sm:flex"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2 md:py-3 font-medium transition-all duration-200 text-[10px] md:text-sm"
                   data-testid="tab-chips"
                 >
                   Chips
                 </TabsTrigger>
                 <TabsTrigger 
                   value="performance" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-3 font-medium transition-all duration-200 mobile-tabs-trigger hidden sm:flex"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2 md:py-3 font-medium transition-all duration-200 text-[10px] md:text-sm"
                   data-testid="tab-performance"
                 >
                   Performance
