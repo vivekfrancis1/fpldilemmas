@@ -430,7 +430,7 @@ export default function BestWildcardTeam() {
 
   // Helper function to optimize starting XI for a specific gameweek
   const optimizeStartingXIForGameweek = (squad: PlayerSnapshot[], gameweek: number): { starting11: PlayerSnapshot[], captain: PlayerSnapshot, viceCaptain: PlayerSnapshot, gameweekPoints: number } => {
-    // Group squad by position
+    // Group squad by position and sort by gameweek-specific points
     const squadByPosition = {
       Goalkeeper: squad.filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP')
         .sort((a, b) => getGameweekPoints(b, gameweek) - getGameweekPoints(a, gameweek)),
@@ -442,27 +442,63 @@ export default function BestWildcardTeam() {
         .sort((a, b) => getGameweekPoints(b, gameweek) - getGameweekPoints(a, gameweek))
     };
 
-    // Select starting 11 based on best performers for this specific gameweek
-    const starting11 = [
-      squadByPosition.Goalkeeper[0], // 1 GK (best for this gameweek)
-      ...squadByPosition.Defender.slice(0, 4), // 4 DEF (best 4 for this gameweek)
-      ...squadByPosition.Midfielder.slice(0, 5), // 5 MID (best 5 for this gameweek)
-      squadByPosition.Forward[0] // 1 FWD (best for this gameweek)
-    ].filter(Boolean);
+    // Try all valid formations and pick the one with highest gameweek points
+    let bestFormation = null;
+    let bestStarting11: PlayerSnapshot[] = [];
+    let bestPoints = 0;
+
+    for (const formation of VALID_FORMATIONS) {
+      // Check if we have enough players in each position
+      if (squadByPosition.Goalkeeper.length < 1 ||
+          squadByPosition.Defender.length < formation.def ||
+          squadByPosition.Midfielder.length < formation.mid ||
+          squadByPosition.Forward.length < formation.fwd) {
+        continue;
+      }
+
+      // Build starting 11 for this formation
+      const starting11 = [
+        squadByPosition.Goalkeeper[0],
+        ...squadByPosition.Defender.slice(0, formation.def),
+        ...squadByPosition.Midfielder.slice(0, formation.mid),
+        ...squadByPosition.Forward.slice(0, formation.fwd)
+      ].filter(Boolean);
+
+      // Calculate total points for this formation (without captain)
+      const formationPoints = starting11.reduce((sum, player) => 
+        sum + getGameweekPoints(player, gameweek), 0
+      );
+
+      if (formationPoints > bestPoints) {
+        bestPoints = formationPoints;
+        bestStarting11 = starting11;
+        bestFormation = formation;
+      }
+    }
+
+    // If no valid formation found, fallback to default
+    if (bestStarting11.length === 0) {
+      bestStarting11 = [
+        squadByPosition.Goalkeeper[0],
+        ...squadByPosition.Defender.slice(0, 4),
+        ...squadByPosition.Midfielder.slice(0, 5),
+        squadByPosition.Forward[0]
+      ].filter(Boolean);
+    }
 
     // Captain should be the player with the highest points for this specific gameweek
-    const captain = starting11.reduce((best, player) => 
+    const captain = bestStarting11.reduce((best, player) => 
       getGameweekPoints(player, gameweek) > getGameweekPoints(best, gameweek) ? player : best
     );
 
     // Vice-captain should be the second-highest scoring player for this gameweek
-    const viceCaptain = starting11
+    const viceCaptain = bestStarting11
       .filter(player => player.playerId !== captain.playerId)
       .reduce((best, player) => 
         getGameweekPoints(player, gameweek) > getGameweekPoints(best, gameweek) ? player : best
       );
 
-    const gameweekPoints = starting11.reduce((sum, player) => {
+    const gameweekPoints = bestStarting11.reduce((sum, player) => {
       const playerPoints = getGameweekPoints(player, gameweek);
       // Double captain points
       if (player.playerId === captain.playerId) {
@@ -471,7 +507,7 @@ export default function BestWildcardTeam() {
       return sum + playerPoints;
     }, 0);
 
-    return { starting11, captain, viceCaptain, gameweekPoints };
+    return { starting11: bestStarting11, captain, viceCaptain, gameweekPoints };
   };
 
   // Helper function to build unlimited budget team with inclusion/exclusion constraints
