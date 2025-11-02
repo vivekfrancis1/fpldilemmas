@@ -1407,17 +1407,17 @@ export default function MyDashboard() {
                     </div>
                   )}
 
-                  {/* List View - Starting XI and Bench */}
+                  {/* List View - Starting XI and Bench - Mobile Optimized */}
                   {teamView === "list" && (
-                  <div className="grid gap-6 lg:grid-cols-2">
+                  <div className="grid gap-3 md:gap-6 lg:grid-cols-2">
                     {/* Starting XI */}
                     <Card className="bg-white shadow-lg border border-gray-200">
-                      <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-t-lg">
-                        <CardTitle className="flex items-center gap-2">
-                          <Users className="h-5 w-5" />
+                      <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-t-lg p-3 md:p-6">
+                        <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                          <Users className="h-4 w-4 md:h-5 md:w-5" />
                           Starting XI
                         </CardTitle>
-                        <CardDescription className="text-emerald-50">
+                        <CardDescription className="text-emerald-50 text-xs md:text-sm">
                           Your team for Gameweek {getCurrentGameweekDashboard()}
                         </CardDescription>
                       </CardHeader>
@@ -1442,7 +1442,7 @@ export default function MyDashboard() {
 
                             return (
                               <div key={positionType} className="border-b border-gray-100 last:border-b-0">
-                                <div className={`px-4 py-2 text-xs font-semibold uppercase tracking-wide ${positionColors[positionType as keyof typeof positionColors]} border-l-4`}>
+                                <div className={`px-2 md:px-4 py-1.5 md:py-2 text-[10px] md:text-xs font-semibold uppercase tracking-wide ${positionColors[positionType as keyof typeof positionColors]} border-l-2 md:border-l-4`}>
                                   {positionName}s ({playersInPosition.length})
                                 </div>
                                 {playersInPosition.map((pick, index) => {
@@ -1452,67 +1452,67 @@ export default function MyDashboard() {
                                   return (
                                     <div 
                                       key={pick.element} 
-                                      className={`flex items-center justify-between p-4 border-l-4 hover:bg-gray-50 transition-colors ${
+                                      className={`flex items-start md:items-center justify-between p-2 md:p-4 border-l-2 md:border-l-4 hover:bg-gray-50 transition-colors ${
                                         pick.is_captain ? 'bg-amber-50 border-amber-400' : 
                                         pick.is_vice_captain ? 'bg-blue-50 border-blue-400' : 
                                         'border-gray-200 hover:border-gray-300'
                                       }`}
                                     >
-                                      <div className="flex items-center gap-3 flex-1">
-                                        <div className="flex-1">
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-semibold text-gray-900">{player.web_name}</span>
+                                      <div className="flex items-start md:items-center gap-2 md:gap-3 flex-1 min-w-0">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                                            <span className="font-semibold text-gray-900 text-xs md:text-base truncate">{player.web_name}</span>
                                             {pick.is_captain && (
-                                              <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2 py-1">C</Badge>
+                                              <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] md:text-xs px-1 md:px-2 py-0.5 md:py-1">C</Badge>
                                             )}
                                             {pick.is_vice_captain && (
-                                              <Badge variant="outline" className="border-blue-300 text-blue-700 text-xs px-2 py-1">VC</Badge>
+                                              <Badge variant="outline" className="border-blue-300 text-blue-700 text-[10px] md:text-xs px-1 md:px-2 py-0.5 md:py-1">VC</Badge>
                                             )}
                                           </div>
-                                          <div className="space-y-2 mt-2">
-                                            <div className="flex items-center gap-2">
-                                              <span className="text-sm font-medium text-gray-700">{getTeamName(player)}</span>
-                                              <span className="text-xs text-gray-500">Form: {player.form}</span>
+                                          <div className="space-y-1 md:space-y-2 mt-1 md:mt-2">
+                                            <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
+                                              <span className="text-xs md:text-sm font-medium text-gray-700">{getTeamName(player)}</span>
+                                              <span className="text-[10px] md:text-xs text-gray-500">Form: {player.form}</span>
                                             </div>
                                             
-                                            {/* Next 3 fixtures */}
-                                            <div className="space-y-1">
-                                              <div className="text-xs font-medium text-gray-600">Next 3 fixtures:</div>
-                                              <div className="flex gap-1 flex-wrap">
+                                            {/* Next 3 fixtures - Simplified on mobile */}
+                                            <div className="space-y-0.5 md:space-y-1">
+                                              <div className="text-[10px] md:text-xs font-medium text-gray-600 hidden md:block">Next 3 fixtures:</div>
+                                              <div className="flex gap-0.5 md:gap-1 flex-wrap">
                                                 {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
                                                   <div 
                                                     key={idx}
-                                                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
+                                                    className={`flex items-center gap-0.5 md:gap-1 px-1 md:px-1.5 py-0.5 rounded text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
                                                     title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
                                                   >
-                                                    <span className="truncate max-w-[40px]">{fixture.opponent}</span>
-                                                    <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
+                                                    <span className="truncate max-w-[30px] md:max-w-[40px]">{fixture.opponent}</span>
+                                                    <span className="text-[9px] md:text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
                                                   </div>
                                                 ))}
                                                 {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
-                                                  <span className="text-xs text-gray-400">No upcoming fixtures</span>
+                                                  <span className="text-[10px] md:text-xs text-gray-400">No fixtures</span>
                                                 )}
                                               </div>
                                             </div>
                                           </div>
                                         </div>
                                       </div>
-                                      <div className="text-right space-y-1">
-                                        <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
+                                      <div className="text-right space-y-0.5 md:space-y-1 ml-2 flex-shrink-0">
+                                        <p className="font-semibold text-green-600 text-xs md:text-base">{formatPrice(player.now_cost)}</p>
                                         {pick.is_captain ? (
-                                          <div className="space-y-1">
-                                            <p className="text-sm font-semibold text-amber-600">
+                                          <div className="space-y-0.5 md:space-y-1">
+                                            <p className="text-xs md:text-sm font-semibold text-amber-600">
                                               {(player.event_points || 0) * 2} pts
                                             </p>
-                                            <p className="text-xs text-gray-500">
-                                              ({player.event_points || 0}×2 captain)
+                                            <p className="text-[10px] md:text-xs text-gray-500 hidden md:block">
+                                              ({player.event_points || 0}×2)
                                             </p>
                                           </div>
                                         ) : (
-                                          <p className="text-sm text-gray-600">{player.event_points || 0} pts</p>
+                                          <p className="text-xs md:text-sm text-gray-600">{player.event_points || 0} pts</p>
                                         )}
-                                        <div className="text-xs text-gray-500">
-                                          <div>Own: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                                        <div className="text-[10px] md:text-xs text-gray-500">
+                                          <div>{parseFloat(player.selected_by_percent).toFixed(1)}%</div>
                                         </div>
                                       </div>
                                     </div>
@@ -1525,14 +1525,14 @@ export default function MyDashboard() {
                       </CardContent>
                     </Card>
 
-                    {/* Bench */}
+                    {/* Bench - Mobile Optimized */}
                     <Card className="bg-white shadow-lg border border-gray-200">
-                      <CardHeader className="bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-t-lg">
-                        <CardTitle className="flex items-center gap-2">
-                          <Users className="h-5 w-5" />
+                      <CardHeader className="bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-t-lg p-3 md:p-6">
+                        <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                          <Users className="h-4 w-4 md:h-5 md:w-5" />
                           Bench
                         </CardTitle>
-                        <CardDescription className="text-gray-100">
+                        <CardDescription className="text-gray-100 text-xs md:text-sm">
                           Substitute players
                         </CardDescription>
                       </CardHeader>
@@ -1545,50 +1545,50 @@ export default function MyDashboard() {
                             return (
                               <div 
                                 key={pick.element} 
-                                className="flex items-center justify-between p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+                                className="flex items-start md:items-center justify-between p-2 md:p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
                               >
-                                <div className="flex items-center gap-3 flex-1">
-                                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
+                                <div className="flex items-start md:items-center gap-2 md:gap-3 flex-1 min-w-0">
+                                  <div className="w-6 h-6 md:w-8 md:h-8 bg-gray-200 rounded-full flex items-center justify-center text-[10px] md:text-xs font-medium text-gray-600 flex-shrink-0">
                                     {pick.position - 11}
                                   </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-semibold text-gray-800">{player.web_name}</span>
-                                      <Badge variant="outline" className="text-xs px-2 py-1">{getPositionName(player.element_type)}</Badge>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                                      <span className="font-semibold text-gray-800 text-xs md:text-base truncate">{player.web_name}</span>
+                                      <Badge variant="outline" className="text-[10px] md:text-xs px-1 md:px-2 py-0.5 md:py-1">{getPositionName(player.element_type)}</Badge>
                                     </div>
-                                    <div className="space-y-2 mt-2">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-sm font-medium text-gray-700">{getTeamName(player)}</span>
-                                        <span className="text-xs text-gray-500">Form: {player.form}</span>
+                                    <div className="space-y-1 md:space-y-2 mt-1 md:mt-2">
+                                      <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
+                                        <span className="text-xs md:text-sm font-medium text-gray-700">{getTeamName(player)}</span>
+                                        <span className="text-[10px] md:text-xs text-gray-500">Form: {player.form}</span>
                                       </div>
                                       
-                                      {/* Next 3 fixtures */}
-                                      <div className="space-y-1">
-                                        <div className="text-xs font-medium text-gray-600">Next 3 fixtures:</div>
-                                        <div className="flex gap-1 flex-wrap">
+                                      {/* Next 3 fixtures - Simplified on mobile */}
+                                      <div className="space-y-0.5 md:space-y-1">
+                                        <div className="text-[10px] md:text-xs font-medium text-gray-600 hidden md:block">Next 3 fixtures:</div>
+                                        <div className="flex gap-0.5 md:gap-1 flex-wrap">
                                           {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
                                             <div 
                                               key={idx}
-                                              className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
+                                              className={`flex items-center gap-0.5 md:gap-1 px-1 md:px-1.5 py-0.5 rounded text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
                                               title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
                                             >
-                                              <span className="truncate max-w-[40px]">{fixture.opponent}</span>
-                                              <span className="text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
+                                              <span className="truncate max-w-[30px] md:max-w-[40px]">{fixture.opponent}</span>
+                                              <span className="text-[9px] md:text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
                                             </div>
                                           ))}
                                           {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
-                                            <span className="text-xs text-gray-400">No upcoming fixtures</span>
+                                            <span className="text-[10px] md:text-xs text-gray-400">No fixtures</span>
                                           )}
                                         </div>
                                       </div>
                                     </div>
                                   </div>
                                 </div>
-                                <div className="text-right space-y-1">
-                                  <p className="font-semibold text-green-600">{formatPrice(player.now_cost)}</p>
-                                  <p className="text-sm text-gray-600">{player.total_points} pts</p>
-                                  <div className="text-xs text-gray-500">
-                                    <div>Own: {parseFloat(player.selected_by_percent).toFixed(1)}%</div>
+                                <div className="text-right space-y-0.5 md:space-y-1 ml-2 flex-shrink-0">
+                                  <p className="font-semibold text-green-600 text-xs md:text-base">{formatPrice(player.now_cost)}</p>
+                                  <p className="text-xs md:text-sm text-gray-600">{player.total_points} pts</p>
+                                  <div className="text-[10px] md:text-xs text-gray-500">
+                                    <div>{parseFloat(player.selected_by_percent).toFixed(1)}%</div>
                                   </div>
                                 </div>
                               </div>
