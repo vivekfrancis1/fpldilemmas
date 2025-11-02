@@ -232,7 +232,7 @@ export default function MyDashboard() {
   const [, setLocation] = useLocation();
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
-  const [teamView, setTeamView] = useState<"list" | "pitch">("pitch");
+  const [teamView, setTeamView] = useState<"list" | "pitch">("list");
 
 
   // Cache manager ID functionality
@@ -1029,8 +1029,8 @@ export default function MyDashboard() {
                     </CardContent>
                   </Card>
 
-                  {/* View Toggle */}
-                  <div className="flex justify-center gap-2">
+                  {/* View Toggle - Hidden on mobile */}
+                  <div className="hidden md:flex justify-center gap-2">
                     <Button
                       variant={teamView === "pitch" ? "default" : "outline"}
                       onClick={() => setTeamView("pitch")}
@@ -1051,7 +1051,7 @@ export default function MyDashboard() {
                     </Button>
                   </div>
 
-                  {/* Pitch View */}
+                  {/* Pitch View - Hidden on mobile */}
                   {teamView === "pitch" && (
                     <div className="space-y-4">
                       {/* Pitch */}

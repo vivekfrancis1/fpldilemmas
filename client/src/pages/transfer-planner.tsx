@@ -961,7 +961,7 @@ export default function TransferPlanner() {
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<number | null>(null);
   const [plannerMode, setPlannerMode] = useState<"auto" | "manual">("manual");
-  const [teamView, setTeamView] = useState<"list" | "pitch">("pitch");
+  const [teamView, setTeamView] = useState<"list" | "pitch">("list");
   const [optimizedLineup, setOptimizedLineup] = useState<OptimizedLineup | null>(null);
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
   
@@ -5225,8 +5225,8 @@ export default function TransferPlanner() {
               Sell prices are calculated estimates. Click the pencil icon to enter actual Buy prices to get exact sell prices.
             </div>
 
-            {/* View Toggle */}
-            <div className="flex justify-center gap-2 mb-4">
+            {/* View Toggle - Hidden on mobile */}
+            <div className="hidden md:flex justify-center gap-2 mb-4">
               <Button
                 variant={teamView === "pitch" ? "default" : "outline"}
                 onClick={() => setTeamView("pitch")}
@@ -6352,8 +6352,8 @@ export default function TransferPlanner() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* View Toggle Buttons */}
-            <div className="flex justify-center gap-2 mb-4">
+            {/* View Toggle Buttons - Hidden on mobile */}
+            <div className="hidden md:flex justify-center gap-2 mb-4">
               <Button
                 variant={teamView === "pitch" ? "default" : "outline"}
                 onClick={() => setTeamView("pitch")}

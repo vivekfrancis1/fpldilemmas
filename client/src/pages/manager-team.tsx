@@ -222,7 +222,7 @@ export default function ManagerTeam() {
   });
 
   // State for view toggle (pitch or list)
-  const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
+  const [teamView, setTeamView] = useState<"pitch" | "list">("list");
 
   // Function to get completed gameweeks (1-3 only)
   const getCompletedGameweeks = () => {
@@ -724,8 +724,8 @@ export default function ManagerTeam() {
               <div>
                 <h2 className="text-xl font-semibold mb-4">Team Squad</h2>
                 
-                {/* View Toggle */}
-                <div className="flex justify-center gap-2 mb-6">
+                {/* View Toggle - Hidden on mobile */}
+                <div className="hidden md:flex justify-center gap-2 mb-6">
                   <Button
                     variant={teamView === "pitch" ? "default" : "outline"}
                     onClick={() => setTeamView("pitch")}
