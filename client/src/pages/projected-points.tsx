@@ -362,10 +362,9 @@ export default function ProjectedPoints() {
     if (!selectedGameweek) return 0;
     
     let total = 0;
-    const lineup = plannerMode === "manual" ? manualLineup : (optimizedLineup?.starting11 || []);
     
     if (plannerMode === "manual") {
-      const starting11 = lineup.filter(p => p.position <= 11);
+      const starting11 = manualLineup.filter(p => p.position <= 11);
       starting11.forEach(pick => {
         const points = getPlayerProjectedPoints(pick.element, selectedGameweek);
         const multiplier = pick.is_captain ? 2 : (pick.is_vice_captain ? 1 : 1);
