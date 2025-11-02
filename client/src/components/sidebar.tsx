@@ -53,7 +53,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "My FPL",
       items: [
         { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview" },
-        { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, new: true }
+        { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, new: true, mobileHidden: true }
       ]
     },
     {
@@ -199,7 +199,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 {section.section}
               </h2>
               <div className="space-y-1">
-                {section.items.map((item) => {
+                {section.items
+                  .filter(item => !isMobile || !(item as any).mobileHidden)
+                  .map((item) => {
                   const isCurrentPage = isActive(item.path);
                   const Icon = item.icon;
                   
