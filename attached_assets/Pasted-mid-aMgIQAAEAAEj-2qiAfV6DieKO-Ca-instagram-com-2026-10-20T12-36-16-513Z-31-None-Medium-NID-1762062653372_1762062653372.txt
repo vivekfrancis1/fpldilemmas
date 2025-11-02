@@ -1,0 +1,17 @@
+mid	aMgIQAAEAAEj-2qiAfV6DieKO_Ca	.instagram.com	/	2026-10-20T12:36:16.513Z	31	✓	✓	None			Medium	
+NID	526=HMa8Y3rAZz1pTmyDjfQZR0efferAFMZZ8X9GsxYmS719m0GcmjrJBP1rmzc5r-wVa_R3Tu6wdQo2xHPX4w8IBFszVuIrIZAF54qXlWTZvL2uMyKDb7NuCl3rAqJ7b0VcOsmH50lR1w1QOP8SaA8kAkuulaISwpKMRgSMlRm-PFLZloLZb3690PMqjqJg5K8LkXCFxrjLkoLrnNLGxgoKbVpUdbkFMo1fzE3fo4g66XUSaa50JuHbSxXopMq4rtkiDFOT8kiaJpT3UWb3a1C-OgLo9x33l1pl7snsh14l01JNwcJbJwIxwNFUhE4x7LwJkABoxFoJ29Rca6eqnH0nnYTsG9gRTfBmpkXb9LfObD8PkTlJsEk1yNIGZx5wn58UyDNpCAjlN32VvmcCj4NPftm7D63sLI0gyjkg2p42pfROUyfb3URzNhf2PE2zDe7CKXN4o9si9j6-NZoqQ8mmkD9LBpZjXQZ-aoGMsYtYLotPYtqrOx5yczKvIUyCHfKDDu5t_EriKjrqXH313xTUyJqHmeu8mOGCH39pq28iNj8HYol52fJDV7cCeqBLMkLd2fZEADAH2NhZTAeT1RZxGXCY9sNnLfR6vujsgLf0PXQeOpWunYYc68kQBKuOHh-WIctyHF5c3mK3T19EN4RtThIlibfg_ojRpTZZdeZKj3EA0shv5_3n83CcpR9I8b3dxZHs-BOOaiS3nzMPtipIK4JlMmOHGzQhcvXJPNG66nuItvLAziQHHVI3TzKozUWQMiuVwy6Un8GwRu2VGZ81YDB2mfzCRStjHbflRWJIJ1zs59sSSJBk6A4Wo-IP_SQXZH-LWPEsPB2XqnP_1LV07qMcZU9Q1nr-swmp58tG8GMdI_dnPiFjdJ2aXxARIBm6YJZXqIsOZNNzRODJb-UYOXUvRoGg2KzrPPTAjeQ39NvxOU8zJ-u8jJ65vWHWlAVsE5-4FThrlSmQgcrOdN4Br8q3ARzawP-X8x4Uqn2qhm5AD8WG5R-SVrN_2Ryk4xVfRrxuIO5OybcUaJGKAwLuLvwcVz8T5UjBQgo1bCe26iIDCQhDOp3IPPYXEy0Na7aEecNfSHm7ySotA-kupv7bE2Tq3wZtN_5wZRLz2Z_d2bqRYN1J9zHJFQ4dtlQahIW0to-QknErG66MpQz4tsk-BVFfLfgnHJe--_kqOHhJ7xiZ-LrMh9PxaV03GCjK8HJM7-fgbOWtkSD_S1zQismGiy315u3DOxj0azBdExGeCQ6Y8Himg5yMyswEgmRxepxLilLJGUg7OTikZ5cTcuvOBdxRcSrfOVjRGI0rT9zN-E2SxaOzMc_-TfAaLINoM6Ar5Qw0tegO8VnhLb4YuzoW3QEb0-Ze0q4Myghl	.google.com	/	2026-05-03T21:40:49.886Z	1387	✓	✓	None			Medium	
+OptanonAlertBoxClosed	2025-11-02T05:48:20.772Z	.premierleague.com	/	2025-12-02T05:48:20.000Z	45			Lax			Medium	
+OptanonConsent	isGpcEnabled=0&datestamp=Sun+Nov+02+2025+11%3A18%3A33+GMT%2B0530+(India+Standard+Time)&version=202502.1.0&browserGpcFlag=0&isIABGlobal=false&hosts=&consentId=97b1da32-98e1-4bbe-8a5c-e297c8500849&interactionCount=1&isAnonUser=1&landingPath=NotLandingPage&groups=C0001%3A1%2CC0002%3A1%2CC0003%3A1%2CC0004%3A1&intType=1&geolocation=IN%3BKL&AwaitingReconsent=false	.premierleague.com	/	2025-12-02T05:48:33.000Z	374			Lax			Medium	
+personalization_id	"v1_9pC2u6uLz4A6reOpohI8rw=="	.twitter.com	/	2026-12-05T10:02:15.814Z	47		✓	None			Medium	
+ps_l	1	.instagram.com	/	2026-10-15T10:12:36.969Z	5	✓	✓	Lax			Medium	
+ps_n	1	.instagram.com	/	2026-10-15T10:12:36.969Z	5	✓	✓	None			Medium	
+receive-cookie-deprecation	1	.doubleclick.net	/	2026-05-01T05:48:18.658Z	27	✓	✓	None	https://premierleague.com	✓	Medium	
+s_nr	1762062538802-Repeat	.premierleague.com	/	2025-11-02T06:18:58.000Z	24			Lax			Medium	
+SAPISID	Bs_yOE-SkhaiSmfo/A_vK-dqsuwv1Jdbf5	.google.com	/	2026-11-25T02:32:21.846Z	41		✓				High	
+SEARCH_SAMESITE	CgQIpZ8B	.google.com	/	2026-04-26T09:51:16.594Z	23			Strict			Medium	
+SID	g.a0002giSISrChz0Lc9y1iuQhZGQKL6m0opsYDeBJA1p6g8Fyxc1RmFwK8HjC4nk6kUW3KPhrUwACgYKAZwSARcSFQHGX2MiwO0FFwB9SSURDic-3jbn7hoVAUF8yKoB0Lh_Pu8EOyuCftxFZWob0076	.google.com	/	2026-11-25T02:32:21.848Z	156						High	
+SIDCC	AKEyXzXAepVhMciXCbD6XVVGXbUonW9n8UgFwurTSOmFJqUqSob_7ZVEGEjsLlXTkA8SdojIRbIT	.google.com	/	2026-11-02T05:50:15.977Z	81						High	
+SSID	AZGZscIuRL728vQM3	.google.com	/	2026-11-25T02:32:21.846Z	21	✓	✓				High	
+ttcsid	1762062498751::2wrPSCRJIMzSu2DXMi8M.1.1762062538930.0	.premierleague.com	/	2026-11-27T05:48:58.000Z	59						Medium	
+ttcsid_CQTPD5JC77U6D8VT2IE0	1762062498751::ExUhnOWx67RzXWrpju_W.1.1762062538930.0	.premierleague.com	/	2026-11-27T05:48:58.000Z	80						Medium	
+twid	u%3D14532478	.twitter.com	/	2026-09-24T12:55:08.064Z	16		✓	None			Medium	
