@@ -71,6 +71,7 @@ import Login from "./pages/login";
 import ResponsiveTableDemo from "./pages/responsive-table-demo";
 import CurrentStandings from "./pages/current-standings";
 import TransferPlanner from "./pages/transfer-planner";
+import ProjectedPoints from "./pages/projected-points";
 
 
 function Router() {
@@ -82,6 +83,7 @@ function Router() {
       <Route path="/" component={TeamGoalProjections} />
       <Route path="/live-rank" component={LiveRank} />
       <Route path="/my-dashboard" component={MyDashboard} />
+      <Route path="/projected-points" component={ProjectedPoints} />
       <Route path="/fixtures" component={Fixtures} />
       <Route path="/transfers" component={Transfers} />
       <Route path="/captain" component={Captain} />
