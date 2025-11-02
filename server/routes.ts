@@ -33,10 +33,12 @@ import connectPg from "connect-pg-simple";
 import { internalFetch, getApiBaseUrl } from "./config";
 import { resultCache } from "./result-cache-service";
 import { normalizeGameweekKeys, normalizeGameweekKey } from './gameweek-key-utils';
-// Minutes scaling removed from all player projection tools
 import { syncProjectionService } from './sync-projection-service';
 import { FPLScoringCacheService } from './fpl-scoring-cache-service';
 import { InitializationOrchestrator } from './initialization-orchestrator';
+import axios from 'axios';
+import { wrapper } from 'axios-cookiejar-support';
+import { CookieJar } from 'tough-cookie';
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -908,75 +910,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'FPL email and password are required' });
       }
 
+      // Create axios instance with cookie jar support
+      const jar = new CookieJar();
+      const client = wrapper(axios.create({ jar }));
+
       // Authenticate with FPL
-      const loginResponse = await fetch('https://users.premierleague.com/accounts/login/', {
-        method: 'POST',
+      console.log('🔐 Attempting FPL login...');
+      const loginResponse = await client.post('https://users.premierleague.com/accounts/login/', {
+        password: fplPassword,
+        login: fplEmail,
+        redirect_uri: 'https://fantasy.premierleague.com/a/login',
+        app: 'plfpl-web'
+      }, {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          password: fplPassword,
-          login: fplEmail,
-          redirect_uri: 'https://fantasy.premierleague.com/a/login',
-          app: 'plfpl-web'
-        })
+        validateStatus: (status) => status < 500 // Accept 4xx responses
       });
 
-      if (!loginResponse.ok) {
-        const errorText = await loginResponse.text();
-        console.error('FPL login failed:', loginResponse.status, errorText);
+      if (loginResponse.status !== 200) {
+        console.error('FPL login failed:', loginResponse.status, loginResponse.data);
         return res.status(401).json({ error: 'Invalid FPL credentials' });
       }
 
-      // Extract ALL cookies from response (FPL sends multiple: pl_profile, sessionid, etc.)
-      let cookies: string = '';
+      // Get all cookies from the jar
+      const cookies = await jar.getCookies('https://fantasy.premierleague.com');
+      console.log('🍪 Extracted cookies:', cookies.length);
       
-      // Try getSetCookie() first (modern fetch API)
-      if (typeof loginResponse.headers.getSetCookie === 'function') {
-        try {
-          const cookieArray = loginResponse.headers.getSetCookie();
-          console.log('DEBUG: getSetCookie() returned:', cookieArray);
-          if (cookieArray && cookieArray.length > 0) {
-            cookies = cookieArray.map(cookie => cookie.split(';')[0]).join('; ');
-          }
-        } catch (e) {
-          console.error('Error using getSetCookie():', e);
-        }
-      }
-      
-      // Fallback: iterate through all headers
-      if (!cookies) {
-        const allCookies: string[] = [];
-        loginResponse.headers.forEach((value, key) => {
-          if (key.toLowerCase() === 'set-cookie') {
-            console.log('DEBUG: Found set-cookie header:', value);
-            allCookies.push(value.split(';')[0]);
-          }
-        });
-        if (allCookies.length > 0) {
-          cookies = allCookies.join('; ');
-        }
-      }
-
-      console.log('DEBUG: Final extracted cookies:', cookies ? `${cookies.substring(0, 50)}...` : 'NONE');
-
-      if (!cookies) {
+      if (cookies.length === 0) {
+        console.error('❌ No cookies received from FPL');
         return res.status(500).json({ error: 'Failed to extract authentication cookies from FPL' });
       }
 
+      // Convert cookies to string format
+      const cookieString = cookies.map(c => `${c.key}=${c.value}`).join('; ');
+      console.log('✅ Cookie string created:', cookieString.substring(0, 50) + '...');
+
       // Get manager ID using the cookies
-      const meResponse = await fetch('https://fantasy.premierleague.com/api/me/', {
+      const meResponse = await client.get('https://fantasy.premierleague.com/api/me/', {
         headers: {
-          'Cookie': cookies
+          'Cookie': cookieString
         }
       });
 
-      if (!meResponse.ok) {
+      if (meResponse.status !== 200) {
+        console.error('Failed to fetch manager info:', meResponse.status);
         return res.status(401).json({ error: 'Failed to fetch FPL manager info' });
       }
 
-      const meData = await meResponse.json();
+      const meData = meResponse.data;
       const fplManagerId = meData.player.entry;
+      console.log('✅ FPL Manager ID:', fplManagerId);
 
       // Store FPL credentials and cookies in database
       const cookiesExpiry = new Date();
@@ -986,10 +970,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({
           fplEmail,
           fplManagerId,
-          fplSessionCookies: cookies,
+          fplSessionCookies: cookieString,
           fplCookiesExpiry: cookiesExpiry
         })
         .where(eq(users.id, userId));
+
+      console.log('✅ FPL account connected successfully for user:', userId);
 
       res.json({ 
         success: true, 
