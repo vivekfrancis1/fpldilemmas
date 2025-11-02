@@ -18,8 +18,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function FplConnectDialog() {
   const [open, setOpen] = useState(false);
-  const [fplEmail, setFplEmail] = useState("");
-  const [fplPassword, setFplPassword] = useState("");
+  const [fplCookies, setFplCookies] = useState("");
+  const [fplManagerId, setFplManagerId] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -37,7 +37,7 @@ export function FplConnectDialog() {
   // Connect FPL account mutation
   const connectMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/fpl/connect", { fplEmail, fplPassword });
+      const res = await apiRequest("POST", "/api/fpl/connect", { fplCookies, fplManagerId: parseInt(fplManagerId) });
       return res.json();
     },
     onSuccess: (data: any) => {
@@ -47,7 +47,8 @@ export function FplConnectDialog() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/fpl/status"] });
       setOpen(false);
-      setFplPassword("");
+      setFplCookies("");
+      setFplManagerId("");
     },
     onError: (error: any) => {
       const isAuthError = error.message?.includes("Authentication required") || error.message?.includes("401");
@@ -55,7 +56,7 @@ export function FplConnectDialog() {
         title: "Connection Failed",
         description: isAuthError 
           ? "Please log in to your account first. Visit /login to sign in or create an account."
-          : error.message || "Please check your FPL credentials and try again",
+          : error.message || "Please check your FPL cookies and try again",
         variant: "destructive",
       });
     },
@@ -73,8 +74,8 @@ export function FplConnectDialog() {
         description: "Your FPL account has been disconnected",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/fpl/status"] });
-      setFplEmail("");
-      setFplPassword("");
+      setFplCookies("");
+      setFplManagerId("");
     },
     onError: (error: Error) => {
       toast({
@@ -86,10 +87,10 @@ export function FplConnectDialog() {
   });
 
   const handleConnect = () => {
-    if (!fplEmail || !fplPassword) {
+    if (!fplCookies || !fplManagerId) {
       toast({
         title: "Missing Information",
-        description: "Please enter your FPL email and password",
+        description: "Please enter your FPL cookies and Manager ID",
         variant: "destructive",
       });
       return;
@@ -141,8 +142,6 @@ export function FplConnectDialog() {
               <CheckCircle2 className="h-4 w-4" />
               <AlertDescription>
                 Connected to FPL Manager ID: {fplStatus.fplManagerId}
-                <br />
-                Email: {fplStatus.fplEmail}
               </AlertDescription>
             </Alert>
 
@@ -170,34 +169,44 @@ export function FplConnectDialog() {
           <div className="space-y-4">
             <Alert>
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Your FPL credentials are used only to authenticate with the official FPL API. They are
-                not stored in plain text and are only used to obtain session cookies.
+              <AlertDescription className="text-sm">
+                <strong>How to get your FPL cookies:</strong>
+                <ol className="list-decimal list-inside mt-2 space-y-1">
+                  <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline">fantasy.premierleague.com</a> and log in</li>
+                  <li>Open browser DevTools (F12 or right-click → Inspect)</li>
+                  <li>Go to Application tab → Cookies → fantasy.premierleague.com</li>
+                  <li>Copy the values of pl_profile and sessionid cookies</li>
+                  <li>Paste them below in this format: pl_profile=...; sessionid=...</li>
+                </ol>
               </AlertDescription>
             </Alert>
 
             <div className="space-y-2">
-              <Label htmlFor="fpl-email">FPL Email</Label>
+              <Label htmlFor="fpl-manager-id">Your FPL Manager ID</Label>
               <Input
-                id="fpl-email"
-                type="email"
-                placeholder="your.email@example.com"
-                value={fplEmail}
-                onChange={(e) => setFplEmail(e.target.value)}
-                data-testid="input-fpl-email"
+                id="fpl-manager-id"
+                type="number"
+                placeholder="e.g., 123456"
+                value={fplManagerId}
+                onChange={(e) => setFplManagerId(e.target.value)}
+                data-testid="input-fpl-manager-id"
               />
+              <p className="text-xs text-muted-foreground">
+                Find this in your FPL URL: fantasy.premierleague.com/entry/[YOUR_ID]/event/10
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fpl-password">FPL Password</Label>
+              <Label htmlFor="fpl-cookies">FPL Cookies</Label>
               <Input
-                id="fpl-password"
-                type="password"
-                placeholder="Your FPL password"
-                value={fplPassword}
-                onChange={(e) => setFplPassword(e.target.value)}
+                id="fpl-cookies"
+                type="text"
+                placeholder="pl_profile=...; sessionid=..."
+                value={fplCookies}
+                onChange={(e) => setFplCookies(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleConnect()}
-                data-testid="input-fpl-password"
+                data-testid="input-fpl-cookies"
+                className="font-mono text-xs"
               />
             </div>
 
