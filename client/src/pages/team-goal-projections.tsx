@@ -95,7 +95,7 @@ export default function TeamGoalProjections() {
           default: return b.totalProjectedGoals - a.totalProjectedGoals;
         }
       });
-  }, [projectionsData, selectedTeam, sortBy]);
+  }, [projectionsData, selectedTeam, sortBy, startGameweek, endGameweek]);
 
 
   const totalGoals = useMemo(() => {
