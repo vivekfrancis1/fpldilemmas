@@ -596,8 +596,8 @@ export default function ProjectedPoints() {
           <CardContent>
             <Tabs value={plannerMode} onValueChange={(v) => setPlannerMode(v as "auto" | "manual")}>
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="manual">Manual Lineup</TabsTrigger>
-                <TabsTrigger value="auto">Auto Optimized</TabsTrigger>
+                <TabsTrigger value="manual">Current Lineup</TabsTrigger>
+                <TabsTrigger value="auto">Auto Optimized Lineup</TabsTrigger>
               </TabsList>
             </Tabs>
           </CardContent>
@@ -611,7 +611,7 @@ export default function ProjectedPoints() {
           <CardContent>
             <div className="text-5xl font-bold">{total6GWPoints.toFixed(1)}</div>
             <div className="text-purple-100 mt-2">
-              {plannerMode === "manual" ? "Manual Lineup" : "Auto-Optimized Lineup"}
+              {plannerMode === "manual" ? "Current Lineup" : "Auto Optimized Lineup"}
             </div>
           </CardContent>
         </Card>
