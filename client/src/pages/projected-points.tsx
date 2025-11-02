@@ -218,7 +218,7 @@ export default function ProjectedPoints() {
   });
 
   // Fetch projections for next 6 gameweeks
-  const { data: playerProjections6GW, isLoading: isLoadingProjections } = useQuery<any[]>({
+  const { data: playerProjections6GW, isLoading: isLoadingProjections, refetch: refetchProjections } = useQuery<any[]>({
     queryKey: ["/api/player-total-points"],
     staleTime: 10 * 60 * 1000,
   });
@@ -381,7 +381,10 @@ export default function ProjectedPoints() {
   // Trigger auto-optimization when switching to auto mode
   useEffect(() => {
     if (plannerMode === "auto" && manualLineup.length > 0 && optimizedLineups.size === 0) {
-      optimizeAllGameweeks();
+      // Refetch projections data first to ensure we have the latest
+      refetchProjections().then(() => {
+        optimizeAllGameweeks();
+      });
     }
   }, [plannerMode]);
 
