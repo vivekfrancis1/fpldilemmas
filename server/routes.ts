@@ -925,22 +925,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         headers: {
           'Content-Type': 'application/json',
         },
-        validateStatus: (status) => status < 500 // Accept 4xx responses
+        validateStatus: (status) => status < 500, // Accept 4xx responses
+        maxRedirects: 0 // Don't follow redirects automatically
       });
 
-      if (loginResponse.status !== 200) {
+      console.log('📊 FPL login response status:', loginResponse.status);
+      console.log('📊 FPL login response headers:', loginResponse.headers);
+      console.log('📊 FPL login response data:', loginResponse.data);
+
+      // FPL login returns different status codes based on success
+      if (loginResponse.status >= 400) {
         console.error('FPL login failed:', loginResponse.status, loginResponse.data);
         return res.status(401).json({ error: 'Invalid FPL credentials' });
       }
 
-      // Get all cookies from the jar
-      const cookies = await jar.getCookies('https://fantasy.premierleague.com');
-      console.log('🍪 Extracted cookies:', cookies.length);
+      // Try to get cookies from both domains
+      const cookiesFPL = await jar.getCookies('https://fantasy.premierleague.com');
+      const cookiesUsers = await jar.getCookies('https://users.premierleague.com');
+      console.log('🍪 Extracted cookies from fantasy.premierleague.com:', cookiesFPL.length);
+      console.log('🍪 Extracted cookies from users.premierleague.com:', cookiesUsers.length);
       
-      if (cookies.length === 0) {
+      const allCookies = [...cookiesFPL, ...cookiesUsers];
+      
+      if (allCookies.length === 0) {
         console.error('❌ No cookies received from FPL');
         return res.status(500).json({ error: 'Failed to extract authentication cookies from FPL' });
       }
+      
+      const cookies = allCookies;
 
       // Convert cookies to string format
       const cookieString = cookies.map(c => `${c.key}=${c.value}`).join('; ');
