@@ -218,7 +218,7 @@ export default function ProjectedPoints() {
 
   // Fetch projections for next 6 gameweeks
   const { data: playerProjections6GW, isLoading: isLoadingProjections } = useQuery<any[]>({
-    queryKey: ["/api/player-total-points-projections"],
+    queryKey: ["/api/player-total-points"],
     staleTime: 10 * 60 * 1000,
   });
 
