@@ -443,11 +443,11 @@ export default function ProjectedPoints() {
     return (
       <TableRow key={idx} className={!isStarting ? "bg-gray-50" : ""}>
         <TableCell className="font-medium">
-          <div className="flex items-center gap-2">
-            <div>
-              <div className="font-semibold text-gray-900">{player.web_name}</div>
-              <div className="flex items-center gap-1.5 mt-1">
-                <Badge className={`text-xs px-1 py-0 h-4 ${
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-gray-900 text-sm sm:text-base truncate">{player.web_name}</div>
+              <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 sm:mt-1 flex-wrap">
+                <Badge className={`text-[10px] sm:text-xs px-0.5 sm:px-1 py-0 h-3.5 sm:h-4 ${
                   position === 'GKP' ? 'bg-yellow-100 text-yellow-800' :
                   position === 'DEF' ? 'bg-green-100 text-green-800' :
                   position === 'MID' ? 'bg-blue-100 text-blue-800' :
@@ -455,35 +455,40 @@ export default function ProjectedPoints() {
                 }`}>
                   {position}
                 </Badge>
-                <Badge variant="outline" className="text-xs px-1 py-0 h-4 text-gray-600">
+                <Badge variant="outline" className="text-[10px] sm:text-xs px-0.5 sm:px-1 py-0 h-3.5 sm:h-4 text-gray-600">
                   {teamName}
                 </Badge>
                 {!isStarting && (
-                  <Badge variant="outline" className="text-xs px-1 py-0 h-4 text-orange-600 border-orange-300">
+                  <Badge variant="outline" className="hidden sm:inline-flex text-xs px-1 py-0 h-4 text-orange-600 border-orange-300">
                     Bench
                   </Badge>
                 )}
               </div>
             </div>
-            {isCaptain && (
-              <Badge className="bg-yellow-500 text-white text-xs px-1.5 py-0.5 h-5 flex items-center gap-1">
-                <Crown className="h-3 w-3" />C
-              </Badge>
-            )}
-            {isViceCaptain && (
-              <Badge variant="outline" className="text-xs px-1.5 py-0.5 h-5 border-yellow-500 text-yellow-600 flex items-center gap-1">
-                <Crown className="h-3 w-3" />V
-              </Badge>
-            )}
-            <PlayerAvailabilityBadge player={player} />
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {isCaptain && (
+                <Badge className="bg-yellow-500 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 h-4 sm:h-5 flex items-center gap-0.5 sm:gap-1">
+                  <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />C
+                </Badge>
+              )}
+              {isViceCaptain && (
+                <Badge variant="outline" className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 h-4 sm:h-5 border-yellow-500 text-yellow-600 flex items-center gap-0.5 sm:gap-1">
+                  <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />V
+                </Badge>
+              )}
+              <PlayerAvailabilityBadge player={player} />
+            </div>
           </div>
         </TableCell>
-        <TableCell className="text-center font-medium text-gray-900">
+        <TableCell className="hidden md:table-cell text-center font-medium text-gray-900">
           £{(player.now_cost / 10).toFixed(1)}m
         </TableCell>
-        {projections.map(proj => (
-          <TableCell key={proj.gw} className="text-center">
-            <span className={`font-medium ${
+        {projections.map((proj, projIdx) => (
+          <TableCell 
+            key={proj.gw} 
+            className={`text-center ${projIdx > 1 && projIdx < projections.length - 1 ? 'hidden lg:table-cell' : ''}`}
+          >
+            <span className={`font-medium text-xs sm:text-sm ${
               proj.gw === selectedGameweek ? 'text-purple-600 font-bold' : 'text-gray-700'
             }`}>
               {proj.points.toFixed(1)}
@@ -491,7 +496,7 @@ export default function ProjectedPoints() {
           </TableCell>
         ))}
         <TableCell className="text-center">
-          <span className="font-bold text-purple-600">
+          <span className="font-bold text-purple-600 text-sm sm:text-base">
             {projections.reduce((sum, p) => sum + p.points, 0).toFixed(1)}
           </span>
         </TableCell>
@@ -515,11 +520,11 @@ export default function ProjectedPoints() {
     return (
       <TableRow key={idx} className={!isStarting ? "bg-gray-50" : ""}>
         <TableCell className="font-medium">
-          <div className="flex items-center gap-2">
-            <div>
-              <div className="font-semibold text-gray-900">{player.web_name}</div>
-              <div className="flex items-center gap-1.5 mt-1">
-                <Badge className={`text-xs px-1 py-0 h-4 ${
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-gray-900 text-sm sm:text-base truncate">{player.web_name}</div>
+              <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 sm:mt-1 flex-wrap">
+                <Badge className={`text-[10px] sm:text-xs px-0.5 sm:px-1 py-0 h-3.5 sm:h-4 ${
                   position === 'GKP' ? 'bg-yellow-100 text-yellow-800' :
                   position === 'DEF' ? 'bg-green-100 text-green-800' :
                   position === 'MID' ? 'bg-blue-100 text-blue-800' :
@@ -527,34 +532,36 @@ export default function ProjectedPoints() {
                 }`}>
                   {position}
                 </Badge>
-                <Badge variant="outline" className="text-xs px-1 py-0 h-4 text-gray-600">
+                <Badge variant="outline" className="text-[10px] sm:text-xs px-0.5 sm:px-1 py-0 h-3.5 sm:h-4 text-gray-600">
                   {teamName}
                 </Badge>
                 {!isStarting && (
-                  <Badge variant="outline" className="text-xs px-1 py-0 h-4 text-orange-600 border-orange-300">
+                  <Badge variant="outline" className="hidden sm:inline-flex text-xs px-1 py-0 h-4 text-orange-600 border-orange-300">
                     Bench
                   </Badge>
                 )}
               </div>
             </div>
-            {isCaptain && (
-              <Badge className="bg-yellow-500 text-white text-xs px-1.5 py-0.5 h-5 flex items-center gap-1">
-                <Crown className="h-3 w-3" />C
-              </Badge>
-            )}
-            {isViceCaptain && (
-              <Badge variant="outline" className="text-xs px-1.5 py-0.5 h-5 border-yellow-500 text-yellow-600 flex items-center gap-1">
-                <Crown className="h-3 w-3" />V
-              </Badge>
-            )}
-            <PlayerAvailabilityBadge player={player} />
+            <div className="flex items-center gap-1 flex-shrink-0">
+              {isCaptain && (
+                <Badge className="bg-yellow-500 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 h-4 sm:h-5 flex items-center gap-0.5 sm:gap-1">
+                  <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />C
+                </Badge>
+              )}
+              {isViceCaptain && (
+                <Badge variant="outline" className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 h-4 sm:h-5 border-yellow-500 text-yellow-600 flex items-center gap-0.5 sm:gap-1">
+                  <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />V
+                </Badge>
+              )}
+              <PlayerAvailabilityBadge player={player} />
+            </div>
           </div>
         </TableCell>
-        <TableCell className="text-center font-medium text-gray-900">
+        <TableCell className="hidden md:table-cell text-center font-medium text-gray-900">
           £{(player.now_cost / 10).toFixed(1)}m
         </TableCell>
         <TableCell className="text-center">
-          <span className="font-bold text-purple-600">
+          <span className="font-bold text-purple-600 text-sm sm:text-base">
             {points.toFixed(1)}
           </span>
         </TableCell>
@@ -694,11 +701,11 @@ export default function ProjectedPoints() {
         {/* Summary Card - Total 6 GW Points */}
         <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
           <CardHeader>
-            <CardTitle className="text-white">Next 6 Gameweeks Total Projected Points</CardTitle>
+            <CardTitle className="text-white text-base sm:text-lg">Next 6 Gameweeks Total Projected Points</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-5xl font-bold">{total6GWPoints.toFixed(1)}</div>
-            <div className="text-purple-100 mt-2">
+            <div className="text-4xl sm:text-5xl font-bold">{total6GWPoints.toFixed(1)}</div>
+            <div className="text-purple-100 mt-2 text-sm sm:text-base">
               {plannerMode === "manual" ? "Current Lineup" : "Auto Optimized Lineup"}
             </div>
           </CardContent>
@@ -707,13 +714,13 @@ export default function ProjectedPoints() {
         {/* Projected Points by Gameweek */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
               Projected Points by Gameweek
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
               {nextGameweeks.map(gw => {
                 // Calculate total for this gameweek
                 let gwTotal = 0;
@@ -745,9 +752,9 @@ export default function ProjectedPoints() {
                     }`}
                     onClick={() => setSelectedGameweek(gw.id)}
                   >
-                    <CardContent className="p-4 text-center">
-                      <div className="text-sm font-medium text-gray-600 mb-2">GW{gw.id}</div>
-                      <div className="text-2xl font-bold text-purple-600">{gwTotal.toFixed(1)}</div>
+                    <CardContent className="p-3 sm:p-4 text-center">
+                      <div className="text-xs sm:text-sm font-medium text-gray-600 mb-1 sm:mb-2">GW{gw.id}</div>
+                      <div className="text-xl sm:text-2xl font-bold text-purple-600">{gwTotal.toFixed(1)}</div>
                     </CardContent>
                   </Card>
                 );
@@ -759,12 +766,14 @@ export default function ProjectedPoints() {
         {/* Current Team */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              {plannerMode === "manual" ? "Current Team Lineup" : `Optimized Lineup for GW${selectedGameweek}`}
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="truncate">
+                {plannerMode === "manual" ? "Current Team Lineup" : `Optimized Lineup for GW${selectedGameweek}`}
+              </span>
             </CardTitle>
             {plannerMode === "auto" && isOptimizing && (
-              <div className="text-sm text-gray-500 mt-2">Optimizing lineups for all gameweeks...</div>
+              <div className="text-xs sm:text-sm text-gray-500 mt-2">Optimizing lineups for all gameweeks...</div>
             )}
           </CardHeader>
           <CardContent>
@@ -772,19 +781,22 @@ export default function ProjectedPoints() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Player</TableHead>
-                    <TableHead className="text-center">Price</TableHead>
+                    <TableHead className="text-xs sm:text-sm">Player</TableHead>
+                    <TableHead className="hidden md:table-cell text-center text-xs sm:text-sm">Price</TableHead>
                     {plannerMode === "manual" ? (
                       <>
-                        {nextGameweeks.map(gw => (
-                          <TableHead key={gw.id} className="text-center">
+                        {nextGameweeks.map((gw, idx) => (
+                          <TableHead 
+                            key={gw.id} 
+                            className={`text-center text-xs sm:text-sm ${idx > 1 && idx < nextGameweeks.length - 1 ? 'hidden lg:table-cell' : ''}`}
+                          >
                             GW{gw.id}
                           </TableHead>
                         ))}
-                        <TableHead className="text-center">Total (6GW)</TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm">Total (6GW)</TableHead>
                       </>
                     ) : (
-                      <TableHead className="text-center">GW{selectedGameweek} Pts</TableHead>
+                      <TableHead className="text-center text-xs sm:text-sm">GW{selectedGameweek} Pts</TableHead>
                     )}
                   </TableRow>
                 </TableHeader>
