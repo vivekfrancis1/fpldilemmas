@@ -1429,6 +1429,86 @@ export default function BestWildcardTeam() {
                         );
                       })}
                     </div>
+
+                    {/* Bench Players for this Gameweek */}
+                    <div className="mt-6">
+                      <h4 className="font-semibold mb-3 text-sm text-muted-foreground">Substitutes</h4>
+                      
+                      {/* Substitute Goalkeeper */}
+                      <div className="mb-3">
+                        <div className="text-xs font-medium text-muted-foreground mb-2">Substitute Goalkeeper</div>
+                        {(() => {
+                          const benchGK = optimalTeam.squad
+                            .filter(p => !gameweekTeam.starting11.some(s => s.playerId === p.playerId))
+                            .filter(p => p.position.toLowerCase().includes('goalkeeper') || p.position === 'GKP');
+                          
+                          return benchGK.map(player => {
+                            const gameweekPoints = getGameweekPoints(player, gameweekTeam.gameweek);
+                            return (
+                              <div
+                                key={player.playerId}
+                                className="flex items-center justify-between p-2 rounded bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Shield className="h-3 w-3 text-yellow-600" />
+                                  <div>
+                                    <div className="text-sm font-medium">
+                                      {playerIdToWebName.get(player.playerId) || player.playerName}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                      {player.teamName} - GKP
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-sm font-medium">
+                                  {gameweekPoints.toFixed(1)} pts
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+
+                      {/* Outfield Substitutes */}
+                      <div>
+                        <div className="text-xs font-medium text-muted-foreground mb-2">Outfield Substitutes (Priority Order)</div>
+                        <div className="space-y-2">
+                          {(() => {
+                            const benchOutfield = optimalTeam.squad
+                              .filter(p => !gameweekTeam.starting11.some(s => s.playerId === p.playerId))
+                              .filter(p => !p.position.toLowerCase().includes('goalkeeper') && p.position !== 'GKP')
+                              .sort((a, b) => getGameweekPoints(b, gameweekTeam.gameweek) - getGameweekPoints(a, gameweekTeam.gameweek));
+                            
+                            return benchOutfield.map((player, index) => {
+                              const gameweekPoints = getGameweekPoints(player, gameweekTeam.gameweek);
+                              return (
+                                <div
+                                  key={player.playerId}
+                                  className="flex items-center justify-between p-2 rounded bg-muted/30 border"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0">
+                                      {index + 1}
+                                    </span>
+                                    <div>
+                                      <div className="text-sm font-medium">
+                                        {playerIdToWebName.get(player.playerId) || player.playerName}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {player.teamName} - {player.position}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-sm font-medium">
+                                    {gameweekPoints.toFixed(1)} pts
+                                  </div>
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </div>
+                    </div>
                       </div>
                     </TabsContent>
                   ))}
