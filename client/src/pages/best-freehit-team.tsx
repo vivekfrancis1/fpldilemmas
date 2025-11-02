@@ -1030,6 +1030,16 @@ export default function BestFreehitTeam() {
     }
   };
 
+  // Convert position to short form (GKP, DEF, MID, FWD)
+  const getPositionShortForm = (position: string): string => {
+    const pos = position.toLowerCase();
+    if (pos.includes('goalkeeper') || pos === 'gkp') return 'GKP';
+    if (pos.includes('defender') || pos === 'def') return 'DEF';
+    if (pos.includes('midfielder') || pos === 'mid') return 'MID';
+    if (pos.includes('forward') || pos === 'fwd') return 'FWD';
+    return position;
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -1465,7 +1475,7 @@ export default function BestFreehitTeam() {
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge className={getPositionColor(player.position)} variant="secondary">
-                          {player.position}
+                          {getPositionShortForm(player.position)}
                         </Badge>
                         <div className="text-right">
                           <div className="flex items-center gap-1">
@@ -1518,7 +1528,7 @@ export default function BestFreehitTeam() {
                       </div>
                       <div className="flex items-center gap-3">
                         <Badge className={getPositionColor(player.position)} variant="secondary">
-                          GK
+                          GKP
                         </Badge>
                         <div className="text-right">
                           <p className="font-medium">
@@ -1566,7 +1576,7 @@ export default function BestFreehitTeam() {
                             className={getPositionColor(player.position)} 
                             variant="secondary"
                           >
-                            {player.position}
+                            {getPositionShortForm(player.position)}
                           </Badge>
                           <div className="text-right">
                             <p className="font-medium">
