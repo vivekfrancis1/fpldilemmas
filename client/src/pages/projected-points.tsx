@@ -357,24 +357,29 @@ export default function ProjectedPoints() {
     }
   }, [plannerMode, selectedGameweek]);
 
-  // Calculate total projected points for current lineup
-  const calculateTotalProjectedPoints = (): number => {
-    if (!selectedGameweek) return 0;
+  // Calculate total projected points for all 6 gameweeks
+  const calculateTotal6GWProjectedPoints = (): number => {
+    const nextGWs = getNextGameweeks();
+    if (nextGWs.length === 0) return 0;
     
     let total = 0;
     
     if (plannerMode === "manual") {
       const starting11 = manualLineup.filter(p => p.position <= 11);
-      starting11.forEach(pick => {
-        const points = getPlayerProjectedPoints(pick.element, selectedGameweek);
-        const multiplier = pick.is_captain ? 2 : (pick.is_vice_captain ? 1 : 1);
-        total += points * multiplier;
+      nextGWs.forEach(gw => {
+        starting11.forEach(pick => {
+          const points = getPlayerProjectedPoints(pick.element, gw.id);
+          const multiplier = pick.is_captain ? 2 : 1;
+          total += points * multiplier;
+        });
       });
     } else {
-      optimizedLineup?.starting11.forEach(pick => {
-        const points = pick.projectedPoints;
-        const multiplier = pick.isCaptain ? 2 : 1;
-        total += points * multiplier;
+      nextGWs.forEach(gw => {
+        optimizedLineup?.starting11.forEach(pick => {
+          const points = getPlayerProjectedPoints(pick.element, gw.id);
+          const multiplier = pick.isCaptain ? 2 : 1;
+          total += points * multiplier;
+        });
       });
     }
     
@@ -537,7 +542,7 @@ export default function ProjectedPoints() {
   }
 
   const nextGameweeks = getNextGameweeks();
-  const totalPoints = calculateTotalProjectedPoints();
+  const total6GWPoints = calculateTotal6GWProjectedPoints();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
@@ -588,20 +593,18 @@ export default function ProjectedPoints() {
           </CardContent>
         </Card>
 
-        {/* Summary Card */}
-        {selectedGameweek && (
-          <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
-            <CardHeader>
-              <CardTitle className="text-white">GW{selectedGameweek} Projected Points</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-5xl font-bold">{totalPoints.toFixed(1)}</div>
-              <div className="text-purple-100 mt-2">
-                {plannerMode === "manual" ? "Manual Lineup" : "Auto-Optimized Lineup"}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {/* Summary Card - Total 6 GW Points */}
+        <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
+          <CardHeader>
+            <CardTitle className="text-white">Next 6 Gameweeks Total Projected Points</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-5xl font-bold">{total6GWPoints.toFixed(1)}</div>
+            <div className="text-purple-100 mt-2">
+              {plannerMode === "manual" ? "Manual Lineup" : "Auto-Optimized Lineup"}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Current Team */}
         <Card>
