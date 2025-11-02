@@ -14421,15 +14421,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bench = enrichedPicks
         .filter(p => !starting11Ids.has(p.element))
         .sort((a, b) => {
-          // Bench order priority: DEF > MID > FWD > GK
-          const positionPriority = { 2: 1, 3: 2, 4: 3, 1: 4 };
-          const aPriority = positionPriority[a.position as keyof typeof positionPriority] || 5;
-          const bPriority = positionPriority[b.position as keyof typeof positionPriority] || 5;
+          // Bench order: GK first, then all outfield players by projected points
+          if (a.position === 1 && b.position !== 1) return -1;
+          if (a.position !== 1 && b.position === 1) return 1;
           
-          if (aPriority !== bPriority) {
-            return aPriority - bPriority;
-          }
-          // Within same position, order by projected points
+          // Both are outfield or both are GK - order by projected points
           return b.projectedPoints - a.projectedPoints;
         });
 
