@@ -983,7 +983,7 @@ export default function TransferPlanner() {
   const teamLineupRef = useRef<HTMLDivElement>(null);
   
   // Draft management state
-  const [activeDraft, setActiveDraft] = useState<string>("Base"); // Current working draft
+  const [activeDraft, setActiveDraft] = useState<string>("A"); // Current working draft
   const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [comparisonFilter, setComparisonFilter] = useState<"all" | "manual" | "auto">("all");
@@ -2724,7 +2724,7 @@ export default function TransferPlanner() {
     return JSON.stringify(signature);
   };
 
-  // Identify duplicate drafts by comparing signatures
+  // Identify duplicate drafts by comparing signatures (excludes Base draft)
   const identifyDuplicateDrafts = () => {
     const nextGWs = getNextGameweeks();
     if (nextGWs.length === 0) return {};
@@ -2733,21 +2733,13 @@ export default function TransferPlanner() {
     const signatureMap = new Map<string, string>();
     const duplicates: Record<string, { isDuplicate: boolean; duplicateOfKey: string }> = {};
     
-    // Array of all drafts in creation order (Base first, then saved drafts)
-    const allDrafts = [
-      { 
-        draftKey: 'Base', 
-        transfers: {}, 
-        // For Base: use plannedChips only if Base is the active draft, otherwise use empty object
-        chips: activeDraft === 'Base' ? plannedChips : {}
-      },
-      ...savedDrafts.map((draft: any) => ({
-        draftKey: draft.draftLetter,
-        // Always use the saved gameweekTransfers from the draft object for accurate comparison
-        transfers: draft.gameweekTransfers || {},
-        chips: draft.plannedChips || {}
-      }))
-    ];
+    // Array of saved drafts only (Base is excluded from comparison)
+    const allDrafts = savedDrafts.map((draft: any) => ({
+      draftKey: draft.draftLetter,
+      // Always use the saved gameweekTransfers from the draft object for accurate comparison
+      transfers: draft.gameweekTransfers || {},
+      chips: draft.plannedChips || {}
+    }));
     
     // Debug: Log chip data for each draft
     console.log('🔍 DUPLICATE DETECTION DEBUG:');
@@ -2782,7 +2774,7 @@ export default function TransferPlanner() {
     return duplicates;
   };
 
-  // Build comparison data for all drafts with both Manual and Auto modes
+  // Build comparison data for all drafts with both Manual and Auto modes (excludes Base draft)
   const buildDraftComparisonData = () => {
     if (!teamData?.picks || !playerProjections6GW) return [];
     
@@ -2790,54 +2782,6 @@ export default function TransferPlanner() {
     if (nextGWs.length === 0) return [];
     
     const comparisonRows: any[] = [];
-    
-    // Base Draft - Manual mode
-    const baseManualRow = {
-      draftKey: 'Base',
-      mode: 'Manual lineup',
-      gameweeks: {} as Record<number, number>,
-      total: 0
-    };
-    
-    nextGWs.forEach(gw => {
-      let squad = getSquadAtGameweek({}, gw.id); // Empty transfers = base team
-      
-      // Apply captain info from current manual lineup (for Base draft)
-      const captainPick = manualLineup.find(p => p.is_captain);
-      const viceCaptainPick = manualLineup.find(p => p.is_vice_captain);
-      if (captainPick || viceCaptainPick) {
-        squad = squad.map(pick => ({
-          ...pick,
-          is_captain: pick.element === captainPick?.element,
-          is_vice_captain: pick.element === viceCaptainPick?.element
-        }));
-      }
-      
-      // Base Draft always has no chips
-      const chipForGW = null;
-      const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
-      baseManualRow.gameweeks[gw.id] = points;
-      baseManualRow.total += points;
-    });
-    comparisonRows.push(baseManualRow);
-    
-    // Base Draft - Auto mode
-    const baseAutoRow = {
-      draftKey: 'Base',
-      mode: 'Auto lineup',
-      gameweeks: {} as Record<number, number>,
-      total: 0
-    };
-    
-    nextGWs.forEach(gw => {
-      const squad = getSquadAtGameweek({}, gw.id);
-      // Base Draft always has no chips
-      const chipForGW = null;
-      const points = calculateAutoPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
-      baseAutoRow.gameweeks[gw.id] = points;
-      baseAutoRow.total += points;
-    });
-    comparisonRows.push(baseAutoRow);
     
     // All saved drafts - both Manual and Auto modes
     savedDrafts.forEach(draft => {
@@ -4045,8 +3989,8 @@ export default function TransferPlanner() {
       });
 
       if (response.ok) {
-        // Switch to Base Draft
-        switchToDraft("Base");
+        // Switch to Draft A
+        switchToDraft("A");
         await loadDrafts();
         toast({ title: "Draft Deleted", description: `Draft ${activeDraft} has been deleted` });
       }
@@ -4056,10 +4000,10 @@ export default function TransferPlanner() {
   };
 
   const resetDraftAToBase = async () => {
-    if (!teamData?.picks || !searchedId) return;
+    if (!teamData?.picks || !searchedId || activeDraft === "Base") return;
 
     const confirmed = window.confirm(
-      "Are you sure you want to reset Draft A to match the Base Draft? This will remove all transfers and chips from Draft A."
+      `Are you sure you want to reset Draft ${activeDraft} to match the Base Draft? This will remove all transfers and chips from Draft ${activeDraft}.`
     );
 
     if (!confirmed) return;
@@ -4074,7 +4018,7 @@ export default function TransferPlanner() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           managerId: parseInt(searchedId),
-          draftLetter: "A",
+          draftLetter: activeDraft,
           gameweekTransfers: {}, // Empty transfers
           plannedChips: {}, // No chips
           captainPlayerId: captainPick?.element || null,
@@ -4089,11 +4033,11 @@ export default function TransferPlanner() {
 
       if (response.ok) {
         await loadDrafts();
-        switchToDraft("A");
-        toast({ title: "Draft A Reset", description: "Draft A has been reset to match the Base Draft" });
+        switchToDraft(activeDraft);
+        toast({ title: `Draft ${activeDraft} Reset`, description: `Draft ${activeDraft} has been reset to match the Base Draft` });
       }
     } catch (error) {
-      toast({ title: "Error", description: "Failed to reset Draft A", variant: "destructive" });
+      toast({ title: "Error", description: `Failed to reset Draft ${activeDraft}`, variant: "destructive" });
     }
   };
 
@@ -4266,7 +4210,7 @@ export default function TransferPlanner() {
         // After loading drafts, check if Draft A exists
         const response = await fetch(`/api/transfer-planner/drafts/${searchedId}`);
         if (!response.ok) {
-          if (isActive) setActiveDraft("Base");
+          if (isActive) setActiveDraft("A");
           return;
         }
         
@@ -4280,7 +4224,7 @@ export default function TransferPlanner() {
           // Draft A exists, switch to it
           await switchToDraft('A');
         } else {
-          // Draft A doesn't exist, create it as a duplicate of Base
+          // Draft A doesn't exist, create it (starts with no transfers/chips like Base)
           // Get captain and vice-captain from current team
           const captainPick = teamData?.picks.find(p => p.is_captain);
           const viceCaptainPick = teamData?.picks.find(p => p.is_vice_captain);
@@ -4316,12 +4260,12 @@ export default function TransferPlanner() {
               toast({ title: "Draft A Created", description: "Draft A created as a copy of your current team" });
             }
           } else {
-            if (isActive) setActiveDraft("Base");
+            if (isActive) setActiveDraft("A");
           }
         }
       } catch (error) {
         console.error("Error initializing drafts:", error);
-        if (isActive) setActiveDraft("Base");
+        if (isActive) setActiveDraft("A");
       }
     };
     
@@ -4587,16 +4531,6 @@ export default function TransferPlanner() {
                   )}
                 </div>
                 <div className="flex gap-2 flex-wrap items-center">
-              {/* Switch to Base */}
-              <Button
-                onClick={() => switchToDraft("Base")}
-                variant={activeDraft === "Base" ? "default" : "outline"}
-                className="h-9 text-base px-3"
-                data-testid="button-switch-base"
-              >
-                Base
-              </Button>
-
               {/* Saved Drafts */}
               {savedDrafts.map((draft: any) => {
                 const draftChips = getDraftChips(draft.draftLetter);
@@ -4686,17 +4620,17 @@ export default function TransferPlanner() {
                     Duplicate
                   </Button>
                   
-                  {activeDraft === "A" ? (
-                    <Button
-                      onClick={resetDraftAToBase}
-                      variant="outline"
-                      className="h-8 text-sm px-3 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
-                      data-testid="button-reset-draft-a"
-                    >
-                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                      Reset to Base
-                    </Button>
-                  ) : (
+                  <Button
+                    onClick={resetDraftAToBase}
+                    variant="outline"
+                    className="h-8 text-sm px-3 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                    data-testid={`button-reset-draft-${activeDraft.toLowerCase()}`}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                    Reset to Base
+                  </Button>
+                  
+                  {activeDraft !== "A" && (
                     <Button
                       onClick={deleteCurrentDraft}
                       variant="outline"
@@ -4710,19 +4644,6 @@ export default function TransferPlanner() {
                 </div>
               )}
 
-              {/* Bulk Actions */}
-              {savedDrafts.length > 0 && activeDraft === "Base" && (
-                <div className="flex gap-2 flex-wrap pl-[140px] items-center">
-                  <Button
-                    onClick={deleteAllDrafts}
-                    variant="outline"
-                    className="h-8 text-sm px-3 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
-                    data-testid="button-delete-all-drafts"
-                  >
-                    Delete All Drafts
-                  </Button>
-                </div>
-              )}
             </div>
 
             {/* Divider */}
@@ -7581,7 +7502,7 @@ export default function TransferPlanner() {
                                   </TooltipProvider>
                                 )}
                                 
-                                {isDuplicate && row.draftKey !== 'Base' && (
+                                {isDuplicate && (
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -7593,7 +7514,7 @@ export default function TransferPlanner() {
                                         });
                                         if (response.ok) {
                                           if (activeDraft === row.draftKey) {
-                                            switchToDraft("Base");
+                                            switchToDraft("A");
                                           }
                                           await loadDrafts();
                                           toast({ title: "Draft Deleted", description: `Duplicate Draft ${row.draftKey} has been deleted` });
