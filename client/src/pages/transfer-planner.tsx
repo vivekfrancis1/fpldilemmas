@@ -1572,11 +1572,11 @@ export default function TransferPlanner() {
       recommendations.tripleC = gwScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
     }
 
-    // Best Free Hit: Find top 2 gameweeks with lowest starting 11 points for selected draft and lineup mode
+    // Best Free Hit: Find top 2 gameweeks where Free Hit improvement is maximum for selected draft and lineup mode
     const fhInstance = getChipInstance('freehit');
     if (fhInstance) {
       const validGWs = getValidGameweeks(fhInstance);
-      const gwScores: { gw: number; points: number }[] = [];
+      const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
 
       validGWs.forEach(gw => {
         const squad = getSquadAtGameweek(gameweekTransfers, gw.id);
@@ -1658,18 +1658,25 @@ export default function TransferPlanner() {
           startingPoints = bestFormationPoints;
         }
 
-        gwScores.push({ gw: gw.id, points: startingPoints });
+        // Estimate Free Hit points as 25% improvement over normal team
+        const estimatedFHPoints = Math.round(startingPoints * 1.25);
+        const improvement = estimatedFHPoints - startingPoints;
+
+        gwScores.push({ 
+          gw: gw.id, 
+          normalPoints: startingPoints,
+          freeHitPoints: estimatedFHPoints,
+          improvement: improvement
+        });
       });
 
-      // Sort by points ascending (lowest first) and take top 2
-      // For Free Hit, we need to estimate potential points if using Free Hit
-      // For now, we'll assume Free Hit could give 20-30% more points (conservative estimate)
-      // In a real scenario, you'd want to calculate optimal free hit team
-      gwScores.sort((a, b) => a.points - b.points);
+      // Sort by improvement (descending - highest improvement first)
+      // This shows gameweeks where Free Hit would provide maximum benefit
+      gwScores.sort((a, b) => b.improvement - a.improvement);
       recommendations.freehit = gwScores.slice(0, 2).map(s => ({ 
         gw: s.gw, 
-        normalPoints: s.points,
-        freeHitPoints: Math.round(s.points * 1.25) // Estimate 25% improvement with Free Hit
+        normalPoints: s.normalPoints,
+        freeHitPoints: s.freeHitPoints
       }));
     }
 

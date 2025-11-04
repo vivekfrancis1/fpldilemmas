@@ -690,9 +690,9 @@ export default function ProjectedPoints() {
       recommendations.tripleC = gwScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
     }
 
-    // Best Free Hit: Find top 2 gameweeks with lowest starting 11 points
+    // Best Free Hit: Find top 2 gameweeks where Free Hit improvement is maximum
     if (!isChipUsed('freehit')) {
-      const gwScores: { gw: number; points: number }[] = [];
+      const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
 
       nextGWs.forEach(gw => {
         let startingPoints = 0;
@@ -714,14 +714,24 @@ export default function ProjectedPoints() {
           }
         }
 
-        gwScores.push({ gw: gw.id, points: startingPoints });
+        // Estimate Free Hit points as 25% improvement over normal team
+        const estimatedFHPoints = Math.round(startingPoints * 1.25);
+        const improvement = estimatedFHPoints - startingPoints;
+
+        gwScores.push({ 
+          gw: gw.id, 
+          normalPoints: startingPoints,
+          freeHitPoints: estimatedFHPoints,
+          improvement: improvement
+        });
       });
 
-      gwScores.sort((a, b) => a.points - b.points);
+      // Sort by improvement (descending - highest improvement first)
+      gwScores.sort((a, b) => b.improvement - a.improvement);
       recommendations.freehit = gwScores.slice(0, 2).map(s => ({ 
         gw: s.gw, 
-        normalPoints: s.points,
-        freeHitPoints: Math.round(s.points * 1.25)
+        normalPoints: s.normalPoints,
+        freeHitPoints: s.freeHitPoints
       }));
     }
 
