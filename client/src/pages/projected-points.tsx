@@ -594,7 +594,15 @@ export default function ProjectedPoints() {
 
   // Calculate chip recommendations
   const getChipRecommendations = () => {
-    if (!playerProjections6GW || !manualLineup.length || !teamData?.chips) {
+    if (!playerProjections6GW || !teamData?.chips) {
+      return null;
+    }
+
+    // Check if we have lineup data based on mode
+    if (plannerMode === "manual" && !manualLineup.length) {
+      return null;
+    }
+    if (plannerMode === "auto" && optimizedLineups.size === 0) {
       return null;
     }
 
