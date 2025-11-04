@@ -279,10 +279,9 @@ export default function PlayerGoalProjections() {
           <CardTitle className="text-lg">Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-            {/* Gameweek Range */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             <div>
-              <Label htmlFor="start-gameweek">Start GW</Label>
+              <Label htmlFor="start-gameweek" className="text-sm font-medium text-gray-700">From GW</Label>
               <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
@@ -298,7 +297,7 @@ export default function PlayerGoalProjections() {
             </div>
 
             <div>
-              <Label htmlFor="end-gameweek">End GW</Label>
+              <Label htmlFor="end-gameweek" className="text-sm font-medium text-gray-700">To GW</Label>
               <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
                 <SelectTrigger className="mt-1">
                   <SelectValue />
@@ -312,27 +311,15 @@ export default function PlayerGoalProjections() {
                 </SelectContent>
               </Select>
             </div>
-
-            <div>
-              <Label htmlFor="search">Search Player/Team</Label>
-              <Input
-                id="search"
-                placeholder="Search players or teams..."
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                className="mt-1"
-                data-testid="input-search-player"
-              />
-            </div>
             
             <div>
-              <Label htmlFor="position">Position</Label>
+              <Label htmlFor="position" className="text-sm font-medium text-gray-700">Position</Label>
               <Select value={positionFilter} onValueChange={setPositionFilter}>
                 <SelectTrigger className="mt-1" data-testid="select-position-filter">
-                  <SelectValue placeholder="All positions" />
+                  <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All positions</SelectItem>
+                  <SelectItem value="all">All</SelectItem>
                   {positions.map(position => (
                     <SelectItem key={position} value={position}>{position}</SelectItem>
                   ))}
@@ -341,7 +328,7 @@ export default function PlayerGoalProjections() {
             </div>
             
             <div>
-              <Label htmlFor="team">Team</Label>
+              <Label htmlFor="team" className="text-sm font-medium text-gray-700">Team</Label>
               <Select value={teamFilter} onValueChange={setTeamFilter}>
                 <SelectTrigger className="mt-1" data-testid="select-team-filter">
                   <SelectValue placeholder="All teams" />
@@ -355,10 +342,25 @@ export default function PlayerGoalProjections() {
               </Select>
             </div>
 
-            <div className="flex items-end">
+            <div className="sm:col-span-2 lg:col-span-1">
+              <Label htmlFor="search" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Search className="h-4 w-4 text-gray-500" />
+                Search
+              </Label>
+              <Input
+                id="search"
+                placeholder="Search players..."
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                className="mt-1"
+                data-testid="input-search-player"
+              />
+            </div>
+
+            <div className="flex items-end sm:col-span-2 lg:col-span-3 xl:col-span-1">
               <div className="text-sm text-gray-600">
-                <p className="font-medium">Showing {sortedPlayers.length} players</p>
-                <p>Total projections: {sortedPlayers.reduce((sum, p) => sum + p.projectedGoals, 0).toFixed(1)} goals</p>
+                <p className="font-medium">{sortedPlayers.length} players</p>
+                <p className="text-xs">{sortedPlayers.reduce((sum, p) => sum + p.projectedGoals, 0).toFixed(1)} goals</p>
               </div>
             </div>
           </div>

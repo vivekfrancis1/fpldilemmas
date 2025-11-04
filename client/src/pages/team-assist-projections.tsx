@@ -165,11 +165,11 @@ export default function TeamAssistProjections() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Start GW
+                  From GW
                 </label>
                 <Select value={startGameweek} onValueChange={setStartGameweek}>
                   <SelectTrigger data-testid="select-start-gameweek">
@@ -187,7 +187,7 @@ export default function TeamAssistProjections() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  End GW
+                  To GW
                 </label>
                 <Select value={endGameweek} onValueChange={setEndGameweek}>
                   <SelectTrigger data-testid="select-end-gameweek">
@@ -205,7 +205,7 @@ export default function TeamAssistProjections() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Team Filter
+                  Team
                 </label>
                 <Select value={selectedTeam} onValueChange={setSelectedTeam}>
                   <SelectTrigger data-testid="select-team">
@@ -220,28 +220,6 @@ export default function TeamAssistProjections() {
                           {team.name}
                         </SelectItem>
                       ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Sort By
-                </label>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger data-testid="select-sort">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="total">Period Total</SelectItem>
-                    <SelectItem value="average">Avg/Game</SelectItem>
-                    <SelectItem value="position">League Position</SelectItem>
-                    {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
-                      const gwNumber = parseInt(startGameweek) + i;
-                      return (
-                        <SelectItem key={`gw${gwNumber}`} value={`gw${gwNumber}`}>GW{gwNumber}</SelectItem>
-                      );
-                    })}
                   </SelectContent>
                 </Select>
               </div>

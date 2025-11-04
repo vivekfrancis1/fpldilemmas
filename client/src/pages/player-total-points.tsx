@@ -1276,73 +1276,9 @@ export default function PlayerTotalPoints() {
               </div>
             </div>
             <div className="fpl-card-content">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-            {/* Load Group Filter */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="load-group-filter" className="text-sm font-medium">Group</Label>
-              <Select value={selectedLoadGroup} onValueChange={setSelectedLoadGroup}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem key="load-group-all" value="all">All Players</SelectItem>
-                  <SelectItem key="load-group-top-50" value="Top 50">Top 50</SelectItem>
-                  <SelectItem key="load-group-value-50" value="Value 50">Value 50</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Position Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="position-filter" className="text-sm font-medium">Position</Label>
-              <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem key="position-all" value="all">All Positions</SelectItem>
-                  {positions.map(position => (
-                    <SelectItem key={`position-${position}`} value={position}>{position}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Team Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="team-filter" className="text-sm font-medium">Team</Label>
-              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem key="team-all" value="all">All Teams</SelectItem>
-                  {teams.map(team => (
-                    <SelectItem key={`team-${team}`} value={team}>{team}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Availability Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="availability-filter" className="text-sm font-medium">Availability</Label>
-              <Select value={selectedAvailability} onValueChange={setSelectedAvailability}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem key="availability-all" value="all">All Players</SelectItem>
-                  <SelectItem key="availability-available" value="available">Available (100%)</SelectItem>
-                  <SelectItem key="availability-partial" value="partial">Partially Available</SelectItem>
-                  <SelectItem key="availability-unavailable" value="unavailable">Unavailable (0%)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Gameweek Range */}
-            <div className="space-y-2">
-              <Label htmlFor="start-gameweek" className="text-sm font-medium">Start GW</Label>
+              <Label htmlFor="start-gameweek" className="text-sm font-medium text-gray-700">From GW</Label>
               <Select value={startGameweek?.toString() || ''} onValueChange={(value) => setStartGameweek(parseInt(value) || nextGameweek)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -1356,7 +1292,7 @@ export default function PlayerTotalPoints() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="end-gameweek" className="text-sm font-medium">End GW</Label>
+              <Label htmlFor="end-gameweek" className="text-sm font-medium text-gray-700">To GW</Label>
               <Select value={endGameweek?.toString() || ''} onValueChange={(value) => setEndGameweek(parseInt(value) || nextGameweek + 5)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -1369,34 +1305,77 @@ export default function PlayerTotalPoints() {
               </Select>
             </div>
 
-            {/* Search - Second Row */}
-            <div className="space-y-2 lg:col-span-2">
-              <Label htmlFor="search" className="text-sm font-medium">Search</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  id="search"
-                  placeholder="Player or team..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="position-filter" className="text-sm font-medium text-gray-700">Position</Label>
+              <Select value={selectedPosition} onValueChange={setSelectedPosition}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key="position-all" value="all">All</SelectItem>
+                  {positions.map(position => (
+                    <SelectItem key={`position-${position}`} value={position}>{position}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Clear Filters */}
-            <div className="flex items-end">
-              <button
-                onClick={() => {
-                  setSelectedPosition("all");
-                  setSelectedTeam("all");
-                  setSelectedAvailability("all");
-                  setSearchTerm("");
-                }}
-                className="w-full px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                Clear Filters
-              </button>
+            <div className="space-y-2">
+              <Label htmlFor="team-filter" className="text-sm font-medium text-gray-700">Team</Label>
+              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key="team-all" value="all">All Teams</SelectItem>
+                  {teams.map(team => (
+                    <SelectItem key={`team-${team}`} value={team}>{team}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="availability-filter" className="text-sm font-medium text-gray-700">Availability</Label>
+              <Select value={selectedAvailability} onValueChange={setSelectedAvailability}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key="availability-all" value="all">All</SelectItem>
+                  <SelectItem key="availability-available" value="available">Available</SelectItem>
+                  <SelectItem key="availability-partial" value="partial">Partial</SelectItem>
+                  <SelectItem key="availability-unavailable" value="unavailable">Unavailable</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="load-group-filter" className="text-sm font-medium text-gray-700">Group</Label>
+              <Select value={selectedLoadGroup} onValueChange={setSelectedLoadGroup}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem key="load-group-all" value="all">All</SelectItem>
+                  <SelectItem key="load-group-top-50" value="Top 50">Top 50</SelectItem>
+                  <SelectItem key="load-group-value-50" value="Value 50">Value 50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+              <Label htmlFor="search" className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Search className="h-4 w-4 text-gray-500" />
+                Search
+              </Label>
+              <Input
+                id="search"
+                placeholder="Search players..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
             </div>
               </div>
             </div>
