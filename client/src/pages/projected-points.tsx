@@ -1114,6 +1114,13 @@ export default function ProjectedPoints() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {plannerMode === "manual" && (
+                  <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                    <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200">
+                      <strong>Tip:</strong> Chip recommendations for Auto lineup mode would be more accurate than Manual mode, since Auto mode selects the most optimized lineup with the best captain for maximum points.
+                    </p>
+                  </div>
+                )}
                 <div className="space-y-3">
                   {recommendations.bboost.length > 0 && (
                     <div className="flex items-start gap-2 flex-wrap">
