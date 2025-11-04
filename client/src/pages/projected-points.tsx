@@ -727,10 +727,24 @@ export default function ProjectedPoints() {
             <CardTitle className="text-white text-base sm:text-lg">Next 6 Gameweeks Total Projected Points</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl sm:text-5xl font-bold">{total6GWPoints.toFixed(1)}</div>
-            <div className="text-purple-100 mt-2 text-sm sm:text-base">
-              {plannerMode === "manual" ? "Current Lineup" : "Auto Optimized Lineup"}
-            </div>
+            {plannerMode === "auto" && isOptimizing ? (
+              <div className="py-4">
+                <div className="flex items-center justify-center gap-3 mb-3">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                  <div className="text-xl sm:text-2xl font-semibold">Optimizing Lineups...</div>
+                </div>
+                <div className="text-purple-100 text-sm sm:text-base text-center">
+                  Analyzing all gameweeks to find the best formations and captain choices for maximum points
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="text-4xl sm:text-5xl font-bold">{total6GWPoints.toFixed(1)}</div>
+                <div className="text-purple-100 mt-2 text-sm sm:text-base">
+                  {plannerMode === "manual" ? "Current Lineup" : "Auto Optimized Lineup"}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
