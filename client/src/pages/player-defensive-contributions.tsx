@@ -508,56 +508,9 @@ export default function PlayerDefensiveContributions() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="space-y-2 sm:col-span-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Search className="h-4 w-4 text-gray-400" />
-                Search Players
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  data-testid="input-player-search"
-                  placeholder="Search by player or team name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full"
-                />
-              </div>
-            </div>
-            
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Position</label>
-              <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Positions</SelectItem>
-                  {positions.map(position => (
-                    <SelectItem key={position} value={position}>{position}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Team</label>
-              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {teams.map(team => (
-                    <SelectItem key={team} value={team}>{team}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Start GW</label>
+              <label className="text-sm font-medium text-gray-700">From GW</label>
               <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -571,7 +524,7 @@ export default function PlayerDefensiveContributions() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">End GW</label>
+              <label className="text-sm font-medium text-gray-700">To GW</label>
               <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -582,6 +535,50 @@ export default function PlayerDefensiveContributions() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Position</label>
+              <Select value={selectedPosition} onValueChange={setSelectedPosition}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  {positions.map(position => (
+                    <SelectItem key={position} value={position}>{position}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Team</label>
+              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Teams</SelectItem>
+                  {teams.map(team => (
+                    <SelectItem key={team} value={team}>{team}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <Search className="h-4 w-4 text-gray-500" />
+                Search
+              </label>
+              <Input
+                data-testid="input-player-search"
+                placeholder="Search players..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
             </div>
 
           </div>

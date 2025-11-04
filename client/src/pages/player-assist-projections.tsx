@@ -338,27 +338,38 @@ export default function PlayerAssistProjections() {
         <Card className="mb-6">
           <CardContent className="p-4 sm:p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-              <div className="space-y-2 sm:col-span-2">
-                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Search className="h-4 w-4 text-green-600" />
-                  Search
-                </label>
-                <Input
-                  data-testid="input-player-search"
-                  placeholder="Search by player or team name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full border-2 border-gray-200 hover:border-green-400 transition-colors"
-                />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">From GW</label>
+                <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: Math.max(0, maxAvailableGW - nextGameweek + 1) }, (_, i) => i + nextGameweek).map((gw, index) => (
+                      <SelectItem key={`start-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Users className="h-4 w-4 text-green-600" />
-                  Position
-                </label>
+                <label className="text-sm font-medium text-gray-700">To GW</label>
+                <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {startGameweek && Array.from({ length: Math.max(0, maxAvailableGW - startGameweek + 1) }, (_, i) => i + startGameweek).map((gw, index) => (
+                      <SelectItem key={`end-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Position</label>
                 <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                  <SelectTrigger className="w-full border-2 border-gray-200 hover:border-green-400 transition-colors">
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -371,12 +382,9 @@ export default function PlayerAssistProjections() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-green-600" />
-                  Team
-                </label>
+                <label className="text-sm font-medium text-gray-700">Team</label>
                 <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                  <SelectTrigger className="w-full border-2 border-gray-200 hover:border-green-400 transition-colors">
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -388,35 +396,18 @@ export default function PlayerAssistProjections() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <Target className="h-4 w-4 text-green-600" />
-                  From GW
+              <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Search className="h-4 w-4 text-gray-500" />
+                  Search
                 </label>
-                <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                  <SelectTrigger className="w-full border-2 border-gray-200 hover:border-green-400 transition-colors">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: Math.max(0, maxAvailableGW - nextGameweek + 1) }, (_, i) => i + nextGameweek).map((gw, index) => (
-                      <SelectItem key={`start-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">To GW</label>
-                <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                  <SelectTrigger className="w-full border-2 border-gray-200 hover:border-green-400 transition-colors">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {startGameweek && Array.from({ length: Math.max(0, maxAvailableGW - startGameweek + 1) }, (_, i) => i + startGameweek).map((gw, index) => (
-                      <SelectItem key={`end-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Input
+                  data-testid="input-player-search"
+                  placeholder="Search players..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full"
+                />
               </div>
 
               

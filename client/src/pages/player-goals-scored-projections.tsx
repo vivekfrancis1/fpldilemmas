@@ -333,12 +333,8 @@ export default function PlayerGoalsScoredProjections() {
         <Card className="mb-4 md:mb-6">
           <CardContent className="p-3 sm:p-4 lg:p-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4">
-              {/* Gameweek Range Filter */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-500" />
-                  From GW
-                </label>
+                <label className="text-sm font-medium text-gray-700">From GW</label>
                 <Select value={startGameweek?.toString() || ""} onValueChange={(value) => setStartGameweek(parseInt(value))}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -364,26 +360,6 @@ export default function PlayerGoalsScoredProjections() {
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-500" />
-                  Team
-                </label>
-                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Teams</SelectItem>
-                    {teams.map(team => (
-                      <SelectItem key={team.id} value={team.short}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Position</label>
@@ -396,6 +372,23 @@ export default function PlayerGoalsScoredProjections() {
                     {positions.map(pos => (
                       <SelectItem key={pos.id} value={pos.name}>
                         {pos.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Team</label>
+                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Teams</SelectItem>
+                    {teams.map(team => (
+                      <SelectItem key={team.id} value={team.short}>
+                        {team.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
