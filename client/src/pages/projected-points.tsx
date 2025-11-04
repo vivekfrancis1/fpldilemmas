@@ -747,6 +747,7 @@ export default function ProjectedPoints() {
               {nextGameweeks.map(gw => {
                 // Calculate total for this gameweek
                 let gwTotal = 0;
+                let gwFormation = '';
                 
                 if (plannerMode === "manual") {
                   const starting11 = manualLineup.filter((p: any) => p.position <= 11);
@@ -758,11 +759,14 @@ export default function ProjectedPoints() {
                 } else {
                   // For auto mode, use the gameweek-specific optimized lineup
                   const gwLineup = optimizedLineups.get(gw.id);
-                  gwLineup?.starting11.forEach(pick => {
-                    const points = getPlayerProjectedPoints(pick.element, gw.id);
-                    const multiplier = pick.isCaptain ? 2 : 1;
-                    gwTotal += points * multiplier;
-                  });
+                  if (gwLineup?.starting11) {
+                    gwLineup.starting11.forEach(pick => {
+                      const points = getPlayerProjectedPoints(pick.element, gw.id);
+                      const multiplier = pick.isCaptain ? 2 : 1;
+                      gwTotal += points * multiplier;
+                    });
+                    gwFormation = calculateFormation(gwLineup.starting11);
+                  }
                 }
 
                 return (
@@ -778,6 +782,9 @@ export default function ProjectedPoints() {
                     <CardContent className="p-3 sm:p-4 text-center">
                       <div className="text-xs sm:text-sm font-medium text-gray-600 mb-1 sm:mb-2">GW{gw.id}</div>
                       <div className="text-xl sm:text-2xl font-bold text-purple-600">{gwTotal.toFixed(1)}</div>
+                      {plannerMode === "auto" && gwFormation && (
+                        <div className="text-xs font-medium text-gray-500 mt-1">{gwFormation}</div>
+                      )}
                     </CardContent>
                   </Card>
                 );
