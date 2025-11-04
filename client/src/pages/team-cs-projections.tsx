@@ -190,25 +190,6 @@ export default function TeamCSProjections() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Sort by:</label>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="average">Avg</SelectItem>
-                      <SelectItem value="position">League Position</SelectItem>
-                      {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
-                        const gwNumber = parseInt(startGameweek) + i;
-                        return (
-                          <SelectItem key={`gw${gwNumber}`} value={`gw${gwNumber}`}>GW{gwNumber}</SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
             </CardContent>
           </Card>
