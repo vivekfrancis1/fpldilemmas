@@ -470,7 +470,7 @@ export default function PlayerAssistProjections() {
                           </th>
                           <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('rangePoints')} className="h-auto p-0 font-medium text-gray-500 hover:bg-blue-100 hover:text-gray-700">
-                              {dynamicGameweekColumns.length} GW Pts {getSortIcon('rangePoints')}
+                              {dynamicGameweekColumns.length}GW Assist Pts {getSortIcon('rangePoints')}
                             </Button>
                           </th>
                         </tr>

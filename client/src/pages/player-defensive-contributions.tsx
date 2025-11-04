@@ -638,7 +638,7 @@ export default function PlayerDefensiveContributions() {
                     className="text-center min-w-[80px] font-bold cursor-pointer hover:bg-muted/50 bg-blue-50"
                   >
                     <div className="flex items-center justify-center gap-1">
-                      {gameweeks.length} GW Pts
+                      {gameweeks.length}GW DC Pts
                     </div>
                   </TableHead>
                 </TableRow>

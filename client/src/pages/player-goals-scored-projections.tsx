@@ -476,7 +476,7 @@ export default function PlayerGoalsScoredProjections() {
                     </th>
                     <th className="px-2 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors min-w-[100px]">
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("totalPoints")}>
-                        {selectedGameweeks.length} GW Pts
+                        {selectedGameweeks.length}GW Goal Pts
                         {sortBy === "totalPoints" && (
                           sortDirection === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
                         )}
