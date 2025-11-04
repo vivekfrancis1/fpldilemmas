@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, Heart, XCircle, Clock } from "lucide-react";
+import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, Heart, XCircle, Clock, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -592,6 +592,114 @@ export default function ProjectedPoints() {
     );
   };
 
+  // Calculate chip recommendations
+  const getChipRecommendations = () => {
+    if (!playerProjections6GW || !manualLineup.length || !teamData?.chips) {
+      return null;
+    }
+
+    const nextGWs = getNextGameweeks();
+    const usedChips = teamData.chips || [];
+    const recommendations = { 
+      bboost: [] as { gw: number; additionalPoints: number }[], 
+      tripleC: [] as { gw: number; additionalPoints: number }[], 
+      freehit: [] as { gw: number; normalPoints: number; freeHitPoints: number }[] 
+    };
+
+    // Helper to check if chip has been used
+    const isChipUsed = (chipName: string) => usedChips.some(c => c.name === chipName);
+
+    // Best Bench Boost: Find top 2 gameweeks with maximum bench points
+    if (!isChipUsed('bboost')) {
+      const gwScores: { gw: number; points: number }[] = [];
+
+      nextGWs.forEach(gw => {
+        const benchPlayers = plannerMode === "manual" 
+          ? manualLineup.filter(pick => pick.position > 11)
+          : optimizedLineups.get(gw.id)?.bench || [];
+        
+        let benchPoints = 0;
+        benchPlayers.forEach(pick => {
+          const projection = playerProjections6GW.find((p: any) => p.playerId === pick.element);
+          if (projection?.gameweekProjections) {
+            benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+          }
+        });
+
+        gwScores.push({ gw: gw.id, points: benchPoints });
+      });
+
+      gwScores.sort((a, b) => b.points - a.points);
+      recommendations.bboost = gwScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
+    }
+
+    // Best Triple Captain: Find top 2 gameweeks where captain has highest points
+    if (!isChipUsed('3xc')) {
+      const gwScores: { gw: number; points: number }[] = [];
+
+      nextGWs.forEach(gw => {
+        let captainPoints = 0;
+
+        if (plannerMode === "manual") {
+          const captainPick = manualLineup.find(p => p.is_captain);
+          if (captainPick) {
+            const projection = playerProjections6GW.find((p: any) => p.playerId === captainPick.element);
+            if (projection?.gameweekProjections) {
+              captainPoints = projection.gameweekProjections[gw.id.toString()] || 0;
+            }
+          }
+        } else {
+          const gwLineup = optimizedLineups.get(gw.id);
+          if (gwLineup?.captainProjectedPoints) {
+            captainPoints = gwLineup.captainProjectedPoints;
+          }
+        }
+
+        gwScores.push({ gw: gw.id, points: captainPoints });
+      });
+
+      gwScores.sort((a, b) => b.points - a.points);
+      recommendations.tripleC = gwScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
+    }
+
+    // Best Free Hit: Find top 2 gameweeks with lowest starting 11 points
+    if (!isChipUsed('freehit')) {
+      const gwScores: { gw: number; points: number }[] = [];
+
+      nextGWs.forEach(gw => {
+        let startingPoints = 0;
+
+        if (plannerMode === "manual") {
+          const startingPlayers = manualLineup.filter(pick => pick.position <= 11);
+          startingPlayers.forEach(pick => {
+            const projection = playerProjections6GW.find((p: any) => p.playerId === pick.element);
+            if (projection?.gameweekProjections) {
+              const points = projection.gameweekProjections[gw.id.toString()] || 0;
+              const multiplier = pick.is_captain ? 2 : 1;
+              startingPoints += points * multiplier;
+            }
+          });
+        } else {
+          const gwLineup = optimizedLineups.get(gw.id);
+          if (gwLineup?.totalProjectedPoints) {
+            startingPoints = gwLineup.totalProjectedPoints;
+          }
+        }
+
+        gwScores.push({ gw: gw.id, points: startingPoints });
+      });
+
+      gwScores.sort((a, b) => a.points - b.points);
+      recommendations.freehit = gwScores.slice(0, 2).map(s => ({ 
+        gw: s.gw, 
+        normalPoints: s.points,
+        freeHitPoints: Math.round(s.points * 1.25)
+      }));
+    }
+
+    return recommendations;
+  };
+
   if (!searchedId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
@@ -939,6 +1047,81 @@ export default function ProjectedPoints() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Chip Recommendations */}
+        {(() => {
+          const recommendations = getChipRecommendations();
+          const hasRecommendations = recommendations && (recommendations.bboost.length > 0 || recommendations.tripleC.length > 0 || recommendations.freehit.length > 0);
+          
+          return hasRecommendations ? (
+            <Card className="border-blue-200 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/10 dark:to-background">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                  Chip Recommendations
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Based on next 6 gameweek projections for your current team
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {recommendations.bboost.length > 0 && (
+                    <div className="flex items-start gap-2 flex-wrap">
+                      <span className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-300 min-w-[100px] pt-1">
+                        Bench Boost:
+                      </span>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {recommendations.bboost.map((rec, index) => (
+                          <div key={rec.gw} className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                            <span className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-300">
+                              Option {index + 1}: GW{rec.gw} (+{rec.additionalPoints.toFixed(1)} bench pts)
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {recommendations.tripleC.length > 0 && (
+                    <div className="flex items-start gap-2 flex-wrap">
+                      <span className="text-xs sm:text-sm font-semibold text-purple-700 dark:text-purple-300 min-w-[100px] pt-1">
+                        Triple Captain:
+                      </span>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {recommendations.tripleC.map((rec, index) => (
+                          <div key={rec.gw} className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                            <span className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-300">
+                              Option {index + 1}: GW{rec.gw} (+{rec.additionalPoints.toFixed(1)} extra pts)
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {recommendations.freehit.length > 0 && (
+                    <div className="flex items-start gap-2 flex-wrap">
+                      <span className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-300 min-w-[100px] pt-1">
+                        Free Hit:
+                      </span>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {recommendations.freehit.map((rec, index) => (
+                          <div key={rec.gw} className="inline-flex flex-col gap-0.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                            <span className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300">
+                              Option {index + 1}: GW{rec.gw}
+                            </span>
+                            <span className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400">
+                              Normal: {rec.normalPoints.toFixed(1)} | FH: ~{rec.freeHitPoints.toFixed(1)} pts
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : null;
+        })()}
       </div>
     </div>
   );
