@@ -83,6 +83,8 @@ export default function PlayerDefensiveContributions() {
   const [totalSortOrder, setTotalSortOrder] = useState<"asc" | "desc">("desc");
   const [sortByAvg, setSortByAvg] = useState<boolean>(false);
   const [avgSortOrder, setAvgSortOrder] = useState<"asc" | "desc">("desc");
+  const [sortByDCPoints, setSortByDCPoints] = useState<boolean>(false);
+  const [dcPointsSortOrder, setDCPointsSortOrder] = useState<"asc" | "desc">("desc");
 
   // Dynamic gameweek range state
   const [gameweekRange, setGameweekRange] = useState(() => {
@@ -297,6 +299,14 @@ export default function PlayerDefensiveContributions() {
         return avgSortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
     }
+    // Sort by DC Points if specified
+    else if (sortByDCPoints) {
+      filtered.sort((a, b) => {
+        const aValue = a.totalDCPoints;
+        const bValue = b.totalDCPoints;
+        return dcPointsSortOrder === "desc" ? bValue - aValue : aValue - bValue;
+      });
+    }
     // Sort by gameweek column if specified
     else if (gameweekSortColumn !== null) {
       filtered.sort((a, b) => {
@@ -317,7 +327,7 @@ export default function PlayerDefensiveContributions() {
     }
 
     return filtered;
-  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, gameweekSortColumn, gameweekSortOrder, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, sortByAvg, avgSortOrder]);
+  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, gameweekSortColumn, gameweekSortOrder, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, sortByAvg, avgSortOrder, sortByDCPoints, dcPointsSortOrder]);
 
   // Get unique values for filters
   const positions = Array.from(new Set(players.map(p => p.position).filter(Boolean)));
@@ -328,6 +338,7 @@ export default function PlayerDefensiveContributions() {
     setSortByCurrentDC(false);
     setSortByTotal(false);
     setSortByAvg(false);
+    setSortByDCPoints(false);
     if (gameweekSortColumn === gameweek) {
       setGameweekSortOrder(gameweekSortOrder === "desc" ? "asc" : "desc");
     } else {
@@ -340,6 +351,7 @@ export default function PlayerDefensiveContributions() {
     setGameweekSortColumn(null);
     setSortByTotal(false);
     setSortByAvg(false);
+    setSortByDCPoints(false);
     if (sortByCurrentDC) {
       setCurrentDCSortOrder(currentDCSortOrder === "desc" ? "asc" : "desc");
     } else {
@@ -352,6 +364,7 @@ export default function PlayerDefensiveContributions() {
     setGameweekSortColumn(null);
     setSortByCurrentDC(false);
     setSortByAvg(false);
+    setSortByDCPoints(false);
     if (sortByTotal) {
       setTotalSortOrder(totalSortOrder === "desc" ? "asc" : "desc");
     } else {
@@ -364,11 +377,25 @@ export default function PlayerDefensiveContributions() {
     setGameweekSortColumn(null);
     setSortByCurrentDC(false);
     setSortByTotal(false);
+    setSortByDCPoints(false);
     if (sortByAvg) {
       setAvgSortOrder(avgSortOrder === "desc" ? "asc" : "desc");
     } else {
       setSortByAvg(true);
       setAvgSortOrder("desc");
+    }
+  };
+
+  const handleDCPointsSort = () => {
+    setGameweekSortColumn(null);
+    setSortByCurrentDC(false);
+    setSortByTotal(false);
+    setSortByAvg(false);
+    if (sortByDCPoints) {
+      setDCPointsSortOrder(dcPointsSortOrder === "desc" ? "asc" : "desc");
+    } else {
+      setSortByDCPoints(true);
+      setDCPointsSortOrder("desc");
     }
   };
 
@@ -636,9 +663,15 @@ export default function PlayerDefensiveContributions() {
                   </TableHead>
                   <TableHead 
                     className="text-center min-w-[80px] font-bold cursor-pointer hover:bg-muted/50 bg-blue-50"
+                    onClick={handleDCPointsSort}
                   >
                     <div className="flex items-center justify-center gap-1">
                       {gameweeks.length}GW DC Pts
+                      {sortByDCPoints && (
+                        <span className="text-xs">
+                          {dcPointsSortOrder === "desc" ? "↓" : "↑"}
+                        </span>
+                      )}
                     </div>
                   </TableHead>
                 </TableRow>
