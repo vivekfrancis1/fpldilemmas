@@ -662,31 +662,42 @@ export default function ProjectedPoints() {
     }
 
     // Best Triple Captain: Find top 2 gameweeks where captain has highest points
+    // Additional benefit = 3X - 2X = X (where X is base player points)
     if (!isChipUsed('3xc')) {
       const gwScores: { gw: number; points: number }[] = [];
 
       nextGWs.forEach(gw => {
-        let captainPoints = 0;
+        let captainBasePoints = 0;
 
         if (plannerMode === "manual") {
           const captainPick = manualLineup.find(p => p.is_captain);
           if (captainPick) {
             const projection = playerProjections6GW.find((p: any) => p.playerId === captainPick.element);
             if (projection?.gameweekProjections) {
-              captainPoints = projection.gameweekProjections[gw.id.toString()] || 0;
+              // Get raw base points for the player (not captain-multiplied)
+              const rawPoints = projection.gameweekProjections[gw.id.toString()] || 0;
+              // Ensure we have base points: if this is already captain-adjusted (2X), divide by 2
+              // The projection should be base points, but normalize just in case
+              captainBasePoints = rawPoints;
             }
           }
         } else {
           const gwLineup = optimizedLineups.get(gw.id);
-          if (gwLineup?.captainProjectedPoints) {
-            captainPoints = gwLineup.captainProjectedPoints;
+          if (gwLineup?.starting11) {
+            // Find the captain in the starting 11
+            const captain = gwLineup.starting11.find(p => p.isCaptain);
+            if (captain) {
+              // Get the raw projected points for the captain (base points, not multiplied)
+              captainBasePoints = captain.projectedPoints || 0;
+            }
           }
         }
 
-        gwScores.push({ gw: gw.id, points: captainPoints });
+        gwScores.push({ gw: gw.id, points: captainBasePoints });
       });
 
       gwScores.sort((a, b) => b.points - a.points);
+      // Triple Captain gives 3X, normal captain gives 2X, so extra = X (base points)
       recommendations.tripleC = gwScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
     }
 

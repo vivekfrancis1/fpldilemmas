@@ -1567,7 +1567,7 @@ export default function TransferPlanner() {
       });
 
       // Sort by points descending and take top 2
-      // additionalPoints = captain points (because we get 3x instead of 2x, the extra is 1x the captain points)
+      // Triple Captain gives 3X, normal captain gives 2X, so extra = X (base player points)
       gwScores.sort((a, b) => b.points - a.points);
       recommendations.tripleC = gwScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
     }
