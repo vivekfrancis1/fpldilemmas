@@ -213,7 +213,13 @@ function getRankChangeDisplay(rankChange: number) {
 
 export default function Top25ManagerTeam() {
   const { rank } = useParams<{ rank: string }>();
-  const [teamView, setTeamView] = useState<"list" | "pitch">("list");
+  // Default to pitch view on desktop (>=768px), list view on mobile
+  const [teamView, setTeamView] = useState<"list" | "pitch">(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768 ? "pitch" : "list";
+    }
+    return "list";
+  });
   
   // Find manager info from our static data
   const managerInfo = TOP_25_MANAGERS.find(m => m.rank === parseInt(rank || '0'));

@@ -232,7 +232,13 @@ export default function MyDashboard() {
   const [, setLocation] = useLocation();
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
-  const [teamView, setTeamView] = useState<"list" | "pitch">("list");
+  // Default to pitch view on desktop (>=768px), list view on mobile
+  const [teamView, setTeamView] = useState<"list" | "pitch">(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768 ? "pitch" : "list";
+    }
+    return "list";
+  });
 
 
   // Cache manager ID functionality

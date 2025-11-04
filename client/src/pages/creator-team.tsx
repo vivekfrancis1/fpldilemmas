@@ -184,8 +184,13 @@ export default function CreatorTeam() {
     retry: 2,
   });
 
-  // Team view state (pitch or list)
-  const [teamView, setTeamView] = useState<"pitch" | "list">("list");
+  // Team view state (pitch or list) - Default to pitch on desktop, list on mobile
+  const [teamView, setTeamView] = useState<"pitch" | "list">(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768 ? "pitch" : "list";
+    }
+    return "list";
+  });
 
   // Get bootstrap data to determine completed gameweeks
   const { data: bootstrapData } = useQuery<any>({

@@ -961,7 +961,13 @@ export default function TransferPlanner() {
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<number | null>(null);
   const [plannerMode, setPlannerMode] = useState<"auto" | "manual">("manual");
-  const [teamView, setTeamView] = useState<"list" | "pitch">("list");
+  // Default to pitch view on desktop (>=768px), list view on mobile
+  const [teamView, setTeamView] = useState<"list" | "pitch">(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768 ? "pitch" : "list";
+    }
+    return "list";
+  });
   const [optimizedLineup, setOptimizedLineup] = useState<OptimizedLineup | null>(null);
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
   
