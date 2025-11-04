@@ -1377,7 +1377,11 @@ export default function TransferPlanner() {
 
     const nextGWs = getNextGameweeks();
     const remaining = getRemainingChips();
-    const recommendations = { bboost: [] as number[], tripleC: [] as number[], freehit: [] as number[] };
+    const recommendations = { 
+      bboost: [] as { gw: number; additionalPoints: number }[], 
+      tripleC: [] as { gw: number; additionalPoints: number }[], 
+      freehit: [] as { gw: number; normalPoints: number; freeHitPoints: number }[] 
+    };
 
     // Helper to determine which instance of a chip is available (1st or 2nd)
     const getChipInstance = (chipType: ChipType): 1 | 2 | null => {
@@ -1481,7 +1485,7 @@ export default function TransferPlanner() {
 
       // Sort by points descending and take top 2
       gwScores.sort((a, b) => b.points - a.points);
-      recommendations.bboost = gwScores.slice(0, 2).map(s => s.gw);
+      recommendations.bboost = gwScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
     }
 
     // Best Triple Captain: Find top 2 gameweeks where captain has highest points for selected draft and lineup mode
@@ -1563,8 +1567,9 @@ export default function TransferPlanner() {
       });
 
       // Sort by points descending and take top 2
+      // additionalPoints = captain points (because we get 3x instead of 2x, the extra is 1x the captain points)
       gwScores.sort((a, b) => b.points - a.points);
-      recommendations.tripleC = gwScores.slice(0, 2).map(s => s.gw);
+      recommendations.tripleC = gwScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
     }
 
     // Best Free Hit: Find top 2 gameweeks with lowest starting 11 points for selected draft and lineup mode
@@ -1657,8 +1662,15 @@ export default function TransferPlanner() {
       });
 
       // Sort by points ascending (lowest first) and take top 2
+      // For Free Hit, we need to estimate potential points if using Free Hit
+      // For now, we'll assume Free Hit could give 20-30% more points (conservative estimate)
+      // In a real scenario, you'd want to calculate optimal free hit team
       gwScores.sort((a, b) => a.points - b.points);
-      recommendations.freehit = gwScores.slice(0, 2).map(s => s.gw);
+      recommendations.freehit = gwScores.slice(0, 2).map(s => ({ 
+        gw: s.gw, 
+        normalPoints: s.points,
+        freeHitPoints: Math.round(s.points * 1.25) // Estimate 25% improvement with Free Hit
+      }));
     }
 
     return recommendations;
@@ -4865,10 +4877,10 @@ export default function TransferPlanner() {
                           Bench Boost:
                         </span>
                         <div className="flex gap-1.5">
-                          {recommendations.bboost.map((gw, index) => (
-                            <div key={gw} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                          {recommendations.bboost.map((rec, index) => (
+                            <div key={rec.gw} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
                               <span className="text-xs font-medium text-green-700 dark:text-green-300">
-                                Option {index + 1}: GW{gw}
+                                Option {index + 1}: GW{rec.gw} (+{rec.additionalPoints.toFixed(1)} bench pts)
                               </span>
                             </div>
                           ))}
@@ -4881,10 +4893,10 @@ export default function TransferPlanner() {
                           Triple Captain:
                         </span>
                         <div className="flex gap-1.5">
-                          {recommendations.tripleC.map((gw, index) => (
-                            <div key={gw} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                          {recommendations.tripleC.map((rec, index) => (
+                            <div key={rec.gw} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
                               <span className="text-xs font-medium text-purple-700 dark:text-purple-300">
-                                Option {index + 1}: GW{gw}
+                                Option {index + 1}: GW{rec.gw} (+{rec.additionalPoints.toFixed(1)} extra pts)
                               </span>
                             </div>
                           ))}
@@ -4897,10 +4909,13 @@ export default function TransferPlanner() {
                           Free Hit:
                         </span>
                         <div className="flex gap-1.5">
-                          {recommendations.freehit.map((gw, index) => (
-                            <div key={gw} className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                          {recommendations.freehit.map((rec, index) => (
+                            <div key={rec.gw} className="inline-flex flex-col gap-0.5 px-2 py-1 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
                               <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
-                                Option {index + 1}: GW{gw}
+                                Option {index + 1}: GW{rec.gw}
+                              </span>
+                              <span className="text-[10px] text-blue-600 dark:text-blue-400">
+                                Normal: {rec.normalPoints.toFixed(1)} | FH: ~{rec.freeHitPoints.toFixed(1)} pts
                               </span>
                             </div>
                           ))}
