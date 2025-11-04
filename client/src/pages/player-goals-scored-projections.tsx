@@ -307,7 +307,7 @@ export default function PlayerGoalsScoredProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Target className="h-8 w-8" />
-            <h1>Player Goals Scored Projections</h1>
+            <h1>Player Goal Projections</h1>
           </div>
           <p className="fpl-page-subtitle">
             Projected Goals for each player across all upcoming fixtures
@@ -430,7 +430,7 @@ export default function PlayerGoalsScoredProjections() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5" />
-                  Player Goals - {selectedGameweeks.length} Gameweeks ({filteredProjections.length} players)
+                  Player Goal Projections: GW{startGameweek}-GW{endGameweek}
                 </CardTitle>
               </CardHeader>
               <CardContent>
