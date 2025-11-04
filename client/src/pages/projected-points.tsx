@@ -687,7 +687,7 @@ export default function ProjectedPoints() {
         {/* Controls */}
         <Card>
           <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4 items-end">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-end">
               <div className="flex-1">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Manager ID</label>
                 <Input
@@ -695,9 +695,11 @@ export default function ProjectedPoints() {
                   value={managerId}
                   onChange={(e) => setManagerId(e.target.value)}
                   placeholder="Enter Manager ID"
+                  className="text-base"
+                  data-testid="input-manager-id"
                 />
               </div>
-              <Button onClick={handleSearch}>
+              <Button onClick={handleSearch} className="w-full sm:w-auto" data-testid="button-search-manager">
                 <Search className="h-4 w-4 mr-2" />
                 Search
               </Button>
@@ -707,15 +709,19 @@ export default function ProjectedPoints() {
 
         {/* Mode Toggle */}
         <Card>
-          <CardHeader>
-            <CardTitle>Lineup Mode</CardTitle>
-            <CardDescription>Choose between your manual lineup or auto-optimized lineup</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base sm:text-lg">Lineup Mode</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Choose between your manual lineup or auto-optimized lineup</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs value={plannerMode} onValueChange={(v) => setPlannerMode(v as "auto" | "manual")}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="manual">Current Lineup</TabsTrigger>
-                <TabsTrigger value="auto">Auto Optimized Lineup</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 h-auto">
+                <TabsTrigger value="manual" className="text-xs sm:text-sm py-2 sm:py-2.5" data-testid="tab-manual-lineup">
+                  Current Lineup
+                </TabsTrigger>
+                <TabsTrigger value="auto" className="text-xs sm:text-sm py-2 sm:py-2.5" data-testid="tab-auto-lineup">
+                  Auto Optimized
+                </TabsTrigger>
               </TabsList>
             </Tabs>
           </CardContent>
@@ -757,7 +763,7 @@ export default function ProjectedPoints() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+            <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
               {nextGameweeks.map(gw => {
                 // Calculate total for this gameweek
                 let gwTotal = 0;
@@ -792,12 +798,13 @@ export default function ProjectedPoints() {
                         : 'hover:bg-gray-50'
                     }`}
                     onClick={() => setSelectedGameweek(gw.id)}
+                    data-testid={`card-gameweek-${gw.id}`}
                   >
-                    <CardContent className="p-3 sm:p-4 text-center">
-                      <div className="text-xs sm:text-sm font-medium text-gray-600 mb-1 sm:mb-2">GW{gw.id}</div>
-                      <div className="text-xl sm:text-2xl font-bold text-purple-600">{gwTotal.toFixed(1)}</div>
+                    <CardContent className="p-2 sm:p-3 md:p-4 text-center">
+                      <div className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-600 mb-1">GW{gw.id}</div>
+                      <div className="text-base sm:text-xl md:text-2xl font-bold text-purple-600">{gwTotal.toFixed(1)}</div>
                       {plannerMode === "auto" && gwFormation && (
-                        <div className="text-xs font-medium text-gray-500 mt-1">{gwFormation}</div>
+                        <div className="text-[9px] sm:text-xs font-medium text-gray-500 mt-0.5 sm:mt-1">{gwFormation}</div>
                       )}
                     </CardContent>
                   </Card>
