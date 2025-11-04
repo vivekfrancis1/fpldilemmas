@@ -311,7 +311,7 @@ export default function PlayerAssistProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Zap className="h-8 w-8" />
-            <h1>Player Assists</h1>
+            <h1>Player Assist Projections</h1>
           </div>
           <p className="fpl-page-subtitle">
             Projected Assists for each player across all upcoming fixtures
@@ -442,7 +442,7 @@ export default function PlayerAssistProjections() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Zap className="h-5 w-5 text-green-600" />
-                    Projected Assists by Gameweek
+                    Player Assist Projections: GW{startGameweek}-GW{endGameweek}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
