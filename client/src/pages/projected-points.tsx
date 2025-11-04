@@ -348,6 +348,29 @@ export default function ProjectedPoints() {
     return positionMap[position?.singular_name || ''] || position?.singular_name || '';
   };
 
+  // Calculate formation from starting 11
+  const calculateFormation = (starting11: Array<{ element: number }>): string => {
+    if (!starting11 || starting11.length !== 11) return '';
+    
+    const positionCounts = {
+      def: 0,
+      mid: 0,
+      fwd: 0
+    };
+    
+    starting11.forEach(pick => {
+      const player = getPlayerById(pick.element);
+      if (!player) return;
+      
+      // element_type: 1=GKP, 2=DEF, 3=MID, 4=FWD
+      if (player.element_type === 2) positionCounts.def++;
+      else if (player.element_type === 3) positionCounts.mid++;
+      else if (player.element_type === 4) positionCounts.fwd++;
+    });
+    
+    return `${positionCounts.def}-${positionCounts.mid}-${positionCounts.fwd}`;
+  };
+
   // Get player projected points
   const getPlayerProjectedPoints = (playerId: number, gameweek: number): number => {
     const playerData = playerProjections6GW?.find((p: any) => p.playerId === playerId);
@@ -766,12 +789,31 @@ export default function ProjectedPoints() {
         {/* Current Team */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="truncate">
-                {plannerMode === "manual" ? "Current Team Lineup" : `Optimized Lineup for GW${selectedGameweek}`}
-              </span>
-            </CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="truncate">
+                  {plannerMode === "manual" ? "Current Team Lineup" : `Optimized Lineup for GW${selectedGameweek}`}
+                </span>
+              </CardTitle>
+              {(() => {
+                let formation = '';
+                if (plannerMode === "manual" && manualLineup.length > 0) {
+                  const starting11 = manualLineup.filter(p => p.position <= 11);
+                  formation = calculateFormation(starting11);
+                } else if (plannerMode === "auto" && selectedGameweek) {
+                  const gwLineup = optimizedLineups.get(selectedGameweek);
+                  if (gwLineup?.starting11) {
+                    formation = calculateFormation(gwLineup.starting11);
+                  }
+                }
+                return formation ? (
+                  <Badge variant="outline" className="text-sm font-semibold px-3 py-1 bg-purple-50 border-purple-200 text-purple-700">
+                    Formation: {formation}
+                  </Badge>
+                ) : null;
+              })()}
+            </div>
             {plannerMode === "auto" && isOptimizing && (
               <div className="text-xs sm:text-sm text-gray-500 mt-2">Optimizing lineups for all gameweeks...</div>
             )}
