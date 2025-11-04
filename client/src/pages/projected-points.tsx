@@ -109,6 +109,11 @@ interface TeamData {
     bank: number;
     value: number;
   };
+  chips?: Array<{
+    name: string;
+    time: string;
+    event: number;
+  }>;
 }
 
 interface Player {
@@ -594,20 +599,35 @@ export default function ProjectedPoints() {
 
   // Calculate chip recommendations
   const getChipRecommendations = () => {
-    if (!playerProjections6GW || !teamData?.chips) {
+    console.log('🔍 Chip Recommendations Debug:', {
+      hasPlayerProjections: !!playerProjections6GW,
+      projectionCount: playerProjections6GW?.length,
+      hasTeamData: !!teamData,
+      hasChips: !!teamData?.chips,
+      chipsData: teamData?.chips,
+      plannerMode,
+      manualLineupLength: manualLineup.length,
+      optimizedLineupsSize: optimizedLineups.size
+    });
+
+    if (!playerProjections6GW || !teamData) {
+      console.log('⚠️ Missing basic data for chip recommendations');
       return null;
     }
 
     // Check if we have lineup data based on mode
     if (plannerMode === "manual" && !manualLineup.length) {
+      console.log('⚠️ Manual mode but no manual lineup');
       return null;
     }
     if (plannerMode === "auto" && optimizedLineups.size === 0) {
+      console.log('⚠️ Auto mode but no optimized lineups');
       return null;
     }
 
     const nextGWs = getNextGameweeks();
     const usedChips = teamData.chips || [];
+    console.log('✅ Chip recommendations calculation starting:', { usedChipsCount: usedChips.length, nextGWCount: nextGWs.length });
     const recommendations = { 
       bboost: [] as { gw: number; additionalPoints: number }[], 
       tripleC: [] as { gw: number; additionalPoints: number }[], 
