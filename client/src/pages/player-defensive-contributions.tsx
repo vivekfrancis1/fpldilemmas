@@ -401,7 +401,7 @@ export default function PlayerDefensiveContributions() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Shield className="h-8 w-8" />
-            <h1>Player Defensive Contributions</h1>
+            <h1>Player Defensive Contributions Projections</h1>
           </div>
           <p className="fpl-page-subtitle">
             Comprehensive defensive stats and FPL points projections with fixture-aware analysis
@@ -564,7 +564,7 @@ export default function PlayerDefensiveContributions() {
       {/* Main Content */}
       <Card>
         <CardHeader>
-          <CardTitle>Defensive Contributions by Gameweek</CardTitle>
+          <CardTitle>Player Defensive Contributions Projections: GW{startGameweek}-GW{endGameweek}</CardTitle>
           <CardDescription>
             Fixture-aware projections with opponent difficulty indicators
           </CardDescription>

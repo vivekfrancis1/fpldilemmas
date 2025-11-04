@@ -1246,7 +1246,7 @@ export default function PlayerTotalPoints() {
             <div className="fpl-page-header-content">
               <div className="fpl-page-title">
                 <Target className="h-8 w-8" />
-                <h1>Player Total Points</h1>
+                <h1>Player Points Projections</h1>
               </div>
               <p className="fpl-page-subtitle">
                 Complete FPL points projection combining all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points
@@ -1418,7 +1418,7 @@ export default function PlayerTotalPoints() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-indigo-600" />
-                    <h2 className="fpl-card-title">Player Total Points (GW{startGameweek}-{endGameweek})</h2>
+                    <h2 className="fpl-card-title">Player Points Projections: GW{startGameweek}-GW{endGameweek}</h2>
                   </div>
                   <Badge className="bg-indigo-100 text-indigo-700">
                     {filteredAndSortedData.length} players
