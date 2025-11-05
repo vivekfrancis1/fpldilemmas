@@ -625,29 +625,29 @@ export default function ResultsAndFixtures() {
 
       <div className="fpl-section-spacing">
         {/* Statistics Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-              <div className="text-sm text-gray-600">Total Matches</div>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats.total}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Total Matches</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
-              <div className="text-sm text-gray-600">Completed</div>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.completed}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Completed</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-orange-600">{stats.live}</div>
-              <div className="text-sm text-gray-600">Live</div>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-orange-600">{stats.live}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Live</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-gray-600">{stats.upcoming}</div>
-              <div className="text-sm text-gray-600">Upcoming</div>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-gray-600">{stats.upcoming}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Upcoming</div>
             </CardContent>
           </Card>
         </div>
@@ -655,23 +655,23 @@ export default function ResultsAndFixtures() {
         {/* Gameweek Navigation */}
         <div className="fpl-filters">
           <div className="fpl-card-content">
-            <div className="flex items-center justify-center space-x-4">
+            <div className="flex items-center justify-center space-x-2 sm:space-x-4">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handlePreviousGameweek()}
                 disabled={selectedGameweek === "all" || selectedGameweek === Math.min(...availableGameweeks)}
-                className="px-3"
+                className="px-2 sm:px-3 min-w-[44px]"
                 data-testid="button-previous-gameweek"
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
+                <ChevronLeft className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Previous</span>
               </Button>
               
               <Select value={selectedGameweek.toString()} onValueChange={(value) => 
                 setSelectedGameweek(value === "all" ? "all" : parseInt(value))
               }>
-                <SelectTrigger data-testid="select-gameweek" className="w-48">
+                <SelectTrigger data-testid="select-gameweek" className="w-32 sm:w-48">
                   <SelectValue placeholder="All Gameweeks" />
                 </SelectTrigger>
                 <SelectContent>
@@ -689,11 +689,11 @@ export default function ResultsAndFixtures() {
                 size="sm"
                 onClick={() => handleNextGameweek()}
                 disabled={selectedGameweek === "all" || selectedGameweek === Math.max(...availableGameweeks)}
-                className="px-3"
+                className="px-2 sm:px-3 min-w-[44px]"
                 data-testid="button-next-gameweek"
               >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="h-4 w-4 sm:ml-1" />
               </Button>
             </div>
           </div>
@@ -732,7 +732,7 @@ export default function ResultsAndFixtures() {
                       {fixtures.map((fixture) => (
                         <div 
                           key={fixture.id} 
-                          className={`flex items-center justify-between p-3 bg-gray-50 rounded-lg transition-colors ${
+                          className={`p-3 bg-gray-50 rounded-lg transition-colors ${
                             fixture.isResult 
                               ? 'hover:bg-blue-50 cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500' 
                               : 'hover:bg-gray-100'
@@ -740,86 +740,159 @@ export default function ResultsAndFixtures() {
                           onClick={() => fixture.isResult && handleMatchClick(fixture)}
                           title={fixture.isResult ? 'Click to view match statistics' : ''}
                         >
-                          <div className="flex items-center space-x-4 flex-1">
-                            {/* Home Team */}
-                            <div className="flex items-center space-x-2 min-w-[120px]">
-                              <div className="text-right flex-1">
-                                <span className="font-medium text-gray-900">
+                          {/* Mobile layout: stacked */}
+                          <div className="flex flex-col space-y-2 md:hidden">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                <Home className="h-3 w-3 text-blue-500 shrink-0" />
+                                <span className="font-medium text-gray-900 text-sm truncate">
                                   {fixture.homeTeam?.short_name || "TBD"}
                                 </span>
                               </div>
-                              <Home className="h-3 w-3 text-blue-500" />
-                            </div>
-
-                            {/* Score or Time */}
-                            <div className="flex items-center justify-center min-w-[80px]">
-                              {fixture.isResult ? (
-                                <span className="text-lg font-bold text-gray-900">
-                                  {fixture.team_h_score} - {fixture.team_a_score}
-                                </span>
-                              ) : (
-                                <span className="text-sm text-gray-600">
-                                  {formatDateTime(fixture.kickoff_time).time}
+                              {fixture.isResult && (
+                                <span className="text-lg font-bold text-gray-900 mx-2 shrink-0">
+                                  {fixture.team_h_score}
                                 </span>
                               )}
                             </div>
-
-                            {/* Away Team */}
-                            <div className="flex items-center space-x-2 min-w-[120px]">
-                              <Plane className="h-3 w-3 text-gray-500" />
-                              <div className="flex-1">
-                                <span className="font-medium text-gray-900">
+                            
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                <Plane className="h-3 w-3 text-gray-500 shrink-0" />
+                                <span className="font-medium text-gray-900 text-sm truncate">
                                   {fixture.awayTeam?.short_name || "TBD"}
                                 </span>
                               </div>
+                              {fixture.isResult && (
+                                <span className="text-lg font-bold text-gray-900 mx-2 shrink-0">
+                                  {fixture.team_a_score}
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center justify-between pt-1 border-t border-gray-200">
+                              <div className="flex items-center space-x-2">
+                                {!fixture.isResult && (
+                                  <span className="text-xs text-gray-600">
+                                    {formatDateTime(fixture.kickoff_time).time}
+                                  </span>
+                                )}
+                                <span className="text-xs text-gray-500">
+                                  {formatDateTime(fixture.kickoff_time).date}
+                                </span>
+                                {getStatusBadge(fixture)}
+                              </div>
+                              
+                              <div className="flex items-center space-x-1">
+                                {!fixture.isResult && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs px-2 py-1 min-w-[44px]"
+                                    onClick={(e) => handleTeamStatsClick(fixture, e)}
+                                    data-testid={`team-stats-${fixture.id}`}
+                                  >
+                                    <Users className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                {fixture.isResult && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs px-2 py-1 min-w-[44px]"
+                                    onClick={(e) => handleMatchTeamStatsClick(fixture, e)}
+                                    data-testid={`match-stats-${fixture.id}`}
+                                  >
+                                    <Trophy className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          
+                          {/* Desktop layout: horizontal */}
+                          <div className="hidden md:flex items-center justify-between">
+                            <div className="flex items-center space-x-4 flex-1">
+                              {/* Home Team */}
+                              <div className="flex items-center space-x-2 min-w-[120px]">
+                                <div className="text-right flex-1">
+                                  <span className="font-medium text-gray-900">
+                                    {fixture.homeTeam?.short_name || "TBD"}
+                                  </span>
+                                </div>
+                                <Home className="h-3 w-3 text-blue-500" />
+                              </div>
 
-                          <div className="flex items-center space-x-2">
-                            {/* Date */}
-                            <span className="text-xs text-gray-500 min-w-[60px]">
-                              {formatDateTime(fixture.kickoff_time).date}
-                            </span>
-                            
-                            {/* Status */}
-                            {getStatusBadge(fixture)}
-                            
-                            {/* Action buttons */}
+                              {/* Score or Time */}
+                              <div className="flex items-center justify-center min-w-[80px]">
+                                {fixture.isResult ? (
+                                  <span className="text-lg font-bold text-gray-900">
+                                    {fixture.team_h_score} - {fixture.team_a_score}
+                                  </span>
+                                ) : (
+                                  <span className="text-sm text-gray-600">
+                                    {formatDateTime(fixture.kickoff_time).time}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Away Team */}
+                              <div className="flex items-center space-x-2 min-w-[120px]">
+                                <Plane className="h-3 w-3 text-gray-500" />
+                                <div className="flex-1">
+                                  <span className="font-medium text-gray-900">
+                                    {fixture.awayTeam?.short_name || "TBD"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
                             <div className="flex items-center space-x-2">
-                              {/* Team Stats button for upcoming matches only */}
-                              {!fixture.isResult && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs px-2 py-1"
-                                  onClick={(e) => handleTeamStatsClick(fixture, e)}
-                                  data-testid={`team-stats-${fixture.id}`}
-                                >
-                                  <Users className="h-3 w-3 mr-1" />
-                                  Team Stats
-                                </Button>
-                              )}
+                              {/* Date */}
+                              <span className="text-xs text-gray-500 min-w-[60px]">
+                                {formatDateTime(fixture.kickoff_time).date}
+                              </span>
                               
-                              {/* Match Stats button for completed matches only */}
-                              {fixture.isResult && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="text-xs px-2 py-1"
-                                  onClick={(e) => handleMatchTeamStatsClick(fixture, e)}
-                                  data-testid={`match-stats-${fixture.id}`}
-                                >
-                                  <Trophy className="h-3 w-3 mr-1" />
-                                  Match Stats
-                                </Button>
-                              )}
+                              {/* Status */}
+                              {getStatusBadge(fixture)}
                               
-                              {/* Click indicator for completed matches */}
-                              {fixture.isResult && (
-                                <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
-                                  Player Stats
-                                </Badge>
-                              )}
+                              {/* Action buttons */}
+                              <div className="flex items-center space-x-2">
+                                {/* Team Stats button for upcoming matches only */}
+                                {!fixture.isResult && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs px-2 py-1"
+                                    onClick={(e) => handleTeamStatsClick(fixture, e)}
+                                    data-testid={`team-stats-${fixture.id}`}
+                                  >
+                                    <Users className="h-3 w-3 mr-1" />
+                                    Team Stats
+                                  </Button>
+                                )}
+                                
+                                {/* Match Stats button for completed matches only */}
+                                {fixture.isResult && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs px-2 py-1"
+                                    onClick={(e) => handleMatchTeamStatsClick(fixture, e)}
+                                    data-testid={`match-stats-${fixture.id}`}
+                                  >
+                                    <Trophy className="h-3 w-3 mr-1" />
+                                    Match Stats
+                                  </Button>
+                                )}
+                                
+                                {/* Click indicator for completed matches */}
+                                {fixture.isResult && (
+                                  <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
+                                    Player Stats
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -834,7 +907,7 @@ export default function ResultsAndFixtures() {
                 {filteredFixtures.map((fixture) => (
                   <div 
                     key={fixture.id} 
-                    className={`flex items-center justify-between p-4 bg-white border rounded-lg transition-all ${
+                    className={`p-3 sm:p-4 bg-white border rounded-lg transition-all ${
                       fixture.isResult 
                         ? 'hover:shadow-md cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500 hover:bg-blue-50' 
                         : 'hover:shadow-sm'
@@ -842,86 +915,161 @@ export default function ResultsAndFixtures() {
                     onClick={() => fixture.isResult && handleMatchClick(fixture)}
                     title={fixture.isResult ? 'Click to view match statistics' : ''}
                   >
-                    <div className="flex items-center space-x-6 flex-1">
-                      {/* Home Team */}
-                      <div className="flex items-center space-x-3 min-w-[140px]">
-                        <div className="text-right flex-1">
-                          <span className="font-medium text-gray-900 text-sm">
-                            {fixture.homeTeam?.name || "TBD"}
+                    {/* Mobile layout: stacked */}
+                    <div className="flex flex-col space-y-2 md:hidden">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2 flex-1 min-w-0">
+                          <Home className="h-3 w-3 text-blue-500 shrink-0" />
+                          <span className="font-medium text-gray-900 text-sm truncate">
+                            {fixture.homeTeam?.short_name || "TBD"}
                           </span>
                         </div>
-                        <Home className="h-4 w-4 text-blue-500" />
-                      </div>
-
-                      {/* Score or Time */}
-                      <div className="flex items-center justify-center min-w-[100px]">
-                        {fixture.isResult ? (
-                          <span className="text-xl font-bold text-gray-900">
-                            {fixture.team_h_score} - {fixture.team_a_score}
+                        {fixture.isResult && (
+                          <span className="text-xl font-bold text-gray-900 mx-2 shrink-0">
+                            {fixture.team_h_score}
                           </span>
-                        ) : (
-                          <div className="text-center">
-                            <div className="text-sm text-gray-600">
-                              {formatDateTime(fixture.kickoff_time).time}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {formatDateTime(fixture.kickoff_time).date}
-                            </div>
-                          </div>
                         )}
                       </div>
-
-                      {/* Away Team */}
-                      <div className="flex items-center space-x-3 min-w-[140px]">
-                        <Plane className="h-4 w-4 text-gray-500" />
-                        <div className="flex-1">
-                          <span className="font-medium text-gray-900 text-sm">
-                            {fixture.awayTeam?.name || "TBD"}
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2 flex-1 min-w-0">
+                          <Plane className="h-3 w-3 text-gray-500 shrink-0" />
+                          <span className="font-medium text-gray-900 text-sm truncate">
+                            {fixture.awayTeam?.short_name || "TBD"}
                           </span>
+                        </div>
+                        {fixture.isResult && (
+                          <span className="text-xl font-bold text-gray-900 mx-2 shrink-0">
+                            {fixture.team_a_score}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-1 border-t border-gray-200">
+                        <div className="flex items-center space-x-2">
+                          {!fixture.isResult && (
+                            <>
+                              <span className="text-xs text-gray-600">
+                                {formatDateTime(fixture.kickoff_time).time}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {formatDateTime(fixture.kickoff_time).date}
+                              </span>
+                            </>
+                          )}
+                          {getStatusBadge(fixture)}
+                        </div>
+                        
+                        <div className="flex items-center space-x-1">
+                          {!fixture.isResult && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs px-2 py-1 min-w-[44px]"
+                              onClick={(e) => handleTeamStatsClick(fixture, e)}
+                              data-testid={`team-stats-${fixture.id}`}
+                            >
+                              <Users className="h-3 w-3" />
+                            </Button>
+                          )}
+                          {fixture.isResult && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs px-2 py-1 min-w-[44px]"
+                              onClick={(e) => handleMatchTeamStatsClick(fixture, e)}
+                              data-testid={`match-stats-${fixture.id}`}
+                            >
+                              <Trophy className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Desktop layout: horizontal */}
+                    <div className="hidden md:flex items-center justify-between">
+                      <div className="flex items-center space-x-6 flex-1">
+                        {/* Home Team */}
+                        <div className="flex items-center space-x-3 min-w-[140px]">
+                          <div className="text-right flex-1">
+                            <span className="font-medium text-gray-900 text-sm">
+                              {fixture.homeTeam?.name || "TBD"}
+                            </span>
+                          </div>
+                          <Home className="h-4 w-4 text-blue-500" />
+                        </div>
 
-                    <div className="flex items-center space-x-2">
-                      {/* Status */}
-                      {getStatusBadge(fixture)}
-                      
-                      {/* Action buttons */}
+                        {/* Score or Time */}
+                        <div className="flex items-center justify-center min-w-[100px]">
+                          {fixture.isResult ? (
+                            <span className="text-xl font-bold text-gray-900">
+                              {fixture.team_h_score} - {fixture.team_a_score}
+                            </span>
+                          ) : (
+                            <div className="text-center">
+                              <div className="text-sm text-gray-600">
+                                {formatDateTime(fixture.kickoff_time).time}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {formatDateTime(fixture.kickoff_time).date}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Away Team */}
+                        <div className="flex items-center space-x-3 min-w-[140px]">
+                          <Plane className="h-4 w-4 text-gray-500" />
+                          <div className="flex-1">
+                            <span className="font-medium text-gray-900 text-sm">
+                              {fixture.awayTeam?.name || "TBD"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="flex items-center space-x-2">
-                        {/* Team Stats button for upcoming matches only */}
-                        {!fixture.isResult && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs px-2 py-1"
-                            onClick={(e) => handleTeamStatsClick(fixture, e)}
-                            data-testid={`team-stats-${fixture.id}`}
-                          >
-                            <Users className="h-3 w-3 mr-1" />
-                            Team Stats
-                          </Button>
-                        )}
+                        {/* Status */}
+                        {getStatusBadge(fixture)}
                         
-                        {/* Match Stats button for completed matches only */}
-                        {fixture.isResult && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs px-2 py-1"
-                            onClick={(e) => handleMatchTeamStatsClick(fixture, e)}
-                            data-testid={`match-stats-${fixture.id}`}
-                          >
-                            <Trophy className="h-3 w-3 mr-1" />
-                            Match Stats
-                          </Button>
-                        )}
-                        
-                        {/* Click indicator for completed matches */}
-                        {fixture.isResult && (
-                          <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
-                            Player Stats
-                          </Badge>
-                        )}
+                        {/* Action buttons */}
+                        <div className="flex items-center space-x-2">
+                          {/* Team Stats button for upcoming matches only */}
+                          {!fixture.isResult && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs px-2 py-1"
+                              onClick={(e) => handleTeamStatsClick(fixture, e)}
+                              data-testid={`team-stats-${fixture.id}`}
+                            >
+                              <Users className="h-3 w-3 mr-1" />
+                              Team Stats
+                            </Button>
+                          )}
+                          
+                          {/* Match Stats button for completed matches only */}
+                          {fixture.isResult && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs px-2 py-1"
+                              onClick={(e) => handleMatchTeamStatsClick(fixture, e)}
+                              data-testid={`match-stats-${fixture.id}`}
+                            >
+                              <Trophy className="h-3 w-3 mr-1" />
+                              Match Stats
+                            </Button>
+                          )}
+                          
+                          {/* Click indicator for completed matches */}
+                          {fixture.isResult && (
+                            <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
+                              Player Stats
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -943,15 +1091,17 @@ export default function ResultsAndFixtures() {
         <Dialog open={isMatchStatsOpen} onOpenChange={setIsMatchStatsOpen}>
           <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-3">
-                <Trophy className="h-6 w-6 text-blue-600" />
+              <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 shrink-0" />
                 {selectedMatch && (
-                  <>
-                    {selectedMatch.homeTeam?.name} {selectedMatch.team_h_score} - {selectedMatch.team_a_score} {selectedMatch.awayTeam?.name}
-                    <Badge variant="outline" className="ml-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <span className="text-sm sm:text-base">
+                      {selectedMatch.homeTeam?.short_name} {selectedMatch.team_h_score} - {selectedMatch.team_a_score} {selectedMatch.awayTeam?.short_name}
+                    </span>
+                    <Badge variant="outline" className="w-fit text-xs">
                       GW{selectedMatch.event} - {formatDateTime(selectedMatch.kickoff_time).date}
                     </Badge>
-                  </>
+                  </div>
                 )}
               </DialogTitle>
             </DialogHeader>
