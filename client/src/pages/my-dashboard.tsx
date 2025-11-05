@@ -1844,33 +1844,6 @@ export default function MyDashboard() {
                         </CardContent>
                       </Card>
                     )}
-
-                  {/* Chips Used */}
-                  {historyData?.chips && historyData.chips.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Star className="h-5 w-5" />
-                          Chips Used
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {historyData.chips.map((chip, index) => (
-                            <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
-                              <div>
-                                <div className="font-medium capitalize">{chip.name.replace('_', ' ')}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  Gameweek {chip.event}
-                                </div>
-                              </div>
-                              <Badge variant="outline">Used</Badge>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
                 </>
               )}
             </TabsContent>
