@@ -320,6 +320,16 @@ export default function MyDashboard() {
   };
 
   // Helper functions
+  const formatChipName = (chipName: string): string => {
+    const chipMap: Record<string, string> = {
+      '3xc': 'Triple Captain',
+      'bboost': 'Bench Boost',
+      'freehit': 'Free Hit',
+      'wildcard': 'Wildcard'
+    };
+    return chipMap[chipName] || chipName.replace('_', ' ');
+  };
+
   const formatRank = (rank: number | null | undefined) => {
     if (rank === null || rank === undefined) return 'N/A';
     return rank.toLocaleString();
@@ -1755,7 +1765,7 @@ export default function MyDashboard() {
                       <div className="space-y-2">
                         {historyData.chips.map((chip, index) => (
                           <div key={index} className="flex items-center gap-4 p-3 border rounded-lg bg-white/70">
-                            <Badge variant="outline" className="capitalize">{chip.name.replace('_', ' ')}</Badge>
+                            <Badge variant="outline">{formatChipName(chip.name)}</Badge>
                             <span className="text-sm text-gray-600">Gameweek {chip.event}</span>
                             <span className="text-xs text-gray-500 ml-auto">
                               {new Date(chip.time).toLocaleDateString()}
