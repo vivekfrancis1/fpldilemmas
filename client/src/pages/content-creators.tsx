@@ -351,21 +351,41 @@ const getContentCreatorColumns = (): ResponsiveTableColumn<CreatorWithLatestData
     }
   },
   {
-    key: 'latestTracking.teamValue',
-    header: 'Team Value',
+    key: 'latestTracking.squadValue',
+    header: 'Squad Value',
     priority: 'secondary',
     align: 'right',
-    mobileLabel: 'Value',
+    mobileLabel: 'Squad',
     cardOrder: 5,
     sortable: true,
     className: 'font-mono',
     render: (_, creator) => {
       const teamValue = creator.latestTracking?.teamValue;
+      const bank = creator.latestTracking?.bank;
       if (teamValue === undefined || teamValue === null) return "N/A";
       
       // Handle both string and number formats
       const parsedValue = typeof teamValue === 'string' ? parseFloat(teamValue) : teamValue;
-      return `£${parsedValue.toFixed(1)}m`;
+      const parsedBank = bank ? (typeof bank === 'string' ? parseFloat(bank) : bank) : 0;
+      return `£${(parsedValue - parsedBank).toFixed(1)}m`;
+    }
+  },
+  {
+    key: 'latestTracking.bank',
+    header: 'Bank',
+    priority: 'optional',
+    align: 'right',
+    mobileLabel: 'Bank',
+    cardOrder: 6,
+    sortable: true,
+    className: 'font-mono',
+    render: (_, creator) => {
+      const bank = creator.latestTracking?.bank;
+      if (bank === undefined || bank === null) return "N/A";
+      
+      // Handle both string and number formats
+      const parsedBank = typeof bank === 'string' ? parseFloat(bank) : bank;
+      return `£${parsedBank.toFixed(1)}m`;
     }
   },
   {

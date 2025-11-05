@@ -529,7 +529,7 @@ export default function Top50ManagerTeam() {
 
       {/* Team Statistics */}
       {teamData?.entry_history && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -570,11 +570,24 @@ export default function Top50ManagerTeam() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-orange-700">
-                    £{((teamData.entry_history.value || 0) / 10).toFixed(1)}m
+                    £{(((teamData.entry_history.value || 0) - (teamData.entry_history.bank || 0)) / 10).toFixed(1)}m
                   </div>
-                  <div className="text-sm text-muted-foreground">Team Value</div>
+                  <div className="text-sm text-muted-foreground">Squad Value</div>
                 </div>
                 <DollarSign className="h-8 w-8 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-teal-500 bg-gradient-to-r from-teal-50 to-white">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-teal-700">
+                    £{((teamData.entry_history.bank || 0) / 10).toFixed(1)}m
+                  </div>
+                  <div className="text-sm text-muted-foreground">Money in Bank</div>
+                </div>
+                <DollarSign className="h-8 w-8 text-teal-500" />
               </div>
             </CardContent>
           </Card>
@@ -1047,7 +1060,8 @@ export default function Top50ManagerTeam() {
                           <TableHead>Points</TableHead>
                           <TableHead>Overall Rank</TableHead>
                           <TableHead>Rank Change</TableHead>
-                          <TableHead>Team Value</TableHead>
+                          <TableHead>Squad Value</TableHead>
+                          <TableHead>Bank</TableHead>
                           <TableHead>Transfers</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1064,7 +1078,8 @@ export default function Top50ManagerTeam() {
                               <TableCell className="font-semibold">{gw.points}</TableCell>
                               <TableCell>#{gw.overall_rank.toLocaleString()}</TableCell>
                               <TableCell>{getRankChangeDisplay(rankChange)}</TableCell>
-                              <TableCell>£{(gw.value / 10).toFixed(1)}m</TableCell>
+                              <TableCell>£{((gw.value - (gw.bank || 0)) / 10).toFixed(1)}m</TableCell>
+                              <TableCell>£{((gw.bank || 0) / 10).toFixed(1)}m</TableCell>
                               <TableCell>
                                 <div className="space-y-1">
                                   <div>{gw.event_transfers} transfers</div>

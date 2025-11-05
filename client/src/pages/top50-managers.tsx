@@ -272,18 +272,35 @@ const getTop50ManagerColumns = (): ResponsiveTableColumn<Top50Manager>[] => [
     }
   },
   {
-    key: 'latestTracking.teamValue',
-    header: 'Team Value',
+    key: 'latestTracking.squadValue',
+    header: 'Squad Value',
     priority: 'secondary',
     align: 'right',
-    mobileLabel: 'Value',
+    mobileLabel: 'Squad',
     cardOrder: 5,
     sortable: true,
     className: 'font-mono',
     render: (value, manager) => {
       const teamValue = manager.latestTracking?.teamValue;
-      return teamValue !== undefined && teamValue !== null 
-        ? `£${(teamValue / 10).toFixed(1)}m` 
+      const bank = manager.latestTracking?.bank;
+      if (teamValue === undefined || teamValue === null) return "N/A";
+      const bankValue = bank !== undefined && bank !== null ? bank : 0;
+      return `£${((teamValue - bankValue) / 10).toFixed(1)}m`;
+    }
+  },
+  {
+    key: 'latestTracking.bank',
+    header: 'Bank',
+    priority: 'optional',
+    align: 'right',
+    mobileLabel: 'Bank',
+    cardOrder: 6,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, manager) => {
+      const bank = manager.latestTracking?.bank;
+      return bank !== undefined && bank !== null 
+        ? `£${(bank / 10).toFixed(1)}m` 
         : "N/A";
     }
   },
