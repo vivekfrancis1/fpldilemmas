@@ -82,6 +82,7 @@ SEO Optimization: Comprehensive search engine optimization implemented with keyw
 - **Build System**: Vite for frontend, esbuild for server.
 - **Development Server**: Integrated Vite dev server with Express API proxy.
 - **Code Organization**: Monorepo structure with shared utilities.
+- **Environment Configuration**: Replit's nodejs-20 module sets NODE_ENV=production by default. The `.npmrc` file in the project root overrides this behavior to ensure devDependencies (like @vitejs/plugin-react) are installed during development. This configuration is essential for the dev server to function properly.
 
 ## External Dependencies
 
