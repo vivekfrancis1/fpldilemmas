@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { PlayerNameCell } from "@/components/enhanced-table";
-import ProtectedRoute from "@/components/protected-route";
 
 interface BootstrapData {
   elements: any[];
@@ -186,7 +185,6 @@ export default function PlayerBonusPoints() {
   }
 
   return (
-    <ProtectedRoute requireAdmin={true}>
       <div className="fpl-page-container">
       {/* Page Header */}
       <div className="fpl-page-header">
@@ -388,6 +386,5 @@ export default function PlayerBonusPoints() {
         )}
       </div>
     </div>
-    </ProtectedRoute>
   );
 }
