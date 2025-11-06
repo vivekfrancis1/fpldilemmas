@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Shield, Search, ArrowUpDown, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { PlayerNameCell } from "@/components/enhanced-table";
 
 interface BootstrapData {
   elements: any[];
@@ -25,11 +26,14 @@ interface SavesProjection {
   averagePerGameweek: number;
 }
 
+type SortField = 'name' | 'team' | 'totalSaves' | string;
+type SortDirection = 'asc' | 'desc';
+
 export default function PlayerSaves() {
   const [searchTerm, setSearchTerm] = useState("");
   const [teamFilter, setTeamFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"totalSaves" | "totalPoints">("totalSaves");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [sortField, setSortField] = useState<SortField>("totalSaves");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -48,37 +52,95 @@ export default function PlayerSaves() {
     staleTime: 30 * 60 * 1000, // Cache for 30 minutes since data is updated twice daily
   });
 
-  const teams = bootstrapData?.teams?.map(team => ({
-    id: team.id,
-    name: team.short_name
-  })) || [];
+  // Create playerIdToWebName mapping for short names
+  const playerIdToWebName = useMemo(() => {
+    if (!bootstrapData?.elements) return null;
+    const map = new Map<number, string>();
+    bootstrapData.elements.forEach(player => {
+      map.set(player.id, player.web_name);
+    });
+    return map;
+  }, [bootstrapData]);
 
-  const filteredProjections = (Array.isArray(savesProjections) ? savesProjections : []).filter((projection: SavesProjection) => {
-    const matchesSearch = !searchTerm || 
-      projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesTeam = teamFilter === "all" || projection.teamName === teamFilter;
-    
-    return matchesSearch && matchesTeam;
-  }).sort((a: SavesProjection, b: SavesProjection) => {
-    const aValue = a[sortBy];
-    const bValue = b[sortBy];
-    return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
-  });
+  const teams = useMemo(() => {
+    if (!savesProjections || !Array.isArray(savesProjections)) return [];
+    const uniqueTeams = Array.from(new Set(savesProjections.map((p: SavesProjection) => p.teamName)));
+    return uniqueTeams.sort();
+  }, [savesProjections]);
 
-  const handleSort = (column: "totalSaves" | "totalPoints") => {
-    if (sortBy === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+  // Generate dynamic gameweek columns
+  const dynamicGameweekColumns = useMemo(() => {
+    return nextGameweeks;
+  }, [nextGameweeks]);
+
+  const filteredAndSortedData = useMemo(() => {
+    if (!savesProjections || !Array.isArray(savesProjections)) return [];
+    
+    let filtered = savesProjections.filter((projection: SavesProjection) => {
+      const matchesSearch = !searchTerm || 
+        projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesTeam = teamFilter === "all" || projection.teamName === teamFilter;
+      
+      return matchesSearch && matchesTeam;
+    });
+
+    // Sort data
+    filtered.sort((a: SavesProjection, b: SavesProjection) => {
+      let aValue: any, bValue: any;
+      
+      switch (sortField) {
+        case 'name':
+          aValue = a.playerName;
+          bValue = b.playerName;
+          break;
+        case 'team':
+          aValue = a.teamName;
+          bValue = b.teamName;
+          break;
+        case 'totalSaves':
+          aValue = a.totalSaves;
+          bValue = b.totalSaves;
+          break;
+        default:
+          // Handle dynamic gameweek fields (like 'gw4', 'gw5', etc.)
+          if (sortField.startsWith('gw')) {
+            const gwNumber = sortField.replace('gw', '');
+            aValue = a.saves?.[`gw${gwNumber}`] || 0;
+            bValue = b.saves?.[`gw${gwNumber}`] || 0;
+          } else {
+            aValue = a.totalSaves;
+            bValue = b.totalSaves;
+          }
+      }
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      }
+      
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    });
+
+    return filtered;
+  }, [savesProjections, searchTerm, teamFilter, sortField, sortDirection, nextGameweeks]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortBy(column);
-      setSortDirection("desc");
+      setSortField(field);
+      setSortDirection('desc');
     }
   };
 
-  const getSortIcon = (column: "totalSaves" | "totalPoints") => {
-    if (sortBy !== column) return <ArrowUpDown className="h-4 w-4" />;
-    return sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
+    }
+    return sortDirection === 'asc' ? 
+      <ArrowUpDown className="h-4 w-4 text-blue-600 rotate-180" /> : 
+      <ArrowUpDown className="h-4 w-4 text-blue-600" />;
   };
 
   if (isLoadingBootstrap || isLoadingProjections) {
@@ -122,160 +184,133 @@ export default function PlayerSaves() {
       <div className="fpl-section-spacing">
         {/* Filters */}
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5 text-blue-600" />
-              Search & Filter
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Team</label>
+                <Select value={teamFilter} onValueChange={setTeamFilter}>
+                  <SelectTrigger className="w-full" data-testid="select-team">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Teams</SelectItem>
+                    {teams.map((team, index) => (
+                      <SelectItem key={`team-${team}-${index}`} value={team}>
+                        {team}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Search className="h-4 w-4 text-gray-500" />
+                  Search
+                </label>
                 <Input
                   placeholder="Search goalkeepers..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="w-full"
                   data-testid="input-search"
                 />
               </div>
-              <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger data-testid="select-team">
-                  <SelectValue placeholder="All Teams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {teams.map(team => (
-                    <SelectItem key={team.id} value={team.name}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+
+              <div className="flex items-center gap-2 text-sm text-gray-600 justify-center sm:justify-end">
+                <Users className="h-4 w-4" />
+                <span>{filteredAndSortedData.length} goalkeepers</span>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Results */}
-        <Tabs defaultValue="saves" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="saves">Saves</TabsTrigger>
-            <TabsTrigger value="points">Points from Saves</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="saves" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Expected Saves (Gameweeks {startGameweek}-{endGameweek})</CardTitle>
-                <CardDescription>
-                  Projected number of saves for each goalkeeper based on opponent strength and team defensive quality
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="fpl-table">
-                    <thead>
+        {filteredAndSortedData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-blue-600" />
+                Expected Saves: GW{startGameweek}-GW{endGameweek}
+              </CardTitle>
+              <CardDescription>
+                Projected number of saves for each goalkeeper based on opponent strength and team defensive quality
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
+                <div className="min-w-full inline-block align-middle">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="text-left">Goalkeeper</th>
-
-                        {nextGameweeks.map(gw => (
-                          <th key={gw} className="text-center">GW{gw}</th>
-                        ))}
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("totalSaves")}>
-                          <div className="flex items-center justify-center gap-1">
-                            Total {getSortIcon("totalSaves")}
-                          </div>
+                        <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 min-w-[140px] sm:min-w-[180px] border-r border-gray-100">
+                          <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                            Player {getSortIcon('name')}
+                          </Button>
                         </th>
-                        <th className="text-center">Avg/GW</th>
+                        {dynamicGameweekColumns.map((gw) => (
+                          <th key={`saves-header-gw${gw}`} className="px-2 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[60px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort(`gw${gw}`)} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                              GW{gw} {getSortIcon(`gw${gw}`)}
+                            </Button>
+                          </th>
+                        ))}
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-blue-50">
+                          <Button variant="ghost" size="sm" onClick={() => handleSort('totalSaves')} className="h-auto p-0 font-medium text-gray-500 hover:bg-blue-100 hover:text-gray-700">
+                            Total Saves {getSortIcon('totalSaves')}
+                          </Button>
+                        </th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50">
+                          Avg/GW
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredProjections.map((projection: SavesProjection) => (
-                        <tr key={projection.playerId}>
-                          <td className="font-medium">
-                            <div className="flex flex-col">
-                              <span>{projection.playerName}</span>
-                              <div className="flex items-center gap-1 mt-1">
-                                <Badge variant="outline" className="text-xs">GKP</Badge>
-                                <Badge variant="outline" className="text-xs">{projection.teamName}</Badge>
-                              </div>
-                            </div>
+                      {filteredAndSortedData.map((projection: SavesProjection, index) => (
+                        <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
+                            <PlayerNameCell 
+                              name={(playerIdToWebName && playerIdToWebName.get(projection.playerId)) || projection.playerName}
+                              position={projection.position}
+                              team={projection.teamName}
+                              compact={true}
+                            />
                           </td>
-                          {nextGameweeks.map(gw => (
-                            <td key={gw} className="text-center">{projection.saves?.[`gw${gw}`] ? (projection.saves[`gw${gw}`]).toFixed(2) : '-'}</td>
+                          {dynamicGameweekColumns.map((gw) => (
+                            <td key={`saves-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
+                              {projection.saves?.[`gw${gw}`] ? (projection.saves[`gw${gw}`]).toFixed(2) : '-'}
+                            </td>
                           ))}
-                          <td className="text-center font-semibold text-blue-600">
-                            {projection.totalSaves}
+                          <td className="text-center py-3 px-1 font-semibold bg-blue-50">
+                            <span className="text-lg font-bold text-blue-900">
+                              {projection.totalSaves.toFixed(2)}
+                            </span>
                           </td>
-                          <td className="text-center text-sm text-gray-600">
-                            {projection.averagePerGameweek.toFixed(2)}
+                          <td className="text-center py-3 px-1 bg-green-50">
+                            <span className="text-sm font-medium text-green-900">
+                              {projection.averagePerGameweek.toFixed(2)}
+                            </span>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-          <TabsContent value="points" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Points from Saves (Gameweeks {startGameweek}-{endGameweek})</CardTitle>
-                <CardDescription>
-                  FPL points earned from saves (1 point per 3 saves) plus penalty save bonuses
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="fpl-table">
-                    <thead>
-                      <tr>
-                        <th className="text-left">Goalkeeper</th>
-
-                        {nextGameweeks.map(gw => (
-                          <th key={gw} className="text-center">GW{gw}</th>
-                        ))}
-                        <th className="text-center cursor-pointer" onClick={() => handleSort("totalPoints")}>
-                          <div className="flex items-center justify-center gap-1">
-                            Total {getSortIcon("totalPoints")}
-                          </div>
-                        </th>
-                        <th className="text-center">Avg/GW</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredProjections.map((projection: SavesProjection) => (
-                        <tr key={projection.playerId}>
-                          <td className="font-medium">
-                            <div className="flex flex-col">
-                              <span>{projection.playerName}</span>
-                              <div className="flex items-center gap-1 mt-1">
-                                <Badge variant="outline" className="text-xs">GKP</Badge>
-                                <Badge variant="outline" className="text-xs">{projection.teamName}</Badge>
-                              </div>
-                            </div>
-                          </td>
-                          {nextGameweeks.map(gw => (
-                            <td key={gw} className="text-center">{projection.pointsFromSaves?.[`gw${gw}`] ? (projection.pointsFromSaves[`gw${gw}`]).toFixed(2) : '-'}</td>
-                          ))}
-                          <td className="text-center font-semibold text-green-600">
-                            {projection.totalPoints}
-                          </td>
-                          <td className="text-center text-sm text-gray-600">
-                            {(projection.totalPoints / nextGameweeks.length).toFixed(2)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {/* No Results */}
+        {filteredAndSortedData.length === 0 && (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No goalkeepers found</h3>
+              <p className="text-gray-600">Try adjusting your filters to see more results.</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
