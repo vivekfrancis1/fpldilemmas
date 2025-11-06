@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, Search, ArrowUpDown, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,17 +34,28 @@ export default function PlayerSaves() {
   const [teamFilter, setTeamFilter] = useState("all");
   const [sortField, setSortField] = useState<SortField>("totalSaves");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [startGameweek, setStartGameweek] = useState<number>(11);
+  const [endGameweek, setEndGameweek] = useState<number>(16);
+  const [initialized, setInitialized] = useState(false);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000,
   });
 
-  // Calculate next 6 gameweeks dynamically
-  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 5;
-  const nextGameweeks = Array.from({ length: 6 }, (_, i) => currentGameweek + 1 + i);
-  const startGameweek = nextGameweeks[0];
-  const endGameweek = nextGameweeks[5];
+  // Calculate current gameweek and available range
+  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 10;
+  const nextGameweek = Math.min(currentGameweek + 1, 38);
+  const maxAvailableGW = Math.min(38, nextGameweek + 5);
+
+  // Initialize gameweek range once bootstrap data is loaded
+  useEffect(() => {
+    if (!bootstrapData || initialized) return;
+    
+    setStartGameweek(nextGameweek);
+    setEndGameweek(Math.min(nextGameweek + 5, maxAvailableGW));
+    setInitialized(true);
+  }, [bootstrapData, initialized, nextGameweek, maxAvailableGW]);
 
   // Cached API call for saves projections - faster response from database
   const { data: savesProjections, isLoading: isLoadingProjections } = useQuery({
@@ -68,10 +79,23 @@ export default function PlayerSaves() {
     return uniqueTeams.sort();
   }, [savesProjections]);
 
-  // Generate dynamic gameweek columns
+  // Generate dynamic gameweek columns based on selected range
   const dynamicGameweekColumns = useMemo(() => {
-    return nextGameweeks;
-  }, [nextGameweeks]);
+    const columns = [];
+    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+      columns.push(gw);
+    }
+    return columns;
+  }, [startGameweek, endGameweek]);
+
+  // Calculate dynamic totals based on selected gameweek range
+  const getFilteredTotal = (player: SavesProjection) => {
+    let total = 0;
+    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+      total += player.saves?.[`gw${gw}`] || 0;
+    }
+    return total;
+  };
 
   const filteredAndSortedData = useMemo(() => {
     if (!savesProjections || !Array.isArray(savesProjections)) return [];
@@ -100,8 +124,8 @@ export default function PlayerSaves() {
           bValue = b.teamName;
           break;
         case 'totalSaves':
-          aValue = a.totalSaves;
-          bValue = b.totalSaves;
+          aValue = getFilteredTotal(a);
+          bValue = getFilteredTotal(b);
           break;
         default:
           // Handle dynamic gameweek fields (like 'gw4', 'gw5', etc.)
@@ -110,8 +134,8 @@ export default function PlayerSaves() {
             aValue = a.saves?.[`gw${gwNumber}`] || 0;
             bValue = b.saves?.[`gw${gwNumber}`] || 0;
           } else {
-            aValue = a.totalSaves;
-            bValue = b.totalSaves;
+            aValue = getFilteredTotal(a);
+            bValue = getFilteredTotal(b);
           }
       }
       
@@ -123,7 +147,7 @@ export default function PlayerSaves() {
     });
 
     return filtered;
-  }, [savesProjections, searchTerm, teamFilter, sortField, sortDirection, nextGameweeks]);
+  }, [savesProjections, searchTerm, teamFilter, sortField, sortDirection, startGameweek, endGameweek]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -185,7 +209,35 @@ export default function PlayerSaves() {
         {/* Filters */}
         <Card className="mb-6">
           <CardContent className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">From GW</label>
+                <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: Math.max(0, maxAvailableGW - nextGameweek + 1) }, (_, i) => i + nextGameweek).map((gw, index) => (
+                      <SelectItem key={`start-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">To GW</label>
+                <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: Math.max(0, maxAvailableGW - startGameweek + 1) }, (_, i) => i + startGameweek).map((gw, index) => (
+                      <SelectItem key={`end-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Team</label>
                 <Select value={teamFilter} onValueChange={setTeamFilter}>
@@ -266,7 +318,10 @@ export default function PlayerSaves() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredAndSortedData.map((projection: SavesProjection, index) => (
+                      {filteredAndSortedData.map((projection: SavesProjection, index) => {
+                        const filteredTotal = getFilteredTotal(projection);
+                        const filteredAverage = filteredTotal / dynamicGameweekColumns.length;
+                        return (
                         <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
                           <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
                             <PlayerNameCell 
@@ -283,16 +338,17 @@ export default function PlayerSaves() {
                           ))}
                           <td className="text-center py-3 px-1 font-semibold bg-blue-50">
                             <span className="text-lg font-bold text-blue-900">
-                              {projection.totalSaves.toFixed(2)}
+                              {filteredTotal.toFixed(2)}
                             </span>
                           </td>
                           <td className="text-center py-3 px-1 bg-green-50">
                             <span className="text-sm font-medium text-green-900">
-                              {projection.averagePerGameweek.toFixed(2)}
+                              {filteredAverage.toFixed(2)}
                             </span>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
