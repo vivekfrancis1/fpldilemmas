@@ -6,7 +6,7 @@ FPL Dilemmas is an analytics application for Fantasy Premier League (FPL) manage
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 **Development Protocol**: Always ask permission before making any changes to logic, calculations, or functionality. No unauthorized modifications are permitted.
-Site tagline: Now uses "Advanced FPL Analytics Platform" in sidebar and home page.
+Site tagline: "FPL made smarter with predictive analytics." displayed in sidebar and header.
 Navigation priority: Goals and Clean Sheets as default landing page (home route '/'), with side navigation for all tools.
 Manager ID caching: All FPL manager tools (My Live Rank, My Team, My Leagues) now automatically save and pre-load the last searched Manager ID using localStorage for seamless cross-tool experience.
 Projection Tools Limit: All projection tools (Player Projections, Match Projections, Team Goal/CS Projections, Goal Share, Assist Share) now limited to next 6 gameweeks only for focused analysis. Updated to show only future gameweeks excluding current/finished gameweeks.

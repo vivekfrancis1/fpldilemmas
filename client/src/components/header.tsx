@@ -62,7 +62,7 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
           <div className="min-w-0">
             <h1 className="text-sm sm:text-lg font-bold text-fpl-purple truncate">FPL Dilemmas</h1>
             {!isMobile && (
-              <p className="text-xs text-gray-600">Advanced FPL Analytics Platform</p>
+              <p className="text-xs text-gray-600">FPL made smarter with predictive analytics.</p>
             )}
           </div>
         </div>
