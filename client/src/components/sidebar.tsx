@@ -97,7 +97,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/player-statistics", label: "Player Statistics", icon: BarChart3, description: "Comprehensive player data", popular: false },
         { path: "/current-standings", label: "Team Statistics", icon: Trophy, description: "Current league table based on completed matches", popular: false },
-        { path: "/results-and-fixtures", label: "Match Statistics", icon: Trophy, description: "Complete Premier League schedule with results", popular: false, mobileHidden: true },
+        { path: "/results-and-fixtures", label: "Match Results", icon: Trophy, description: "Complete Premier League schedule with results", popular: false, mobileHidden: true },
         { path: "/recent-price-changes", label: "Price Changes", icon: RefreshCw, description: "Season price changes", popular: false },
         { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false }
       ]
