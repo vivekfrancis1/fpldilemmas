@@ -286,16 +286,23 @@ class ProjectionService {
             // 5. SAVES CALCULATION (Goalkeepers Only) - Official FPL Rules: 1pt per 3 saves, 5pts per penalty save
             let savesPoints = 0;
             if (position === 'GKP' && expectedMinutes >= 1) {
-              // Expected shots on target based on opponent strength and team defensive quality
-              const opponentShotsOnTarget = opponentStrengthSeed <= 4 ? 6.5 : // vs Elite teams
-                                           opponentStrengthSeed <= 9 ? 5.0 : // vs Strong teams  
-                                           opponentStrengthSeed <= 14 ? 3.5 : 2.5; // vs Average/Weak teams
+              // NEW FORMULA: (Goalkeeper Avg Saves/Game × Opponent AGR) / 1.35
+              // Get goalkeeper's historical average saves per game from FPL data
+              const goalkeeperAvgSavesPerGame = fplPlayer.saves && fplPlayer.minutes > 0 
+                ? (fplPlayer.saves / (fplPlayer.minutes / 90)) 
+                : 2.5; // Default to 2.5 saves per 90 if no data
               
-              const teamDefensiveQuality = (adjustedForm * 0.1) + 0.7; // Base 70% + form adjustment
-              const expectedShotsToSave = opponentShotsOnTarget * teamDefensiveQuality * (expectedMinutes / 90);
+              // Get opponent team's AGR from standings (approximated by opponent strength)
+              // AGR ranges from ~0.5 (weak attack) to ~2.5 (strong attack) goals per game
+              const opponentAGR = opponentStrengthSeed <= 4 ? 2.0 : // vs Elite teams
+                                  opponentStrengthSeed <= 9 ? 1.5 : // vs Strong teams  
+                                  opponentStrengthSeed <= 14 ? 1.2 : 0.8; // vs Average/Weak teams
+              
+              // Calculate expected saves using new formula
+              const expectedSaves = (goalkeeperAvgSavesPerGame * opponentAGR / 1.35) * (expectedMinutes / 90);
               
               // 1 point for every 3 saves (according to FPL rules)
-              savesPoints = Math.floor(expectedShotsToSave / 3);
+              savesPoints = Math.floor(expectedSaves / 3);
               
               // Penalty save probability (rare event, ~3% chance per game for top keepers)
               const penaltySaveProbability = position === 'GKP' ? 0.03 * (adjustedForm / 10) : 0;
