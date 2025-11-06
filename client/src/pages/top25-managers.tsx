@@ -44,6 +44,7 @@ type Top25Manager = {
     gameweekPoints: number;
     gameweekRank?: number;
     teamValue: number;
+    bank: number;
     totalTransfers: number;
     chipsUsed?: number;
   };
@@ -282,6 +283,7 @@ export default function Top25Managers() {
           overallPoints: managerData.summary_overall_points,
           gameweekPoints: managerData.summary_event_points,
           teamValue: managerData.last_deadline_value,
+          bank: managerData.last_deadline_bank,
           totalTransfers: managerData.last_deadline_total_transfers,
           chipsUsed: chipsUsed,
         };
