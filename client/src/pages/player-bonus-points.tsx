@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Star, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Star, Search, ArrowUpDown, Users } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { PlayerNameCell } from "@/components/enhanced-table";
 import ProtectedRoute from "@/components/protected-route";
 
 interface BootstrapData {
@@ -24,17 +26,37 @@ interface BonusPointsProjection {
   averagePerGameweek: number;
 }
 
+type SortField = 'name' | 'team' | 'totalBonusPoints' | string;
+type SortDirection = 'asc' | 'desc';
+
 export default function PlayerBonusPoints() {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"totalBonusPoints" | "totalPoints">("totalBonusPoints");
-  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [sortField, setSortField] = useState<SortField>("totalBonusPoints");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [startGameweek, setStartGameweek] = useState<number>(11);
+  const [endGameweek, setEndGameweek] = useState<number>(16);
+  const [initialized, setInitialized] = useState(false);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000,
   });
+
+  // Calculate current gameweek and available range
+  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 10;
+  const nextGameweek = Math.min(currentGameweek + 1, 38);
+  const maxAvailableGW = Math.min(38, nextGameweek + 5);
+
+  // Initialize gameweek range once bootstrap data is loaded
+  useEffect(() => {
+    if (!bootstrapData || initialized) return;
+    
+    setStartGameweek(nextGameweek);
+    setEndGameweek(Math.min(nextGameweek + 5, maxAvailableGW));
+    setInitialized(true);
+  }, [bootstrapData, initialized, nextGameweek, maxAvailableGW]);
 
   // Simplified API call for bonus points projections (now projects future gameweeks only)
   const { data: bonusPointsProjections, isLoading: isLoadingProjections } = useQuery<BonusPointsProjection[]>({
@@ -42,53 +64,102 @@ export default function PlayerBonusPoints() {
     staleTime: 10 * 60 * 1000, // Cache for 10 minutes for live data
   });
 
-  // Extract gameweeks dynamically from API response
-  const gameweeks = bonusPointsProjections && bonusPointsProjections.length > 0 
-    ? Object.keys(bonusPointsProjections[0].bonusPoints).map(gw => parseInt(gw.replace('gw', ''))).sort((a, b) => a - b)
-    : [];
-  
-  const gameweekRange = gameweeks.length > 0 ? `${gameweeks[0]}-${gameweeks[gameweeks.length - 1]}` : "6-11";
+  // Create playerIdToWebName mapping for short names
+  const playerIdToWebName = useMemo(() => {
+    if (!bootstrapData?.elements) return null;
+    const map = new Map<number, string>();
+    bootstrapData.elements.forEach(player => {
+      map.set(player.id, player.web_name);
+    });
+    return map;
+  }, [bootstrapData]);
 
-  const teams = bootstrapData?.teams?.map(team => ({
-    id: team.id,
-    name: team.short_name
-  })) || [];
+  const teams = useMemo(() => {
+    if (!bonusPointsProjections || !Array.isArray(bonusPointsProjections)) return [];
+    const uniqueTeams = Array.from(new Set(bonusPointsProjections.map((p: BonusPointsProjection) => p.teamName)));
+    return uniqueTeams.sort();
+  }, [bonusPointsProjections]);
 
-  const positions = [
-    { id: "GKP", name: "Goalkeeper" },
-    { id: "DEF", name: "Defender" },
-    { id: "MID", name: "Midfielder" },
-    { id: "FWD", name: "Forward" }
-  ];
+  const positions = ["GKP", "DEF", "MID", "FWD"];
 
-  // Filter and sort bonus points projections
-  const filteredBonusPointsProjections = (bonusPointsProjections || []).filter((item: BonusPointsProjection) => {
-    const matchesSearch = !searchTerm || 
-      item.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.teamName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesPosition = positionFilter === "all" || item.position === positionFilter;
-    const matchesTeam = teamFilter === "all" || item.teamName === teamFilter;
-    
-    return matchesSearch && matchesPosition && matchesTeam;
-  }).sort((a: BonusPointsProjection, b: BonusPointsProjection) => {
-    const aValue = a[sortBy];
-    const bValue = b[sortBy];
-    return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
-  });
-
-  const handleSort = (column: "totalBonusPoints" | "totalPoints") => {
-    if (sortBy === column) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortBy(column);
-      setSortDirection("desc");
+  // Generate dynamic gameweek columns based on selected range
+  const dynamicGameweekColumns = useMemo(() => {
+    const columns = [];
+    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+      columns.push(gw);
     }
+    return columns;
+  }, [startGameweek, endGameweek]);
+
+  // Calculate dynamic totals based on selected gameweek range
+  const getFilteredTotal = (player: BonusPointsProjection) => {
+    let total = 0;
+    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+      total += player.bonusPoints?.[`gw${gw}`] || 0;
+    }
+    return total;
   };
 
-  const getSortIcon = (column: string) => {
-    if (sortBy !== column) return <ArrowUpDown className="h-4 w-4" />;
-    return sortDirection === "asc" ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />;
+  const filteredAndSortedData = useMemo(() => {
+    if (!bonusPointsProjections || !Array.isArray(bonusPointsProjections)) return [];
+    
+    let filtered = bonusPointsProjections.filter((projection: BonusPointsProjection) => {
+      const matchesSearch = !searchTerm || 
+        projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesPosition = positionFilter === "all" || projection.position === positionFilter;
+      const matchesTeam = teamFilter === "all" || projection.teamName === teamFilter;
+      
+      return matchesSearch && matchesPosition && matchesTeam;
+    });
+
+    // Sort data
+    filtered.sort((a: BonusPointsProjection, b: BonusPointsProjection) => {
+      let aValue: any, bValue: any;
+      
+      switch (sortField) {
+        case 'name':
+          aValue = a.playerName;
+          bValue = b.playerName;
+          break;
+        case 'team':
+          aValue = a.teamName;
+          bValue = b.teamName;
+          break;
+        case 'totalBonusPoints':
+          aValue = getFilteredTotal(a);
+          bValue = getFilteredTotal(b);
+          break;
+        default:
+          // Handle dynamic gameweek fields (like 'gw11', 'gw12', etc.)
+          if (sortField.startsWith('gw')) {
+            const gwNumber = sortField.replace('gw', '');
+            aValue = a.bonusPoints?.[`gw${gwNumber}`] || 0;
+            bValue = b.bonusPoints?.[`gw${gwNumber}`] || 0;
+          } else {
+            aValue = getFilteredTotal(a);
+            bValue = getFilteredTotal(b);
+          }
+      }
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      }
+      
+      return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+    });
+
+    return filtered;
+  }, [bonusPointsProjections, searchTerm, positionFilter, teamFilter, sortField, sortDirection, startGameweek, endGameweek]);
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
   };
 
   if (isLoadingBootstrap || isLoadingProjections) {
@@ -133,103 +204,188 @@ export default function PlayerBonusPoints() {
       <div className="fpl-section-spacing">
         {/* Filters */}
         <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5 text-blue-600" />
-              Search & Filter
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">From GW</label>
+                <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: Math.max(0, maxAvailableGW - nextGameweek + 1) }, (_, i) => i + nextGameweek).map((gw, index) => (
+                      <SelectItem key={`start-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">To GW</label>
+                <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: Math.max(0, maxAvailableGW - startGameweek + 1) }, (_, i) => i + startGameweek).map((gw, index) => (
+                      <SelectItem key={`end-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Position</label>
+                <Select value={positionFilter} onValueChange={setPositionFilter}>
+                  <SelectTrigger className="w-full" data-testid="select-position">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Positions</SelectItem>
+                    {positions.map((position, index) => (
+                      <SelectItem key={`position-${position}-${index}`} value={position}>
+                        {position}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Team</label>
+                <Select value={teamFilter} onValueChange={setTeamFilter}>
+                  <SelectTrigger className="w-full" data-testid="select-team">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Teams</SelectItem>
+                    {teams.map((team, index) => (
+                      <SelectItem key={`team-${team}-${index}`} value={team}>
+                        {team}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                  <Search className="h-4 w-4 text-gray-500" />
+                  Search
+                </label>
                 <Input
                   placeholder="Search players..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="w-full"
                   data-testid="input-search"
                 />
               </div>
-              <Select value={positionFilter} onValueChange={setPositionFilter}>
-                <SelectTrigger data-testid="select-position">
-                  <SelectValue placeholder="All Positions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Positions</SelectItem>
-                  {positions.map(position => (
-                    <SelectItem key={position.id} value={position.id}>
-                      {position.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger data-testid="select-team">
-                  <SelectValue placeholder="All Teams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {teams.map(team => (
-                    <SelectItem key={team.id} value={team.name}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm text-gray-600 mt-4">
+              <Users className="h-4 w-4" />
+              <span>{filteredAndSortedData.length} players</span>
             </div>
           </CardContent>
         </Card>
 
-        {/* Simplified Bonus Points Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Player Bonus Points (Gameweeks {gameweekRange})</CardTitle>
-            <CardDescription>
-              Simplified formula: (Player BPS ÷ Total BPS of both teams) × 6 for future gameweeks only
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="fpl-table">
-                <thead>
-                  <tr>
-                    <th className="text-left">Player</th>
-                    <th className="text-center">Pos</th>
-                    <th className="text-center">Team</th>
-                    {gameweeks.map(gw => (
-                      <th key={gw} className="text-center">GW{gw}</th>
-                    ))}
-                    <th className="text-center cursor-pointer" onClick={() => handleSort("totalBonusPoints")}>
-                      <div className="flex items-center justify-center gap-1">
-                        Total {getSortIcon("totalBonusPoints")}
-                      </div>
-                    </th>
-                    <th className="text-center">Avg/GW</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredBonusPointsProjections.map((projection: BonusPointsProjection) => (
-                    <tr key={projection.playerId}>
-                      <td className="font-medium">{projection.playerName}</td>
-                      <td className="text-center text-xs font-semibold">{projection.position}</td>
-                      <td className="text-center text-sm">{projection.teamName}</td>
-                      {gameweeks.map(gw => (
-                        <td key={gw} className="text-center">{projection.bonusPoints?.[`gw${gw}`] || '-'}</td>
-                      ))}
-                      <td className="text-center font-semibold text-yellow-600">
-                        {projection.totalBonusPoints}
-                      </td>
-                      <td className="text-center text-sm text-gray-600">
-                        {gameweeks.length > 0 ? (projection.totalBonusPoints / gameweeks.length).toFixed(3) : '0.000'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Results */}
+        {filteredAndSortedData.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Bonus Points Projections</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="border rounded-lg overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-blue-50 border-b-2 border-blue-100 sticky top-0 z-10">
+                      <tr>
+                        <th className="text-left py-3 px-2 sm:px-4 font-semibold text-gray-700 sticky left-0 bg-blue-50 border-r border-blue-100 min-w-[140px] sm:min-w-[180px]">
+                          <button
+                            onClick={() => handleSort('name')}
+                            className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+                          >
+                            Player
+                            <ArrowUpDown className="h-3 w-3" />
+                          </button>
+                        </th>
+                        {dynamicGameweekColumns.map((gw) => (
+                          <th key={`gw${gw}`} className="text-center py-3 px-2 text-sm font-semibold text-gray-700 min-w-[60px]">
+                            <button
+                              onClick={() => handleSort(`gw${gw}`)}
+                              className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors w-full"
+                            >
+                              GW{gw}
+                              <ArrowUpDown className="h-3 w-3" />
+                            </button>
+                          </th>
+                        ))}
+                        <th className="text-center py-3 px-1 text-sm font-bold bg-blue-100 border-l border-blue-200">
+                          <button
+                            onClick={() => handleSort('totalBonusPoints')}
+                            className="flex items-center justify-center gap-1 hover:text-blue-700 transition-colors w-full"
+                          >
+                            Total
+                            <ArrowUpDown className="h-3 w-3" />
+                          </button>
+                        </th>
+                        <th className="text-center py-3 px-1 text-sm font-semibold bg-green-50 border-l border-green-200">
+                          Avg/GW
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredAndSortedData.map((projection: BonusPointsProjection, index) => {
+                        const filteredTotal = getFilteredTotal(projection);
+                        const filteredAverage = filteredTotal / dynamicGameweekColumns.length;
+                        return (
+                        <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
+                          <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
+                            <PlayerNameCell 
+                              name={(playerIdToWebName && playerIdToWebName.get(projection.playerId)) || projection.playerName}
+                              position={projection.position}
+                              team={projection.teamName}
+                              compact={true}
+                            />
+                          </td>
+                          {dynamicGameweekColumns.map((gw) => (
+                            <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
+                              {projection.bonusPoints?.[`gw${gw}`] ? (projection.bonusPoints[`gw${gw}`]).toFixed(2) : '-'}
+                            </td>
+                          ))}
+                          <td className="text-center py-3 px-1 font-semibold bg-blue-50">
+                            <span className="text-lg font-bold text-blue-900">
+                              {filteredTotal.toFixed(2)}
+                            </span>
+                          </td>
+                          <td className="text-center py-3 px-1 bg-green-50">
+                            <span className="text-sm font-medium text-green-900">
+                              {filteredAverage.toFixed(2)}
+                            </span>
+                          </td>
+                        </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {filteredAndSortedData.length === 0 && bonusPointsProjections && (
+          <Card>
+            <CardContent className="py-12">
+              <div className="text-center text-gray-500">
+                <p className="text-lg font-medium">No players found</p>
+                <p className="text-sm mt-2">Try adjusting your filters</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
     </ProtectedRoute>
