@@ -1,0 +1,9 @@
+# robots.txt for FPL Dilemmas
+User-agent: *
+Allow: /
+
+# Disallow admin pages
+Disallow: /admin-content-creators
+
+# Sitemap location
+Sitemap: https://fpl-dilemmas.replit.app/sitemap.xml
