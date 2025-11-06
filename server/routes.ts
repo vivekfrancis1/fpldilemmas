@@ -11272,8 +11272,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Get opponent's AGR (Average Goals Received/Against per game)
             const opponentAGR = getOpponentAGR(opponentId);
             
-            // Apply user's exact formula: Expected saves = Average saves/game × AGR of opponent/1.25
-            const expectedSaves = savesPerTeamGame * (opponentAGR / 1.25);
+            // Apply user's exact formula: Expected saves = Average saves/game × AGR of opponent/1.35
+            const expectedSaves = savesPerTeamGame * (opponentAGR / 1.35);
             
             // Apply new points formula: Points from saves = 0.33 × expected saves
             const expectedPoints = expectedSaves * 0.33;
@@ -11301,7 +11301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
       
-        console.log(`✅ LIVE SUCCESS: Generated saves projections for ${savesProjections.length} goalkeepers using formula: Average saves/game × AGR of opponent/1.25`);
+        console.log(`✅ LIVE SUCCESS: Generated saves projections for ${savesProjections.length} goalkeepers using formula: Average saves/game × AGR of opponent/1.35`);
         return res.json(savesProjections);
 
       } catch (liveError) {
