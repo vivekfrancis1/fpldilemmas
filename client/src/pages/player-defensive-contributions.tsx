@@ -225,9 +225,9 @@ export default function PlayerDefensiveContributions() {
         let dcPoints = 0;
         const dc = gw.defensiveContribution;
         
-        if (player.position === "Goalkeeper") {
+        if (player.position === "GKP" || player.position === "Goalkeeper") {
           dcPoints = 0; // Goalkeepers don't get DC points
-        } else if (player.position === "Defender") {
+        } else if (player.position === "DEF" || player.position === "Defender") {
           dcPoints = dc >= 10 ? 2 : 0; // Defenders need 10+ DC for 2 points
         } else {
           dcPoints = dc >= 12 ? 2 : 0; // Midfielders/Forwards need 12+ DC for 2 points
