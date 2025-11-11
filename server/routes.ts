@@ -11408,7 +11408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Defensive Contributions API called - using formula: Average DC/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game");
+        console.log("DEBUG: Player Defensive Contributions API called - using formula: Current DC/game × DCC of opponent/77 where DCC is from /current-standings per game");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -11425,87 +11425,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const fixturesData = await fixturesResponse.json();
       
-      // Calculate AGR (Adjusted Goal Rate) = 0.5 × (GF + XGF) per game for each team
-      const teamGoalsFor = new Map<number, number>();
-      const teamExpectedGoalsFor = new Map<number, number>();
+      // Fetch current standings to get DCC per game for each team
+      const standingsResponse = await internalFetch("api/current-standings?venue=all");
+      const standingsData = await standingsResponse.json();
       
-      // Initialize all teams with 0 goals for and expected goals for
-      fplData.teams.forEach((team: any) => {
-        teamGoalsFor.set(team.id, 0);
-        teamExpectedGoalsFor.set(team.id, 0);
+      // Create a map of team ID to DCC per game
+      const teamDCCPerGame = new Map<number, number>();
+      standingsData.forEach((team: any) => {
+        const dccPerGame = team.played > 0 
+          ? team.defensiveContributionsConceded / team.played 
+          : 0;
+        teamDCCPerGame.set(team.id, dccPerGame);
       });
       
-      // Count actual goals for each team from completed fixtures
-      fixturesData.forEach((fixture: any) => {
-        const isCompleted = fixture.finished || fixture.event < currentGameweek;
-        
-        if (isCompleted && fixture.team_h_score !== null && fixture.team_a_score !== null) {
-          // Home team goals for = home team score
-          const homeGF = teamGoalsFor.get(fixture.team_h) || 0;
-          teamGoalsFor.set(fixture.team_h, homeGF + fixture.team_h_score);
-          
-          // Away team goals for = away team score  
-          const awayGF = teamGoalsFor.get(fixture.team_a) || 0;
-          teamGoalsFor.set(fixture.team_a, awayGF + fixture.team_a_score);
-        }
-      });
-      
-      // Get expected goals for from completed gameweeks (same logic as current-standings)
-      const completedGameweeks = new Set<number>();
-      fixturesData.forEach((fixture: any) => {
-        if ((fixture.finished || fixture.event < currentGameweek) && fixture.event) {
-          completedGameweeks.add(fixture.event);
-        }
-      });
-      
-      // Fetch live data for completed gameweeks to get XGF
-      const liveDataPromises = Array.from(completedGameweeks).map(async (gameweek) => {
-        try {
-          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
-          if (liveResponse.ok) {
-            const liveData = await liveResponse.json();
-            return { gameweek, data: liveData };
-          }
-        } catch (error) {
-          console.warn(`Failed to fetch live data for gameweek ${gameweek}:`, error);
-        }
-        return null;
-      });
-      
-      const liveDataResults = await Promise.all(liveDataPromises);
-      
-      // Process live data to calculate XGF for each team
-      const playerToTeamMap = new Map<number, number>();
-      fplData.elements.forEach((player: any) => {
-        playerToTeamMap.set(player.id, player.team);
-      });
-      
-      liveDataResults.forEach((result) => {
-        if (result && result.data && result.data.elements) {
-          Object.entries(result.data.elements).forEach(([playerId, playerData]: [string, any]) => {
-            const teamId = playerToTeamMap.get(parseInt(playerId));
-            if (!teamId) return;
-            
-            const stats = playerData.stats || {};
-            let playerXGF = 0;
-            if (stats.expected_goals) {
-              playerXGF = parseFloat(stats.expected_goals) || 0;
-            } else if (stats.xg) {
-              playerXGF = parseFloat(stats.xg) || 0;
-            }
-            
-            const currentXGF = teamExpectedGoalsFor.get(teamId) || 0;
-            teamExpectedGoalsFor.set(teamId, currentXGF + playerXGF);
-          });
-        }
-      });
-
-      const getOpponentAGR = (teamId: number): number => {
-        const goalsFor = teamGoalsFor.get(teamId) || 0;
-        const expectedGoalsFor = teamExpectedGoalsFor.get(teamId) || 0;
-        const gamesPlayed = Math.max(1, teamCompletedFixtures.get(teamId) || 1);
-        return 0.5 * (goalsFor + expectedGoalsFor) / gamesPlayed; // AGR = 0.5 × (GF + XGF) per game
-      };
+      console.log(`DEBUG: Loaded DCC per game for ${teamDCCPerGame.size} teams from current standings`);
       
       // Get player minutes projections
       const minutesResponse = await fetch("http://localhost:5000/api/player-minutes-projections");
@@ -11595,11 +11528,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
             }
             
-            // Get opponent's AGR (Average Goals Received/Against per game)
-            const opponentAGR = getOpponentAGR(opponentId);
+            // Get opponent's DCC per game from current standings
+            const opponentDCC = teamDCCPerGame.get(opponentId) || 0;
             
-            // Apply user's exact formula: Expected DC = Average DC/game × AGR of opponent/1.35
-            const projectedDC = dcPerTeamGame * (opponentAGR / 1.35);
+            // Apply user's exact formula: Expected DC = Current DC/game × DCC of opponent/77
+            const projectedDC = dcPerTeamGame * (opponentDCC / 77);
             
             // Calculate points (2 points if DC >= threshold based on position)
             let points = 0;
