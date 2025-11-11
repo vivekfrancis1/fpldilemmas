@@ -392,7 +392,7 @@ class ProjectionService {
             }
             totalCleanSheetPoints += gwCleanSheetPoints;
             
-            // 10. DEFENSIVE CONTRIBUTIONS (2025/26 season) - Use same logic as individual DC tool
+            // 10. DEFENSIVE CONTRIBUTIONS (2025/26 season) - Threshold-based scoring
             let gwDefensivePoints = 0;
             if (position === 'DEF' || position === 'MID' || position === 'FWD') {
               // Estimate DC value based on form and minutes
@@ -402,8 +402,7 @@ class ProjectionService {
               
               // Apply FPL threshold rule: 2 points if DC >= 10 for DEF, >= 12 for MID/FWD
               const dcThreshold = position === 'DEF' ? 10 : 12;
-              const dcProbability = Math.min(estimatedDC / dcThreshold, 1.0); // Probability of reaching threshold
-              gwDefensivePoints = dcProbability * 2; // Expected points from defensive contributions
+              gwDefensivePoints = estimatedDC >= dcThreshold ? 2 : 0;
             }
             pointsFromDefensiveContributions[gw.toString()] = Math.round(gwDefensivePoints * 100) / 100; // Use numeric string for consistency
             totalDefensivePoints += gwDefensivePoints;
