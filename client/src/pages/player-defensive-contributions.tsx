@@ -181,7 +181,7 @@ export default function PlayerDefensiveContributions() {
       }).sort((a, b) => a.gameweek - b.gameweek);
       
       // Use actual current season stats from API (not legacy averages)
-      const currentDCPer90 = player.dcPer90 || 0;
+      const currentDCPer90 = player.dcPerGame || 0;
       const seasonTotalDC = player.seasonDefensiveContribution || 0;
       
       return {
