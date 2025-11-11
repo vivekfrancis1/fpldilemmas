@@ -44,6 +44,7 @@ interface CurrentTeamStanding {
   tackles: number;
   defensiveActions: number;
   defensiveContributions: number;
+  defensiveContributionsConceded: number;
   // Calculated fields
   adjustedGoalRate: number;
   adjustedGoalsAgainstRate: number;
@@ -121,6 +122,7 @@ export default function CurrentStandings() {
         tackles: team.tackles / team.played,
         defensiveActions: team.defensiveActions / team.played,
         defensiveContributions: team.defensiveContributions / team.played,
+        defensiveContributionsConceded: team.defensiveContributionsConceded / team.played,
         adjustedGoalRate,
         adjustedGoalsAgainstRate,
       };
@@ -176,6 +178,7 @@ export default function CurrentStandings() {
       tackles: acc.tackles + team.tackles,
       defensiveActions: acc.defensiveActions + team.defensiveActions,
       defensiveContributions: acc.defensiveContributions + team.defensiveContributions,
+      defensiveContributionsConceded: acc.defensiveContributionsConceded + team.defensiveContributionsConceded,
       adjustedGoalRate: acc.adjustedGoalRate + (team.adjustedGoalRate || 0),
       adjustedGoalsAgainstRate: acc.adjustedGoalsAgainstRate + (team.adjustedGoalsAgainstRate || 0),
     }), {
@@ -183,7 +186,7 @@ export default function CurrentStandings() {
       goalDifference: 0, points: 0, cleanSheets: 0, yellowCards: 0, redCards: 0,
       saves: 0, ownGoals: 0, penaltiesSaved: 0, penaltiesMissed: 0,
       expectedGoalsFor: 0, expectedGoalsAgainst: 0, tackles: 0, defensiveActions: 0,
-      defensiveContributions: 0, adjustedGoalRate: 0, adjustedGoalsAgainstRate: 0
+      defensiveContributions: 0, defensiveContributionsConceded: 0, adjustedGoalRate: 0, adjustedGoalsAgainstRate: 0
     });
 
     const teamCount = displayData.length;
@@ -208,6 +211,7 @@ export default function CurrentStandings() {
       tackles: totals.tackles / teamCount,
       defensiveActions: totals.defensiveActions / teamCount,
       defensiveContributions: totals.defensiveContributions / teamCount,
+      defensiveContributionsConceded: totals.defensiveContributionsConceded / teamCount,
       adjustedGoalRate: totals.adjustedGoalRate / teamCount,
       adjustedGoalsAgainstRate: totals.adjustedGoalsAgainstRate / teamCount,
     };
@@ -489,6 +493,7 @@ export default function CurrentStandings() {
                     <SortableHeader field="tackles" tooltip="Total tackles made by the team">T</SortableHeader>
                     <SortableHeader field="defensiveActions" tooltip="Defensive actions (interceptions, blocks, clearances)">DA</SortableHeader>
                     <SortableHeader field="defensiveContributions" tooltip="Defensive Contributions (CBI + Tackles + Recoveries, position-weighted)">DC</SortableHeader>
+                    <SortableHeader field="defensiveContributionsConceded" tooltip="Defensive Contributions Conceded - opponent's defensive contributions across all matches">DCC</SortableHeader>
                     
                     {/* Enhanced Statistics */}
                     <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l cursor-pointer hover:bg-gray-100 transition-colors"
@@ -591,6 +596,9 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-700" data-testid={`defensive-contributions-${team.shortName}`}>
                         {formatStat(team.defensiveContributions)}
                       </td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-800" data-testid={`defensive-contributions-conceded-${team.shortName}`}>
+                        {formatStat(team.defensiveContributionsConceded)}
+                      </td>
                       
                       {/* Clean Sheets */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-blue-600 border-l" data-testid={`clean-sheets-${team.shortName}`}>
@@ -662,6 +670,7 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-semibold text-teal-600">{summaryStats.totals.tackles.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-teal-500">{summaryStats.totals.defensiveActions.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-teal-700">{summaryStats.totals.defensiveContributions.toFixed(2)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-semibold text-teal-800">{summaryStats.totals.defensiveContributionsConceded.toFixed(2)}</td>
                       
                       {/* Enhanced Statistics */}
                       <td className="px-2 py-4 text-center text-sm font-semibold text-blue-600 border-l">{summaryStats.totals.cleanSheets.toFixed(2)}</td>
@@ -715,6 +724,7 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-700">{summaryStats.averages.tackles.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-600">{summaryStats.averages.defensiveActions.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-800">{summaryStats.averages.defensiveContributions.toFixed(1)}</td>
+                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-900">{summaryStats.averages.defensiveContributionsConceded.toFixed(1)}</td>
                       
                       {/* Enhanced Statistics */}
                       <td className="px-2 py-4 text-center text-sm font-medium text-blue-700 border-l">{summaryStats.averages.cleanSheets.toFixed(1)}</td>
@@ -764,6 +774,8 @@ export default function CurrentStandings() {
                   <li><strong>AGAR:</strong> Adjusted Goals Against Rate (0.5 × (GA+xGA)/Games)</li>
                   <li><strong>T:</strong> Tackles</li>
                   <li><strong>DA:</strong> Defensive actions</li>
+                  <li><strong>DC:</strong> Defensive Contributions (position-weighted: CBI + Tackles + Recoveries)</li>
+                  <li><strong>DCC:</strong> Defensive Contributions Conceded (opponent's DC across all matches)</li>
                 </ul>
               </div>
             </div>
