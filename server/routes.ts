@@ -7165,7 +7165,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           expectedGoalsAgainst: 0,
           tackles: 0,
           defensiveActions: 0,
-          defensiveContributions: 0
+          defensiveContributions: 0,
+          defensiveContributionsConceded: 0
         });
       });
       
@@ -7271,6 +7272,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         team.defensiveContributions += defensiveContribution;
       });
+      
+      // Calculate defensive contributions conceded per match using live data
+      for (const [gameweek, liveData] of Array.from(liveDataMap)) {
+        if (!liveData || !liveData.elements) continue;
+        
+        // Get fixtures for this gameweek
+        const gameweekFixtures = completedFixtures.filter((f: any) => f.event === gameweek);
+        
+        // For each fixture in this gameweek, calculate DC for each team
+        gameweekFixtures.forEach((fixture: any) => {
+          const homeTeamId = fixture.team_h;
+          const awayTeamId = fixture.team_a;
+          
+          let homeTeamDC = 0;
+          let awayTeamDC = 0;
+          
+          // Calculate DC for each team based on players who played
+          liveData.elements.forEach((playerLive: any) => {
+            const playerId = playerLive.id;
+            const teamId = playerToTeamMap.get(playerId);
+            const position = playerPositionMap.get(playerId);
+            
+            if (!teamId || !position || playerLive.stats.minutes === 0) return;
+            
+            // Only count players from the two teams in this fixture
+            if (teamId !== homeTeamId && teamId !== awayTeamId) return;
+            
+            const cbi = playerLive.stats.clearances_blocks_interceptions || 0;
+            const tackles = playerLive.stats.tackles || 0;
+            const recoveries = playerLive.stats.recoveries || 0;
+            const dc = calculateDefensiveContribution(position, cbi, tackles, recoveries);
+            
+            if (teamId === homeTeamId) {
+              homeTeamDC += dc;
+            } else if (teamId === awayTeamId) {
+              awayTeamDC += dc;
+            }
+          });
+          
+          // Assign defensive contributions conceded
+          const homeTeam = teamStandings.get(homeTeamId);
+          const awayTeam = teamStandings.get(awayTeamId);
+          
+          if (homeTeam && awayTeam) {
+            const processHome = venue === 'all' || venue === 'home';
+            const processAway = venue === 'all' || venue === 'away';
+            
+            if (processHome) {
+              homeTeam.defensiveContributionsConceded += awayTeamDC;
+            }
+            if (processAway) {
+              awayTeam.defensiveContributionsConceded += homeTeamDC;
+            }
+          }
+        });
+      }
       
       // Process completed fixtures with enhanced statistics
       completedFixtures.forEach((fixture: any) => {
