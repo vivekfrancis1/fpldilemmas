@@ -189,31 +189,30 @@ export default function CurrentStandings() {
       defensiveContributions: 0, defensiveContributionsConceded: 0, adjustedGoalRate: 0, adjustedGoalsAgainstRate: 0
     });
 
-    const teamCount = displayData.length;
     const averages = {
-      played: totals.played / teamCount,
-      wins: totals.wins / teamCount,
-      draws: totals.draws / teamCount,
-      losses: totals.losses / teamCount,
-      goalsFor: totals.goalsFor / teamCount,
-      goalsAgainst: totals.goalsAgainst / teamCount,
-      goalDifference: totals.goalDifference / teamCount,
-      points: totals.points / teamCount,
-      cleanSheets: totals.cleanSheets / teamCount,
-      yellowCards: totals.yellowCards / teamCount,
-      redCards: totals.redCards / teamCount,
-      saves: totals.saves / teamCount,
-      ownGoals: totals.ownGoals / teamCount,
-      penaltiesSaved: totals.penaltiesSaved / teamCount,
-      penaltiesMissed: totals.penaltiesMissed / teamCount,
-      expectedGoalsFor: totals.expectedGoalsFor / teamCount,
-      expectedGoalsAgainst: totals.expectedGoalsAgainst / teamCount,
-      tackles: totals.tackles / teamCount,
-      defensiveActions: totals.defensiveActions / teamCount,
-      defensiveContributions: totals.defensiveContributions / teamCount,
-      defensiveContributionsConceded: totals.defensiveContributionsConceded / teamCount,
-      adjustedGoalRate: totals.adjustedGoalRate / teamCount,
-      adjustedGoalsAgainstRate: totals.adjustedGoalsAgainstRate / teamCount,
+      played: totals.played / 20,
+      wins: totals.wins / 20,
+      draws: totals.draws / 20,
+      losses: totals.losses / 20,
+      goalsFor: totals.goalsFor / 20,
+      goalsAgainst: totals.goalsAgainst / 20,
+      goalDifference: totals.goalDifference / 20,
+      points: totals.points / 20,
+      cleanSheets: totals.cleanSheets / 20,
+      yellowCards: totals.yellowCards / 20,
+      redCards: totals.redCards / 20,
+      saves: totals.saves / 20,
+      ownGoals: totals.ownGoals / 20,
+      penaltiesSaved: totals.penaltiesSaved / 20,
+      penaltiesMissed: totals.penaltiesMissed / 20,
+      expectedGoalsFor: totals.expectedGoalsFor / 20,
+      expectedGoalsAgainst: totals.expectedGoalsAgainst / 20,
+      tackles: totals.tackles / 20,
+      defensiveActions: totals.defensiveActions / 20,
+      defensiveContributions: totals.defensiveContributions / 20,
+      defensiveContributionsConceded: totals.defensiveContributionsConceded / 20,
+      adjustedGoalRate: totals.adjustedGoalRate / 20,
+      adjustedGoalsAgainstRate: totals.adjustedGoalsAgainstRate / 20,
     };
 
     return { totals, averages };
@@ -490,8 +489,6 @@ export default function CurrentStandings() {
                     </SortableHeader>
                     
                     {/* Defensive Stats - After xGA */}
-                    <SortableHeader field="tackles" tooltip="Total tackles made by the team">T</SortableHeader>
-                    <SortableHeader field="defensiveActions" tooltip="Defensive actions (interceptions, blocks, clearances)">DA</SortableHeader>
                     <SortableHeader field="defensiveContributions" tooltip="Defensive Contributions (CBI + Tackles + Recoveries, position-weighted)">DC</SortableHeader>
                     <SortableHeader field="defensiveContributionsConceded" tooltip="Defensive Contributions Conceded - opponent's defensive contributions across all matches">DCC</SortableHeader>
                     
@@ -587,12 +584,6 @@ export default function CurrentStandings() {
                       </td>
                       
                       {/* Defensive Stats - After xGA */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-600" data-testid={`tackles-${team.shortName}`}>
-                        {formatStat(team.tackles)}
-                      </td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-500" data-testid={`defensive-actions-${team.shortName}`}>
-                        {formatStat(team.defensiveActions)}
-                      </td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-700" data-testid={`defensive-contributions-${team.shortName}`}>
                         {formatStat(team.defensiveContributions)}
                       </td>
@@ -667,8 +658,6 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-semibold text-orange-600">{summaryStats.totals.adjustedGoalsAgainstRate.toFixed(2)}</td>
                       
                       {/* Defensive Stats */}
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-teal-600">{summaryStats.totals.tackles.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-semibold text-teal-500">{summaryStats.totals.defensiveActions.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-teal-700">{summaryStats.totals.defensiveContributions.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-semibold text-teal-800">{summaryStats.totals.defensiveContributionsConceded.toFixed(2)}</td>
                       
@@ -717,12 +706,8 @@ export default function CurrentStandings() {
                       <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600">{summaryStats.averages.expectedGoalsAgainst.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-purple-700">{summaryStats.averages.adjustedGoalRate.toFixed(2)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-orange-700">{summaryStats.averages.adjustedGoalsAgainstRate.toFixed(2)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-emerald-700">1.00</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-rose-700">1.00</td>
                       
                       {/* Defensive Stats */}
-                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-700">{summaryStats.averages.tackles.toFixed(1)}</td>
-                      <td className="px-2 py-4 text-center text-sm font-medium text-teal-600">{summaryStats.averages.defensiveActions.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-800">{summaryStats.averages.defensiveContributions.toFixed(1)}</td>
                       <td className="px-2 py-4 text-center text-sm font-medium text-teal-900">{summaryStats.averages.defensiveContributionsConceded.toFixed(1)}</td>
                       
