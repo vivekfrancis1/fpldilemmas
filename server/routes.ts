@@ -11534,11 +11534,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Apply user's exact formula: Expected DC = Current DC/game × DCC of opponent/77
             const projectedDC = dcPerTeamGame * (opponentDCC / 77);
             
+            // Round to 1 decimal place for threshold comparison to avoid floating-point precision issues
+            const normalizedDC = parseFloat(projectedDC.toFixed(1));
+            
             // Calculate points (2 points if DC >= threshold based on position)
             let points = 0;
-            if (player.element_type === 2 && projectedDC >= 10) { // Defenders: 10+ DC = 2 points
+            if (player.element_type === 2 && normalizedDC >= 10) { // Defenders: 10+ DC = 2 points
               points = 2;
-            } else if ((player.element_type === 3 || player.element_type === 4) && projectedDC >= 12) { // Mid/Fwd: 12+ DC = 2 points
+            } else if ((player.element_type === 3 || player.element_type === 4) && normalizedDC >= 12) { // Mid/Fwd: 12+ DC = 2 points
               points = 2;
             }
             // Goalkeepers don't get points from defensive contributions
