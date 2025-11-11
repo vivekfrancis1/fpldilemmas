@@ -272,8 +272,8 @@ export default function PlayerGameweekModal({
                           <div className="font-medium">{formatValue((gw.value || 0) / 10)}</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-xs text-gray-500">Selected</div>
-                          <div className="font-medium">{formatValue(gw.selected || 0, 'percentage')}</div>
+                          <div className="text-xs text-gray-500">Selected By</div>
+                          <div className="font-medium">{(gw.selected || 0).toLocaleString()}</div>
                         </div>
                       </div>
                     </div>
@@ -287,33 +287,33 @@ export default function PlayerGameweekModal({
                     <tr>
                       <th className="px-2 py-2 text-left font-medium text-gray-700 min-w-[60px]">GW</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Opponent</th>
+                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">£</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Pts</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Starts</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Min</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">G</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">A</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">CS</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">GC</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Saves</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">YC</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">RC</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Bonus</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">BPS</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">xG</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">xA</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">xGI</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">xGC</th>
+                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Min</th>
+                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">GC</th>
+                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Sav</th>
+                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Starts</th>
+                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Bonus</th>
+                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">BPS</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Influence</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Creativity</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Threat</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">ICT</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Pen Saved</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Pen Missed</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Own Goals</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Value</th>
+                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">YC</th>
+                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">RC</th>
+                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">OG</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Trans In</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Trans Out</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Selected</th>
+                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[70px]">Selected By</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -339,35 +339,33 @@ export default function PlayerGameweekModal({
                               <span className="font-medium">{opponent}</span>
                               <span className="text-xs ml-1 text-gray-500">{venue}</span>
                             </td>
-                            <td className={`px-2 py-3 text-center font-semibold ${getPointsColor(gw.total_points)}`}>
-                              {gw.total_points}
-                            </td>
-                            <td className="px-2 py-3 text-center text-gray-700">{gw.starts ?? '-'}</td>
-                            <td className="px-2 py-3 text-center text-gray-700">{gw.minutes}</td>
+                            <td className="px-2 py-3 text-center text-gray-700">{formatValue((gw.value || 0) / 10)}</td>
+                            <td className={`px-2 py-3 text-center font-semibold ${getPointsColor(gw.total_points)}`}>{gw.total_points}</td>
                             <td className="px-2 py-3 text-center font-medium text-green-600">{gw.goals_scored}</td>
                             <td className="px-2 py-3 text-center font-medium text-blue-600">{gw.assists}</td>
                             <td className="px-2 py-3 text-center font-medium text-green-600">{gw.clean_sheets}</td>
-                            <td className="px-2 py-3 text-center text-red-600">{gw.goals_conceded}</td>
-                            <td className="px-2 py-3 text-center text-gray-700">{gw.saves}</td>
-                            <td className="px-2 py-3 text-center text-yellow-600">{gw.yellow_cards}</td>
-                            <td className="px-2 py-3 text-center text-red-600">{gw.red_cards}</td>
-                            <td className="px-2 py-3 text-center font-medium text-purple-600">{gw.bonus}</td>
-                            <td className="px-2 py-3 text-center text-gray-700">{gw.bps}</td>
                             <td className="px-2 py-3 text-center font-medium text-purple-600">{gw.expected_goals ? formatValue(gw.expected_goals) : '-'}</td>
                             <td className="px-2 py-3 text-center font-medium text-blue-600">{gw.expected_assists ? formatValue(gw.expected_assists) : '-'}</td>
                             <td className="px-2 py-3 text-center font-medium text-indigo-600">{gw.expected_goal_involvements ? formatValue(gw.expected_goal_involvements) : '-'}</td>
                             <td className="px-2 py-3 text-center font-medium text-red-600">{gw.expected_goals_conceded ? formatValue(gw.expected_goals_conceded) : '-'}</td>
+                            <td className="px-2 py-3 text-center text-gray-700">{gw.minutes}</td>
+                            <td className="px-2 py-3 text-center text-red-600">{gw.goals_conceded}</td>
+                            <td className="px-2 py-3 text-center text-gray-700">{gw.saves}</td>
+                            <td className="px-2 py-3 text-center text-gray-700">{gw.starts ?? '-'}</td>
+                            <td className="px-2 py-3 text-center font-medium text-purple-600">{gw.bonus}</td>
+                            <td className="px-2 py-3 text-center text-gray-700">{gw.bps}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{formatValue(gw.influence)}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{formatValue(gw.creativity)}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{formatValue(gw.threat)}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{formatValue(gw.ict_index)}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.penalties_saved || 0}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.penalties_missed || 0}</td>
+                            <td className="px-2 py-3 text-center text-yellow-600">{gw.yellow_cards}</td>
+                            <td className="px-2 py-3 text-center text-red-600">{gw.red_cards}</td>
                             <td className="px-2 py-3 text-center text-red-600">{gw.own_goals || 0}</td>
-                            <td className="px-2 py-3 text-center text-gray-700">{formatValue((gw.value || 0) / 10)}</td>
                             <td className="px-2 py-3 text-center text-green-600">{gw.transfers_in || 0}</td>
                             <td className="px-2 py-3 text-center text-red-600">{gw.transfers_out || 0}</td>
-                            <td className="px-2 py-3 text-center text-gray-700">{formatValue(gw.selected || 0, 'percentage')}</td>
+                            <td className="px-2 py-3 text-center text-gray-700">{(gw.selected || 0).toLocaleString()}</td>
                           </tr>
                         );
                       })
