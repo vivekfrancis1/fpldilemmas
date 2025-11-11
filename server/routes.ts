@@ -7164,7 +7164,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           expectedGoalsFor: 0,
           expectedGoalsAgainst: 0,
           tackles: 0,
-          defensiveActions: 0
+          defensiveActions: 0,
+          defensiveContributions: 0
         });
       });
       
@@ -7257,6 +7258,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         })
       }
+      
+      // Aggregate defensive contributions from all players for each team
+      bootstrapData.elements.forEach((player: any) => {
+        const team = teamStandings.get(player.team);
+        if (!team) return;
+        
+        const cbi = player.clearances_blocks_interceptions || 0;
+        const tackles = player.tackles || 0;
+        const recoveries = player.recoveries || 0;
+        const defensiveContribution = calculateDefensiveContribution(player.element_type, cbi, tackles, recoveries);
+        
+        team.defensiveContributions += defensiveContribution;
+      });
       
       // Process completed fixtures with enhanced statistics
       completedFixtures.forEach((fixture: any) => {
