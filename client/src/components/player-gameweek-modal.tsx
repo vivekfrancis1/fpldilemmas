@@ -124,16 +124,12 @@ export default function PlayerGameweekModal({
     totalPoints: acc.totalPoints + gw.total_points,
     totalMinutes: acc.totalMinutes + gw.minutes,
     totalGoals: acc.totalGoals + gw.goals_scored,
-    totalAssists: acc.totalAssists + gw.assists,
-    totalCleanSheets: acc.totalCleanSheets + gw.clean_sheets,
     totalBonus: acc.totalBonus + gw.bonus,
     gameweeksPlayed: gw.minutes > 0 ? acc.gameweeksPlayed + 1 : acc.gameweeksPlayed
   }), {
     totalPoints: 0,
     totalMinutes: 0,
     totalGoals: 0,
-    totalAssists: 0,
-    totalCleanSheets: 0,
     totalBonus: 0,
     gameweeksPlayed: 0
   });
@@ -156,53 +152,6 @@ export default function PlayerGameweekModal({
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Summary Stats */}
-          <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-4'}`}>
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg">
-              <div className="flex items-center gap-2 mb-1">
-                <Award className="h-4 w-4 text-blue-600" />
-                <span className="text-xs font-medium text-blue-700">Total Points</span>
-              </div>
-              <div className="text-xl font-bold text-blue-900">{totalStats.totalPoints}</div>
-              <div className="text-xs text-blue-600">
-                {totalStats.gameweeksPlayed > 0 ? (totalStats.totalPoints / totalStats.gameweeksPlayed).toFixed(1) : '0.0'} avg
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg">
-              <div className="flex items-center gap-2 mb-1">
-                <Target className="h-4 w-4 text-green-600" />
-                <span className="text-xs font-medium text-green-700">Goals + Assists</span>
-              </div>
-              <div className="text-xl font-bold text-green-900">{totalStats.totalGoals + totalStats.totalAssists}</div>
-              <div className="text-xs text-green-600">
-                {totalStats.totalGoals}G / {totalStats.totalAssists}A
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg">
-              <div className="flex items-center gap-2 mb-1">
-                <Clock className="h-4 w-4 text-purple-600" />
-                <span className="text-xs font-medium text-purple-700">Minutes</span>
-              </div>
-              <div className="text-xl font-bold text-purple-900">{totalStats.totalMinutes}</div>
-              <div className="text-xs text-purple-600">
-                {totalStats.gameweeksPlayed > 0 ? (totalStats.totalMinutes / totalStats.gameweeksPlayed).toFixed(0) : '0'} avg
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg">
-              <div className="flex items-center gap-2 mb-1">
-                <Shield className="h-4 w-4 text-orange-600" />
-                <span className="text-xs font-medium text-orange-700">Clean Sheets</span>
-              </div>
-              <div className="text-xl font-bold text-orange-900">{totalStats.totalCleanSheets}</div>
-              <div className="text-xs text-orange-600">
-                {totalStats.totalBonus} bonus pts
-              </div>
-            </div>
-          </div>
-
           {/* Gameweek by Gameweek Performance */}
           <div className="bg-white rounded-lg border">
             <div className="px-4 py-3 bg-gray-50 border-b">
@@ -228,7 +177,7 @@ export default function PlayerGameweekModal({
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
                         <div className="text-center">
                           <div className="text-xs text-gray-500">Minutes</div>
                           <div className="font-medium">{gw.minutes}</div>
@@ -237,21 +186,9 @@ export default function PlayerGameweekModal({
                           <div className="text-xs text-gray-500">Goals</div>
                           <div className="font-medium text-green-600">{gw.goals_scored}</div>
                         </div>
-                        <div className="text-center">
-                          <div className="text-xs text-gray-500">Assists</div>
-                          <div className="font-medium text-blue-600">{gw.assists}</div>
-                        </div>
                       </div>
                       
-                      <div className="grid grid-cols-4 gap-3 text-sm">
-                        <div className="text-center">
-                          <div className="text-xs text-gray-500">CS</div>
-                          <div className="font-medium text-green-600">{gw.clean_sheets}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-gray-500">GC</div>
-                          <div className="font-medium text-red-600">{gw.goals_conceded}</div>
-                        </div>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
                         <div className="text-center">
                           <div className="text-xs text-gray-500">Saves</div>
                           <div className="font-medium">{gw.saves}</div>
@@ -290,22 +227,15 @@ export default function PlayerGameweekModal({
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">£</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Pts</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">G</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">A</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">CS</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">xG</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">xA</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">xGI</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">xGC</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Min</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">GC</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Sav</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Starts</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Bonus</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">BPS</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Influence</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Creativity</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">Threat</th>
-                      <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[50px]">ICT</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Pen Saved</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[60px]">Pen Missed</th>
                       <th className="px-2 py-2 text-center font-medium text-gray-700 min-w-[45px]">YC</th>
@@ -319,7 +249,7 @@ export default function PlayerGameweekModal({
                   <tbody>
                     {sortedHistory.length === 0 ? (
                       <tr>
-                        <td colSpan={29} className="px-3 py-8 text-center text-gray-500">
+                        <td colSpan={22} className="px-3 py-8 text-center text-gray-500">
                           No gameweek data available for this player
                         </td>
                       </tr>
@@ -342,22 +272,15 @@ export default function PlayerGameweekModal({
                             <td className="px-2 py-3 text-center text-gray-700">{formatValue((gw.value || 0) / 10)}</td>
                             <td className={`px-2 py-3 text-center font-semibold ${getPointsColor(gw.total_points)}`}>{gw.total_points}</td>
                             <td className="px-2 py-3 text-center font-medium text-green-600">{gw.goals_scored}</td>
-                            <td className="px-2 py-3 text-center font-medium text-blue-600">{gw.assists}</td>
-                            <td className="px-2 py-3 text-center font-medium text-green-600">{gw.clean_sheets}</td>
                             <td className="px-2 py-3 text-center font-medium text-purple-600">{gw.expected_goals ? formatValue(gw.expected_goals) : '-'}</td>
                             <td className="px-2 py-3 text-center font-medium text-blue-600">{gw.expected_assists ? formatValue(gw.expected_assists) : '-'}</td>
                             <td className="px-2 py-3 text-center font-medium text-indigo-600">{gw.expected_goal_involvements ? formatValue(gw.expected_goal_involvements) : '-'}</td>
                             <td className="px-2 py-3 text-center font-medium text-red-600">{gw.expected_goals_conceded ? formatValue(gw.expected_goals_conceded) : '-'}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.minutes}</td>
-                            <td className="px-2 py-3 text-center text-red-600">{gw.goals_conceded}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.saves}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.starts ?? '-'}</td>
                             <td className="px-2 py-3 text-center font-medium text-purple-600">{gw.bonus}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.bps}</td>
-                            <td className="px-2 py-3 text-center text-gray-700">{formatValue(gw.influence)}</td>
-                            <td className="px-2 py-3 text-center text-gray-700">{formatValue(gw.creativity)}</td>
-                            <td className="px-2 py-3 text-center text-gray-700">{formatValue(gw.threat)}</td>
-                            <td className="px-2 py-3 text-center text-gray-700">{formatValue(gw.ict_index)}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.penalties_saved || 0}</td>
                             <td className="px-2 py-3 text-center text-gray-700">{gw.penalties_missed || 0}</td>
                             <td className="px-2 py-3 text-center text-yellow-600">{gw.yellow_cards}</td>
