@@ -11510,11 +11510,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          // Get actual completed games for this player's team
-          const teamGamesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1); // Ensure at least 1 to avoid division by zero
+          // Fetch player's gameweek history to count actual matches played (including substitute appearances)
+          let playerMatchesPlayed = 1; // Default to 1 to avoid division by zero
+          try {
+            const playerHistoryResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+            if (playerHistoryResponse.ok) {
+              const playerHistory = await playerHistoryResponse.json();
+              // Count gameweeks where player had minutes > 0 (including substitute appearances)
+              playerMatchesPlayed = Math.max(1, playerHistory.history.filter((gw: any) => gw.minutes > 0).length);
+            } else {
+              // Fallback to team games if API fails
+              playerMatchesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1);
+            }
+          } catch (error) {
+            // Fallback to team games if fetch fails
+            playerMatchesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1);
+          }
           
-          // Calculate DC per team game for this player
-          const dcPerTeamGame = seasonDefensiveContribution / teamGamesPlayed;
+          // Calculate DC per match for this player based on their actual matches played
+          const dcPerGame = seasonDefensiveContribution / playerMatchesPlayed;
           
           // Process each FUTURE gameweek only
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
@@ -11532,7 +11546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const opponentDCC = teamDCCPerGame.get(opponentId) || 0;
             
             // Apply user's exact formula: Expected DC = Current DC/game × DCC of opponent/77
-            const projectedDC = dcPerTeamGame * (opponentDCC / 77);
+            const projectedDC = dcPerGame * (opponentDCC / 77);
             
             // Round to 1 decimal place for threshold comparison to avoid floating-point precision issues
             const normalizedDC = parseFloat(projectedDC.toFixed(1));
@@ -11570,8 +11584,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalDefensiveContributions: parseFloat(totalDC.toFixed(1)),
             totalPoints: totalPoints,
             averagePerGameweek: parseFloat((totalDC / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(1)),
-            dcPer90: dcPerTeamGame, // DC per team game for verification
-            teamGamesPlayed: teamGamesPlayed, // Include for verification
+            dcPerGame: parseFloat(dcPerGame.toFixed(2)), // DC per match played (including substitute appearances)
+            playerMatchesPlayed: playerMatchesPlayed, // Actual matches played by this player
             seasonDefensiveContribution: seasonDefensiveContribution // Include raw DC value
           };
         })
