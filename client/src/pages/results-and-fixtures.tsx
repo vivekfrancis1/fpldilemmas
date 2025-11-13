@@ -1677,30 +1677,34 @@ export default function ResultsAndFixtures() {
                             <span className="text-gray-600">Yellow Cards:</span>
                             <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalYellowCards}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Red Cards:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalRedCards}</span>
-                          </div>
+                          {matchTeamStats.homeTeamMatchStats.totalRedCards > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Red Cards:</span>
+                              <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalRedCards}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between">
                             <span className="text-gray-600">Saves:</span>
                             <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalSaves}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Bonus Points:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalBonus}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Own Goals:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalOwnGoals}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Penalties Saved:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalPenaltiesSaved}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Penalties Missed:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalPenaltiesMissed}</span>
-                          </div>
+                          {matchTeamStats.homeTeamMatchStats.totalOwnGoals > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Own Goals:</span>
+                              <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalOwnGoals}</span>
+                            </div>
+                          )}
+                          {matchTeamStats.homeTeamMatchStats.totalPenaltiesSaved > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Penalties Saved:</span>
+                              <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalPenaltiesSaved}</span>
+                            </div>
+                          )}
+                          {matchTeamStats.homeTeamMatchStats.totalPenaltiesMissed > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Penalties Missed:</span>
+                              <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalPenaltiesMissed}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1759,30 +1763,34 @@ export default function ResultsAndFixtures() {
                             <span className="text-gray-600">Yellow Cards:</span>
                             <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalYellowCards}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Red Cards:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalRedCards}</span>
-                          </div>
+                          {matchTeamStats.awayTeamMatchStats.totalRedCards > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Red Cards:</span>
+                              <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalRedCards}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between">
                             <span className="text-gray-600">Saves:</span>
                             <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalSaves}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Bonus Points:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalBonus}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Own Goals:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalOwnGoals}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Penalties Saved:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalPenaltiesSaved}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Penalties Missed:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalPenaltiesMissed}</span>
-                          </div>
+                          {matchTeamStats.awayTeamMatchStats.totalOwnGoals > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Own Goals:</span>
+                              <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalOwnGoals}</span>
+                            </div>
+                          )}
+                          {matchTeamStats.awayTeamMatchStats.totalPenaltiesSaved > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Penalties Saved:</span>
+                              <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalPenaltiesSaved}</span>
+                            </div>
+                          )}
+                          {matchTeamStats.awayTeamMatchStats.totalPenaltiesMissed > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Penalties Missed:</span>
+                              <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalPenaltiesMissed}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
