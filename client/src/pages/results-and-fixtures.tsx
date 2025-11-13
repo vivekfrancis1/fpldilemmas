@@ -735,13 +735,16 @@ export default function ResultsAndFixtures() {
 
         {/* Player Statistics Modal */}
         <Dialog open={isPlayerStatsOpen} onOpenChange={setIsPlayerStatsOpen}>
-          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
-              <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 shrink-0" />
+              <DialogTitle className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-blue-600 shrink-0" />
+                  <span className="text-base sm:text-lg">Match Statistics</span>
+                </div>
                 {selectedMatch && (
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                    <span className="text-sm sm:text-base">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <span className="text-sm sm:text-base font-medium">
                       {selectedMatch.homeTeam?.short_name} {selectedMatch.team_h_score} - {selectedMatch.team_a_score} {selectedMatch.awayTeam?.short_name}
                     </span>
                     <Badge variant="outline" className="w-fit text-xs">
@@ -758,28 +761,28 @@ export default function ResultsAndFixtures() {
                 <span className="ml-3 text-gray-600">Loading match statistics...</span>
               </div>
             ) : matchStats ? (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Match Summary */}
-                <div className="flex items-center justify-center gap-4 p-4 bg-gray-900 text-white rounded-lg">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 p-3 sm:p-4 bg-gray-900 text-white rounded-lg">
                   <div className="text-center">
-                    <div className="text-lg font-bold">
+                    <div className="text-sm sm:text-base md:text-lg font-bold truncate max-w-[140px] sm:max-w-none">
                       {selectedMatch?.homeTeam?.name}
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold px-6 py-2 bg-gray-800 rounded-lg">
+                    <div className="text-2xl sm:text-3xl font-bold px-4 sm:px-6 py-1 sm:py-2 bg-gray-800 rounded-lg">
                       {selectedMatch?.team_h_score} - {selectedMatch?.team_a_score}
                     </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-lg font-bold">
+                    <div className="text-sm sm:text-base md:text-lg font-bold truncate max-w-[140px] sm:max-w-none">
                       {selectedMatch?.awayTeam?.name}
                     </div>
                   </div>
                 </div>
 
                 {/* Categorized Player Statistics */}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {/* Goals Scored Section */}
                   {(() => {
                     const homeGoalScorers = matchStats.homeTeamStats.filter(p => p.goals_scored > 0).sort((a, b) => b.goals_scored - a.goals_scored);
@@ -796,27 +799,27 @@ export default function ResultsAndFixtures() {
                     
                     return (
                       <div>
-                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                        <div className="bg-gray-700 text-white text-center py-2 px-3 sm:px-4 rounded-lg text-sm sm:text-base font-semibold">
                           Goals scored
                         </div>
-                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-4 mt-2 px-2 sm:px-4">
                           <div className="space-y-1">
                             {homeGoalScorers.map((player) => (
-                              <div key={player.playerId} className="flex items-center gap-2">
-                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                              <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-green-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                   +{getGoalPoints(player.goals_scored, player.position)}
                                 </span>
-                                <span className="text-sm">{player.playerName} {player.goals_scored > 1 ? `(${player.goals_scored})` : ''}</span>
+                                <span className="text-xs sm:text-sm truncate">{player.playerName} {player.goals_scored > 1 ? `(${player.goals_scored})` : ''}</span>
                               </div>
                             ))}
                           </div>
                           <div className="space-y-1">
                             {awayGoalScorers.map((player) => (
-                              <div key={player.playerId} className="flex items-center gap-2">
-                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                              <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-green-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                   +{getGoalPoints(player.goals_scored, player.position)}
                                 </span>
-                                <span className="text-sm">{player.playerName} {player.goals_scored > 1 ? `(${player.goals_scored})` : ''}</span>
+                                <span className="text-xs sm:text-sm truncate">{player.playerName} {player.goals_scored > 1 ? `(${player.goals_scored})` : ''}</span>
                               </div>
                             ))}
                           </div>
@@ -833,27 +836,27 @@ export default function ResultsAndFixtures() {
                     
                     return (
                       <div>
-                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                        <div className="bg-gray-700 text-white text-center py-2 px-3 sm:px-4 rounded-lg text-sm sm:text-base font-semibold">
                           Assists
                         </div>
-                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-4 mt-2 px-2 sm:px-4">
                           <div className="space-y-1">
                             {homeAssistProviders.map((player) => (
-                              <div key={player.playerId} className="flex items-center gap-2">
-                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                              <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-green-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                   +{player.assists * 3}
                                 </span>
-                                <span className="text-sm">{player.playerName} {player.assists > 1 ? `(${player.assists})` : ''}</span>
+                                <span className="text-xs sm:text-sm truncate">{player.playerName} {player.assists > 1 ? `(${player.assists})` : ''}</span>
                               </div>
                             ))}
                           </div>
                           <div className="space-y-1">
                             {awayAssistProviders.map((player) => (
-                              <div key={player.playerId} className="flex items-center gap-2">
-                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                              <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-green-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                   +{player.assists * 3}
                                 </span>
-                                <span className="text-sm">{player.playerName} {player.assists > 1 ? `(${player.assists})` : ''}</span>
+                                <span className="text-xs sm:text-sm truncate">{player.playerName} {player.assists > 1 ? `(${player.assists})` : ''}</span>
                               </div>
                             ))}
                           </div>
@@ -870,27 +873,27 @@ export default function ResultsAndFixtures() {
                     
                     return (
                       <div>
-                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                        <div className="bg-gray-700 text-white text-center py-2 px-3 sm:px-4 rounded-lg text-sm sm:text-base font-semibold">
                           Yellow cards
                         </div>
-                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-4 mt-2 px-2 sm:px-4">
                           <div className="space-y-1">
                             {homeYellowCards.map((player) => (
-                              <div key={player.playerId} className="flex items-center gap-2">
-                                <span className="inline-flex items-center justify-center w-8 h-6 bg-red-500 text-white text-xs font-bold rounded px-1">
+                              <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-red-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                   -1
                                 </span>
-                                <span className="text-sm">{player.playerName}</span>
+                                <span className="text-xs sm:text-sm truncate">{player.playerName}</span>
                               </div>
                             ))}
                           </div>
                           <div className="space-y-1">
                             {awayYellowCards.map((player) => (
-                              <div key={player.playerId} className="flex items-center gap-2">
-                                <span className="inline-flex items-center justify-center w-8 h-6 bg-red-500 text-white text-xs font-bold rounded px-1">
+                              <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-red-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                   -1
                                 </span>
-                                <span className="text-sm">{player.playerName}</span>
+                                <span className="text-xs sm:text-sm truncate">{player.playerName}</span>
                               </div>
                             ))}
                           </div>
@@ -907,27 +910,27 @@ export default function ResultsAndFixtures() {
                     
                     return (
                       <div>
-                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                        <div className="bg-gray-700 text-white text-center py-2 px-3 sm:px-4 rounded-lg text-sm sm:text-base font-semibold">
                           Red cards
                         </div>
-                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-4 mt-2 px-2 sm:px-4">
                           <div className="space-y-1">
                             {homeRedCards.map((player) => (
-                              <div key={player.playerId} className="flex items-center gap-2">
-                                <span className="inline-flex items-center justify-center w-8 h-6 bg-red-500 text-white text-xs font-bold rounded px-1">
+                              <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-red-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                   -3
                                 </span>
-                                <span className="text-sm">{player.playerName}</span>
+                                <span className="text-xs sm:text-sm truncate">{player.playerName}</span>
                               </div>
                             ))}
                           </div>
                           <div className="space-y-1">
                             {awayRedCards.map((player) => (
-                              <div key={player.playerId} className="flex items-center gap-2">
-                                <span className="inline-flex items-center justify-center w-8 h-6 bg-red-500 text-white text-xs font-bold rounded px-1">
+                              <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-red-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                   -3
                                 </span>
-                                <span className="text-sm">{player.playerName}</span>
+                                <span className="text-xs sm:text-sm truncate">{player.playerName}</span>
                               </div>
                             ))}
                           </div>
@@ -944,27 +947,27 @@ export default function ResultsAndFixtures() {
                     
                     return (
                       <div>
-                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                        <div className="bg-gray-700 text-white text-center py-2 px-3 sm:px-4 rounded-lg text-sm sm:text-base font-semibold">
                           Saves
                         </div>
-                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-4 mt-2 px-2 sm:px-4">
                           <div className="space-y-1">
                             {homeSaves.map((player) => (
-                              <div key={player.playerId} className="flex items-center gap-2">
-                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                              <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-green-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                   +{Math.floor(player.saves / 3)}
                                 </span>
-                                <span className="text-sm">{player.playerName} ({player.saves})</span>
+                                <span className="text-xs sm:text-sm truncate">{player.playerName} ({player.saves})</span>
                               </div>
                             ))}
                           </div>
                           <div className="space-y-1">
                             {awaySaves.map((player) => (
-                              <div key={player.playerId} className="flex items-center gap-2">
-                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                              <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
+                                <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-green-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                   +{Math.floor(player.saves / 3)}
                                 </span>
-                                <span className="text-sm">{player.playerName} ({player.saves})</span>
+                                <span className="text-xs sm:text-sm truncate">{player.playerName} ({player.saves})</span>
                               </div>
                             ))}
                           </div>
@@ -981,31 +984,31 @@ export default function ResultsAndFixtures() {
                     
                     return (
                       <div>
-                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                        <div className="bg-gray-700 text-white text-center py-2 px-3 sm:px-4 rounded-lg text-sm sm:text-base font-semibold">
                           Bonus Points System
                         </div>
-                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-4 mt-2 px-2 sm:px-4">
                           <div className="space-y-1">
                             {homeBPS.map((player) => (
-                              <div key={player.playerId} className="flex items-center gap-2">
+                              <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
                                 {player.bonus > 0 && (
-                                  <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-green-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                     +{player.bonus}
                                   </span>
                                 )}
-                                <span className="text-sm">{player.playerName} ({player.bps})</span>
+                                <span className="text-xs sm:text-sm truncate">{player.playerName} ({player.bps})</span>
                               </div>
                             ))}
                           </div>
                           <div className="space-y-1">
                             {awayBPS.map((player) => (
-                              <div key={player.playerId} className="flex items-center gap-2">
+                              <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
                                 {player.bonus > 0 && (
-                                  <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-green-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                     +{player.bonus}
                                   </span>
                                 )}
-                                <span className="text-sm">{player.playerName} ({player.bps})</span>
+                                <span className="text-xs sm:text-sm truncate">{player.playerName} ({player.bps})</span>
                               </div>
                             ))}
                           </div>
@@ -1022,22 +1025,22 @@ export default function ResultsAndFixtures() {
                     
                     return (
                       <div>
-                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                        <div className="bg-gray-700 text-white text-center py-2 px-3 sm:px-4 rounded-lg text-sm sm:text-base font-semibold">
                           Defensive Contributions
                         </div>
-                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-4 mt-2 px-2 sm:px-4">
                           <div className="space-y-1">
                             {homeDC.map((player) => {
                               const dc = (player as any).defensive_contribution || 0;
                               const dcPoints = (player.position === 'DEF' || player.position === 'GKP') && dc >= 10 ? 2 : (player.position === 'MID' || player.position === 'FWD') && dc >= 12 ? 2 : 0;
                               return (
-                                <div key={player.playerId} className="flex items-center gap-2">
+                                <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
                                   {dcPoints > 0 && (
-                                    <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                    <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-green-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                       +{dcPoints}
                                     </span>
                                   )}
-                                  <span className="text-sm">{player.playerName} ({dc})</span>
+                                  <span className="text-xs sm:text-sm truncate">{player.playerName} ({dc})</span>
                                 </div>
                               );
                             })}
@@ -1047,13 +1050,13 @@ export default function ResultsAndFixtures() {
                               const dc = (player as any).defensive_contribution || 0;
                               const dcPoints = (player.position === 'DEF' || player.position === 'GKP') && dc >= 10 ? 2 : (player.position === 'MID' || player.position === 'FWD') && dc >= 12 ? 2 : 0;
                               return (
-                                <div key={player.playerId} className="flex items-center gap-2">
+                                <div key={player.playerId} className="flex items-center gap-1.5 sm:gap-2">
                                   {dcPoints > 0 && (
-                                    <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                    <span className="inline-flex items-center justify-center min-w-[28px] sm:min-w-[32px] h-6 bg-green-500 text-white text-xs font-bold rounded px-1 shrink-0">
                                       +{dcPoints}
                                     </span>
                                   )}
-                                  <span className="text-sm">{player.playerName} ({dc})</span>
+                                  <span className="text-xs sm:text-sm truncate">{player.playerName} ({dc})</span>
                                 </div>
                               );
                             })}
