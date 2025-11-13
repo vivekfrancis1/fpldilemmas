@@ -64,6 +64,9 @@ interface MatchStats {
 export default function ResultsAndFixtures() {
   const [selectedGameweek, setSelectedGameweek] = useState<"all" | number>(5);
   const [selectedMatch, setSelectedMatch] = useState<any>(null);
+  const [isMatchStatsOpen, setIsMatchStatsOpen] = useState(false);
+  const [matchStats, setMatchStats] = useState<MatchStats | null>(null);
+  const [isLoadingMatchStats, setIsLoadingMatchStats] = useState(false);
   const [isTeamStatsOpen, setIsTeamStatsOpen] = useState(false);
   const [teamStats, setTeamStats] = useState<any>(null);
   const [isLoadingTeamStats, setIsLoadingTeamStats] = useState(false);
@@ -195,6 +198,117 @@ export default function ResultsAndFixtures() {
     };
   };
 
+  // Fetch match statistics for a specific fixture
+  const fetchMatchStats = async (fixture: any) => {
+    if (!fixture.isResult) return null;
+    
+    setIsLoadingMatchStats(true);
+    try {
+      // Get all players from both teams
+      const homeTeamPlayers = bootstrapData?.elements.filter(p => p.team === fixture.team_h) || [];
+      const awayTeamPlayers = bootstrapData?.elements.filter(p => p.team === fixture.team_a) || [];
+      
+      // Fetch detailed stats for each player
+      const [homeStats, awayStats] = await Promise.all([
+        Promise.all(homeTeamPlayers.map(async (player: any) => {
+          try {
+            const response = await fetch(`/api/element-summary/${player.id}`);
+            if (!response.ok) throw new Error('Failed to fetch player data');
+            const data = await response.json();
+            
+            // Find the specific gameweek data
+            const gameweekData = data.history?.find((h: any) => h.round === fixture.event);
+            
+            if (!gameweekData) return null;
+            
+            return {
+              playerId: player.id,
+              playerName: player.web_name,
+              teamName: fixture.homeTeam?.short_name || 'Home',
+              position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'Unknown',
+              minutes: gameweekData.minutes || 0,
+              goals_scored: gameweekData.goals_scored || 0,
+              assists: gameweekData.assists || 0,
+              clean_sheets: gameweekData.clean_sheets || 0,
+              goals_conceded: gameweekData.goals_conceded || 0,
+              own_goals: gameweekData.own_goals || 0,
+              penalties_saved: gameweekData.penalties_saved || 0,
+              penalties_missed: gameweekData.penalties_missed || 0,
+              yellow_cards: gameweekData.yellow_cards || 0,
+              red_cards: gameweekData.red_cards || 0,
+              saves: gameweekData.saves || 0,
+              bonus: gameweekData.bonus || 0,
+              bps: gameweekData.bps || 0,
+              influence: parseFloat(gameweekData.influence) || 0,
+              creativity: parseFloat(gameweekData.creativity) || 0,
+              threat: parseFloat(gameweekData.threat) || 0,
+              ict_index: parseFloat(gameweekData.ict_index) || 0,
+              total_points: gameweekData.total_points || 0
+            };
+          } catch (error) {
+            console.error(`Error fetching data for player ${player.web_name}:`, error);
+            return null;
+          }
+        })),
+        Promise.all(awayTeamPlayers.map(async (player: any) => {
+          try {
+            const response = await fetch(`/api/element-summary/${player.id}`);
+            if (!response.ok) throw new Error('Failed to fetch player data');
+            const data = await response.json();
+            
+            // Find the specific gameweek data
+            const gameweekData = data.history?.find((h: any) => h.round === fixture.event);
+            
+            if (!gameweekData) return null;
+            
+            return {
+              playerId: player.id,
+              playerName: player.web_name,
+              teamName: fixture.awayTeam?.short_name || 'Away',
+              position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'Unknown',
+              minutes: gameweekData.minutes || 0,
+              goals_scored: gameweekData.goals_scored || 0,
+              assists: gameweekData.assists || 0,
+              clean_sheets: gameweekData.clean_sheets || 0,
+              goals_conceded: gameweekData.goals_conceded || 0,
+              own_goals: gameweekData.own_goals || 0,
+              penalties_saved: gameweekData.penalties_saved || 0,
+              penalties_missed: gameweekData.penalties_missed || 0,
+              yellow_cards: gameweekData.yellow_cards || 0,
+              red_cards: gameweekData.red_cards || 0,
+              saves: gameweekData.saves || 0,
+              bonus: gameweekData.bonus || 0,
+              bps: gameweekData.bps || 0,
+              influence: parseFloat(gameweekData.influence) || 0,
+              creativity: parseFloat(gameweekData.creativity) || 0,
+              threat: parseFloat(gameweekData.threat) || 0,
+              ict_index: parseFloat(gameweekData.ict_index) || 0,
+              total_points: gameweekData.total_points || 0
+            };
+          } catch (error) {
+            console.error(`Error fetching data for player ${player.web_name}:`, error);
+            return null;
+          }
+        }))
+      ]);
+      
+      // Filter out null results and sort by total points
+      const homeTeamStats = homeStats.filter(Boolean).sort((a, b) => (b?.total_points || 0) - (a?.total_points || 0));
+      const awayTeamStats = awayStats.filter(Boolean).sort((a, b) => (b?.total_points || 0) - (a?.total_points || 0));
+      
+      return {
+        fixture,
+        homeTeamStats,
+        awayTeamStats
+      };
+    } catch (error) {
+      console.error('Error fetching match stats:', error);
+      return null;
+    } finally {
+      setIsLoadingMatchStats(false);
+    }
+  };
+
   // Fetch team statistics for a specific fixture
   const fetchTeamStats = async (fixture: any) => {
     setIsLoadingTeamStats(true);
@@ -253,6 +367,17 @@ export default function ResultsAndFixtures() {
     } finally {
       setIsLoadingTeamStats(false);
     }
+  };
+
+  // Handle match click
+  const handleMatchClick = async (fixture: any) => {
+    if (!fixture.isResult) return; // Only allow clicks on completed matches
+    
+    setSelectedMatch(fixture);
+    setIsMatchStatsOpen(true);
+    
+    const stats = await fetchMatchStats(fixture);
+    setMatchStats(stats);
   };
 
   // Fetch match-specific team statistics for a completed fixture
@@ -500,29 +625,29 @@ export default function ResultsAndFixtures() {
 
       <div className="fpl-section-spacing">
         {/* Statistics Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
           <Card>
-            <CardContent className="p-2 sm:p-4 text-center">
-              <div className="text-lg sm:text-2xl font-bold text-blue-600">{stats.total}</div>
-              <div className="text-[10px] sm:text-sm text-gray-600">Total Matches</div>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats.total}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Total Matches</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-2 sm:p-4 text-center">
-              <div className="text-lg sm:text-2xl font-bold text-green-600">{stats.completed}</div>
-              <div className="text-[10px] sm:text-sm text-gray-600">Completed</div>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.completed}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Completed</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-2 sm:p-4 text-center">
-              <div className="text-lg sm:text-2xl font-bold text-orange-600">{stats.live}</div>
-              <div className="text-[10px] sm:text-sm text-gray-600">Live</div>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-orange-600">{stats.live}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Live</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-2 sm:p-4 text-center">
-              <div className="text-lg sm:text-2xl font-bold text-gray-600">{stats.upcoming}</div>
-              <div className="text-[10px] sm:text-sm text-gray-600">Upcoming</div>
+            <CardContent className="p-3 sm:p-4 text-center">
+              <div className="text-xl sm:text-2xl font-bold text-gray-600">{stats.upcoming}</div>
+              <div className="text-xs sm:text-sm text-gray-600">Upcoming</div>
             </CardContent>
           </Card>
         </div>
@@ -607,7 +732,13 @@ export default function ResultsAndFixtures() {
                       {fixtures.map((fixture) => (
                         <div 
                           key={fixture.id} 
-                          className="p-3 bg-gray-50 rounded-lg"
+                          className={`p-3 bg-gray-50 rounded-lg transition-colors ${
+                            fixture.isResult 
+                              ? 'hover:bg-blue-50 cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500' 
+                              : 'hover:bg-gray-100'
+                          }`}
+                          onClick={() => fixture.isResult && handleMatchClick(fixture)}
+                          title={fixture.isResult ? 'Click to view match statistics' : ''}
                         >
                           {/* Mobile layout: stacked */}
                           <div className="flex flex-col space-y-2 md:hidden">
@@ -754,6 +885,13 @@ export default function ResultsAndFixtures() {
                                     Match Stats
                                   </Button>
                                 )}
+                                
+                                {/* Click indicator for completed matches */}
+                                {fixture.isResult && (
+                                  <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
+                                    Player Stats
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -769,7 +907,13 @@ export default function ResultsAndFixtures() {
                 {filteredFixtures.map((fixture) => (
                   <div 
                     key={fixture.id} 
-                    className="p-3 sm:p-4 bg-white border rounded-lg"
+                    className={`p-3 sm:p-4 bg-white border rounded-lg transition-all ${
+                      fixture.isResult 
+                        ? 'hover:shadow-md cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500 hover:bg-blue-50' 
+                        : 'hover:shadow-sm'
+                    }`}
+                    onClick={() => fixture.isResult && handleMatchClick(fixture)}
+                    title={fixture.isResult ? 'Click to view match statistics' : ''}
                   >
                     {/* Mobile layout: stacked */}
                     <div className="flex flex-col space-y-2 md:hidden">
@@ -918,6 +1062,13 @@ export default function ResultsAndFixtures() {
                               Match Stats
                             </Button>
                           )}
+                          
+                          {/* Click indicator for completed matches */}
+                          {fixture.isResult && (
+                            <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
+                              Player Stats
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -935,6 +1086,347 @@ export default function ResultsAndFixtures() {
             )}
           </div>
         </div>
+
+        {/* Match Statistics Modal */}
+        <Dialog open={isMatchStatsOpen} onOpenChange={setIsMatchStatsOpen}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600 shrink-0" />
+                {selectedMatch && (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <span className="text-sm sm:text-base">
+                      {selectedMatch.homeTeam?.short_name} {selectedMatch.team_h_score} - {selectedMatch.team_a_score} {selectedMatch.awayTeam?.short_name}
+                    </span>
+                    <Badge variant="outline" className="w-fit text-xs">
+                      GW{selectedMatch.event} - {formatDateTime(selectedMatch.kickoff_time).date}
+                    </Badge>
+                  </div>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+            
+            {isLoadingMatchStats ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-600">Loading match statistics...</span>
+              </div>
+            ) : matchStats ? (
+              <div className="space-y-4">
+                {/* Match Summary */}
+                <div className="flex items-center justify-center gap-4 p-4 bg-gray-900 text-white rounded-lg">
+                  <div className="text-center">
+                    <div className="text-lg font-bold">
+                      {selectedMatch?.homeTeam?.name}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold px-6 py-2 bg-gray-800 rounded-lg">
+                      {selectedMatch?.team_h_score} - {selectedMatch?.team_a_score}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold">
+                      {selectedMatch?.awayTeam?.name}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Categorized Player Statistics */}
+                <div className="space-y-3">
+                  {/* Goals Scored Section */}
+                  {(() => {
+                    const homeGoalScorers = matchStats.homeTeamStats.filter(p => p.goals_scored > 0).sort((a, b) => b.goals_scored - a.goals_scored);
+                    const awayGoalScorers = matchStats.awayTeamStats.filter(p => p.goals_scored > 0).sort((a, b) => b.goals_scored - a.goals_scored);
+                    if (homeGoalScorers.length === 0 && awayGoalScorers.length === 0) return null;
+                    
+                    const getGoalPoints = (goals: number, position: string) => {
+                      if (position === 'FWD') return goals * 4;
+                      if (position === 'MID') return goals * 5;
+                      if (position === 'DEF') return goals * 6;
+                      if (position === 'GKP') return goals * 6;
+                      return goals * 4;
+                    };
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Goals scored
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeGoalScorers.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  +{getGoalPoints(player.goals_scored, player.position)}
+                                </span>
+                                <span className="text-sm">{player.playerName} {player.goals_scored > 1 ? `(${player.goals_scored})` : ''}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {awayGoalScorers.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  +{getGoalPoints(player.goals_scored, player.position)}
+                                </span>
+                                <span className="text-sm">{player.playerName} {player.goals_scored > 1 ? `(${player.goals_scored})` : ''}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Assists Section */}
+                  {(() => {
+                    const homeAssistProviders = matchStats.homeTeamStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists);
+                    const awayAssistProviders = matchStats.awayTeamStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists);
+                    if (homeAssistProviders.length === 0 && awayAssistProviders.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Assists
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeAssistProviders.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  +{player.assists * 3}
+                                </span>
+                                <span className="text-sm">{player.playerName} {player.assists > 1 ? `(${player.assists})` : ''}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {awayAssistProviders.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  +{player.assists * 3}
+                                </span>
+                                <span className="text-sm">{player.playerName} {player.assists > 1 ? `(${player.assists})` : ''}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Yellow Cards Section */}
+                  {(() => {
+                    const homeYellowCards = matchStats.homeTeamStats.filter(p => p.yellow_cards > 0);
+                    const awayYellowCards = matchStats.awayTeamStats.filter(p => p.yellow_cards > 0);
+                    if (homeYellowCards.length === 0 && awayYellowCards.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Yellow cards
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeYellowCards.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-red-500 text-white text-xs font-bold rounded px-1">
+                                  -1
+                                </span>
+                                <span className="text-sm">{player.playerName}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {awayYellowCards.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-red-500 text-white text-xs font-bold rounded px-1">
+                                  -1
+                                </span>
+                                <span className="text-sm">{player.playerName}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Red Cards Section */}
+                  {(() => {
+                    const homeRedCards = matchStats.homeTeamStats.filter(p => p.red_cards > 0);
+                    const awayRedCards = matchStats.awayTeamStats.filter(p => p.red_cards > 0);
+                    if (homeRedCards.length === 0 && awayRedCards.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Red cards
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeRedCards.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-red-500 text-white text-xs font-bold rounded px-1">
+                                  -3
+                                </span>
+                                <span className="text-sm">{player.playerName}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {awayRedCards.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-red-500 text-white text-xs font-bold rounded px-1">
+                                  -3
+                                </span>
+                                <span className="text-sm">{player.playerName}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Saves Section */}
+                  {(() => {
+                    const homeSaves = matchStats.homeTeamStats.filter(p => p.saves > 0).sort((a, b) => b.saves - a.saves);
+                    const awaySaves = matchStats.awayTeamStats.filter(p => p.saves > 0).sort((a, b) => b.saves - a.saves);
+                    if (homeSaves.length === 0 && awaySaves.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Saves
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeSaves.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  +{Math.floor(player.saves / 3)}
+                                </span>
+                                <span className="text-sm">{player.playerName} ({player.saves})</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {awaySaves.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  +{Math.floor(player.saves / 3)}
+                                </span>
+                                <span className="text-sm">{player.playerName} ({player.saves})</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Bonus Points System Section */}
+                  {(() => {
+                    const homeBPS = matchStats.homeTeamStats.filter(p => p.bps > 0).sort((a, b) => b.bps - a.bps).slice(0, 10);
+                    const awayBPS = matchStats.awayTeamStats.filter(p => p.bps > 0).sort((a, b) => b.bps - a.bps).slice(0, 10);
+                    if (homeBPS.length === 0 && awayBPS.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Bonus Points System
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeBPS.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                {player.bonus > 0 && (
+                                  <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                    +{player.bonus}
+                                  </span>
+                                )}
+                                <span className="text-sm">{player.playerName} ({player.bps})</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {awayBPS.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                {player.bonus > 0 && (
+                                  <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                    +{player.bonus}
+                                  </span>
+                                )}
+                                <span className="text-sm">{player.playerName} ({player.bps})</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Defensive Contributions Section */}
+                  {(() => {
+                    const homeDC = matchStats.homeTeamStats.filter(p => (p as any).defensive_contribution > 0).sort((a, b) => (b as any).defensive_contribution - (a as any).defensive_contribution).slice(0, 10);
+                    const awayDC = matchStats.awayTeamStats.filter(p => (p as any).defensive_contribution > 0).sort((a, b) => (b as any).defensive_contribution - (a as any).defensive_contribution).slice(0, 10);
+                    if (homeDC.length === 0 && awayDC.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Defensive Contributions
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeDC.map((player) => {
+                              const dc = (player as any).defensive_contribution || 0;
+                              const dcPoints = (player.position === 'DEF' || player.position === 'GKP') && dc >= 10 ? 2 : (player.position === 'MID' || player.position === 'FWD') && dc >= 12 ? 2 : 0;
+                              return (
+                                <div key={player.playerId} className="flex items-center gap-2">
+                                  {dcPoints > 0 && (
+                                    <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                      +{dcPoints}
+                                    </span>
+                                  )}
+                                  <span className="text-sm">{player.playerName} ({dc})</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="space-y-1">
+                            {awayDC.map((player) => {
+                              const dc = (player as any).defensive_contribution || 0;
+                              const dcPoints = (player.position === 'DEF' || player.position === 'GKP') && dc >= 10 ? 2 : (player.position === 'MID' || player.position === 'FWD') && dc >= 12 ? 2 : 0;
+                              return (
+                                <div key={player.playerId} className="flex items-center gap-2">
+                                  {dcPoints > 0 && (
+                                    <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                      +{dcPoints}
+                                    </span>
+                                  )}
+                                  <span className="text-sm">{player.playerName} ({dc})</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No statistics available</h3>
+                <p className="text-gray-600">Unable to load match statistics at this time.</p>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Team Statistics Modal */}
         <Dialog open={isTeamStatsOpen} onOpenChange={setIsTeamStatsOpen}>
