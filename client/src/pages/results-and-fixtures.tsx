@@ -1655,7 +1655,7 @@ export default function ResultsAndFixtures() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-4">
                         <div className="text-center">
                           <div className="text-2xl font-bold text-blue-600">{matchTeamStats.homeTeamMatchStats.totalPoints}</div>
                           <div className="text-sm text-gray-600">FPL Points</div>
@@ -1663,10 +1663,6 @@ export default function ResultsAndFixtures() {
                         <div className="text-center">
                           <div className="text-2xl font-bold text-green-600">{matchTeamStats.homeTeamMatchStats.totalGoals}</div>
                           <div className="text-sm text-gray-600">Goals</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-purple-600">{matchTeamStats.homeTeamMatchStats.totalAssists}</div>
-                          <div className="text-sm text-gray-600">Assists</div>
                         </div>
                         <div className="text-center">
                           <div className="text-2xl font-bold text-orange-600">{matchTeamStats.homeTeamMatchStats.playersUsed}</div>
@@ -1677,10 +1673,6 @@ export default function ResultsAndFixtures() {
                       <div className="space-y-2">
                         <h4 className="font-semibold text-gray-700">Match Details</h4>
                         <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Clean Sheet:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.cleanSheets ? 'Yes' : 'No'}</span>
-                          </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Yellow Cards:</span>
                             <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalYellowCards}</span>
@@ -1708,44 +1700,6 @@ export default function ResultsAndFixtures() {
                           <div className="flex justify-between">
                             <span className="text-gray-600">Penalties Missed:</span>
                             <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalPenaltiesMissed}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Goals Conceded:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalGoalsConceded}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <h4 className="font-semibold text-gray-700">Performance Metrics</h4>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Total BPS:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalBPS}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Avg BPS:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.averageBPS.toFixed(1)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Total ICT Index:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalICTIndex.toFixed(1)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Avg ICT:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.averageICT.toFixed(1)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Influence:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalInfluence.toFixed(1)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Creativity:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalCreativity.toFixed(1)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Threat:</span>
-                            <span className="font-medium">{matchTeamStats.homeTeamMatchStats.totalThreat.toFixed(1)}</span>
                           </div>
                         </div>
                       </div>
@@ -1783,7 +1737,7 @@ export default function ResultsAndFixtures() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-4">
                         <div className="text-center">
                           <div className="text-2xl font-bold text-blue-600">{matchTeamStats.awayTeamMatchStats.totalPoints}</div>
                           <div className="text-sm text-gray-600">FPL Points</div>
@@ -1791,10 +1745,6 @@ export default function ResultsAndFixtures() {
                         <div className="text-center">
                           <div className="text-2xl font-bold text-green-600">{matchTeamStats.awayTeamMatchStats.totalGoals}</div>
                           <div className="text-sm text-gray-600">Goals</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-2xl font-bold text-purple-600">{matchTeamStats.awayTeamMatchStats.totalAssists}</div>
-                          <div className="text-sm text-gray-600">Assists</div>
                         </div>
                         <div className="text-center">
                           <div className="text-2xl font-bold text-orange-600">{matchTeamStats.awayTeamMatchStats.playersUsed}</div>
@@ -1805,10 +1755,6 @@ export default function ResultsAndFixtures() {
                       <div className="space-y-2">
                         <h4 className="font-semibold text-gray-700">Match Details</h4>
                         <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Clean Sheet:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.cleanSheets ? 'Yes' : 'No'}</span>
-                          </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Yellow Cards:</span>
                             <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalYellowCards}</span>
@@ -1837,44 +1783,6 @@ export default function ResultsAndFixtures() {
                             <span className="text-gray-600">Penalties Missed:</span>
                             <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalPenaltiesMissed}</span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Goals Conceded:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalGoalsConceded}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <h4 className="font-semibold text-gray-700">Performance Metrics</h4>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Total BPS:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalBPS}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Avg BPS:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.averageBPS.toFixed(1)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Total ICT Index:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalICTIndex.toFixed(1)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Avg ICT:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.averageICT.toFixed(1)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Influence:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalInfluence.toFixed(1)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Creativity:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalCreativity.toFixed(1)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Threat:</span>
-                            <span className="font-medium">{matchTeamStats.awayTeamMatchStats.totalThreat.toFixed(1)}</span>
-                          </div>
                         </div>
                       </div>
 
@@ -1902,92 +1810,6 @@ export default function ResultsAndFixtures() {
                     </CardContent>
                   </Card>
                 </div>
-
-                {/* Match Summary Comparison */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-green-600" />
-                      Match Performance Summary
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
-                        <div className="text-lg font-bold text-blue-600">
-                          {matchTeamStats.homeTeamMatchStats.totalPoints > matchTeamStats.awayTeamMatchStats.totalPoints ? 
-                            matchTeamStats.homeTeamMatchStats.name : 
-                            matchTeamStats.awayTeamMatchStats.totalPoints > matchTeamStats.homeTeamMatchStats.totalPoints ?
-                            matchTeamStats.awayTeamMatchStats.name : 'Tie'}
-                        </div>
-                        <div className="text-sm text-gray-600">More FPL Points</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {matchTeamStats.homeTeamMatchStats.totalPoints} - {matchTeamStats.awayTeamMatchStats.totalPoints}
-                        </div>
-                      </div>
-                      <div className="text-center p-4 bg-green-50 rounded-lg">
-                        <div className="text-lg font-bold text-green-600">
-                          {matchTeamStats.homeTeamMatchStats.totalGoals > matchTeamStats.awayTeamMatchStats.totalGoals ? 
-                            matchTeamStats.homeTeamMatchStats.name : 
-                            matchTeamStats.awayTeamMatchStats.totalGoals > matchTeamStats.homeTeamMatchStats.totalGoals ?
-                            matchTeamStats.awayTeamMatchStats.name : 'Tie'}
-                        </div>
-                        <div className="text-sm text-gray-600">More Goals</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {matchTeamStats.homeTeamMatchStats.totalGoals} - {matchTeamStats.awayTeamMatchStats.totalGoals}
-                        </div>
-                      </div>
-                      <div className="text-center p-4 bg-purple-50 rounded-lg">
-                        <div className="text-lg font-bold text-purple-600">
-                          {matchTeamStats.homeTeamMatchStats.totalAssists > matchTeamStats.awayTeamMatchStats.totalAssists ? 
-                            matchTeamStats.homeTeamMatchStats.name : 
-                            matchTeamStats.awayTeamMatchStats.totalAssists > matchTeamStats.homeTeamMatchStats.totalAssists ?
-                            matchTeamStats.awayTeamMatchStats.name : 'Tie'}
-                        </div>
-                        <div className="text-sm text-gray-600">More Assists</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {matchTeamStats.homeTeamMatchStats.totalAssists} - {matchTeamStats.awayTeamMatchStats.totalAssists}
-                        </div>
-                      </div>
-                      <div className="text-center p-4 bg-orange-50 rounded-lg">
-                        <div className="text-lg font-bold text-orange-600">
-                          {matchTeamStats.homeTeamMatchStats.totalBonus > matchTeamStats.awayTeamMatchStats.totalBonus ? 
-                            matchTeamStats.homeTeamMatchStats.name : 
-                            matchTeamStats.awayTeamMatchStats.totalBonus > matchTeamStats.homeTeamMatchStats.totalBonus ?
-                            matchTeamStats.awayTeamMatchStats.name : 'Tie'}
-                        </div>
-                        <div className="text-sm text-gray-600">More Bonus Points</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {matchTeamStats.homeTeamMatchStats.totalBonus} - {matchTeamStats.awayTeamMatchStats.totalBonus}
-                        </div>
-                      </div>
-                      <div className="text-center p-4 bg-indigo-50 rounded-lg">
-                        <div className="text-lg font-bold text-indigo-600">
-                          {matchTeamStats.homeTeamMatchStats.totalBPS > matchTeamStats.awayTeamMatchStats.totalBPS ? 
-                            matchTeamStats.homeTeamMatchStats.name : 
-                            matchTeamStats.awayTeamMatchStats.totalBPS > matchTeamStats.homeTeamMatchStats.totalBPS ?
-                            matchTeamStats.awayTeamMatchStats.name : 'Tie'}
-                        </div>
-                        <div className="text-sm text-gray-600">Higher BPS</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {matchTeamStats.homeTeamMatchStats.totalBPS} - {matchTeamStats.awayTeamMatchStats.totalBPS}
-                        </div>
-                      </div>
-                      <div className="text-center p-4 bg-teal-50 rounded-lg">
-                        <div className="text-lg font-bold text-teal-600">
-                          {matchTeamStats.homeTeamMatchStats.totalICTIndex > matchTeamStats.awayTeamMatchStats.totalICTIndex ? 
-                            matchTeamStats.homeTeamMatchStats.name : 
-                            matchTeamStats.awayTeamMatchStats.totalICTIndex > matchTeamStats.homeTeamMatchStats.totalICTIndex ?
-                            matchTeamStats.awayTeamMatchStats.name : 'Tie'}
-                        </div>
-                        <div className="text-sm text-gray-600">Higher ICT Index</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {matchTeamStats.homeTeamMatchStats.totalICTIndex.toFixed(1)} - {matchTeamStats.awayTeamMatchStats.totalICTIndex.toFixed(1)}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             ) : (
               <div className="text-center py-12">
