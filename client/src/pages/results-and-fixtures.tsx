@@ -500,29 +500,29 @@ export default function ResultsAndFixtures() {
 
       <div className="fpl-section-spacing">
         {/* Statistics Overview */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <Card>
-            <CardContent className="p-3 sm:p-4 text-center">
-              <div className="text-xl sm:text-2xl font-bold text-blue-600">{stats.total}</div>
-              <div className="text-xs sm:text-sm text-gray-600">Total Matches</div>
+            <CardContent className="p-2 sm:p-4 text-center">
+              <div className="text-lg sm:text-2xl font-bold text-blue-600">{stats.total}</div>
+              <div className="text-[10px] sm:text-sm text-gray-600">Total Matches</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-3 sm:p-4 text-center">
-              <div className="text-xl sm:text-2xl font-bold text-green-600">{stats.completed}</div>
-              <div className="text-xs sm:text-sm text-gray-600">Completed</div>
+            <CardContent className="p-2 sm:p-4 text-center">
+              <div className="text-lg sm:text-2xl font-bold text-green-600">{stats.completed}</div>
+              <div className="text-[10px] sm:text-sm text-gray-600">Completed</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-3 sm:p-4 text-center">
-              <div className="text-xl sm:text-2xl font-bold text-orange-600">{stats.live}</div>
-              <div className="text-xs sm:text-sm text-gray-600">Live</div>
+            <CardContent className="p-2 sm:p-4 text-center">
+              <div className="text-lg sm:text-2xl font-bold text-orange-600">{stats.live}</div>
+              <div className="text-[10px] sm:text-sm text-gray-600">Live</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-3 sm:p-4 text-center">
-              <div className="text-xl sm:text-2xl font-bold text-gray-600">{stats.upcoming}</div>
-              <div className="text-xs sm:text-sm text-gray-600">Upcoming</div>
+            <CardContent className="p-2 sm:p-4 text-center">
+              <div className="text-lg sm:text-2xl font-bold text-gray-600">{stats.upcoming}</div>
+              <div className="text-[10px] sm:text-sm text-gray-600">Upcoming</div>
             </CardContent>
           </Card>
         </div>
