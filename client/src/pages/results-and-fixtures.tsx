@@ -1112,267 +1112,310 @@ export default function ResultsAndFixtures() {
                 <span className="ml-3 text-gray-600">Loading match statistics...</span>
               </div>
             ) : matchStats ? (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Match Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center justify-center gap-4 p-4 bg-gray-900 text-white rounded-lg">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">
+                    <div className="text-lg font-bold">
                       {selectedMatch?.homeTeam?.name}
                     </div>
-                    <div className="text-3xl font-bold mt-2">
-                      {selectedMatch?.team_h_score}
-                    </div>
-                  </div>
-                  <div className="text-center flex items-center justify-center">
-                    <div className="text-gray-600">Final Score</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">
+                    <div className="text-3xl font-bold px-6 py-2 bg-gray-800 rounded-lg">
+                      {selectedMatch?.team_h_score} - {selectedMatch?.team_a_score}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold">
                       {selectedMatch?.awayTeam?.name}
                     </div>
-                    <div className="text-3xl font-bold mt-2">
-                      {selectedMatch?.team_a_score}
-                    </div>
                   </div>
                 </div>
 
-                {/* Player Statistics Tables */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Home Team Stats */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <Home className="h-5 w-5 text-blue-500" />
-                      {selectedMatch?.homeTeam?.name} Players
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-gray-50">
-                            <th className="p-2 text-left">Player</th>
-                            <th className="p-2 text-center">Pts</th>
-                            <th className="p-2 text-center">G</th>
-                            <th className="p-2 text-center">A</th>
-                            <th className="p-2 text-center">Min</th>
-                            <th className="p-2 text-center">Saves</th>
-                            <th className="p-2 text-center">BPS</th>
-                            <th className="p-2 text-center">YC</th>
-                            <th className="p-2 text-center">RC</th>
-                            <th className="p-2 text-center">Bonus</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {matchStats.homeTeamStats.map((player) => (
-                            <tr key={player.playerId} className="border-b hover:bg-gray-50">
-                              <td className="p-2">
-                                <div>
-                                  <div className="font-medium">{player.playerName}</div>
-                                  <div className="text-xs text-gray-500">{player.position}</div>
-                                </div>
-                              </td>
-                              <td className="p-2 text-center font-bold">{player.total_points}</td>
-                              <td className="p-2 text-center">
-                                {player.goals_scored > 0 && (
-                                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                    {player.goals_scored}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="p-2 text-center">
-                                {player.assists > 0 && (
-                                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                                    {player.assists}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="p-2 text-center text-gray-600">{player.minutes}'</td>
-                              <td className="p-2 text-center">
-                                {player.saves > 0 && (
-                                  <Badge variant="secondary" className="bg-cyan-100 text-cyan-800">
-                                    {player.saves}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="p-2 text-center">
-                                {player.bps > 0 && (
-                                  <Badge variant="secondary" className="bg-indigo-100 text-indigo-800">
-                                    {player.bps}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="p-2 text-center">
-                                {player.yellow_cards > 0 && (
-                                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                                    {player.yellow_cards}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="p-2 text-center">
-                                {player.red_cards > 0 && (
-                                  <Badge variant="secondary" className="bg-red-100 text-red-800">
-                                    {player.red_cards}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="p-2 text-center">
-                                {player.bonus > 0 && (
-                                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                                    {player.bonus}
-                                  </Badge>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                {/* Categorized Player Statistics */}
+                <div className="space-y-3">
+                  {/* Goals Scored Section */}
+                  {(() => {
+                    const homeGoalScorers = matchStats.homeTeamStats.filter(p => p.goals_scored > 0).sort((a, b) => b.goals_scored - a.goals_scored);
+                    const awayGoalScorers = matchStats.awayTeamStats.filter(p => p.goals_scored > 0).sort((a, b) => b.goals_scored - a.goals_scored);
+                    if (homeGoalScorers.length === 0 && awayGoalScorers.length === 0) return null;
+                    
+                    const getGoalPoints = (goals: number, position: string) => {
+                      if (position === 'FWD') return goals * 4;
+                      if (position === 'MID') return goals * 5;
+                      if (position === 'DEF') return goals * 6;
+                      if (position === 'GKP') return goals * 6;
+                      return goals * 4;
+                    };
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Goals scored
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeGoalScorers.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  +{getGoalPoints(player.goals_scored, player.position)}
+                                </span>
+                                <span className="text-sm">{player.playerName} {player.goals_scored > 1 ? `(${player.goals_scored})` : ''}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {awayGoalScorers.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  +{getGoalPoints(player.goals_scored, player.position)}
+                                </span>
+                                <span className="text-sm">{player.playerName} {player.goals_scored > 1 ? `(${player.goals_scored})` : ''}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
-                  {/* Away Team Stats */}
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <Plane className="h-5 w-5 text-gray-500" />
-                      {selectedMatch?.awayTeam?.name} Players
-                    </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b bg-gray-50">
-                            <th className="p-2 text-left">Player</th>
-                            <th className="p-2 text-center">Pts</th>
-                            <th className="p-2 text-center">G</th>
-                            <th className="p-2 text-center">A</th>
-                            <th className="p-2 text-center">Min</th>
-                            <th className="p-2 text-center">Saves</th>
-                            <th className="p-2 text-center">BPS</th>
-                            <th className="p-2 text-center">YC</th>
-                            <th className="p-2 text-center">RC</th>
-                            <th className="p-2 text-center">Bonus</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {matchStats.awayTeamStats.map((player) => (
-                            <tr key={player.playerId} className="border-b hover:bg-gray-50">
-                              <td className="p-2">
-                                <div>
-                                  <div className="font-medium">{player.playerName}</div>
-                                  <div className="text-xs text-gray-500">{player.position}</div>
-                                </div>
-                              </td>
-                              <td className="p-2 text-center font-bold">{player.total_points}</td>
-                              <td className="p-2 text-center">
-                                {player.goals_scored > 0 && (
-                                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                    {player.goals_scored}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="p-2 text-center">
-                                {player.assists > 0 && (
-                                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                                    {player.assists}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="p-2 text-center text-gray-600">{player.minutes}'</td>
-                              <td className="p-2 text-center">
-                                {player.saves > 0 && (
-                                  <Badge variant="secondary" className="bg-cyan-100 text-cyan-800">
-                                    {player.saves}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="p-2 text-center">
-                                {player.bps > 0 && (
-                                  <Badge variant="secondary" className="bg-indigo-100 text-indigo-800">
-                                    {player.bps}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="p-2 text-center">
-                                {player.yellow_cards > 0 && (
-                                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                                    {player.yellow_cards}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="p-2 text-center">
-                                {player.red_cards > 0 && (
-                                  <Badge variant="secondary" className="bg-red-100 text-red-800">
-                                    {player.red_cards}
-                                  </Badge>
-                                )}
-                              </td>
-                              <td className="p-2 text-center">
-                                {player.bonus > 0 && (
-                                  <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                                    {player.bonus}
-                                  </Badge>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
+                  {/* Assists Section */}
+                  {(() => {
+                    const homeAssistProviders = matchStats.homeTeamStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists);
+                    const awayAssistProviders = matchStats.awayTeamStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists);
+                    if (homeAssistProviders.length === 0 && awayAssistProviders.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Assists
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeAssistProviders.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  +{player.assists * 3}
+                                </span>
+                                <span className="text-sm">{player.playerName} {player.assists > 1 ? `(${player.assists})` : ''}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {awayAssistProviders.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  +{player.assists * 3}
+                                </span>
+                                <span className="text-sm">{player.playerName} {player.assists > 1 ? `(${player.assists})` : ''}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
-                {/* Additional Stats */}
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <div className="text-2xl font-bold text-green-600">
-                        {matchStats.homeTeamStats.reduce((sum, p) => sum + p.goals_scored, 0) + 
-                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.goals_scored, 0)}
+                  {/* Yellow Cards Section */}
+                  {(() => {
+                    const homeYellowCards = matchStats.homeTeamStats.filter(p => p.yellow_cards > 0);
+                    const awayYellowCards = matchStats.awayTeamStats.filter(p => p.yellow_cards > 0);
+                    if (homeYellowCards.length === 0 && awayYellowCards.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Yellow cards
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeYellowCards.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-red-500 text-white text-xs font-bold rounded px-1">
+                                  -1
+                                </span>
+                                <span className="text-sm">{player.playerName}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {awayYellowCards.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-red-500 text-white text-xs font-bold rounded px-1">
+                                  -1
+                                </span>
+                                <span className="text-sm">{player.playerName}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600">Total Goals</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {matchStats.homeTeamStats.reduce((sum, p) => sum + p.assists, 0) + 
-                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.assists, 0)}
+                    );
+                  })()}
+
+                  {/* Red Cards Section */}
+                  {(() => {
+                    const homeRedCards = matchStats.homeTeamStats.filter(p => p.red_cards > 0);
+                    const awayRedCards = matchStats.awayTeamStats.filter(p => p.red_cards > 0);
+                    if (homeRedCards.length === 0 && awayRedCards.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Red cards
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeRedCards.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-red-500 text-white text-xs font-bold rounded px-1">
+                                  -3
+                                </span>
+                                <span className="text-sm">{player.playerName}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {awayRedCards.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-red-500 text-white text-xs font-bold rounded px-1">
+                                  -3
+                                </span>
+                                <span className="text-sm">{player.playerName}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600">Total Assists</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <div className="text-2xl font-bold text-cyan-600">
-                        {matchStats.homeTeamStats.reduce((sum, p) => sum + p.saves, 0) + 
-                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.saves, 0)}
+                    );
+                  })()}
+
+                  {/* Saves Section */}
+                  {(() => {
+                    const homeSaves = matchStats.homeTeamStats.filter(p => p.saves > 0).sort((a, b) => b.saves - a.saves);
+                    const awaySaves = matchStats.awayTeamStats.filter(p => p.saves > 0).sort((a, b) => b.saves - a.saves);
+                    if (homeSaves.length === 0 && awaySaves.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Saves
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeSaves.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  +{Math.floor(player.saves / 3)}
+                                </span>
+                                <span className="text-sm">{player.playerName} ({player.saves})</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {awaySaves.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                  +{Math.floor(player.saves / 3)}
+                                </span>
+                                <span className="text-sm">{player.playerName} ({player.saves})</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600">Total Saves</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <div className="text-2xl font-bold text-indigo-600">
-                        {matchStats.homeTeamStats.reduce((sum, p) => sum + p.bps, 0) + 
-                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.bps, 0)}
+                    );
+                  })()}
+
+                  {/* Bonus Points System Section */}
+                  {(() => {
+                    const homeBPS = matchStats.homeTeamStats.filter(p => p.bps > 0).sort((a, b) => b.bps - a.bps).slice(0, 10);
+                    const awayBPS = matchStats.awayTeamStats.filter(p => p.bps > 0).sort((a, b) => b.bps - a.bps).slice(0, 10);
+                    if (homeBPS.length === 0 && awayBPS.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Bonus Points System
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeBPS.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                {player.bonus > 0 && (
+                                  <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                    +{player.bonus}
+                                  </span>
+                                )}
+                                <span className="text-sm">{player.playerName} ({player.bps})</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1">
+                            {awayBPS.map((player) => (
+                              <div key={player.playerId} className="flex items-center gap-2">
+                                {player.bonus > 0 && (
+                                  <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                    +{player.bonus}
+                                  </span>
+                                )}
+                                <span className="text-sm">{player.playerName} ({player.bps})</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600">Total BPS</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <div className="text-2xl font-bold text-yellow-600">
-                        {matchStats.homeTeamStats.reduce((sum, p) => sum + p.yellow_cards, 0) + 
-                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.yellow_cards, 0)}
+                    );
+                  })()}
+
+                  {/* Defensive Contributions Section */}
+                  {(() => {
+                    const homeDC = matchStats.homeTeamStats.filter(p => (p as any).defensive_contribution > 0).sort((a, b) => (b as any).defensive_contribution - (a as any).defensive_contribution).slice(0, 10);
+                    const awayDC = matchStats.awayTeamStats.filter(p => (p as any).defensive_contribution > 0).sort((a, b) => (b as any).defensive_contribution - (a as any).defensive_contribution).slice(0, 10);
+                    if (homeDC.length === 0 && awayDC.length === 0) return null;
+                    
+                    return (
+                      <div>
+                        <div className="bg-gray-700 text-white text-center py-2 px-4 rounded-lg font-semibold">
+                          Defensive Contributions
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mt-2 px-4">
+                          <div className="space-y-1">
+                            {homeDC.map((player) => {
+                              const dc = (player as any).defensive_contribution || 0;
+                              const dcPoints = (player.position === 'DEF' || player.position === 'GKP') && dc >= 10 ? 2 : (player.position === 'MID' || player.position === 'FWD') && dc >= 12 ? 2 : 0;
+                              return (
+                                <div key={player.playerId} className="flex items-center gap-2">
+                                  {dcPoints > 0 && (
+                                    <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                      +{dcPoints}
+                                    </span>
+                                  )}
+                                  <span className="text-sm">{player.playerName} ({dc})</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="space-y-1">
+                            {awayDC.map((player) => {
+                              const dc = (player as any).defensive_contribution || 0;
+                              const dcPoints = (player.position === 'DEF' || player.position === 'GKP') && dc >= 10 ? 2 : (player.position === 'MID' || player.position === 'FWD') && dc >= 12 ? 2 : 0;
+                              return (
+                                <div key={player.playerId} className="flex items-center gap-2">
+                                  {dcPoints > 0 && (
+                                    <span className="inline-flex items-center justify-center w-8 h-6 bg-green-500 text-white text-xs font-bold rounded px-1">
+                                      +{dcPoints}
+                                    </span>
+                                  )}
+                                  <span className="text-sm">{player.playerName} ({dc})</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600">Yellow Cards</div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4 text-center">
-                      <div className="text-2xl font-bold text-red-600">
-                        {matchStats.homeTeamStats.reduce((sum, p) => sum + p.red_cards, 0) + 
-                         matchStats.awayTeamStats.reduce((sum, p) => sum + p.red_cards, 0)}
-                      </div>
-                      <div className="text-sm text-gray-600">Red Cards</div>
-                    </CardContent>
-                  </Card>
+                    );
+                  })()}
                 </div>
               </div>
             ) : (
