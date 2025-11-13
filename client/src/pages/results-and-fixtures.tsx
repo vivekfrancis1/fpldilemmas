@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, Clock, Trophy, Target, Home, Plane, ArrowUpDown, ArrowUp, ArrowDown, X, User, Shield, Star, Zap, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
@@ -67,6 +67,8 @@ export default function ResultsAndFixtures() {
   const [isPlayerStatsOpen, setIsPlayerStatsOpen] = useState(false);
   const [matchStats, setMatchStats] = useState<MatchStats | null>(null);
   const [isLoadingMatchStats, setIsLoadingMatchStats] = useState(false);
+  const [isBackgroundRefresh, setIsBackgroundRefresh] = useState(false);
+  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -193,10 +195,14 @@ export default function ResultsAndFixtures() {
   };
 
   // Fetch match statistics for a specific fixture
-  const fetchMatchStats = async (fixture: any) => {
-    if (!fixture.isResult) return null;
+  const fetchMatchStats = async (fixture: any, isBackgroundUpdate = false) => {
+    if (!fixture.isResult && !fixture.isLive) return null;
     
-    setIsLoadingMatchStats(true);
+    if (!isBackgroundUpdate) {
+      setIsLoadingMatchStats(true);
+    } else {
+      setIsBackgroundRefresh(true);
+    }
     try {
       // Get all players from both teams
       const homeTeamPlayers = bootstrapData?.elements.filter(p => p.team === fixture.team_h) || [];
@@ -302,13 +308,17 @@ export default function ResultsAndFixtures() {
       console.error('Error fetching match stats:', error);
       return null;
     } finally {
-      setIsLoadingMatchStats(false);
+      if (!isBackgroundUpdate) {
+        setIsLoadingMatchStats(false);
+      } else {
+        setIsBackgroundRefresh(false);
+      }
     }
   };
 
   // Handle match click for player stats
   const handleMatchClick = async (fixture: any) => {
-    if (!fixture.isResult) return; // Only allow clicks on completed matches
+    if (!fixture.isResult && !fixture.isLive) return; // Allow clicks on completed and live matches
     
     setSelectedMatch(fixture);
     setIsPlayerStatsOpen(true);
@@ -316,6 +326,45 @@ export default function ResultsAndFixtures() {
     const stats = await fetchMatchStats(fixture);
     setMatchStats(stats);
   };
+
+  // Auto-refresh player stats for live matches
+  useEffect(() => {
+    // Clear any existing interval
+    if (autoRefreshIntervalRef.current) {
+      clearInterval(autoRefreshIntervalRef.current);
+      autoRefreshIntervalRef.current = null;
+    }
+
+    // Only set up auto-refresh if viewing a live match
+    if (isPlayerStatsOpen && selectedMatch && selectedMatch.isLive) {
+      const intervalId = setInterval(async () => {
+        // Check if match is still live before refreshing
+        const currentFixture = processedFixtures.find(f => f.id === selectedMatch.id);
+        if (currentFixture && currentFixture.isLive) {
+          const stats = await fetchMatchStats(selectedMatch, true);
+          if (stats) {
+            setMatchStats(stats);
+          }
+        } else {
+          // Match is no longer live, clear interval
+          if (autoRefreshIntervalRef.current) {
+            clearInterval(autoRefreshIntervalRef.current);
+            autoRefreshIntervalRef.current = null;
+          }
+        }
+      }, 30000); // Refresh every 30 seconds
+
+      autoRefreshIntervalRef.current = intervalId;
+    }
+
+    // Cleanup function
+    return () => {
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current);
+        autoRefreshIntervalRef.current = null;
+      }
+    };
+  }, [isPlayerStatsOpen, selectedMatch, processedFixtures]);
 
   // Get match status badge
   const getStatusBadge = (fixture: any) => {
@@ -489,12 +538,12 @@ export default function ResultsAndFixtures() {
                         <div 
                           key={fixture.id} 
                           className={`p-3 bg-gray-50 rounded-lg transition-colors ${
-                            fixture.isResult 
+                            (fixture.isResult || fixture.isLive)
                               ? 'hover:bg-blue-50 cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500' 
                               : 'hover:bg-gray-100'
                           }`}
-                          onClick={() => fixture.isResult && handleMatchClick(fixture)}
-                          title={fixture.isResult ? 'Click to view match statistics' : ''}
+                          onClick={() => (fixture.isResult || fixture.isLive) && handleMatchClick(fixture)}
+                          title={(fixture.isResult || fixture.isLive) ? 'Click to view match statistics' : ''}
                         >
                           {/* Mobile layout: stacked */}
                           <div className="flex flex-col space-y-2 md:hidden">
@@ -588,8 +637,8 @@ export default function ResultsAndFixtures() {
                               {/* Status */}
                               {getStatusBadge(fixture)}
                               
-                              {/* Click indicator for completed matches */}
-                              {fixture.isResult && (
+                              {/* Click indicator for completed and live matches */}
+                              {(fixture.isResult || fixture.isLive) && (
                                 <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
                                   Player Stats
                                 </Badge>
@@ -609,12 +658,12 @@ export default function ResultsAndFixtures() {
                   <div 
                     key={fixture.id} 
                     className={`p-3 sm:p-4 bg-white border rounded-lg transition-all ${
-                      fixture.isResult 
+                      (fixture.isResult || fixture.isLive)
                         ? 'hover:shadow-md cursor-pointer border-l-4 border-l-transparent hover:border-l-blue-500 hover:bg-blue-50' 
                         : 'hover:shadow-sm'
                     }`}
-                    onClick={() => fixture.isResult && handleMatchClick(fixture)}
-                    title={fixture.isResult ? 'Click to view match statistics' : ''}
+                    onClick={() => (fixture.isResult || fixture.isLive) && handleMatchClick(fixture)}
+                    title={(fixture.isResult || fixture.isLive) ? 'Click to view match statistics' : ''}
                   >
                     {/* Mobile layout: stacked */}
                     <div className="flex flex-col space-y-2 md:hidden">
@@ -710,8 +759,8 @@ export default function ResultsAndFixtures() {
                         {/* Status */}
                         {getStatusBadge(fixture)}
                         
-                        {/* Click indicator for completed matches */}
-                        {fixture.isResult && (
+                        {/* Click indicator for completed and live matches */}
+                        {(fixture.isResult || fixture.isLive) && (
                           <Badge variant="outline" className="text-xs text-blue-600 opacity-70">
                             Player Stats
                           </Badge>
@@ -747,9 +796,16 @@ export default function ResultsAndFixtures() {
                     <span className="text-sm sm:text-base font-medium">
                       {selectedMatch.homeTeam?.short_name} {selectedMatch.team_h_score} - {selectedMatch.team_a_score} {selectedMatch.awayTeam?.short_name}
                     </span>
-                    <Badge variant="outline" className="w-fit text-xs">
-                      GW{selectedMatch.event} - {formatDateTime(selectedMatch.kickoff_time).date}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="w-fit text-xs">
+                        GW{selectedMatch.event} - {formatDateTime(selectedMatch.kickoff_time).date}
+                      </Badge>
+                      {selectedMatch.isLive && (
+                        <Badge variant="secondary" className="bg-red-100 text-red-800 animate-pulse text-xs">
+                          LIVE - Auto-updating every 30s
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 )}
               </DialogTitle>

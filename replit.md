@@ -62,6 +62,7 @@ SEO Optimization: Comprehensive search engine optimization implemented with keyw
 - **Open FPL Projections**: Advanced machine learning projection tool with position-specific ensemble models, multi-horizon forecasting, and hourly updates.
 - **Price Tracker**: Complete FPL API-based system tracking actual price changes.
 - **Results Projections**: Match prediction tool displaying predicted scores, calculated win probabilities, expected goals, and clean sheet odds for future gameweeks only.
+- **Results and Fixtures**: Comprehensive match schedule with LIVE match indicators (animated pulsing badge), clickable player stats for both completed and ongoing matches, and automatic 30-second background refresh of player statistics during live matches. Player Stats modal displays categorized performance data (Goals, Assists, Cards, Saves, BPS, DC) with FPL points, LIVE indicator showing "Auto-updating every 30s", and smart interval management that stops refreshing when matches finish.
 - **Historical Data**: Year selection functionality for player statistics from 2016/17 season onwards.
 - **Defensive Contribution Analytics**: Integration of new FPL API defensive data points and comprehensive projection model using attacking tier system for fixture-aware variance calculations.
 - **Historical Player Stats Database**: Comprehensive PostgreSQL table with complete historical data for all players across 9 seasons (2016/17-2024/25).
