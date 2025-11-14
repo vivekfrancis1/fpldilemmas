@@ -2379,7 +2379,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transferRecommendations.sort((a, b) => b.pointsGain - a.pointsGain);
         
         // Select N primary transfers where N = number of free transfers for this gameweek
-        const primaryTransfers = transferRecommendations.slice(0, freeTransfersForGW);
+        // Important: Primary transfers must not conflict with each other
+        const primaryTransfers: any[] = [];
+        const selectedOutIds = new Set<number>();
+        const selectedInIds = new Set<number>();
+        
+        for (const transfer of transferRecommendations) {
+          if (primaryTransfers.length >= freeTransfersForGW) break;
+          
+          // Check if this transfer conflicts with already selected primaries
+          const conflictsWithSelected = 
+            selectedOutIds.has(transfer.playerOut.id) || 
+            selectedInIds.has(transfer.playerIn.id);
+          
+          if (!conflictsWithSelected) {
+            primaryTransfers.push(transfer);
+            selectedOutIds.add(transfer.playerOut.id);
+            selectedInIds.add(transfer.playerIn.id);
+          }
+        }
         
         console.log(`DEBUG GW${targetGW}: ${freeTransfersForGW} free transfer${freeTransfersForGW !== 1 ? 's' : ''} available`);
         primaryTransfers.forEach((transfer, index) => {
@@ -2389,19 +2407,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Filter out conflicting transfers: remove recommendations that conflict with ANY of the primary transfers
         let filteredRecommendations = transferRecommendations;
         if (primaryTransfers.length > 0) {
-          // Build sets of players involved in primary transfers
-          const primaryTransferredOutIds = new Set(primaryTransfers.map(t => t.playerOut.id));
-          const primaryTransferredInIds = new Set(primaryTransfers.map(t => t.playerIn.id));
+          // Build sets of players involved in primary transfers (already done above as selectedOutIds/selectedInIds)
           
-          filteredRecommendations = transferRecommendations.filter((rec, index) => {
-            // Keep all primary transfers
-            if (index < freeTransfersForGW) return true;
+          filteredRecommendations = transferRecommendations.filter((rec) => {
+            // Check if this is a primary transfer - if so, keep it
+            const isPrimary = primaryTransfers.some(pt => 
+              pt.playerOut.id === rec.playerOut.id && pt.playerIn.id === rec.playerIn.id
+            );
+            if (isPrimary) return true;
             
             // Filter out transfers that conflict with ANY primary transfer:
             // 1. Don't try to transfer OUT a player who's already been transferred OUT
             // 2. Don't try to transfer IN a player who's already been transferred IN
-            const isTryingToTransferOutSamePlayer = primaryTransferredOutIds.has(rec.playerOut.id);
-            const isTryingToTransferInSamePlayer = primaryTransferredInIds.has(rec.playerIn.id);
+            const isTryingToTransferOutSamePlayer = selectedOutIds.has(rec.playerOut.id);
+            const isTryingToTransferInSamePlayer = selectedInIds.has(rec.playerIn.id);
             
             if (isTryingToTransferOutSamePlayer) {
               console.log(`  FILTERED OUT (player already transferred out): ${rec.playerOut.webName} → ${rec.playerIn.webName}`);
