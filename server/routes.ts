@@ -2255,7 +2255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sellingPrice: currentPrice, // Using current price for simplicity
           purchasePrice: currentPrice,
           elementType: element?.element_type,
-          projectedPoints: projection?.totalProjectedPoints || 0,
+          projectedPoints: projection?.totalExpectedPoints || 0,
           webName: element?.web_name,
           team: element?.team,
           nowCost: currentPrice
@@ -2297,7 +2297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         for (const playerIn of samePositionPlayers) {
           consideredCount++;
           const playerInProjection = projectionsByPlayerId.get(playerIn.id);
-          const playerInPoints = playerInProjection?.totalProjectedPoints || 0;
+          const playerInPoints = playerInProjection?.totalExpectedPoints || 0;
           
           // Calculate cost and check budget
           const transferCost = playerIn.now_cost - playerOut.sellingPrice;
