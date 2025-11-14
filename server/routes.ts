@@ -2364,11 +2364,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (playerIn.now_cost <= budget) {
               const pointsGain = playerInPoints - playerOut.projectedPoints;
               
-              // Minimum point gain = 0.7 points per remaining gameweek
-              // For GW12 (GW12-17 = 6 remaining): min 4.2 points
-              // For GW13 (GW13-17 = 5 remaining): min 3.5 points, etc.
+              // Minimum point gain threshold that scales based on free transfers available
+              // More FTs = lower threshold to allow using all transfers
+              // 1-2 FTs: 0.7 points per gameweek (strict)
+              // 3-4 FTs: 0.4 points per gameweek (moderate)
+              // 5 FTs: 0.2 points per gameweek (lenient, use all transfers)
               const remainingGameweeks = planningEnd - targetGW + 1;
-              const minPointsGain = remainingGameweeks * 0.7;
+              const baseThreshold = freeTransfersForGW >= 5 ? 0.2 : 
+                                   freeTransfersForGW >= 3 ? 0.4 : 0.7;
+              const minPointsGain = remainingGameweeks * baseThreshold;
               
               if (pointsGain >= minPointsGain) {
                 transferRecommendations.push({
