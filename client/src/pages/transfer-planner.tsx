@@ -5362,7 +5362,7 @@ export default function TransferPlanner() {
           </CardHeader>
           <CardContent>
             <div className="text-xs text-muted-foreground mb-2 italic">
-              Sell prices are calculated estimates. Click the pencil icon to enter actual Buy prices to get exact sell prices.
+              Click on the player to transfer or swap or set as captain
             </div>
 
             {/* View Toggle - Hidden on mobile */}
