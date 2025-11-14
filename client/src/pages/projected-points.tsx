@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, Heart, XCircle, Clock, Sparkles, DollarSign, ArrowRightLeft, TrendingDown } from "lucide-react";
+import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, Heart, XCircle, Clock, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -228,57 +228,6 @@ export default function ProjectedPoints() {
     staleTime: 10 * 60 * 1000,
   });
 
-  // Fetch recommended transfers
-  const { data: recommendedTransfers, isLoading: isLoadingRecommendations, error: recommendationsError } = useQuery<any>({
-    queryKey: ["/api/manager", searchedId, "recommended-transfers"],
-    enabled: !!searchedId,
-    staleTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
-  // Memoized calculation of budget and free transfers timeline for each gameweek
-  const gameweekFinances = useMemo(() => {
-    if (!recommendedTransfers?.gameweeks) return {};
-
-    const gameweeks = Object.keys(recommendedTransfers.gameweeks).sort((a, b) => parseInt(a) - parseInt(b));
-    const finances: Record<string, { cashBefore: number; cashAfter: number; ftsAvailable: number }> = {};
-    
-    let acc = {
-      bank: recommendedTransfers.bank || 0,
-      freeTransfers: recommendedTransfers.freeTransfers || 1
-    };
-
-    gameweeks.forEach((gw, index) => {
-      const gwData = recommendedTransfers.gameweeks[gw];
-      const primaryRec = gwData.recommendations?.[0];
-      
-      // Use API-provided values for bankBefore and freeTransfersAvailable
-      const cashBefore = gwData.bankBefore ?? acc.bank;
-      const cashAfter = primaryRec?.budgetAfter ?? acc.bank;
-      const ftsAvailable = gwData.freeTransfersAvailable ?? acc.freeTransfers;
-      
-      finances[gw] = { cashBefore, cashAfter, ftsAvailable };
-      
-      // Update accumulator for next gameweek
-      acc = {
-        bank: cashAfter,
-        freeTransfers: Math.min(2, Math.max(0, acc.freeTransfers - 1) + 1)
-      };
-    });
-
-    return finances;
-  }, [recommendedTransfers]);
-
-  // Debug logging
-  useEffect(() => {
-    console.log("🔍 Recommended Transfers Debug:", {
-      searchedId,
-      hasRecommendations: !!recommendedTransfers,
-      recommendations: recommendedTransfers,
-      isLoading: isLoadingRecommendations,
-      error: recommendationsError
-    });
-  }, [searchedId, recommendedTransfers, isLoadingRecommendations, recommendationsError]);
 
   // Initialize manual lineup when team data loads
   useEffect(() => {
@@ -1231,194 +1180,6 @@ export default function ProjectedPoints() {
           ) : null;
         })()}
 
-        {/* Transfer Recommendations */}
-        {recommendedTransfers && recommendedTransfers.gameweeks && Object.keys(recommendedTransfers.gameweeks).length > 0 && (
-          <Card className="border-orange-200 bg-gradient-to-br from-orange-50/50 to-white">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
-                Transfer Recommendations
-              </CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
-                Maximize your projected points for remaining gameweeks
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue={Object.keys(recommendedTransfers.gameweeks)[0]} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto mb-4">
-                  {Object.keys(recommendedTransfers.gameweeks).map((gw) => (
-                    <TabsTrigger key={gw} value={gw} className="text-xs sm:text-sm py-2 sm:py-2.5" data-testid={`tab-transfer-gw-${gw}`}>
-                      GW{gw}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                {Object.entries(recommendedTransfers.gameweeks).map(([gw, gwData]: [string, any]) => {
-                  const finances = gameweekFinances[gw];
-                  return (
-                  <TabsContent key={gw} value={gw} className="space-y-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                      <div className="text-xs sm:text-sm text-gray-600">
-                        <strong>Target:</strong> Maximize points for {gwData.targetRange}
-                      </div>
-                      {finances && (
-                        <div className="flex gap-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg px-4 py-2">
-                          <div className="flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-green-600" />
-                            <div>
-                              <div className="text-[10px] text-gray-500">Cash in Bank</div>
-                              <div className="text-sm font-bold text-green-700">£{(finances.cashBefore / 10).toFixed(1)}m</div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 border-l border-green-300 pl-4">
-                            <ArrowRightLeft className="h-4 w-4 text-green-600" />
-                            <div>
-                              <div className="text-[10px] text-gray-500">Free Transfers</div>
-                              <div className="text-sm font-bold text-green-700">{finances.ftsAvailable}</div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    {gwData.recommendations && gwData.recommendations.length > 0 ? (
-                      <div className="space-y-4">
-                        {/* Primary Transfer Recommendations (based on free transfers available) */}
-                        {(() => {
-                          const freeTransfers = gwData.freeTransfersAvailable || 1;
-                          const primaryTransfers = gwData.recommendations.slice(0, freeTransfers);
-                          const otherTransfers = gwData.recommendations.slice(freeTransfers);
-                          
-                          return (
-                            <>
-                              {primaryTransfers.length > 0 && (
-                                <div>
-                                  <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                                    Primary Transfer Recommendation{primaryTransfers.length > 1 ? 's' : ''}
-                                  </h3>
-                                  <div className="space-y-3">
-                                    {primaryTransfers.map((rec: any, index: number) => (
-                                      <div
-                                        key={`${rec.playerOut.id}-${rec.playerIn.id}`}
-                                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-orange-50 to-white border-2 border-orange-300 rounded-lg shadow-sm"
-                                        data-testid={`transfer-recommendation-gw${gw}-${index}`}
-                                      >
-                                        <div className="flex-1 w-full sm:w-auto mb-3 sm:mb-0">
-                                          <div className="flex items-center gap-2 mb-2">
-                                            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
-                                              OUT
-                                            </Badge>
-                                            <TrendingDown className="h-3 w-3 text-red-500" />
-                                            <span className="text-sm font-medium text-gray-900">{rec.playerOut.webName}</span>
-                                            <span className="text-xs text-gray-500">
-                                              ({rec.playerOut.projectedPoints.toFixed(1)} pts)
-                                            </span>
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                                              IN
-                                            </Badge>
-                                            <TrendingUp className="h-3 w-3 text-green-500" />
-                                            <span className="text-sm font-medium text-gray-900">{rec.playerIn.webName}</span>
-                                            <span className="text-xs text-gray-500">
-                                              ({rec.playerIn.projectedPoints.toFixed(1)} pts)
-                                            </span>
-                                          </div>
-                                        </div>
-                                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                          <div className="text-right">
-                                            <div className="text-xs text-gray-500">Points Gain</div>
-                                            <div className="text-lg font-bold text-green-600">+{rec.pointsGain.toFixed(1)}</div>
-                                          </div>
-                                          <div className="text-right">
-                                            <div className="text-xs text-gray-500">Cost</div>
-                                            <div className={`text-sm font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                              {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
-                                            </div>
-                                          </div>
-                                          <div className="text-right">
-                                            <div className="text-xs text-gray-500">ITB After</div>
-                                            <div className="text-sm font-medium text-gray-700">
-                                              £{(rec.budgetAfter / 10).toFixed(1)}m
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Other Transfer Recommendations */}
-                              {otherTransfers.length > 0 && (
-                                <div>
-                                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Other Transfer Recommendations</h3>
-                                  <div className="space-y-3">
-                                    {otherTransfers.map((rec: any, index: number) => (
-                                      <div
-                                        key={`${rec.playerOut.id}-${rec.playerIn.id}`}
-                                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-white border border-orange-100 rounded-lg hover:border-orange-300 transition-colors"
-                                        data-testid={`transfer-recommendation-gw${gw}-${freeTransfers + index}`}
-                                      >
-                                        <div className="flex-1 w-full sm:w-auto mb-3 sm:mb-0">
-                                          <div className="flex items-center gap-2 mb-2">
-                                            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
-                                              OUT
-                                            </Badge>
-                                            <TrendingDown className="h-3 w-3 text-red-500" />
-                                            <span className="text-sm font-medium text-gray-900">{rec.playerOut.webName}</span>
-                                            <span className="text-xs text-gray-500">
-                                              ({rec.playerOut.projectedPoints.toFixed(1)} pts)
-                                            </span>
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                                              IN
-                                            </Badge>
-                                            <TrendingUp className="h-3 w-3 text-green-500" />
-                                            <span className="text-sm font-medium text-gray-900">{rec.playerIn.webName}</span>
-                                            <span className="text-xs text-gray-500">
-                                              ({rec.playerIn.projectedPoints.toFixed(1)} pts)
-                                            </span>
-                                          </div>
-                                        </div>
-                                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                          <div className="text-right">
-                                            <div className="text-xs text-gray-500">Points Gain</div>
-                                            <div className="text-lg font-bold text-green-600">+{rec.pointsGain.toFixed(1)}</div>
-                                          </div>
-                                          <div className="text-right">
-                                            <div className="text-xs text-gray-500">Cost</div>
-                                            <div className={`text-sm font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                              {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
-                                            </div>
-                                          </div>
-                                          <div className="text-right">
-                                            <div className="text-xs text-gray-500">ITB After</div>
-                                            <div className="text-sm font-medium text-gray-700">
-                                              £{(rec.budgetAfter / 10).toFixed(1)}m
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-gray-500 text-sm">
-                        No transfer recommendations for this gameweek
-                      </div>
-                    )}
-                  </TabsContent>
-                  );
-                })}
-              </Tabs>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
