@@ -2337,11 +2337,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (playerIn.now_cost <= budget) {
               const pointsGain = playerInPoints - playerOut.projectedPoints;
               
-              // Minimum point gain = 0.5 points per remaining gameweek
-              // For GW12 (GW12-17 = 6 remaining): min 3 points
-              // For GW13 (GW13-17 = 5 remaining): min 2.5 points, etc.
+              // Minimum point gain = 0.7 points per remaining gameweek
+              // For GW12 (GW12-17 = 6 remaining): min 4.2 points
+              // For GW13 (GW13-17 = 5 remaining): min 3.5 points, etc.
               const remainingGameweeks = planningEnd - targetGW + 1;
-              const minPointsGain = remainingGameweeks * 0.5;
+              const minPointsGain = remainingGameweeks * 0.7;
               
               if (pointsGain >= minPointsGain) {
                 transferRecommendations.push({
