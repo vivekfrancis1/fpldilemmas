@@ -2272,6 +2272,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recommendationsByGameweek: any = {};
       const executedTransfers: any[] = []; // Track primary transfers that have been executed
       
+      // Track running bank balance across gameweeks (mutable)
+      let runningBank = bank;
+      
       console.log(`DEBUG: Calculating recommendations from GW${planningStart} to GW${planningEnd}`);
       
       for (let targetGW = planningStart; targetGW <= planningEnd; targetGW++) {
@@ -2313,6 +2316,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
         
+        // Initialize running bank balance for this gameweek
+        let currentBank = runningBank;
+        
         // Calculate transfer recommendations for this gameweek
         const transferRecommendations: any[] = [];
         
@@ -2338,7 +2344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const playerInPoints = playerInProjection?.totalExpectedPoints || 0;
             
             const transferCost = playerIn.now_cost - playerOut.sellingPrice;
-            const budget = bank + playerOut.sellingPrice;
+            const budget = currentBank + playerOut.sellingPrice;
             
             if (playerIn.now_cost <= budget) {
               const pointsGain = playerInPoints - playerOut.projectedPoints;
@@ -2380,6 +2386,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Select N primary transfers where N = number of free transfers for this gameweek
         // Important: Primary transfers must not conflict with each other
+        // Process them sequentially to update budgetAfter based on running bank balance
         const primaryTransfers: any[] = [];
         const selectedOutIds = new Set<number>();
         const selectedInIds = new Set<number>();
@@ -2393,9 +2400,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             selectedInIds.has(transfer.playerIn.id);
           
           if (!conflictsWithSelected) {
-            primaryTransfers.push(transfer);
+            // Recalculate budgetAfter based on current running bank balance
+            const budgetBefore = currentBank;
+            const netChange = transfer.playerOut.sellingPrice - transfer.playerIn.nowCost;
+            const budgetAfter = budgetBefore + netChange;
+            
+            // Create updated transfer with correct budgetAfter
+            const updatedTransfer = {
+              ...transfer,
+              budgetAfter: budgetAfter
+            };
+            
+            primaryTransfers.push(updatedTransfer);
             selectedOutIds.add(transfer.playerOut.id);
             selectedInIds.add(transfer.playerIn.id);
+            
+            // Update running bank balance for next primary transfer
+            currentBank = budgetAfter;
           }
         }
         
@@ -2404,16 +2425,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`  Primary ${index + 1}: ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.pointsGain.toFixed(2)} pts)`);
         });
         
-        // Filter out conflicting transfers: remove recommendations that conflict with ANY of the primary transfers
+        // Create a map of updated primary transfers for efficient lookup
+        const primaryTransferMap = new Map(
+          primaryTransfers.map(pt => [`${pt.playerOut.id}-${pt.playerIn.id}`, pt])
+        );
+        
+        // Filter out conflicting transfers and update budgetAfter for "other" transfers
+        // to reflect the bank balance after all primary transfers
         let filteredRecommendations = transferRecommendations;
         if (primaryTransfers.length > 0) {
-          // Build sets of players involved in primary transfers (already done above as selectedOutIds/selectedInIds)
-          
           filteredRecommendations = transferRecommendations.filter((rec) => {
-            // Check if this is a primary transfer - if so, keep it
-            const isPrimary = primaryTransfers.some(pt => 
-              pt.playerOut.id === rec.playerOut.id && pt.playerIn.id === rec.playerIn.id
-            );
+            // Check if this is a primary transfer using the map
+            const transferKey = `${rec.playerOut.id}-${rec.playerIn.id}`;
+            const isPrimary = primaryTransferMap.has(transferKey);
             if (isPrimary) return true;
             
             // Filter out transfers that conflict with ANY primary transfer:
@@ -2430,6 +2454,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             return !isTryingToTransferOutSamePlayer && !isTryingToTransferInSamePlayer;
+          }).map((rec) => {
+            // For primary transfers, return the updated version from the map
+            const transferKey = `${rec.playerOut.id}-${rec.playerIn.id}`;
+            const updatedPrimary = primaryTransferMap.get(transferKey);
+            
+            if (updatedPrimary) {
+              // Return the budget-corrected primary transfer
+              return updatedPrimary;
+            } else {
+              // Recalculate budgetAfter for "other" transfers using the final currentBank
+              const budgetBeforeThisTransfer = currentBank + rec.playerOut.sellingPrice;
+              const budgetAfterThisTransfer = budgetBeforeThisTransfer - rec.playerIn.nowCost;
+              return {
+                ...rec,
+                budgetAfter: budgetAfterThisTransfer
+              };
+            }
           });
         }
         
@@ -2463,6 +2504,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             console.log(`  Executed: ${primaryTransfer.playerOut.webName} OUT → ${primaryTransfer.playerIn.webName} IN`);
           });
+          
+          // Update running bank for next gameweek to reflect final balance after all primaries
+          runningBank = currentBank;
         }
       }
       
