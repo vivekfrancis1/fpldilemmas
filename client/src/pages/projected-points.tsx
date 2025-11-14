@@ -1306,12 +1306,12 @@ export default function ProjectedPoints() {
                           </div>
                         )}
 
-                        {/* Other Transfer Recommendations (2nd to 4th) */}
+                        {/* Other Transfer Recommendations (all beyond the first) */}
                         {gwData.recommendations.length > 1 && (
                           <div>
                             <h3 className="text-sm font-semibold text-gray-700 mb-2">Other Transfer Recommendations</h3>
                             <div className="space-y-3">
-                              {gwData.recommendations.slice(1, 4).map((rec: any, index: number) => (
+                              {gwData.recommendations.slice(1).map((rec: any, index: number) => (
                                 <div
                                   key={`${rec.playerOut.id}-${rec.playerIn.id}`}
                                   className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-white border border-orange-100 rounded-lg hover:border-orange-300 transition-colors"

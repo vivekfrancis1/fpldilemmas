@@ -2328,12 +2328,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
         
-        // Sort and take top 5 for this gameweek
+        // Sort by point gain (descending) - no limit, show all that meet minimum threshold
         transferRecommendations.sort((a, b) => b.pointsGain - a.pointsGain);
         recommendationsByGameweek[targetGW] = {
           gameweek: targetGW,
           targetRange: `GW${targetGW}-${nextGWEnd}`,
-          recommendations: transferRecommendations.slice(0, 5)
+          recommendations: transferRecommendations
         };
         
         console.log(`DEBUG: GW${targetGW}: Found ${transferRecommendations.length} transfer opportunities`);
