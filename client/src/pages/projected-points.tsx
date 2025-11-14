@@ -1231,13 +1231,13 @@ export default function ProjectedPoints() {
           ) : null;
         })()}
 
-        {/* Recommended Transfers */}
+        {/* Transfer Recommendations */}
         {recommendedTransfers && recommendedTransfers.gameweeks && Object.keys(recommendedTransfers.gameweeks).length > 0 && (
           <Card className="border-orange-200 bg-gradient-to-br from-orange-50/50 to-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
-                Recommended Transfers
+                Transfer Recommendations
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm">
                 Maximize your projected points for remaining gameweeks
