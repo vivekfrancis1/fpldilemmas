@@ -308,7 +308,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState(initialPositionFilter);
   const [teamFilter, setTeamFilter] = useState("all");
-  const [loadGroupFilter, setLoadGroupFilter] = useState("All");
+  const [loadGroupFilter, setLoadGroupFilter] = useState("Top 50");
   const [sortField, setSortField] = useState<string>('total');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [minPrice, setMinPrice] = useState<number>(4.0);
