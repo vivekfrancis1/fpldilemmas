@@ -2371,13 +2371,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Sort by point gain (descending) - no limit, show all that meet minimum threshold
         transferRecommendations.sort((a, b) => b.pointsGain - a.pointsGain);
+        
+        // Filter out conflicting transfers: if primary transfer is A→B, remove all recommendations that involve:
+        // 1. Transferring out B (the player we just brought in)
+        // 2. Transferring in A (the player we just transferred out)
+        let filteredRecommendations = transferRecommendations;
+        if (transferRecommendations.length > 0) {
+          const primaryTransfer = transferRecommendations[0];
+          console.log(`DEBUG GW${targetGW}: Primary transfer - OUT: ${primaryTransfer.playerOut.webName} (ID: ${primaryTransfer.playerOut.id}), IN: ${primaryTransfer.playerIn.webName} (ID: ${primaryTransfer.playerIn.id})`);
+          
+          filteredRecommendations = transferRecommendations.filter((rec, index) => {
+            // Keep the primary transfer (index 0)
+            if (index === 0) return true;
+            
+            // Filter out transfers that conflict with the primary transfer:
+            // 1. Don't try to transfer OUT a player who's already been transferred OUT
+            // 2. Don't try to transfer IN a player who's already been transferred IN
+            const isTryingToTransferOutSamePlayer = rec.playerOut.id === primaryTransfer.playerOut.id;
+            const isTryingToTransferInSamePlayer = rec.playerIn.id === primaryTransfer.playerIn.id;
+            
+            if (isTryingToTransferOutSamePlayer) {
+              console.log(`  FILTERED OUT (player already transferred out): ${rec.playerOut.webName} → ${rec.playerIn.webName}`);
+            }
+            if (isTryingToTransferInSamePlayer) {
+              console.log(`  FILTERED OUT (player already transferred in): ${rec.playerOut.webName} → ${rec.playerIn.webName}`);
+            }
+            
+            return !isTryingToTransferOutSamePlayer && !isTryingToTransferInSamePlayer;
+          });
+        }
+        
         recommendationsByGameweek[targetGW] = {
           gameweek: targetGW,
           targetRange: `GW${targetGW}-${planningEnd}`,
-          recommendations: transferRecommendations
+          recommendations: filteredRecommendations
         };
         
-        console.log(`DEBUG: GW${targetGW}: Found ${transferRecommendations.length} transfer opportunities`);
+        console.log(`DEBUG: GW${targetGW}: Found ${transferRecommendations.length} transfer opportunities, ${filteredRecommendations.length} after filtering conflicts`);
         
         // If there's at least one recommendation, assume the primary (first) one is executed
         // This affects future gameweeks' recommendations
