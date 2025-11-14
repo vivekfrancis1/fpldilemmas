@@ -229,12 +229,23 @@ export default function ProjectedPoints() {
   });
 
   // Fetch recommended transfers
-  const { data: recommendedTransfers, isLoading: isLoadingRecommendations } = useQuery<any>({
+  const { data: recommendedTransfers, isLoading: isLoadingRecommendations, error: recommendationsError } = useQuery<any>({
     queryKey: ["/api/manager", searchedId, "recommended-transfers"],
     enabled: !!searchedId,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  // Debug logging
+  useEffect(() => {
+    console.log("🔍 Recommended Transfers Debug:", {
+      searchedId,
+      hasRecommendations: !!recommendedTransfers,
+      recommendations: recommendedTransfers,
+      isLoading: isLoadingRecommendations,
+      error: recommendationsError
+    });
+  }, [searchedId, recommendedTransfers, isLoadingRecommendations, recommendationsError]);
 
   // Initialize manual lineup when team data loads
   useEffect(() => {

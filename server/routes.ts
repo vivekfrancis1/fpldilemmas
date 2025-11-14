@@ -2241,20 +2241,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const projectionsByPlayerId = new Map(projectionsData.map((p: any) => [p.playerId, p]));
       const elementsByPlayerId = new Map(bootstrapData.elements.map((p: any) => [p.id, p]));
       
-      // Get current team players with their selling prices
+      // Get current team players with their prices
+      // Note: Using current price as both buy and sell for simplicity
+      // In reality, selling price = purchase price + half the profit
       const currentTeam = teamData.picks.map((pick: any) => {
         const element = elementsByPlayerId.get(pick.element);
         const projection = projectionsByPlayerId.get(pick.element);
+        const currentPrice = element?.now_cost || 0;
+        
         return {
           id: pick.element,
           position: pick.position,
-          sellingPrice: pick.selling_price,
-          purchasePrice: pick.purchase_price || pick.selling_price,
+          sellingPrice: currentPrice, // Using current price for simplicity
+          purchasePrice: currentPrice,
           elementType: element?.element_type,
           projectedPoints: projection?.totalProjectedPoints || 0,
           webName: element?.web_name,
           team: element?.team,
-          nowCost: element?.now_cost
+          nowCost: currentPrice
         };
       });
       
@@ -2269,16 +2273,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Calculate all possible single transfers
       const transferRecommendations: any[] = [];
+      const currentTeamIds = new Set(currentTeam.map((p: any) => p.id));
+      
+      console.log(`DEBUG: Analyzing ${currentTeam.length} players in current team for transfer opportunities`);
       
       for (const playerOut of currentTeam) {
-        // Get all players of the same position
+        // Get all players of the same position who aren't already in the team
         const samePositionPlayers = bootstrapData.elements.filter((p: any) => 
           p.element_type === playerOut.elementType && 
-          p.id !== playerOut.id &&
+          !currentTeamIds.has(p.id) && // Not already in the team
           p.status === 'a' // Only available players
         );
         
+        let consideredCount = 0;
+        let affordableCount = 0;
+        let pointsGainCount = 0;
+        
         for (const playerIn of samePositionPlayers) {
+          consideredCount++;
           const playerInProjection = projectionsByPlayerId.get(playerIn.id);
           const playerInPoints = playerInProjection?.totalProjectedPoints || 0;
           
@@ -2287,10 +2299,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const budget = bank + playerOut.sellingPrice;
           
           if (playerIn.now_cost <= budget) {
+            affordableCount++;
             const pointsGain = playerInPoints - playerOut.projectedPoints;
             
             // Only recommend if there's significant points gain
             if (pointsGain > 0.5) {
+              pointsGainCount++;
               transferRecommendations.push({
                 playerOut: {
                   id: playerOut.id,
@@ -2313,6 +2327,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
             }
           }
+        }
+        
+        if (consideredCount > 0 && transferRecommendations.length === 0) {
+          console.log(`DEBUG: Player ${playerOut.webName} (${playerOut.projectedPoints.toFixed(1)} pts): Considered ${consideredCount}, Affordable ${affordableCount}, Points gain ${pointsGainCount}`);
         }
       }
       
