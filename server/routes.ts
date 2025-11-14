@@ -2195,6 +2195,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGW = bootstrapData.events.find((event: any) => event.is_current);
       const currentGameweek = currentGW?.id || 1;
       
+      console.log(`DEBUG: Current gameweek detected: ${currentGameweek} (is_current: ${currentGW?.is_current}, finished: ${currentGW?.finished})`);
+      
       // Get team data
       const teamResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
       if (!teamResponse.ok) {
