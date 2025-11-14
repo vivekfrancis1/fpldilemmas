@@ -2224,19 +2224,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const mostRecentGW = historyData.current?.[historyData.current.length - 1];
       const bank = entryData.last_deadline_bank || 0;
       
-      // Calculate free transfers for next gameweek
-      // If no history exists (season start or API loading), default to 1 FT
-      // If 0 transfers were made in the most recent GW, you get 2 FTs (1 rolled over + 1 new)
-      // If 1+ transfers were made, you get 1 FT (new one only)
-      // Max 2 FTs can accumulate
-      let freeTransfers = 1; // Default
-      let transfersMadeLastGW = 0;
-      if (mostRecentGW && mostRecentGW.event === currentGameweek) {
-        transfersMadeLastGW = mostRecentGW.event_transfers || 0;
-        freeTransfers = transfersMadeLastGW === 0 ? 2 : 1;
+      // Calculate free transfers for next gameweek (NEW 2024/25 RULE: Max 5 FTs)
+      // Start with 1 FT and look back through history to count accumulated unused transfers
+      let freeTransfers = 1; // Start with base 1 FT
+      
+      if (historyData.current && historyData.current.length > 0) {
+        // Look back through recent gameweeks to calculate accumulated FTs
+        // Start from the current/most recent GW and work backwards
+        let accumulatedFTs = 1; // Start with 1 new FT for next gameweek
+        
+        // Look back through history (up to 4 previous gameweeks since max is 5 FTs)
+        for (let i = historyData.current.length - 1; i >= Math.max(0, historyData.current.length - 4); i--) {
+          const gw = historyData.current[i];
+          const transfersMade = gw.event_transfers || 0;
+          
+          if (transfersMade === 0 && accumulatedFTs < 5) {
+            // No transfers made, so 1 FT was banked
+            accumulatedFTs++;
+          } else if (transfersMade > 0) {
+            // Transfers were made, stop looking back
+            break;
+          }
+        }
+        
+        freeTransfers = Math.min(5, accumulatedFTs); // Cap at 5
       }
       
-      console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Transfers made in GW${teamDataGameweek}: ${transfersMadeLastGW}, Free transfers for next planning GW: ${freeTransfers}`);
+      console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Free transfers calculated for next planning GW: ${freeTransfers}`);
       
       // Calculate the range of gameweeks to analyze (next 6 gameweeks)
       // If current GW is finished, start from next GW
@@ -2275,7 +2289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Track running bank balance across gameweeks (mutable)
       let runningBank = bank;
       
-      // Track running free transfers across gameweeks with banking logic (max 2)
+      // Track running free transfers across gameweeks with banking logic (max 5 in 2024/25)
       let runningFreeTransfers = freeTransfers;
       
       console.log(`DEBUG: Calculating recommendations from GW${planningStart} to GW${planningEnd}`);
@@ -2512,10 +2526,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Update free transfers for next gameweek with banking logic
-        // Formula: (current FTs - transfers used) + 1 new FT, capped at max 2
+        // Formula: (current FTs - transfers used) + 1 new FT, capped at max 5 (2024/25 rule)
         const transfersUsedThisGW = primaryTransfers.length;
         const unusedFTs = Math.max(0, freeTransfersForGW - transfersUsedThisGW);
-        runningFreeTransfers = Math.min(2, unusedFTs + 1);
+        runningFreeTransfers = Math.min(5, unusedFTs + 1);
         
         console.log(`DEBUG: GW${targetGW} FT update: Had ${freeTransfersForGW}, used ${transfersUsedThisGW}, banking ${unusedFTs}, next GW will have ${runningFreeTransfers}`);
       }
