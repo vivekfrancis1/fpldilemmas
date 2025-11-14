@@ -2229,6 +2229,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const nextGWStart = Math.min(currentGameweek + 1, 38); // Start from next gameweek
       const nextGWEnd = Math.min(nextGWStart + 5, 38); // 6 gameweeks total (e.g., GW12-17)
       
+      console.log(`DEBUG: Gameweek range calculation - currentGameweek: ${currentGameweek}, nextGWStart: ${nextGWStart}, nextGWEnd: ${nextGWEnd}`);
+      
       // If we're at the end of the season
       if (nextGWStart > 38 || nextGWStart > nextGWEnd) {
         console.log(`DEBUG: End of season reached (GW${currentGameweek}), no transfers to recommend`);
@@ -2241,7 +2243,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const elementsByPlayerId = new Map(bootstrapData.elements.map((p: any) => [p.id, p]));
-      let currentTeamIds = new Set(teamData.picks.map((p: any) => p.element));
+      
+      // Initialize team composition - convert array to array of player IDs with position info
+      let currentTeamComposition = teamData.picks.map((pick: any) => ({
+        playerId: pick.element,
+        position: pick.position,
+        elementType: elementsByPlayerId.get(pick.element)?.element_type
+      }));
       
       // Calculate recommendations for each target gameweek
       const recommendationsByGameweek: any = {};
@@ -2260,18 +2268,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const projectionsData = await projectionsResponse.json();
         const projectionsByPlayerId = new Map(projectionsData.map((p: any) => [p.playerId, p]));
         
+        // Build current team IDs from the current composition
+        const currentTeamIds = new Set(currentTeamComposition.map(p => p.playerId));
+        
         // Get current team with projections for this range
-        const currentTeam = teamData.picks.map((pick: any) => {
-          const element = elementsByPlayerId.get(pick.element);
-          const projection = projectionsByPlayerId.get(pick.element);
+        const currentTeam = currentTeamComposition.map((pick) => {
+          const element = elementsByPlayerId.get(pick.playerId);
+          const projection = projectionsByPlayerId.get(pick.playerId);
           const currentPrice = element?.now_cost || 0;
           
           return {
-            id: pick.element,
+            id: pick.playerId,
             position: pick.position,
             sellingPrice: currentPrice,
             purchasePrice: currentPrice,
-            elementType: element?.element_type,
+            elementType: pick.elementType,
             projectedPoints: projection?.totalExpectedPoints || 0,
             webName: element?.web_name,
             team: element?.team,
@@ -2357,9 +2368,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const primaryTransfer = transferRecommendations[0];
           executedTransfers.push(primaryTransfer);
           
-          // Update team composition for next gameweek
-          currentTeamIds.delete(primaryTransfer.playerOut.id);
-          currentTeamIds.add(primaryTransfer.playerIn.id);
+          // Update team composition for next gameweek - replace the transferred out player with the transferred in player
+          currentTeamComposition = currentTeamComposition.map(player => {
+            if (player.playerId === primaryTransfer.playerOut.id) {
+              // Replace the transferred out player with the transferred in player
+              return {
+                playerId: primaryTransfer.playerIn.id,
+                position: player.position, // Keep the same squad position
+                elementType: elementsByPlayerId.get(primaryTransfer.playerIn.id)?.element_type
+              };
+            }
+            return player;
+          });
           
           console.log(`DEBUG: GW${targetGW} primary transfer executed: ${primaryTransfer.playerOut.webName} OUT → ${primaryTransfer.playerIn.webName} IN`);
         }
