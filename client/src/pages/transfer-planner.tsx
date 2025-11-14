@@ -2494,9 +2494,17 @@ export default function TransferPlanner() {
     const currentGW = currentEvent?.id || 1;
     const firstPlanningGW = currentGW + 1;
     
-    // For the first gameweek in planning, use the base from API
+    // For the first gameweek in planning, calculate based on transfers made in current GW
     if (selectedGameweek === firstPlanningGW) {
-      return teamData.transfers.limit || 1;
+      // If no history exists (season start or API loading), default to 1 FT
+      // If 0 transfers were made in the current GW, you get 2 FTs (1 rolled over + 1 new)
+      // If 1+ transfers were made, you get 1 FT (new one only)
+      const currentGWHistory = historyData?.current?.find((h: any) => h.event === currentGW);
+      if (!currentGWHistory) {
+        return 1; // Default when no history available
+      }
+      const transfersMadeCurrentGW = currentGWHistory.event_transfers || 0;
+      return transfersMadeCurrentGW === 0 ? 2 : 1;
     }
     
     // For subsequent gameweeks: Initial for GW_N = max(1, min(5, 1 + Transfers remaining for GW_(N-1)))

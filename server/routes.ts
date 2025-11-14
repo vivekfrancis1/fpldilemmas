@@ -2223,11 +2223,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bank = entryData.last_deadline_bank || 0;
       
       // Calculate free transfers for next gameweek
+      // If no history exists (season start or API loading), default to 1 FT
       // If 0 transfers were made in the most recent GW, you get 2 FTs (1 rolled over + 1 new)
       // If 1+ transfers were made, you get 1 FT (new one only)
       // Max 2 FTs can accumulate
-      const transfersMadeLastGW = mostRecentGW?.event_transfers || 0;
-      const freeTransfers = transfersMadeLastGW === 0 ? 2 : 1;
+      let freeTransfers = 1; // Default
+      let transfersMadeLastGW = 0;
+      if (mostRecentGW && mostRecentGW.event === currentGameweek) {
+        transfersMadeLastGW = mostRecentGW.event_transfers || 0;
+        freeTransfers = transfersMadeLastGW === 0 ? 2 : 1;
+      }
       
       console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Transfers made in GW${currentGameweek}: ${transfersMadeLastGW}, Free transfers for GW${currentGameweek + 1}: ${freeTransfers}`);
       
