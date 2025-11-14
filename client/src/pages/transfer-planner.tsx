@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
@@ -1008,6 +1009,11 @@ export default function TransferPlanner() {
   
   // Chip planning state
   const [plannedChips, setPlannedChips] = useState<PlannedChips>({});
+  
+  // Collapsible sections state - default to collapsed
+  const [isChipsPlanningOpen, setIsChipsPlanningOpen] = useState(false);
+  const [isTeamEvolutionOpen, setIsTeamEvolutionOpen] = useState(false);
+  const [isDraftComparisonOpen, setIsDraftComparisonOpen] = useState(false);
   
   // Track chip changes for autosave (to avoid saving on initial load or draft switch)
   const chipChangeForAutosaveRef = useRef(false);
