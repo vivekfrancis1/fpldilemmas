@@ -4768,36 +4768,55 @@ export default function TransferPlanner() {
 
       {/* Chips Planning */}
       {searchedId && teamData && selectedGameweek && (
-        <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background">
-          <CardHeader className="pb-2 md:pb-4">
-            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-              <Sparkles className="h-4 w-4 md:h-5 md:w-5 text-amber-600" />
-              <span>Chips Planning</span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="inline-flex items-center">
-                      <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="w-80 p-4">
-                    <div className="space-y-2 text-sm">
-                      <p className="font-semibold">About FPL Chips:</p>
-                      <p>Each chip can be used twice per season. Plan ahead to maximize their impact!</p>
-                      <div className="border-t pt-2 mt-2 space-y-1">
-                        <p className="font-semibold text-xs">Chip Availability Windows:</p>
-                        <ul className="text-xs space-y-0.5 pl-3 list-disc">
-                          <li>First set of chips must be used before GW 19</li>
-                          <li>Second set of chips available from GW 20 onwards</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 md:space-y-4 pt-2 md:pt-4">
+        <Collapsible open={isChipsPlanningOpen} onOpenChange={setIsChipsPlanningOpen}>
+          <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background">
+            <CardHeader className="pb-2 md:pb-4">
+              <div className="flex items-start justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg" data-testid="text-chips-planning-title">
+                  <Sparkles className="h-4 w-4 md:h-5 md:w-5 text-amber-600" />
+                  <span>Chips Planning</span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button className="inline-flex items-center">
+                          <Info className="h-4 w-4 text-muted-foreground cursor-help" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="w-80 p-4">
+                        <div className="space-y-2 text-sm">
+                          <p className="font-semibold">About FPL Chips:</p>
+                          <p>Each chip can be used twice per season. Plan ahead to maximize their impact!</p>
+                          <div className="border-t pt-2 mt-2 space-y-1">
+                            <p className="font-semibold text-xs">Chip Availability Windows:</p>
+                            <ul className="text-xs space-y-0.5 pl-3 list-disc">
+                              <li>First set of chips must be used before GW 19</li>
+                              <li>Second set of chips available from GW 20 onwards</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </CardTitle>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900"
+                    data-testid="button-toggle-chips-planning"
+                  >
+                    {isChipsPlanningOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent className="space-y-3 md:space-y-4 pt-2 md:pt-4" data-testid="section-chips-planning">
             {/* Important Chip Information */}
             <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
               <Info className="h-4 w-4 text-blue-600" />
@@ -4994,8 +5013,10 @@ export default function TransferPlanner() {
                 </div>
               </div>
             )}
-          </CardContent>
-        </Card>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* Team Summary Stats */}
