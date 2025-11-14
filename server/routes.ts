@@ -2191,14 +2191,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const bootstrapData = await bootstrapResponse.json();
       
-      // Get current gameweek
+      // Get current gameweek and determine planning start
       const currentGW = bootstrapData.events.find((event: any) => event.is_current);
       const currentGameweek = currentGW?.id || 1;
+      const isCurrentGWFinished = currentGW?.finished || false;
       
-      console.log(`DEBUG: Current gameweek detected: ${currentGameweek} (is_current: ${currentGW?.is_current}, finished: ${currentGW?.finished})`);
+      console.log(`DEBUG: Current gameweek detected: ${currentGameweek} (is_current: ${currentGW?.is_current}, finished: ${isCurrentGWFinished})`);
       
-      // Get team data
-      const teamResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
+      // Get team data - use previous GW if current hasn't started yet
+      const teamDataGameweek = isCurrentGWFinished ? currentGameweek : Math.max(1, currentGameweek - 1);
+      const teamResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${teamDataGameweek}/picks/`);
       if (!teamResponse.ok) {
         throw new Error("Failed to fetch team data");
       }
@@ -2234,16 +2236,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         freeTransfers = transfersMadeLastGW === 0 ? 2 : 1;
       }
       
-      console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Transfers made in GW${currentGameweek}: ${transfersMadeLastGW}, Free transfers for GW${currentGameweek + 1}: ${freeTransfers}`);
+      console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Transfers made in GW${teamDataGameweek}: ${transfersMadeLastGW}, Free transfers for next planning GW: ${freeTransfers}`);
       
       // Calculate the range of gameweeks to analyze (next 6 gameweeks)
-      const nextGWStart = Math.min(currentGameweek + 1, 38); // Start from next gameweek
-      const nextGWEnd = Math.min(nextGWStart + 5, 38); // 6 gameweeks total (e.g., GW12-17)
+      // If current GW is finished, start from next GW
+      // If current GW is not finished (between GWs), start from current GW (it's the next one to play)
+      const planningStart = isCurrentGWFinished 
+        ? Math.min(currentGameweek + 1, 38)
+        : Math.min(currentGameweek, 38);
+      const planningEnd = Math.min(planningStart + 5, 38);
       
-      console.log(`DEBUG: Gameweek range calculation - currentGameweek: ${currentGameweek}, nextGWStart: ${nextGWStart}, nextGWEnd: ${nextGWEnd}`);
+      console.log(`DEBUG: Gameweek range - currentGW: ${currentGameweek}, finished: ${isCurrentGWFinished}, planningStart: ${planningStart}, planningEnd: ${planningEnd} (6 gameweeks)`);
       
       // If we're at the end of the season
-      if (nextGWStart > 38 || nextGWStart > nextGWEnd) {
+      if (planningStart > 38 || planningStart > planningEnd) {
         console.log(`DEBUG: End of season reached (GW${currentGameweek}), no transfers to recommend`);
         return res.json({
           currentGameweek,
@@ -2266,14 +2272,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recommendationsByGameweek: any = {};
       const executedTransfers: any[] = []; // Track primary transfers that have been executed
       
-      console.log(`DEBUG: Calculating recommendations from GW${nextGWStart} to GW${nextGWEnd}`);
+      console.log(`DEBUG: Calculating recommendations from GW${planningStart} to GW${planningEnd}`);
       
-      for (let targetGW = nextGWStart; targetGW <= nextGWEnd; targetGW++) {
+      for (let targetGW = planningStart; targetGW <= planningEnd; targetGW++) {
         console.log(`DEBUG: Processing GW${targetGW}...`);
-        // Fetch projections for this specific range (targetGW to nextGWEnd)
-        const projectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${targetGW}&endGameweek=${nextGWEnd}`);
+        // Fetch projections for this specific range (targetGW to planningEnd)
+        const projectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${targetGW}&endGameweek=${planningEnd}`);
         if (!projectionsResponse.ok) {
-          console.error(`Failed to fetch projections for GW${targetGW}-${nextGWEnd}`);
+          console.error(`Failed to fetch projections for GW${targetGW}-${planningEnd}`);
           continue;
         }
         const projectionsData = await projectionsResponse.json();
@@ -2334,7 +2340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Minimum point gain = 1 point per remaining gameweek
               // For GW12 (GW12-17 = 6 remaining): min 6 points
               // For GW13 (GW13-17 = 5 remaining): min 5 points, etc.
-              const remainingGameweeks = nextGWEnd - targetGW + 1;
+              const remainingGameweeks = planningEnd - targetGW + 1;
               const minPointsGain = remainingGameweeks;
               
               if (pointsGain >= minPointsGain) {
@@ -2367,7 +2373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transferRecommendations.sort((a, b) => b.pointsGain - a.pointsGain);
         recommendationsByGameweek[targetGW] = {
           gameweek: targetGW,
-          targetRange: `GW${targetGW}-${nextGWEnd}`,
+          targetRange: `GW${targetGW}-${planningEnd}`,
           recommendations: transferRecommendations
         };
         
