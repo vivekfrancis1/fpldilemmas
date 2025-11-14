@@ -2436,6 +2436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recommendationsByGameweek[targetGW] = {
           gameweek: targetGW,
           targetRange: `GW${targetGW}-${planningEnd}`,
+          freeTransfersAvailable: freeTransfersForGW,
           recommendations: filteredRecommendations
         };
         

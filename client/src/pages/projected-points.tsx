@@ -1284,7 +1284,7 @@ export default function ProjectedPoints() {
                       <div className="space-y-4">
                         {/* Primary Transfer Recommendations (based on free transfers available) */}
                         {(() => {
-                          const freeTransfers = finances?.ftsAvailable || 1;
+                          const freeTransfers = gwData.freeTransfersAvailable || 1;
                           const primaryTransfers = gwData.recommendations.slice(0, freeTransfers);
                           const otherTransfers = gwData.recommendations.slice(freeTransfers);
                           
