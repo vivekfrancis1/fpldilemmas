@@ -2241,10 +2241,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const elementsByPlayerId = new Map(bootstrapData.elements.map((p: any) => [p.id, p]));
-      const currentTeamIds = new Set(teamData.picks.map((p: any) => p.element));
+      let currentTeamIds = new Set(teamData.picks.map((p: any) => p.element));
       
       // Calculate recommendations for each target gameweek
       const recommendationsByGameweek: any = {};
+      const executedTransfers: any[] = []; // Track primary transfers that have been executed
       
       console.log(`DEBUG: Calculating recommendations from GW${nextGWStart} to GW${nextGWEnd}`);
       
@@ -2281,11 +2282,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate transfer recommendations for this gameweek
         const transferRecommendations: any[] = [];
         
+        // Get IDs of players involved in previous primary transfers
+        const previouslyTransferredOutIds = new Set(executedTransfers.map(t => t.playerOut.id));
+        const previouslyTransferredInIds = new Set(executedTransfers.map(t => t.playerIn.id));
+        
         for (const playerOut of currentTeam) {
+          // Skip if this player was transferred IN during a previous gameweek
+          if (previouslyTransferredInIds.has(playerOut.id)) {
+            continue;
+          }
+          
           const samePositionPlayers = bootstrapData.elements.filter((p: any) => 
             p.element_type === playerOut.elementType && 
             !currentTeamIds.has(p.id) &&
-            p.status === 'a'
+            p.status === 'a' &&
+            !previouslyTransferredOutIds.has(p.id) // Don't recommend players that were transferred OUT in previous GWs
           );
           
           for (const playerIn of samePositionPlayers) {
@@ -2339,6 +2350,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         
         console.log(`DEBUG: GW${targetGW}: Found ${transferRecommendations.length} transfer opportunities`);
+        
+        // If there's at least one recommendation, assume the primary (first) one is executed
+        // This affects future gameweeks' recommendations
+        if (transferRecommendations.length > 0) {
+          const primaryTransfer = transferRecommendations[0];
+          executedTransfers.push(primaryTransfer);
+          
+          // Update team composition for next gameweek
+          currentTeamIds.delete(primaryTransfer.playerOut.id);
+          currentTeamIds.add(primaryTransfer.playerIn.id);
+          
+          console.log(`DEBUG: GW${targetGW} primary transfer executed: ${primaryTransfer.playerOut.webName} OUT → ${primaryTransfer.playerIn.webName} IN`);
+        }
       }
       
       res.json({
