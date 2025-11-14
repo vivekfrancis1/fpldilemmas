@@ -2494,17 +2494,29 @@ export default function TransferPlanner() {
     const currentGW = currentEvent?.id || 1;
     const firstPlanningGW = currentGW + 1;
     
-    // For the first gameweek in planning, calculate based on transfers made in current GW
+    // For the first gameweek in planning, calculate based on historical transfer accumulation (NEW 2024/25 RULE: Max 5 FTs)
     if (selectedGameweek === firstPlanningGW) {
-      // If no history exists (season start or API loading), default to 1 FT
-      // If 0 transfers were made in the current GW, you get 2 FTs (1 rolled over + 1 new)
-      // If 1+ transfers were made, you get 1 FT (new one only)
-      const currentGWHistory = historyData?.current?.find((h: any) => h.event === currentGW);
-      if (!currentGWHistory) {
-        return 1; // Default when no history available
+      // Start with 1 FT and look back through history to count accumulated unused transfers
+      let accumulatedFTs = 1;
+      
+      if (historyData?.current && historyData.current.length > 0) {
+        // Look back through recent gameweeks to calculate accumulated FTs
+        // Start from the current/most recent GW and work backwards (up to 4 previous GWs since max is 5 FTs)
+        for (let i = historyData.current.length - 1; i >= Math.max(0, historyData.current.length - 4); i--) {
+          const gw = historyData.current[i];
+          const transfersMade = gw.event_transfers || 0;
+          
+          if (transfersMade === 0 && accumulatedFTs < 5) {
+            // No transfers made, so 1 FT was banked
+            accumulatedFTs++;
+          } else if (transfersMade > 0) {
+            // Transfers were made, stop looking back
+            break;
+          }
+        }
       }
-      const transfersMadeCurrentGW = currentGWHistory.event_transfers || 0;
-      return transfersMadeCurrentGW === 0 ? 2 : 1;
+      
+      return Math.min(5, accumulatedFTs); // Cap at 5
     }
     
     // For subsequent gameweeks: Initial for GW_N = max(1, min(5, 1 + Transfers remaining for GW_(N-1)))
