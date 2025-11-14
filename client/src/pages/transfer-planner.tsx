@@ -7185,13 +7185,15 @@ export default function TransferPlanner() {
 
       {/* Team Evolution Section - Shows for both Manual and Auto modes */}
       {searchedId && teamData && selectedGameweek && (
-        <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-background">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-indigo-600" />
-                {activeDraft === "Base" ? "Team Evolution - Base Draft" : `Team Evolution - Draft ${activeDraft}`}
-              </div>
+        <Collapsible open={isTeamEvolutionOpen} onOpenChange={setIsTeamEvolutionOpen}>
+          <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-background">
+            <CardHeader>
+              <div className="flex items-start justify-between gap-2">
+                <CardTitle className="flex items-center justify-between flex-1" data-testid="text-team-evolution-title">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-indigo-600" />
+                    {activeDraft === "Base" ? "Team Evolution - Base Draft" : `Team Evolution - Draft ${activeDraft}`}
+                  </div>
               {(() => {
                 const currentChip = plannedChips[selectedGameweek];
                 if (currentChip) {
@@ -7219,12 +7221,29 @@ export default function TransferPlanner() {
                 }
                 return null;
               })()}
-            </CardTitle>
-            <CardDescription>
-              Horizontal scrollable view showing how your team evolves across the next 6 gameweeks with all planned transfers
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+                </CardTitle>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-full text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900"
+                    data-testid="button-toggle-team-evolution"
+                  >
+                    {isTeamEvolutionOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
+              </div>
+              <CardDescription>
+                Horizontal scrollable view showing how your team evolves across the next 6 gameweeks with all planned transfers
+              </CardDescription>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent data-testid="section-team-evolution">
             <div className="overflow-x-auto pb-4">
               <div className="flex gap-4 min-w-max">
                 {/* Base Column */}
@@ -7421,21 +7440,25 @@ export default function TransferPlanner() {
                 <strong>Chip Active</strong>
               </p>
             </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
 
       {/* Draft Comparison Table */}
       {searchedId && teamData && playerProjections && playerProjections6GW && (
-        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
-          <CardHeader>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5 text-blue-600" />
-                  Draft Comparison
-                </CardTitle>
+        <Collapsible open={isDraftComparisonOpen} onOpenChange={setIsDraftComparisonOpen}>
+          <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
+            <CardHeader>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2" data-testid="text-draft-comparison-title">
+                    <Target className="h-5 w-5 text-blue-600" />
+                    Draft Comparison
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
                 {(() => {
                   const duplicateInfo = identifyDuplicateDrafts();
                   const duplicateCount = Object.values(duplicateInfo).filter(info => info.isDuplicate).length;
@@ -7456,9 +7479,25 @@ export default function TransferPlanner() {
                   }
                   return null;
                 })()}
-              </div>
-              
-              {/* Filter Buttons */}
+                    <CollapsibleTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900"
+                        data-testid="button-toggle-draft-comparison"
+                      >
+                        {isDraftComparisonOpen ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </CollapsibleTrigger>
+                  </div>
+                </div>
+                
+                {/* Filter Buttons */}
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Show:</span>
                 <div className="flex gap-1">
@@ -7491,9 +7530,10 @@ export default function TransferPlanner() {
                   </Button>
                 </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
+              </div>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent data-testid="section-draft-comparison">
             {(() => {
               const comparisonData = buildDraftComparisonData();
               const nextGWs = getNextGameweeks();
@@ -7719,8 +7759,10 @@ export default function TransferPlanner() {
               <p><strong>Auto:</strong> Optimized lineup with best formation and captain for maximum points.</p>
               <p><Sparkles className="h-3 w-3 inline mr-1 text-amber-600" /><strong>Chip Badges:</strong> 3xC (Triple Captain), BB (Bench Boost), FH (Free Hit), WC (Wildcard)</p>
             </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* Projected Points Section */}
