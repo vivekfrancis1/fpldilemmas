@@ -2262,6 +2262,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
+      console.log(`DEBUG: Created current team with ${currentTeam.length} players`);
+      console.log(`DEBUG: Sample player:`, currentTeam[0]);
+      
       // Group current team by position
       const teamByPosition: { [key: number]: any[] } = {};
       currentTeam.forEach(player => {
@@ -2270,6 +2273,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         teamByPosition[player.elementType].push(player);
       });
+      
+      console.log(`DEBUG: Grouped team by position:`, Object.keys(teamByPosition).map(k => `${k}: ${teamByPosition[k].length}`));
       
       // Calculate all possible single transfers
       const transferRecommendations: any[] = [];
