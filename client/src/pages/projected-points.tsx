@@ -236,6 +236,40 @@ export default function ProjectedPoints() {
     refetchOnWindowFocus: false,
   });
 
+  // Memoized calculation of budget and free transfers timeline for each gameweek
+  const gameweekFinances = useMemo(() => {
+    if (!recommendedTransfers?.gameweeks) return {};
+
+    const gameweeks = Object.keys(recommendedTransfers.gameweeks).sort((a, b) => parseInt(a) - parseInt(b));
+    const finances: Record<string, { cashBefore: number; cashAfter: number; ftsAvailable: number }> = {};
+    
+    let acc = {
+      bank: recommendedTransfers.bank || 0,
+      freeTransfers: recommendedTransfers.freeTransfers || 1
+    };
+
+    gameweeks.forEach((gw, index) => {
+      const gwData = recommendedTransfers.gameweeks[gw];
+      const primaryRec = gwData.recommendations?.[0];
+      
+      const cashBefore = acc.bank;
+      const cashAfter = primaryRec?.budgetAfter ?? acc.bank;
+      const ftsAvailable = index === 0 
+        ? acc.freeTransfers 
+        : Math.min(2, Math.max(0, acc.freeTransfers - 1) + 1);
+      
+      finances[gw] = { cashBefore, cashAfter, ftsAvailable };
+      
+      // Update accumulator for next gameweek
+      acc = {
+        bank: cashAfter,
+        freeTransfers: Math.min(2, Math.max(0, acc.freeTransfers - 1) + 1)
+      };
+    });
+
+    return finances;
+  }, [recommendedTransfers]);
+
   // Debug logging
   useEffect(() => {
     console.log("🔍 Recommended Transfers Debug:", {
@@ -1198,34 +1232,6 @@ export default function ProjectedPoints() {
           ) : null;
         })()}
 
-        {/* Cash in Bank & Transfers Available */}
-        {teamData && (
-          <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                Team Budget{recommendedTransfers?.gameweeks && Object.keys(recommendedTransfers.gameweeks).length > 0 ? ` (GW${Object.keys(recommendedTransfers.gameweeks)[0]})` : ''}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs sm:text-sm text-gray-600 mb-1">Cash in Bank</div>
-                  <div className="text-xl sm:text-2xl font-bold text-green-700">
-                    £{((recommendedTransfers?.bank || teamData.transfers?.bank || 0) / 10).toFixed(1)}m
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs sm:text-sm text-gray-600 mb-1">Free Transfers</div>
-                  <div className="text-xl sm:text-2xl font-bold text-green-700">
-                    {recommendedTransfers?.freeTransfers || 1}
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Recommended Transfers */}
         {recommendedTransfers && recommendedTransfers.gameweeks && Object.keys(recommendedTransfers.gameweeks).length > 0 && (
           <Card className="border-orange-200 bg-gradient-to-br from-orange-50/50 to-white">
@@ -1247,10 +1253,32 @@ export default function ProjectedPoints() {
                     </TabsTrigger>
                   ))}
                 </TabsList>
-                {Object.entries(recommendedTransfers.gameweeks).map(([gw, gwData]: [string, any]) => (
+                {Object.entries(recommendedTransfers.gameweeks).map(([gw, gwData]: [string, any]) => {
+                  const finances = gameweekFinances[gw];
+                  return (
                   <TabsContent key={gw} value={gw} className="space-y-4">
-                    <div className="text-xs sm:text-sm text-gray-600 mb-3">
-                      <strong>Target:</strong> Maximize points for {gwData.targetRange}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                      <div className="text-xs sm:text-sm text-gray-600">
+                        <strong>Target:</strong> Maximize points for {gwData.targetRange}
+                      </div>
+                      {finances && (
+                        <div className="flex gap-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg px-4 py-2">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-green-600" />
+                            <div>
+                              <div className="text-[10px] text-gray-500">Cash in Bank</div>
+                              <div className="text-sm font-bold text-green-700">£{(finances.cashBefore / 10).toFixed(1)}m</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 border-l border-green-300 pl-4">
+                            <ArrowRightLeft className="h-4 w-4 text-green-600" />
+                            <div>
+                              <div className="text-[10px] text-gray-500">Free Transfers</div>
+                              <div className="text-sm font-bold text-green-700">{finances.ftsAvailable}</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                     {gwData.recommendations && gwData.recommendations.length > 0 ? (
                       <div className="space-y-4">
@@ -1369,7 +1397,8 @@ export default function ProjectedPoints() {
                       </div>
                     )}
                   </TabsContent>
-                ))}
+                  );
+                })}
               </Tabs>
             </CardContent>
           </Card>
