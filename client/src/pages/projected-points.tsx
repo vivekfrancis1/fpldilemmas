@@ -252,11 +252,10 @@ export default function ProjectedPoints() {
       const gwData = recommendedTransfers.gameweeks[gw];
       const primaryRec = gwData.recommendations?.[0];
       
-      const cashBefore = acc.bank;
+      // Use API-provided values for bankBefore and freeTransfersAvailable
+      const cashBefore = gwData.bankBefore ?? acc.bank;
       const cashAfter = primaryRec?.budgetAfter ?? acc.bank;
-      const ftsAvailable = index === 0 
-        ? acc.freeTransfers 
-        : Math.min(2, Math.max(0, acc.freeTransfers - 1) + 1);
+      const ftsAvailable = gwData.freeTransfersAvailable ?? acc.freeTransfers;
       
       finances[gw] = { cashBefore, cashAfter, ftsAvailable };
       
