@@ -2221,9 +2221,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the most recent gameweek data from history
       const mostRecentGW = historyData.current?.[historyData.current.length - 1];
       const bank = entryData.last_deadline_bank || 0;
-      const freeTransfers = mostRecentGW?.event_transfers || 1; // FPL always provides at least 1 free transfer
       
-      console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Free transfers: ${freeTransfers}`);
+      // Calculate free transfers for next gameweek
+      // If 0 transfers were made in the most recent GW, you get 2 FTs (1 rolled over + 1 new)
+      // If 1+ transfers were made, you get 1 FT (new one only)
+      // Max 2 FTs can accumulate
+      const transfersMadeLastGW = mostRecentGW?.event_transfers || 0;
+      const freeTransfers = transfersMadeLastGW === 0 ? 2 : 1;
+      
+      console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Transfers made in GW${currentGameweek}: ${transfersMadeLastGW}, Free transfers for GW${currentGameweek + 1}: ${freeTransfers}`);
       
       // Calculate the range of gameweeks to analyze (next 6 gameweeks)
       const nextGWStart = Math.min(currentGameweek + 1, 38); // Start from next gameweek
