@@ -2166,6 +2166,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Get recommended transfers for next gameweek
   app.get("/api/manager/:managerId/recommended-transfers", async (req, res) => {
+    // Add cache-busting headers to prevent 304 responses
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate, private, max-age=0',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Last-Modified': new Date().toUTCString(),
+      'ETag': `"${Date.now()}"`
+    });
+    
     try {
       const { managerId } = req.params;
       
@@ -2235,7 +2244,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate recommendations for each target gameweek
       const recommendationsByGameweek: any = {};
       
+      console.log(`DEBUG: Calculating recommendations from GW${nextGWStart} to GW${nextGWEnd}`);
+      
       for (let targetGW = nextGWStart; targetGW <= nextGWEnd; targetGW++) {
+        console.log(`DEBUG: Processing GW${targetGW}...`);
         // Fetch projections for this specific range (targetGW to nextGWEnd)
         const projectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${targetGW}&endGameweek=${nextGWEnd}`);
         if (!projectionsResponse.ok) {
