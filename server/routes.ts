@@ -2214,143 +2214,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Free transfers: ${freeTransfers}`);
       
-      // Get player total points projections for next 6 gameweeks
-      // Guard against end-of-season edge cases
+      // Calculate the range of gameweeks to analyze (next 6 gameweeks)
       const nextGWStart = Math.min(currentGameweek + 1, 38);
       const nextGWEnd = Math.min(nextGWStart + 5, 38);
       
-      // If we're at the end of the season, use current gameweek
+      // If we're at the end of the season
       if (nextGWStart > 38 || nextGWStart > nextGWEnd) {
         console.log(`DEBUG: End of season reached (GW${currentGameweek}), no transfers to recommend`);
         return res.json({
           currentGameweek,
-          nextGameweek: currentGameweek,
           bank,
           freeTransfers,
-          recommendations: []
+          gameweeks: {}
         });
       }
       
-      const projectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${nextGWStart}&endGameweek=${nextGWEnd}`);
-      if (!projectionsResponse.ok) {
-        throw new Error("Failed to fetch player projections");
-      }
-      const projectionsData = await projectionsResponse.json();
-      
-      // Create lookup maps
-      const projectionsByPlayerId = new Map(projectionsData.map((p: any) => [p.playerId, p]));
       const elementsByPlayerId = new Map(bootstrapData.elements.map((p: any) => [p.id, p]));
+      const currentTeamIds = new Set(teamData.picks.map((p: any) => p.element));
       
-      // Get current team players with their prices
-      // Note: Using current price as both buy and sell for simplicity
-      // In reality, selling price = purchase price + half the profit
-      const currentTeam = teamData.picks.map((pick: any) => {
-        const element = elementsByPlayerId.get(pick.element);
-        const projection = projectionsByPlayerId.get(pick.element);
-        const currentPrice = element?.now_cost || 0;
-        
-        return {
-          id: pick.element,
-          position: pick.position,
-          sellingPrice: currentPrice, // Using current price for simplicity
-          purchasePrice: currentPrice,
-          elementType: element?.element_type,
-          projectedPoints: projection?.totalExpectedPoints || 0,
-          webName: element?.web_name,
-          team: element?.team,
-          nowCost: currentPrice
-        };
-      });
+      // Calculate recommendations for each target gameweek
+      const recommendationsByGameweek: any = {};
       
-      console.log(`DEBUG: Created current team with ${currentTeam.length} players`);
-      console.log(`DEBUG: Sample player:`, currentTeam[0]);
-      
-      // Group current team by position
-      const teamByPosition: { [key: number]: any[] } = {};
-      currentTeam.forEach(player => {
-        if (!teamByPosition[player.elementType]) {
-          teamByPosition[player.elementType] = [];
+      for (let targetGW = nextGWStart; targetGW <= nextGWEnd; targetGW++) {
+        // Fetch projections for this specific range (targetGW to nextGWEnd)
+        const projectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${targetGW}&endGameweek=${nextGWEnd}`);
+        if (!projectionsResponse.ok) {
+          console.error(`Failed to fetch projections for GW${targetGW}-${nextGWEnd}`);
+          continue;
         }
-        teamByPosition[player.elementType].push(player);
-      });
-      
-      console.log(`DEBUG: Grouped team by position:`, Object.keys(teamByPosition).map(k => `${k}: ${teamByPosition[k].length}`));
-      
-      // Calculate all possible single transfers
-      const transferRecommendations: any[] = [];
-      const currentTeamIds = new Set(currentTeam.map((p: any) => p.id));
-      
-      console.log(`DEBUG: Analyzing ${currentTeam.length} players in current team for transfer opportunities`);
-      
-      for (const playerOut of currentTeam) {
-        // Get all players of the same position who aren't already in the team
-        const samePositionPlayers = bootstrapData.elements.filter((p: any) => 
-          p.element_type === playerOut.elementType && 
-          !currentTeamIds.has(p.id) && // Not already in the team
-          p.status === 'a' // Only available players
-        );
+        const projectionsData = await projectionsResponse.json();
+        const projectionsByPlayerId = new Map(projectionsData.map((p: any) => [p.playerId, p]));
         
-        let consideredCount = 0;
-        let affordableCount = 0;
-        let pointsGainCount = 0;
+        // Get current team with projections for this range
+        const currentTeam = teamData.picks.map((pick: any) => {
+          const element = elementsByPlayerId.get(pick.element);
+          const projection = projectionsByPlayerId.get(pick.element);
+          const currentPrice = element?.now_cost || 0;
+          
+          return {
+            id: pick.element,
+            position: pick.position,
+            sellingPrice: currentPrice,
+            purchasePrice: currentPrice,
+            elementType: element?.element_type,
+            projectedPoints: projection?.totalExpectedPoints || 0,
+            webName: element?.web_name,
+            team: element?.team,
+            nowCost: currentPrice
+          };
+        });
         
-        for (const playerIn of samePositionPlayers) {
-          consideredCount++;
-          const playerInProjection = projectionsByPlayerId.get(playerIn.id);
-          const playerInPoints = playerInProjection?.totalExpectedPoints || 0;
+        // Calculate transfer recommendations for this gameweek
+        const transferRecommendations: any[] = [];
+        
+        for (const playerOut of currentTeam) {
+          const samePositionPlayers = bootstrapData.elements.filter((p: any) => 
+            p.element_type === playerOut.elementType && 
+            !currentTeamIds.has(p.id) &&
+            p.status === 'a'
+          );
           
-          // Calculate cost and check budget
-          const transferCost = playerIn.now_cost - playerOut.sellingPrice;
-          const budget = bank + playerOut.sellingPrice;
-          
-          if (playerIn.now_cost <= budget) {
-            affordableCount++;
-            const pointsGain = playerInPoints - playerOut.projectedPoints;
+          for (const playerIn of samePositionPlayers) {
+            const playerInProjection = projectionsByPlayerId.get(playerIn.id);
+            const playerInPoints = playerInProjection?.totalExpectedPoints || 0;
             
-            // Only recommend if there's significant points gain
-            if (pointsGain > 0.5) {
-              pointsGainCount++;
-              transferRecommendations.push({
-                playerOut: {
-                  id: playerOut.id,
-                  webName: playerOut.webName,
-                  team: playerOut.team,
-                  sellingPrice: playerOut.sellingPrice,
-                  projectedPoints: playerOut.projectedPoints
-                },
-                playerIn: {
-                  id: playerIn.id,
-                  webName: playerIn.web_name,
-                  team: playerIn.team,
-                  nowCost: playerIn.now_cost,
-                  projectedPoints: playerInPoints
-                },
-                pointsGain: pointsGain,
-                cost: transferCost,
-                budgetAfter: budget - playerIn.now_cost,
-                position: bootstrapData.element_types.find((t: any) => t.id === playerOut.elementType)?.singular_name || 'Unknown'
-              });
+            const transferCost = playerIn.now_cost - playerOut.sellingPrice;
+            const budget = bank + playerOut.sellingPrice;
+            
+            if (playerIn.now_cost <= budget) {
+              const pointsGain = playerInPoints - playerOut.projectedPoints;
+              
+              if (pointsGain > 0.5) {
+                transferRecommendations.push({
+                  playerOut: {
+                    id: playerOut.id,
+                    webName: playerOut.webName,
+                    team: playerOut.team,
+                    sellingPrice: playerOut.sellingPrice,
+                    projectedPoints: playerOut.projectedPoints
+                  },
+                  playerIn: {
+                    id: playerIn.id,
+                    webName: playerIn.web_name,
+                    team: playerIn.team,
+                    nowCost: playerIn.now_cost,
+                    projectedPoints: playerInPoints
+                  },
+                  pointsGain: pointsGain,
+                  cost: transferCost,
+                  budgetAfter: budget - playerIn.now_cost,
+                  position: bootstrapData.element_types.find((t: any) => t.id === playerOut.elementType)?.singular_name || 'Unknown'
+                });
+              }
             }
           }
         }
         
-        if (consideredCount > 0 && transferRecommendations.length === 0) {
-          console.log(`DEBUG: Player ${playerOut.webName} (${playerOut.projectedPoints.toFixed(1)} pts): Considered ${consideredCount}, Affordable ${affordableCount}, Points gain ${pointsGainCount}`);
-        }
+        // Sort and take top 5 for this gameweek
+        transferRecommendations.sort((a, b) => b.pointsGain - a.pointsGain);
+        recommendationsByGameweek[targetGW] = {
+          gameweek: targetGW,
+          targetRange: `GW${targetGW}-${nextGWEnd}`,
+          recommendations: transferRecommendations.slice(0, 5)
+        };
+        
+        console.log(`DEBUG: GW${targetGW}: Found ${transferRecommendations.length} transfer opportunities`);
       }
-      
-      // Sort by points gain (highest first) and take top 10
-      transferRecommendations.sort((a, b) => b.pointsGain - a.pointsGain);
-      const topRecommendations = transferRecommendations.slice(0, 10);
-      
-      console.log(`DEBUG: Found ${transferRecommendations.length} transfer opportunities, returning top ${topRecommendations.length}`);
       
       res.json({
         currentGameweek,
-        nextGameweek: nextGWStart,
         bank,
         freeTransfers,
-        recommendations: topRecommendations
+        gameweeks: recommendationsByGameweek
       });
       
     } catch (error) {
