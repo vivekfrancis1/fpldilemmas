@@ -2276,6 +2276,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (let targetGW = planningStart; targetGW <= planningEnd; targetGW++) {
         console.log(`DEBUG: Processing GW${targetGW}...`);
+        
+        // Calculate free transfers for this gameweek
+        // First gameweek: use the actual value from API
+        // Subsequent gameweeks: 1 FT (assuming all previous FTs were used)
+        const freeTransfersForGW = targetGW === planningStart ? freeTransfers : 1;
+        
         // Fetch projections for this specific range (targetGW to planningEnd)
         const projectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${targetGW}&endGameweek=${planningEnd}`);
         if (!projectionsResponse.ok) {
@@ -2372,23 +2378,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Sort by point gain (descending) - no limit, show all that meet minimum threshold
         transferRecommendations.sort((a, b) => b.pointsGain - a.pointsGain);
         
-        // Filter out conflicting transfers: if primary transfer is A→B, remove all recommendations that involve:
-        // 1. Transferring out B (the player we just brought in)
-        // 2. Transferring in A (the player we just transferred out)
+        // Select N primary transfers where N = number of free transfers for this gameweek
+        const primaryTransfers = transferRecommendations.slice(0, freeTransfersForGW);
+        
+        console.log(`DEBUG GW${targetGW}: ${freeTransfersForGW} free transfer${freeTransfersForGW !== 1 ? 's' : ''} available`);
+        primaryTransfers.forEach((transfer, index) => {
+          console.log(`  Primary ${index + 1}: ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.pointsGain.toFixed(2)} pts)`);
+        });
+        
+        // Filter out conflicting transfers: remove recommendations that conflict with ANY of the primary transfers
         let filteredRecommendations = transferRecommendations;
-        if (transferRecommendations.length > 0) {
-          const primaryTransfer = transferRecommendations[0];
-          console.log(`DEBUG GW${targetGW}: Primary transfer - OUT: ${primaryTransfer.playerOut.webName} (ID: ${primaryTransfer.playerOut.id}), IN: ${primaryTransfer.playerIn.webName} (ID: ${primaryTransfer.playerIn.id})`);
+        if (primaryTransfers.length > 0) {
+          // Build sets of players involved in primary transfers
+          const primaryTransferredOutIds = new Set(primaryTransfers.map(t => t.playerOut.id));
+          const primaryTransferredInIds = new Set(primaryTransfers.map(t => t.playerIn.id));
           
           filteredRecommendations = transferRecommendations.filter((rec, index) => {
-            // Keep the primary transfer (index 0)
-            if (index === 0) return true;
+            // Keep all primary transfers
+            if (index < freeTransfersForGW) return true;
             
-            // Filter out transfers that conflict with the primary transfer:
+            // Filter out transfers that conflict with ANY primary transfer:
             // 1. Don't try to transfer OUT a player who's already been transferred OUT
             // 2. Don't try to transfer IN a player who's already been transferred IN
-            const isTryingToTransferOutSamePlayer = rec.playerOut.id === primaryTransfer.playerOut.id;
-            const isTryingToTransferInSamePlayer = rec.playerIn.id === primaryTransfer.playerIn.id;
+            const isTryingToTransferOutSamePlayer = primaryTransferredOutIds.has(rec.playerOut.id);
+            const isTryingToTransferInSamePlayer = primaryTransferredInIds.has(rec.playerIn.id);
             
             if (isTryingToTransferOutSamePlayer) {
               console.log(`  FILTERED OUT (player already transferred out): ${rec.playerOut.webName} → ${rec.playerIn.webName}`);
@@ -2409,26 +2422,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`DEBUG: GW${targetGW}: Found ${transferRecommendations.length} transfer opportunities, ${filteredRecommendations.length} after filtering conflicts`);
         
-        // If there's at least one recommendation, assume the primary (first) one is executed
+        // Execute ALL primary transfers - they all count as "free" for this gameweek
         // This affects future gameweeks' recommendations
-        if (transferRecommendations.length > 0) {
-          const primaryTransfer = transferRecommendations[0];
-          executedTransfers.push(primaryTransfer);
-          
-          // Update team composition for next gameweek - replace the transferred out player with the transferred in player
-          currentTeamComposition = currentTeamComposition.map(player => {
-            if (player.playerId === primaryTransfer.playerOut.id) {
-              // Replace the transferred out player with the transferred in player
-              return {
-                playerId: primaryTransfer.playerIn.id,
-                position: player.position, // Keep the same squad position
-                elementType: elementsByPlayerId.get(primaryTransfer.playerIn.id)?.element_type
-              };
-            }
-            return player;
+        if (primaryTransfers.length > 0) {
+          primaryTransfers.forEach(primaryTransfer => {
+            executedTransfers.push(primaryTransfer);
+            
+            // Update team composition for next gameweek - replace the transferred out player with the transferred in player
+            currentTeamComposition = currentTeamComposition.map(player => {
+              if (player.playerId === primaryTransfer.playerOut.id) {
+                // Replace the transferred out player with the transferred in player
+                return {
+                  playerId: primaryTransfer.playerIn.id,
+                  position: player.position, // Keep the same squad position
+                  elementType: elementsByPlayerId.get(primaryTransfer.playerIn.id)?.element_type
+                };
+              }
+              return player;
+            });
+            
+            console.log(`  Executed: ${primaryTransfer.playerOut.webName} OUT → ${primaryTransfer.playerIn.webName} IN`);
           });
-          
-          console.log(`DEBUG: GW${targetGW} primary transfer executed: ${primaryTransfer.playerOut.webName} OUT → ${primaryTransfer.playerIn.webName} IN`);
         }
       }
       
