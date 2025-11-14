@@ -2164,6 +2164,181 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get recommended transfers for next gameweek
+  app.get("/api/manager/:managerId/recommended-transfers", async (req, res) => {
+    try {
+      const { managerId } = req.params;
+      
+      if (!managerId || isNaN(Number(managerId))) {
+        return res.status(400).json({ message: "Invalid manager ID" });
+      }
+
+      console.log(`DEBUG: Calculating recommended transfers for manager ${managerId}`);
+      
+      // Get bootstrap data for gameweek info and all players
+      const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      const bootstrapData = await bootstrapResponse.json();
+      
+      // Get current gameweek
+      const currentGW = bootstrapData.events.find((event: any) => event.is_current);
+      const currentGameweek = currentGW?.id || 1;
+      
+      // Get team data
+      const teamResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
+      if (!teamResponse.ok) {
+        throw new Error("Failed to fetch team data");
+      }
+      const teamData = await teamResponse.json();
+      
+      // Get entry data for accurate bank balance and transfer info
+      const entryResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
+      if (!entryResponse.ok) {
+        throw new Error("Failed to fetch entry data");
+      }
+      const entryData = await entryResponse.json();
+      
+      // Get transfer info from history endpoint which has accurate data
+      const historyResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`);
+      if (!historyResponse.ok) {
+        throw new Error("Failed to fetch history data");
+      }
+      const historyData = await historyResponse.json();
+      
+      // Get the most recent gameweek data from history
+      const mostRecentGW = historyData.current?.[historyData.current.length - 1];
+      const bank = entryData.last_deadline_bank || 0;
+      const freeTransfers = mostRecentGW?.event_transfers || 1; // FPL always provides at least 1 free transfer
+      
+      console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Free transfers: ${freeTransfers}`);
+      
+      // Get player total points projections for next 6 gameweeks
+      // Guard against end-of-season edge cases
+      const nextGWStart = Math.min(currentGameweek + 1, 38);
+      const nextGWEnd = Math.min(nextGWStart + 5, 38);
+      
+      // If we're at the end of the season, use current gameweek
+      if (nextGWStart > 38 || nextGWStart > nextGWEnd) {
+        console.log(`DEBUG: End of season reached (GW${currentGameweek}), no transfers to recommend`);
+        return res.json({
+          currentGameweek,
+          nextGameweek: currentGameweek,
+          bank,
+          freeTransfers,
+          recommendations: []
+        });
+      }
+      
+      const projectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${nextGWStart}&endGameweek=${nextGWEnd}`);
+      if (!projectionsResponse.ok) {
+        throw new Error("Failed to fetch player projections");
+      }
+      const projectionsData = await projectionsResponse.json();
+      
+      // Create lookup maps
+      const projectionsByPlayerId = new Map(projectionsData.map((p: any) => [p.playerId, p]));
+      const elementsByPlayerId = new Map(bootstrapData.elements.map((p: any) => [p.id, p]));
+      
+      // Get current team players with their selling prices
+      const currentTeam = teamData.picks.map((pick: any) => {
+        const element = elementsByPlayerId.get(pick.element);
+        const projection = projectionsByPlayerId.get(pick.element);
+        return {
+          id: pick.element,
+          position: pick.position,
+          sellingPrice: pick.selling_price,
+          purchasePrice: pick.purchase_price || pick.selling_price,
+          elementType: element?.element_type,
+          projectedPoints: projection?.totalProjectedPoints || 0,
+          webName: element?.web_name,
+          team: element?.team,
+          nowCost: element?.now_cost
+        };
+      });
+      
+      // Group current team by position
+      const teamByPosition: { [key: number]: any[] } = {};
+      currentTeam.forEach(player => {
+        if (!teamByPosition[player.elementType]) {
+          teamByPosition[player.elementType] = [];
+        }
+        teamByPosition[player.elementType].push(player);
+      });
+      
+      // Calculate all possible single transfers
+      const transferRecommendations: any[] = [];
+      
+      for (const playerOut of currentTeam) {
+        // Get all players of the same position
+        const samePositionPlayers = bootstrapData.elements.filter((p: any) => 
+          p.element_type === playerOut.elementType && 
+          p.id !== playerOut.id &&
+          p.status === 'a' // Only available players
+        );
+        
+        for (const playerIn of samePositionPlayers) {
+          const playerInProjection = projectionsByPlayerId.get(playerIn.id);
+          const playerInPoints = playerInProjection?.totalProjectedPoints || 0;
+          
+          // Calculate cost and check budget
+          const transferCost = playerIn.now_cost - playerOut.sellingPrice;
+          const budget = bank + playerOut.sellingPrice;
+          
+          if (playerIn.now_cost <= budget) {
+            const pointsGain = playerInPoints - playerOut.projectedPoints;
+            
+            // Only recommend if there's significant points gain
+            if (pointsGain > 0.5) {
+              transferRecommendations.push({
+                playerOut: {
+                  id: playerOut.id,
+                  webName: playerOut.webName,
+                  team: playerOut.team,
+                  sellingPrice: playerOut.sellingPrice,
+                  projectedPoints: playerOut.projectedPoints
+                },
+                playerIn: {
+                  id: playerIn.id,
+                  webName: playerIn.web_name,
+                  team: playerIn.team,
+                  nowCost: playerIn.now_cost,
+                  projectedPoints: playerInPoints
+                },
+                pointsGain: pointsGain,
+                cost: transferCost,
+                budgetAfter: budget - playerIn.now_cost,
+                position: bootstrapData.element_types.find((t: any) => t.id === playerOut.elementType)?.singular_name || 'Unknown'
+              });
+            }
+          }
+        }
+      }
+      
+      // Sort by points gain (highest first) and take top 10
+      transferRecommendations.sort((a, b) => b.pointsGain - a.pointsGain);
+      const topRecommendations = transferRecommendations.slice(0, 10);
+      
+      console.log(`DEBUG: Found ${transferRecommendations.length} transfer opportunities, returning top ${topRecommendations.length}`);
+      
+      res.json({
+        currentGameweek,
+        nextGameweek: nextGWStart,
+        bank,
+        freeTransfers,
+        recommendations: topRecommendations
+      });
+      
+    } catch (error) {
+      console.error(`Error calculating recommended transfers for manager ${req.params.managerId}:`, error);
+      res.status(500).json({
+        error: "Failed to calculate recommended transfers",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Get manager leagues
   app.get("/api/manager/:managerId/leagues", async (req, res) => {
     try {

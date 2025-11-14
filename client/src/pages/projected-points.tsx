@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, Heart, XCircle, Clock, Sparkles } from "lucide-react";
+import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, Heart, XCircle, Clock, Sparkles, DollarSign, ArrowRightLeft, TrendingDown } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -226,6 +226,14 @@ export default function ProjectedPoints() {
   const { data: playerProjections6GW, isLoading: isLoadingProjections, refetch: refetchProjections } = useQuery<any[]>({
     queryKey: ["/api/player-total-points"],
     staleTime: 10 * 60 * 1000,
+  });
+
+  // Fetch recommended transfers
+  const { data: recommendedTransfers, isLoading: isLoadingRecommendations } = useQuery<any>({
+    queryKey: ["/api/manager", searchedId, "recommended-transfers"],
+    enabled: !!searchedId,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
   // Initialize manual lineup when team data loads
@@ -883,6 +891,108 @@ export default function ProjectedPoints() {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Cash in Bank & Transfers Available */}
+        {teamData && (
+          <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                Team Budget (GW{recommendedTransfers?.nextGameweek || (bootstrapData?.events.find((e: any) => e.is_current)?.id ? bootstrapData.events.find((e: any) => e.is_current)!.id + 1 : '?')})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs sm:text-sm text-gray-600 mb-1">Cash in Bank</div>
+                  <div className="text-xl sm:text-2xl font-bold text-green-700">
+                    £{((recommendedTransfers?.bank || teamData.transfers?.bank || 0) / 10).toFixed(1)}m
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs sm:text-sm text-gray-600 mb-1">Free Transfers</div>
+                  <div className="text-xl sm:text-2xl font-bold text-green-700">
+                    {recommendedTransfers?.freeTransfers || 1}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Recommended Transfers */}
+        {recommendedTransfers && recommendedTransfers.recommendations && recommendedTransfers.recommendations.length > 0 && (
+          <Card className="border-orange-200 bg-gradient-to-br from-orange-50/50 to-white">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <ArrowRightLeft className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+                Recommended Transfers for GW{recommendedTransfers.nextGameweek}
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Maximize your projected points for next 6 gameweeks by making these transfers
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {recommendedTransfers.recommendations.slice(0, 5).map((rec: any, index: number) => (
+                  <div
+                    key={`${rec.playerOut.id}-${rec.playerIn.id}`}
+                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-white border border-orange-100 rounded-lg hover:border-orange-300 transition-colors"
+                    data-testid={`transfer-recommendation-${index}`}
+                  >
+                    <div className="flex-1 w-full sm:w-auto mb-3 sm:mb-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                          OUT
+                        </Badge>
+                        <TrendingDown className="h-3 w-3 text-red-500" />
+                        <span className="text-sm font-medium text-gray-900">{rec.playerOut.webName}</span>
+                        <span className="text-xs text-gray-500">
+                          ({rec.playerOut.projectedPoints.toFixed(1)} pts)
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                          IN
+                        </Badge>
+                        <TrendingUp className="h-3 w-3 text-green-500" />
+                        <span className="text-sm font-medium text-gray-900">{rec.playerIn.webName}</span>
+                        <span className="text-xs text-gray-500">
+                          ({rec.playerIn.projectedPoints.toFixed(1)} pts)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500">Points Gain</div>
+                        <div className="text-lg font-bold text-green-600">+{rec.pointsGain.toFixed(1)}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500">Cost</div>
+                        <div className={`text-sm font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                          {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-gray-500">ITB After</div>
+                        <div className="text-sm font-medium text-gray-700">
+                          £{(rec.budgetAfter / 10).toFixed(1)}m
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {recommendedTransfers.recommendations.length > 5 && (
+                <div className="mt-4 text-center">
+                  <p className="text-xs text-gray-500">
+                    Showing top 5 of {recommendedTransfers.recommendations.length} recommendations
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Summary Card - Total 6 GW Points */}
         <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
