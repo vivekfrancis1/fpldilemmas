@@ -2275,15 +2275,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Track running bank balance across gameweeks (mutable)
       let runningBank = bank;
       
+      // Track running free transfers across gameweeks with banking logic (max 2)
+      let runningFreeTransfers = freeTransfers;
+      
       console.log(`DEBUG: Calculating recommendations from GW${planningStart} to GW${planningEnd}`);
       
       for (let targetGW = planningStart; targetGW <= planningEnd; targetGW++) {
         console.log(`DEBUG: Processing GW${targetGW}...`);
         
-        // Calculate free transfers for this gameweek
-        // First gameweek: use the actual value from API
-        // Subsequent gameweeks: 1 FT (assuming all previous FTs were used)
-        const freeTransfersForGW = targetGW === planningStart ? freeTransfers : 1;
+        // Use the running free transfers count for this gameweek
+        const freeTransfersForGW = runningFreeTransfers;
         
         // Fetch projections for this specific range (targetGW to planningEnd)
         const projectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${targetGW}&endGameweek=${planningEnd}`);
@@ -2509,6 +2510,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Update running bank for next gameweek to reflect final balance after all primaries
           runningBank = currentBank;
         }
+        
+        // Update free transfers for next gameweek with banking logic
+        // Formula: (current FTs - transfers used) + 1 new FT, capped at max 2
+        const transfersUsedThisGW = primaryTransfers.length;
+        const unusedFTs = Math.max(0, freeTransfersForGW - transfersUsedThisGW);
+        runningFreeTransfers = Math.min(2, unusedFTs + 1);
+        
+        console.log(`DEBUG: GW${targetGW} FT update: Had ${freeTransfersForGW}, used ${transfersUsedThisGW}, banking ${unusedFTs}, next GW will have ${runningFreeTransfers}`);
       }
       
       res.json({
