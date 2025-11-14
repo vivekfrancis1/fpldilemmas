@@ -1282,114 +1282,131 @@ export default function ProjectedPoints() {
                     </div>
                     {gwData.recommendations && gwData.recommendations.length > 0 ? (
                       <div className="space-y-4">
-                        {/* Primary Transfer Recommendation */}
-                        {gwData.recommendations[0] && (
-                          <div>
-                            <h3 className="text-sm font-semibold text-gray-700 mb-2">Primary Transfer Recommendation</h3>
-                            <div
-                              className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-orange-50 to-white border-2 border-orange-300 rounded-lg shadow-sm"
-                              data-testid={`transfer-recommendation-gw${gw}-0`}
-                            >
-                              <div className="flex-1 w-full sm:w-auto mb-3 sm:mb-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
-                                    OUT
-                                  </Badge>
-                                  <TrendingDown className="h-3 w-3 text-red-500" />
-                                  <span className="text-sm font-medium text-gray-900">{gwData.recommendations[0].playerOut.webName}</span>
-                                  <span className="text-xs text-gray-500">
-                                    ({gwData.recommendations[0].playerOut.projectedPoints.toFixed(1)} pts)
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                                    IN
-                                  </Badge>
-                                  <TrendingUp className="h-3 w-3 text-green-500" />
-                                  <span className="text-sm font-medium text-gray-900">{gwData.recommendations[0].playerIn.webName}</span>
-                                  <span className="text-xs text-gray-500">
-                                    ({gwData.recommendations[0].playerIn.projectedPoints.toFixed(1)} pts)
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                <div className="text-right">
-                                  <div className="text-xs text-gray-500">Points Gain</div>
-                                  <div className="text-lg font-bold text-green-600">+{gwData.recommendations[0].pointsGain.toFixed(1)}</div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="text-xs text-gray-500">Cost</div>
-                                  <div className={`text-sm font-semibold ${gwData.recommendations[0].cost >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                    {gwData.recommendations[0].cost >= 0 ? '+' : ''}{(gwData.recommendations[0].cost / 10).toFixed(1)}m
+                        {/* Primary Transfer Recommendations (based on free transfers available) */}
+                        {(() => {
+                          const freeTransfers = finances?.ftsAvailable || 1;
+                          const primaryTransfers = gwData.recommendations.slice(0, freeTransfers);
+                          const otherTransfers = gwData.recommendations.slice(freeTransfers);
+                          
+                          return (
+                            <>
+                              {primaryTransfers.length > 0 && (
+                                <div>
+                                  <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                                    Primary Transfer Recommendation{primaryTransfers.length > 1 ? 's' : ''}
+                                  </h3>
+                                  <div className="space-y-3">
+                                    {primaryTransfers.map((rec: any, index: number) => (
+                                      <div
+                                        key={`${rec.playerOut.id}-${rec.playerIn.id}`}
+                                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gradient-to-r from-orange-50 to-white border-2 border-orange-300 rounded-lg shadow-sm"
+                                        data-testid={`transfer-recommendation-gw${gw}-${index}`}
+                                      >
+                                        <div className="flex-1 w-full sm:w-auto mb-3 sm:mb-0">
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                                              OUT
+                                            </Badge>
+                                            <TrendingDown className="h-3 w-3 text-red-500" />
+                                            <span className="text-sm font-medium text-gray-900">{rec.playerOut.webName}</span>
+                                            <span className="text-xs text-gray-500">
+                                              ({rec.playerOut.projectedPoints.toFixed(1)} pts)
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                              IN
+                                            </Badge>
+                                            <TrendingUp className="h-3 w-3 text-green-500" />
+                                            <span className="text-sm font-medium text-gray-900">{rec.playerIn.webName}</span>
+                                            <span className="text-xs text-gray-500">
+                                              ({rec.playerIn.projectedPoints.toFixed(1)} pts)
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                                          <div className="text-right">
+                                            <div className="text-xs text-gray-500">Points Gain</div>
+                                            <div className="text-lg font-bold text-green-600">+{rec.pointsGain.toFixed(1)}</div>
+                                          </div>
+                                          <div className="text-right">
+                                            <div className="text-xs text-gray-500">Cost</div>
+                                            <div className={`text-sm font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                              {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
+                                            </div>
+                                          </div>
+                                          <div className="text-right">
+                                            <div className="text-xs text-gray-500">ITB After</div>
+                                            <div className="text-sm font-medium text-gray-700">
+                                              £{(rec.budgetAfter / 10).toFixed(1)}m
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
                                 </div>
-                                <div className="text-right">
-                                  <div className="text-xs text-gray-500">ITB After</div>
-                                  <div className="text-sm font-medium text-gray-700">
-                                    £{(gwData.recommendations[0].budgetAfter / 10).toFixed(1)}m
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
+                              )}
 
-                        {/* Other Transfer Recommendations (all beyond the first) */}
-                        {gwData.recommendations.length > 1 && (
-                          <div>
-                            <h3 className="text-sm font-semibold text-gray-700 mb-2">Other Transfer Recommendations</h3>
-                            <div className="space-y-3">
-                              {gwData.recommendations.slice(1).map((rec: any, index: number) => (
-                                <div
-                                  key={`${rec.playerOut.id}-${rec.playerIn.id}`}
-                                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-white border border-orange-100 rounded-lg hover:border-orange-300 transition-colors"
-                                  data-testid={`transfer-recommendation-gw${gw}-${index + 1}`}
-                                >
-                                  <div className="flex-1 w-full sm:w-auto mb-3 sm:mb-0">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
-                                        OUT
-                                      </Badge>
-                                      <TrendingDown className="h-3 w-3 text-red-500" />
-                                      <span className="text-sm font-medium text-gray-900">{rec.playerOut.webName}</span>
-                                      <span className="text-xs text-gray-500">
-                                        ({rec.playerOut.projectedPoints.toFixed(1)} pts)
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                                        IN
-                                      </Badge>
-                                      <TrendingUp className="h-3 w-3 text-green-500" />
-                                      <span className="text-sm font-medium text-gray-900">{rec.playerIn.webName}</span>
-                                      <span className="text-xs text-gray-500">
-                                        ({rec.playerIn.projectedPoints.toFixed(1)} pts)
-                                      </span>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-                                    <div className="text-right">
-                                      <div className="text-xs text-gray-500">Points Gain</div>
-                                      <div className="text-lg font-bold text-green-600">+{rec.pointsGain.toFixed(1)}</div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-xs text-gray-500">Cost</div>
-                                      <div className={`text-sm font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                        {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
+                              {/* Other Transfer Recommendations */}
+                              {otherTransfers.length > 0 && (
+                                <div>
+                                  <h3 className="text-sm font-semibold text-gray-700 mb-2">Other Transfer Recommendations</h3>
+                                  <div className="space-y-3">
+                                    {otherTransfers.map((rec: any, index: number) => (
+                                      <div
+                                        key={`${rec.playerOut.id}-${rec.playerIn.id}`}
+                                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-white border border-orange-100 rounded-lg hover:border-orange-300 transition-colors"
+                                        data-testid={`transfer-recommendation-gw${gw}-${freeTransfers + index}`}
+                                      >
+                                        <div className="flex-1 w-full sm:w-auto mb-3 sm:mb-0">
+                                          <div className="flex items-center gap-2 mb-2">
+                                            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">
+                                              OUT
+                                            </Badge>
+                                            <TrendingDown className="h-3 w-3 text-red-500" />
+                                            <span className="text-sm font-medium text-gray-900">{rec.playerOut.webName}</span>
+                                            <span className="text-xs text-gray-500">
+                                              ({rec.playerOut.projectedPoints.toFixed(1)} pts)
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                              IN
+                                            </Badge>
+                                            <TrendingUp className="h-3 w-3 text-green-500" />
+                                            <span className="text-sm font-medium text-gray-900">{rec.playerIn.webName}</span>
+                                            <span className="text-xs text-gray-500">
+                                              ({rec.playerIn.projectedPoints.toFixed(1)} pts)
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                                          <div className="text-right">
+                                            <div className="text-xs text-gray-500">Points Gain</div>
+                                            <div className="text-lg font-bold text-green-600">+{rec.pointsGain.toFixed(1)}</div>
+                                          </div>
+                                          <div className="text-right">
+                                            <div className="text-xs text-gray-500">Cost</div>
+                                            <div className={`text-sm font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                              {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
+                                            </div>
+                                          </div>
+                                          <div className="text-right">
+                                            <div className="text-xs text-gray-500">ITB After</div>
+                                            <div className="text-sm font-medium text-gray-700">
+                                              £{(rec.budgetAfter / 10).toFixed(1)}m
+                                            </div>
+                                          </div>
+                                        </div>
                                       </div>
-                                    </div>
-                                    <div className="text-right">
-                                      <div className="text-xs text-gray-500">ITB After</div>
-                                      <div className="text-sm font-medium text-gray-700">
-                                        £{(rec.budgetAfter / 10).toFixed(1)}m
-                                      </div>
-                                    </div>
+                                    ))}
                                   </div>
                                 </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500 text-sm">
