@@ -2223,9 +2223,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Free transfers: ${freeTransfers}`);
       
-      // Calculate the range of gameweeks to analyze (current + next 5 gameweeks = 6 total)
-      const nextGWStart = Math.min(currentGameweek, 38);
-      const nextGWEnd = Math.min(nextGWStart + 5, 38);
+      // Calculate the range of gameweeks to analyze (next 6 gameweeks)
+      const nextGWStart = Math.min(currentGameweek + 1, 38); // Start from next gameweek
+      const nextGWEnd = Math.min(nextGWStart + 5, 38); // 6 gameweeks total (e.g., GW12-17)
       
       // If we're at the end of the season
       if (nextGWStart > 38 || nextGWStart > nextGWEnd) {
