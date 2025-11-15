@@ -2449,11 +2449,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // SPECIAL CASES for threshold application:
         // 1. GW15: Accept all transfers (any positive points gain) since GW16 tops up to 5 FTs
-        // 2. 5 FT gameweeks: Accept at least 1 transfer with any positive gain (don't waste FTs)
+        // 2. 5 FT gameweeks: Try normal threshold first, but accept at least 1 transfer with positive gain to avoid waste
         // 3. Other gameweeks: All transfers must meet normal threshold
         const isGW15 = targetGW === 15;
         const has5FTs = freeTransfersForGW === 5;
         
+        // First pass: Try to accept transfers using normal threshold rules
         for (const transfer of transferRecommendations) {
           if (primaryTransfers.length >= freeTransfersForGW) break;
           
@@ -2469,15 +2470,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (isGW15) {
               // GW15: Accept all transfers with positive gain
               shouldAccept = true;
-            } else if (has5FTs) {
-              // When we have 5 FTs, ONLY accept transfers with positive gain
-              // This prevents wasting FTs when there are no high-value transfers available
-              shouldAccept = transfer.pointsGain > 0;
-              if (shouldAccept) {
-                console.log(`  ✅ 5 FT gameweek: Accepting ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.pointsGain.toFixed(2)} pts, no threshold required)`);
-              }
             } else {
-              // All other cases: Must meet normal threshold
+              // All other cases: Must meet normal threshold in first pass
               shouldAccept = transfer.meetsNormalThreshold;
             }
             
@@ -2499,6 +2493,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Update running bank balance for next primary transfer
               currentBank = budgetAfter;
+            }
+          }
+        }
+        
+        // Second pass: If we have 5 FTs and no transfers met threshold, accept at least 1 with positive gain
+        if (has5FTs && primaryTransfers.length === 0 && !isGW15) {
+          console.log(`  💎 5 FTs available but no transfers meet threshold - accepting best positive-gain transfer to avoid waste`);
+          
+          for (const transfer of transferRecommendations) {
+            // Check if this transfer conflicts with already selected primaries
+            const conflictsWithSelected = 
+              selectedOutIds.has(transfer.playerOut.id) || 
+              selectedInIds.has(transfer.playerIn.id);
+            
+            if (!conflictsWithSelected && transfer.pointsGain > 0) {
+              // Recalculate budgetAfter based on current running bank balance
+              const budgetBefore = currentBank;
+              const netChange = transfer.playerOut.sellingPrice - transfer.playerIn.nowCost;
+              const budgetAfter = budgetBefore + netChange;
+              
+              const updatedTransfer = {
+                ...transfer,
+                budgetAfter: budgetAfter
+              };
+              
+              primaryTransfers.push(updatedTransfer);
+              selectedOutIds.add(transfer.playerOut.id);
+              selectedInIds.add(transfer.playerIn.id);
+              currentBank = budgetAfter;
+              
+              console.log(`  ✅ 5 FT special case: Accepting ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.pointsGain.toFixed(2)} pts, positive gain only)`);
+              break; // Only accept 1 transfer in this special case
             }
           }
         }
