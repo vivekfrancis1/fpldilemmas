@@ -2252,15 +2252,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Free transfers calculated for next planning GW: ${freeTransfers}`);
       
-      // Calculate the range of gameweeks to analyze (next 6 gameweeks)
+      // Calculate the range of gameweeks to analyze (next 12 gameweeks)
       // If current GW is finished, start from next GW
       // If current GW is not finished (between GWs), start from current GW (it's the next one to play)
       const planningStart = isCurrentGWFinished 
         ? Math.min(currentGameweek + 1, 38)
         : Math.min(currentGameweek, 38);
-      const planningEnd = Math.min(planningStart + 5, 38);
+      const planningEnd = Math.min(planningStart + 11, 38);
       
-      console.log(`DEBUG: Gameweek range - currentGW: ${currentGameweek}, finished: ${isCurrentGWFinished}, planningStart: ${planningStart}, planningEnd: ${planningEnd} (6 gameweeks)`);
+      console.log(`DEBUG: Gameweek range - currentGW: ${currentGameweek}, finished: ${isCurrentGWFinished}, planningStart: ${planningStart}, planningEnd: ${planningEnd} (12 gameweeks)`);
       
       // If we're at the end of the season
       if (planningStart > 38 || planningStart > planningEnd) {
