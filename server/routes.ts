@@ -2309,6 +2309,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const projectionsData = await projectionsResponse.json();
         const projectionsByPlayerId = new Map(projectionsData.map((p: any) => [p.playerId, p]));
         
+        // ALSO fetch projections for just this single gameweek for threshold checking
+        const singleGWProjectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${targetGW}&endGameweek=${targetGW}`);
+        if (!singleGWProjectionsResponse.ok) {
+          console.error(`Failed to fetch single GW projections for GW${targetGW}`);
+          continue;
+        }
+        const singleGWProjectionsData = await singleGWProjectionsResponse.json();
+        const singleGWProjectionsByPlayerId = new Map(singleGWProjectionsData.map((p: any) => [p.playerId, p]));
+        
         // Build current team IDs from the current composition
         const currentTeamIds = new Set(currentTeamComposition.map(p => p.playerId));
         
@@ -2316,6 +2325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const currentTeam = currentTeamComposition.map((pick) => {
           const element = elementsByPlayerId.get(pick.playerId);
           const projection = projectionsByPlayerId.get(pick.playerId);
+          const singleGWProjection = singleGWProjectionsByPlayerId.get(pick.playerId);
           const currentPrice = element?.now_cost || 0;
           
           return {
@@ -2325,6 +2335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             purchasePrice: currentPrice,
             elementType: pick.elementType,
             projectedPoints: projection?.totalExpectedPoints || 0,
+            singleGWPoints: singleGWProjection?.totalExpectedPoints || 0,
             webName: element?.web_name,
             team: element?.team,
             nowCost: currentPrice
@@ -2358,11 +2369,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const playerInProjection = projectionsByPlayerId.get(playerIn.id);
             const playerInPoints = playerInProjection?.totalExpectedPoints || 0;
             
+            const playerInSingleGWProjection = singleGWProjectionsByPlayerId.get(playerIn.id);
+            const playerInSingleGWPoints = playerInSingleGWProjection?.totalExpectedPoints || 0;
+            
             const transferCost = playerIn.now_cost - playerOut.sellingPrice;
             const budget = currentBank + playerOut.sellingPrice;
             
             if (playerIn.now_cost <= budget) {
               const pointsGain = playerInPoints - playerOut.projectedPoints;
+              const singleGWPointsGain = playerInSingleGWPoints - playerOut.singleGWPoints;
               
               // Dynamic threshold based on free transfers available
               // 1 FT: 1.2 pts/game, 2 FT: 1.1 pts/game, 3 FT: 1.0 pts/game, 4 FT: 0.9 pts/game, 5 FT: 0.8 pts/game
@@ -2375,9 +2390,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
               const thresholdMultiplier = thresholdByFreeTransfers[freeTransfersForGW] || 1.1;
               const remainingGameweeks = planningEnd - targetGW + 1;
-              const minPointsGain = remainingGameweeks * thresholdMultiplier;
+              const minPointsGainTotal = remainingGameweeks * thresholdMultiplier;
+              const minPointsGainSingleGW = thresholdMultiplier;
               
-              if (pointsGain >= minPointsGain) {
+              // Transfer must meet BOTH thresholds:
+              // 1. Single gameweek threshold (e.g., 1.2 pts for GW 12 with 1 FT)
+              // 2. Total range threshold (e.g., 1.2 * 6 = 7.2 pts for GW 12-17 with 1 FT)
+              if (singleGWPointsGain >= minPointsGainSingleGW && pointsGain >= minPointsGainTotal) {
                 transferRecommendations.push({
                   playerOut: {
                     id: playerOut.id,
