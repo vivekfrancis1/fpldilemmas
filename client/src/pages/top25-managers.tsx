@@ -31,6 +31,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import Top25TeamAnalysis from "./top25-team-analysis";
+import { LoadingExperience } from "@/components/loading-experience";
 
 type Top25Manager = {
   rank: number;
@@ -379,6 +380,23 @@ export default function Top25Managers() {
 
     return sorted;
   }, [managersWithData, sortField, sortDirection]);
+
+  // Show loading screen on initial load
+  const hasNoTrackingData = managersWithData.every(m => !m.latestTracking);
+  if (isRefreshing && hasNoTrackingData) {
+    return (
+      <LoadingExperience
+        variant="table"
+        title="Loading Top 25 Managers"
+        description="Fetching live data for all 25 elite FPL managers..."
+        steps={[
+          { text: "Retrieving manager profiles", delay: "0s" },
+          { text: "Fetching current rankings and points", delay: "0.2s" },
+          { text: "Calculating team values and transfers", delay: "0.4s" },
+        ]}
+      />
+    );
+  }
 
   return (
     <div className="fpl-page-wrapper">

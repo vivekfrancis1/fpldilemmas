@@ -36,6 +36,7 @@ import {
   PieChart,
   ArrowUpDown,
 } from "lucide-react";
+import { LoadingExperience } from "@/components/loading-experience";
 
 type Top50Manager = {
   rank: number;
@@ -652,6 +653,22 @@ export default function Top50Managers() {
 
     return sorted;
   }, [managersWithData, sortField, sortDirection]);
+
+  // Show loading screen when bootstrap data is loading
+  if (bootstrapLoading) {
+    return (
+      <LoadingExperience
+        variant="table"
+        title="Loading Top 50 Managers"
+        description="Fetching FPL data and current top 50 manager standings..."
+        steps={[
+          { text: "Connecting to FPL API", delay: "0s" },
+          { text: "Loading manager rankings", delay: "0.2s" },
+          { text: "Preparing team analysis data", delay: "0.4s" },
+        ]}
+      />
+    );
+  }
 
   return (
     <div className="fpl-page-wrapper">
