@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Calendar } from "lucide-react";
+import { LoadingExperience } from "@/components/loading-experience";
 import StatsCards from "../components/stats-cards";
 import FiltersPanel from "../components/filters-panel";
 import PlayerStatsTable from "../components/player-stats-table";
@@ -263,12 +264,18 @@ export default function PlayerStats() {
 
       {isLoading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="loading-state">
-          <div className="bg-white rounded-lg p-6 flex items-center space-x-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-            <span className="text-sm text-gray-700 font-medium">
-              {selectedSeason === "current" ? "Loading current player data..." : `Loading ${selectedSeason} season data...`}
-            </span>
-          </div>
+          <LoadingExperience
+            variant="table"
+            title={selectedSeason === "current" ? "Loading Current Season" : `Loading ${selectedSeason} Season`}
+            description={selectedSeason === "current" 
+              ? "Fetching live player statistics and performance data..." 
+              : `Retrieving historical player data from ${selectedSeason} season...`}
+            steps={[
+              { text: "Loading player information", delay: "0s" },
+              { text: "Fetching team and position data", delay: "0.2s" },
+              { text: "Preparing statistics table", delay: "0.4s" },
+            ]}
+          />
         </div>
       )}
 
