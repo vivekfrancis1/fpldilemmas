@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 
-import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { BootstrapData } from "@shared/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBatchAssistsProjections } from "@/hooks/use-batch-projections";
@@ -47,16 +47,21 @@ export default function PlayerAssistProjections() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Get available gameweeks for dropdown (next 12 gameweeks)
+  const availableGameweeks = useMemo(() => {
+    if (!bootstrapData?.events) {
+      return Array.from({ length: 12 }, (_, i) => i + 5); // Fallback
+    }
+    return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
+  }, [bootstrapData?.events]);
+
   // useEffect for initialization
   useEffect(() => {
     if (!bootstrapData || initialized) return;
     
-    const currentGW = computeCurrentGameweek(bootstrapData.events);
-    const nextGW = Math.min((currentGW ?? 3) + 1, 38);
-    const maxAvailableGW = Math.min(38, nextGW + 5); // Next 6 gameweeks max
-    
-    setStartGameweek(nextGW);
-    setEndGameweek(Math.min(nextGW + 5, maxAvailableGW)); // Next 6 gameweeks default
+    const range = getDefaultGameweekRange(bootstrapData.events, 6); // Default to 6 gameweeks
+    setStartGameweek(parseInt(range.startGameweek));
+    setEndGameweek(parseInt(range.endGameweek));
     setInitialized(true);
   }, [bootstrapData, initialized]);
 
@@ -94,9 +99,6 @@ export default function PlayerAssistProjections() {
     return currentEvent ? currentEvent.id : 3;
   }, [bootstrapData]);
 
-  const nextGameweek = currentGameweek + 1;
-  const maxAvailableGW = Math.min(38, nextGameweek + 5); // Next 6 gameweeks max
-
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
     if (!playerAssistData) return [];
@@ -109,21 +111,6 @@ export default function PlayerAssistProjections() {
     const uniquePositions = Array.from(new Set(playerAssistData.map(p => p.position)));
     return uniquePositions.sort();
   }, [playerAssistData]);
-
-  // Get available gameweeks for filtering
-  const availableGameweeks = useMemo(() => {
-    if (!playerAssistData || playerAssistData.length === 0) return [];
-    const gameweeks = new Set<number>();
-    playerAssistData.forEach(player => {
-      Object.keys(player.gameweekProjections).forEach(gw => {
-        const gwNum = parseInt(gw);
-        if (gwNum >= nextGameweek && gwNum <= maxAvailableGW) { // Show next 6 gameweeks dynamically
-          gameweeks.add(gwNum);
-        }
-      });
-    });
-    return Array.from(gameweeks).sort((a, b) => a - b);
-  }, [playerAssistData, nextGameweek, maxAvailableGW]);
 
   // Generate dynamic gameweek columns based on selected range
   const dynamicGameweekColumns = useMemo(() => {
@@ -345,8 +332,8 @@ export default function PlayerAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: Math.max(0, maxAvailableGW - nextGameweek + 1) }, (_, i) => i + nextGameweek).map((gw, index) => (
-                      <SelectItem key={`start-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
+                    {availableGameweeks.map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -359,8 +346,8 @@ export default function PlayerAssistProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {startGameweek && Array.from({ length: Math.max(0, maxAvailableGW - startGameweek + 1) }, (_, i) => i + startGameweek).map((gw, index) => (
-                      <SelectItem key={`end-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
+                    {availableGameweeks.filter(gw => gw >= startGameweek).map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

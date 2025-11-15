@@ -12222,9 +12222,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fplData = await fplResponse.json();
         const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
         
-        // Use dynamic gameweek calculation for next 6 gameweeks
+        // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
-        const gameweekRange = computeNextRange(fplData.events, 6);
+        const gameweekRange = computeNextRange(fplData.events, 12);
         const startGameweek = gameweekRange.start;
         const endGameweek = gameweekRange.end;
         
@@ -12242,7 +12242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const teamGamesPlayed = currentGameweek; // Average number of games team has played
           const expectedYellowCardsPerGameweek = teamGamesPlayed > 0 ? seasonYellowCards / teamGamesPlayed : 0;
           
-          // Process each gameweek in the next 6 gameweeks range
+          // Process each gameweek in the next 12 gameweeks range
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
             const gwYellowCards = expectedYellowCardsPerGameweek;
             const gwPoints = -gwYellowCards; // -1 point per yellow card
@@ -12703,9 +12703,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
         const fplData = await fplResponse.json();
         
-        // Use dynamic gameweek calculation for next 6 gameweeks
+        // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
-        const gameweekRange = computeNextRange(fplData.events, 6);
+        const gameweekRange = computeNextRange(fplData.events, 12);
         const startGameweek = gameweekRange.start;
         const endGameweek = gameweekRange.end;
         
@@ -13200,11 +13200,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
       }
       
-      // Calculate next 6 gameweeks range
+      // Calculate next 12 gameweeks range
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(startGameweek + 5, 38); // Next 6 gameweeks
+      const endGameweek = Math.min(startGameweek + 11, 38); // Next 12 gameweeks
       
-      console.log(`📊 Current GW: ${currentGameweek}, serving next 6 gameweeks: GW${startGameweek}-${endGameweek}`);
+      console.log(`📊 Current GW: ${currentGameweek}, serving next 12 gameweeks: GW${startGameweek}-${endGameweek}`);
       
       // Check memory cache for current range
       const currentCacheKey = `${startGameweek}-${endGameweek}`;
@@ -13943,9 +13943,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
       const nextGameweek = currentGameweek + 1;
       
-      // Set defaults: next 6 gameweeks if no parameters provided
+      // Set defaults: next 12 gameweeks if no parameters provided
       const defaultStartGw = nextGameweek;
-      const defaultEndGw = Math.min(nextGameweek + 5, 38);
+      const defaultEndGw = Math.min(nextGameweek + 11, 38);
       
       const finalStartGw = startGw || defaultStartGw;
       const finalEndGw = endGw || defaultEndGw;
@@ -14073,9 +14073,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 3;
       const nextGameweek = currentGameweek + 1;
       
-      // Set defaults: next 6 gameweeks if no parameters provided
+      // Set defaults: next 12 gameweeks if no parameters provided
       const defaultStartGw = nextGameweek;
-      const defaultEndGw = Math.min(nextGameweek + 5, 38);
+      const defaultEndGw = Math.min(nextGameweek + 11, 38);
       
       const finalStartGw = startGw || defaultStartGw;
       const finalEndGw = endGw || defaultEndGw;
