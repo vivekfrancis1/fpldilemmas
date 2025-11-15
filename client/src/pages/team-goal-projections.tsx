@@ -40,12 +40,12 @@ export default function TeamGoalProjections() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
 
-  // Get available gameweeks for dropdown options (next 6 gameweeks)
+  // Get available gameweeks for dropdown options (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) {
-      return Array.from({ length: 6 }, (_, i) => i + 1); // Fallback
+      return Array.from({ length: 12 }, (_, i) => i + 1); // Fallback
     }
-    return getNextGameweeksForDropdown(bootstrapData.events, 6);
+    return getNextGameweeksForDropdown(bootstrapData.events, 12);
   }, [bootstrapData?.events]);
 
   // Update state when bootstrap data changes (e.g., on page load)

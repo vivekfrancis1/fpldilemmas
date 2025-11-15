@@ -36,7 +36,7 @@ export default function TeamAssistProjections() {
   }, [bootstrapData]);
   
   const availableGameweeks = useMemo(() => 
-    getNextGameweeksForDropdown(bootstrapData?.events || [], 6), [bootstrapData]
+    getNextGameweeksForDropdown(bootstrapData?.events || [], 12), [bootstrapData]
   );
 
   const [startGameweek, setStartGameweek] = useState<string>("6");
