@@ -11,6 +11,7 @@ import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { LoadingExperience } from "@/components/loading-experience";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -1042,14 +1043,16 @@ export default function BestFreehitTeam() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="space-y-6">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Loading player data...</p>
-          </div>
-        </div>
-      </div>
+      <LoadingExperience
+        variant="simulation"
+        title="Loading Free Hit Optimizer"
+        description="Preparing unlimited transfer optimization for the selected gameweek..."
+        steps={[
+          { text: "Loading player pool and projections", delay: "0s" },
+          { text: "Fetching fixture difficulty ratings", delay: "0.2s" },
+          { text: "Preparing optimization engine", delay: "0.4s" },
+        ]}
+      />
     );
   }
 
