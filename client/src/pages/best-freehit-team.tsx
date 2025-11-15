@@ -1043,16 +1043,14 @@ export default function BestFreehitTeam() {
 
   if (isLoading) {
     return (
-      <LoadingExperience
-        variant="simulation"
-        title="Loading Free Hit Optimizer"
-        description="Preparing unlimited transfer optimization for the selected gameweek..."
-        steps={[
-          { text: "Loading player pool and projections", delay: "0s" },
-          { text: "Fetching fixture difficulty ratings", delay: "0.2s" },
-          { text: "Preparing optimization engine", delay: "0.4s" },
-        ]}
-      />
+      <div className="container mx-auto px-4 py-8">
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading player data...</p>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -1080,6 +1078,25 @@ export default function BestFreehitTeam() {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
+      {/* Optimization Loading Screen */}
+      {isOptimizing && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          data-testid="overlay-optimizing-freehit"
+        >
+          <LoadingExperience
+            variant="simulation"
+            title="Optimizing Free Hit Team"
+            description="Running advanced algorithms to find the best possible squad for the selected gameweek..."
+            steps={[
+              { text: "Analyzing player projections", delay: "0s" },
+              { text: "Testing formation combinations", delay: "0.2s" },
+              { text: "Selecting optimal captain", delay: "0.4s" },
+            ]}
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="fpl-page-header">
         <div className="flex items-center gap-3">

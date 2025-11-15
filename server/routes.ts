@@ -2469,11 +2469,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (isGW15) {
               // GW15: Accept all transfers with positive gain
               shouldAccept = true;
-            } else if (has5FTs && primaryTransfers.length === 0) {
-              // When we have 5 FTs, accept at least 1 transfer (even with negative/zero gain)
+            } else if (has5FTs) {
+              // When we have 5 FTs, ONLY accept transfers with positive gain
               // This prevents wasting FTs when there are no high-value transfers available
-              shouldAccept = true;
-              console.log(`  ✅ First transfer with 5 FTs: Accepting ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.pointsGain.toFixed(2)} pts, no threshold required)`);
+              shouldAccept = transfer.pointsGain > 0;
+              if (shouldAccept) {
+                console.log(`  ✅ 5 FT gameweek: Accepting ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.pointsGain.toFixed(2)} pts, no threshold required)`);
+              }
             } else {
               // All other cases: Must meet normal threshold
               shouldAccept = transfer.meetsNormalThreshold;

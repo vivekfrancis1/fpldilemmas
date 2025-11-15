@@ -12,6 +12,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LoadingExperience } from "@/components/loading-experience";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -1020,6 +1021,25 @@ export default function BestWildcardTeam() {
 
   return (
     <div className="space-y-6">
+      {/* Optimization Loading Screen */}
+      {isOptimizing && (
+        <div 
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          data-testid="overlay-optimizing-wildcard"
+        >
+          <LoadingExperience
+            variant="simulation"
+            title="Optimizing Wildcard Team"
+            description="Running advanced algorithms to find the best possible squad across multiple gameweeks..."
+            steps={[
+              { text: "Analyzing player projections for all gameweeks", delay: "0s" },
+              { text: "Testing formation combinations", delay: "0.2s" },
+              { text: "Optimizing captain and vice-captain selections", delay: "0.4s" },
+            ]}
+          />
+        </div>
+      )}
+
       {/* Header - Mobile Optimized */}
       <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-lg p-4 md:p-6 text-white">
         <div className="flex items-center gap-2 md:gap-3 mb-2">
