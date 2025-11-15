@@ -1111,21 +1111,21 @@ export default function BestWildcardTeam() {
 
           {/* Optimization Mode - Mobile Optimized */}
           <div className="space-y-4 p-3 md:p-4 bg-muted/30 rounded-lg">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
-              <div className="space-y-1">
+            <div className="space-y-1">
+              <div className="flex items-center gap-3">
                 <Label htmlFor="unlimited-budget" className="text-sm font-medium">
                   {unlimitedBudget ? 'Unlimited Budget (Default)' : 'Budget Optimization Mode'}
                 </Label>
-                <p className="text-xs text-muted-foreground">
-                  {unlimitedBudget ? 'Select top players by total projected points (no budget limit)' : 'Optimize within budget using unlimited team as reference'}
-                </p>
+                <Switch
+                  id="unlimited-budget"
+                  checked={unlimitedBudget}
+                  onCheckedChange={setUnlimitedBudget}
+                  data-testid="switch-unlimited-budget"
+                />
               </div>
-              <Switch
-                id="unlimited-budget"
-                checked={unlimitedBudget}
-                onCheckedChange={setUnlimitedBudget}
-                data-testid="switch-unlimited-budget"
-              />
+              <p className="text-xs text-muted-foreground">
+                {unlimitedBudget ? 'Select top players by total projected points (no budget limit)' : 'Optimize within budget using unlimited team as reference'}
+              </p>
             </div>
             
             {!unlimitedBudget && (
