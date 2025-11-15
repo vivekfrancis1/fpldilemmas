@@ -222,7 +222,7 @@ export default function ProjectedPoints() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch projections for next 6 gameweeks
+  // Fetch projections for next 12 gameweeks
   const { data: playerProjections6GW, isLoading: isLoadingProjections, refetch: refetchProjections } = useQuery<any[]>({
     queryKey: ["/api/player-total-points"],
     staleTime: 10 * 60 * 1000,
@@ -246,7 +246,7 @@ export default function ProjectedPoints() {
     }
   }, [bootstrapData, selectedGameweek]);
 
-  // Auto-optimize for all 6 gameweeks
+  // Auto-optimize for all 12 gameweeks
   const optimizeAllGameweeks = async () => {
     const nextGWs = getNextGameweeks();
     if (nextGWs.length === 0 || manualLineup.length === 0) {
@@ -300,7 +300,7 @@ export default function ProjectedPoints() {
     }
   };
 
-  // Get next 6 gameweeks
+  // Get next 12 gameweeks
   const getNextGameweeks = () => {
     if (!bootstrapData) return [];
     
@@ -320,7 +320,7 @@ export default function ProjectedPoints() {
     }
     
     const nextGameweeks = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 12; i++) {
       const gwNumber = startGW + i;
       const gw = bootstrapData.events.find(e => e.id === gwNumber);
       if (gw && gwNumber <= 38) {
@@ -417,7 +417,7 @@ export default function ProjectedPoints() {
     }
   }, [plannerMode]);
 
-  // Calculate total projected points for all 6 gameweeks
+  // Calculate total projected points for all 12 gameweeks
   const calculateTotal6GWProjectedPoints = (): number => {
     const nextGWs = getNextGameweeks();
     if (nextGWs.length === 0) return 0;
@@ -459,7 +459,7 @@ export default function ProjectedPoints() {
     const teamName = getTeamName(player);
     const nextGWs = getNextGameweeks();
     
-    // Get projected points for next 6 gameweeks
+    // Get projected points for next 12 gameweeks
     const projections = nextGWs.map(gw => ({
       gw: gw.id,
       points: getPlayerProjectedPoints(player.id, gw.id)
