@@ -86,21 +86,22 @@ export default function PlayerDefensiveContributions() {
   const [sortByDCPoints, setSortByDCPoints] = useState<boolean>(false);
   const [dcPointsSortOrder, setDCPointsSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Dynamic gameweek range state (default 6 gameweeks, max 12 available)
+  // Dynamic gameweek range state (fetch 12 gameweeks for API, default display to 6)
   const [gameweekRange, setGameweekRange] = useState(() => {
     const start = nextGameweek;
-    const end = Math.min(nextGameweek + 5, 38); // Default to 6 gameweeks
+    const end = Math.min(nextGameweek + 11, 38); // Fetch 12 gameweeks for dropdown
     return { start, end };
   });
   
   // Update range when current gameweek changes
   useEffect(() => {
     const start = nextGameweek;
-    const end = Math.min(nextGameweek + 5, 38); // Default to 6 gameweeks
+    const end = Math.min(nextGameweek + 11, 38); // Fetch 12 gameweeks for dropdown
     setGameweekRange({ start, end });
   }, [nextGameweek]);
 
   // Fetch defensive contribution projections using new formula-based endpoint with current season data
+  // Fetches 12 gameweeks to populate dropdown, but display defaults to 6
   const { data: defensiveData, isLoading } = useQuery({
     queryKey: ["player-defensive-contributions-current-season", gameweekRange.start, gameweekRange.end],
     queryFn: () => fetch(`/api/player-defensive-contributions-projections?startGameweek=${gameweekRange.start}&endGameweek=${gameweekRange.end}`).then(res => res.json()),
@@ -208,10 +209,10 @@ export default function PlayerDefensiveContributions() {
     ? players[0].gameweekProjections.map(gw => gw.gameweek)
     : Array.from({ length: 12 }, (_, i) => gameweekRange.start + i).filter(gw => gw <= 38);
   
-  // Set default gameweek range based on current API query
+  // Set default gameweek range to 6 gameweeks (even though API fetches 12)
   useEffect(() => {
     setStartGameweek(gameweekRange.start);
-    setEndGameweek(gameweekRange.end);
+    setEndGameweek(Math.min(gameweekRange.start + 5, 38)); // Default to 6 gameweeks
   }, [gameweekRange]);
   
   // All gameweeks are already in the correct range from API

@@ -156,14 +156,15 @@ export default function ProjectedStandings() {
                       <SelectValue placeholder="Loading..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {bootstrapData && Array.from({ length: 6 }, (_, i) => {
+                      {bootstrapData && Array.from({ length: 12 }, (_, i) => {
                         const gw = currentGameweek + 1 + i;
+                        if (gw > 38) return null; // Don't show gameweeks beyond GW38
                         return (
                           <SelectItem key={gw} value={gw.toString()}>
                             {gw}
                           </SelectItem>
                         );
-                      })}
+                      }).filter(Boolean)}
                     </SelectContent>
                   </Select>
                 </div>
