@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info, Heart, AlertTriangle, XCircle, Clock, List } from "lucide-react";
+import { LoadingExperience } from "@/components/loading-experience";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -368,13 +369,16 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="py-12">
-          <div className="text-center text-muted-foreground">
-            Loading player projections...
-          </div>
-        </CardContent>
-      </Card>
+      <LoadingExperience
+        variant="optimization"
+        title="Loading Transfer Planner"
+        description="Setting up your transfer planning workspace with player projections and team data..."
+        steps={[
+          { text: "Loading 700+ player projections", delay: "0s" },
+          { text: "Fetching FPL bootstrap data", delay: "0.2s" },
+          { text: "Preparing draft management system", delay: "0.4s" },
+        ]}
+      />
     );
   }
 
