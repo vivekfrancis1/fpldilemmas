@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -101,10 +102,13 @@ export default function BestWildcardTeam() {
     return map;
   }, [bootstrapData]);
 
-  // Calculate dynamic gameweek range (next 12 gameweeks)
+  // State for gameweek horizon selection
+  const [gameweekHorizon, setGameweekHorizon] = useState<number>(12);
+  
+  // Calculate dynamic gameweek range based on selected horizon
   const currentGameweek = bootstrapData?.events.find((event: any) => event.is_current)?.id || 6;
   const startGameweek = currentGameweek + 1;
-  const endGameweek = Math.min(startGameweek + 11, 38); // Next 12 gameweeks, max GW38
+  const endGameweek = Math.min(startGameweek + gameweekHorizon - 1, 38); // Based on selected horizon, max GW38
 
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimalTeam, setOptimalTeam] = useState<OptimalTeam | null>(null);
@@ -148,6 +152,11 @@ export default function BestWildcardTeam() {
     endGameweek: endGameweek
   })) : [];
   const gameweekRange = `GW${startGameweek}-${endGameweek}`;
+
+  // Clear optimal team when gameweek horizon changes
+  useEffect(() => {
+    setOptimalTeam(null);
+  }, [gameweekHorizon]);
 
   // Get points for specific gameweek
   const getGameweekPoints = (player: PlayerSnapshot, gameweek: number): number => {
@@ -873,7 +882,7 @@ export default function BestWildcardTeam() {
   };
 
   const optimizeTeam = async () => {
-    console.log('Starting WILDCARD optimization for next 6 gameweeks:', gameweekRange);
+    console.log(`Starting WILDCARD optimization for next ${gameweekHorizon} gameweeks:`, gameweekRange);
     console.log('Total snapshots:', snapshots.length);
     if (snapshots.length > 0) {
       console.log('Sample snapshot:', snapshots[0]);
@@ -1052,10 +1061,34 @@ export default function BestWildcardTeam() {
         <CardHeader>
           <CardTitle className="text-lg">Wildcard Optimization</CardTitle>
           <CardDescription>
-            Optimize your wildcard team for maximum points across the next 6 gameweeks
+            Optimize your wildcard team for maximum points across the next {gameweekHorizon} gameweeks
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Gameweek Horizon Selection */}
+          <div className="space-y-2 p-3 md:p-4 bg-muted/20 rounded-lg border">
+            <Label htmlFor="gameweek-horizon" className="text-sm font-medium">
+              Optimization Horizon
+            </Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Select how many gameweeks ahead to optimize your wildcard team
+            </p>
+            <Select 
+              value={gameweekHorizon.toString()} 
+              onValueChange={(value) => setGameweekHorizon(parseInt(value))}
+            >
+              <SelectTrigger id="gameweek-horizon" className="w-full sm:w-48" data-testid="select-gameweek-horizon">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="6">Next 6 Gameweeks</SelectItem>
+                <SelectItem value="8">Next 8 Gameweeks</SelectItem>
+                <SelectItem value="10">Next 10 Gameweeks</SelectItem>
+                <SelectItem value="12">Next 12 Gameweeks</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Optimization Mode - Mobile Optimized */}
           <div className="space-y-4 p-3 md:p-4 bg-muted/30 rounded-lg">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0">
