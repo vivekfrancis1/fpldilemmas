@@ -2567,19 +2567,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let nextGWFTs = unusedFTs + 1;
         
         // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
-        // If next gameweek is 16, apply AFCON bonus
+        // All managers get 5 free transfers in GW16 regardless of GW15 transfers
         const nextGW = targetGW + 1;
         if (nextGW === 16) {
-          if (nextGWFTs === 1) {
-            // No banked transfers: get 1 normal + 4 AFCON bonus = 5 total
-            nextGWFTs = 5;
-            console.log(`🎁 GW16 AFCON BONUS: No banked transfers → Reset to 5 FTs (1 normal + 4 bonus)`);
-          } else {
-            // Has banked transfers: get banked + 1 normal + 2 AFCON bonus, capped at 5
-            const afconBonus = 2;
-            nextGWFTs = Math.min(5, nextGWFTs + afconBonus);
-            console.log(`🎁 GW16 AFCON BONUS: Had ${unusedFTs} banked → ${nextGWFTs} FTs (banked + 1 normal + 2 bonus)`);
-          }
+          nextGWFTs = 5;
+          console.log(`🎁 GW16 AFCON BONUS: All managers receive 5 FTs for GW16 (regardless of GW15 activity)`);
         }
         
         runningFreeTransfers = Math.min(5, nextGWFTs);
