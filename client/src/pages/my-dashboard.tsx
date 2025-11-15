@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
+import { LoadingExperience } from "@/components/loading-experience";
 
 
 
@@ -686,15 +687,16 @@ export default function MyDashboard() {
 
         {/* Loading State */}
         {isLoading && searchedId && (
-          <div className="text-center py-12">
-            <div className="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-purple-500 bg-white transition ease-in-out duration-150">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Loading manager data...
-            </div>
-          </div>
+          <LoadingExperience
+            variant="analysis"
+            title="Loading Your FPL Dashboard"
+            description="Gathering comprehensive manager data from multiple sources..."
+            steps={[
+              { text: "Fetching manager profile and history", delay: "0s" },
+              { text: "Loading current team and transfers", delay: "0.2s" },
+              { text: "Analyzing league standings", delay: "0.4s" },
+            ]}
+          />
         )}
 
         {/* Dashboard Content */}
