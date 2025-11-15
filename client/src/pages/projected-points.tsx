@@ -885,10 +885,10 @@ export default function ProjectedPoints() {
           </CardContent>
         </Card>
 
-        {/* Summary Card - Total 6 GW Points */}
+        {/* Summary Card - Total 12 GW Points */}
         <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
           <CardHeader>
-            <CardTitle className="text-white text-base sm:text-lg">Next 6 Gameweeks Total Projected Points</CardTitle>
+            <CardTitle className="text-white text-base sm:text-lg">Next 12 Gameweeks Total Projected Points</CardTitle>
           </CardHeader>
           <CardContent>
             {plannerMode === "auto" && isOptimizing ? (
@@ -1021,7 +1021,7 @@ export default function ProjectedPoints() {
                             GW{gw.id}
                           </TableHead>
                         ))}
-                        <TableHead className="text-center text-xs sm:text-sm">Total (6GW)</TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm">Total (12GW)</TableHead>
                       </>
                     ) : (
                       <TableHead className="text-center text-xs sm:text-sm">GW{selectedGameweek} Pts</TableHead>
@@ -1111,7 +1111,7 @@ export default function ProjectedPoints() {
                   Chip Recommendations
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
-                  Based on next 6 gameweek projections for your current team
+                  Based on next 12 gameweek projections for your current team
                 </CardDescription>
               </CardHeader>
               <CardContent>
