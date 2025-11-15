@@ -71,6 +71,7 @@ export default function PlayerSaves() {
   // API call for saves projections with dynamic gameweek range
   const { data: savesProjections, isLoading: isLoadingProjections } = useQuery({
     queryKey: ["/api/player-saves-projections", startGameweek, endGameweek],
+    queryFn: () => fetch(`/api/player-saves-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).then(res => res.json()),
     enabled: initialized && startGameweek > 0 && endGameweek > 0,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
