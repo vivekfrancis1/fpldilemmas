@@ -27,12 +27,12 @@ export class FPLScoringCacheService {
     }
     
     FPLScoringCacheService.updateLock = true;
-    // Calculate next 6 gameweeks if not provided
+    // Calculate next 12 gameweeks if not provided
     if (!startGameweek || !endGameweek) {
       const { computeNextRange } = await import('../shared/gameweek-utils');
       const bootstrapResponse = await internalFetch('/api/bootstrap-static');
       const bootstrap = await bootstrapResponse.json();
-      const nextRange = computeNextRange(bootstrap.events, 6);
+      const nextRange = computeNextRange(bootstrap.events, 12);
       startGameweek = nextRange.start;
       endGameweek = nextRange.end;
     }
