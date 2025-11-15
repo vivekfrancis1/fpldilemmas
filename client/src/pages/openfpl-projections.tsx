@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Brain, BarChart3, Target, AlertTriangle, TrendingUp, Star, Clock, DollarSign, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { LoadingExperience } from "@/components/loading-experience";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -170,6 +171,22 @@ export default function OpenFPLProjections() {
   }, {} as Record<number, boolean>);
 
   const formatPrice = (price: number) => `£${(price / 10).toFixed(1)}m`;
+  
+  // Show loading screen when bootstrap data is loading (required for everything)
+  if (isLoadingBootstrap) {
+    return (
+      <LoadingExperience
+        variant="analysis"
+        title="Loading OpenFPL ML System"
+        description="Initializing machine learning projections and player data..."
+        steps={[
+          { text: "Connecting to FPL API", delay: "0s" },
+          { text: "Loading player and team data", delay: "0.2s" },
+          { text: "Preparing ML ensemble models", delay: "0.4s" },
+        ]}
+      />
+    );
+  }
   
   const getAvailabilityColor = (status: number) => {
     if (status === 100) return "bg-green-50 text-green-700 border-green-200";
