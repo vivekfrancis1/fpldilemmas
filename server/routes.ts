@@ -9358,7 +9358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (currentEvent) {
           currentGameweek = currentEvent.id;
           dynamicStart = currentGameweek + 1;
-          dynamicEnd = Math.min(dynamicStart + 5, 38); // Next 6 gameweeks
+          dynamicEnd = Math.min(dynamicStart + 11, 38); // Next 12 gameweeks
         }
       } catch (error) {
         console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
