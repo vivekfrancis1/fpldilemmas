@@ -2469,8 +2469,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (isGW15) {
               // GW15: Accept all transfers with positive gain
               shouldAccept = true;
-            } else if (has5FTs && primaryTransfers.length === 0 && transfer.pointsGain > 0) {
-              // When we have 5 FTs, accept at least 1 transfer with any positive gain
+            } else if (has5FTs && primaryTransfers.length === 0) {
+              // When we have 5 FTs, accept at least 1 transfer (even with negative/zero gain)
               // This prevents wasting FTs when there are no high-value transfers available
               shouldAccept = true;
               console.log(`  ✅ First transfer with 5 FTs: Accepting ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.pointsGain.toFixed(2)} pts, no threshold required)`);
