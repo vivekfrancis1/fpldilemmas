@@ -2466,15 +2466,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`  Primary ${index + 1}: ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.pointsGain.toFixed(2)} pts)`);
         });
         
-        // Create a map of updated primary transfers for efficient lookup
-        const primaryTransferMap = new Map(
-          primaryTransfers.map(pt => [`${pt.playerOut.id}-${pt.playerIn.id}`, pt])
-        );
-        
-        // Filter out conflicting transfers and update budgetAfter for "other" transfers
-        // to reflect the bank balance after all primary transfers
+        // If no transfers meet the threshold, recommend rolling the transfer
         let filteredRecommendations = transferRecommendations;
-        if (primaryTransfers.length > 0) {
+        if (primaryTransfers.length === 0) {
+          console.log(`DEBUG GW${targetGW}: No transfers meet threshold - recommending to ROLL transfer`);
+          filteredRecommendations = [{
+            type: 'roll',
+            message: 'No transfers meet the minimum threshold. Roll your transfer to bank it for future gameweeks.',
+            freeTransfersAvailable: freeTransfersForGW,
+            bankBalance: runningBank
+          }];
+        } else {
+          // Create a map of updated primary transfers for efficient lookup
+          const primaryTransferMap = new Map(
+            primaryTransfers.map(pt => [`${pt.playerOut.id}-${pt.playerIn.id}`, pt])
+          );
+          
+          // Filter out conflicting transfers and update budgetAfter for "other" transfers
+          // to reflect the bank balance after all primary transfers
           filteredRecommendations = transferRecommendations.filter((rec) => {
             // Check if this is a primary transfer using the map
             const transferKey = `${rec.playerOut.id}-${rec.playerIn.id}`;

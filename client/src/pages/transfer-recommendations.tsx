@@ -228,15 +228,44 @@ export default function TransferRecommendations() {
                     </div>
                     {gwData.recommendations && gwData.recommendations.length > 0 ? (
                       <div className="space-y-4">
-                        {/* Primary Transfer Recommendations (based on free transfers available) */}
-                        {(() => {
-                          const freeTransfers = gwData.freeTransfersAvailable || 1;
-                          const primaryTransfers = gwData.recommendations.slice(0, freeTransfers);
-                          const otherTransfers = gwData.recommendations.slice(freeTransfers);
-                          
-                          return (
-                            <>
-                              {primaryTransfers.length > 0 && (
+                        {/* Check if this is a roll transfer recommendation */}
+                        {gwData.recommendations[0]?.type === 'roll' ? (
+                          <div className="flex flex-col items-center justify-center p-6 sm:p-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg" data-testid={`roll-transfer-gw${gw}`}>
+                            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                              <ArrowRightLeft className="h-8 w-8 text-blue-600" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Roll Transfer</h3>
+                            <p className="text-sm text-gray-700 text-center max-w-md mb-4">
+                              {gwData.recommendations[0].message}
+                            </p>
+                            <div className="flex gap-4 mt-2">
+                              <div className="flex items-center gap-2 bg-white/50 rounded-lg px-4 py-2">
+                                <ArrowRightLeft className="h-4 w-4 text-blue-600" />
+                                <div>
+                                  <div className="text-[10px] text-gray-500">Free Transfers</div>
+                                  <div className="text-sm font-bold text-blue-700">{gwData.recommendations[0].freeTransfersAvailable}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 bg-white/50 rounded-lg px-4 py-2">
+                                <DollarSign className="h-4 w-4 text-blue-600" />
+                                <div>
+                                  <div className="text-[10px] text-gray-500">Bank Balance</div>
+                                  <div className="text-sm font-bold text-blue-700">£{(gwData.recommendations[0].bankBalance / 10).toFixed(1)}m</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {/* Primary Transfer Recommendations (based on free transfers available) */}
+                            {(() => {
+                              const freeTransfers = gwData.freeTransfersAvailable || 1;
+                              const primaryTransfers = gwData.recommendations.slice(0, freeTransfers);
+                              const otherTransfers = gwData.recommendations.slice(freeTransfers);
+                              
+                              return (
+                                <>
+                                  {primaryTransfers.length > 0 && (
                                 <div>
                                   <h3 className="text-sm font-semibold text-gray-700 mb-2">
                                     Primary Transfer Recommendation{primaryTransfers.length > 1 ? 's' : ''}
@@ -356,6 +385,8 @@ export default function TransferRecommendations() {
                             </>
                           );
                         })()}
+                          </>
+                        )}
                       </div>
                     ) : (
                       <div className="text-center py-8 text-gray-500 text-sm">
