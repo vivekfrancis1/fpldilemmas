@@ -86,17 +86,17 @@ export default function PlayerDefensiveContributions() {
   const [sortByDCPoints, setSortByDCPoints] = useState<boolean>(false);
   const [dcPointsSortOrder, setDCPointsSortOrder] = useState<"asc" | "desc">("desc");
 
-  // Dynamic gameweek range state
+  // Dynamic gameweek range state (default 6 gameweeks, max 12 available)
   const [gameweekRange, setGameweekRange] = useState(() => {
     const start = nextGameweek;
-    const end = Math.min(nextGameweek + 5, 38);
+    const end = Math.min(nextGameweek + 5, 38); // Default to 6 gameweeks
     return { start, end };
   });
   
   // Update range when current gameweek changes
   useEffect(() => {
     const start = nextGameweek;
-    const end = Math.min(nextGameweek + 5, 38);
+    const end = Math.min(nextGameweek + 5, 38); // Default to 6 gameweeks
     setGameweekRange({ start, end });
   }, [nextGameweek]);
 
@@ -203,10 +203,10 @@ export default function PlayerDefensiveContributions() {
     });
   }, [defensiveData, bootstrapData, fixturesData]);
 
-  // Get all gameweeks from the API data (already filtered to future gameweeks)
+  // Get all gameweeks from the API data (already filtered to future gameweeks, up to 12 available)
   const allGameweeks = players.length > 0 && players[0].gameweekProjections.length > 0 
     ? players[0].gameweekProjections.map(gw => gw.gameweek)
-    : Array.from({ length: 6 }, (_, i) => gameweekRange.start + i).filter(gw => gw <= 38);
+    : Array.from({ length: 12 }, (_, i) => gameweekRange.start + i).filter(gw => gw <= 38);
   
   // Set default gameweek range based on current API query
   useEffect(() => {

@@ -5079,7 +5079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.set('Last-Modified', new Date().toUTCString());
     res.set('ETag', `"${Date.now()}"`);
     try {
-      console.log(`DEBUG: Team Goal Projections API called - generating next 6 gameweeks only`);
+      console.log(`DEBUG: Team Goal Projections API called - generating next 12 gameweeks`);
       
       // Use hardcoded teams for better performance, only fetch what we need from API
       const { PREMIER_LEAGUE_TEAMS } = await import("@shared/schema");
@@ -5104,10 +5104,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamService = await createTeamService();
       const bettingData = teamService.getBettingData();
       
-      // Process next 6 gameweeks only for optimized performance  
+      // Process next 12 gameweeks
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + 6, 38); // Next 6 gameweeks only
-      console.log(`DEBUG: Processing next 6 gameweeks (GW${startGameweek}-${endGameweek}) for team goal projections, current GW: ${currentGameweek}`);
+      const endGameweek = Math.min(currentGameweek + 12, 38);
+      console.log(`DEBUG: Processing next 12 gameweeks (GW${startGameweek}-${endGameweek}) for team goal projections, current GW: ${currentGameweek}`);
       
       // Use centralized TeamGoalsService instead of duplicated calculation logic
       const { TeamGoalsService } = await import('./team-goals-service');
@@ -5123,7 +5123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Assist Projections endpoint - using correct assist values based on actual FPL data analysis
   app.get("/api/team-assist-projections", async (req, res) => {
     try {
-      console.log(`DEBUG: Team Assist Projections API called - generating next 6 gameweeks only`);
+      console.log(`DEBUG: Team Assist Projections API called - generating next 12 gameweeks`);
       
       // Get current gameweek from bootstrap data
       const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
@@ -5133,10 +5133,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Force next 6 gameweeks only - ignore query parameters
+      // Process next 12 gameweeks
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + 6, 38);
-      console.log(`DEBUG: Team Assist Projections - Limiting to next 6 gameweeks: GW${startGameweek}-${endGameweek}`);
+      const endGameweek = Math.min(currentGameweek + 12, 38);
+      console.log(`DEBUG: Team Assist Projections - Limiting to next 12 gameweeks: GW${startGameweek}-${endGameweek}`);
       
       // Use TeamGoalsService directly (not HTTP call) as architect specified
       const { TeamGoalsService } = await import('./team-goals-service');
@@ -5171,7 +5171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Clean Sheet Projections endpoint
   app.get("/api/team-cs-projections", async (req, res) => {
     try {
-      console.log(`DEBUG: Team CS Projections API called - generating next 6 gameweeks only`);
+      console.log(`DEBUG: Team CS Projections API called - generating next 12 gameweeks`);
       
       const [bootstrapResponse, fixturesResponse, goalsAgainstResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
@@ -5189,9 +5189,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-      const endGameweek = Math.min(currentGameweek + 6, 38); // Next 6 gameweeks only
+      const endGameweek = Math.min(currentGameweek + 12, 38);
       
-      console.log(`DEBUG: Processing next 6 gameweeks for clean sheets (GW${currentGameweek + 1} to GW${endGameweek}), current GW: ${currentGameweek}`);
+      console.log(`DEBUG: Processing next 12 gameweeks for clean sheets (GW${currentGameweek + 1} to GW${endGameweek}), current GW: ${currentGameweek}`);
       
       // Create lookup map for team Goals Against by gameweek for new formula
       const teamGoalsAgainstMap = new Map();
@@ -5204,7 +5204,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bettingData = teamService.getBettingData();
       
       const teamProjections = teams.map((team: any) => {
-        // Get fixtures for this team across next 6 gameweeks only
+        // Get fixtures for this team across next 12 gameweeks
         const allFixtures = fixturesData
           .filter((f: any) => 
             (f.team_h === team.id || f.team_a === team.id) && 
@@ -5252,7 +5252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }).filter(Boolean);
         
-        // Calculate totals and averages for next 6 gameweeks only (actual projections)
+        // Calculate totals and averages for next 12 gameweeks (actual projections)
         const totalCSProbability = projections.reduce((sum, p) => sum + (p ? p.cleanSheetOdds : 0), 0);
         const averageCleanSheetOdds = projections.length > 0 ? totalCSProbability / projections.length : 0;
         
@@ -8149,7 +8149,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const matchProjections = await matchProjectionsResponse.json();
 
-      // Filter to show only next 6 gameweeks
+      // Filter to show only next 12 gameweeks
       const [bootstrapResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
       ]);
@@ -8161,9 +8161,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 5;
       const nextStartGameweek = currentGameweek + 1;
-      const nextEndGameweek = Math.min(currentGameweek + 6, 38);
+      const nextEndGameweek = Math.min(currentGameweek + 12, 38);
 
-      // Filter match projections to next 6 gameweeks only
+      // Filter match projections to next 12 gameweeks
       const filteredMatchProjections = matchProjections.filter((match: any) => 
         match.gameweek >= nextStartGameweek && match.gameweek <= nextEndGameweek
       );
@@ -8283,11 +8283,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Initialize goals against with zeros for all teams - LIMIT TO NEXT 6 GAMEWEEKS ONLY
+      // Initialize goals against with zeros for all teams - LIMIT TO NEXT 12 GAMEWEEKS
       const teamsGoalsAgainst = new Map();
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + 6, 38); // Next 6 gameweeks only
-      console.log(`DEBUG: Team Goals Conceded Projections - Limiting to next 6 gameweeks: GW${startGameweek}-${endGameweek}`);
+      const endGameweek = Math.min(currentGameweek + 12, 38);
+      console.log(`DEBUG: Team Goals Conceded Projections - Limiting to next 12 gameweeks: GW${startGameweek}-${endGameweek}`);
       
       teams.forEach((team: any) => {
         const gameweekProjections: any = {};
@@ -8371,7 +8371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Debug info (season totals removed)
-      console.log(`DEBUG: Team Goals Conceded Projections - Generated gameweek data for ${teamsGoalsAgainst.size} teams (next 6 gameweeks only: GW${startGameweek}-${endGameweek})`);
+      console.log(`DEBUG: Team Goals Conceded Projections - Generated gameweek data for ${teamsGoalsAgainst.size} teams (next 12 gameweeks: GW${startGameweek}-${endGameweek})`);
       
       // Convert to array and sort by team ID since no season totals
       const finalProjections = Array.from(teamsGoalsAgainst.values())

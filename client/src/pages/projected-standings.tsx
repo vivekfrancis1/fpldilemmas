@@ -34,15 +34,16 @@ export default function ProjectedStandings() {
   });
 
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 2;
-  const maxEndGameweek = Math.min(currentGameweek + 6, 38); // Next 6 gameweeks (excluding current)
+  const maxEndGameweek = Math.min(currentGameweek + 12, 38); // Up to 12 gameweeks available
+  const defaultEndGameweek = Math.min(currentGameweek + 6, 38); // Default to 6 gameweeks
   const [selectedEndGameweek, setSelectedEndGameweek] = useState<number | null>(null);
   
-  // Initialize selectedEndGameweek when bootstrapData is loaded
+  // Initialize selectedEndGameweek to default 6 gameweeks when bootstrapData is loaded
   useEffect(() => {
     if (bootstrapData && selectedEndGameweek === null) {
-      setSelectedEndGameweek(maxEndGameweek);
+      setSelectedEndGameweek(defaultEndGameweek);
     }
-  }, [bootstrapData, maxEndGameweek, selectedEndGameweek]);
+  }, [bootstrapData, defaultEndGameweek, selectedEndGameweek]);
 
   const { data: standingsData, isLoading: standingsLoading } = useQuery<TeamStanding[]>({
     queryKey: ["/api/projected-standings", selectedEndGameweek],

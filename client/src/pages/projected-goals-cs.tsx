@@ -38,31 +38,31 @@ export default function ProjectedGoalsCS() {
     queryKey: ["/api/bootstrap-static"],
   });
 
-  // Calculate dynamic gameweek defaults based on bootstrap data
+  // Calculate dynamic gameweek defaults based on bootstrap data (default 6 weeks, max 12)
   const defaultGameweekRange = useMemo(() => {
     if (!bootstrapData?.events) {
       return { startGameweek: "7", endGameweek: "12" }; // Fallback to likely next 6 gameweeks
     }
     debugGameweekCalculation(bootstrapData.events);
-    return getDefaultGameweekRange(bootstrapData.events, 6);
+    return getDefaultGameweekRange(bootstrapData.events, 6); // Default to 6 gameweeks
   }, [bootstrapData?.events]);
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
 
-  // Get available gameweeks for dropdown options (next 6 gameweeks)
+  // Get available gameweeks for dropdown options (next 12 gameweeks available)
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) {
-      return Array.from({ length: 6 }, (_, i) => i + 7); // Fallback starting from GW7
+      return Array.from({ length: 12 }, (_, i) => i + 7); // Fallback starting from GW7
     }
-    return getNextGameweeksForDropdown(bootstrapData.events, 6);
+    return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
   }, [bootstrapData?.events]);
 
   // Update state when bootstrap data changes (e.g., on page load)
   useEffect(() => {
     if (bootstrapData?.events) {
-      const newRange = getDefaultGameweekRange(bootstrapData.events, 6);
+      const newRange = getDefaultGameweekRange(bootstrapData.events, 6); // Default to 6 gameweeks
       setStartGameweek(newRange.startGameweek);
       setEndGameweek(newRange.endGameweek);
     }
