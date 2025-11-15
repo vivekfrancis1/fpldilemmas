@@ -1254,6 +1254,22 @@ export default function PlayerTotalPoints() {
 
   return (
     <div className="fpl-page-wrapper">
+      {/* Loading overlay when refetching data after gameweek change */}
+      {initialized && isLoading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" data-testid="overlay-loading-data">
+          <LoadingExperience
+            variant="table"
+            title="Updating Player Projections"
+            description="Recalculating player points for the selected gameweek range..."
+            steps={[
+              { text: "Fetching updated player data", delay: "0s" },
+              { text: "Calculating projected points", delay: "0.2s" },
+              { text: "Updating table view", delay: "0.4s" },
+            ]}
+          />
+        </div>
+      )}
+      
       <div className="fpl-container fpl-content-area fpl-section-spacing">
         <TooltipProvider delayDuration={100} skipDelayDuration={0}>
           {/* Page Header */}

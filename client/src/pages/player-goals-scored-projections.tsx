@@ -319,6 +319,22 @@ export default function PlayerGoalsScoredProjections() {
 
   return (
     <div className="fpl-page-container">
+      {/* Loading overlay when refetching data after gameweek change */}
+      {initialized && (isLoading || playerGoalLoading) && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" data-testid="overlay-loading-goals">
+          <LoadingExperience
+            variant="analysis"
+            title="Updating Goal Projections"
+            description="Recalculating projected goals for the selected gameweek range..."
+            steps={[
+              { text: "Loading team goal projections", delay: "0s" },
+              { text: "Updating player goal shares", delay: "0.2s" },
+              { text: "Computing player projections", delay: "0.4s" },
+            ]}
+          />
+        </div>
+      )}
+      
       {/* Unified Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-header-content">
