@@ -910,8 +910,8 @@ export default function ProjectedPoints() {
             <CardTitle className="text-white text-base sm:text-lg">Next 12 Gameweeks Total Projected Points</CardTitle>
           </CardHeader>
           <CardContent>
-            {plannerMode === "auto" && isOptimizing ? (
-              <div className="py-4">
+            {plannerMode === "auto" && (isOptimizing || optimizedLineups.size === 0) ? (
+              <div className="py-4" data-testid="loader-optimizing-lineup">
                 <div className="flex items-center justify-center gap-3 mb-3">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                   <div className="text-xl sm:text-2xl font-semibold">Optimizing Lineups...</div>
@@ -940,54 +940,63 @@ export default function ProjectedPoints() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
-              {nextGameweeks.map(gw => {
-                // Calculate total for this gameweek
-                let gwTotal = 0;
-                let gwFormation = '';
-                
-                if (plannerMode === "manual") {
-                  const starting11 = manualLineup.filter((p: any) => p.position <= 11);
-                  starting11.forEach((pick: any) => {
-                    const points = getPlayerProjectedPoints(pick.element, gw.id);
-                    const multiplier = pick.is_captain ? 2 : 1;
-                    gwTotal += points * multiplier;
-                  });
-                } else {
-                  // For auto mode, use the gameweek-specific optimized lineup
-                  const gwLineup = optimizedLineups.get(gw.id);
-                  if (gwLineup?.starting11) {
-                    gwLineup.starting11.forEach(pick => {
+            {plannerMode === "auto" && (isOptimizing || optimizedLineups.size === 0) ? (
+              <div className="text-center py-8">
+                <div className="flex items-center justify-center gap-3 mb-2">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                  <span className="text-sm text-gray-600">Calculating gameweek projections...</span>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 md:gap-4">
+                {nextGameweeks.map(gw => {
+                  // Calculate total for this gameweek
+                  let gwTotal = 0;
+                  let gwFormation = '';
+                  
+                  if (plannerMode === "manual") {
+                    const starting11 = manualLineup.filter((p: any) => p.position <= 11);
+                    starting11.forEach((pick: any) => {
                       const points = getPlayerProjectedPoints(pick.element, gw.id);
-                      const multiplier = pick.isCaptain ? 2 : 1;
+                      const multiplier = pick.is_captain ? 2 : 1;
                       gwTotal += points * multiplier;
                     });
-                    gwFormation = calculateFormation(gwLineup.starting11);
+                  } else {
+                    // For auto mode, use the gameweek-specific optimized lineup
+                    const gwLineup = optimizedLineups.get(gw.id);
+                    if (gwLineup?.starting11) {
+                      gwLineup.starting11.forEach(pick => {
+                        const points = getPlayerProjectedPoints(pick.element, gw.id);
+                        const multiplier = pick.isCaptain ? 2 : 1;
+                        gwTotal += points * multiplier;
+                      });
+                      gwFormation = calculateFormation(gwLineup.starting11);
+                    }
                   }
-                }
 
-                return (
-                  <Card 
-                    key={gw.id} 
-                    className={`cursor-pointer transition-all ${
-                      selectedGameweek === gw.id 
-                        ? 'ring-2 ring-purple-500 bg-purple-50' 
-                        : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => setSelectedGameweek(gw.id)}
-                    data-testid={`card-gameweek-${gw.id}`}
-                  >
-                    <CardContent className="p-2 sm:p-3 md:p-4 text-center">
-                      <div className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-600 mb-1">GW{gw.id}</div>
-                      <div className="text-base sm:text-xl md:text-2xl font-bold text-purple-600">{gwTotal.toFixed(1)}</div>
-                      {plannerMode === "auto" && gwFormation && (
-                        <div className="text-[9px] sm:text-xs font-medium text-gray-500 mt-0.5 sm:mt-1">{gwFormation}</div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
+                  return (
+                    <Card 
+                      key={gw.id} 
+                      className={`cursor-pointer transition-all ${
+                        selectedGameweek === gw.id 
+                          ? 'ring-2 ring-purple-500 bg-purple-50' 
+                          : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => setSelectedGameweek(gw.id)}
+                      data-testid={`card-gameweek-${gw.id}`}
+                    >
+                      <CardContent className="p-2 sm:p-3 md:p-4 text-center">
+                        <div className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-600 mb-1">GW{gw.id}</div>
+                        <div className="text-base sm:text-xl md:text-2xl font-bold text-purple-600">{gwTotal.toFixed(1)}</div>
+                        {plannerMode === "auto" && gwFormation && (
+                          <div className="text-[9px] sm:text-xs font-medium text-gray-500 mt-0.5 sm:mt-1">{gwFormation}</div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -1109,7 +1118,16 @@ export default function ProjectedPoints() {
                             </>
                           );
                         })()
-                      : null
+                      : (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center py-8">
+                              <div className="flex items-center justify-center gap-3">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600"></div>
+                                <span className="text-sm text-gray-600">Loading optimized lineup...</span>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )
                   }
                 </TableBody>
               </Table>
