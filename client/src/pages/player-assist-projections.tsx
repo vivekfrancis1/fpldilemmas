@@ -40,8 +40,8 @@ export default function PlayerAssistProjections() {
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [startGameweek, setStartGameweek] = useState<number>(5);
-  const [endGameweek, setEndGameweek] = useState<number>(10);
+  const [startGameweek, setStartGameweek] = useState<number>(0);
+  const [endGameweek, setEndGameweek] = useState<number>(0);
   const [initialized, setInitialized] = useState(false);
   const [sortField, setSortField] = useState<SortField>('rangeTotal');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -50,19 +50,25 @@ export default function PlayerAssistProjections() {
   // Get available gameweeks for dropdown (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) {
-      return Array.from({ length: 12 }, (_, i) => i + 5); // Fallback
+      return [];
     }
     return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
   }, [bootstrapData?.events]);
 
-  // useEffect for initialization
+  // Initialize gameweeks when bootstrap data loads
   useEffect(() => {
     if (!bootstrapData || initialized) return;
     
     const range = getDefaultGameweekRange(bootstrapData.events, 6); // Default to 6 gameweeks
-    setStartGameweek(parseInt(range.startGameweek));
-    setEndGameweek(parseInt(range.endGameweek));
-    setInitialized(true);
+    const start = parseInt(range.startGameweek);
+    const end = parseInt(range.endGameweek);
+    
+    // Validate range
+    if (start > 0 && end > 0 && start <= end && end <= 38) {
+      setStartGameweek(start);
+      setEndGameweek(end);
+      setInitialized(true);
+    }
   }, [bootstrapData, initialized]);
 
   // BATCH OPTIMIZED: Use new batch hook for better performance
@@ -407,14 +413,14 @@ export default function PlayerAssistProjections() {
         </Card>
 
         {/* Loading State */}
-        {isLoading && (
+        {(isLoading || !initialized) && (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
           </div>
         )}
 
         {/* Results */}
-        {!isLoading && filteredAndSortedData.length > 0 && (
+        {!isLoading && initialized && filteredAndSortedData.length > 0 && (
           <div className="space-y-6">
               <Card>
                 <CardHeader>

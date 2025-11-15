@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw, UserPlus, Heart, AlertTriangle, XCircle, Clock, CheckCircle } from "lucide-react";
+import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -823,9 +825,6 @@ function createPlayerTotalPointsColumns(
   ];
 }
 
-import { computeCurrentGameweek } from "@shared/gameweek-utils";
-import { BootstrapData } from "@shared/schema";
-
 export default function PlayerTotalPoints() {
   const queryClient = useQueryClient();
   
@@ -851,18 +850,28 @@ export default function PlayerTotalPoints() {
   const [compareList, setCompareList] = useState<PlayerTotalPointsData[]>([]);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
 
+  // Get available gameweeks for dropdown (next 12 gameweeks)
+  const availableGameweeks = useMemo(() => {
+    if (!bootstrapData?.events) {
+      return [];
+    }
+    return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
+  }, [bootstrapData?.events]);
+
   // One-time initialization when bootstrap data loads
   useEffect(() => {
     if (!bootstrapData || initialized) return;
     
-    const currentGW = computeCurrentGameweek(bootstrapData.events);
-    const nextGW = Math.min((currentGW ?? 5) + 1, 38); // Use current gameweek + 1
-    const maxAvailableGW = Math.min(38, nextGW + 11); // Next 12 gameweeks max
+    const range = getDefaultGameweekRange(bootstrapData.events, 6); // Default to 6 gameweeks
+    const start = parseInt(range.startGameweek);
+    const end = parseInt(range.endGameweek);
     
-    // Always start from the next gameweek (future gameweeks only)
-    setStartGameweek(nextGW);
-    setEndGameweek(Math.min(nextGW + 5, maxAvailableGW)); // Next 6 gameweeks default
-    setInitialized(true);
+    // Validate range
+    if (start > 0 && end > 0 && start <= end && end <= 38) {
+      setStartGameweek(start);
+      setEndGameweek(end);
+      setInitialized(true);
+    }
   }, [bootstrapData, initialized]);
 
   // Calculate current gameweek and upcoming gameweeks
@@ -1279,13 +1288,13 @@ export default function PlayerTotalPoints() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
             <div className="space-y-2">
               <Label htmlFor="start-gameweek" className="text-sm font-medium text-gray-700">From GW</Label>
-              <Select value={startGameweek?.toString() || ''} onValueChange={(value) => setStartGameweek(parseInt(value) || nextGameweek)}>
+              <Select value={startGameweek?.toString() || ''} onValueChange={(value) => setStartGameweek(parseInt(value))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 6 }, (_, i) => nextGameweek + i).map(gw => (
-                    <SelectItem key={`start-gw-${gw}`} value={gw.toString()}>GW{gw}</SelectItem>
+                  {availableGameweeks.map(gw => (
+                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -1293,13 +1302,13 @@ export default function PlayerTotalPoints() {
 
             <div className="space-y-2">
               <Label htmlFor="end-gameweek" className="text-sm font-medium text-gray-700">To GW</Label>
-              <Select value={endGameweek?.toString() || ''} onValueChange={(value) => setEndGameweek(parseInt(value) || nextGameweek + 5)}>
+              <Select value={endGameweek?.toString() || ''} onValueChange={(value) => setEndGameweek(parseInt(value))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 6 }, (_, i) => nextGameweek + i).filter(gw => gw >= (startGameweek || nextGameweek)).map(gw => (
-                    <SelectItem key={`end-gw-${gw}`} value={gw.toString()}>GW{gw}</SelectItem>
+                  {availableGameweeks.filter(gw => !startGameweek || gw >= startGameweek).map(gw => (
+                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

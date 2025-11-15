@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 import { Target, Search, Filter, Trophy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
@@ -114,18 +114,10 @@ export default function PlayerGoalProjections() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Calculate dynamic gameweek defaults based on bootstrap data
-  const defaultGameweekRange = useMemo(() => {
-    if (!bootstrapData?.events) {
-      return { startGameweek: "7", endGameweek: "12" }; // Fallback
-    }
-    return getDefaultGameweekRange(bootstrapData.events, 6); // Default to 6 gameweeks
-  }, [bootstrapData?.events]);
-
   // Get available gameweeks for dropdown (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) {
-      return Array.from({ length: 12 }, (_, i) => i + 7); // Fallback
+      return [];
     }
     return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
   }, [bootstrapData?.events]);
@@ -133,18 +125,26 @@ export default function PlayerGoalProjections() {
   const [searchFilter, setSearchFilter] = useState("");
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
-  const [startGameweek, setStartGameweek] = useState(parseInt(defaultGameweekRange.startGameweek));
-  const [endGameweek, setEndGameweek] = useState(parseInt(defaultGameweekRange.endGameweek));
+  const [startGameweek, setStartGameweek] = useState<number>(0);
+  const [endGameweek, setEndGameweek] = useState<number>(0);
+  const [initialized, setInitialized] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Update start and end gameweeks when bootstrap data loads
-  useMemo(() => {
-    if (bootstrapData) {
-      const newRange = getDefaultGameweekRange(bootstrapData.events, 6);
-      setStartGameweek(parseInt(newRange.startGameweek));
-      setEndGameweek(parseInt(newRange.endGameweek));
+  // Initialize gameweeks when bootstrap data loads
+  useEffect(() => {
+    if (!bootstrapData?.events || initialized) return;
+    
+    const range = getDefaultGameweekRange(bootstrapData.events, 6);
+    const start = parseInt(range.startGameweek);
+    const end = parseInt(range.endGameweek);
+    
+    // Validate range
+    if (start > 0 && end > 0 && start <= end && end <= 38) {
+      setStartGameweek(start);
+      setEndGameweek(end);
+      setInitialized(true);
     }
-  }, [bootstrapData]);
+  }, [bootstrapData, initialized]);
   const [sortField, setSortField] = useState<SortField>("projectedGoals");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
@@ -153,7 +153,8 @@ export default function PlayerGoalProjections() {
     staleTime: 30 * 60 * 1000, // 30 minutes - data updated hourly
   });
 
-  if (isLoading) {
+  // Show loading state while data is loading OR while initializing gameweeks
+  if (isLoading || !initialized) {
     return (
       <div className="fpl-page-wrapper">
         <div className="fpl-container fpl-content-area">

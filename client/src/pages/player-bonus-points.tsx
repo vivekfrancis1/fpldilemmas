@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Star, Search, ArrowUpDown, Users } from "lucide-react";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -34,8 +35,8 @@ export default function PlayerBonusPoints() {
   const [teamFilter, setTeamFilter] = useState("all");
   const [sortField, setSortField] = useState<SortField>("totalBonusPoints");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
-  const [startGameweek, setStartGameweek] = useState<number>(11);
-  const [endGameweek, setEndGameweek] = useState<number>(16);
+  const [startGameweek, setStartGameweek] = useState<number>(0);
+  const [endGameweek, setEndGameweek] = useState<number>(0);
   const [initialized, setInitialized] = useState(false);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
@@ -43,19 +44,29 @@ export default function PlayerBonusPoints() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Calculate current gameweek and available range
-  const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 10;
-  const nextGameweek = Math.min(currentGameweek + 1, 38);
-  const maxAvailableGW = Math.min(38, nextGameweek + 5);
+  // Get available gameweeks for dropdown (next 12 gameweeks)
+  const availableGameweeks = useMemo(() => {
+    if (!bootstrapData?.events) {
+      return [];
+    }
+    return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
+  }, [bootstrapData?.events]);
 
   // Initialize gameweek range once bootstrap data is loaded
   useEffect(() => {
     if (!bootstrapData || initialized) return;
     
-    setStartGameweek(nextGameweek);
-    setEndGameweek(Math.min(nextGameweek + 5, maxAvailableGW));
-    setInitialized(true);
-  }, [bootstrapData, initialized, nextGameweek, maxAvailableGW]);
+    const range = getDefaultGameweekRange(bootstrapData.events, 6); // Default to 6 gameweeks
+    const start = parseInt(range.startGameweek);
+    const end = parseInt(range.endGameweek);
+    
+    // Validate range
+    if (start > 0 && end > 0 && start <= end && end <= 38) {
+      setStartGameweek(start);
+      setEndGameweek(end);
+      setInitialized(true);
+    }
+  }, [bootstrapData, initialized]);
 
   // Simplified API call for bonus points projections (now projects future gameweeks only)
   const { data: bonusPointsProjections, isLoading: isLoadingProjections } = useQuery<BonusPointsProjection[]>({
@@ -161,7 +172,8 @@ export default function PlayerBonusPoints() {
     }
   };
 
-  if (isLoadingBootstrap || isLoadingProjections) {
+  // Show loading state while data is loading OR while initializing gameweeks
+  if (isLoadingBootstrap || isLoadingProjections || !initialized) {
     return (
       <div className="fpl-page-container">
         <div className="fpl-page-header">
@@ -211,8 +223,8 @@ export default function PlayerBonusPoints() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: Math.max(0, maxAvailableGW - nextGameweek + 1) }, (_, i) => i + nextGameweek).map((gw, index) => (
-                      <SelectItem key={`start-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
+                    {availableGameweeks.map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -225,8 +237,8 @@ export default function PlayerBonusPoints() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: Math.max(0, maxAvailableGW - startGameweek + 1) }, (_, i) => i + startGameweek).map((gw, index) => (
-                      <SelectItem key={`end-gw-${gw}-${index}`} value={gw.toString()}>GW{gw}</SelectItem>
+                    {availableGameweeks.filter(gw => gw >= startGameweek).map(gw => (
+                      <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
-import { computeCurrentGameweek } from "@shared/gameweek-utils";
+import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -55,17 +55,28 @@ export default function PlayerGoalsScoredProjections() {
     return map;
   }, [bootstrapData]);
 
+  // Get available gameweeks for dropdown (next 12 gameweeks)
+  const availableGameweeks = useMemo(() => {
+    if (!bootstrapData?.events) {
+      return [];
+    }
+    return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
+  }, [bootstrapData?.events]);
+
   // One-time initialization when bootstrap data loads
   useEffect(() => {
     if (!bootstrapData || initialized) return;
     
-    const currentGW = computeCurrentGameweek(bootstrapData.events);
-    const nextGW = Math.min((currentGW ?? 3) + 1, 38);
-    const maxAvailableGW = Math.min(38, nextGW + 5); // Next 6 gameweeks max
+    const range = getDefaultGameweekRange(bootstrapData.events, 6); // Default to 6 gameweeks
+    const start = parseInt(range.startGameweek);
+    const end = parseInt(range.endGameweek);
     
-    setStartGameweek(nextGW);
-    setEndGameweek(Math.min(nextGW + 5, maxAvailableGW)); // Next 6 gameweeks default
-    setInitialized(true);
+    // Validate range
+    if (start > 0 && end > 0 && start <= end && end <= 38) {
+      setStartGameweek(start);
+      setEndGameweek(end);
+      setInitialized(true);
+    }
   }, [bootstrapData, initialized]);
 
   // Use fast cached endpoint with robust error handling
@@ -89,10 +100,8 @@ export default function PlayerGoalsScoredProjections() {
     throwOnError: false // Don't throw errors, handle gracefully
   });
 
-  // Get current gameweek from bootstrap data
+  // Get current gameweek from bootstrap data (for display purposes)
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 3;
-  const nextGameweek = currentGameweek + 1;
-  const maxAvailableGW = Math.min(38, nextGameweek + 5); // Next 6 gameweeks max
 
   // Dynamic gameweek range based on user selection (default: starts from next gameweek)
   const selectedGameweeks = useMemo(() => {
@@ -340,7 +349,7 @@ export default function PlayerGoalsScoredProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: Math.max(0, maxAvailableGW - nextGameweek + 1) }, (_, i) => i + nextGameweek).map(gw => (
+                    {availableGameweeks.map(gw => (
                       <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
@@ -354,7 +363,7 @@ export default function PlayerGoalsScoredProjections() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: Math.max(0, maxAvailableGW - (startGameweek ?? nextGameweek) + 1) }, (_, i) => i + (startGameweek ?? nextGameweek)).map(gw => (
+                    {availableGameweeks.filter(gw => !startGameweek || gw >= startGameweek).map(gw => (
                       <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                     ))}
                   </SelectContent>
