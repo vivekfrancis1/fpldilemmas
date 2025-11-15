@@ -60,11 +60,16 @@ export default function PlayerSaves() {
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
     
+    console.log('🔍 Player Saves Initialization:', { range, start, end, valid: start > 0 && end > 0 && start <= end && end <= 38 });
+    
     // Validate range
     if (start > 0 && end > 0 && start <= end && end <= 38) {
       setStartGameweek(start);
       setEndGameweek(end);
       setInitialized(true);
+      console.log('✅ Player Saves Initialized:', { startGameweek: start, endGameweek: end });
+    } else {
+      console.error('❌ Invalid gameweek range:', { start, end });
     }
   }, [bootstrapData, initialized]);
 
