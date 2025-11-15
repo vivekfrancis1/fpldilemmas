@@ -2449,7 +2449,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // SPECIAL CASES for threshold application:
         // 1. GW15: Accept all transfers (any positive points gain) since GW16 tops up to 5 FTs
-        // 2. 5 FT gameweeks: First transfer can be any positive gain, subsequent must meet threshold
+        // 2. 5 FT gameweeks: Accept at least 1 transfer with any positive gain (don't waste FTs)
         // 3. Other gameweeks: All transfers must meet normal threshold
         const isGW15 = targetGW === 15;
         const has5FTs = freeTransfersForGW === 5;
@@ -2469,10 +2469,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (isGW15) {
               // GW15: Accept all transfers with positive gain
               shouldAccept = true;
-            } else if (has5FTs && primaryTransfers.length === 0) {
-              // First transfer when we have 5 FTs: Accept any positive gain
+            } else if (has5FTs && primaryTransfers.length === 0 && transfer.pointsGain > 0) {
+              // When we have 5 FTs, accept at least 1 transfer with any positive gain
+              // This prevents wasting FTs when there are no high-value transfers available
               shouldAccept = true;
-              console.log(`  ✅ First transfer with 5 FTs: Accepting ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (no threshold required)`);
+              console.log(`  ✅ First transfer with 5 FTs: Accepting ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.pointsGain.toFixed(2)} pts, no threshold required)`);
             } else {
               // All other cases: Must meet normal threshold
               shouldAccept = transfer.meetsNormalThreshold;
