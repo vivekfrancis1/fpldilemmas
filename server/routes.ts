@@ -2365,15 +2365,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const pointsGain = playerInPoints - playerOut.projectedPoints;
               
               // Dynamic threshold based on free transfers available
-              // 1 FT: 0.8 pts/game, 2 FT: 0.7 pts/game, 3 FT: 0.6 pts/game, 4 FT: 0.5 pts/game, 5 FT: 0.4 pts/game
+              // 1 FT: 1.2 pts/game, 2 FT: 1.1 pts/game, 3 FT: 1.0 pts/game, 4 FT: 0.9 pts/game, 5 FT: 0.8 pts/game
               const thresholdByFreeTransfers: { [key: number]: number } = {
-                1: 0.8,
-                2: 0.7,
-                3: 0.6,
-                4: 0.5,
-                5: 0.4
+                1: 1.2,
+                2: 1.1,
+                3: 1.0,
+                4: 0.9,
+                5: 0.8
               };
-              const thresholdMultiplier = thresholdByFreeTransfers[freeTransfersForGW] || 0.7;
+              const thresholdMultiplier = thresholdByFreeTransfers[freeTransfersForGW] || 1.1;
               const remainingGameweeks = planningEnd - targetGW + 1;
               const minPointsGain = remainingGameweeks * thresholdMultiplier;
               
