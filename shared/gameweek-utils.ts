@@ -74,7 +74,7 @@ export function computeCurrentGameweek(events: GameweekEvent[]): number {
  * Calculates the next N gameweeks from current position
  * Handles edge cases for pre-season, mid-season, and season end
  */
-export function computeNextRange(events: GameweekEvent[], count: number = 6): GameweekRange {
+export function computeNextRange(events: GameweekEvent[], count: number = 12): GameweekRange {
   if (!events || events.length === 0) {
     // Fallback: return default range if no events data
     return {
