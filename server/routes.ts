@@ -2297,13 +2297,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let targetGW = planningStart; targetGW <= planningEnd; targetGW++) {
         console.log(`DEBUG: Processing GW${targetGW}...`);
         
-        // SPECIAL CASE: GW15 - Use all free transfers since GW16 tops up to 5 FTs
+        // Use the running free transfers count for this gameweek
+        const freeTransfersForGW = runningFreeTransfers;
+        
+        // SPECIAL CASES logging:
         if (targetGW === 15) {
           console.log(`🎯 GW15 SPECIAL: Will use all available free transfers (no threshold) since GW16 tops up to 5 FTs`);
         }
-        
-        // Use the running free transfers count for this gameweek
-        const freeTransfersForGW = runningFreeTransfers;
+        if (freeTransfersForGW === 5) {
+          console.log(`💎 5 FTs AVAILABLE: First transfer will ignore threshold to ensure at least 1 transfer is made`);
+        }
         
         // Fetch projections for this specific range (targetGW to planningEnd)
         const projectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${targetGW}&endGameweek=${planningEnd}`);
@@ -2402,14 +2405,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const minPointsGainTotal = remainingGameweeks * thresholdMultiplier;
               const minPointsGainSingleGW = thresholdMultiplier;
               
-              // Check if transfer meets criteria:
-              // - GW15: Accept any positive points gain (no threshold) since GW16 tops up to 5 FTs
-              // - Other GWs: Must meet BOTH thresholds (single GW + total range)
-              const meetsThreshold = isGW15 
-                ? pointsGain > 0 
-                : (singleGWPointsGain >= minPointsGainSingleGW && pointsGain >= minPointsGainTotal);
+              // Determine if this transfer meets the normal threshold
+              const meetsNormalThreshold = singleGWPointsGain >= minPointsGainSingleGW && pointsGain >= minPointsGainTotal;
               
-              if (meetsThreshold) {
+              // Only add transfers with positive points gain
+              // We'll apply special threshold rules when selecting primary transfers
+              if (pointsGain > 0) {
                 transferRecommendations.push({
                   playerOut: {
                     id: playerOut.id,
@@ -2428,7 +2429,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   pointsGain: pointsGain,
                   cost: transferCost,
                   budgetAfter: budget - playerIn.now_cost,
-                  position: bootstrapData.element_types.find((t: any) => t.id === playerOut.elementType)?.singular_name || 'Unknown'
+                  position: bootstrapData.element_types.find((t: any) => t.id === playerOut.elementType)?.singular_name || 'Unknown',
+                  meetsNormalThreshold: meetsNormalThreshold
                 });
               }
             }
@@ -2445,6 +2447,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const selectedOutIds = new Set<number>();
         const selectedInIds = new Set<number>();
         
+        // SPECIAL CASES for threshold application:
+        // 1. GW15: Accept all transfers (any positive points gain) since GW16 tops up to 5 FTs
+        // 2. 5 FT gameweeks: First transfer can be any positive gain, subsequent must meet threshold
+        // 3. Other gameweeks: All transfers must meet normal threshold
+        const isGW15 = targetGW === 15;
+        const has5FTs = freeTransfersForGW === 5;
+        
         for (const transfer of transferRecommendations) {
           if (primaryTransfers.length >= freeTransfersForGW) break;
           
@@ -2454,23 +2463,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
             selectedInIds.has(transfer.playerIn.id);
           
           if (!conflictsWithSelected) {
-            // Recalculate budgetAfter based on current running bank balance
-            const budgetBefore = currentBank;
-            const netChange = transfer.playerOut.sellingPrice - transfer.playerIn.nowCost;
-            const budgetAfter = budgetBefore + netChange;
+            // Determine if this transfer should be accepted based on special rules
+            let shouldAccept = false;
             
-            // Create updated transfer with correct budgetAfter
-            const updatedTransfer = {
-              ...transfer,
-              budgetAfter: budgetAfter
-            };
+            if (isGW15) {
+              // GW15: Accept all transfers with positive gain
+              shouldAccept = true;
+            } else if (has5FTs && primaryTransfers.length === 0) {
+              // First transfer when we have 5 FTs: Accept any positive gain
+              shouldAccept = true;
+              console.log(`  ✅ First transfer with 5 FTs: Accepting ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (no threshold required)`);
+            } else {
+              // All other cases: Must meet normal threshold
+              shouldAccept = transfer.meetsNormalThreshold;
+            }
             
-            primaryTransfers.push(updatedTransfer);
-            selectedOutIds.add(transfer.playerOut.id);
-            selectedInIds.add(transfer.playerIn.id);
-            
-            // Update running bank balance for next primary transfer
-            currentBank = budgetAfter;
+            if (shouldAccept) {
+              // Recalculate budgetAfter based on current running bank balance
+              const budgetBefore = currentBank;
+              const netChange = transfer.playerOut.sellingPrice - transfer.playerIn.nowCost;
+              const budgetAfter = budgetBefore + netChange;
+              
+              // Create updated transfer with correct budgetAfter
+              const updatedTransfer = {
+                ...transfer,
+                budgetAfter: budgetAfter
+              };
+              
+              primaryTransfers.push(updatedTransfer);
+              selectedOutIds.add(transfer.playerOut.id);
+              selectedInIds.add(transfer.playerIn.id);
+              
+              // Update running bank balance for next primary transfer
+              currentBank = budgetAfter;
+            }
           }
         }
         
