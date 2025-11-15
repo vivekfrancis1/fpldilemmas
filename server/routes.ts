@@ -2408,8 +2408,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Determine if this transfer meets the normal threshold
               const meetsNormalThreshold = singleGWPointsGain >= minPointsGainSingleGW && pointsGain >= minPointsGainTotal;
               
-              // Only add transfers with positive points gain
-              // We'll apply special threshold rules when selecting primary transfers
+              // Add all transfers with positive points gain to the pool
+              // We'll apply threshold filtering later when selecting which to show
               if (pointsGain > 0) {
                 transferRecommendations.push({
                   playerOut: {
@@ -2528,6 +2528,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const transferKey = `${rec.playerOut.id}-${rec.playerIn.id}`;
             const isPrimary = primaryTransferMap.has(transferKey);
             if (isPrimary) return true;
+            
+            // For "Other Transfers": Only show transfers that meet normal threshold (GW15 excluded as it uses all FTs anyway)
+            if (!rec.meetsNormalThreshold && !isGW15) {
+              console.log(`  FILTERED OUT (doesn't meet threshold): ${rec.playerOut.webName} → ${rec.playerIn.webName} (${rec.pointsGain.toFixed(1)} pts)`);
+              return false;
+            }
             
             // Filter out transfers that conflict with ANY primary transfer:
             // 1. Don't try to transfer OUT a player who's already been transferred OUT
