@@ -2297,6 +2297,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (let targetGW = planningStart; targetGW <= planningEnd; targetGW++) {
         console.log(`DEBUG: Processing GW${targetGW}...`);
         
+        // SPECIAL CASE: GW15 - Use all free transfers since GW16 tops up to 5 FTs
+        if (targetGW === 15) {
+          console.log(`🎯 GW15 SPECIAL: Will use all available free transfers (no threshold) since GW16 tops up to 5 FTs`);
+        }
+        
         // Use the running free transfers count for this gameweek
         const freeTransfersForGW = runningFreeTransfers;
         
@@ -2379,6 +2384,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const pointsGain = playerInPoints - playerOut.projectedPoints;
               const singleGWPointsGain = playerInSingleGWPoints - playerOut.singleGWPoints;
               
+              // SPECIAL CASE: GW15 - Use all free transfers regardless of threshold
+              // Since GW16 will be topped up to 5 FTs anyway, no reason to save them
+              const isGW15 = targetGW === 15;
+              
               // Dynamic threshold based on free transfers available
               // 1 FT: 1.2 pts/game, 2 FT: 1.1 pts/game, 3 FT: 1.0 pts/game, 4 FT: 0.9 pts/game, 5 FT: 0.8 pts/game
               const thresholdByFreeTransfers: { [key: number]: number } = {
@@ -2393,10 +2402,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const minPointsGainTotal = remainingGameweeks * thresholdMultiplier;
               const minPointsGainSingleGW = thresholdMultiplier;
               
-              // Transfer must meet BOTH thresholds:
-              // 1. Single gameweek threshold (e.g., 1.2 pts for GW 12 with 1 FT)
-              // 2. Total range threshold (e.g., 1.2 * 6 = 7.2 pts for GW 12-17 with 1 FT)
-              if (singleGWPointsGain >= minPointsGainSingleGW && pointsGain >= minPointsGainTotal) {
+              // Check if transfer meets criteria:
+              // - GW15: Accept any positive points gain (no threshold) since GW16 tops up to 5 FTs
+              // - Other GWs: Must meet BOTH thresholds (single GW + total range)
+              const meetsThreshold = isGW15 
+                ? pointsGain > 0 
+                : (singleGWPointsGain >= minPointsGainSingleGW && pointsGain >= minPointsGainTotal);
+              
+              if (meetsThreshold) {
                 transferRecommendations.push({
                   playerOut: {
                     id: playerOut.id,
