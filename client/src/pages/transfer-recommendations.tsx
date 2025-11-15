@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle } from "lucide-react";
+import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function TransferRecommendations() {
@@ -155,15 +155,37 @@ export default function TransferRecommendations() {
 
         {/* Loading state */}
         {isLoadingRecommendations && searchedId && (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-3">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-24 w-full" />
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex items-center justify-center py-12">
+            <Card className="w-full max-w-md shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Loader2 className="h-5 w-5 animate-spin text-orange-600" />
+                  Analyzing Your Team
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <p className="text-gray-600">
+                    Calculating optimal transfer recommendations across all remaining gameweeks...
+                  </p>
+                  <div className="space-y-2 text-sm text-gray-500">
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse"></div>
+                      <span>Analyzing current squad</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                      <span>Comparing 700+ player projections</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                      <span>Optimizing transfer strategy</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* No search yet state */}
