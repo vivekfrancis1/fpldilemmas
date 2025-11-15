@@ -804,11 +804,30 @@ export default function ProjectedPoints() {
 
   if (isLoadingTeam || isLoadingProjections) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-96 w-full" />
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4 flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="relative">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600"></div>
+                <Target className="h-8 w-8 text-purple-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {isLoadingTeam ? "Loading Team Data..." : "Calculating Projections..."}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {isLoadingTeam 
+                    ? "Fetching your team lineup and player details from FPL" 
+                    : "Generating 12 gameweeks of projected points for 450+ players"}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  This may take a few seconds...
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
