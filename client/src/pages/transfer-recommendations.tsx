@@ -234,26 +234,7 @@ export default function TransferRecommendations() {
                             <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
                               <ArrowRightLeft className="h-8 w-8 text-blue-600" />
                             </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">Roll Transfer</h3>
-                            <p className="text-sm text-gray-700 text-center max-w-md mb-4">
-                              {gwData.recommendations[0].message}
-                            </p>
-                            <div className="flex gap-4 mt-2">
-                              <div className="flex items-center gap-2 bg-white/50 rounded-lg px-4 py-2">
-                                <ArrowRightLeft className="h-4 w-4 text-blue-600" />
-                                <div>
-                                  <div className="text-[10px] text-gray-500">Free Transfers</div>
-                                  <div className="text-sm font-bold text-blue-700">{gwData.recommendations[0].freeTransfersAvailable}</div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 bg-white/50 rounded-lg px-4 py-2">
-                                <DollarSign className="h-4 w-4 text-blue-600" />
-                                <div>
-                                  <div className="text-[10px] text-gray-500">Bank Balance</div>
-                                  <div className="text-sm font-bold text-blue-700">£{(gwData.recommendations[0].bankBalance / 10).toFixed(1)}m</div>
-                                </div>
-                              </div>
-                            </div>
+                            <h3 className="text-lg font-bold text-gray-900">Roll Transfer</h3>
                           </div>
                         ) : (
                           <>
