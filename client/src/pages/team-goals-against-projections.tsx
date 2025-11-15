@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, TrendingUp, Filter, BarChart3, Trophy } from "lucide-react";
+import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2 } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -146,11 +146,21 @@ export default function TeamGoalsAgainstProjections() {
 
   if (isLoading || projectionsLoading) {
     return (
-      
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
+        <Card className="w-96 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              Loading Goals Against
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Calculating team goals conceded projections across the next 12 gameweeks...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, TrendingUp, Users, Calendar, ArrowUpDown, Target, Filter, Search } from "lucide-react";
+import { Clock, TrendingUp, Users, Calendar, ArrowUpDown, Target, Filter, Search, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -168,6 +168,26 @@ export default function PlayerMinutes() {
             </CardContent>
           </Card>
         </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
+        <Card className="w-96 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              Loading Minutes Projections
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Calculating expected minutes for all players using rotation patterns and current form...
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

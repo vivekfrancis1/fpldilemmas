@@ -4,7 +4,7 @@ import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDro
 import { BootstrapData } from "@shared/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBatchAssistsProjections } from "@/hooks/use-batch-projections";
-import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown, RefreshCw } from "lucide-react";
+import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown, RefreshCw, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -293,6 +293,26 @@ export default function PlayerAssistProjections() {
             </CardContent>
           </Card>
         </div>
+      </div>
+    );
+  }
+
+  if (isLoading || !initialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
+        <Card className="w-96 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              Loading Assist Projections
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Calculating projected assists for all players across the next 12 gameweeks...
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

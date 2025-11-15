@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Shield, Filter, Clock, Target, Search } from "lucide-react";
+import { Shield, Filter, Clock, Target, Search, Loader2 } from "lucide-react";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean }>;
@@ -413,11 +413,20 @@ export default function PlayerDefensiveContributions() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 animate-spin" />
-          <span>Loading defensive contributions...</span>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
+        <Card className="w-96 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              Loading Defensive Stats
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Calculating defensive contribution projections for all players across the next 12 gameweeks...
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

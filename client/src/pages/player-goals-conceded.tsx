@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ShieldAlert, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ShieldAlert, Search, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -124,23 +124,20 @@ export default function PlayerGoalsConceded() {
 
   if (isLoadingBootstrap || isLoadingProjections) {
     return (
-      <div className="fpl-page-container">
-        <div className="fpl-page-header">
-          <div className="fpl-page-header-content">
-            <div className="fpl-page-title">
-              <ShieldAlert className="h-8 w-8" />
-              <h1>Player Goals Conceded</h1>
-            </div>
-            <p className="fpl-page-subtitle">
-              Goals conceded projections and FPL point penalties for goalkeepers and defenders
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
+        <Card className="w-96 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              Loading Goals Conceded
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Calculating goals conceded projections for goalkeepers and defenders...
             </p>
-          </div>
-        </div>
-        <div className="grid gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="fpl-loading-card" />
-          ))}
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }

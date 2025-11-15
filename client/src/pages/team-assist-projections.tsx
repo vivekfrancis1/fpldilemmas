@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, TrendingUp, Filter, BarChart3, Trophy, Zap } from "lucide-react";
+import { Users, TrendingUp, Filter, BarChart3, Trophy, Zap, Loader2 } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -128,14 +128,21 @@ export default function TeamAssistProjections() {
 
   if (isLoading || projectionsLoading) {
     return (
-      
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading team assist projections...</p>
-          </div>
-        </div>
-      
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
+        <Card className="w-96 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              Loading Team Assists
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Calculating team assist projections across the next 12 gameweeks...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 

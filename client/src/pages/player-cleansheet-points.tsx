@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, Calendar, Filter, Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Shield, Calendar, Filter, Search, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -146,6 +146,26 @@ export default function PlayerCleanSheetPoints() {
             Error loading clean sheet points data. Please try again.
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
+        <Card className="w-96 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              Loading Clean Sheet Points
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Calculating clean sheet probabilities and FPL points for all players...
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }

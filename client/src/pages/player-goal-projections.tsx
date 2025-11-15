@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useState, useMemo, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
-import { Target, Search, Filter, Trophy, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Target, Search, Filter, Trophy, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 
 interface BootstrapData {
@@ -156,13 +156,20 @@ export default function PlayerGoalProjections() {
   // Show loading state while data is loading OR while initializing gameweeks
   if (isLoading || !initialized) {
     return (
-      <div className="fpl-page-wrapper">
-        <div className="fpl-container fpl-content-area">
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-2 text-gray-600">Loading player goal projections...</p>
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
+        <Card className="w-96 shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              Loading Goal Projections
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">
+              Calculating projected goals for all players across the next 12 gameweeks...
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
