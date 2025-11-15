@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, SortableHeader, type TableColumn } from "@/components/enhanced-table";
+import { LoadingExperience } from "@/components/loading-experience";
 
 interface PlayerGoalProjection {
   playerId: number;
@@ -271,21 +272,16 @@ export default function PlayerGoalsScoredProjections() {
   // Show loading only when actually needed
   if (!initialized || !bootstrapData || isLoading || playerGoalLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
-        <Card className="w-96 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-              Loading Goal Projections
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">
-              Calculating projected goals for all players across the next 12 gameweeks...
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <LoadingExperience
+        variant="analysis"
+        title="Loading Goal Projections"
+        description="Calculating projected goals for all players based on team projections and goal share..."
+        steps={[
+          { text: "Loading team goal projections", delay: "0s" },
+          { text: "Analyzing player goal share percentages", delay: "0.2s" },
+          { text: "Computing individual player projections", delay: "0.4s" },
+        ]}
+      />
     );
   }
 

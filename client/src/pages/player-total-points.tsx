@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { LoadingExperience } from "@/components/loading-experience";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) {
@@ -1226,11 +1227,16 @@ export default function PlayerTotalPoints() {
   // Show loading only when actually needed
   if (!initialized || !bootstrapData || isLoading) {
     return (
-      <div className="container mx-auto px-6 py-8">
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      </div>
+      <LoadingExperience
+        variant="table"
+        title="Loading Player Points Projections"
+        description="Fetching comprehensive FPL points data for all players across the next 12 gameweeks..."
+        steps={[
+          { text: "Loading player data and fixture difficulty", delay: "0s" },
+          { text: "Calculating projected points from multiple components", delay: "0.2s" },
+          { text: "Preparing sortable projection table", delay: "0.4s" },
+        ]}
+      />
     );
   }
 
