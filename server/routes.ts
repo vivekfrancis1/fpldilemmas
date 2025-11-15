@@ -7394,9 +7394,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
-      // Accept endGameweek parameter from query, with bounds checking
+      // Accept endGameweek parameter from query, with bounds checking (up to 12 gameweeks ahead)
       const requestedEndGameweek = parseInt(req.query.endGameweek as string) || Math.min(currentGameweek + 6, 38);
-      const maxAllowedEndGameweek = Math.min(currentGameweek + 6, 38);
+      const maxAllowedEndGameweek = Math.min(currentGameweek + 12, 38);
       const endGameweek = Math.min(Math.max(requestedEndGameweek, currentGameweek + 1), maxAllowedEndGameweek);
       
       console.log(`DEBUG: Processing final standings for gameweeks 1 to GW${endGameweek} (user requested: ${requestedEndGameweek}), current GW: ${currentGameweek}`);
