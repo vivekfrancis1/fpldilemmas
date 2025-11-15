@@ -68,10 +68,11 @@ export default function PlayerSaves() {
     }
   }, [bootstrapData, initialized]);
 
-  // Cached API call for saves projections - faster response from database
+  // API call for saves projections with dynamic gameweek range
   const { data: savesProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/cached/player-saves-projections"],
-    staleTime: 30 * 60 * 1000, // Cache for 30 minutes since data is updated twice daily
+    queryKey: ["/api/player-saves-projections", startGameweek, endGameweek],
+    enabled: initialized && startGameweek > 0 && endGameweek > 0,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
 
   // Create playerIdToWebName mapping for short names
