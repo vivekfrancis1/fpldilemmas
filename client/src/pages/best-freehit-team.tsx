@@ -90,10 +90,10 @@ export default function BestFreehitTeam() {
     return map;
   }, [bootstrapData]);
 
-  // Calculate dynamic gameweek range (next 6 gameweeks)
+  // Calculate dynamic gameweek range (next 12 gameweeks)
   const currentGameweek = bootstrapData?.events.find((event: any) => event.is_current)?.id || 6;
   const startGameweek = currentGameweek + 1;
-  const endGameweek = Math.min(startGameweek + 5, 38); // Next 6 gameweeks, max GW38
+  const endGameweek = Math.min(startGameweek + 11, 38); // Next 12 gameweeks, max GW38
 
   const [selectedGameweek, setSelectedGameweek] = useState<number>(startGameweek);
   const [isOptimizing, setIsOptimizing] = useState(false);
@@ -150,7 +150,7 @@ export default function BestFreehitTeam() {
     setOptimalTeam(null);
   }, [selectedGameweek]);
 
-  // Get gameweek options (dynamic range for freehit optimization - next 6 gameweeks)
+  // Get gameweek options (dynamic range for freehit optimization - next 12 gameweeks)
   const getGameweekOptions = () => {
     const options = [];
     for (let gw = startGameweek; gw <= endGameweek; gw++) {

@@ -101,10 +101,10 @@ export default function BestWildcardTeam() {
     return map;
   }, [bootstrapData]);
 
-  // Calculate dynamic gameweek range (next 6 gameweeks)
+  // Calculate dynamic gameweek range (next 12 gameweeks)
   const currentGameweek = bootstrapData?.events.find((event: any) => event.is_current)?.id || 6;
   const startGameweek = currentGameweek + 1;
-  const endGameweek = Math.min(startGameweek + 5, 38); // Next 6 gameweeks, max GW38
+  const endGameweek = Math.min(startGameweek + 11, 38); // Next 12 gameweeks, max GW38
 
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimalTeam, setOptimalTeam] = useState<OptimalTeam | null>(null);
@@ -117,7 +117,7 @@ export default function BestWildcardTeam() {
   const includeListRef = useRef<HTMLDivElement>(null);
   const excludeListRef = useRef<HTMLDivElement>(null);
 
-  // Fetch live Player Total Points data (dynamic next 6 gameweeks for wildcard optimization)
+  // Fetch live Player Total Points data (dynamic next 12 gameweeks for wildcard optimization)
   const { data: liveData, isLoading, error } = useQuery({
     queryKey: ['/api/player-total-points', startGameweek, endGameweek],
     queryFn: async () => {
