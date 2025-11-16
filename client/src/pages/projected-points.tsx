@@ -584,15 +584,15 @@ export default function ProjectedPoints() {
   if (!searchedId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
-        <div className="max-w-2xl mx-auto pt-12">
-          <Card>
-            <CardHeader className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4 mx-auto">
-                <Target className="h-8 w-8 text-purple-600" />
-              </div>
-              <CardTitle className="text-2xl">My Team Projected Points</CardTitle>
-              <CardDescription>View projected points for your current FPL team</CardDescription>
-            </CardHeader>
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="text-center py-6">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">My Team Projected Points</h1>
+            <p className="text-lg text-gray-600">View projected points for your current FPL team</p>
+          </div>
+
+          {/* Manager Search Section */}
+          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
             <CardContent className="p-4 sm:p-6">
               <div className="max-w-2xl mx-auto">
                 <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
