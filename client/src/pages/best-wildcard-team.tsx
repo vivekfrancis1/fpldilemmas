@@ -1047,7 +1047,7 @@ export default function BestWildcardTeam() {
           <h1 className="text-xl md:text-2xl font-bold">Best Wildcard Team</h1>
         </div>
         <p className="text-green-100 text-sm md:text-base">
-          Optimize your wildcard team considering total points across the next 6 gameweeks
+          Optimize your wildcard team to maximise total points across the upcoming gameweeks
         </p>
         <div className="flex items-center gap-2 mt-2">
           <Calendar className="h-3 w-3 md:h-4 md:w-4" />
