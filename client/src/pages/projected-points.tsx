@@ -740,11 +740,26 @@ export default function ProjectedPoints() {
       freehit2: null as { gw: number; normalPoints: number; freeHitPoints: number } | null
     };
 
-    // Helper to check if chip has been used
-    const isChipUsed = (chipName: string) => usedChips.some(c => c.name === chipName);
+    // FPL 2024/25 chip limits (each chip can be used twice)
+    const chipMaxUses: { [key: string]: number } = {
+      'bboost': 2,
+      '3xc': 2,
+      'freehit': 2,
+      'wildcard': 2
+    };
+
+    // Helper to count how many times a chip has been used
+    const countChipUses = (chipName: string) => usedChips.filter(c => c.name === chipName).length;
+    
+    // Helper to check if chip has remaining uses
+    const hasRemainingUses = (chipName: string) => {
+      const used = countChipUses(chipName);
+      const max = chipMaxUses[chipName] || 1;
+      return used < max;
+    };
 
     // Best Bench Boost: Find best gameweek in each set (using Auto optimized lineup)
-    if (!isChipUsed('bboost')) {
+    if (hasRemainingUses('bboost')) {
       // Set 1: GW 12-18
       if (set1GWs.length > 0) {
         const gwScores: { gw: number; points: number }[] = [];
@@ -788,7 +803,7 @@ export default function ProjectedPoints() {
 
     // Best Triple Captain: Find best gameweek in each set (using Auto optimized lineup)
     // Additional benefit = 3X - 2X = X (where X is base player points)
-    if (!isChipUsed('3xc')) {
+    if (hasRemainingUses('3xc')) {
       // Set 1: GW 12-18
       if (set1GWs.length > 0) {
         const gwScores: { gw: number; points: number }[] = [];
@@ -831,7 +846,7 @@ export default function ProjectedPoints() {
     }
 
     // Best Free Hit: Find best gameweek in each set (using Auto optimized lineup)
-    if (!isChipUsed('freehit')) {
+    if (hasRemainingUses('freehit')) {
       // Set 1: GW 12-18
       if (set1GWs.length > 0) {
         const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
