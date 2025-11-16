@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, Heart, XCircle, Clock } from "lucide-react";
+import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, Heart, XCircle, Clock, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
@@ -180,6 +180,8 @@ export default function ProjectedPoints() {
   const [selectedGameweek, setSelectedGameweek] = useState<number | null>(null);
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
   const [gameweekHorizon, setGameweekHorizon] = useState<number>(6);
+  const [sortColumn, setSortColumn] = useState<string>("total");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   
   const { toast } = useToast();
 
@@ -452,6 +454,26 @@ export default function ProjectedPoints() {
     return total;
   };
 
+  // Handle column sorting
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("desc");
+    }
+  };
+
+  // Get total projected points for a player
+  const getPlayerTotalPoints = (pick: any): number => {
+    const nextGWs = getNextGameweeks();
+    let total = 0;
+    nextGWs.forEach(gw => {
+      total += getPlayerProjectedPoints(pick.element, gw.id);
+    });
+    return total;
+  };
+
   // Render player row for list view
   const renderPlayerRow = (pick: any, idx: number | string) => {
     const player = getPlayerById(pick.element || pick.element);
@@ -467,7 +489,6 @@ export default function ProjectedPoints() {
       points: getPlayerProjectedPoints(player.id, gw.id)
     }));
 
-    const isStarting = pick.position <= 11;
     const isCaptain = pick.is_captain;
     const isViceCaptain = pick.is_vice_captain;
 
@@ -478,8 +499,8 @@ export default function ProjectedPoints() {
     const visibleProjectionsTablet = projections.filter((proj, i) => i < 4);
 
     return (
-      <TableRow key={idx} className={!isStarting ? "bg-gray-50 dark:bg-gray-900" : ""}>
-        <TableCell className={`sticky left-0 z-10 font-medium min-w-[120px] sm:min-w-[140px] md:min-w-[180px] ${!isStarting ? 'bg-gray-50 dark:bg-gray-900' : 'bg-white dark:bg-background'}`}>
+      <TableRow key={idx}>
+        <TableCell className="sticky left-0 z-10 font-medium min-w-[120px] sm:min-w-[140px] md:min-w-[180px] bg-white dark:bg-background">
           <div className="flex items-center gap-1 sm:gap-1.5">
             <div className="min-w-0 flex-1">
               <div className="font-semibold text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">{player.web_name}</div>
@@ -705,52 +726,99 @@ export default function ProjectedPoints() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 z-10 bg-white dark:bg-background text-[10px] sm:text-xs min-w-[120px] sm:min-w-[140px] md:min-w-[180px]">Player</TableHead>
-                    <TableHead className="hidden lg:table-cell text-center text-[10px] sm:text-xs">Price</TableHead>
+                    <TableHead 
+                      className="sticky left-0 z-10 bg-white dark:bg-background text-[10px] sm:text-xs min-w-[120px] sm:min-w-[140px] md:min-w-[180px] cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
+                      onClick={() => handleSort("player")}
+                    >
+                      <div className="flex items-center gap-1">
+                        Player
+                        {sortColumn === "player" ? (
+                          sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 opacity-40" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="hidden lg:table-cell text-center text-[10px] sm:text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
+                      onClick={() => handleSort("price")}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        Price
+                        {sortColumn === "price" ? (
+                          sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 opacity-40" />
+                        )}
+                      </div>
+                    </TableHead>
                     {nextGameweeks.map((gw, i) => (
                       <TableHead 
                         key={gw.id} 
-                        className={`text-center text-[10px] sm:text-xs ${
+                        className={`text-center text-[10px] sm:text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 ${
                           i >= 2 && gw.id !== selectedGameweek ? 'hidden md:table-cell' : 
                           i >= 4 ? 'hidden lg:table-cell' : ''
                         }`}
+                        onClick={() => handleSort(`gw${gw.id}`)}
                       >
-                        GW{gw.id}
+                        <div className="flex items-center justify-center gap-1">
+                          GW{gw.id}
+                          {sortColumn === `gw${gw.id}` ? (
+                            sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          ) : (
+                            <ArrowUpDown className="h-3 w-3 opacity-40" />
+                          )}
+                        </div>
                       </TableHead>
                     ))}
-                    <TableHead className="text-center text-[10px] sm:text-xs sticky right-0 bg-white dark:bg-background">Total</TableHead>
+                    <TableHead 
+                      className="text-center text-[10px] sm:text-xs sticky right-0 bg-white dark:bg-background cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
+                      onClick={() => handleSort("total")}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        Total
+                        {sortColumn === "total" ? (
+                          sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                        ) : (
+                          <ArrowUpDown className="h-3 w-3 opacity-40" />
+                        )}
+                      </div>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(() => {
-                    const sortedLineup = [...manualLineup].sort((a, b) => a.position - b.position);
-                    const starting11 = sortedLineup.filter(p => p.position <= 11);
-                    const bench = sortedLineup.filter(p => p.position > 11);
-                    
-                    // Sort bench: goalkeeper first, then others
-                    const benchSorted = bench.sort((a, b) => {
-                      const playerA = getPlayerById(a.element);
-                      const playerB = getPlayerById(b.element);
-                      const posA = playerA?.element_type || 0;
-                      const posB = playerB?.element_type || 0;
-                      
-                      // element_type 1 = GKP, prioritize it
-                      if (posA === 1 && posB !== 1) return -1;
-                      if (posA !== 1 && posB === 1) return 1;
-                      return a.position - b.position;
+                    // Sort all 15 players based on selected column
+                    const sortedLineup = [...manualLineup].sort((a, b) => {
+                      let aValue: any;
+                      let bValue: any;
+
+                      if (sortColumn === "player") {
+                        const playerA = getPlayerById(a.element);
+                        const playerB = getPlayerById(b.element);
+                        aValue = playerA?.web_name || "";
+                        bValue = playerB?.web_name || "";
+                        return sortDirection === "asc" 
+                          ? aValue.localeCompare(bValue)
+                          : bValue.localeCompare(aValue);
+                      } else if (sortColumn === "price") {
+                        const playerA = getPlayerById(a.element);
+                        const playerB = getPlayerById(b.element);
+                        aValue = playerA?.now_cost || 0;
+                        bValue = playerB?.now_cost || 0;
+                      } else if (sortColumn === "total") {
+                        aValue = getPlayerTotalPoints(a);
+                        bValue = getPlayerTotalPoints(b);
+                      } else if (sortColumn.startsWith("gw")) {
+                        const gwNumber = parseInt(sortColumn.replace("gw", ""));
+                        aValue = getPlayerProjectedPoints(a.element, gwNumber);
+                        bValue = getPlayerProjectedPoints(b.element, gwNumber);
+                      }
+
+                      return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
                     });
                     
-                    return (
-                      <>
-                        {starting11.map((pick, idx) => renderPlayerRow(pick, idx))}
-                        <TableRow>
-                          <TableCell colSpan={nextGameweeks.length + 3} className="bg-gray-100 text-center font-semibold text-gray-700 py-3">
-                            BENCH
-                          </TableCell>
-                        </TableRow>
-                        {benchSorted.map((pick, idx) => renderPlayerRow(pick, `bench-${idx}`))}
-                      </>
-                    );
+                    return sortedLineup.map((pick, idx) => renderPlayerRow(pick, idx));
                   })()}
                 </TableBody>
               </Table>
