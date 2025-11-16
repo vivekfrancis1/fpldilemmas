@@ -909,6 +909,11 @@ export default function TransferPlanner() {
   // Selected player for pitch view actions
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   
+  // Team optimization undo state - stores pre-optimization lineups per gameweek
+  const [optimizationUndoState, setOptimizationUndoState] = useState<{
+    [gameweek: number]: TeamPick[]
+  }>({});
+  
   const { toast } = useToast();
 
   // Cache manager ID functionality
@@ -2526,6 +2531,220 @@ export default function TransferPlanner() {
       description: `Bench priority of ${movedPlayerName} has been moved ${direction === 'up' ? 'up' : 'down'} to ${movedPlayerNewPriority}, and bench priority of ${swappedPlayerName} has been moved ${direction === 'up' ? 'down' : 'up'} to ${swappedPlayerNewPriority}`
     });
     
+    // If we were in Base, finalize the new draft
+    if (wasInBase) {
+      setTimeout(() => finalizeNewDraft(targetDraft), 100);
+    } else {
+      setHasUnsavedChanges(true);
+    }
+  };
+
+  // Optimize team lineup for a specific gameweek
+  const optimizeTeamLineup = (gameweek: number) => {
+    if (!playerProjections6GW || !bootstrapData || manualLineup.length === 0) {
+      toast({
+        title: "Cannot Optimize",
+        description: "Player projections are not available yet",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if we can create a draft
+    const targetDraft = getTargetDraftForChanges();
+    if (!targetDraft) return;
+    
+    const wasInBase = activeDraft === "Base";
+
+    // Store current lineup for undo
+    setOptimizationUndoState(prev => ({
+      ...prev,
+      [gameweek]: JSON.parse(JSON.stringify(manualLineup))
+    }));
+
+    // Get projected points for this gameweek
+    const getProjectedPoints = (playerId: number): number => {
+      const projection = playerProjections6GW.find((p: any) => p.playerId === playerId);
+      return projection?.gameweekProjections?.[gameweek.toString()] || 0;
+    };
+
+    // Group players by position
+    const squadByPosition: {
+      GKP: TeamPick[];
+      DEF: TeamPick[];
+      MID: TeamPick[];
+      FWD: TeamPick[];
+    } = {
+      GKP: [],
+      DEF: [],
+      MID: [],
+      FWD: []
+    };
+
+    manualLineup.forEach(pick => {
+      const player = getPlayerById(pick.element);
+      if (!player) return;
+      
+      const positionType = player.element_type;
+      const posKey = positionType === 1 ? 'GKP' : positionType === 2 ? 'DEF' : positionType === 3 ? 'MID' : 'FWD';
+      squadByPosition[posKey].push({
+        ...pick,
+        projectedPoints: getProjectedPoints(pick.element)
+      } as any);
+    });
+
+    // Sort each position by projected points (descending)
+    Object.keys(squadByPosition).forEach(pos => {
+      squadByPosition[pos as keyof typeof squadByPosition].sort((a: any, b: any) => b.projectedPoints - a.projectedPoints);
+    });
+
+    // Select best starting 11 using valid FPL formations
+    const formations = [
+      { def: 3, mid: 5, fwd: 2, name: '3-5-2' },
+      { def: 3, mid: 4, fwd: 3, name: '3-4-3' },
+      { def: 4, mid: 5, fwd: 1, name: '4-5-1' },
+      { def: 4, mid: 4, fwd: 2, name: '4-4-2' },
+      { def: 4, mid: 3, fwd: 3, name: '4-3-3' },
+      { def: 5, mid: 4, fwd: 1, name: '5-4-1' },
+      { def: 5, mid: 3, fwd: 2, name: '5-3-2' }
+    ];
+
+    let bestFormation = null;
+    let bestPoints = -1;
+    let bestStarting11: TeamPick[] = [];
+
+    formations.forEach(formation => {
+      if (squadByPosition.DEF.length < formation.def || 
+          squadByPosition.MID.length < formation.mid || 
+          squadByPosition.FWD.length < formation.fwd) {
+        return; // Skip if we don't have enough players for this formation
+      }
+
+      const starting11 = [
+        squadByPosition.GKP[0], // Best GK
+        ...squadByPosition.DEF.slice(0, formation.def),
+        ...squadByPosition.MID.slice(0, formation.mid),
+        ...squadByPosition.FWD.slice(0, formation.fwd)
+      ];
+
+      const totalPoints = starting11.reduce((sum, pick: any) => sum + (pick.projectedPoints || 0), 0);
+
+      if (totalPoints > bestPoints) {
+        bestPoints = totalPoints;
+        bestFormation = formation;
+        bestStarting11 = starting11;
+      }
+    });
+
+    if (!bestFormation || bestStarting11.length === 0) {
+      toast({
+        title: "Optimization Failed",
+        description: "Could not find a valid formation for your squad",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Build bench (remaining players)
+    const startingPlayerIds = new Set(bestStarting11.map(p => p.element));
+    const bench = manualLineup
+      .filter(pick => !startingPlayerIds.has(pick.element))
+      .map(pick => ({
+        ...pick,
+        projectedPoints: getProjectedPoints(pick.element)
+      } as any))
+      .sort((a: any, b: any) => {
+        // Sort bench: GK first, then by projected points
+        const aPlayer = getPlayerById(a.element);
+        const bPlayer = getPlayerById(b.element);
+        if (aPlayer?.element_type === 1) return -1;
+        if (bPlayer?.element_type === 1) return 1;
+        return b.projectedPoints - a.projectedPoints;
+      });
+
+    // Assign positions
+    const optimizedLineup = [
+      ...bestStarting11.map((pick, index) => ({
+        ...pick,
+        position: index + 1,
+        is_captain: false,
+        is_vice_captain: false,
+        multiplier: 1
+      })),
+      ...bench.map((pick, index) => ({
+        ...pick,
+        position: 12 + index,
+        is_captain: false,
+        is_vice_captain: false,
+        multiplier: 1
+      }))
+    ];
+
+    // Set captain (highest projected points in starting 11)
+    const sortedByPoints = bestStarting11
+      .map((pick: any, index) => ({ pick, index, points: pick.projectedPoints || 0 }))
+      .sort((a, b) => b.points - a.points);
+
+    if (sortedByPoints.length > 0) {
+      optimizedLineup[sortedByPoints[0].index].is_captain = true;
+      optimizedLineup[sortedByPoints[0].index].multiplier = 2;
+    }
+
+    if (sortedByPoints.length > 1) {
+      optimizedLineup[sortedByPoints[1].index].is_vice_captain = true;
+    }
+
+    // Apply optimized lineup
+    setManualLineup(optimizedLineup);
+
+    const captainPlayer = getPlayerById(optimizedLineup.find(p => p.is_captain)?.element || 0);
+    
+    toast({
+      title: "Team Optimized!",
+      description: `${bestFormation.name} formation selected. Captain: ${captainPlayer?.web_name || 'TBD'}. ${(bestPoints + (sortedByPoints[0]?.points || 0)).toFixed(1)} projected pts.`
+    });
+
+    // If we were in Base, finalize the new draft
+    if (wasInBase) {
+      setTimeout(() => finalizeNewDraft(targetDraft), 100);
+    } else {
+      setHasUnsavedChanges(true);
+    }
+  };
+
+  // Undo team optimization for a specific gameweek
+  const undoTeamOptimization = (gameweek: number) => {
+    const previousLineup = optimizationUndoState[gameweek];
+    if (!previousLineup) {
+      toast({
+        title: "Cannot Undo",
+        description: "No previous lineup to restore",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if we can create a draft
+    const targetDraft = getTargetDraftForChanges();
+    if (!targetDraft) return;
+    
+    const wasInBase = activeDraft === "Base";
+
+    // Restore previous lineup
+    setManualLineup(JSON.parse(JSON.stringify(previousLineup)));
+
+    // Clear undo state for this gameweek
+    setOptimizationUndoState(prev => {
+      const newState = { ...prev };
+      delete newState[gameweek];
+      return newState;
+    });
+
+    toast({
+      title: "Optimization Undone",
+      description: "Previous lineup has been restored"
+    });
+
     // If we were in Base, finalize the new draft
     if (wasInBase) {
       setTimeout(() => finalizeNewDraft(targetDraft), 100);
