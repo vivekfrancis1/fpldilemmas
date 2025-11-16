@@ -15162,6 +15162,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Free Hit Team Optimization Endpoint
+  app.post("/api/optimize-freehit-team", async (req, res) => {
+    try {
+      const { gameweek } = req.body;
+
+      if (!gameweek || typeof gameweek !== 'number') {
+        return res.status(400).json({ error: "Invalid gameweek" });
+      }
+
+      console.log(`🎯 Optimizing Free Hit team for GW${gameweek}`);
+
+      // Fetch bootstrap data for player details
+      const bootstrapResponse = await internalFetch(`/api/bootstrap-static`);
+      const bootstrapData = await bootstrapResponse.json();
+      const allPlayers = bootstrapData.elements;
+
+      // Fetch player total points projections for the gameweek
+      const projectionsResponse = await internalFetch(
+        `/api/player-total-points?startGameweek=${gameweek}&endGameweek=${gameweek}`
+      );
+      const projections = await projectionsResponse.json();
+
+      // Create enriched player list with projected points for this gameweek
+      const enrichedPlayers = allPlayers.map((player: any) => {
+        const projection = projections.find((p: any) => p.playerId === player.id);
+        const projectedPoints = projection?.gameweekProjections?.[gameweek] || 0;
+        
+        return {
+          id: player.id,
+          web_name: player.web_name,
+          position: player.element_type,
+          team: player.team,
+          now_cost: player.now_cost,
+          projectedPoints
+        };
+      });
+
+      // Group by position and sort by projected points
+      const gkps = enrichedPlayers.filter(p => p.position === 1).sort((a, b) => b.projectedPoints - a.projectedPoints);
+      const defs = enrichedPlayers.filter(p => p.position === 2).sort((a, b) => b.projectedPoints - a.projectedPoints);
+      const mids = enrichedPlayers.filter(p => p.position === 3).sort((a, b) => b.projectedPoints - a.projectedPoints);
+      const fwds = enrichedPlayers.filter(p => p.position === 4).sort((a, b) => b.projectedPoints - a.projectedPoints);
+
+      // Valid formations
+      const validFormations = [
+        { def: 3, mid: 4, fwd: 3 },
+        { def: 3, mid: 5, fwd: 2 },
+        { def: 4, mid: 3, fwd: 3 },
+        { def: 4, mid: 4, fwd: 2 },
+        { def: 4, mid: 5, fwd: 1 },
+        { def: 5, mid: 3, fwd: 2 },
+        { def: 5, mid: 4, fwd: 1 }
+      ];
+
+      const BUDGET = 1000; // £100.0m
+      const MAX_PLAYERS_PER_TEAM = 3;
+
+      let bestTeam: any = null;
+      let bestPoints = -1;
+
+      // Try each formation
+      for (const formation of validFormations) {
+        // Greedy selection with budget and team constraints
+        const selected: any[] = [];
+        let totalCost = 0;
+        const teamCounts = new Map<number, number>();
+
+        // Helper to check if player can be added
+        const canAdd = (player: any) => {
+          const teamCount = teamCounts.get(player.team) || 0;
+          return teamCount < MAX_PLAYERS_PER_TEAM && totalCost + player.now_cost <= BUDGET;
+        };
+
+        // Select 1 GKP
+        const gk = gkps.find(canAdd);
+        if (!gk) continue;
+        selected.push(gk);
+        totalCost += gk.now_cost;
+        teamCounts.set(gk.team, (teamCounts.get(gk.team) || 0) + 1);
+
+        // Select defenders
+        let defCount = 0;
+        for (const def of defs) {
+          if (defCount >= formation.def) break;
+          if (canAdd(def)) {
+            selected.push(def);
+            totalCost += def.now_cost;
+            teamCounts.set(def.team, (teamCounts.get(def.team) || 0) + 1);
+            defCount++;
+          }
+        }
+        if (defCount < formation.def) continue;
+
+        // Select midfielders
+        let midCount = 0;
+        for (const mid of mids) {
+          if (midCount >= formation.mid) break;
+          if (canAdd(mid)) {
+            selected.push(mid);
+            totalCost += mid.now_cost;
+            teamCounts.set(mid.team, (teamCounts.get(mid.team) || 0) + 1);
+            midCount++;
+          }
+        }
+        if (midCount < formation.mid) continue;
+
+        // Select forwards
+        let fwdCount = 0;
+        for (const fwd of fwds) {
+          if (fwdCount >= formation.fwd) break;
+          if (canAdd(fwd)) {
+            selected.push(fwd);
+            totalCost += fwd.now_cost;
+            teamCounts.set(fwd.team, (teamCounts.get(fwd.team) || 0) + 1);
+            fwdCount++;
+          }
+        }
+        if (fwdCount < formation.fwd) continue;
+
+        // Calculate total points (with captain doubling best player)
+        const captain = selected.reduce((best, p) => p.projectedPoints > best.projectedPoints ? p : best);
+        const totalPoints = selected.reduce((sum, p) => 
+          sum + p.projectedPoints + (p.id === captain.id ? p.projectedPoints : 0), 0
+        );
+
+        if (totalPoints > bestPoints) {
+          bestPoints = totalPoints;
+          bestTeam = {
+            formation: `${formation.def}-${formation.mid}-${formation.fwd}`,
+            starting11: selected,
+            captain,
+            totalPoints,
+            totalCost
+          };
+        }
+      }
+
+      if (!bestTeam) {
+        return res.status(400).json({ error: "Unable to build optimal Free Hit team" });
+      }
+
+      console.log(`✅ Free Hit optimization complete: ${bestTeam.formation} formation, ${bestPoints.toFixed(1)} projected points`);
+
+      res.json(bestTeam);
+
+    } catch (error) {
+      console.error("❌ Error in Free Hit optimization:", error);
+      res.status(500).json({ 
+        error: "Free Hit optimization failed",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Transfer Planner Draft Management Endpoints
   
   // Save or update a draft

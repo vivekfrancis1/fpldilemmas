@@ -184,6 +184,8 @@ export default function ProjectedPoints() {
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [gameweekHorizon, setGameweekHorizon] = useState<number>(6);
+  const [freeHitOptimizations, setFreeHitOptimizations] = useState<Map<number, number>>(new Map());
+  const [isOptimizingFreeHit, setIsOptimizingFreeHit] = useState(false);
   
   const { toast } = useToast();
 
@@ -504,6 +506,111 @@ export default function ProjectedPoints() {
       }
     }
   }, [plannerMode, gameweekHorizon]);
+
+  // Calculate accurate Free Hit points for recommended gameweeks
+  useEffect(() => {
+    const calculateFreeHitOptimizations = async () => {
+      if (plannerMode !== "auto" || optimizedLineups.size === 0 || !teamData) {
+        return;
+      }
+
+      setIsOptimizingFreeHit(true);
+      console.log('🎯 Starting Free Hit optimizations');
+
+      try {
+        const nextGWs = getNextGameweeks();
+        const set1GWs = nextGWs.filter(gw => gw.id <= 19);
+        const set2GWs = nextGWs.filter(gw => gw.id >= 20);
+
+        const usedChips = teamData.chips || [];
+        const freeHitUsedCount = usedChips.filter(c => c.name === 'freehit').length;
+        const remainingFreeHits = 2 - freeHitUsedCount;
+
+        if (remainingFreeHits === 0) {
+          setIsOptimizingFreeHit(false);
+          return;
+        }
+
+        const gameweeksToOptimize: number[] = [];
+
+        // Find best gameweek in Set 1 (using estimation)
+        if (remainingFreeHits >= 2 && set1GWs.length > 0) {
+          let bestSet1GW = set1GWs[0].id;
+          let bestSet1Improvement = 0;
+
+          set1GWs.forEach(gw => {
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.totalProjectedPoints) {
+              const normalPoints = gwLineup.totalProjectedPoints;
+              const estimatedFHPoints = normalPoints * 1.25;
+              const improvement = estimatedFHPoints - normalPoints;
+              if (improvement > bestSet1Improvement) {
+                bestSet1Improvement = improvement;
+                bestSet1GW = gw.id;
+              }
+            }
+          });
+
+          gameweeksToOptimize.push(bestSet1GW);
+        }
+
+        // Find best gameweek in Set 2 (using estimation)
+        if (set2GWs.length > 0) {
+          let bestSet2GW = set2GWs[0].id;
+          let bestSet2Improvement = 0;
+
+          set2GWs.forEach(gw => {
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.totalProjectedPoints) {
+              const normalPoints = gwLineup.totalProjectedPoints;
+              const estimatedFHPoints = normalPoints * 1.25;
+              const improvement = estimatedFHPoints - normalPoints;
+              if (improvement > bestSet2Improvement) {
+                bestSet2Improvement = improvement;
+                bestSet2GW = gw.id;
+              }
+            }
+          });
+
+          gameweeksToOptimize.push(bestSet2GW);
+        }
+
+        // Call API to get real Free Hit points for selected gameweeks
+        const newFreeHitOptimizations = new Map<number, number>();
+
+        for (const gw of gameweeksToOptimize) {
+          try {
+            const response = await fetch("/api/optimize-freehit-team", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({ gameweek: gw })
+            });
+
+            if (!response.ok) {
+              console.error(`❌ Failed to optimize Free Hit for GW${gw}`);
+              continue;
+            }
+
+            const data = await response.json();
+            newFreeHitOptimizations.set(gw, data.totalPoints);
+            console.log(`✅ Free Hit GW${gw}: ${data.totalPoints.toFixed(1)} pts`);
+          } catch (error) {
+            console.error(`❌ Error optimizing Free Hit for GW${gw}:`, error);
+          }
+        }
+
+        setFreeHitOptimizations(newFreeHitOptimizations);
+      } catch (error) {
+        console.error('❌ Error in Free Hit optimization:', error);
+      } finally {
+        setIsOptimizingFreeHit(false);
+      }
+    };
+
+    calculateFreeHitOptimizations();
+  }, [optimizedLineups, teamData, plannerMode]);
 
   // Calculate total projected points for all 12 gameweeks
   const calculateTotal6GWProjectedPoints = (): number => {
@@ -899,7 +1006,7 @@ export default function ProjectedPoints() {
       }
     }
 
-    // Best Free Hit: Find best gameweek in each set (using Auto optimized lineup)
+    // Best Free Hit: Find best gameweek in each set (using Auto optimized lineup with real optimization)
     if (hasRemainingUses('freehit')) {
       const remainingFreeHits = chipMaxUses['freehit'] - countChipUses('freehit');
       
@@ -915,12 +1022,14 @@ export default function ProjectedPoints() {
             if (gwLineup?.totalProjectedPoints) {
               startingPoints = gwLineup.totalProjectedPoints;
             }
-            const estimatedFHPoints = Math.round(startingPoints * 1.25);
-            const improvement = estimatedFHPoints - startingPoints;
+            // Use real Free Hit points if available, otherwise use estimation
+            const realFHPoints = freeHitOptimizations.get(gw.id);
+            const freeHitPoints = realFHPoints !== undefined ? realFHPoints : Math.round(startingPoints * 1.25);
+            const improvement = freeHitPoints - startingPoints;
             gwScores.push({ 
               gw: gw.id, 
               normalPoints: startingPoints,
-              freeHitPoints: estimatedFHPoints,
+              freeHitPoints: freeHitPoints,
               improvement: improvement
             });
           });
@@ -943,12 +1052,14 @@ export default function ProjectedPoints() {
             if (gwLineup?.totalProjectedPoints) {
               startingPoints = gwLineup.totalProjectedPoints;
             }
-            const estimatedFHPoints = Math.round(startingPoints * 1.25);
-            const improvement = estimatedFHPoints - startingPoints;
+            // Use real Free Hit points if available, otherwise use estimation
+            const realFHPoints = freeHitOptimizations.get(gw.id);
+            const freeHitPoints = realFHPoints !== undefined ? realFHPoints : Math.round(startingPoints * 1.25);
+            const improvement = freeHitPoints - startingPoints;
             gwScores.push({ 
               gw: gw.id, 
               normalPoints: startingPoints,
-              freeHitPoints: estimatedFHPoints,
+              freeHitPoints: freeHitPoints,
               improvement: improvement
             });
           });
@@ -972,12 +1083,14 @@ export default function ProjectedPoints() {
             if (gwLineup?.totalProjectedPoints) {
               startingPoints = gwLineup.totalProjectedPoints;
             }
-            const estimatedFHPoints = Math.round(startingPoints * 1.25);
-            const improvement = estimatedFHPoints - startingPoints;
+            // Use real Free Hit points if available, otherwise use estimation
+            const realFHPoints = freeHitOptimizations.get(gw.id);
+            const freeHitPoints = realFHPoints !== undefined ? realFHPoints : Math.round(startingPoints * 1.25);
+            const improvement = freeHitPoints - startingPoints;
             gwScores.push({ 
               gw: gw.id, 
               normalPoints: startingPoints,
-              freeHitPoints: estimatedFHPoints,
+              freeHitPoints: freeHitPoints,
               improvement: improvement
             });
           });
@@ -1473,7 +1586,7 @@ export default function ProjectedPoints() {
                           GW{recommendations.freehit1.gw}
                         </span>
                         <span className="text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400">
-                          Normal: {recommendations.freehit1.normalPoints.toFixed(1)} | FH: ~{recommendations.freehit1.freeHitPoints.toFixed(1)}
+                          Normal: {recommendations.freehit1.normalPoints.toFixed(1)} | FH: {recommendations.freehit1.freeHitPoints.toFixed(1)}
                         </span>
                       </div>
                     </div>
@@ -1488,7 +1601,7 @@ export default function ProjectedPoints() {
                           GW{recommendations.freehit2.gw}
                         </span>
                         <span className="text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400">
-                          Normal: {recommendations.freehit2.normalPoints.toFixed(1)} | FH: ~{recommendations.freehit2.freeHitPoints.toFixed(1)}
+                          Normal: {recommendations.freehit2.normalPoints.toFixed(1)} | FH: {recommendations.freehit2.freeHitPoints.toFixed(1)}
                         </span>
                       </div>
                     </div>
