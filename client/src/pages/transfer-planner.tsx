@@ -5005,7 +5005,7 @@ export default function TransferPlanner() {
                     </TooltipProvider>
                   )}
                 </div>
-                <div className="text-2xl font-bold text-blue-600" key={JSON.stringify(plannedChips)}>
+                <div className="text-2xl font-bold text-blue-600" key={JSON.stringify(plannedChips) + JSON.stringify(optimizationUndoState)}>
                   {(() => {
                     if (!playerProjections6GW || !Array.isArray(playerProjections6GW) || !teamData?.picks) return '0.0';
                     
@@ -5014,8 +5014,17 @@ export default function TransferPlanner() {
                     
                     // For each gameweek, calculate the lineup's points for THAT specific gameweek
                     nextGWs.forEach(gw => {
-                      // Get the lineup for this specific gameweek (with cumulative transfers applied)
-                      const lineupForGW = getBaselineLineup(gw);
+                      // Check if there's an optimized lineup for this gameweek
+                      const optimizedLineupKey = `optimized_${gw}` as any;
+                      let lineupForGW: TeamPick[];
+                      
+                      if (optimizationUndoState[optimizedLineupKey]) {
+                        // Use optimized lineup
+                        lineupForGW = optimizationUndoState[optimizedLineupKey] as TeamPick[];
+                      } else {
+                        // Get the baseline lineup for this specific gameweek (with cumulative transfers applied)
+                        lineupForGW = getBaselineLineup(gw);
+                      }
                       
                       // Check if Bench Boost is planned for this gameweek
                       const isBenchBoostActive = plannedChips[gw] === 'bboost';
@@ -5024,7 +5033,7 @@ export default function TransferPlanner() {
                       // Check if Triple Captain is active for THIS gameweek
                       const isTripleCaptainActive = plannedChips[gw] === '3xc';
                       
-                      playersToInclude.forEach(pick => {
+                      playersToInclude.forEach((pick: TeamPick) => {
                         const playerData = playerProjections6GW.find((p: any) => p.playerId === pick.element);
                         const gwPoints = playerData?.gameweekProjections?.[gw.toString()] || 0;
                         
