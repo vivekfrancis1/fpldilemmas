@@ -2387,6 +2387,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const budget = currentBank + playerOut.sellingPrice;
             
             if (playerIn.now_cost <= budget) {
+              // Check team constraint: Can't have more than 3 players from the same team
+              // Count how many players from playerIn's team are currently in the squad
+              const playersFromIncomingTeam = currentTeam.filter(p => p.team === playerIn.team).length;
+              
+              // If transferring out a player from the same team, we're replacing them, so constraint is fine
+              // If transferring from different team AND we already have 3 from incoming team, skip
+              const wouldViolateTeamConstraint = playerOut.team !== playerIn.team && playersFromIncomingTeam >= 3;
+              
+              if (wouldViolateTeamConstraint) {
+                // Skip this transfer - would exceed 3 players from same team
+                continue;
+              }
+              
               const pointsGain = playerInPoints - playerOut.projectedPoints;
               const singleGWPointsGain = playerInSingleGWPoints - playerOut.singleGWPoints;
               
@@ -2457,6 +2470,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const isGW15 = targetGW === 15;
         const has5FTs = freeTransfersForGW === 5;
         
+        // Track team counts as we build the primary transfers list
+        // Start with current team composition counts
+        const teamCounts = new Map<number, number>();
+        currentTeam.forEach(player => {
+          const count = teamCounts.get(player.team) || 0;
+          teamCounts.set(player.team, count + 1);
+        });
+        
         // First pass: Try to accept transfers using normal threshold rules
         for (const transfer of transferRecommendations) {
           if (primaryTransfers.length >= freeTransfersForGW) break;
@@ -2467,6 +2488,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             selectedInIds.has(transfer.playerIn.id);
           
           if (!conflictsWithSelected) {
+            // Check team constraint for this transfer
+            // If transferring from same team, no constraint issue
+            // If transferring to different team, check if we'd exceed 3 players
+            const wouldViolateTeamConstraint = 
+              transfer.playerOut.team !== transfer.playerIn.team && 
+              (teamCounts.get(transfer.playerIn.team) || 0) >= 3;
+            
+            if (wouldViolateTeamConstraint) {
+              console.log(`  SKIPPED (team constraint): ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (would exceed 3 players from same team)`);
+              continue;
+            }
+            
             // Determine if this transfer should be accepted based on special rules
             let shouldAccept = false;
             
@@ -2494,6 +2527,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               selectedOutIds.add(transfer.playerOut.id);
               selectedInIds.add(transfer.playerIn.id);
               
+              // Update team counts to reflect this transfer
+              if (transfer.playerOut.team !== transfer.playerIn.team) {
+                teamCounts.set(transfer.playerOut.team, (teamCounts.get(transfer.playerOut.team) || 0) - 1);
+                teamCounts.set(transfer.playerIn.team, (teamCounts.get(transfer.playerIn.team) || 0) + 1);
+              }
+              
               // Update running bank balance for next primary transfer
               currentBank = budgetAfter;
             }
@@ -2510,7 +2549,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               selectedOutIds.has(transfer.playerOut.id) || 
               selectedInIds.has(transfer.playerIn.id);
             
-            if (!conflictsWithSelected && transfer.pointsGain > 0) {
+            // Check team constraint
+            const wouldViolateTeamConstraint = 
+              transfer.playerOut.team !== transfer.playerIn.team && 
+              (teamCounts.get(transfer.playerIn.team) || 0) >= 3;
+            
+            if (!conflictsWithSelected && !wouldViolateTeamConstraint && transfer.pointsGain > 0) {
               // Recalculate budgetAfter based on current running bank balance
               const budgetBefore = currentBank;
               const netChange = transfer.playerOut.sellingPrice - transfer.playerIn.nowCost;
@@ -2524,6 +2568,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               primaryTransfers.push(updatedTransfer);
               selectedOutIds.add(transfer.playerOut.id);
               selectedInIds.add(transfer.playerIn.id);
+              
+              // Update team counts
+              if (transfer.playerOut.team !== transfer.playerIn.team) {
+                teamCounts.set(transfer.playerOut.team, (teamCounts.get(transfer.playerOut.team) || 0) - 1);
+                teamCounts.set(transfer.playerIn.team, (teamCounts.get(transfer.playerIn.team) || 0) + 1);
+              }
+              
               currentBank = budgetAfter;
               
               console.log(`  ✅ 5 FT special case: Accepting ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.pointsGain.toFixed(2)} pts, positive gain only)`);
