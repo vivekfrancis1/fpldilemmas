@@ -2063,17 +2063,10 @@ export default function TransferPlanner() {
         let nextGWInitial = 1 + remaining;
         
         // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
-        // If next gameweek is 16, apply AFCON bonus
+        // All managers get 5 free transfers in GW16 regardless of GW15 transfers
         const nextGW = gw + 1;
         if (nextGW === 16) {
-          if (nextGWInitial === 1) {
-            // No banked transfers: get 1 normal + 4 AFCON bonus = 5 total
-            nextGWInitial = 5;
-          } else {
-            // Has banked transfers: get banked + 1 normal + 2 AFCON bonus, capped at 5
-            const afconBonus = 2;
-            nextGWInitial = Math.min(5, nextGWInitial + afconBonus);
-          }
+          nextGWInitial = 5;
         }
         
         // Cap at 5 FT maximum as per FPL rules
