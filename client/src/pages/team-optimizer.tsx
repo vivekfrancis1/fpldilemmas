@@ -651,16 +651,13 @@ export default function TeamOptimizer() {
       // If we've already used the allotted chips, none available
       if (firstHalfUsed + secondHalfUsed >= totalMax) return false;
       
-      // If second-half chips not unlocked yet, none available
-      if (!secondHalfChipsUnlocked) return false;
-      
       // If we've used the first-half chip and it's expired, check if we still have one for second-half
       if (firstHalfChipsExpired && firstHalfUsed > 0) {
         // First-half chip was used and expired, so we don't have a second-half chip
         return false;
       }
       
-      // Otherwise we have a second-half chip available
+      // Show recommendations for planning purposes (even if not unlocked yet)
       return true;
     };
 
