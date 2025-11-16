@@ -5639,8 +5639,11 @@ export default function TransferPlanner() {
 
       {/* Team Evolution Section */}
 
-      {/* Team Evolution Section - Shows for both Manual and Auto modes */}
-      {searchedId && teamData && selectedGameweek && (
+      {/* Team Evolution Section - Only show if there are transfers made for this draft in any gameweek */}
+      {searchedId && teamData && selectedGameweek && activeDraft !== "Base" && Object.keys(gameweekTransfers).some(gw => 
+        gameweekTransfers[parseInt(gw)]?.completed?.length > 0 || 
+        gameweekTransfers[parseInt(gw)]?.transferredOut?.length > 0
+      ) && (
         <Collapsible open={isTeamEvolutionOpen} onOpenChange={setIsTeamEvolutionOpen}>
           <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-background">
             <CardHeader>
