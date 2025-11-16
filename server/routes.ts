@@ -15016,10 +15016,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const allPlayers = bootstrapData.elements;
 
-      // Fetch player total points projections for the gameweek
-      const projectionsResponse = await internalFetch(
-        `/api/player-total-points?startGameweek=${gameweek}&endGameweek=${gameweek}`
-      );
+      // Use cached projections for much faster optimization
+      const projectionsResponse = await internalFetch(`/api/cached/player-total-points`);
       const projections = await projectionsResponse.json();
 
       // Create a map of player ID to projected points for the specific gameweek
@@ -15178,10 +15176,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const allPlayers = bootstrapData.elements;
 
-      // Fetch player total points projections for the gameweek
-      const projectionsResponse = await internalFetch(
-        `/api/player-total-points?startGameweek=${gameweek}&endGameweek=${gameweek}`
-      );
+      // Use cached projections for much faster optimization
+      const projectionsResponse = await internalFetch(`/api/cached/player-total-points`);
       const projections = await projectionsResponse.json();
 
       // Create enriched player list with projected points for this gameweek
