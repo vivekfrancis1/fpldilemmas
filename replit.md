@@ -40,6 +40,7 @@ Loading Experience: Enhanced loading screens implemented across all major slow-l
 - **Database Configuration**: Drizzle ORM for PostgreSQL (Neon Database) for historical data and daily price tracking.
 - **Data Persistence**: Automated daily collection of player prices, ownership, and transfer data.
 - **Data Consistency**: All projection tools use deterministic calculations based on team ID and gameweek seeds. MASTER_TEAM_DEFAULTS serves as the central configuration source for all projection multipliers.
+- **Cache Refresh Strategy**: Daily automated cache refresh at 3 AM refreshes all projection caches (team projections, goal shares, assist shares, player total points, player saves, player yellow cards, player red cards). Manual cache refresh available via POST `/api/admin/refresh-cache` endpoint for immediate updates. In-memory caches have 30-minute TTL with automatic invalidation.
 
 ### API Integration
 - **External API**: Official Fantasy Premier League API.

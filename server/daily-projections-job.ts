@@ -58,6 +58,9 @@ export class DailyProjectionsService {
       // Calculate and store assist shares
       await this.calculateAssistShares(today);
       
+      // Warm up in-memory caches for player projections (instant access)
+      await this.warmPlayerProjectionCaches();
+      
       const duration = Date.now() - startTime;
       console.log(`✅ Daily projections completed successfully in ${duration}ms`);
       
@@ -310,6 +313,54 @@ export class DailyProjectionsService {
     }, {});
     
     return Object.values(teamGroups);
+  }
+
+  /**
+   * Warm up in-memory caches for player projections
+   * This ensures instant access for the most commonly used cached endpoints
+   */
+  private async warmPlayerProjectionCaches(): Promise<void> {
+    console.log('🔥 Warming up in-memory player projection caches...');
+    
+    try {
+      // Warm player total points cache (most important - used by many tools)
+      console.log('📊 Warming player total points cache...');
+      const totalPointsResponse = await fetch(`${INTERNAL_API_BASE}/api/cached/player-total-points`);
+      if (totalPointsResponse.ok) {
+        await totalPointsResponse.json(); // This populates the cache
+        console.log('✅ Player total points cache warmed');
+      }
+      
+      // Warm player saves cache
+      console.log('🧤 Warming player saves cache...');
+      const savesResponse = await fetch(`${INTERNAL_API_BASE}/api/cached/player-saves-projections`);
+      if (savesResponse.ok) {
+        await savesResponse.json();
+        console.log('✅ Player saves cache warmed');
+      }
+      
+      // Warm player yellow cards cache
+      console.log('🟨 Warming player yellow cards cache...');
+      const yellowCardsResponse = await fetch(`${INTERNAL_API_BASE}/api/cached/player-yellow-cards-projections`);
+      if (yellowCardsResponse.ok) {
+        await yellowCardsResponse.json();
+        console.log('✅ Player yellow cards cache warmed');
+      }
+      
+      // Warm player red cards cache
+      console.log('🟥 Warming player red cards cache...');
+      const redCardsResponse = await fetch(`${INTERNAL_API_BASE}/api/cached/player-red-cards-projections`);
+      if (redCardsResponse.ok) {
+        await redCardsResponse.json();
+        console.log('✅ Player red cards cache warmed');
+      }
+      
+      console.log('✅ All player projection caches warmed successfully');
+      
+    } catch (error) {
+      console.error('❌ Failed to warm player projection caches:', error);
+      // Don't throw - cache warming failure shouldn't stop other calculations
+    }
   }
 }
 

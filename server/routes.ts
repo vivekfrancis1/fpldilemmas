@@ -15529,6 +15529,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ Transfer Planner Draft API routes registered successfully");
 
+  // Manual cache refresh endpoint for admin/testing
+  app.post("/api/admin/refresh-cache", async (req, res) => {
+    try {
+      console.log('🔄 Manual cache refresh triggered...');
+      
+      // Import the daily projections service
+      const { dailyProjectionsService } = await import('./daily-projections-job');
+      
+      // Trigger cache warming
+      await dailyProjectionsService.runDailyCalculations();
+      
+      console.log('✅ Manual cache refresh completed successfully');
+      res.json({ 
+        success: true, 
+        message: 'Cache refreshed successfully',
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Manual cache refresh failed:', error);
+      res.status(500).json({ 
+        error: 'Failed to refresh cache',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  console.log("✓ Admin API routes registered successfully");
+
   const httpServer = createServer(app);
   return httpServer;
 }
