@@ -465,15 +465,19 @@ export default function ProjectedPoints() {
     saveManagerIdToCache(managerId);
   };
 
-  // Trigger auto-optimization when switching to auto mode
+  // Trigger auto-optimization when switching to auto mode or when gameweek horizon changes
   useEffect(() => {
-    if (plannerMode === "auto" && manualLineup.length > 0 && optimizedLineups.size === 0) {
-      // Refetch projections data first to ensure we have the latest
-      refetchProjections().then(() => {
-        optimizeAllGameweeks();
-      });
+    if (plannerMode === "auto" && manualLineup.length > 0) {
+      const nextGWs = getNextGameweeks();
+      // Re-optimize if we have no lineups OR if horizon changed (current lineups don't match horizon)
+      if (optimizedLineups.size === 0 || optimizedLineups.size !== nextGWs.length) {
+        // Refetch projections data first to ensure we have the latest
+        refetchProjections().then(() => {
+          optimizeAllGameweeks();
+        });
+      }
     }
-  }, [plannerMode]);
+  }, [plannerMode, gameweekHorizon]);
 
   // Calculate total projected points for all 12 gameweeks
   const calculateTotal6GWProjectedPoints = (): number => {
