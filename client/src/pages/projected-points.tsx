@@ -701,6 +701,7 @@ export default function ProjectedPoints() {
   };
 
   // Calculate chip recommendations (based on Auto optimized lineup only)
+  // Split into two sets: Set 1 (GW 12-18), Set 2 (GW 20-38)
   const getChipRecommendations = () => {
     console.log('🔍 Chip Recommendations Debug:', {
       hasPlayerProjections: !!adjustedPlayerProjections,
@@ -725,94 +726,167 @@ export default function ProjectedPoints() {
     const nextGWs = getNextGameweeks();
     const usedChips = teamData.chips || [];
     console.log('✅ Chip recommendations calculation starting:', { usedChipsCount: usedChips.length, nextGWCount: nextGWs.length });
+    
+    // Split gameweeks into two sets
+    const set1GWs = nextGWs.filter(gw => gw.id < 19); // GW 12-18
+    const set2GWs = nextGWs.filter(gw => gw.id >= 20); // GW 20-38
+
     const recommendations = { 
-      bboost: [] as { gw: number; additionalPoints: number }[], 
-      tripleC: [] as { gw: number; additionalPoints: number }[], 
-      freehit: [] as { gw: number; normalPoints: number; freeHitPoints: number }[] 
+      bboost1: null as { gw: number; additionalPoints: number } | null,
+      bboost2: null as { gw: number; additionalPoints: number } | null,
+      tripleC1: null as { gw: number; additionalPoints: number } | null,
+      tripleC2: null as { gw: number; additionalPoints: number } | null,
+      freehit1: null as { gw: number; normalPoints: number; freeHitPoints: number } | null,
+      freehit2: null as { gw: number; normalPoints: number; freeHitPoints: number } | null
     };
 
     // Helper to check if chip has been used
     const isChipUsed = (chipName: string) => usedChips.some(c => c.name === chipName);
 
-    // Best Bench Boost: Find top 2 gameweeks with maximum bench points (using Auto optimized lineup)
+    // Best Bench Boost: Find best gameweek in each set (using Auto optimized lineup)
     if (!isChipUsed('bboost')) {
-      const gwScores: { gw: number; points: number }[] = [];
-
-      nextGWs.forEach(gw => {
-        const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
-        
-        let benchPoints = 0;
-        benchPlayers.forEach(pick => {
-          const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
-          if (projection?.gameweekProjections) {
-            benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
-          }
+      // Set 1: GW 12-18
+      if (set1GWs.length > 0) {
+        const gwScores: { gw: number; points: number }[] = [];
+        set1GWs.forEach(gw => {
+          const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
+          let benchPoints = 0;
+          benchPlayers.forEach(pick => {
+            const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
+            if (projection?.gameweekProjections) {
+              benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+            }
+          });
+          gwScores.push({ gw: gw.id, points: benchPoints });
         });
+        gwScores.sort((a, b) => b.points - a.points);
+        if (gwScores.length > 0) {
+          recommendations.bboost1 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+        }
+      }
 
-        gwScores.push({ gw: gw.id, points: benchPoints });
-      });
-
-      gwScores.sort((a, b) => b.points - a.points);
-      recommendations.bboost = gwScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
+      // Set 2: GW 20-38
+      if (set2GWs.length > 0) {
+        const gwScores: { gw: number; points: number }[] = [];
+        set2GWs.forEach(gw => {
+          const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
+          let benchPoints = 0;
+          benchPlayers.forEach(pick => {
+            const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
+            if (projection?.gameweekProjections) {
+              benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+            }
+          });
+          gwScores.push({ gw: gw.id, points: benchPoints });
+        });
+        gwScores.sort((a, b) => b.points - a.points);
+        if (gwScores.length > 0) {
+          recommendations.bboost2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+        }
+      }
     }
 
-    // Best Triple Captain: Find top 2 gameweeks where captain has highest points (using Auto optimized lineup)
+    // Best Triple Captain: Find best gameweek in each set (using Auto optimized lineup)
     // Additional benefit = 3X - 2X = X (where X is base player points)
     if (!isChipUsed('3xc')) {
-      const gwScores: { gw: number; points: number }[] = [];
-
-      nextGWs.forEach(gw => {
-        let captainBasePoints = 0;
-
-        const gwLineup = optimizedLineups.get(gw.id);
-        if (gwLineup?.starting11) {
-          // Find the captain in the starting 11
-          const captain = gwLineup.starting11.find(p => p.isCaptain);
-          if (captain) {
-            // Get the raw projected points for the captain (base points, not multiplied)
-            captainBasePoints = captain.projectedPoints || 0;
+      // Set 1: GW 12-18
+      if (set1GWs.length > 0) {
+        const gwScores: { gw: number; points: number }[] = [];
+        set1GWs.forEach(gw => {
+          let captainBasePoints = 0;
+          const gwLineup = optimizedLineups.get(gw.id);
+          if (gwLineup?.starting11) {
+            const captain = gwLineup.starting11.find(p => p.isCaptain);
+            if (captain) {
+              captainBasePoints = captain.projectedPoints || 0;
+            }
           }
+          gwScores.push({ gw: gw.id, points: captainBasePoints });
+        });
+        gwScores.sort((a, b) => b.points - a.points);
+        if (gwScores.length > 0) {
+          recommendations.tripleC1 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
         }
+      }
 
-        gwScores.push({ gw: gw.id, points: captainBasePoints });
-      });
-
-      gwScores.sort((a, b) => b.points - a.points);
-      // Triple Captain gives 3X, normal captain gives 2X, so extra = X (base points)
-      recommendations.tripleC = gwScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
+      // Set 2: GW 20-38
+      if (set2GWs.length > 0) {
+        const gwScores: { gw: number; points: number }[] = [];
+        set2GWs.forEach(gw => {
+          let captainBasePoints = 0;
+          const gwLineup = optimizedLineups.get(gw.id);
+          if (gwLineup?.starting11) {
+            const captain = gwLineup.starting11.find(p => p.isCaptain);
+            if (captain) {
+              captainBasePoints = captain.projectedPoints || 0;
+            }
+          }
+          gwScores.push({ gw: gw.id, points: captainBasePoints });
+        });
+        gwScores.sort((a, b) => b.points - a.points);
+        if (gwScores.length > 0) {
+          recommendations.tripleC2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+        }
+      }
     }
 
-    // Best Free Hit: Find top 2 gameweeks where Free Hit improvement is maximum (using Auto optimized lineup)
+    // Best Free Hit: Find best gameweek in each set (using Auto optimized lineup)
     if (!isChipUsed('freehit')) {
-      const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
-
-      nextGWs.forEach(gw => {
-        let startingPoints = 0;
-
-        const gwLineup = optimizedLineups.get(gw.id);
-        if (gwLineup?.totalProjectedPoints) {
-          startingPoints = gwLineup.totalProjectedPoints;
-        }
-
-        // Estimate Free Hit points as 25% improvement over normal team
-        const estimatedFHPoints = Math.round(startingPoints * 1.25);
-        const improvement = estimatedFHPoints - startingPoints;
-
-        gwScores.push({ 
-          gw: gw.id, 
-          normalPoints: startingPoints,
-          freeHitPoints: estimatedFHPoints,
-          improvement: improvement
+      // Set 1: GW 12-18
+      if (set1GWs.length > 0) {
+        const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
+        set1GWs.forEach(gw => {
+          let startingPoints = 0;
+          const gwLineup = optimizedLineups.get(gw.id);
+          if (gwLineup?.totalProjectedPoints) {
+            startingPoints = gwLineup.totalProjectedPoints;
+          }
+          const estimatedFHPoints = Math.round(startingPoints * 1.25);
+          const improvement = estimatedFHPoints - startingPoints;
+          gwScores.push({ 
+            gw: gw.id, 
+            normalPoints: startingPoints,
+            freeHitPoints: estimatedFHPoints,
+            improvement: improvement
+          });
         });
-      });
+        gwScores.sort((a, b) => b.improvement - a.improvement);
+        if (gwScores.length > 0) {
+          recommendations.freehit1 = { 
+            gw: gwScores[0].gw, 
+            normalPoints: gwScores[0].normalPoints,
+            freeHitPoints: gwScores[0].freeHitPoints
+          };
+        }
+      }
 
-      // Sort by improvement (descending - highest improvement first)
-      gwScores.sort((a, b) => b.improvement - a.improvement);
-      recommendations.freehit = gwScores.slice(0, 2).map(s => ({ 
-        gw: s.gw, 
-        normalPoints: s.normalPoints,
-        freeHitPoints: s.freeHitPoints
-      }));
+      // Set 2: GW 20-38
+      if (set2GWs.length > 0) {
+        const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
+        set2GWs.forEach(gw => {
+          let startingPoints = 0;
+          const gwLineup = optimizedLineups.get(gw.id);
+          if (gwLineup?.totalProjectedPoints) {
+            startingPoints = gwLineup.totalProjectedPoints;
+          }
+          const estimatedFHPoints = Math.round(startingPoints * 1.25);
+          const improvement = estimatedFHPoints - startingPoints;
+          gwScores.push({ 
+            gw: gw.id, 
+            normalPoints: startingPoints,
+            freeHitPoints: estimatedFHPoints,
+            improvement: improvement
+          });
+        });
+        gwScores.sort((a, b) => b.improvement - a.improvement);
+        if (gwScores.length > 0) {
+          recommendations.freehit2 = { 
+            gw: gwScores[0].gw, 
+            normalPoints: gwScores[0].normalPoints,
+            freeHitPoints: gwScores[0].freeHitPoints
+          };
+        }
+      }
     }
 
     return recommendations;
@@ -1226,7 +1300,11 @@ export default function ProjectedPoints() {
         {/* Chip Recommendations */}
         {(() => {
           const recommendations = getChipRecommendations();
-          const hasRecommendations = recommendations && (recommendations.bboost.length > 0 || recommendations.tripleC.length > 0 || recommendations.freehit.length > 0);
+          const hasRecommendations = recommendations && (
+            recommendations.bboost1 || recommendations.bboost2 || 
+            recommendations.tripleC1 || recommendations.tripleC2 || 
+            recommendations.freehit1 || recommendations.freehit2
+          );
           
           return hasRecommendations ? (
             <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/10 dark:to-background">
@@ -1236,66 +1314,83 @@ export default function ProjectedPoints() {
                   <span className="truncate">Chip Recommendations</span>
                 </CardTitle>
                 <CardDescription className="text-[10px] sm:text-xs md:text-sm">
-                  Based on next {gameweekHorizon} gameweek projections
+                  Based on Auto optimized lineup (Set 1: GW 12-18, Set 2: GW 20-38)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {plannerMode === "manual" && (
-                  <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
-                    <p className="text-[10px] sm:text-xs text-amber-800 dark:text-amber-200">
-                      <strong>Tip:</strong> Auto mode recommendations are more accurate as they use optimized lineups with best captains.
-                    </p>
-                  </div>
-                )}
                 <div className="space-y-2 sm:space-y-3">
-                  {recommendations.bboost.length > 0 && (
+                  {(recommendations.bboost1 || recommendations.bboost2) && (
                     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
-                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-green-700 dark:text-green-300 sm:min-w-[100px] sm:pt-1">
+                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-green-700 dark:text-green-300 sm:min-w-[120px] sm:pt-1">
                         Bench Boost:
                       </span>
                       <div className="flex gap-1 sm:gap-1.5 flex-wrap">
-                        {recommendations.bboost.map((rec, index) => (
-                          <div key={rec.gw} className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                        {recommendations.bboost1 && (
+                          <div className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
                             <span className="text-[10px] sm:text-xs md:text-sm font-medium text-green-700 dark:text-green-300">
-                              Option {index + 1}: GW{rec.gw} (+{rec.additionalPoints.toFixed(1)} pts)
+                              Bench Boost 1: GW{recommendations.bboost1.gw} (+{recommendations.bboost1.additionalPoints.toFixed(1)} pts)
                             </span>
                           </div>
-                        ))}
+                        )}
+                        {recommendations.bboost2 && (
+                          <div className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-green-700 dark:text-green-300">
+                              Bench Boost 2: GW{recommendations.bboost2.gw} (+{recommendations.bboost2.additionalPoints.toFixed(1)} pts)
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
-                  {recommendations.tripleC.length > 0 && (
+                  {(recommendations.tripleC1 || recommendations.tripleC2) && (
                     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
-                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-purple-700 dark:text-purple-300 sm:min-w-[100px] sm:pt-1">
+                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-purple-700 dark:text-purple-300 sm:min-w-[120px] sm:pt-1">
                         Triple Captain:
                       </span>
                       <div className="flex gap-1 sm:gap-1.5 flex-wrap">
-                        {recommendations.tripleC.map((rec, index) => (
-                          <div key={rec.gw} className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                        {recommendations.tripleC1 && (
+                          <div className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
                             <span className="text-[10px] sm:text-xs md:text-sm font-medium text-purple-700 dark:text-purple-300">
-                              Option {index + 1}: GW{rec.gw} (+{rec.additionalPoints.toFixed(1)} pts)
+                              Triple Captain 1: GW{recommendations.tripleC1.gw} (+{recommendations.tripleC1.additionalPoints.toFixed(1)} pts)
                             </span>
                           </div>
-                        ))}
+                        )}
+                        {recommendations.tripleC2 && (
+                          <div className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-purple-700 dark:text-purple-300">
+                              Triple Captain 2: GW{recommendations.tripleC2.gw} (+{recommendations.tripleC2.additionalPoints.toFixed(1)} pts)
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
-                  {recommendations.freehit.length > 0 && (
+                  {(recommendations.freehit1 || recommendations.freehit2) && (
                     <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
-                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-blue-700 dark:text-blue-300 sm:min-w-[100px] sm:pt-1">
+                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-blue-700 dark:text-blue-300 sm:min-w-[120px] sm:pt-1">
                         Free Hit:
                       </span>
                       <div className="flex gap-1 sm:gap-1.5 flex-wrap">
-                        {recommendations.freehit.map((rec, index) => (
-                          <div key={rec.gw} className="inline-flex flex-col gap-0.5 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                        {recommendations.freehit1 && (
+                          <div className="inline-flex flex-col gap-0.5 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
                             <span className="text-[10px] sm:text-xs md:text-sm font-medium text-blue-700 dark:text-blue-300">
-                              Option {index + 1}: GW{rec.gw}
+                              Free Hit 1: GW{recommendations.freehit1.gw}
                             </span>
                             <span className="text-[9px] sm:text-[10px] md:text-xs text-blue-600 dark:text-blue-400">
-                              Normal: {rec.normalPoints.toFixed(1)} | FH: ~{rec.freeHitPoints.toFixed(1)}
+                              Normal: {recommendations.freehit1.normalPoints.toFixed(1)} | FH: ~{recommendations.freehit1.freeHitPoints.toFixed(1)}
                             </span>
                           </div>
-                        ))}
+                        )}
+                        {recommendations.freehit2 && (
+                          <div className="inline-flex flex-col gap-0.5 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-blue-700 dark:text-blue-300">
+                              Free Hit 2: GW{recommendations.freehit2.gw}
+                            </span>
+                            <span className="text-[9px] sm:text-[10px] md:text-xs text-blue-600 dark:text-blue-400">
+                              Normal: {recommendations.freehit2.normalPoints.toFixed(1)} | FH: ~{recommendations.freehit2.freeHitPoints.toFixed(1)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
