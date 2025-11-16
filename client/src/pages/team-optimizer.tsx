@@ -1156,7 +1156,76 @@ export default function TeamOptimizer() {
             recommendations.freehit1 || recommendations.freehit2
           );
           
-          return hasRecommendations ? (
+          if (!hasRecommendations) return null;
+
+          // Collect all chips into an array and sort by gameweek
+          const chipList: Array<{
+            type: string;
+            name: string;
+            gw: number;
+            color: string;
+            display: string;
+          }> = [];
+
+          if (recommendations.bboost1) {
+            chipList.push({
+              type: 'bboost',
+              name: 'Bench Boost 1',
+              gw: recommendations.bboost1.gw,
+              color: 'green',
+              display: `GW${recommendations.bboost1.gw} (+${recommendations.bboost1.additionalPoints.toFixed(1)} pts)`
+            });
+          }
+          if (recommendations.bboost2) {
+            chipList.push({
+              type: 'bboost',
+              name: 'Bench Boost 2',
+              gw: recommendations.bboost2.gw,
+              color: 'green',
+              display: `GW${recommendations.bboost2.gw} (+${recommendations.bboost2.additionalPoints.toFixed(1)} pts)`
+            });
+          }
+          if (recommendations.tripleC1) {
+            chipList.push({
+              type: 'tripleC',
+              name: 'Triple Captain 1',
+              gw: recommendations.tripleC1.gw,
+              color: 'purple',
+              display: `GW${recommendations.tripleC1.gw} (+${recommendations.tripleC1.additionalPoints.toFixed(1)} pts)`
+            });
+          }
+          if (recommendations.tripleC2) {
+            chipList.push({
+              type: 'tripleC',
+              name: 'Triple Captain 2',
+              gw: recommendations.tripleC2.gw,
+              color: 'purple',
+              display: `GW${recommendations.tripleC2.gw} (+${recommendations.tripleC2.additionalPoints.toFixed(1)} pts)`
+            });
+          }
+          if (recommendations.freehit1) {
+            chipList.push({
+              type: 'freehit',
+              name: 'Free Hit 1',
+              gw: recommendations.freehit1.gw,
+              color: 'blue',
+              display: `GW${recommendations.freehit1.gw} (Normal: ${recommendations.freehit1.normalPoints.toFixed(1)} | FH: ${recommendations.freehit1.freeHitPoints.toFixed(1)})`
+            });
+          }
+          if (recommendations.freehit2) {
+            chipList.push({
+              type: 'freehit',
+              name: 'Free Hit 2',
+              gw: recommendations.freehit2.gw,
+              color: 'blue',
+              display: `GW${recommendations.freehit2.gw} (Normal: ${recommendations.freehit2.normalPoints.toFixed(1)} | FH: ${recommendations.freehit2.freeHitPoints.toFixed(1)})`
+            });
+          }
+
+          // Sort by gameweek (ascending)
+          chipList.sort((a, b) => a.gw - b.gw);
+          
+          return (
             <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/10 dark:to-background">
               <CardHeader className="pb-3 sm:pb-4">
                 <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg">
@@ -1164,75 +1233,46 @@ export default function TeamOptimizer() {
                   <span className="truncate">Chip Recommendations</span>
                 </CardTitle>
                 <CardDescription className="text-[10px] sm:text-xs md:text-sm">
-                  Based on Auto optimized lineup (Set 1: GW 12-19, Set 2: GW 20-38)
+                  Based on Auto optimized lineup (ordered by gameweek)
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-1.5 sm:space-y-2">
-                  {recommendations.bboost1 && (
-                    <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-green-700 dark:text-green-300">
-                        Bench Boost 1:
+                  {chipList.map((chip, idx) => (
+                    <div 
+                      key={idx}
+                      className={`flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md ${
+                        chip.color === 'green' 
+                          ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800' 
+                          : chip.color === 'purple'
+                          ? 'bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800'
+                          : 'bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800'
+                      }`}
+                    >
+                      <span className={`text-[10px] sm:text-xs md:text-sm font-semibold ${
+                        chip.color === 'green'
+                          ? 'text-green-700 dark:text-green-300'
+                          : chip.color === 'purple'
+                          ? 'text-purple-700 dark:text-purple-300'
+                          : 'text-blue-700 dark:text-blue-300'
+                      }`}>
+                        {chip.name}:
                       </span>
-                      <span className="text-[10px] sm:text-xs md:text-sm font-medium text-green-700 dark:text-green-300">
-                        GW{recommendations.bboost1.gw} (+{recommendations.bboost1.additionalPoints.toFixed(1)} pts)
-                      </span>
-                    </div>
-                  )}
-                  {recommendations.bboost2 && (
-                    <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-green-700 dark:text-green-300">
-                        Bench Boost 2:
-                      </span>
-                      <span className="text-[10px] sm:text-xs md:text-sm font-medium text-green-700 dark:text-green-300">
-                        GW{recommendations.bboost2.gw} (+{recommendations.bboost2.additionalPoints.toFixed(1)} pts)
-                      </span>
-                    </div>
-                  )}
-                  {recommendations.tripleC1 && (
-                    <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
-                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-purple-700 dark:text-purple-300">
-                        Triple Captain 1:
-                      </span>
-                      <span className="text-[10px] sm:text-xs md:text-sm font-medium text-purple-700 dark:text-purple-300">
-                        GW{recommendations.tripleC1.gw} (+{recommendations.tripleC1.additionalPoints.toFixed(1)} pts)
-                      </span>
-                    </div>
-                  )}
-                  {recommendations.tripleC2 && (
-                    <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
-                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-purple-700 dark:text-purple-300">
-                        Triple Captain 2:
-                      </span>
-                      <span className="text-[10px] sm:text-xs md:text-sm font-medium text-purple-700 dark:text-purple-300">
-                        GW{recommendations.tripleC2.gw} (+{recommendations.tripleC2.additionalPoints.toFixed(1)} pts)
+                      <span className={`text-[10px] sm:text-xs md:text-sm font-medium ${
+                        chip.color === 'green'
+                          ? 'text-green-700 dark:text-green-300'
+                          : chip.color === 'purple'
+                          ? 'text-purple-700 dark:text-purple-300'
+                          : 'text-blue-700 dark:text-blue-300'
+                      }`}>
+                        {chip.display}
                       </span>
                     </div>
-                  )}
-                  {recommendations.freehit1 && (
-                    <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-blue-700 dark:text-blue-300">
-                        Free Hit 1:
-                      </span>
-                      <span className="text-[10px] sm:text-xs md:text-sm font-medium text-blue-700 dark:text-blue-300">
-                        GW{recommendations.freehit1.gw} (Normal: {recommendations.freehit1.normalPoints.toFixed(1)} | FH: {recommendations.freehit1.freeHitPoints.toFixed(1)})
-                      </span>
-                    </div>
-                  )}
-                  {recommendations.freehit2 && (
-                    <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-blue-700 dark:text-blue-300">
-                        Free Hit 2:
-                      </span>
-                      <span className="text-[10px] sm:text-xs md:text-sm font-medium text-blue-700 dark:text-blue-300">
-                        GW{recommendations.freehit2.gw} (Normal: {recommendations.freehit2.normalPoints.toFixed(1)} | FH: {recommendations.freehit2.freeHitPoints.toFixed(1)})
-                      </span>
-                    </div>
-                  )}
+                  ))}
                 </div>
               </CardContent>
             </Card>
-          ) : null;
+          );
         })()}
       </div>
     </div>
