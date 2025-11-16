@@ -22,10 +22,11 @@ export interface PlayerWithProjections {
 }
 
 // AFCON 2025 Availability - Players traveling to Morocco (December 21, 2025 - January 18, 2026)
+// Names must match exactly with FPL API format (first_name + second_name with accents)
 export const AFCON_PLAYERS = new Set([
   'Mohamed Salah', 'Omar Marmoush', 'Calvin Bassey', 'Alex Iwobi', 'Samuel Chukwueze', 
   'Ola Aina', 'Taiwo Awoniyi', 'Ike Ugbo', 'Frank Onyeka', 'Tolu Arokodare',
-  'Iliman Ndiaye', 'Idrissa Gueye', 'Ismaila Sarr', 'Pape Sarr', 'Pathé Ciss',
+  'Iliman Ndiaye', 'Idrissa Gueye', 'Ismaïla Sarr', 'Pape Matar Sarr', 'Pathé Ciss',
   'Amad Diallo', 'Ibrahim Sangaré', 'Willy Boly', 'Bertrand Traoré', 'Wesley Fofana',
   'Maxwel Cornet', 'Emmanuel Agbadou', 'Simon Adingra', 'Malick Yalcouye', 'Evann Guessand',
   'Bryan Mbeumo', 'Amadou Onana', 'Carlos Baleba', 'Noussair Mazraoui', 'Dara O\'Shea',
