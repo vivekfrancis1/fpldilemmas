@@ -500,12 +500,12 @@ export default function ProjectedPoints() {
 
     return (
       <TableRow key={idx}>
-        <TableCell className="sticky left-0 z-10 font-medium min-w-[120px] sm:min-w-[140px] md:min-w-[180px] bg-white dark:bg-background">
-          <div className="flex items-center gap-1 sm:gap-1.5">
+        <TableCell className="sticky left-0 z-10 font-medium min-w-[140px] sm:min-w-[160px] md:min-w-[200px] bg-white dark:bg-background py-3 sm:py-4">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <div className="min-w-0 flex-1">
-              <div className="font-semibold text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">{player.web_name}</div>
-              <div className="flex items-center gap-0.5 sm:gap-1 mt-0.5 flex-wrap">
-                <Badge className={`text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0 h-3 sm:h-3.5 ${
+              <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base truncate">{player.web_name}</div>
+              <div className="flex items-center gap-1 sm:gap-1.5 mt-1 flex-wrap">
+                <Badge className={`text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 h-4 sm:h-5 ${
                   position === 'GKP' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                   position === 'DEF' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                   position === 'MID' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
@@ -513,21 +513,21 @@ export default function ProjectedPoints() {
                 }`}>
                   {position}
                 </Badge>
-                <Badge variant="outline" className="text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0 h-3 sm:h-3.5 text-gray-600 dark:text-gray-400">
+                <Badge variant="outline" className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 h-4 sm:h-5 text-gray-600 dark:text-gray-400">
                   {teamName}
                 </Badge>
               </div>
             </div>
-            <div className="flex items-center gap-0.5 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
               {isCaptain && (
-                <Badge className="bg-yellow-500 text-white text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0.5 h-3.5 sm:h-4 flex items-center gap-0.5">
-                  <Crown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                <Badge className="bg-yellow-500 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 sm:py-1 h-5 sm:h-6 flex items-center gap-0.5">
+                  <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                   <span className="hidden sm:inline">C</span>
                 </Badge>
               )}
               {isViceCaptain && (
-                <Badge variant="outline" className="text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0.5 h-3.5 sm:h-4 border-yellow-500 text-yellow-600 dark:text-yellow-400 flex items-center gap-0.5">
-                  <Crown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                <Badge variant="outline" className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 sm:py-1 h-5 sm:h-6 border-yellow-500 text-yellow-600 dark:text-yellow-400 flex items-center gap-0.5">
+                  <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                   <span className="hidden sm:inline">V</span>
                 </Badge>
               )}
@@ -537,27 +537,27 @@ export default function ProjectedPoints() {
             </div>
           </div>
         </TableCell>
-        <TableCell className="hidden lg:table-cell text-center font-medium text-gray-900 dark:text-gray-100 text-xs">
+        <TableCell className="hidden lg:table-cell text-center font-medium text-gray-900 dark:text-gray-100 text-sm py-3 sm:py-4">
           £{(player.now_cost / 10).toFixed(1)}m
         </TableCell>
         {/* Mobile: Show first 2 GWs + selected GW */}
         {projections.map((proj, i) => (
           <TableCell 
             key={proj.gw} 
-            className={`text-center ${
+            className={`text-center py-3 sm:py-4 ${
               i >= 2 && proj.gw !== selectedGameweek ? 'hidden md:table-cell' : 
               i >= 4 ? 'hidden lg:table-cell' : ''
             }`}
           >
-            <span className={`font-medium text-[10px] sm:text-xs ${
+            <span className={`font-semibold text-xs sm:text-sm md:text-base ${
               proj.gw === selectedGameweek ? 'text-purple-600 dark:text-purple-400 font-bold' : 'text-gray-700 dark:text-gray-300'
             }`}>
               {proj.points.toFixed(1)}
             </span>
           </TableCell>
         ))}
-        <TableCell className="text-center sticky right-0 bg-white dark:bg-background">
-          <span className="font-bold text-purple-600 dark:text-purple-400 text-xs sm:text-sm">
+        <TableCell className="text-center sticky right-0 bg-white dark:bg-background py-3 sm:py-4">
+          <span className="font-bold text-purple-600 dark:text-purple-400 text-sm sm:text-base md:text-lg">
             {projections.reduce((sum, p) => sum + p.points, 0).toFixed(1)}
           </span>
         </TableCell>
@@ -702,24 +702,10 @@ export default function ProjectedPoints() {
         {/* Current Team */}
         <Card>
           <CardHeader className="pb-3 sm:pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2">
-              <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg">
-                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-                <span className="truncate">Current Team</span>
-              </CardTitle>
-              {(() => {
-                let formation = '';
-                if (manualLineup.length > 0) {
-                  const starting11 = manualLineup.filter(p => p.position <= 11);
-                  formation = calculateFormation(starting11);
-                }
-                return formation ? (
-                  <Badge variant="outline" className="text-xs sm:text-sm font-semibold px-2 sm:px-3 py-0.5 sm:py-1 bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300">
-                    {formation}
-                  </Badge>
-                ) : null;
-              })()}
-            </div>
+            <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-base sm:text-lg md:text-xl">
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+              <span>Current Team</span>
+            </CardTitle>
           </CardHeader>
           <CardContent className="px-2 sm:px-6">
             <div className="overflow-x-auto -mx-2 sm:-mx-6 px-2 sm:px-6">
@@ -727,60 +713,60 @@ export default function ProjectedPoints() {
                 <TableHeader>
                   <TableRow>
                     <TableHead 
-                      className="sticky left-0 z-10 bg-white dark:bg-background text-[10px] sm:text-xs min-w-[120px] sm:min-w-[140px] md:min-w-[180px] cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
+                      className="sticky left-0 z-10 bg-white dark:bg-background text-xs sm:text-sm md:text-base font-semibold min-w-[140px] sm:min-w-[160px] md:min-w-[200px] cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 py-3 sm:py-4"
                       onClick={() => handleSort("player")}
                     >
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 sm:gap-1.5">
                         Player
                         {sortColumn === "player" ? (
-                          sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          sortDirection === "asc" ? <ArrowUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <ArrowDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         ) : (
-                          <ArrowUpDown className="h-3 w-3 opacity-40" />
+                          <ArrowUpDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-40" />
                         )}
                       </div>
                     </TableHead>
                     <TableHead 
-                      className="hidden lg:table-cell text-center text-[10px] sm:text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
+                      className="hidden lg:table-cell text-center text-xs sm:text-sm md:text-base font-semibold cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 py-3 sm:py-4"
                       onClick={() => handleSort("price")}
                     >
-                      <div className="flex items-center justify-center gap-1">
+                      <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                         Price
                         {sortColumn === "price" ? (
-                          sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          sortDirection === "asc" ? <ArrowUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <ArrowDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         ) : (
-                          <ArrowUpDown className="h-3 w-3 opacity-40" />
+                          <ArrowUpDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-40" />
                         )}
                       </div>
                     </TableHead>
                     {nextGameweeks.map((gw, i) => (
                       <TableHead 
                         key={gw.id} 
-                        className={`text-center text-[10px] sm:text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 ${
+                        className={`text-center text-xs sm:text-sm md:text-base font-semibold cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 py-3 sm:py-4 ${
                           i >= 2 && gw.id !== selectedGameweek ? 'hidden md:table-cell' : 
                           i >= 4 ? 'hidden lg:table-cell' : ''
                         }`}
                         onClick={() => handleSort(`gw${gw.id}`)}
                       >
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                           GW{gw.id}
                           {sortColumn === `gw${gw.id}` ? (
-                            sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                            sortDirection === "asc" ? <ArrowUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <ArrowDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                           ) : (
-                            <ArrowUpDown className="h-3 w-3 opacity-40" />
+                            <ArrowUpDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-40" />
                           )}
                         </div>
                       </TableHead>
                     ))}
                     <TableHead 
-                      className="text-center text-[10px] sm:text-xs sticky right-0 bg-white dark:bg-background cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900"
+                      className="text-center text-xs sm:text-sm md:text-base font-semibold sticky right-0 bg-white dark:bg-background cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 py-3 sm:py-4"
                       onClick={() => handleSort("total")}
                     >
-                      <div className="flex items-center justify-center gap-1">
+                      <div className="flex items-center justify-center gap-1 sm:gap-1.5">
                         Total
                         {sortColumn === "total" ? (
-                          sortDirection === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                          sortDirection === "asc" ? <ArrowUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <ArrowDown className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         ) : (
-                          <ArrowUpDown className="h-3 w-3 opacity-40" />
+                          <ArrowUpDown className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-40" />
                         )}
                       </div>
                     </TableHead>
