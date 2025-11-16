@@ -193,6 +193,25 @@ function getGameweekFromDate(date: Date, bootstrapData: BootstrapData): number |
   return null;
 }
 
+// AFCON 2025 Availability - Players traveling to Morocco (December 21, 2025 - January 18, 2026)
+const AFCON_PLAYERS = new Set([
+  'Salah', 'Marmoush', 'Bassey', 'Iwobi', 'Chukwueze', 'Aina', 'Awoniyi', 'Uche', 'Onyeka', 
+  'Arokodare', 'Ndiaye', 'Gueye', 'Sarr', 'I.Sarr', 'Diouf', 'Amad', 'Sangaré', 'Boly', 
+  'Traoré', 'Fofana', 'Cornet', 'Agbadou', 'Adingra', 'Yalcouye', 'Guessand', 'Mbeumo', 
+  'Onana', 'Baleba', 'Mazraoui', 'Riad', 'Adli', 'Aguerd', 'Ait Nouri', 'Wissa', 
+  'Wan-Bissaka', 'Bissouma', 'Doucouré', 'Ouattara', 'Kaboré', 'Benson', 'Foster', 
+  'Mejbri', 'Munetsi', 'Chirewa'
+]);
+
+// Get AFCON availability percentage for a specific gameweek
+function getAFCONAvailability(gameweek: number): number {
+  if (gameweek === 17 || gameweek === 18 || gameweek === 19) return 0.0;  // 0% - Tournament group stage
+  if (gameweek === 20) return 0.25; // 25% - Knockouts begin, some eliminated
+  if (gameweek === 21) return 0.50; // 50% - Quarter-finals
+  if (gameweek === 22) return 0.75; // 75% - Semi-finals onwards
+  return 1.0; // 100% - Normal availability
+}
+
 function applyAvailabilityAdjustments(
   player: PlayerTotalPointsData,
   bootstrapData: BootstrapData,
@@ -201,11 +220,12 @@ function applyAvailabilityAdjustments(
   const chanceOfPlaying = player.chanceOfPlayingNextRound ?? 100;
   const status = player.status || 'a';
   const news = player.news || '';
+  const isAFCONPlayer = AFCON_PLAYERS.has(player.playerName);
   
   // Apply availability adjustments based on player status
   
-  // If fully available, no adjustments needed
-  if (chanceOfPlaying >= 100 && status === 'a') {
+  // If fully available AND not an AFCON player, no adjustments needed
+  if (chanceOfPlaying >= 100 && status === 'a' && !isAFCONPlayer) {
     return player;
   }
   
@@ -266,6 +286,34 @@ function applyAvailabilityAdjustments(
         };
       }
     }
+  }
+  
+  // Apply AFCON 2025 availability adjustments (GW 17-22)
+  if (AFCON_PLAYERS.has(player.playerName)) {
+    Object.keys(adjustedProjections).forEach(gwKey => {
+      const gw = parseInt(gwKey);
+      const afconAvailability = getAFCONAvailability(gw);
+      
+      // Only apply if AFCON affects this gameweek (< 100% availability)
+      if (afconAvailability < 1.0) {
+        const original = adjustedProjections[gwKey];
+        const adjusted = original * afconAvailability;
+        adjustedProjections[gwKey] = adjusted;
+        
+        if (original > 0) {
+          const afconStatus = afconAvailability === 0 ? 'AFCON - Unavailable' : 
+                             afconAvailability === 0.25 ? 'AFCON - 25% available' :
+                             afconAvailability === 0.5 ? 'AFCON - 50% available' :
+                             'AFCON - 75% available';
+          
+          availabilityAdjustments[gwKey] = {
+            original,
+            adjusted,
+            reason: afconStatus
+          };
+        }
+      }
+    });
   }
   
   // Recalculate totals and averages after adjustments
