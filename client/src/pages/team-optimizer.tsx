@@ -576,25 +576,22 @@ export default function TeamOptimizer() {
 
     const nextGWs = getNextGameweeks();
     const usedChips = teamData.chips || [];
-    
-    // Split gameweeks into two sets
-    const set1GWs = nextGWs.filter(gw => gw.id <= 19);
-    const set2GWs = nextGWs.filter(gw => gw.id >= 20);
+
+    type ChipOption = { gw: number; additionalPoints: number };
+    type FreeHitOption = { gw: number; normalPoints: number; freeHitPoints: number };
 
     const recommendations = { 
-      bboost1: null as { gw: number; additionalPoints: number } | null,
-      bboost2: null as { gw: number; additionalPoints: number } | null,
-      tripleC1: null as { gw: number; additionalPoints: number } | null,
-      tripleC2: null as { gw: number; additionalPoints: number } | null,
-      freehit1: null as { gw: number; normalPoints: number; freeHitPoints: number } | null,
-      freehit2: null as { gw: number; normalPoints: number; freeHitPoints: number } | null
+      bboost1_options: [] as ChipOption[],
+      freehit1_options: [] as FreeHitOption[],
+      bboost2_options: [] as ChipOption[],
+      tripleC2_options: [] as ChipOption[],
+      freehit2_options: [] as FreeHitOption[]
     };
 
     const chipMaxUses: { [key: string]: number } = {
       'bboost': 2,
       '3xc': 2,
       'freehit': 2,
-      'wildcard': 2
     };
 
     const countChipUses = (chipName: string) => usedChips.filter(c => c.name === chipName).length;
@@ -604,230 +601,200 @@ export default function TeamOptimizer() {
       return used < max;
     };
 
-    // Best Bench Boost
+    // Helper to calculate bench points for a gameweek
+    const getBenchPoints = (gwId: number) => {
+      const benchPlayers = optimizedLineups.get(gwId)?.bench || [];
+      let benchPoints = 0;
+      benchPlayers.forEach(pick => {
+        const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
+        if (projection?.gameweekProjections) {
+          benchPoints += projection.gameweekProjections[gwId.toString()] || 0;
+        }
+      });
+      return benchPoints;
+    };
+
+    // Helper to calculate captain points for a gameweek
+    const getCaptainPoints = (gwId: number) => {
+      const gwLineup = optimizedLineups.get(gwId);
+      if (gwLineup?.starting11) {
+        const captain = gwLineup.starting11.find(p => p.isCaptain);
+        if (captain) {
+          return captain.projectedPoints || 0;
+        }
+      }
+      return 0;
+    };
+
+    // Helper to calculate free hit improvement for a gameweek
+    const getFreeHitImprovement = (gwId: number) => {
+      let startingPoints = 0;
+      const gwLineup = optimizedLineups.get(gwId);
+      if (gwLineup?.totalProjectedPoints) {
+        startingPoints = gwLineup.totalProjectedPoints;
+      }
+      const realFHPoints = freeHitOptimizations.get(gwId);
+      const freeHitPoints = realFHPoints !== undefined ? realFHPoints : Math.round(startingPoints * 1.25);
+      return {
+        normalPoints: startingPoints,
+        freeHitPoints: freeHitPoints,
+        improvement: freeHitPoints - startingPoints
+      };
+    };
+
+    // Bench Boost recommendations
     if (hasRemainingUses('bboost')) {
-      const remainingBenchBoosts = chipMaxUses['bboost'] - countChipUses('bboost');
-      
-      if (remainingBenchBoosts >= 2) {
-        // Set 1: GW 12-19
-        if (set1GWs.length > 0) {
-          const gwScores: { gw: number; points: number }[] = [];
-          set1GWs.forEach(gw => {
-            const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
-            let benchPoints = 0;
-            benchPlayers.forEach(pick => {
-              const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
-              if (projection?.gameweekProjections) {
-                benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
-              }
-            });
-            gwScores.push({ gw: gw.id, points: benchPoints });
-          });
-          gwScores.sort((a, b) => b.points - a.points);
-          if (gwScores.length > 0) {
-            recommendations.bboost1 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
-          }
-        }
+      const bbUsed = countChipUses('bboost');
+      const bbRemaining = chipMaxUses['bboost'] - bbUsed;
 
-        // Set 2: GW 20-38
-        if (set2GWs.length > 0) {
-          const gwScores: { gw: number; points: number }[] = [];
-          set2GWs.forEach(gw => {
-            const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
-            let benchPoints = 0;
-            benchPlayers.forEach(pick => {
-              const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
-              if (projection?.gameweekProjections) {
-                benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
-              }
-            });
-            gwScores.push({ gw: gw.id, points: benchPoints });
-          });
-          gwScores.sort((a, b) => b.points - a.points);
-          if (gwScores.length > 0) {
-            recommendations.bboost2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
-          }
+      if (bbRemaining >= 2) {
+        // Both chips available - assign distinct gameweeks
+        const allBBScores = nextGWs.map(gw => ({ gw: gw.id, points: getBenchPoints(gw.id) }));
+        allBBScores.sort((a, b) => b.points - a.points);
+
+        // BB1 gets best 2 gameweeks (or all available if less than 2)
+        if (allBBScores.length >= 2) {
+          recommendations.bboost1_options = allBBScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
+        } else if (allBBScores.length === 1) {
+          // Only 1 gameweek - show it for both options
+          recommendations.bboost1_options = [
+            { gw: allBBScores[0].gw, additionalPoints: allBBScores[0].points },
+            { gw: allBBScores[0].gw, additionalPoints: allBBScores[0].points }
+          ];
         }
-      } else if (remainingBenchBoosts === 1) {
-        // Only 1 chip remaining - show only BB2
-        if (set2GWs.length > 0) {
-          const gwScores: { gw: number; points: number }[] = [];
-          set2GWs.forEach(gw => {
-            const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
-            let benchPoints = 0;
-            benchPlayers.forEach(pick => {
-              const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
-              if (projection?.gameweekProjections) {
-                benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
-              }
-            });
-            gwScores.push({ gw: gw.id, points: benchPoints });
-          });
-          gwScores.sort((a, b) => b.points - a.points);
-          if (gwScores.length > 0) {
-            recommendations.bboost2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
-          }
+        
+        // BB2 gets next 2 best gameweeks
+        if (allBBScores.length >= 4) {
+          // 4+ gameweeks: BB2 gets ranks 3-4
+          recommendations.bboost2_options = allBBScores.slice(2, 4).map(s => ({ gw: s.gw, additionalPoints: s.points }));
+        } else if (allBBScores.length === 3) {
+          // 3 gameweeks: BB2 gets rank 3 twice
+          recommendations.bboost2_options = [
+            { gw: allBBScores[2].gw, additionalPoints: allBBScores[2].points },
+            { gw: allBBScores[2].gw, additionalPoints: allBBScores[2].points }
+          ];
+        } else if (allBBScores.length >= 1) {
+          // 1-2 gameweeks: BB2 reuses best gameweek(s)
+          const bestGW = allBBScores[0];
+          recommendations.bboost2_options = [
+            { gw: bestGW.gw, additionalPoints: bestGW.points },
+            { gw: bestGW.gw, additionalPoints: bestGW.points }
+          ];
+        }
+      } else if (bbRemaining === 1) {
+        // Only 1 remaining - show in BB2 slot only
+        const allBBScores = nextGWs.map(gw => ({ gw: gw.id, points: getBenchPoints(gw.id) }));
+        allBBScores.sort((a, b) => b.points - a.points);
+        
+        if (allBBScores.length >= 2) {
+          recommendations.bboost2_options = allBBScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
+        } else if (allBBScores.length === 1) {
+          // Only 1 gameweek - show it for both options
+          recommendations.bboost2_options = [
+            { gw: allBBScores[0].gw, additionalPoints: allBBScores[0].points },
+            { gw: allBBScores[0].gw, additionalPoints: allBBScores[0].points }
+          ];
         }
       }
     }
 
-    // Best Triple Captain
+    // Triple Captain recommendations (only TC2 available based on user's chips)
     if (hasRemainingUses('3xc')) {
-      const remainingTripleCaptains = chipMaxUses['3xc'] - countChipUses('3xc');
+      const allTCScores = nextGWs.map(gw => ({ gw: gw.id, points: getCaptainPoints(gw.id) }));
+      allTCScores.sort((a, b) => b.points - a.points);
       
-      if (remainingTripleCaptains >= 2) {
-        // Set 1: GW 12-19
-        if (set1GWs.length > 0) {
-          const gwScores: { gw: number; points: number }[] = [];
-          set1GWs.forEach(gw => {
-            let captainBasePoints = 0;
-            const gwLineup = optimizedLineups.get(gw.id);
-            if (gwLineup?.starting11) {
-              const captain = gwLineup.starting11.find(p => p.isCaptain);
-              if (captain) {
-                captainBasePoints = captain.projectedPoints || 0;
-              }
-            }
-            gwScores.push({ gw: gw.id, points: captainBasePoints });
-          });
-          gwScores.sort((a, b) => b.points - a.points);
-          if (gwScores.length > 0) {
-            recommendations.tripleC1 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
-          }
-        }
-
-        // Set 2: GW 20-38
-        if (set2GWs.length > 0) {
-          const gwScores: { gw: number; points: number }[] = [];
-          set2GWs.forEach(gw => {
-            let captainBasePoints = 0;
-            const gwLineup = optimizedLineups.get(gw.id);
-            if (gwLineup?.starting11) {
-              const captain = gwLineup.starting11.find(p => p.isCaptain);
-              if (captain) {
-                captainBasePoints = captain.projectedPoints || 0;
-              }
-            }
-            gwScores.push({ gw: gw.id, points: captainBasePoints });
-          });
-          gwScores.sort((a, b) => b.points - a.points);
-          if (gwScores.length > 0) {
-            recommendations.tripleC2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
-          }
-        }
-      } else if (remainingTripleCaptains === 1) {
-        // Only 1 chip remaining - show only TC2
-        if (set2GWs.length > 0) {
-          const gwScores: { gw: number; points: number }[] = [];
-          set2GWs.forEach(gw => {
-            let captainBasePoints = 0;
-            const gwLineup = optimizedLineups.get(gw.id);
-            if (gwLineup?.starting11) {
-              const captain = gwLineup.starting11.find(p => p.isCaptain);
-              if (captain) {
-                captainBasePoints = captain.projectedPoints || 0;
-              }
-            }
-            gwScores.push({ gw: gw.id, points: captainBasePoints });
-          });
-          gwScores.sort((a, b) => b.points - a.points);
-          if (gwScores.length > 0) {
-            recommendations.tripleC2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
-          }
-        }
+      // Ensure TC2 always has 2 options
+      if (allTCScores.length >= 2) {
+        recommendations.tripleC2_options = allTCScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
+      } else if (allTCScores.length === 1) {
+        // Only 1 gameweek - show it for both options
+        recommendations.tripleC2_options = [
+          { gw: allTCScores[0].gw, additionalPoints: allTCScores[0].points },
+          { gw: allTCScores[0].gw, additionalPoints: allTCScores[0].points }
+        ];
       }
     }
 
-    // Best Free Hit
+    // Free Hit recommendations
     if (hasRemainingUses('freehit')) {
-      const remainingFreeHits = chipMaxUses['freehit'] - countChipUses('freehit');
-      
-      if (remainingFreeHits >= 2) {
-        // Set 1: GW 12-19
-        if (set1GWs.length > 0) {
-          const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
-          set1GWs.forEach(gw => {
-            let startingPoints = 0;
-            const gwLineup = optimizedLineups.get(gw.id);
-            if (gwLineup?.totalProjectedPoints) {
-              startingPoints = gwLineup.totalProjectedPoints;
-            }
-            const realFHPoints = freeHitOptimizations.get(gw.id);
-            const freeHitPoints = realFHPoints !== undefined ? realFHPoints : Math.round(startingPoints * 1.25);
-            const improvement = freeHitPoints - startingPoints;
-            gwScores.push({ 
-              gw: gw.id, 
-              normalPoints: startingPoints,
-              freeHitPoints: freeHitPoints,
-              improvement: improvement
-            });
-          });
-          gwScores.sort((a, b) => b.improvement - a.improvement);
-          if (gwScores.length > 0) {
-            recommendations.freehit1 = { 
-              gw: gwScores[0].gw, 
-              normalPoints: gwScores[0].normalPoints,
-              freeHitPoints: gwScores[0].freeHitPoints
-            };
-          }
-        }
+      const fhUsed = countChipUses('freehit');
+      const fhRemaining = chipMaxUses['freehit'] - fhUsed;
 
-        // Set 2: GW 20-38
-        if (set2GWs.length > 0) {
-          const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
-          set2GWs.forEach(gw => {
-            let startingPoints = 0;
-            const gwLineup = optimizedLineups.get(gw.id);
-            if (gwLineup?.totalProjectedPoints) {
-              startingPoints = gwLineup.totalProjectedPoints;
-            }
-            const realFHPoints = freeHitOptimizations.get(gw.id);
-            const freeHitPoints = realFHPoints !== undefined ? realFHPoints : Math.round(startingPoints * 1.25);
-            const improvement = freeHitPoints - startingPoints;
-            gwScores.push({ 
-              gw: gw.id, 
-              normalPoints: startingPoints,
-              freeHitPoints: freeHitPoints,
-              improvement: improvement
-            });
-          });
-          gwScores.sort((a, b) => b.improvement - a.improvement);
-          if (gwScores.length > 0) {
-            recommendations.freehit2 = { 
-              gw: gwScores[0].gw, 
-              normalPoints: gwScores[0].normalPoints,
-              freeHitPoints: gwScores[0].freeHitPoints
-            };
-          }
+      if (fhRemaining >= 2) {
+        // Both chips available - assign distinct gameweeks
+        const allFHScores = nextGWs.map(gw => {
+          const result = getFreeHitImprovement(gw.id);
+          return { 
+            gw: gw.id, 
+            normalPoints: result.normalPoints,
+            freeHitPoints: result.freeHitPoints,
+            improvement: result.improvement
+          };
+        });
+        allFHScores.sort((a, b) => b.improvement - a.improvement);
+
+        // FH1 gets best 2 gameweeks (or all available if less than 2)
+        if (allFHScores.length >= 2) {
+          recommendations.freehit1_options = allFHScores.slice(0, 2).map(s => ({ 
+            gw: s.gw, 
+            normalPoints: s.normalPoints, 
+            freeHitPoints: s.freeHitPoints 
+          }));
+        } else if (allFHScores.length === 1) {
+          // Only 1 gameweek - show it for both options
+          recommendations.freehit1_options = [
+            { gw: allFHScores[0].gw, normalPoints: allFHScores[0].normalPoints, freeHitPoints: allFHScores[0].freeHitPoints },
+            { gw: allFHScores[0].gw, normalPoints: allFHScores[0].normalPoints, freeHitPoints: allFHScores[0].freeHitPoints }
+          ];
         }
-      } else if (remainingFreeHits === 1) {
-        // Only 1 chip remaining - show only FH2
-        if (set2GWs.length > 0) {
-          const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
-          set2GWs.forEach(gw => {
-            let startingPoints = 0;
-            const gwLineup = optimizedLineups.get(gw.id);
-            if (gwLineup?.totalProjectedPoints) {
-              startingPoints = gwLineup.totalProjectedPoints;
-            }
-            const realFHPoints = freeHitOptimizations.get(gw.id);
-            const freeHitPoints = realFHPoints !== undefined ? realFHPoints : Math.round(startingPoints * 1.25);
-            const improvement = freeHitPoints - startingPoints;
-            gwScores.push({ 
-              gw: gw.id, 
-              normalPoints: startingPoints,
-              freeHitPoints: freeHitPoints,
-              improvement: improvement
-            });
-          });
-          gwScores.sort((a, b) => b.improvement - a.improvement);
-          if (gwScores.length > 0) {
-            recommendations.freehit2 = { 
-              gw: gwScores[0].gw, 
-              normalPoints: gwScores[0].normalPoints,
-              freeHitPoints: gwScores[0].freeHitPoints
-            };
-          }
+        
+        // FH2 gets next 2 best gameweeks
+        if (allFHScores.length >= 4) {
+          // 4+ gameweeks: FH2 gets ranks 3-4
+          recommendations.freehit2_options = allFHScores.slice(2, 4).map(s => ({ 
+            gw: s.gw, 
+            normalPoints: s.normalPoints, 
+            freeHitPoints: s.freeHitPoints 
+          }));
+        } else if (allFHScores.length === 3) {
+          // 3 gameweeks: FH2 gets rank 3 twice
+          recommendations.freehit2_options = [
+            { gw: allFHScores[2].gw, normalPoints: allFHScores[2].normalPoints, freeHitPoints: allFHScores[2].freeHitPoints },
+            { gw: allFHScores[2].gw, normalPoints: allFHScores[2].normalPoints, freeHitPoints: allFHScores[2].freeHitPoints }
+          ];
+        } else if (allFHScores.length >= 1) {
+          // 1-2 gameweeks: FH2 reuses best gameweek(s)
+          const bestGW = allFHScores[0];
+          recommendations.freehit2_options = [
+            { gw: bestGW.gw, normalPoints: bestGW.normalPoints, freeHitPoints: bestGW.freeHitPoints },
+            { gw: bestGW.gw, normalPoints: bestGW.normalPoints, freeHitPoints: bestGW.freeHitPoints }
+          ];
+        }
+      } else if (fhRemaining === 1) {
+        // Only 1 remaining - show in FH2 slot only
+        const allFHScores = nextGWs.map(gw => {
+          const result = getFreeHitImprovement(gw.id);
+          return { 
+            gw: gw.id, 
+            normalPoints: result.normalPoints,
+            freeHitPoints: result.freeHitPoints,
+            improvement: result.improvement
+          };
+        });
+        allFHScores.sort((a, b) => b.improvement - a.improvement);
+        
+        if (allFHScores.length >= 2) {
+          recommendations.freehit2_options = allFHScores.slice(0, 2).map(s => ({ 
+            gw: s.gw, 
+            normalPoints: s.normalPoints, 
+            freeHitPoints: s.freeHitPoints 
+          }));
+        } else if (allFHScores.length === 1) {
+          // Only 1 gameweek - show it for both options
+          recommendations.freehit2_options = [
+            { gw: allFHScores[0].gw, normalPoints: allFHScores[0].normalPoints, freeHitPoints: allFHScores[0].freeHitPoints },
+            { gw: allFHScores[0].gw, normalPoints: allFHScores[0].normalPoints, freeHitPoints: allFHScores[0].freeHitPoints }
+          ];
         }
       }
     }
@@ -1150,83 +1117,78 @@ export default function TeamOptimizer() {
         {/* Chip Recommendations */}
         {(() => {
           const recommendations = getChipRecommendations();
-          const hasRecommendations = recommendations && (
-            recommendations.bboost1 || recommendations.bboost2 || 
-            recommendations.tripleC1 || recommendations.tripleC2 || 
-            recommendations.freehit1 || recommendations.freehit2
-          );
-          
-          if (!hasRecommendations) return null;
+          if (!recommendations) return null;
 
-          // Collect all chips into an array and sort by gameweek
-          const chipList: Array<{
-            type: string;
+          type ChipDisplay = {
             name: string;
-            gw: number;
             color: string;
-            display: string;
-          }> = [];
+            option1?: { gw: number; gain: number };
+            option2?: { gw: number; gain: number };
+          };
 
-          if (recommendations.bboost1) {
-            chipList.push({
-              type: 'bboost',
+          const chips: ChipDisplay[] = [
+            {
               name: 'Bench Boost 1',
-              gw: recommendations.bboost1.gw,
               color: 'green',
-              display: `GW${recommendations.bboost1.gw} (+${recommendations.bboost1.additionalPoints.toFixed(1)} pts)`
-            });
-          }
-          if (recommendations.bboost2) {
-            chipList.push({
-              type: 'bboost',
-              name: 'Bench Boost 2',
-              gw: recommendations.bboost2.gw,
-              color: 'green',
-              display: `GW${recommendations.bboost2.gw} (+${recommendations.bboost2.additionalPoints.toFixed(1)} pts)`
-            });
-          }
-          if (recommendations.tripleC1) {
-            chipList.push({
-              type: 'tripleC',
-              name: 'Triple Captain 1',
-              gw: recommendations.tripleC1.gw,
-              color: 'purple',
-              display: `GW${recommendations.tripleC1.gw} (+${recommendations.tripleC1.additionalPoints.toFixed(1)} pts)`
-            });
-          }
-          if (recommendations.tripleC2) {
-            chipList.push({
-              type: 'tripleC',
-              name: 'Triple Captain 2',
-              gw: recommendations.tripleC2.gw,
-              color: 'purple',
-              display: `GW${recommendations.tripleC2.gw} (+${recommendations.tripleC2.additionalPoints.toFixed(1)} pts)`
-            });
-          }
-          if (recommendations.freehit1) {
-            const gain = recommendations.freehit1.freeHitPoints - recommendations.freehit1.normalPoints;
-            chipList.push({
-              type: 'freehit',
+              option1: recommendations.bboost1_options[0] ? { 
+                gw: recommendations.bboost1_options[0].gw, 
+                gain: recommendations.bboost1_options[0].additionalPoints 
+              } : undefined,
+              option2: recommendations.bboost1_options[1] ? { 
+                gw: recommendations.bboost1_options[1].gw, 
+                gain: recommendations.bboost1_options[1].additionalPoints 
+              } : undefined,
+            },
+            {
               name: 'Free Hit 1',
-              gw: recommendations.freehit1.gw,
               color: 'blue',
-              display: `GW${recommendations.freehit1.gw} (+${gain.toFixed(1)} pts)`
-            });
-          }
-          if (recommendations.freehit2) {
-            const gain = recommendations.freehit2.freeHitPoints - recommendations.freehit2.normalPoints;
-            chipList.push({
-              type: 'freehit',
+              option1: recommendations.freehit1_options[0] ? { 
+                gw: recommendations.freehit1_options[0].gw, 
+                gain: recommendations.freehit1_options[0].freeHitPoints - recommendations.freehit1_options[0].normalPoints 
+              } : undefined,
+              option2: recommendations.freehit1_options[1] ? { 
+                gw: recommendations.freehit1_options[1].gw, 
+                gain: recommendations.freehit1_options[1].freeHitPoints - recommendations.freehit1_options[1].normalPoints 
+              } : undefined,
+            },
+            {
+              name: 'Bench Boost 2',
+              color: 'green',
+              option1: recommendations.bboost2_options[0] ? { 
+                gw: recommendations.bboost2_options[0].gw, 
+                gain: recommendations.bboost2_options[0].additionalPoints 
+              } : undefined,
+              option2: recommendations.bboost2_options[1] ? { 
+                gw: recommendations.bboost2_options[1].gw, 
+                gain: recommendations.bboost2_options[1].additionalPoints 
+              } : undefined,
+            },
+            {
+              name: 'Triple Captain 2',
+              color: 'purple',
+              option1: recommendations.tripleC2_options[0] ? { 
+                gw: recommendations.tripleC2_options[0].gw, 
+                gain: recommendations.tripleC2_options[0].additionalPoints 
+              } : undefined,
+              option2: recommendations.tripleC2_options[1] ? { 
+                gw: recommendations.tripleC2_options[1].gw, 
+                gain: recommendations.tripleC2_options[1].additionalPoints 
+              } : undefined,
+            },
+            {
               name: 'Free Hit 2',
-              gw: recommendations.freehit2.gw,
               color: 'blue',
-              display: `GW${recommendations.freehit2.gw} (+${gain.toFixed(1)} pts)`
-            });
-          }
+              option1: recommendations.freehit2_options[0] ? { 
+                gw: recommendations.freehit2_options[0].gw, 
+                gain: recommendations.freehit2_options[0].freeHitPoints - recommendations.freehit2_options[0].normalPoints 
+              } : undefined,
+              option2: recommendations.freehit2_options[1] ? { 
+                gw: recommendations.freehit2_options[1].gw, 
+                gain: recommendations.freehit2_options[1].freeHitPoints - recommendations.freehit2_options[1].normalPoints 
+              } : undefined,
+            },
+          ];
 
-          // Sort by gameweek (ascending)
-          chipList.sort((a, b) => a.gw - b.gw);
-          
           return (
             <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/10 dark:to-background">
               <CardHeader className="pb-3 sm:pb-4">
@@ -1235,15 +1197,15 @@ export default function TeamOptimizer() {
                   <span className="truncate">Chip Recommendations</span>
                 </CardTitle>
                 <CardDescription className="text-[10px] sm:text-xs md:text-sm">
-                  Based on Auto optimized lineup (ordered by gameweek)
+                  Top 2 gameweeks for each chip based on points gained
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-1.5 sm:space-y-2">
-                  {chipList.map((chip, idx) => (
+                <div className="space-y-2 sm:space-y-3">
+                  {chips.map((chip, idx) => (
                     <div 
                       key={idx}
-                      className={`flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md ${
+                      className={`px-2 sm:px-3 py-2 sm:py-2.5 rounded-md ${
                         chip.color === 'green' 
                           ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800' 
                           : chip.color === 'purple'
@@ -1251,24 +1213,39 @@ export default function TeamOptimizer() {
                           : 'bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800'
                       }`}
                     >
-                      <span className={`text-[10px] sm:text-xs md:text-sm font-semibold ${
+                      <div className={`text-[11px] sm:text-xs md:text-sm font-semibold mb-1.5 sm:mb-2 ${
                         chip.color === 'green'
                           ? 'text-green-700 dark:text-green-300'
                           : chip.color === 'purple'
                           ? 'text-purple-700 dark:text-purple-300'
                           : 'text-blue-700 dark:text-blue-300'
                       }`}>
-                        {chip.name}:
-                      </span>
-                      <span className={`text-[10px] sm:text-xs md:text-sm font-medium ${
-                        chip.color === 'green'
-                          ? 'text-green-700 dark:text-green-300'
-                          : chip.color === 'purple'
-                          ? 'text-purple-700 dark:text-purple-300'
-                          : 'text-blue-700 dark:text-blue-300'
-                      }`}>
-                        {chip.display}
-                      </span>
+                        {chip.name}
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        {chip.option1 && (
+                          <div className={`flex-1 min-w-[100px] px-2 py-1 rounded text-[10px] sm:text-xs ${
+                            chip.color === 'green'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+                              : chip.color === 'purple'
+                              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200'
+                              : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200'
+                          }`}>
+                            <span className="font-medium">Option 1:</span> GW{chip.option1.gw} (+{chip.option1.gain.toFixed(1)} pts)
+                          </div>
+                        )}
+                        {chip.option2 && (
+                          <div className={`flex-1 min-w-[100px] px-2 py-1 rounded text-[10px] sm:text-xs ${
+                            chip.color === 'green'
+                              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+                              : chip.color === 'purple'
+                              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200'
+                              : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200'
+                          }`}>
+                            <span className="font-medium">Option 2:</span> GW{chip.option2.gw} (+{chip.option2.gain.toFixed(1)} pts)
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
