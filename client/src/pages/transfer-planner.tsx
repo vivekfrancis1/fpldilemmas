@@ -3060,6 +3060,11 @@ export default function TransferPlanner() {
       title: "Player Transferred Out",
       description: `${player.web_name} (${positionName}) has been transferred out for £${sellingPrice.toFixed(1)}m. Select a replacement ${positionName.toLowerCase()}.`
     });
+    
+    // Immediately save draft after transfer out to prevent data loss on refresh
+    if (activeDraft !== "Base" && !isCreatingNewDraft) {
+      setTimeout(() => saveCurrentDraft(updatedGameweekTransfers, activeDraft, true), 200);
+    }
   };
 
   // Handle clicking "Replace" to scroll to projections
@@ -3191,10 +3196,10 @@ export default function TransferPlanner() {
       }
     }, 100);
 
-    // Auto-save draft after transfer in with the updated transfers
-    if (activeDraft !== "Base" && newTransferredOut.length === 0) {
+    // Always save immediately after transfer in to prevent data loss on refresh
+    if (activeDraft !== "Base") {
       const draftToSave = activeDraft; // Capture draft letter before async operation
-      setTimeout(() => saveCurrentDraft(updatedGameweekTransfers, draftToSave), 200);
+      setTimeout(() => saveCurrentDraft(updatedGameweekTransfers, draftToSave, true), 200);
     }
   };
 
