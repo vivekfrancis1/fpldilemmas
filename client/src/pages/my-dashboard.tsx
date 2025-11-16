@@ -260,12 +260,12 @@ export default function MyDashboard() {
     }
   };
 
-  // Load cached manager ID on component mount
+  // Load cached manager ID on component mount (but don't auto-search)
   useEffect(() => {
     const cachedId = getManagerIdFromCache();
     if (cachedId) {
       setManagerId(cachedId);
-      setSearchedId(cachedId);
+      // Don't auto-search - let user click "Search" or "Load Last Manager"
     }
   }, []);
 
@@ -651,13 +651,31 @@ export default function MyDashboard() {
                 <div className="flex gap-2">
                   <Button 
                     onClick={handleSearch} 
-                    disabled={!managerId.trim()}
+                    disabled={!managerId.trim() || isLoading}
                     className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200 whitespace-nowrap"
                     data-testid="button-search-manager"
                   >
                     <Search className="h-4 w-4 mr-2" />
-                    Search Manager
+                    {isLoading ? "Searching..." : "Search Manager"}
                   </Button>
+                  {getManagerIdFromCache() && !searchedId && !isLoading && (
+                    <Button 
+                      onClick={() => {
+                        const cachedId = getManagerIdFromCache();
+                        if (cachedId) {
+                          setManagerId(cachedId);
+                          setSearchedId(cachedId);
+                          saveManagerIdToCache(cachedId);
+                        }
+                      }}
+                      variant="outline"
+                      className="whitespace-nowrap" 
+                      data-testid="button-load-last-manager"
+                    >
+                      <TrendingUp className="h-4 w-4 mr-2" />
+                      Load Last Manager
+                    </Button>
+                  )}
                   <FplConnectDialog />
                 </div>
               </div>

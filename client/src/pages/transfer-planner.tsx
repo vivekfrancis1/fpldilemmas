@@ -934,12 +934,12 @@ export default function TransferPlanner() {
     }
   };
 
-  // Load cached manager ID on component mount
+  // Load cached manager ID on component mount (but don't auto-search)
   useEffect(() => {
     const cachedId = getManagerIdFromCache();
     if (cachedId) {
       setManagerId(cachedId);
-      setSearchedId(cachedId);
+      // Don't auto-search - let user click "Search" or "Load Last Manager"
     }
   }, []);
 
@@ -4500,7 +4500,7 @@ export default function TransferPlanner() {
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-2 md:pt-4">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Input
               type="number"
               placeholder="Enter FPL Manager ID"
@@ -4509,14 +4509,34 @@ export default function TransferPlanner() {
               onKeyPress={handleKeyPress}
               className="flex-1 h-8 md:h-10 text-sm md:text-base"
               data-testid="input-manager-id"
+              disabled={isLoadingTeam}
             />
             <Button 
               onClick={handleSearch}
               className="h-8 md:h-10 text-sm md:text-base"
               data-testid="button-search-manager"
+              disabled={!managerId.trim() || isLoadingTeam}
             >
-              Load Team
+              {isLoadingTeam ? "Loading..." : "Load Team"}
             </Button>
+            {getManagerIdFromCache() && !searchedId && !isLoadingTeam && (
+              <Button 
+                onClick={() => {
+                  const cachedId = getManagerIdFromCache();
+                  if (cachedId) {
+                    setManagerId(cachedId);
+                    setSearchedId(cachedId);
+                    saveManagerIdToCache(cachedId);
+                  }
+                }}
+                variant="outline"
+                className="h-8 md:h-10 text-sm md:text-base" 
+                data-testid="button-load-last-manager"
+              >
+                <TrendingUp className="h-3 w-3 md:h-4 md:w-4 mr-2" />
+                Load Last Manager
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

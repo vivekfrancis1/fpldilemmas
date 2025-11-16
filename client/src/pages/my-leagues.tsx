@@ -96,13 +96,12 @@ function MyLeagues() {
     }
   };
 
-  // Load cached manager ID on component mount
+  // Load cached manager ID on component mount (but don't auto-search)
   useEffect(() => {
     const cachedId = getManagerIdFromCache();
     if (cachedId) {
       setManagerId(cachedId);
-      // Auto-load the data for cached manager
-      setSearchedId(cachedId);
+      // Don't auto-search - let user click "Search" or "Load Last Manager"
     }
   }, []);
 
@@ -174,7 +173,7 @@ function MyLeagues() {
             </div>
           </div>
           <div className="fpl-card-content">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Input
               type="number"
               placeholder="Manager ID (e.g., 123456)"
@@ -183,14 +182,34 @@ function MyLeagues() {
               onKeyPress={handleKeyPress}
               className="flex-1"
               data-testid="input-manager-id"
+              disabled={isLoadingManager || isLoadingLeagues}
             />
             <Button 
               onClick={handleSearch} 
-              disabled={!managerId.trim()}
+              disabled={!managerId.trim() || isLoadingManager || isLoadingLeagues}
               data-testid="button-search"
             >
-              Search
+              <Search className="h-4 w-4 mr-2" />
+              {isLoadingManager || isLoadingLeagues ? "Searching..." : "Search"}
             </Button>
+            {getManagerIdFromCache() && !searchedId && !isLoadingManager && !isLoadingLeagues && (
+              <Button 
+                onClick={() => {
+                  const cachedId = getManagerIdFromCache();
+                  if (cachedId) {
+                    setManagerId(cachedId);
+                    setSearchedId(cachedId);
+                    saveManagerIdToCache(cachedId);
+                  }
+                }}
+                variant="outline"
+                className="w-full sm:w-auto" 
+                data-testid="button-load-last-manager"
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Load Last Manager
+              </Button>
+            )}
             </div>
           </div>
         </div>

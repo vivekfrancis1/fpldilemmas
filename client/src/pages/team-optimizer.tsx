@@ -202,12 +202,12 @@ export default function TeamOptimizer() {
     }
   };
 
-  // Load cached manager ID on component mount
+  // Load cached manager ID on component mount (but don't auto-search)
   useEffect(() => {
     const cachedId = getManagerIdFromCache();
     if (cachedId) {
       setManagerId(cachedId);
-      setSearchedId(cachedId);
+      // Don't auto-search - let user click "Search" or "Load Last Manager"
     }
   }, []);
 
@@ -897,24 +897,45 @@ export default function TeamOptimizer() {
                 <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
                   Manager ID
                 </label>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Input
                     id="manager-id"
                     type="text"
                     placeholder="Enter your FPL Manager ID"
                     value={managerId}
                     onChange={(e) => setManagerId(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    onKeyDown={(e) => e.key === "Enter" && !isLoadingTeam && handleSearch()}
                     data-testid="input-manager-id"
+                    disabled={isLoadingTeam}
+                    className="flex-1"
                   />
                   <Button
                     onClick={handleSearch}
                     className="flex items-center gap-2"
                     data-testid="button-search-manager"
+                    disabled={!managerId.trim() || isLoadingTeam}
                   >
                     <Search className="h-4 w-4" />
-                    Search
+                    {isLoadingTeam ? "Loading..." : "Search"}
                   </Button>
+                  {getManagerIdFromCache() && !searchedId && !isLoadingTeam && (
+                    <Button 
+                      onClick={() => {
+                        const cachedId = getManagerIdFromCache();
+                        if (cachedId) {
+                          setManagerId(cachedId);
+                          setSearchedId(cachedId);
+                          saveManagerIdToCache(cachedId);
+                        }
+                      }}
+                      variant="outline"
+                      className="w-full sm:w-auto" 
+                      data-testid="button-load-last-manager"
+                    >
+                      <TrendingUp className="h-4 w-4 mr-2" />
+                      Load Last Manager
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>

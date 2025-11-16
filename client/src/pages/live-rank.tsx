@@ -73,13 +73,12 @@ export default function LiveRank() {
     }
   };
 
-  // Load cached manager ID on component mount
+  // Load cached manager ID on component mount (but don't auto-search)
   useEffect(() => {
     const cachedId = getManagerIdFromCache();
     if (cachedId) {
       setManagerId(cachedId);
-      // Auto-load the data for cached manager
-      setSearchedId(cachedId);
+      // Don't auto-search - let user click "Search" or "Load Last Manager"
     }
   }, []);
 
@@ -172,6 +171,7 @@ export default function LiveRank() {
                 onChange={(e) => setManagerId(e.target.value)}
                 onKeyPress={handleKeyPress}
                 className="flex-1 text-base"
+                disabled={isLoading}
               />
               <Button 
                 data-testid="button-search-manager"
@@ -181,6 +181,24 @@ export default function LiveRank() {
               >
                 {isLoading ? "Searching..." : "Search"}
               </Button>
+              {getManagerIdFromCache() && !searchedId && !isLoading && (
+                <Button 
+                  onClick={() => {
+                    const cachedId = getManagerIdFromCache();
+                    if (cachedId) {
+                      setManagerId(cachedId);
+                      setSearchedId(cachedId);
+                      saveManagerIdToCache(cachedId);
+                    }
+                  }}
+                  variant="outline"
+                  className="w-full sm:w-auto" 
+                  data-testid="button-load-last-manager"
+                >
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Load Last Manager
+                </Button>
+              )}
             </div>
             
             <div className="mt-6 fpl-text-muted">
@@ -190,11 +208,6 @@ export default function LiveRank() {
                 <li>Sign in and go to "Pick Team" or "Points"</li>
                 <li>Your Manager ID is the number in the URL (e.g., /entry/123456/)</li>
               </ol>
-              {getManagerIdFromCache() && (
-                <p className="mt-3 text-green-600 font-medium">
-                  ✓ Your last searched Manager ID ({getManagerIdFromCache()}) is automatically loaded
-                </p>
-              )}
             </div>
           </div>
         </div>
