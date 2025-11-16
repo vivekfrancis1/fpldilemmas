@@ -760,43 +760,70 @@ export default function ProjectedPoints() {
 
     // Best Bench Boost: Find best gameweek in each set (using Auto optimized lineup)
     if (hasRemainingUses('bboost')) {
-      // Set 1: GW 12-18
-      if (set1GWs.length > 0) {
-        const gwScores: { gw: number; points: number }[] = [];
-        set1GWs.forEach(gw => {
-          const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
-          let benchPoints = 0;
-          benchPlayers.forEach(pick => {
-            const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
-            if (projection?.gameweekProjections) {
-              benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
-            }
+      const remainingBenchBoosts = chipMaxUses['bboost'] - countChipUses('bboost');
+      
+      // Only show recommendations for remaining chips
+      if (remainingBenchBoosts >= 2) {
+        // Show both BB1 and BB2
+        // Set 1: GW 12-19
+        if (set1GWs.length > 0) {
+          const gwScores: { gw: number; points: number }[] = [];
+          set1GWs.forEach(gw => {
+            const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
+            let benchPoints = 0;
+            benchPlayers.forEach(pick => {
+              const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
+              if (projection?.gameweekProjections) {
+                benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+              }
+            });
+            gwScores.push({ gw: gw.id, points: benchPoints });
           });
-          gwScores.push({ gw: gw.id, points: benchPoints });
-        });
-        gwScores.sort((a, b) => b.points - a.points);
-        if (gwScores.length > 0) {
-          recommendations.bboost1 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+          gwScores.sort((a, b) => b.points - a.points);
+          if (gwScores.length > 0) {
+            recommendations.bboost1 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+          }
         }
-      }
 
-      // Set 2: GW 20-38
-      if (set2GWs.length > 0) {
-        const gwScores: { gw: number; points: number }[] = [];
-        set2GWs.forEach(gw => {
-          const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
-          let benchPoints = 0;
-          benchPlayers.forEach(pick => {
-            const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
-            if (projection?.gameweekProjections) {
-              benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
-            }
+        // Set 2: GW 20-38
+        if (set2GWs.length > 0) {
+          const gwScores: { gw: number; points: number }[] = [];
+          set2GWs.forEach(gw => {
+            const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
+            let benchPoints = 0;
+            benchPlayers.forEach(pick => {
+              const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
+              if (projection?.gameweekProjections) {
+                benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+              }
+            });
+            gwScores.push({ gw: gw.id, points: benchPoints });
           });
-          gwScores.push({ gw: gw.id, points: benchPoints });
-        });
-        gwScores.sort((a, b) => b.points - a.points);
-        if (gwScores.length > 0) {
-          recommendations.bboost2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+          gwScores.sort((a, b) => b.points - a.points);
+          if (gwScores.length > 0) {
+            recommendations.bboost2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+          }
+        }
+      } else if (remainingBenchBoosts === 1) {
+        // Only 1 chip remaining - show only BB2
+        // Set 2: GW 20-38
+        if (set2GWs.length > 0) {
+          const gwScores: { gw: number; points: number }[] = [];
+          set2GWs.forEach(gw => {
+            const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
+            let benchPoints = 0;
+            benchPlayers.forEach(pick => {
+              const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
+              if (projection?.gameweekProjections) {
+                benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+              }
+            });
+            gwScores.push({ gw: gw.id, points: benchPoints });
+          });
+          gwScores.sort((a, b) => b.points - a.points);
+          if (gwScores.length > 0) {
+            recommendations.bboost2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+          }
         }
       }
     }
@@ -804,102 +831,164 @@ export default function ProjectedPoints() {
     // Best Triple Captain: Find best gameweek in each set (using Auto optimized lineup)
     // Additional benefit = 3X - 2X = X (where X is base player points)
     if (hasRemainingUses('3xc')) {
-      // Set 1: GW 12-18
-      if (set1GWs.length > 0) {
-        const gwScores: { gw: number; points: number }[] = [];
-        set1GWs.forEach(gw => {
-          let captainBasePoints = 0;
-          const gwLineup = optimizedLineups.get(gw.id);
-          if (gwLineup?.starting11) {
-            const captain = gwLineup.starting11.find(p => p.isCaptain);
-            if (captain) {
-              captainBasePoints = captain.projectedPoints || 0;
+      const remainingTripleCaptains = chipMaxUses['3xc'] - countChipUses('3xc');
+      
+      // Only show recommendations for remaining chips
+      if (remainingTripleCaptains >= 2) {
+        // Show both TC1 and TC2
+        // Set 1: GW 12-19
+        if (set1GWs.length > 0) {
+          const gwScores: { gw: number; points: number }[] = [];
+          set1GWs.forEach(gw => {
+            let captainBasePoints = 0;
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.starting11) {
+              const captain = gwLineup.starting11.find(p => p.isCaptain);
+              if (captain) {
+                captainBasePoints = captain.projectedPoints || 0;
+              }
             }
+            gwScores.push({ gw: gw.id, points: captainBasePoints });
+          });
+          gwScores.sort((a, b) => b.points - a.points);
+          if (gwScores.length > 0) {
+            recommendations.tripleC1 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
           }
-          gwScores.push({ gw: gw.id, points: captainBasePoints });
-        });
-        gwScores.sort((a, b) => b.points - a.points);
-        if (gwScores.length > 0) {
-          recommendations.tripleC1 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
         }
-      }
 
-      // Set 2: GW 20-38
-      if (set2GWs.length > 0) {
-        const gwScores: { gw: number; points: number }[] = [];
-        set2GWs.forEach(gw => {
-          let captainBasePoints = 0;
-          const gwLineup = optimizedLineups.get(gw.id);
-          if (gwLineup?.starting11) {
-            const captain = gwLineup.starting11.find(p => p.isCaptain);
-            if (captain) {
-              captainBasePoints = captain.projectedPoints || 0;
+        // Set 2: GW 20-38
+        if (set2GWs.length > 0) {
+          const gwScores: { gw: number; points: number }[] = [];
+          set2GWs.forEach(gw => {
+            let captainBasePoints = 0;
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.starting11) {
+              const captain = gwLineup.starting11.find(p => p.isCaptain);
+              if (captain) {
+                captainBasePoints = captain.projectedPoints || 0;
+              }
             }
+            gwScores.push({ gw: gw.id, points: captainBasePoints });
+          });
+          gwScores.sort((a, b) => b.points - a.points);
+          if (gwScores.length > 0) {
+            recommendations.tripleC2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
           }
-          gwScores.push({ gw: gw.id, points: captainBasePoints });
-        });
-        gwScores.sort((a, b) => b.points - a.points);
-        if (gwScores.length > 0) {
-          recommendations.tripleC2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+        }
+      } else if (remainingTripleCaptains === 1) {
+        // Only 1 chip remaining - show only TC2
+        // Set 2: GW 20-38
+        if (set2GWs.length > 0) {
+          const gwScores: { gw: number; points: number }[] = [];
+          set2GWs.forEach(gw => {
+            let captainBasePoints = 0;
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.starting11) {
+              const captain = gwLineup.starting11.find(p => p.isCaptain);
+              if (captain) {
+                captainBasePoints = captain.projectedPoints || 0;
+              }
+            }
+            gwScores.push({ gw: gw.id, points: captainBasePoints });
+          });
+          gwScores.sort((a, b) => b.points - a.points);
+          if (gwScores.length > 0) {
+            recommendations.tripleC2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+          }
         }
       }
     }
 
     // Best Free Hit: Find best gameweek in each set (using Auto optimized lineup)
     if (hasRemainingUses('freehit')) {
-      // Set 1: GW 12-18
-      if (set1GWs.length > 0) {
-        const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
-        set1GWs.forEach(gw => {
-          let startingPoints = 0;
-          const gwLineup = optimizedLineups.get(gw.id);
-          if (gwLineup?.totalProjectedPoints) {
-            startingPoints = gwLineup.totalProjectedPoints;
-          }
-          const estimatedFHPoints = Math.round(startingPoints * 1.25);
-          const improvement = estimatedFHPoints - startingPoints;
-          gwScores.push({ 
-            gw: gw.id, 
-            normalPoints: startingPoints,
-            freeHitPoints: estimatedFHPoints,
-            improvement: improvement
+      const remainingFreeHits = chipMaxUses['freehit'] - countChipUses('freehit');
+      
+      // Only show recommendations for remaining chips
+      if (remainingFreeHits >= 2) {
+        // Show both FH1 and FH2
+        // Set 1: GW 12-19
+        if (set1GWs.length > 0) {
+          const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
+          set1GWs.forEach(gw => {
+            let startingPoints = 0;
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.totalProjectedPoints) {
+              startingPoints = gwLineup.totalProjectedPoints;
+            }
+            const estimatedFHPoints = Math.round(startingPoints * 1.25);
+            const improvement = estimatedFHPoints - startingPoints;
+            gwScores.push({ 
+              gw: gw.id, 
+              normalPoints: startingPoints,
+              freeHitPoints: estimatedFHPoints,
+              improvement: improvement
+            });
           });
-        });
-        gwScores.sort((a, b) => b.improvement - a.improvement);
-        if (gwScores.length > 0) {
-          recommendations.freehit1 = { 
-            gw: gwScores[0].gw, 
-            normalPoints: gwScores[0].normalPoints,
-            freeHitPoints: gwScores[0].freeHitPoints
-          };
+          gwScores.sort((a, b) => b.improvement - a.improvement);
+          if (gwScores.length > 0) {
+            recommendations.freehit1 = { 
+              gw: gwScores[0].gw, 
+              normalPoints: gwScores[0].normalPoints,
+              freeHitPoints: gwScores[0].freeHitPoints
+            };
+          }
         }
-      }
 
-      // Set 2: GW 20-38
-      if (set2GWs.length > 0) {
-        const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
-        set2GWs.forEach(gw => {
-          let startingPoints = 0;
-          const gwLineup = optimizedLineups.get(gw.id);
-          if (gwLineup?.totalProjectedPoints) {
-            startingPoints = gwLineup.totalProjectedPoints;
-          }
-          const estimatedFHPoints = Math.round(startingPoints * 1.25);
-          const improvement = estimatedFHPoints - startingPoints;
-          gwScores.push({ 
-            gw: gw.id, 
-            normalPoints: startingPoints,
-            freeHitPoints: estimatedFHPoints,
-            improvement: improvement
+        // Set 2: GW 20-38
+        if (set2GWs.length > 0) {
+          const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
+          set2GWs.forEach(gw => {
+            let startingPoints = 0;
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.totalProjectedPoints) {
+              startingPoints = gwLineup.totalProjectedPoints;
+            }
+            const estimatedFHPoints = Math.round(startingPoints * 1.25);
+            const improvement = estimatedFHPoints - startingPoints;
+            gwScores.push({ 
+              gw: gw.id, 
+              normalPoints: startingPoints,
+              freeHitPoints: estimatedFHPoints,
+              improvement: improvement
+            });
           });
-        });
-        gwScores.sort((a, b) => b.improvement - a.improvement);
-        if (gwScores.length > 0) {
-          recommendations.freehit2 = { 
-            gw: gwScores[0].gw, 
-            normalPoints: gwScores[0].normalPoints,
-            freeHitPoints: gwScores[0].freeHitPoints
-          };
+          gwScores.sort((a, b) => b.improvement - a.improvement);
+          if (gwScores.length > 0) {
+            recommendations.freehit2 = { 
+              gw: gwScores[0].gw, 
+              normalPoints: gwScores[0].normalPoints,
+              freeHitPoints: gwScores[0].freeHitPoints
+            };
+          }
+        }
+      } else if (remainingFreeHits === 1) {
+        // Only 1 chip remaining - show only FH2
+        // Set 2: GW 20-38
+        if (set2GWs.length > 0) {
+          const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
+          set2GWs.forEach(gw => {
+            let startingPoints = 0;
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.totalProjectedPoints) {
+              startingPoints = gwLineup.totalProjectedPoints;
+            }
+            const estimatedFHPoints = Math.round(startingPoints * 1.25);
+            const improvement = estimatedFHPoints - startingPoints;
+            gwScores.push({ 
+              gw: gw.id, 
+              normalPoints: startingPoints,
+              freeHitPoints: estimatedFHPoints,
+              improvement: improvement
+            });
+          });
+          gwScores.sort((a, b) => b.improvement - a.improvement);
+          if (gwScores.length > 0) {
+            recommendations.freehit2 = { 
+              gw: gwScores[0].gw, 
+              normalPoints: gwScores[0].normalPoints,
+              freeHitPoints: gwScores[0].freeHitPoints
+            };
+          }
         }
       }
     }
