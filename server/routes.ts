@@ -2330,7 +2330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Apply adjustments for each gameweek in the range
           for (let gw = targetGW; gw <= planningEnd; gw++) {
-            const gwKey = `GW${gw}`;
+            const gwKey = `${gw}`;  // API returns keys as "14", "15", not "GW14", "GW15"
             const originalPoints = playerProj.gameweekProjections?.[gwKey] || 0;
             
             const { adjustedPoints } = applyAvailabilityToGameweek(
