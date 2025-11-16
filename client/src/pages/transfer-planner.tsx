@@ -1252,8 +1252,8 @@ export default function TransferPlanner() {
       const draftData = {
         managerId: parseInt(searchedId),
         draftLetter: draftLetter,
-        gameweekTransfers: structuredClone(gameweekTransfers),
-        plannedChips: structuredClone(plannedChips),
+        gameweekTransfers: JSON.parse(JSON.stringify(gameweekTransfers)),
+        plannedChips: JSON.parse(JSON.stringify(plannedChips)),
         mode: "manual",
         teamBank: calculateBankAfterTransfers(),
         teamValue: 0,
@@ -2776,7 +2776,7 @@ export default function TransferPlanner() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             draftLetter: newDraftLetter,
-            gameweekTransfers: structuredClone(updatedGameweekTransfers) // Deep clone to prevent shared references
+            gameweekTransfers: JSON.parse(JSON.stringify(updatedGameweekTransfers)) // Deep clone to prevent shared references
           })
         });
         
@@ -3213,8 +3213,8 @@ export default function TransferPlanner() {
         body: JSON.stringify({
           managerId: parseInt(searchedId),
           draftLetter: draftLetter,
-          gameweekTransfers: structuredClone(transfersData), // Deep clone to prevent shared references
-          plannedChips: structuredClone(plannedChips), // Include planned chips
+          gameweekTransfers: JSON.parse(JSON.stringify(transfersData)), // Deep clone to prevent shared references
+          plannedChips: JSON.parse(JSON.stringify(plannedChips)), // Include planned chips
           mode: "manual",
           teamBank: calculateBankAfterTransfers(),
           teamValue: 0,
@@ -3318,8 +3318,8 @@ export default function TransferPlanner() {
           
           // Reset ALL state for complete draft isolation
           // CRITICAL: Deep clone to prevent shared references between drafts
-          setGameweekTransfers(structuredClone(draft.gameweekTransfers || {}));
-          setPlannedChips(structuredClone(draft.plannedChips || {})); // Load planned chips
+          setGameweekTransfers(JSON.parse(JSON.stringify(draft.gameweekTransfers || {})));
+          setPlannedChips(JSON.parse(JSON.stringify(draft.plannedChips || {}))); // Load planned chips
           setPlannerMode(draft.mode);
           
           // Save captain/vice-captain info to be applied AFTER useEffect rebuilds lineup
@@ -3427,7 +3427,7 @@ export default function TransferPlanner() {
         body: JSON.stringify({
           managerId: parseInt(searchedId),
           draftLetter: nextLetter,
-          gameweekTransfers: structuredClone(gameweekTransfers), // Deep clone to prevent shared references
+          gameweekTransfers: JSON.parse(JSON.stringify(gameweekTransfers)), // Deep clone to prevent shared references
           mode: "manual",
           teamBank: calculateBankAfterTransfers(),
           teamValue: 0,
