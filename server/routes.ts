@@ -2408,6 +2408,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const singleGWProjection = singleGWProjectionsByPlayerId.get(pick.playerId);
           const currentPrice = element?.now_cost || 0;
           
+          // Debug logging for Sarr
+          if (element?.web_name === 'Sarr' && targetGW === 14) {
+            console.log(`🔍 SARR in currentTeam GW${targetGW}: playerId=${pick.playerId}, projectedPoints=${projection?.totalExpectedPoints?.toFixed(2)}`);
+          }
+          
           return {
             id: pick.playerId,
             position: pick.position,
@@ -2471,6 +2476,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               const pointsGain = playerInPoints - playerOut.projectedPoints;
               const singleGWPointsGain = playerInSingleGWPoints - playerOut.singleGWPoints;
+              
+              // Debug logging for Sarr → Mbeumo transfer
+              if (targetGW === 14 && playerOut.webName === 'Sarr' && playerIn.web_name === 'Mbeumo') {
+                console.log(`🔍 SARR → MBEUMO GW${targetGW}: Sarr OUT=${playerOut.projectedPoints.toFixed(2)}, Mbeumo IN=${playerInPoints.toFixed(2)}, Gain=${pointsGain.toFixed(2)}`);
+              }
               
               // SPECIAL CASE: GW15 - Use all free transfers regardless of threshold
               // Since GW16 will be topped up to 5 FTs anyway, no reason to save them
