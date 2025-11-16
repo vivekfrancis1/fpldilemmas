@@ -34,12 +34,12 @@ export default function TransferRecommendations() {
     }
   };
 
-  // Load cached manager ID on component mount
+  // Load cached manager ID on component mount (but don't auto-search)
   useEffect(() => {
     const cachedId = getManagerIdFromCache();
     if (cachedId) {
       setManagerId(cachedId);
-      setSearchedId(cachedId);
+      // Don't auto-search - let user click "Search" or "Load Last Manager"
     }
   }, []);
 
@@ -134,16 +134,47 @@ export default function TransferRecommendations() {
                   type="text"
                   value={managerId}
                   onChange={(e) => setManagerId(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && !isLoadingRecommendations && handleSearch()}
                   placeholder="Enter Manager ID"
                   className="text-base min-h-11"
                   data-testid="input-manager-id"
+                  disabled={isLoadingRecommendations}
                 />
               </div>
-              <Button onClick={handleSearch} className="w-full sm:w-auto min-h-11" data-testid="button-search-manager">
+              <Button 
+                onClick={handleSearch} 
+                className="w-full sm:w-auto min-h-11" 
+                data-testid="button-search-manager"
+                disabled={isLoadingRecommendations || !managerId.trim()}
+              >
                 <Search className="h-4 w-4 mr-2" />
-                Search
+                {isLoadingRecommendations ? "Analyzing..." : "Search"}
               </Button>
+              {getManagerIdFromCache() && !searchedId && !isLoadingRecommendations && (
+                <Button 
+                  onClick={() => {
+                    const cachedId = getManagerIdFromCache();
+                    if (cachedId) {
+                      setManagerId(cachedId);
+                      setSearchedId(cachedId);
+                      saveManagerIdToCache(cachedId);
+                    }
+                  }}
+                  variant="outline"
+                  className="w-full sm:w-auto min-h-11" 
+                  data-testid="button-load-last-manager"
+                >
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Load Last Manager
+                </Button>
+              )}
             </div>
+            {isLoadingRecommendations && (
+              <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
+                <span>Calculating optimal transfers... This may take 10-20 seconds</span>
+              </div>
+            )}
           </CardContent>
         </Card>
 

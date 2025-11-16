@@ -187,6 +187,9 @@ class EnhancedCache {
 // Export enhanced totalPointsCache
 export const totalPointsCache = new EnhancedCache(1000, 30 * 60 * 1000); // 1000 entries, 30min TTL
 
+// Recommended Transfers Cache - Short TTL for fresh recommendations
+const recommendedTransfersCache = new EnhancedCache(100, 3 * 60 * 1000); // 100 entries, 3min TTL
+
 // ========== INITIALIZATION ORCHESTRATOR FOR DEPENDENCY MANAGEMENT ==========
 
 // Global orchestrator instance for checking system readiness
@@ -2191,14 +2194,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const { managerId } = req.params;
+      const refresh = req.query.refresh === 'true';
       
       if (!managerId || isNaN(Number(managerId))) {
         return res.status(400).json({ message: "Invalid manager ID" });
       }
-
-      console.log(`DEBUG: Calculating recommended transfers for manager ${managerId}`);
       
-      // Get bootstrap data for gameweek info and all players
+      // Get bootstrap data for gameweek info (needed for cache key)
       const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
@@ -2208,6 +2210,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get current gameweek and determine planning start
       const currentGW = bootstrapData.events.find((event: any) => event.is_current);
       const currentGameweek = currentGW?.id || 1;
+      
+      // Check cache (keyed by managerId + currentGameweek for auto-invalidation)
+      const cacheKey = `${managerId}:${currentGameweek}`;
+      
+      if (!refresh) {
+        const cached = recommendedTransfersCache.get(cacheKey);
+        if (cached) {
+          console.log(`✅ CACHE HIT: Serving cached transfer recommendations for manager ${managerId} GW${currentGameweek}`);
+          return res.json(cached);
+        }
+      } else {
+        console.log(`🔄 CACHE REFRESH: Bypassing cache for manager ${managerId} due to refresh=true`);
+      }
+      
+      console.log(`❌ CACHE MISS: Calculating fresh transfer recommendations for manager ${managerId} GW${currentGameweek}`);
+      const startTime = Date.now();
       const isCurrentGWFinished = currentGW?.finished || false;
       
       console.log(`DEBUG: Current gameweek detected: ${currentGameweek} (is_current: ${currentGW?.is_current}, finished: ${isCurrentGWFinished})`);
@@ -2833,12 +2851,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`DEBUG: GW${targetGW} FT update: Had ${freeTransfersForGW}, used ${transfersUsedThisGW}, banking ${unusedFTs}, next GW will have ${runningFreeTransfers}`);
       }
       
-      res.json({
+      // Build final response object
+      const responseData = {
         currentGameweek,
         bank,
         freeTransfers,
         gameweeks: recommendationsByGameweek
-      });
+      };
+      
+      // Cache the response for 3 minutes (auto-invalidates on new gameweek)
+      recommendedTransfersCache.set(cacheKey, responseData);
+      
+      const duration = Date.now() - startTime;
+      console.log(`⏱️ Transfer recommendations calculated in ${duration}ms and cached for manager ${managerId} GW${currentGameweek}`);
+      
+      res.json(responseData);
       
     } catch (error) {
       console.error(`Error calculating recommended transfers for manager ${req.params.managerId}:`, error);
