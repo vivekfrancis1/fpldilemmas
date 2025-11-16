@@ -631,13 +631,13 @@ export default function MyDashboard() {
         </div>
 
         {/* Manager Search Section */}
-        <Card className="mb-8 border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardContent className="p-6">
+        <Card className="mb-6 sm:mb-8 border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardContent className="p-4 sm:p-6">
             <div className="max-w-2xl mx-auto">
               <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
                 Manager ID
               </label>
-              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-stretch">
+              <div className="flex flex-col gap-3">
                 <Input
                   id="manager-id"
                   type="text"
@@ -645,14 +645,14 @@ export default function MyDashboard() {
                   value={managerId}
                   onChange={(e) => setManagerId(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  className="flex-1 border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                  className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                   data-testid="input-manager-id"
                 />
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
                   <Button 
                     onClick={handleSearch} 
                     disabled={!managerId.trim() || isLoading}
-                    className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200 whitespace-nowrap"
+                    className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200"
                     data-testid="button-search-manager"
                   >
                     <Search className="h-4 w-4 mr-2" />
@@ -664,11 +664,10 @@ export default function MyDashboard() {
                         const cachedId = getManagerIdFromCache();
                         if (cachedId) {
                           setManagerId(cachedId);
-                          // Don't set searchedId - user must click Search Manager button to fetch data
                         }
                       }}
                       variant="outline"
-                      className="whitespace-nowrap" 
+                      className="w-full sm:w-auto" 
                       data-testid="button-load-last-manager"
                     >
                       <TrendingUp className="h-4 w-4 mr-2" />
@@ -684,8 +683,8 @@ export default function MyDashboard() {
 
         {/* Error State */}
         {error && (
-          <Alert className="max-w-2xl mx-auto mb-8 border-red-200 bg-red-50">
-            <AlertDescription className="text-red-700">
+          <Alert className="max-w-2xl mx-auto mb-6 sm:mb-8 border-red-200 bg-red-50">
+            <AlertDescription className="text-red-700 text-sm sm:text-base">
               {error instanceof Error 
                 ? error.message 
                 : "Failed to load manager data. Please check the Manager ID and try again."
@@ -710,14 +709,14 @@ export default function MyDashboard() {
 
         {/* Dashboard Content */}
         {managerData && !isLoading && (
-          <div className="fpl-section-spacing">
+          <div className="space-y-6 sm:space-y-8">
             {/* Manager Overview */}
             <Card className="border-0 bg-gradient-to-r from-purple-50 to-indigo-50 shadow-lg">
-              <CardHeader className="text-center pb-6">
-                <CardTitle className="fpl-heading-section text-gradient bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              <CardHeader className="text-center p-4 sm:p-6">
+                <CardTitle className="text-xl sm:text-2xl lg:text-3xl font-semibold text-gradient bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                   {managerData.player_first_name} {managerData.player_last_name}
                 </CardTitle>
-                <CardDescription className="fpl-text-body text-lg">
+                <CardDescription className="text-base sm:text-lg text-gray-600 mt-2">
                   {managerData.player_region_name} • Manager ID: {managerData.id}
                 </CardDescription>
               </CardHeader>
@@ -725,39 +724,39 @@ export default function MyDashboard() {
 
             {/* Main Dashboard Tabs */}
             <Tabs defaultValue="overview" className="w-full">
-              {/* All 5 tabs in one row on mobile */}
-              <TabsList className="grid w-full grid-cols-5 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+              {/* Mobile: 3 columns on first row, 2 on second. Desktop: all 5 in one row */}
+              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1 sm:gap-0 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
                 <TabsTrigger 
                   value="overview" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2 md:py-3 font-medium transition-all duration-200 text-[10px] md:text-sm"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
                   data-testid="tab-overview"
                 >
                   Overview
                 </TabsTrigger>
                 <TabsTrigger 
                   value="team" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2 md:py-3 font-medium transition-all duration-200 text-[10px] md:text-sm"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
                   data-testid="tab-team"
                 >
                   Team
                 </TabsTrigger>
                 <TabsTrigger 
                   value="transfers" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2 md:py-3 font-medium transition-all duration-200 text-[10px] md:text-sm"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
                   data-testid="tab-transfers"
                 >
                   Transfers
                 </TabsTrigger>
                 <TabsTrigger 
                   value="chips" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2 md:py-3 font-medium transition-all duration-200 text-[10px] md:text-sm"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px] col-span-1 sm:col-span-1"
                   data-testid="tab-chips"
                 >
                   Chips
                 </TabsTrigger>
                 <TabsTrigger 
                   value="performance" 
-                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2 md:py-3 font-medium transition-all duration-200 text-[10px] md:text-sm"
+                  className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px] col-span-2 sm:col-span-1"
                   data-testid="tab-performance"
                 >
                   Performance
@@ -765,29 +764,29 @@ export default function MyDashboard() {
               </TabsList>
 
               {/* Overview Tab */}
-              <TabsContent value="overview" className="fpl-section-spacing mt-8">
+              <TabsContent value="overview" className="space-y-6 mt-6 sm:mt-8">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                   {/* Total Points */}
-                  <Card className="border-0 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg hover:shadow-xl transition-all duration-300 mobile-dashboard-card" data-testid="card-total-points">
-                    <CardContent className="p-3 sm:p-6">
+                  <Card className="border-0 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-total-points">
+                    <CardContent className="p-4 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-blue-600 mb-1">Total Points</p>
+                          <p className="text-xs sm:text-sm font-medium text-blue-600 mb-1 sm:mb-2">Total Points</p>
                           <p className="text-xl sm:text-2xl font-bold text-blue-900">{managerData.summary_overall_points.toLocaleString()}</p>
                         </div>
-                        <div className="p-2 bg-blue-100 rounded-full flex-shrink-0">
-                          <Target className="h-5 w-5 text-blue-600" />
+                        <div className="p-2 sm:p-2.5 bg-blue-100 rounded-full flex-shrink-0">
+                          <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Overall Rank */}
-                  <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg hover:shadow-xl transition-all duration-300 mobile-dashboard-card" data-testid="card-overall-rank">
-                    <CardContent className="p-3 sm:p-6">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0 pt-1">
-                          <p className="text-xs font-medium text-amber-600 mb-2">Overall Rank</p>
+                  <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-overall-rank">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs sm:text-sm font-medium text-amber-600 mb-1 sm:mb-2">Overall Rank</p>
                           <p className="text-xl sm:text-2xl font-bold text-amber-900 break-words">{formatRank(managerData.summary_overall_rank)}</p>
                           {getRankChange() !== null && getRankChange() !== 0 && (
                             <div className={`flex items-center text-xs mt-1 ${getRankChange()! > 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -802,41 +801,41 @@ export default function MyDashboard() {
                             </div>
                           )}
                         </div>
-                        <div className="p-2 bg-amber-100 rounded-full flex-shrink-0 self-start">
-                          <Trophy className="h-5 w-5 text-amber-600" />
+                        <div className="p-2 sm:p-2.5 bg-amber-100 rounded-full flex-shrink-0">
+                          <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Gameweek Points */}
-                  <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg hover:shadow-xl transition-all duration-300 mobile-dashboard-card" data-testid="card-gameweek-points">
-                    <CardContent className="p-3 sm:p-6">
+                  <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-gameweek-points">
+                    <CardContent className="p-4 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-green-600 mb-1">GW Points</p>
+                          <p className="text-xs sm:text-sm font-medium text-green-600 mb-1 sm:mb-2">GW Points</p>
                           <p className="text-xl sm:text-2xl font-bold text-green-900">{managerData.summary_event_points}</p>
                           <p className="text-xs text-green-600 font-medium mt-1">
                             GW{managerData.current_event}
                           </p>
                         </div>
-                        <div className="p-2 bg-green-100 rounded-full flex-shrink-0">
-                          <Activity className="h-5 w-5 text-green-600" />
+                        <div className="p-2 sm:p-2.5 bg-green-100 rounded-full flex-shrink-0">
+                          <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
                   {/* Gameweek Rank */}
-                  <Card className="border-0 bg-gradient-to-br from-purple-50 to-violet-50 shadow-lg hover:shadow-xl transition-all duration-300 mobile-dashboard-card" data-testid="card-gameweek-rank">
-                    <CardContent className="p-3 sm:p-6">
+                  <Card className="border-0 bg-gradient-to-br from-purple-50 to-violet-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-gameweek-rank">
+                    <CardContent className="p-4 sm:p-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium text-purple-600 mb-1">GW Rank</p>
+                          <p className="text-xs sm:text-sm font-medium text-purple-600 mb-1 sm:mb-2">GW Rank</p>
                           <p className="text-xl sm:text-2xl font-bold text-purple-900">{formatRank(managerData.summary_event_rank)}</p>
                         </div>
-                        <div className="p-2 bg-purple-100 rounded-full flex-shrink-0">
-                          <Calendar className="h-5 w-5 text-purple-600" />
+                        <div className="p-2 sm:p-2.5 bg-purple-100 rounded-full flex-shrink-0">
+                          <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                         </div>
                       </div>
                     </CardContent>
@@ -845,16 +844,16 @@ export default function MyDashboard() {
 
                 {/* My Leagues */}
                 {leaguesData && leaguesData.classic && (
-                  <Card className="border-0 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg mobile-dashboard-card" data-testid="card-leagues">
-                    <CardHeader className="mobile-dashboard-header">
-                      <CardTitle className="fpl-heading-card flex items-center gap-2 text-indigo-800 mobile-dashboard-title">
+                  <Card className="border-0 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg" data-testid="card-leagues">
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="flex items-center gap-2 text-indigo-800 text-lg sm:text-xl">
                         <div className="p-2 bg-indigo-100 rounded-lg">
-                          <Trophy className="h-5 w-5 text-indigo-600" />
+                          <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
                         </div>
                         My Leagues
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="p-3 sm:p-6">
+                    <CardContent className="p-4 sm:p-6">
                     <div className="space-y-2 sm:space-y-3">
                       {leaguesData.classic
                         .filter(league => {
@@ -928,13 +927,13 @@ export default function MyDashboard() {
 
 
             {/* Team Tab */}
-            <TabsContent value="team" className="space-y-6">
+            <TabsContent value="team" className="space-y-6 mt-6 sm:mt-8">
               {teamData && (
                 <>
                   {/* Team Overview Cards */}
                   <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
                     <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
-                      <CardContent className="p-3 sm:p-4">
+                      <CardContent className="p-4 sm:p-5">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs sm:text-sm font-medium text-emerald-700 mb-1 truncate">Formation</p>
@@ -950,7 +949,7 @@ export default function MyDashboard() {
                     </Card>
 
                     <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
-                      <CardContent className="p-3 sm:p-4">
+                      <CardContent className="p-4 sm:p-5">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Squad Value</p>
@@ -969,7 +968,7 @@ export default function MyDashboard() {
                     </Card>
 
                     <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
-                      <CardContent className="p-3 sm:p-4">
+                      <CardContent className="p-4 sm:p-5">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1 truncate">Transfers</p>
@@ -998,7 +997,7 @@ export default function MyDashboard() {
                     </Card>
 
                     <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
-                      <CardContent className="p-3 sm:p-4">
+                      <CardContent className="p-4 sm:p-5">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Current GW Points</p>
@@ -1015,7 +1014,7 @@ export default function MyDashboard() {
                     </Card>
 
                     <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 shadow-sm">
-                      <CardContent className="p-3 sm:p-4">
+                      <CardContent className="p-4 sm:p-5">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs sm:text-sm font-medium text-indigo-700 mb-1 truncate">Total Points</p>
@@ -1034,7 +1033,7 @@ export default function MyDashboard() {
 
                   {/* Legend */}
                   <Card className="bg-blue-50 border-blue-200">
-                    <CardContent className="p-4">
+                    <CardContent className="p-4 sm:p-5">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold text-blue-900 mb-2">Fixture Difficulty Legend:</h4>
                         <div className="flex gap-2 items-center">
@@ -1435,7 +1434,7 @@ export default function MyDashboard() {
                   <div className="grid gap-3 md:gap-6 lg:grid-cols-2">
                     {/* Starting XI */}
                     <Card className="bg-white shadow-lg border border-gray-200">
-                      <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-t-lg p-3 md:p-6">
+                      <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-t-lg p-4 sm:p-6">
                         <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                           <Users className="h-4 w-4 md:h-5 md:w-5" />
                           Starting XI
@@ -1550,7 +1549,7 @@ export default function MyDashboard() {
 
                     {/* Bench - Mobile Optimized */}
                     <Card className="bg-white shadow-lg border border-gray-200">
-                      <CardHeader className="bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-t-lg p-3 md:p-6">
+                      <CardHeader className="bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-t-lg p-4 sm:p-6">
                         <CardTitle className="flex items-center gap-2 text-base md:text-lg">
                           <Users className="h-4 w-4 md:h-5 md:w-5" />
                           Bench
@@ -1633,21 +1632,21 @@ export default function MyDashboard() {
             </TabsContent>
 
               {/* Transfers Tab */}
-              <TabsContent value="transfers" className="fpl-section-spacing mt-8">
+              <TabsContent value="transfers" className="space-y-6 mt-6 sm:mt-8">
                 {transfersData && (
                   <Card className="border-0 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg">
-                    <CardHeader>
-                      <CardTitle className="fpl-heading-card flex items-center gap-2 text-orange-800">
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="flex items-center gap-2 text-orange-800 text-lg sm:text-xl">
                         <div className="p-2 bg-orange-100 rounded-lg">
-                          <ArrowLeftRight className="h-5 w-5 text-orange-600" />
+                          <ArrowLeftRight className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
                         </div>
                         Transfer History
                       </CardTitle>
-                      <CardDescription className="text-orange-700">
+                      <CardDescription className="text-orange-700 text-sm sm:text-base mt-2">
                         All transfers made this season with player prices and gameweek details
                       </CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="p-4 sm:p-6">
                       {transfersData && transfersData.length > 0 ? (
                         <div className="space-y-3">
                           {transfersData
@@ -1762,16 +1761,16 @@ export default function MyDashboard() {
               </TabsContent>
 
               {/* Chips Tab */}
-              <TabsContent value="chips" className="fpl-section-spacing mt-8">
+              <TabsContent value="chips" className="space-y-6 mt-6 sm:mt-8">
                 <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Star className="h-5 w-5" />
+                  <CardHeader className="p-4 sm:p-6">
+                    <CardTitle className="flex items-center gap-2 text-amber-800 text-lg sm:text-xl">
+                      <Star className="h-4 w-4 sm:h-5 sm:w-5" />
                       Chips Used
                     </CardTitle>
-                    <CardDescription>Special chips played this season</CardDescription>
+                    <CardDescription className="text-sm sm:text-base mt-2">Special chips played this season</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-4 sm:p-6">
                     {historyData?.chips && historyData.chips.length > 0 ? (
                       <div className="space-y-2">
                         {historyData.chips.map((chip, index) => (
@@ -1798,21 +1797,21 @@ export default function MyDashboard() {
               </TabsContent>
 
               {/* Performance Tab */}
-              <TabsContent value="performance" className="fpl-section-spacing mt-8">
+              <TabsContent value="performance" className="space-y-6 mt-6 sm:mt-8">
                 {historyData && (
                   <>
                     {/* Gameweek History */}
                     {historyData?.current && historyData.current.length > 0 && (
                       <Card className="border-0 bg-gradient-to-br from-emerald-50 to-green-50 shadow-lg">
-                        <CardHeader>
-                          <CardTitle className="fpl-heading-card flex items-center gap-2 text-emerald-800">
+                        <CardHeader className="p-4 sm:p-6">
+                          <CardTitle className="flex items-center gap-2 text-emerald-800 text-lg sm:text-xl">
                             <div className="p-2 bg-emerald-100 rounded-lg">
-                              <Activity className="h-5 w-5 text-emerald-600" />
+                              <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
                             </div>
                             Gameweek History
                           </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-4 sm:p-6">
                           <div className="space-y-3">
                             {historyData.current.slice().reverse().map((gw) => (
                               <div key={gw.event} className="flex items-center justify-between p-3 sm:p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200 gap-3">
@@ -1838,15 +1837,15 @@ export default function MyDashboard() {
                     {/* Season History */}
                     {historyData?.past && historyData.past.length > 0 && (
                       <Card className="border-0 bg-gradient-to-br from-indigo-50 to-blue-50 shadow-lg">
-                        <CardHeader>
-                          <CardTitle className="fpl-heading-card flex items-center gap-2 text-indigo-800">
+                        <CardHeader className="p-4 sm:p-6">
+                          <CardTitle className="flex items-center gap-2 text-indigo-800 text-lg sm:text-xl">
                             <div className="p-2 bg-indigo-100 rounded-lg">
-                              <BarChart3 className="h-5 w-5 text-indigo-600" />
+                              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
                             </div>
                             Season History
                           </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-4 sm:p-6">
                           <div className="space-y-3">
                             {historyData.past.slice().reverse().map((season, index) => (
                               <div key={index} className="flex items-center justify-between p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200">
@@ -1870,21 +1869,21 @@ export default function MyDashboard() {
             </TabsContent>
 
             {/* Chips Tab */}
-            <TabsContent value="chips" className="fpl-section-spacing mt-8">
+            <TabsContent value="chips" className="space-y-6 mt-6 sm:mt-8">
               {historyData && (
                 <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg">
-                  <CardHeader>
-                    <CardTitle className="fpl-heading-card flex items-center gap-2 text-amber-800">
+                  <CardHeader className="p-4 sm:p-6">
+                    <CardTitle className="flex items-center gap-2 text-amber-800 text-lg sm:text-xl">
                       <div className="p-2 bg-amber-100 rounded-lg">
-                        <Star className="h-5 w-5 text-amber-600" />
+                        <Star className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
                       </div>
                       Chip Usage Summary
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-sm sm:text-base mt-2">
                       Complete overview of FPL chip usage for this season
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-4 sm:p-6">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -1996,12 +1995,12 @@ export default function MyDashboard() {
         {/* Initial State */}
         {!searchedId && (
           <Card className="max-w-2xl mx-auto border-0 bg-white/80 backdrop-blur-sm shadow-lg">
-            <CardContent className="text-center py-12">
-              <div className="p-4 bg-purple-100 rounded-full w-fit mx-auto mb-6">
-                <Trophy className="h-12 w-12 text-purple-600" />
+            <CardContent className="text-center p-6 sm:p-12">
+              <div className="p-3 sm:p-4 bg-purple-100 rounded-full w-fit mx-auto mb-4 sm:mb-6">
+                <Trophy className="h-8 w-8 sm:h-12 sm:w-12 text-purple-600" />
               </div>
-              <h2 className="fpl-heading-card mb-4">Enter Your Manager ID</h2>
-              <div className="fpl-text-body mb-4 space-y-3">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-3 sm:mb-4">Enter Your Manager ID</h2>
+              <div className="text-sm sm:text-base text-gray-700 mb-4 space-y-3">
                 <p className="font-medium">To find your Manager ID, follow these steps:</p>
                 <ol className="list-decimal list-inside space-y-2 ml-2">
                   <li>Go to fantasy.premierleague.com and sign in to your account.</li>
