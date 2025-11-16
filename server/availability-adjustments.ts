@@ -126,10 +126,19 @@ export function applyAvailabilityToGameweek(
 ): { adjustedPoints: number; reason?: string } {
   const isAFCONPlayer = AFCON_PLAYERS.has(playerName);
   
+  // Debug logging for Mbeumo
+  if (playerName === 'Bryan Mbeumo' && gameweek >= 14 && gameweek <= 22) {
+    console.log(`🔍 MBEUMO DEBUG GW${gameweek}: isAFCON=${isAFCONPlayer}, originalPoints=${projectedPoints.toFixed(2)}`);
+  }
+  
   // AFCON adjustments apply regardless of injury status
   if (isAFCONPlayer) {
     const afconAvailability = getAFCONAvailability(gameweek);
     if (afconAvailability < 1.0) {
+      // Debug logging for Mbeumo AFCON adjustment
+      if (playerName === 'Bryan Mbeumo') {
+        console.log(`🎯 MBEUMO AFCON ADJUSTMENT GW${gameweek}: ${projectedPoints.toFixed(2)} → ${(projectedPoints * afconAvailability).toFixed(2)} (${Math.round(afconAvailability * 100)}% availability)`);
+      }
       return {
         adjustedPoints: projectedPoints * afconAvailability,
         reason: `AFCON ${Math.round(afconAvailability * 100)}% availability`
