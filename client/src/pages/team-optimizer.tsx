@@ -345,18 +345,16 @@ export default function TeamOptimizer() {
     }
   }, [teamData]);
 
-  // Trigger auto-optimization on mount or when gameweek horizon changes
+  // Trigger auto-optimization when data is ready
   useEffect(() => {
-    if (teamData?.picks && teamData.picks.length > 0) {
+    if (teamData?.picks && teamData.picks.length > 0 && adjustedPlayerProjections && adjustedPlayerProjections.length > 0) {
       const nextGWs = getNextGameweeks();
       // Re-optimize if we have no lineups OR if horizon changed
       if (optimizedLineups.size === 0 || optimizedLineups.size !== nextGWs.length) {
-        refetchProjections().then(() => {
-          optimizeAllGameweeks();
-        });
+        optimizeAllGameweeks();
       }
     }
-  }, [teamData, gameweekHorizon]);
+  }, [teamData, gameweekHorizon, adjustedPlayerProjections]);
 
   // Optimize lineup for all gameweeks
   const optimizeAllGameweeks = async () => {
