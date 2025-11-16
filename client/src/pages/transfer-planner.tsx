@@ -5640,10 +5640,26 @@ export default function TransferPlanner() {
       {/* Team Evolution Section */}
 
       {/* Team Evolution Section - Only show if there are transfers made for this draft in any gameweek */}
-      {searchedId && teamData && selectedGameweek && activeDraft && activeDraft !== "Base" && gameweekTransfers && Object.keys(gameweekTransfers).length > 0 && Object.keys(gameweekTransfers).some(gw => 
-        gameweekTransfers[parseInt(gw)]?.completed?.length > 0 || 
-        gameweekTransfers[parseInt(gw)]?.transferredOut?.length > 0
-      ) && (
+      {(() => {
+        // Helper: Check if Team Evolution should be shown
+        const shouldShowTeamEvolution = () => {
+          if (!searchedId || !teamData || !selectedGameweek || !activeDraft) return false;
+          if (activeDraft === "Base") return false;
+          if (!gameweekTransfers || typeof gameweekTransfers !== 'object') return false;
+          
+          // Check if any gameweek has transfers
+          return Object.keys(gameweekTransfers).some(gw => {
+            const gwData = gameweekTransfers[parseInt(gw)];
+            return gwData && (
+              (gwData.completed && gwData.completed.length > 0) ||
+              (gwData.transferredOut && gwData.transferredOut.length > 0)
+            );
+          });
+        };
+        
+        if (!shouldShowTeamEvolution()) return null;
+        
+        return (
         <Collapsible open={isTeamEvolutionOpen} onOpenChange={setIsTeamEvolutionOpen}>
           <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-white dark:from-indigo-950/20 dark:to-background">
             <CardHeader>
@@ -5893,7 +5909,8 @@ export default function TransferPlanner() {
             </CollapsibleContent>
           </Card>
         </Collapsible>
-      )}
+        );
+      })()}
 
 
       {/* Draft Comparison Table - Only show if there are at least 2 unique (non-duplicate) drafts */}
