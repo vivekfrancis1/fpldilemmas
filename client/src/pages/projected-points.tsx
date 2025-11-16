@@ -254,17 +254,23 @@ export default function ProjectedPoints() {
     };
   }, [bootstrapData, gameweekHorizon]);
 
-  // Fetch projections based on selected horizon
-  const { data: playerProjections6GW, isLoading: isLoadingProjections, refetch: refetchProjections } = useQuery<any[]>({
-    queryKey: ["/api/player-total-points", gameweekRange.start, gameweekRange.end],
-    queryFn: async () => {
-      const response = await fetch(`/api/player-total-points?startGameweek=${gameweekRange.start}&endGameweek=${gameweekRange.end}`);
-      if (!response.ok) throw new Error('Failed to fetch player projections');
-      return response.json();
-    },
+  // Fetch projections using cached endpoint for faster loading
+  const { data: allPlayerProjections, isLoading: isLoadingProjections, refetch: refetchProjections } = useQuery<any[]>({
+    queryKey: ["/api/cached/player-total-points"],
     enabled: !!bootstrapData,
-    staleTime: 10 * 60 * 1000,
+    staleTime: 60 * 60 * 1000, // 1 hour cache
   });
+
+  // Filter projections to only the 15 players in the team for performance
+  const playerProjections6GW = useMemo(() => {
+    if (!allPlayerProjections || !teamData?.picks) return allPlayerProjections;
+    
+    // Get player IDs from team
+    const teamPlayerIds = new Set(teamData.picks.map(pick => pick.element));
+    
+    // Filter to only team players
+    return allPlayerProjections.filter(player => teamPlayerIds.has(player.playerId));
+  }, [allPlayerProjections, teamData]);
 
   // Apply availability adjustments to player projections
   const adjustedPlayerProjections = useMemo(() => {
