@@ -517,7 +517,7 @@ export default function ProjectedPoints() {
     const teamName = getTeamName(player);
     const nextGWs = getNextGameweeks();
     
-    // Get projected points for next 12 gameweeks
+    // Get projected points for gameweeks
     const projections = nextGWs.map(gw => ({
       gw: gw.id,
       points: getPlayerProjectedPoints(player.id, gw.id)
@@ -527,63 +527,72 @@ export default function ProjectedPoints() {
     const isCaptain = plannerMode === "manual" ? pick.is_captain : pick.isCaptain;
     const isViceCaptain = plannerMode === "manual" ? pick.is_vice_captain : pick.isViceCaptain;
 
+    // On mobile: show first 2 GWs, selected GW (if different), and total
+    // On tablet: show first 4 GWs and total
+    // On desktop: show all GWs
+    const visibleProjectionsMobile = projections.filter((proj, i) => i < 2 || proj.gw === selectedGameweek);
+    const visibleProjectionsTablet = projections.filter((proj, i) => i < 4);
+
     return (
-      <TableRow key={idx} className={!isStarting ? "bg-gray-50" : ""}>
-        <TableCell className={`sticky left-0 z-10 font-medium min-w-[140px] sm:min-w-[180px] ${!isStarting ? 'bg-gray-50' : 'bg-white'}`}>
-          <div className="flex items-center gap-1.5 sm:gap-2">
+      <TableRow key={idx} className={!isStarting ? "bg-gray-50 dark:bg-gray-900" : ""}>
+        <TableCell className={`sticky left-0 z-10 font-medium min-w-[120px] sm:min-w-[140px] md:min-w-[180px] ${!isStarting ? 'bg-gray-50 dark:bg-gray-900' : 'bg-white dark:bg-background'}`}>
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <div className="min-w-0 flex-1">
-              <div className="font-semibold text-gray-900 text-sm sm:text-base truncate">{player.web_name}</div>
-              <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 sm:mt-1 flex-wrap">
-                <Badge className={`text-[10px] sm:text-xs px-0.5 sm:px-1 py-0 h-3.5 sm:h-4 ${
-                  position === 'GKP' ? 'bg-yellow-100 text-yellow-800' :
-                  position === 'DEF' ? 'bg-green-100 text-green-800' :
-                  position === 'MID' ? 'bg-blue-100 text-blue-800' :
-                  'bg-red-100 text-red-800'
+              <div className="font-semibold text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">{player.web_name}</div>
+              <div className="flex items-center gap-0.5 sm:gap-1 mt-0.5 flex-wrap">
+                <Badge className={`text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0 h-3 sm:h-3.5 ${
+                  position === 'GKP' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                  position === 'DEF' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                  position === 'MID' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                  'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                 }`}>
                   {position}
                 </Badge>
-                <Badge variant="outline" className="text-[10px] sm:text-xs px-0.5 sm:px-1 py-0 h-3.5 sm:h-4 text-gray-600">
+                <Badge variant="outline" className="text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0 h-3 sm:h-3.5 text-gray-600 dark:text-gray-400">
                   {teamName}
                 </Badge>
-                {!isStarting && (
-                  <Badge variant="outline" className="hidden sm:inline-flex text-xs px-1 py-0 h-4 text-orange-600 border-orange-300">
-                    Bench
-                  </Badge>
-                )}
               </div>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-0.5 flex-shrink-0">
               {isCaptain && (
-                <Badge className="bg-yellow-500 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 h-4 sm:h-5 flex items-center gap-0.5 sm:gap-1">
-                  <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />C
+                <Badge className="bg-yellow-500 text-white text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0.5 h-3.5 sm:h-4 flex items-center gap-0.5">
+                  <Crown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                  <span className="hidden sm:inline">C</span>
                 </Badge>
               )}
               {isViceCaptain && (
-                <Badge variant="outline" className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 h-4 sm:h-5 border-yellow-500 text-yellow-600 flex items-center gap-0.5 sm:gap-1">
-                  <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />V
+                <Badge variant="outline" className="text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0.5 h-3.5 sm:h-4 border-yellow-500 text-yellow-600 dark:text-yellow-400 flex items-center gap-0.5">
+                  <Crown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                  <span className="hidden sm:inline">V</span>
                 </Badge>
               )}
-              <PlayerAvailabilityBadge player={player} />
+              <div className="hidden sm:block">
+                <PlayerAvailabilityBadge player={player} />
+              </div>
             </div>
           </div>
         </TableCell>
-        <TableCell className="text-center font-medium text-gray-900 text-xs sm:text-sm">
+        <TableCell className="hidden lg:table-cell text-center font-medium text-gray-900 dark:text-gray-100 text-xs">
           £{(player.now_cost / 10).toFixed(1)}m
         </TableCell>
-        {projections.map((proj) => (
+        {/* Mobile: Show first 2 GWs + selected GW */}
+        {projections.map((proj, i) => (
           <TableCell 
             key={proj.gw} 
-            className="text-center"
+            className={`text-center ${
+              i >= 2 && proj.gw !== selectedGameweek ? 'hidden md:table-cell' : 
+              i >= 4 ? 'hidden lg:table-cell' : ''
+            }`}
           >
-            <span className={`font-medium text-xs sm:text-sm ${
-              proj.gw === selectedGameweek ? 'text-purple-600 font-bold' : 'text-gray-700'
+            <span className={`font-medium text-[10px] sm:text-xs ${
+              proj.gw === selectedGameweek ? 'text-purple-600 dark:text-purple-400 font-bold' : 'text-gray-700 dark:text-gray-300'
             }`}>
               {proj.points.toFixed(1)}
             </span>
           </TableCell>
         ))}
-        <TableCell className="text-center">
-          <span className="font-bold text-purple-600 text-sm sm:text-base">
+        <TableCell className="text-center sticky right-0 bg-white dark:bg-background">
+          <span className="font-bold text-purple-600 dark:text-purple-400 text-xs sm:text-sm">
             {projections.reduce((sum, p) => sum + p.points, 0).toFixed(1)}
           </span>
         </TableCell>
@@ -908,34 +917,34 @@ export default function ProjectedPoints() {
   const total6GWPoints = calculateTotal6GWProjectedPoints();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 dark:from-gray-950 dark:to-gray-900 p-2 sm:p-4">
+      <div className="max-w-7xl mx-auto space-y-3 sm:space-y-6">
         {/* Header */}
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 rounded-full mb-4">
-            <Target className="h-8 w-8 text-purple-600" />
+        <div className="text-center py-2 sm:py-0">
+          <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 dark:bg-purple-900 rounded-full mb-2 sm:mb-4">
+            <Target className="h-6 w-6 sm:h-8 sm:w-8 text-purple-600 dark:text-purple-400" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">My Team Projected Points</h1>
-          <p className="text-lg text-gray-600">View your current team's projected performance</p>
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-1 sm:mb-2 px-2">My Team Projected Points</h1>
+          <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-400 px-2">View your current team's projected performance</p>
         </div>
 
         {/* Controls */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-end">
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-end">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Manager ID</label>
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">Manager ID</label>
                 <Input
                   type="text"
                   value={managerId}
                   onChange={(e) => setManagerId(e.target.value)}
                   placeholder="Enter Manager ID"
-                  className="text-base min-h-11"
+                  className="text-sm sm:text-base min-h-10 sm:min-h-11"
                   data-testid="input-manager-id"
                 />
               </div>
-              <Button onClick={handleSearch} className="w-full sm:w-auto min-h-11" data-testid="button-search-manager">
-                <Search className="h-4 w-4 mr-2" />
+              <Button onClick={handleSearch} className="w-full sm:w-auto min-h-10 sm:min-h-11 text-sm sm:text-base" data-testid="button-search-manager">
+                <Search className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 Search
               </Button>
             </div>
@@ -944,28 +953,28 @@ export default function ProjectedPoints() {
 
         {/* Mode Toggle & Projection Horizon */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base sm:text-lg">Settings</CardTitle>
-            <CardDescription className="text-sm">Configure lineup mode and projection horizon</CardDescription>
+          <CardHeader className="pb-2 sm:pb-3">
+            <CardTitle className="text-sm sm:text-base md:text-lg">Settings</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Configure lineup mode and projection horizon</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 sm:space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Lineup Mode</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">Lineup Mode</label>
               <Tabs value={plannerMode} onValueChange={(v) => setPlannerMode(v as "auto" | "manual")}>
                 <TabsList className="grid w-full grid-cols-2 h-auto">
-                  <TabsTrigger value="manual" className="text-sm py-2.5 px-3" data-testid="tab-manual-lineup">
+                  <TabsTrigger value="manual" className="text-xs sm:text-sm py-2 sm:py-2.5 px-2 sm:px-3" data-testid="tab-manual-lineup">
                     Current Lineup
                   </TabsTrigger>
-                  <TabsTrigger value="auto" className="text-sm py-2.5 px-3" data-testid="tab-auto-lineup">
+                  <TabsTrigger value="auto" className="text-xs sm:text-sm py-2 sm:py-2.5 px-2 sm:px-3" data-testid="tab-auto-lineup">
                     Auto Optimized
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Projection Horizon</label>
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">Projection Horizon</label>
               <Select value={gameweekHorizon.toString()} onValueChange={(v) => setGameweekHorizon(parseInt(v))}>
-                <SelectTrigger className="w-full" data-testid="select-gameweek-horizon">
+                <SelectTrigger className="w-full text-xs sm:text-sm" data-testid="select-gameweek-horizon">
                   <SelectValue placeholder="Select gameweek horizon" />
                 </SelectTrigger>
                 <SelectContent>
@@ -981,24 +990,24 @@ export default function ProjectedPoints() {
 
         {/* Summary Card - Total Points */}
         <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
-          <CardHeader>
-            <CardTitle className="text-white text-base sm:text-lg">Next {gameweekHorizon} Gameweeks Total Projected Points</CardTitle>
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-white text-sm sm:text-base md:text-lg">Next {gameweekHorizon} Gameweeks Total Points</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-4 sm:pb-6">
             {plannerMode === "auto" && (isOptimizing || optimizedLineups.size === 0) ? (
-              <div className="py-4" data-testid="loader-optimizing-lineup">
-                <div className="flex items-center justify-center gap-3 mb-3">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                  <div className="text-xl sm:text-2xl font-semibold">Optimizing Lineups...</div>
+              <div className="py-2 sm:py-4" data-testid="loader-optimizing-lineup">
+                <div className="flex items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                  <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-white"></div>
+                  <div className="text-base sm:text-xl md:text-2xl font-semibold">Optimizing...</div>
                 </div>
-                <div className="text-purple-100 text-sm sm:text-base text-center">
-                  Analyzing all gameweeks to find the best formations and captain choices for maximum points
+                <div className="text-purple-100 text-xs sm:text-sm text-center px-2">
+                  Finding best formations and captains
                 </div>
               </div>
             ) : (
               <>
-                <div className="text-4xl sm:text-5xl font-bold">{total6GWPoints.toFixed(1)}</div>
-                <div className="text-purple-100 mt-2 text-sm sm:text-base">
+                <div className="text-3xl sm:text-4xl md:text-5xl font-bold">{total6GWPoints.toFixed(1)}</div>
+                <div className="text-purple-100 mt-1 sm:mt-2 text-xs sm:text-sm md:text-base">
                   {plannerMode === "manual" ? "Current Lineup" : "Auto Optimized Lineup"}
                 </div>
               </>
@@ -1008,10 +1017,10 @@ export default function ProjectedPoints() {
 
         {/* Projected Points by Gameweek */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
-              Projected Points by Gameweek
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg">
+              <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+              <span className="truncate">Points by Gameweek</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -1023,7 +1032,7 @@ export default function ProjectedPoints() {
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {nextGameweeks.map(gw => {
                   // Calculate total for this gameweek
                   let gwTotal = 0;
@@ -1052,19 +1061,19 @@ export default function ProjectedPoints() {
                   return (
                     <Card 
                       key={gw.id} 
-                      className={`cursor-pointer transition-all min-h-[80px] sm:min-h-[90px] ${
+                      className={`cursor-pointer transition-all min-h-[70px] sm:min-h-[80px] ${
                         selectedGameweek === gw.id 
-                          ? 'ring-2 ring-purple-500 bg-purple-50' 
-                          : 'hover:bg-gray-50'
+                          ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-950' 
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-900'
                       }`}
                       onClick={() => setSelectedGameweek(gw.id)}
                       data-testid={`card-gameweek-${gw.id}`}
                     >
-                      <CardContent className="p-3 sm:p-4 text-center flex flex-col justify-center h-full">
-                        <div className="text-xs sm:text-sm font-medium text-gray-600 mb-1">GW{gw.id}</div>
-                        <div className="text-lg sm:text-xl md:text-2xl font-bold text-purple-600">{gwTotal.toFixed(1)}</div>
+                      <CardContent className="p-2 sm:p-3 text-center flex flex-col justify-center h-full">
+                        <div className="text-[10px] sm:text-xs font-medium text-gray-600 dark:text-gray-400 mb-0.5 sm:mb-1">GW{gw.id}</div>
+                        <div className="text-base sm:text-lg md:text-xl font-bold text-purple-600 dark:text-purple-400">{gwTotal.toFixed(1)}</div>
                         {plannerMode === "auto" && gwFormation && (
-                          <div className="text-[10px] sm:text-xs font-medium text-gray-500 mt-1">{gwFormation}</div>
+                          <div className="text-[9px] sm:text-[10px] font-medium text-gray-500 dark:text-gray-500 mt-0.5 sm:mt-1">{gwFormation}</div>
                         )}
                       </CardContent>
                     </Card>
@@ -1077,12 +1086,12 @@ export default function ProjectedPoints() {
 
         {/* Current Team */}
         <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+          <CardHeader className="pb-3 sm:pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-2">
+              <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg">
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
                 <span className="truncate">
-                  {plannerMode === "manual" ? "Current Team Lineup" : `Optimized Lineup for GW${selectedGameweek}`}
+                  {plannerMode === "manual" ? "Current Team" : `GW${selectedGameweek} Optimized`}
                 </span>
               </CardTitle>
               {(() => {
@@ -1097,37 +1106,40 @@ export default function ProjectedPoints() {
                   }
                 }
                 return formation ? (
-                  <Badge variant="outline" className="text-sm font-semibold px-3 py-1 bg-purple-50 border-purple-200 text-purple-700">
-                    Formation: {formation}
+                  <Badge variant="outline" className="text-xs sm:text-sm font-semibold px-2 sm:px-3 py-0.5 sm:py-1 bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300">
+                    {formation}
                   </Badge>
                 ) : null;
               })()}
             </div>
             {plannerMode === "auto" && isOptimizing && (
-              <div className="text-xs sm:text-sm text-gray-500 mt-2">Optimizing lineups for all gameweeks...</div>
+              <div className="text-[10px] sm:text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1 sm:mt-2">Optimizing lineups...</div>
             )}
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto -mx-6 px-6">
+          <CardContent className="px-2 sm:px-6">
+            <div className="overflow-x-auto -mx-2 sm:-mx-6 px-2 sm:px-6">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 z-10 bg-white text-xs sm:text-sm min-w-[140px] sm:min-w-[180px]">Player</TableHead>
-                    <TableHead className="text-center text-xs sm:text-sm">Price</TableHead>
+                    <TableHead className="sticky left-0 z-10 bg-white dark:bg-background text-[10px] sm:text-xs min-w-[120px] sm:min-w-[140px] md:min-w-[180px]">Player</TableHead>
+                    <TableHead className="hidden lg:table-cell text-center text-[10px] sm:text-xs">Price</TableHead>
                     {plannerMode === "manual" ? (
                       <>
-                        {nextGameweeks.map((gw) => (
+                        {nextGameweeks.map((gw, i) => (
                           <TableHead 
                             key={gw.id} 
-                            className="text-center text-xs sm:text-sm"
+                            className={`text-center text-[10px] sm:text-xs ${
+                              i >= 2 && gw.id !== selectedGameweek ? 'hidden md:table-cell' : 
+                              i >= 4 ? 'hidden lg:table-cell' : ''
+                            }`}
                           >
                             GW{gw.id}
                           </TableHead>
                         ))}
-                        <TableHead className="text-center text-xs sm:text-sm">Total ({gameweekHorizon}GW)</TableHead>
+                        <TableHead className="text-center text-[10px] sm:text-xs sticky right-0 bg-white dark:bg-background">Total</TableHead>
                       </>
                     ) : (
-                      <TableHead className="text-center text-xs sm:text-sm">GW{selectedGameweek} Pts</TableHead>
+                      <TableHead className="text-center text-[10px] sm:text-xs">GW{selectedGameweek}</TableHead>
                     )}
                   </TableRow>
                 </TableHeader>
@@ -1216,35 +1228,35 @@ export default function ProjectedPoints() {
           const hasRecommendations = recommendations && (recommendations.bboost.length > 0 || recommendations.tripleC.length > 0 || recommendations.freehit.length > 0);
           
           return hasRecommendations ? (
-            <Card className="border-blue-200 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/10 dark:to-background">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                  Chip Recommendations
+            <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/10 dark:to-background">
+              <CardHeader className="pb-3 sm:pb-4">
+                <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg">
+                  <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-blue-600 dark:text-blue-400" />
+                  <span className="truncate">Chip Recommendations</span>
                 </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">
-                  Based on next {gameweekHorizon} gameweek projections for your current team
+                <CardDescription className="text-[10px] sm:text-xs md:text-sm">
+                  Based on next {gameweekHorizon} gameweek projections
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {plannerMode === "manual" && (
-                  <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
-                    <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200">
-                      <strong>Tip:</strong> Chip recommendations for Auto lineup mode would be more accurate than Manual mode, since Auto mode selects the most optimized lineup with the best captain for maximum points.
+                  <div className="mb-3 sm:mb-4 p-2 sm:p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                    <p className="text-[10px] sm:text-xs text-amber-800 dark:text-amber-200">
+                      <strong>Tip:</strong> Auto mode recommendations are more accurate as they use optimized lineups with best captains.
                     </p>
                   </div>
                 )}
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {recommendations.bboost.length > 0 && (
-                    <div className="flex items-start gap-2 flex-wrap">
-                      <span className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-300 min-w-[100px] pt-1">
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-green-700 dark:text-green-300 sm:min-w-[100px] sm:pt-1">
                         Bench Boost:
                       </span>
-                      <div className="flex gap-1.5 flex-wrap">
+                      <div className="flex gap-1 sm:gap-1.5 flex-wrap">
                         {recommendations.bboost.map((rec, index) => (
-                          <div key={rec.gw} className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                            <span className="text-xs sm:text-sm font-medium text-green-700 dark:text-green-300">
-                              Option {index + 1}: GW{rec.gw} (+{rec.additionalPoints.toFixed(1)} bench pts)
+                          <div key={rec.gw} className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-green-700 dark:text-green-300">
+                              Option {index + 1}: GW{rec.gw} (+{rec.additionalPoints.toFixed(1)} pts)
                             </span>
                           </div>
                         ))}
@@ -1252,15 +1264,15 @@ export default function ProjectedPoints() {
                     </div>
                   )}
                   {recommendations.tripleC.length > 0 && (
-                    <div className="flex items-start gap-2 flex-wrap">
-                      <span className="text-xs sm:text-sm font-semibold text-purple-700 dark:text-purple-300 min-w-[100px] pt-1">
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-purple-700 dark:text-purple-300 sm:min-w-[100px] sm:pt-1">
                         Triple Captain:
                       </span>
-                      <div className="flex gap-1.5 flex-wrap">
+                      <div className="flex gap-1 sm:gap-1.5 flex-wrap">
                         {recommendations.tripleC.map((rec, index) => (
-                          <div key={rec.gw} className="inline-flex items-center gap-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
-                            <span className="text-xs sm:text-sm font-medium text-purple-700 dark:text-purple-300">
-                              Option {index + 1}: GW{rec.gw} (+{rec.additionalPoints.toFixed(1)} extra pts)
+                          <div key={rec.gw} className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-purple-700 dark:text-purple-300">
+                              Option {index + 1}: GW{rec.gw} (+{rec.additionalPoints.toFixed(1)} pts)
                             </span>
                           </div>
                         ))}
@@ -1268,18 +1280,18 @@ export default function ProjectedPoints() {
                     </div>
                   )}
                   {recommendations.freehit.length > 0 && (
-                    <div className="flex items-start gap-2 flex-wrap">
-                      <span className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-300 min-w-[100px] pt-1">
+                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
+                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-blue-700 dark:text-blue-300 sm:min-w-[100px] sm:pt-1">
                         Free Hit:
                       </span>
-                      <div className="flex gap-1.5 flex-wrap">
+                      <div className="flex gap-1 sm:gap-1.5 flex-wrap">
                         {recommendations.freehit.map((rec, index) => (
-                          <div key={rec.gw} className="inline-flex flex-col gap-0.5 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                            <span className="text-xs sm:text-sm font-medium text-blue-700 dark:text-blue-300">
+                          <div key={rec.gw} className="inline-flex flex-col gap-0.5 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-blue-700 dark:text-blue-300">
                               Option {index + 1}: GW{rec.gw}
                             </span>
-                            <span className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400">
-                              Normal: {rec.normalPoints.toFixed(1)} | FH: ~{rec.freeHitPoints.toFixed(1)} pts
+                            <span className="text-[9px] sm:text-[10px] md:text-xs text-blue-600 dark:text-blue-400">
+                              Normal: {rec.normalPoints.toFixed(1)} | FH: ~{rec.freeHitPoints.toFixed(1)}
                             </span>
                           </div>
                         ))}
