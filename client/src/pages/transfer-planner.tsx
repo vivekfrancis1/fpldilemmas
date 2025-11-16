@@ -4827,7 +4827,9 @@ export default function TransferPlanner() {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-600" />
-                {activeDraft === "Base" ? "Team Selection - Base Draft" : `Team Selection - Draft ${activeDraft}`}
+                {activeDraft === "Base" 
+                  ? `Team Selection - Base Draft - Gameweek ${selectedGameweek}` 
+                  : `Team Selection - Draft ${activeDraft} - Gameweek ${selectedGameweek}`}
               </div>
               {(() => {
                 const currentChip = plannedChips[selectedGameweek];
