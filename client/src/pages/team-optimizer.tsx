@@ -254,7 +254,7 @@ export default function TeamOptimizer() {
   }, [bootstrapData, gameweekHorizon]);
 
   // Fetch projections using cached endpoint for faster loading (always gets next 12 GWs)
-  const { data: playerProjections12GW, refetch: refetchProjections } = useQuery<any[]>({
+  const { data: playerProjections12GW, refetch: refetchProjections, isRefetching } = useQuery<any[]>({
     queryKey: ["/api/cached/player-total-points"],
     enabled: !!bootstrapData,
     staleTime: 10 * 60 * 1000,

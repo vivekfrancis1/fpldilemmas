@@ -751,12 +751,12 @@ export default function PlayerTotalPoints() {
   const maxCompareReached = compareList.length >= 5;
 
   // ALL useQuery hooks - cached and live data sources
-  const { data: cachedTotalPointsData, isLoading: cachedLoading, error: cachedError } = useQuery<PlayerTotalPointsData[]>({
+  const { data: cachedTotalPointsData, isLoading: cachedLoading, error: cachedError, refetch: refetchCached } = useQuery<PlayerTotalPointsData[]>({
     queryKey: ["/api/cached/player-total-points"],
     staleTime: 60 * 60 * 1000, // 1 hour cache
   });
 
-  const { data: liveTotalPointsData, isLoading: liveLoading, error: liveError } = useQuery<PlayerTotalPointsData[]>({
+  const { data: liveTotalPointsData, isLoading: liveLoading, error: liveError, refetch: refetchLive } = useQuery<PlayerTotalPointsData[]>({
     queryKey: ["/api/player-total-points", startGameweek, endGameweek],
     queryFn: async () => {
       const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
@@ -866,9 +866,13 @@ export default function PlayerTotalPoints() {
           return key?.includes("/api/player-total-points") || key?.includes("/api/cached/player-total-points");
         }
       });
-      // Force refetch the current data
+      
+      // Force refetch both cached and live data
       console.log('🔄 Refetching total points data...');
-      await queryClient.refetchQueries({ queryKey: ["/api/cached/player-total-points"] });
+      await Promise.all([
+        refetchCached(),
+        refetchLive()
+      ]);
       console.log('🔄 Total points refresh completed!');
     } finally {
       setIsRefreshing(false);

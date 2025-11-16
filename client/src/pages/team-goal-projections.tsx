@@ -58,7 +58,7 @@ export default function TeamGoalProjections() {
   }, [bootstrapData?.events]);
 
   // Use cached endpoint for faster loading
-  const { data: projectionsData, isLoading: projectionsLoading, error: projectionsError } = useQuery<TeamGoalProjection[]>({
+  const { data: projectionsData, isLoading: projectionsLoading, error: projectionsError, refetch: refetchProjections } = useQuery<TeamGoalProjection[]>({
     queryKey: ["/api/cached/team-goal-projections"],
     staleTime: 60 * 60 * 1000, // 1 hour cache
     retry: 2,
