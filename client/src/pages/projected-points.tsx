@@ -700,7 +700,7 @@ export default function ProjectedPoints() {
     );
   };
 
-  // Calculate chip recommendations
+  // Calculate chip recommendations (based on Auto optimized lineup only)
   const getChipRecommendations = () => {
     console.log('🔍 Chip Recommendations Debug:', {
       hasPlayerProjections: !!adjustedPlayerProjections,
@@ -708,8 +708,6 @@ export default function ProjectedPoints() {
       hasTeamData: !!teamData,
       hasChips: !!teamData?.chips,
       chipsData: teamData?.chips,
-      plannerMode,
-      manualLineupLength: manualLineup.length,
       optimizedLineupsSize: optimizedLineups.size
     });
 
@@ -718,13 +716,9 @@ export default function ProjectedPoints() {
       return null;
     }
 
-    // Check if we have lineup data based on mode
-    if (plannerMode === "manual" && !manualLineup.length) {
-      console.log('⚠️ Manual mode but no manual lineup');
-      return null;
-    }
-    if (plannerMode === "auto" && optimizedLineups.size === 0) {
-      console.log('⚠️ Auto mode but no optimized lineups');
+    // Chip recommendations are based on Auto optimized lineup only
+    if (optimizedLineups.size === 0) {
+      console.log('⚠️ No optimized lineups available for chip recommendations');
       return null;
     }
 
@@ -740,14 +734,12 @@ export default function ProjectedPoints() {
     // Helper to check if chip has been used
     const isChipUsed = (chipName: string) => usedChips.some(c => c.name === chipName);
 
-    // Best Bench Boost: Find top 2 gameweeks with maximum bench points
+    // Best Bench Boost: Find top 2 gameweeks with maximum bench points (using Auto optimized lineup)
     if (!isChipUsed('bboost')) {
       const gwScores: { gw: number; points: number }[] = [];
 
       nextGWs.forEach(gw => {
-        const benchPlayers = plannerMode === "manual" 
-          ? manualLineup.filter(pick => pick.position > 11)
-          : optimizedLineups.get(gw.id)?.bench || [];
+        const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
         
         let benchPoints = 0;
         benchPlayers.forEach(pick => {
@@ -764,7 +756,7 @@ export default function ProjectedPoints() {
       recommendations.bboost = gwScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
     }
 
-    // Best Triple Captain: Find top 2 gameweeks where captain has highest points
+    // Best Triple Captain: Find top 2 gameweeks where captain has highest points (using Auto optimized lineup)
     // Additional benefit = 3X - 2X = X (where X is base player points)
     if (!isChipUsed('3xc')) {
       const gwScores: { gw: number; points: number }[] = [];
@@ -772,27 +764,13 @@ export default function ProjectedPoints() {
       nextGWs.forEach(gw => {
         let captainBasePoints = 0;
 
-        if (plannerMode === "manual") {
-          const captainPick = manualLineup.find(p => p.is_captain);
-          if (captainPick) {
-            const projection = adjustedPlayerProjections.find((p: any) => p.playerId === captainPick.element);
-            if (projection?.gameweekProjections) {
-              // Get raw base points for the player (not captain-multiplied)
-              const rawPoints = projection.gameweekProjections[gw.id.toString()] || 0;
-              // Ensure we have base points: if this is already captain-adjusted (2X), divide by 2
-              // The projection should be base points, but normalize just in case
-              captainBasePoints = rawPoints;
-            }
-          }
-        } else {
-          const gwLineup = optimizedLineups.get(gw.id);
-          if (gwLineup?.starting11) {
-            // Find the captain in the starting 11
-            const captain = gwLineup.starting11.find(p => p.isCaptain);
-            if (captain) {
-              // Get the raw projected points for the captain (base points, not multiplied)
-              captainBasePoints = captain.projectedPoints || 0;
-            }
+        const gwLineup = optimizedLineups.get(gw.id);
+        if (gwLineup?.starting11) {
+          // Find the captain in the starting 11
+          const captain = gwLineup.starting11.find(p => p.isCaptain);
+          if (captain) {
+            // Get the raw projected points for the captain (base points, not multiplied)
+            captainBasePoints = captain.projectedPoints || 0;
           }
         }
 
@@ -804,28 +782,16 @@ export default function ProjectedPoints() {
       recommendations.tripleC = gwScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
     }
 
-    // Best Free Hit: Find top 2 gameweeks where Free Hit improvement is maximum
+    // Best Free Hit: Find top 2 gameweeks where Free Hit improvement is maximum (using Auto optimized lineup)
     if (!isChipUsed('freehit')) {
       const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
 
       nextGWs.forEach(gw => {
         let startingPoints = 0;
 
-        if (plannerMode === "manual") {
-          const startingPlayers = manualLineup.filter(pick => pick.position <= 11);
-          startingPlayers.forEach(pick => {
-            const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
-            if (projection?.gameweekProjections) {
-              const points = projection.gameweekProjections[gw.id.toString()] || 0;
-              const multiplier = pick.is_captain ? 2 : 1;
-              startingPoints += points * multiplier;
-            }
-          });
-        } else {
-          const gwLineup = optimizedLineups.get(gw.id);
-          if (gwLineup?.totalProjectedPoints) {
-            startingPoints = gwLineup.totalProjectedPoints;
-          }
+        const gwLineup = optimizedLineups.get(gw.id);
+        if (gwLineup?.totalProjectedPoints) {
+          startingPoints = gwLineup.totalProjectedPoints;
         }
 
         // Estimate Free Hit points as 25% improvement over normal team
