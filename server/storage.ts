@@ -1,7 +1,7 @@
 import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
-import { eq, sql, inArray, desc } from "drizzle-orm";
+import { eq, sql, inArray, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   getBootstrapData(): Promise<BootstrapData | undefined>;
@@ -1508,6 +1508,16 @@ export class DatabaseStorage implements IStorage {
       await db
         .update(playerTotalPointsWindows)
         .set({ isActive: false });
+      
+      // Delete any existing window with the same start gameweek and season to avoid unique constraint violation
+      await db
+        .delete(playerTotalPointsWindows)
+        .where(
+          and(
+            eq(playerTotalPointsWindows.startGameweek, startGameweek),
+            eq(playerTotalPointsWindows.season, season)
+          )
+        );
       
       // Create new window
       const [window] = await db
