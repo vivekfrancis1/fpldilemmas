@@ -1086,30 +1086,6 @@ export default function TeamOptimizer() {
           </Card>
         )}
 
-        {/* Gameweek Selector */}
-        {nextGameweeks.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2 sm:pb-3">
-              <CardTitle className="text-sm sm:text-base md:text-lg">Select Gameweek</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-1.5 sm:gap-2">
-                {nextGameweeks.map((gw) => (
-                  <Button
-                    key={gw.id}
-                    variant={selectedGameweek === gw.id ? "default" : "outline"}
-                    onClick={() => setSelectedGameweek(gw.id)}
-                    className="text-xs sm:text-sm py-1.5 sm:py-2 h-auto"
-                    data-testid={`button-gw-${gw.id}`}
-                  >
-                    GW{gw.id}
-                  </Button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* Optimized Lineup Table */}
         {selectedGameweek && optimizedLineups.get(selectedGameweek) && (
           <Card>
