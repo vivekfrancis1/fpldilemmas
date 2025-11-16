@@ -570,12 +570,26 @@ export default function TeamOptimizer() {
 
   // Calculate chip recommendations
   const getChipRecommendations = () => {
-    if (!adjustedPlayerProjections || !teamData || optimizedLineups.size === 0) {
+    if (!adjustedPlayerProjections || !teamData || optimizedLineups.size === 0 || !bootstrapData) {
       return null;
     }
 
     const nextGWs = getNextGameweeks();
     const usedChips = teamData.chips || [];
+    
+    // Get current gameweek
+    const currentGameweek = bootstrapData.events.find((e: any) => e.is_current)?.id || 
+                           bootstrapData.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+    
+    // Split gameweeks: first half (≤19) and second half (≥20)
+    const firstHalfGWs = nextGWs.filter(gw => gw.id <= 19);
+    const secondHalfGWs = nextGWs.filter(gw => gw.id >= 20);
+    
+    // Check if first-half chips have expired (current GW > 19)
+    const firstHalfChipsExpired = currentGameweek > 19;
+    
+    // Check if second-half chips are unlocked (current GW >= 20)
+    const secondHalfChipsUnlocked = currentGameweek >= 20;
 
     type ChipOption = { gw: number; additionalPoints: number };
     type FreeHitOption = { gw: number; normalPoints: number; freeHitPoints: number };
@@ -594,11 +608,60 @@ export default function TeamOptimizer() {
       'freehit': 2,
     };
 
+    // Track chip uses by season half based on when they were actually used
     const countChipUses = (chipName: string) => usedChips.filter(c => c.name === chipName).length;
+    const countFirstHalfChipUses = (chipName: string) => 
+      usedChips.filter(c => c.name === chipName && c.event <= 19).length;
+    const countSecondHalfChipUses = (chipName: string) => 
+      usedChips.filter(c => c.name === chipName && c.event >= 20).length;
+    
     const hasRemainingUses = (chipName: string) => {
       const used = countChipUses(chipName);
       const max = chipMaxUses[chipName] || 1;
       return used < max;
+    };
+    
+    // Check if specific half chip is available
+    const hasFirstHalfChipAvailable = (chipName: string) => {
+      const firstHalfUsed = countFirstHalfChipUses(chipName);
+      const secondHalfUsed = countSecondHalfChipUses(chipName);
+      const totalMax = chipMaxUses[chipName] || 1;
+      
+      // If first-half chip already used, not available
+      if (firstHalfUsed > 0) return false;
+      
+      // If we've already used the allotted chips, none available
+      if (firstHalfUsed + secondHalfUsed >= totalMax) return false;
+      
+      // If first-half chips expired, none available
+      if (firstHalfChipsExpired) return false;
+      
+      // Otherwise we have a first-half chip available
+      return true;
+    };
+    
+    const hasSecondHalfChipAvailable = (chipName: string) => {
+      const firstHalfUsed = countFirstHalfChipUses(chipName);
+      const secondHalfUsed = countSecondHalfChipUses(chipName);
+      const totalMax = chipMaxUses[chipName] || 1;
+      
+      // If second-half chip already used, not available
+      if (secondHalfUsed > 0) return false;
+      
+      // If we've already used the allotted chips, none available
+      if (firstHalfUsed + secondHalfUsed >= totalMax) return false;
+      
+      // If second-half chips not unlocked yet, none available
+      if (!secondHalfChipsUnlocked) return false;
+      
+      // If we've used the first-half chip and it's expired, check if we still have one for second-half
+      if (firstHalfChipsExpired && firstHalfUsed > 0) {
+        // First-half chip was used and expired, so we don't have a second-half chip
+        return false;
+      }
+      
+      // Otherwise we have a second-half chip available
+      return true;
     };
 
     // Helper to calculate bench points for a gameweek
@@ -643,159 +706,104 @@ export default function TeamOptimizer() {
     };
 
     // Bench Boost recommendations
-    if (hasRemainingUses('bboost')) {
-      const bbUsed = countChipUses('bboost');
-      const bbRemaining = chipMaxUses['bboost'] - bbUsed;
+    // BB1: Only show if available and first-half gameweeks exist
+    if (hasFirstHalfChipAvailable('bboost') && firstHalfGWs.length > 0) {
+      const bb1Scores = firstHalfGWs.map(gw => ({ gw: gw.id, points: getBenchPoints(gw.id) }));
+      bb1Scores.sort((a, b) => b.points - a.points);
 
-      if (bbRemaining >= 2) {
-        // Both chips available - assign distinct gameweeks
-        const allBBScores = nextGWs.map(gw => ({ gw: gw.id, points: getBenchPoints(gw.id) }));
-        allBBScores.sort((a, b) => b.points - a.points);
+      if (bb1Scores.length >= 2) {
+        recommendations.bboost1_options = bb1Scores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
+      } else if (bb1Scores.length === 1) {
+        recommendations.bboost1_options = [
+          { gw: bb1Scores[0].gw, additionalPoints: bb1Scores[0].points },
+          { gw: bb1Scores[0].gw, additionalPoints: bb1Scores[0].points }
+        ];
+      }
+    }
+    
+    // BB2: Only show if available and second-half gameweeks exist
+    if (hasSecondHalfChipAvailable('bboost') && secondHalfGWs.length > 0) {
+      const bb2Scores = secondHalfGWs.map(gw => ({ gw: gw.id, points: getBenchPoints(gw.id) }));
+      bb2Scores.sort((a, b) => b.points - a.points);
 
-        // BB1 gets best 2 gameweeks (or all available if less than 2)
-        if (allBBScores.length >= 2) {
-          recommendations.bboost1_options = allBBScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
-        } else if (allBBScores.length === 1) {
-          // Only 1 gameweek - show it for both options
-          recommendations.bboost1_options = [
-            { gw: allBBScores[0].gw, additionalPoints: allBBScores[0].points },
-            { gw: allBBScores[0].gw, additionalPoints: allBBScores[0].points }
-          ];
-        }
-        
-        // BB2 gets next 2 best gameweeks
-        if (allBBScores.length >= 4) {
-          // 4+ gameweeks: BB2 gets ranks 3-4
-          recommendations.bboost2_options = allBBScores.slice(2, 4).map(s => ({ gw: s.gw, additionalPoints: s.points }));
-        } else if (allBBScores.length === 3) {
-          // 3 gameweeks: BB2 gets rank 3 twice
-          recommendations.bboost2_options = [
-            { gw: allBBScores[2].gw, additionalPoints: allBBScores[2].points },
-            { gw: allBBScores[2].gw, additionalPoints: allBBScores[2].points }
-          ];
-        } else if (allBBScores.length >= 1) {
-          // 1-2 gameweeks: BB2 reuses best gameweek(s)
-          const bestGW = allBBScores[0];
-          recommendations.bboost2_options = [
-            { gw: bestGW.gw, additionalPoints: bestGW.points },
-            { gw: bestGW.gw, additionalPoints: bestGW.points }
-          ];
-        }
-      } else if (bbRemaining === 1) {
-        // Only 1 remaining - show in BB2 slot only
-        const allBBScores = nextGWs.map(gw => ({ gw: gw.id, points: getBenchPoints(gw.id) }));
-        allBBScores.sort((a, b) => b.points - a.points);
-        
-        if (allBBScores.length >= 2) {
-          recommendations.bboost2_options = allBBScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
-        } else if (allBBScores.length === 1) {
-          // Only 1 gameweek - show it for both options
-          recommendations.bboost2_options = [
-            { gw: allBBScores[0].gw, additionalPoints: allBBScores[0].points },
-            { gw: allBBScores[0].gw, additionalPoints: allBBScores[0].points }
-          ];
-        }
+      if (bb2Scores.length >= 2) {
+        recommendations.bboost2_options = bb2Scores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
+      } else if (bb2Scores.length === 1) {
+        recommendations.bboost2_options = [
+          { gw: bb2Scores[0].gw, additionalPoints: bb2Scores[0].points },
+          { gw: bb2Scores[0].gw, additionalPoints: bb2Scores[0].points }
+        ];
       }
     }
 
-    // Triple Captain recommendations (only TC2 available based on user's chips)
-    if (hasRemainingUses('3xc')) {
-      const allTCScores = nextGWs.map(gw => ({ gw: gw.id, points: getCaptainPoints(gw.id) }));
-      allTCScores.sort((a, b) => b.points - a.points);
+    // Triple Captain recommendations (only TC2 available - second half GW ≥20)
+    // Note: TC only has 2 total uses, so we only show second-half recommendations
+    if (hasSecondHalfChipAvailable('3xc') && secondHalfGWs.length > 0) {
+      const tc2Scores = secondHalfGWs.map(gw => ({ gw: gw.id, points: getCaptainPoints(gw.id) }));
+      tc2Scores.sort((a, b) => b.points - a.points);
       
-      // Ensure TC2 always has 2 options
-      if (allTCScores.length >= 2) {
-        recommendations.tripleC2_options = allTCScores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
-      } else if (allTCScores.length === 1) {
-        // Only 1 gameweek - show it for both options
+      if (tc2Scores.length >= 2) {
+        recommendations.tripleC2_options = tc2Scores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
+      } else if (tc2Scores.length === 1) {
         recommendations.tripleC2_options = [
-          { gw: allTCScores[0].gw, additionalPoints: allTCScores[0].points },
-          { gw: allTCScores[0].gw, additionalPoints: allTCScores[0].points }
+          { gw: tc2Scores[0].gw, additionalPoints: tc2Scores[0].points },
+          { gw: tc2Scores[0].gw, additionalPoints: tc2Scores[0].points }
         ];
       }
     }
 
     // Free Hit recommendations
-    if (hasRemainingUses('freehit')) {
-      const fhUsed = countChipUses('freehit');
-      const fhRemaining = chipMaxUses['freehit'] - fhUsed;
+    // FH1: Only show if available and first-half gameweeks exist
+    if (hasFirstHalfChipAvailable('freehit') && firstHalfGWs.length > 0) {
+      const fh1Scores = firstHalfGWs.map(gw => {
+        const result = getFreeHitImprovement(gw.id);
+        return { 
+          gw: gw.id, 
+          normalPoints: result.normalPoints,
+          freeHitPoints: result.freeHitPoints,
+          improvement: result.improvement
+        };
+      });
+      fh1Scores.sort((a, b) => b.improvement - a.improvement);
 
-      if (fhRemaining >= 2) {
-        // Both chips available - assign distinct gameweeks
-        const allFHScores = nextGWs.map(gw => {
-          const result = getFreeHitImprovement(gw.id);
-          return { 
-            gw: gw.id, 
-            normalPoints: result.normalPoints,
-            freeHitPoints: result.freeHitPoints,
-            improvement: result.improvement
-          };
-        });
-        allFHScores.sort((a, b) => b.improvement - a.improvement);
+      if (fh1Scores.length >= 2) {
+        recommendations.freehit1_options = fh1Scores.slice(0, 2).map(s => ({ 
+          gw: s.gw, 
+          normalPoints: s.normalPoints, 
+          freeHitPoints: s.freeHitPoints 
+        }));
+      } else if (fh1Scores.length === 1) {
+        recommendations.freehit1_options = [
+          { gw: fh1Scores[0].gw, normalPoints: fh1Scores[0].normalPoints, freeHitPoints: fh1Scores[0].freeHitPoints },
+          { gw: fh1Scores[0].gw, normalPoints: fh1Scores[0].normalPoints, freeHitPoints: fh1Scores[0].freeHitPoints }
+        ];
+      }
+    }
+    
+    // FH2: Only show if available and second-half gameweeks exist
+    if (hasSecondHalfChipAvailable('freehit') && secondHalfGWs.length > 0) {
+      const fh2Scores = secondHalfGWs.map(gw => {
+        const result = getFreeHitImprovement(gw.id);
+        return { 
+          gw: gw.id, 
+          normalPoints: result.normalPoints,
+          freeHitPoints: result.freeHitPoints,
+          improvement: result.improvement
+        };
+      });
+      fh2Scores.sort((a, b) => b.improvement - a.improvement);
 
-        // FH1 gets best 2 gameweeks (or all available if less than 2)
-        if (allFHScores.length >= 2) {
-          recommendations.freehit1_options = allFHScores.slice(0, 2).map(s => ({ 
-            gw: s.gw, 
-            normalPoints: s.normalPoints, 
-            freeHitPoints: s.freeHitPoints 
-          }));
-        } else if (allFHScores.length === 1) {
-          // Only 1 gameweek - show it for both options
-          recommendations.freehit1_options = [
-            { gw: allFHScores[0].gw, normalPoints: allFHScores[0].normalPoints, freeHitPoints: allFHScores[0].freeHitPoints },
-            { gw: allFHScores[0].gw, normalPoints: allFHScores[0].normalPoints, freeHitPoints: allFHScores[0].freeHitPoints }
-          ];
-        }
-        
-        // FH2 gets next 2 best gameweeks
-        if (allFHScores.length >= 4) {
-          // 4+ gameweeks: FH2 gets ranks 3-4
-          recommendations.freehit2_options = allFHScores.slice(2, 4).map(s => ({ 
-            gw: s.gw, 
-            normalPoints: s.normalPoints, 
-            freeHitPoints: s.freeHitPoints 
-          }));
-        } else if (allFHScores.length === 3) {
-          // 3 gameweeks: FH2 gets rank 3 twice
-          recommendations.freehit2_options = [
-            { gw: allFHScores[2].gw, normalPoints: allFHScores[2].normalPoints, freeHitPoints: allFHScores[2].freeHitPoints },
-            { gw: allFHScores[2].gw, normalPoints: allFHScores[2].normalPoints, freeHitPoints: allFHScores[2].freeHitPoints }
-          ];
-        } else if (allFHScores.length >= 1) {
-          // 1-2 gameweeks: FH2 reuses best gameweek(s)
-          const bestGW = allFHScores[0];
-          recommendations.freehit2_options = [
-            { gw: bestGW.gw, normalPoints: bestGW.normalPoints, freeHitPoints: bestGW.freeHitPoints },
-            { gw: bestGW.gw, normalPoints: bestGW.normalPoints, freeHitPoints: bestGW.freeHitPoints }
-          ];
-        }
-      } else if (fhRemaining === 1) {
-        // Only 1 remaining - show in FH2 slot only
-        const allFHScores = nextGWs.map(gw => {
-          const result = getFreeHitImprovement(gw.id);
-          return { 
-            gw: gw.id, 
-            normalPoints: result.normalPoints,
-            freeHitPoints: result.freeHitPoints,
-            improvement: result.improvement
-          };
-        });
-        allFHScores.sort((a, b) => b.improvement - a.improvement);
-        
-        if (allFHScores.length >= 2) {
-          recommendations.freehit2_options = allFHScores.slice(0, 2).map(s => ({ 
-            gw: s.gw, 
-            normalPoints: s.normalPoints, 
-            freeHitPoints: s.freeHitPoints 
-          }));
-        } else if (allFHScores.length === 1) {
-          // Only 1 gameweek - show it for both options
-          recommendations.freehit2_options = [
-            { gw: allFHScores[0].gw, normalPoints: allFHScores[0].normalPoints, freeHitPoints: allFHScores[0].freeHitPoints },
-            { gw: allFHScores[0].gw, normalPoints: allFHScores[0].normalPoints, freeHitPoints: allFHScores[0].freeHitPoints }
-          ];
-        }
+      if (fh2Scores.length >= 2) {
+        recommendations.freehit2_options = fh2Scores.slice(0, 2).map(s => ({ 
+          gw: s.gw, 
+          normalPoints: s.normalPoints, 
+          freeHitPoints: s.freeHitPoints 
+        }));
+      } else if (fh2Scores.length === 1) {
+        recommendations.freehit2_options = [
+          { gw: fh2Scores[0].gw, normalPoints: fh2Scores[0].normalPoints, freeHitPoints: fh2Scores[0].freeHitPoints },
+          { gw: fh2Scores[0].gw, normalPoints: fh2Scores[0].normalPoints, freeHitPoints: fh2Scores[0].freeHitPoints }
+        ];
       }
     }
 
