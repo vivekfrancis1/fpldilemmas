@@ -48,7 +48,7 @@ Loading Experience: Enhanced loading screens implemented across all major slow-l
 
 ### Feature Specifications
 - **My Dashboard**: Comprehensive FPL overview combining My Live Rank, My Team, and My Leagues in a single tabbed interface, serving as the home page.
-- **Player Projections**: AI-powered projection model for various player statistics (minutes, goals, assists, clean sheets, bonus points, CBIT%).
+- **Player Projections**: AI-powered projection model for various player statistics (minutes, goals, assists, clean sheets, bonus points, CBIT%). **AFCON 2025 Integration**: Automatic availability adjustments for 51 African players traveling to Morocco (December 21, 2025 - January 18, 2026) with graduated return percentages: GW17-19 (0%), GW20 (25%), GW21 (50%), GW22 (75%).
 - **Team Projections**: Advanced team-level forecasting for goals and clean sheets using 8-phase spread betting market analysis and statistical modeling.
 - **Goal/Assist Share**: Dedicated tools showing team expected goals/assists breakdown by player percentage share.
 - **Captain Selector**: Enhanced with historical captaincy performance data, 6-factor scoring algorithm, and ownership analysis.
@@ -61,6 +61,7 @@ Loading Experience: Enhanced loading screens implemented across all major slow-l
 - **Defensive Contribution Analytics**: Integration of new FPL API defensive data points and comprehensive projection model.
 - **Comprehensive FPL Scoring System**: Implemented probability-based calculations for all official FPL scoring components with hybrid methodology.
 - **Transfer Planner**: Comprehensive transfer planning tool with gameweek selector, auto/manual mode, chip planning, draft management (Base + A-E drafts), Team Evolution visualization, Draft Comparison table, and Projected Points analysis. Fully implements FPL 2024/25 rule changes including 5 free transfers and GW16 AFCON Free Transfer Top-Up.
+- **Tournament Availability Tracking**: AFCON 2025 player availability automatically factored into all projection calculations across 15 participating nations (Egypt, Nigeria, Senegal, Ivory Coast, Cameroon, Morocco, Algeria, DR Congo, Mali, Burkina Faso, Angola, South Africa, Tunisia, Zimbabwe, Mozambique).
 
 ## External Dependencies
 
