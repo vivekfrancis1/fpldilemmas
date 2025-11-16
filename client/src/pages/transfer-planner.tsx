@@ -4857,26 +4857,55 @@ export default function TransferPlanner() {
               Click on the player to transfer or swap or set as captain
             </div>
 
-            {/* View Toggle - Hidden on mobile */}
-            <div className="hidden md:flex justify-center gap-2 mb-4">
-              <Button
-                variant={teamView === "pitch" ? "default" : "outline"}
-                onClick={() => setTeamView("pitch")}
-                className="flex items-center gap-2"
-                data-testid="button-team-pitch-view"
-              >
-                <Target className="h-4 w-4" />
-                Pitch View
-              </Button>
-              <Button
-                variant={teamView === "list" ? "default" : "outline"}
-                onClick={() => setTeamView("list")}
-                className="flex items-center gap-2"
-                data-testid="button-team-list-view"
-              >
-                <Users className="h-4 w-4" />
-                List View
-              </Button>
+            {/* View Toggle and Optimization Controls */}
+            <div className="flex flex-col sm:flex-row justify-center items-center gap-2 mb-4">
+              {/* View Toggle - Hidden on mobile */}
+              <div className="hidden md:flex gap-2">
+                <Button
+                  variant={teamView === "pitch" ? "default" : "outline"}
+                  onClick={() => setTeamView("pitch")}
+                  className="flex items-center gap-2"
+                  data-testid="button-team-pitch-view"
+                >
+                  <Target className="h-4 w-4" />
+                  Pitch View
+                </Button>
+                <Button
+                  variant={teamView === "list" ? "default" : "outline"}
+                  onClick={() => setTeamView("list")}
+                  className="flex items-center gap-2"
+                  data-testid="button-team-list-view"
+                >
+                  <Users className="h-4 w-4" />
+                  List View
+                </Button>
+              </div>
+
+              {/* Optimization Controls */}
+              <div className="flex gap-2">
+                <Button
+                  variant="default"
+                  onClick={() => selectedGameweek && optimizeTeamLineup(selectedGameweek)}
+                  disabled={!selectedGameweek || !playerProjections6GW}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  data-testid="button-optimize-team"
+                >
+                  <Sparkles className="h-4 w-4" />
+                  Optimize Team
+                </Button>
+                
+                {selectedGameweek && optimizationUndoState[selectedGameweek] && (
+                  <Button
+                    variant="outline"
+                    onClick={() => selectedGameweek && undoTeamOptimization(selectedGameweek)}
+                    className="flex items-center gap-2"
+                    data-testid="button-undo-optimization"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Undo
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div>
