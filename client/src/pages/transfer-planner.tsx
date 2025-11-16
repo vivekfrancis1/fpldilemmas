@@ -5640,7 +5640,7 @@ export default function TransferPlanner() {
       {/* Team Evolution Section */}
 
       {/* Team Evolution Section - Only show if there are transfers made for this draft in any gameweek */}
-      {searchedId && teamData && selectedGameweek && activeDraft !== "Base" && Object.keys(gameweekTransfers).some(gw => 
+      {searchedId && teamData && selectedGameweek && activeDraft && activeDraft !== "Base" && gameweekTransfers && Object.keys(gameweekTransfers).length > 0 && Object.keys(gameweekTransfers).some(gw => 
         gameweekTransfers[parseInt(gw)]?.completed?.length > 0 || 
         gameweekTransfers[parseInt(gw)]?.transferredOut?.length > 0
       ) && (
