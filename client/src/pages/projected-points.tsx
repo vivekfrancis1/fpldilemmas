@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { applyAvailabilityAdjustments, AFCON_PLAYERS, type BootstrapData as AvailabilityBootstrapData } from "@/lib/availability-adjustments";
 
 // Player Availability Badge Component
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -228,6 +229,30 @@ export default function ProjectedPoints() {
     staleTime: 10 * 60 * 1000,
   });
 
+  // Apply availability adjustments to player projections
+  const adjustedPlayerProjections = useMemo(() => {
+    if (!playerProjections6GW || !bootstrapData) return playerProjections6GW;
+
+    const currentGameweek = bootstrapData.events.find((e: any) => e.is_current)?.id || 
+                           bootstrapData.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+
+    return playerProjections6GW.map(player => {
+      // Find matching player in bootstrap data for availability info
+      const bootstrapPlayer = bootstrapData.elements?.find((p: any) => p.id === player.playerId);
+      if (!bootstrapPlayer) return player;
+
+      // Create player object with required fields for availability adjustment
+      const playerWithAvailability = {
+        ...player,
+        chanceOfPlayingNextRound: bootstrapPlayer.chance_of_playing_next_round,
+        status: bootstrapPlayer.status,
+        news: bootstrapPlayer.news
+      };
+
+      // Apply availability adjustments (handles injury/suspension/AFCON)
+      return applyAvailabilityAdjustments(playerWithAvailability, bootstrapData as any, currentGameweek);
+    });
+  }, [playerProjections6GW, bootstrapData]);
 
   // Initialize manual lineup when team data loads
   useEffect(() => {
@@ -379,7 +404,7 @@ export default function ProjectedPoints() {
 
   // Get player projected points
   const getPlayerProjectedPoints = (playerId: number, gameweek: number): number => {
-    const playerData = playerProjections6GW?.find((p: any) => p.playerId === playerId);
+    const playerData = adjustedPlayerProjections?.find((p: any) => p.playerId === playerId);
     const points = playerData?.gameweekProjections?.[gameweek.toString()];
     
     // Debug logging for GW16 issue
@@ -601,8 +626,8 @@ export default function ProjectedPoints() {
   // Calculate chip recommendations
   const getChipRecommendations = () => {
     console.log('🔍 Chip Recommendations Debug:', {
-      hasPlayerProjections: !!playerProjections6GW,
-      projectionCount: playerProjections6GW?.length,
+      hasPlayerProjections: !!adjustedPlayerProjections,
+      projectionCount: adjustedPlayerProjections?.length,
       hasTeamData: !!teamData,
       hasChips: !!teamData?.chips,
       chipsData: teamData?.chips,
@@ -611,7 +636,7 @@ export default function ProjectedPoints() {
       optimizedLineupsSize: optimizedLineups.size
     });
 
-    if (!playerProjections6GW || !teamData) {
+    if (!adjustedPlayerProjections || !teamData) {
       console.log('⚠️ Missing basic data for chip recommendations');
       return null;
     }
@@ -649,7 +674,7 @@ export default function ProjectedPoints() {
         
         let benchPoints = 0;
         benchPlayers.forEach(pick => {
-          const projection = playerProjections6GW.find((p: any) => p.playerId === pick.element);
+          const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
           if (projection?.gameweekProjections) {
             benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
           }
@@ -673,7 +698,7 @@ export default function ProjectedPoints() {
         if (plannerMode === "manual") {
           const captainPick = manualLineup.find(p => p.is_captain);
           if (captainPick) {
-            const projection = playerProjections6GW.find((p: any) => p.playerId === captainPick.element);
+            const projection = adjustedPlayerProjections.find((p: any) => p.playerId === captainPick.element);
             if (projection?.gameweekProjections) {
               // Get raw base points for the player (not captain-multiplied)
               const rawPoints = projection.gameweekProjections[gw.id.toString()] || 0;
@@ -712,7 +737,7 @@ export default function ProjectedPoints() {
         if (plannerMode === "manual") {
           const startingPlayers = manualLineup.filter(pick => pick.position <= 11);
           startingPlayers.forEach(pick => {
-            const projection = playerProjections6GW.find((p: any) => p.playerId === pick.element);
+            const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
             if (projection?.gameweekProjections) {
               const points = projection.gameweekProjections[gw.id.toString()] || 0;
               const multiplier = pick.is_captain ? 2 : 1;
