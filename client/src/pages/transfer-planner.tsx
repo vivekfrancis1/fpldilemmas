@@ -1610,20 +1610,27 @@ export default function TransferPlanner() {
     // Apply buy price overrides before setting state
     lineupWithTransfers = applyBuyPriceOverrides(lineupWithTransfers);
     
-    // Apply saved captain/vice-captain if available (from draft loading)
-    if (savedCaptainInfo && (savedCaptainInfo.captainPlayerId || savedCaptainInfo.viceCaptainPlayerId)) {
-      console.log("DEBUG: Applying saved captain info:", savedCaptainInfo);
-      lineupWithTransfers = lineupWithTransfers.map(pick => ({
-        ...pick,
-        is_captain: pick.element === savedCaptainInfo.captainPlayerId,
-        is_vice_captain: pick.element === savedCaptainInfo.viceCaptainPlayerId
-      }));
+    // Check if there's an optimized lineup for this gameweek
+    const optimizedLineupKey = `optimized_${selectedGameweek}`;
+    if (optimizationUndoState[optimizedLineupKey]) {
+      // Use the optimized lineup instead
+      lineupWithTransfers = JSON.parse(JSON.stringify(optimizationUndoState[optimizedLineupKey]));
     } else {
-      console.log("DEBUG: No saved captain info to apply, savedCaptainInfo:", savedCaptainInfo);
+      // Apply saved captain/vice-captain if available (from draft loading)
+      if (savedCaptainInfo && (savedCaptainInfo.captainPlayerId || savedCaptainInfo.viceCaptainPlayerId)) {
+        console.log("DEBUG: Applying saved captain info:", savedCaptainInfo);
+        lineupWithTransfers = lineupWithTransfers.map(pick => ({
+          ...pick,
+          is_captain: pick.element === savedCaptainInfo.captainPlayerId,
+          is_vice_captain: pick.element === savedCaptainInfo.viceCaptainPlayerId
+        }));
+      } else {
+        console.log("DEBUG: No saved captain info to apply, savedCaptainInfo:", savedCaptainInfo);
+      }
     }
     
     setManualLineup(lineupWithTransfers);
-  }, [selectedGameweek, activeDraft, gameweekTransfers, buyPriceOverridesData, buyPricesData, savedCaptainInfo]);
+  }, [selectedGameweek, activeDraft, gameweekTransfers, buyPriceOverridesData, buyPricesData, savedCaptainInfo, optimizationUndoState]);
 
   const handleSearch = () => {
     if (managerId.trim()) {
@@ -2911,17 +2918,19 @@ export default function TransferPlanner() {
       }
     }
 
-    // Store optimized lineups in gameweekLineups
-    setGameweekLineups(prev => ({
-      ...prev,
-      ...allOptimizedLineups
-    }));
-
-    // Store undo state for all gameweeks
-    setOptimizationUndoState(prev => ({
-      ...prev,
-      ...allPreviousLineups
-    }));
+    // Store undo state for all gameweeks (includes both previous and optimized lineups)
+    setOptimizationUndoState(prev => {
+      const newState = { ...prev };
+      // Store previous lineups for undo
+      Object.keys(allPreviousLineups).forEach(gw => {
+        newState[parseInt(gw)] = allPreviousLineups[parseInt(gw)];
+      });
+      // Store optimized lineups separately with a special key
+      Object.keys(allOptimizedLineups).forEach(gw => {
+        newState[`optimized_${gw}`] = allOptimizedLineups[parseInt(gw)];
+      });
+      return newState;
+    });
 
     // If current gameweek was optimized, update manualLineup
     if (allOptimizedLineups[selectedGameweek]) {
@@ -2943,7 +2952,10 @@ export default function TransferPlanner() {
 
   // Undo all gameweek optimizations
   const undoAllOptimizations = () => {
-    const optimizedGameweeks = Object.keys(optimizationUndoState).map(Number);
+    // Filter out only regular gameweek keys (not optimized_ keys)
+    const optimizedGameweeks = Object.keys(optimizationUndoState)
+      .filter(key => !key.startsWith('optimized_'))
+      .map(Number);
     
     if (optimizedGameweeks.length === 0) {
       toast({
@@ -2960,23 +2972,9 @@ export default function TransferPlanner() {
     
     const wasInBase = activeDraft === "Base";
 
-    // Restore all previous lineups
-    const restoredLineups: { [key: number]: TeamPick[] } = {};
-    optimizedGameweeks.forEach(gw => {
-      if (optimizationUndoState[gw]) {
-        restoredLineups[gw] = JSON.parse(JSON.stringify(optimizationUndoState[gw]));
-      }
-    });
-
-    // Update gameweekLineups with restored lineups
-    setGameweekLineups(prev => ({
-      ...prev,
-      ...restoredLineups
-    }));
-
     // If current gameweek was optimized, restore its lineup
-    if (restoredLineups[selectedGameweek]) {
-      setManualLineup(JSON.parse(JSON.stringify(restoredLineups[selectedGameweek])));
+    if (optimizationUndoState[selectedGameweek]) {
+      setManualLineup(JSON.parse(JSON.stringify(optimizationUndoState[selectedGameweek])));
     }
 
     // Clear all undo state
@@ -2984,7 +2982,7 @@ export default function TransferPlanner() {
 
     toast({
       title: "All Optimizations Undone",
-      description: `Restored previous lineups for ${optimizedGameweeks.length} gameweeks`
+      description: `Cleared optimization data for ${optimizedGameweeks.length} gameweeks`
     });
 
     // Auto-save after undo all
