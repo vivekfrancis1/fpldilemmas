@@ -253,19 +253,15 @@ export default function TeamOptimizer() {
     };
   }, [bootstrapData, gameweekHorizon]);
 
-  // Fetch projections based on selected horizon
+  // Fetch projections using cached endpoint for faster loading (always gets next 12 GWs)
   const { data: playerProjections12GW, refetch: refetchProjections } = useQuery<any[]>({
-    queryKey: ["/api/player-total-points", gameweekRange.start, gameweekRange.end],
-    queryFn: async () => {
-      const response = await fetch(`/api/player-total-points?startGameweek=${gameweekRange.start}&endGameweek=${gameweekRange.end}`);
-      if (!response.ok) throw new Error('Failed to fetch player projections');
-      return response.json();
-    },
+    queryKey: ["/api/cached/player-total-points"],
     enabled: !!bootstrapData,
     staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  // Apply availability adjustments to player projections
+  // Apply availability adjustments and filter by selected horizon
   const adjustedPlayerProjections = useMemo(() => {
     if (!playerProjections12GW || !bootstrapData) return playerProjections12GW;
 
@@ -286,9 +282,28 @@ export default function TeamOptimizer() {
       };
 
       // Apply availability adjustments (handles injury/suspension/AFCON)
-      return applyAvailabilityAdjustments(playerWithAvailability, bootstrapData as any, currentGameweek);
+      const adjustedPlayer = applyAvailabilityAdjustments(playerWithAvailability, bootstrapData as any, currentGameweek);
+      
+      // Filter gameweek projections based on selected horizon
+      const filteredGameweekProjections: { [key: string]: number } = {};
+      let filteredTotal = 0;
+      
+      for (let gw = gameweekRange.start; gw <= gameweekRange.end; gw++) {
+        const gwKey = gw.toString();
+        if (adjustedPlayer.gameweekProjections?.[gwKey] !== undefined) {
+          filteredGameweekProjections[gwKey] = adjustedPlayer.gameweekProjections[gwKey];
+          filteredTotal += adjustedPlayer.gameweekProjections[gwKey];
+        }
+      }
+      
+      return {
+        ...adjustedPlayer,
+        gameweekProjections: filteredGameweekProjections,
+        totalExpectedPoints: filteredTotal,
+        averagePerGameweek: filteredTotal / gameweekHorizon
+      };
     });
-  }, [playerProjections12GW, bootstrapData]);
+  }, [playerProjections12GW, bootstrapData, gameweekRange, gameweekHorizon]);
 
   // Get player by ID helper
   const getPlayerById = (id: number): Player | undefined => {
