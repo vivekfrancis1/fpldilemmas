@@ -36,6 +36,7 @@ import { normalizeGameweekKeys, normalizeGameweekKey } from './gameweek-key-util
 import { syncProjectionService } from './sync-projection-service';
 import { FPLScoringCacheService } from './fpl-scoring-cache-service';
 import { InitializationOrchestrator } from './initialization-orchestrator';
+import { applyAvailabilityToGameweek, AFCON_PLAYERS } from './availability-adjustments';
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -2318,7 +2319,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue;
         }
         const projectionsData = await projectionsResponse.json();
-        const projectionsByPlayerId = new Map(projectionsData.map((p: any) => [p.playerId, p]));
+        
+        // Apply availability adjustments to projections
+        const adjustedProjectionsData = projectionsData.map((playerProj: any) => {
+          const element = elementsByPlayerId.get(playerProj.playerId);
+          if (!element) return playerProj;
+          
+          const playerName = `${element.first_name} ${element.second_name}`;
+          let adjustedTotal = playerProj.totalExpectedPoints || 0;
+          
+          // Apply adjustments for each gameweek in the range
+          for (let gw = targetGW; gw <= planningEnd; gw++) {
+            const gwKey = `GW${gw}`;
+            const originalPoints = playerProj.gameweekProjections?.[gwKey] || 0;
+            
+            const { adjustedPoints } = applyAvailabilityToGameweek(
+              playerName,
+              gw,
+              originalPoints,
+              element.chance_of_playing_next_round,
+              element.status,
+              element.news || '',
+              bootstrapData.events,
+              currentGameweek
+            );
+            
+            // Subtract original and add adjusted to get new total
+            adjustedTotal = adjustedTotal - originalPoints + adjustedPoints;
+          }
+          
+          return {
+            ...playerProj,
+            totalExpectedPoints: adjustedTotal,
+            availabilityAdjusted: adjustedTotal !== playerProj.totalExpectedPoints
+          };
+        });
+        
+        const projectionsByPlayerId = new Map(adjustedProjectionsData.map((p: any) => [p.playerId, p]));
         
         // ALSO fetch projections for just this single gameweek for threshold checking
         const singleGWProjectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${targetGW}&endGameweek=${targetGW}`);
@@ -2327,7 +2364,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue;
         }
         const singleGWProjectionsData = await singleGWProjectionsResponse.json();
-        const singleGWProjectionsByPlayerId = new Map(singleGWProjectionsData.map((p: any) => [p.playerId, p]));
+        
+        // Apply availability adjustments to single GW projections
+        const adjustedSingleGWData = singleGWProjectionsData.map((playerProj: any) => {
+          const element = elementsByPlayerId.get(playerProj.playerId);
+          if (!element) return playerProj;
+          
+          const playerName = `${element.first_name} ${element.second_name}`;
+          const originalPoints = playerProj.totalExpectedPoints || 0;
+          
+          const { adjustedPoints } = applyAvailabilityToGameweek(
+            playerName,
+            targetGW,
+            originalPoints,
+            element.chance_of_playing_next_round,
+            element.status,
+            element.news || '',
+            bootstrapData.events,
+            currentGameweek
+          );
+          
+          return {
+            ...playerProj,
+            totalExpectedPoints: adjustedPoints,
+            availabilityAdjusted: adjustedPoints !== originalPoints
+          };
+        });
+        
+        const singleGWProjectionsByPlayerId = new Map(adjustedSingleGWData.map((p: any) => [p.playerId, p]));
         
         // Build current team IDs from the current composition
         const currentTeamIds = new Set(currentTeamComposition.map(p => p.playerId));
