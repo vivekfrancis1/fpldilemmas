@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingExperience } from "@/components/loading-experience";
+import { applyAvailabilityAdjustments, type BootstrapData } from "@/lib/availability-adjustments";
 
 export default function TransferRecommendations() {
   const [managerId, setManagerId] = useState("");
@@ -43,6 +44,20 @@ export default function TransferRecommendations() {
     }
   }, []);
 
+  // Fetch bootstrap data for availability adjustments
+  const { data: bootstrapData } = useQuery<BootstrapData>({
+    queryKey: ["/api/bootstrap-static"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch current gameweek
+  const { data: currentGWData } = useQuery<{ current_event: number }>({
+    queryKey: ["/api/current-gameweek"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const currentGameweek = currentGWData?.current_event || 1;
+
   // Fetch recommended transfers
   const { data: recommendedTransfers, isLoading: isLoadingRecommendations, error: recommendationsError } = useQuery<any>({
     queryKey: ["/api/manager", searchedId, "recommended-transfers"],
@@ -51,20 +66,88 @@ export default function TransferRecommendations() {
     refetchOnWindowFocus: false,
   });
 
+  // Apply availability adjustments to transfer recommendations
+  const adjustedRecommendations = useMemo(() => {
+    if (!recommendedTransfers?.gameweeks || !bootstrapData) return recommendedTransfers;
+
+    const adjusted = { ...recommendedTransfers };
+    const adjustedGameweeks: any = {};
+
+    Object.entries(recommendedTransfers.gameweeks).forEach(([gw, gwData]: [string, any]) => {
+      const adjustedRecs = gwData.recommendations?.map((rec: any) => {
+        // Create player objects with required fields for availability adjustments
+        const playerOutWithProjections = {
+          playerName: rec.playerOut.webName,
+          chanceOfPlayingNextRound: rec.playerOut.chanceOfPlayingNextRound,
+          status: rec.playerOut.status,
+          news: rec.playerOut.news,
+          gameweekProjections: { [gw]: rec.playerOut.projectedPoints },
+          totalExpectedPoints: rec.playerOut.projectedPoints,
+          price: rec.playerOut.sellingPrice / 10,
+        };
+
+        const playerInWithProjections = {
+          playerName: rec.playerIn.webName,
+          chanceOfPlayingNextRound: rec.playerIn.chanceOfPlayingNextRound,
+          status: rec.playerIn.status,
+          news: rec.playerIn.news,
+          gameweekProjections: { [gw]: rec.playerIn.projectedPoints },
+          totalExpectedPoints: rec.playerIn.projectedPoints,
+          price: rec.playerIn.nowCost / 10,
+        };
+
+        // Apply availability adjustments
+        const adjustedPlayerOut = applyAvailabilityAdjustments(playerOutWithProjections, bootstrapData, currentGameweek);
+        const adjustedPlayerIn = applyAvailabilityAdjustments(playerInWithProjections, bootstrapData, currentGameweek);
+
+        // Calculate new points gain based on adjusted points
+        const adjustedOutPoints = adjustedPlayerOut.gameweekProjections[gw] || 0;
+        const adjustedInPoints = adjustedPlayerIn.gameweekProjections[gw] || 0;
+        const adjustedPointsGain = adjustedInPoints - adjustedOutPoints;
+
+        return {
+          ...rec,
+          playerOut: {
+            ...rec.playerOut,
+            projectedPoints: adjustedOutPoints,
+            originalProjectedPoints: rec.playerOut.projectedPoints,
+            availabilityAdjusted: adjustedOutPoints !== rec.playerOut.projectedPoints,
+          },
+          playerIn: {
+            ...rec.playerIn,
+            projectedPoints: adjustedInPoints,
+            originalProjectedPoints: rec.playerIn.projectedPoints,
+            availabilityAdjusted: adjustedInPoints !== rec.playerIn.projectedPoints,
+          },
+          pointsGain: adjustedPointsGain,
+          originalPointsGain: rec.pointsGain,
+        };
+      });
+
+      adjustedGameweeks[gw] = {
+        ...gwData,
+        recommendations: adjustedRecs,
+      };
+    });
+
+    adjusted.gameweeks = adjustedGameweeks;
+    return adjusted;
+  }, [recommendedTransfers, bootstrapData, currentGameweek]);
+
   // Memoized calculation of budget and free transfers timeline for each gameweek
   const gameweekFinances = useMemo(() => {
-    if (!recommendedTransfers?.gameweeks) return {};
+    if (!adjustedRecommendations?.gameweeks) return {};
 
-    const gameweeks = Object.keys(recommendedTransfers.gameweeks).sort((a, b) => parseInt(a) - parseInt(b));
+    const gameweeks = Object.keys(adjustedRecommendations.gameweeks).sort((a, b) => parseInt(a) - parseInt(b));
     const finances: Record<string, { cashBefore: number; cashAfter: number; ftsAvailable: number }> = {};
     
     let acc = {
-      bank: recommendedTransfers.bank || 0,
-      freeTransfers: recommendedTransfers.freeTransfers || 1
+      bank: adjustedRecommendations.bank || 0,
+      freeTransfers: adjustedRecommendations.freeTransfers || 1
     };
 
     gameweeks.forEach((gw, index) => {
-      const gwData = recommendedTransfers.gameweeks[gw];
+      const gwData = adjustedRecommendations.gameweeks[gw];
       const primaryRec = gwData.recommendations?.[0];
       
       // Use API-provided values for bankBefore and freeTransfersAvailable
@@ -82,7 +165,7 @@ export default function TransferRecommendations() {
     });
 
     return finances;
-  }, [recommendedTransfers]);
+  }, [adjustedRecommendations]);
 
   // Handle search
   const handleSearch = () => {
@@ -181,7 +264,7 @@ export default function TransferRecommendations() {
         )}
 
         {/* Transfer Recommendations */}
-        {searchedId && !isLoadingRecommendations && recommendedTransfers && recommendedTransfers.gameweeks && Object.keys(recommendedTransfers.gameweeks).length > 0 && (
+        {searchedId && !isLoadingRecommendations && adjustedRecommendations && adjustedRecommendations.gameweeks && Object.keys(adjustedRecommendations.gameweeks).length > 0 && (
           <Card className="border-orange-200 bg-gradient-to-br from-orange-50/50 to-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
@@ -193,10 +276,10 @@ export default function TransferRecommendations() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue={Object.keys(recommendedTransfers.gameweeks)[0]} className="w-full">
+              <Tabs defaultValue={Object.keys(adjustedRecommendations.gameweeks)[0]} className="w-full">
                 <div className="overflow-x-auto -mx-6 px-6 mb-4">
                   <TabsList className="inline-flex w-auto min-w-full h-auto gap-2 bg-transparent">
-                    {Object.keys(recommendedTransfers.gameweeks).map((gw) => (
+                    {Object.keys(adjustedRecommendations.gameweeks).map((gw) => (
                       <TabsTrigger 
                         key={gw} 
                         value={gw} 
@@ -208,7 +291,7 @@ export default function TransferRecommendations() {
                     ))}
                   </TabsList>
                 </div>
-                {Object.entries(recommendedTransfers.gameweeks).map(([gw, gwData]: [string, any]) => {
+                {Object.entries(adjustedRecommendations.gameweeks).map(([gw, gwData]: [string, any]) => {
                   const finances = gameweekFinances[gw];
                   return (
                   <TabsContent key={gw} value={gw} className="space-y-4">
@@ -400,7 +483,7 @@ export default function TransferRecommendations() {
         )}
 
         {/* No recommendations available state */}
-        {searchedId && !isLoadingRecommendations && recommendedTransfers && (!recommendedTransfers.gameweeks || Object.keys(recommendedTransfers.gameweeks).length === 0) && (
+        {searchedId && !isLoadingRecommendations && adjustedRecommendations && (!adjustedRecommendations.gameweeks || Object.keys(adjustedRecommendations.gameweeks).length === 0) && (
           <Card>
             <CardContent className="pt-6">
               <div className="text-center py-8">
