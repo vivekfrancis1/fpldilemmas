@@ -2775,6 +2775,7 @@ export default function TransferPlanner() {
 
     // Store all current lineups for undo (before any optimization)
     const allPreviousLineups: { [key: number]: TeamPick[] } = {};
+    const allOptimizedLineups: { [key: number]: TeamPick[] } = {};
     
     for (const gw of nextGWs) {
       // Get baseline lineup for this gameweek
@@ -2864,15 +2865,68 @@ export default function TransferPlanner() {
       });
 
       if (bestFormation && bestStarting11.length > 0) {
+        // Create bench: remaining players not in starting 11
+        const bench = baselineLineup.filter(pick => 
+          !bestStarting11.find(s11 => s11.element === pick.element)
+        );
+
+        // Sort bench by projected points (highest to lowest)
+        const sortedBench = bench
+          .map(pick => ({
+            ...pick,
+            projectedPoints: getProjectedPoints(pick.element)
+          }))
+          .sort((a: any, b: any) => b.projectedPoints - a.projectedPoints)
+          .map(({ projectedPoints, ...pick }) => pick);
+
+        // Remove captain and vice-captain flags from all players
+        const cleanedStarting11 = bestStarting11.map(pick => ({
+          ...pick,
+          is_captain: false,
+          is_vice_captain: false
+        }));
+
+        // Set captain and vice-captain based on projected points
+        const sortedByPoints = cleanedStarting11
+          .map(pick => ({
+            ...pick,
+            points: getProjectedPoints(pick.element)
+          }))
+          .sort((a, b) => b.points - a.points);
+
+        if (sortedByPoints.length > 0) {
+          sortedByPoints[0].is_captain = true;
+        }
+        if (sortedByPoints.length > 1) {
+          sortedByPoints[1].is_vice_captain = true;
+        }
+
+        const optimizedLineup = [
+          ...sortedByPoints.map(({ points, ...pick }) => pick),
+          ...sortedBench
+        ];
+
+        allOptimizedLineups[gameweek] = optimizedLineup;
         optimizedCount++;
       }
     }
+
+    // Store optimized lineups in gameweekLineups
+    setGameweekLineups(prev => ({
+      ...prev,
+      ...allOptimizedLineups
+    }));
 
     // Store undo state for all gameweeks
     setOptimizationUndoState(prev => ({
       ...prev,
       ...allPreviousLineups
     }));
+
+    // If current gameweek was optimized, update manualLineup
+    if (allOptimizedLineups[selectedGameweek]) {
+      setManualLineup(JSON.parse(JSON.stringify(allOptimizedLineups[selectedGameweek])));
+    }
 
     toast({
       title: "All Gameweeks Optimized!",
@@ -2906,12 +2960,31 @@ export default function TransferPlanner() {
     
     const wasInBase = activeDraft === "Base";
 
+    // Restore all previous lineups
+    const restoredLineups: { [key: number]: TeamPick[] } = {};
+    optimizedGameweeks.forEach(gw => {
+      if (optimizationUndoState[gw]) {
+        restoredLineups[gw] = JSON.parse(JSON.stringify(optimizationUndoState[gw]));
+      }
+    });
+
+    // Update gameweekLineups with restored lineups
+    setGameweekLineups(prev => ({
+      ...prev,
+      ...restoredLineups
+    }));
+
+    // If current gameweek was optimized, restore its lineup
+    if (restoredLineups[selectedGameweek]) {
+      setManualLineup(JSON.parse(JSON.stringify(restoredLineups[selectedGameweek])));
+    }
+
     // Clear all undo state
     setOptimizationUndoState({});
 
     toast({
       title: "All Optimizations Undone",
-      description: `Cleared optimization data for ${optimizedGameweeks.length} gameweeks`
+      description: `Restored previous lineups for ${optimizedGameweeks.length} gameweeks`
     });
 
     // Auto-save after undo all
