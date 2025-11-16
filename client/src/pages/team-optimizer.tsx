@@ -1205,7 +1205,7 @@ export default function TeamOptimizer() {
                   <span className="truncate">Chip Recommendations</span>
                 </CardTitle>
                 <CardDescription className="text-[10px] sm:text-xs md:text-sm">
-                  Top 2 gameweeks for each chip based on points gained
+                  Top 2 gameweeks for each chip based on projected points of the optimized team across the next 12 gameweeks
                 </CardDescription>
               </CardHeader>
               <CardContent>
