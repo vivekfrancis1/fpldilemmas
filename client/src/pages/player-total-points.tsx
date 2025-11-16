@@ -195,12 +195,15 @@ function getGameweekFromDate(date: Date, bootstrapData: BootstrapData): number |
 
 // AFCON 2025 Availability - Players traveling to Morocco (December 21, 2025 - January 18, 2026)
 const AFCON_PLAYERS = new Set([
-  'Salah', 'Marmoush', 'Bassey', 'Iwobi', 'Chukwueze', 'Aina', 'Awoniyi', 'Uche', 'Onyeka', 
-  'Arokodare', 'Ndiaye', 'Gueye', 'Sarr', 'I.Sarr', 'Diouf', 'Amad', 'Sangaré', 'Boly', 
-  'Traoré', 'Fofana', 'Cornet', 'Agbadou', 'Adingra', 'Yalcouye', 'Guessand', 'Mbeumo', 
-  'Onana', 'Baleba', 'Mazraoui', 'Riad', 'Adli', 'Aguerd', 'Ait Nouri', 'Wissa', 
-  'Wan-Bissaka', 'Bissouma', 'Doucouré', 'Ouattara', 'Kaboré', 'Benson', 'Foster', 
-  'Mejbri', 'Munetsi', 'Chirewa'
+  'Mohamed Salah', 'Omar Marmoush', 'Calvin Bassey', 'Alex Iwobi', 'Samuel Chukwueze', 
+  'Ola Aina', 'Taiwo Awoniyi', 'Ike Ugbo', 'Frank Onyeka', 'Tolu Arokodare',
+  'Iliman Ndiaye', 'Idrissa Gueye', 'Ismaila Sarr', 'Pape Sarr', 'Pathé Ciss',
+  'Amad Diallo', 'Ibrahim Sangaré', 'Willy Boly', 'Bertrand Traoré', 'Wesley Fofana',
+  'Maxwel Cornet', 'Emmanuel Agbadou', 'Simon Adingra', 'Malick Yalcouye', 'Evann Guessand',
+  'Bryan Mbeumo', 'Amadou Onana', 'Carlos Baleba', 'Noussair Mazraoui', 'Dara O\'Shea',
+  'Amine Adli', 'Nayef Aguerd', 'Rayan Ait Nouri', 'Yoane Wissa', 'Aaron Wan-Bissaka',
+  'Yves Bissouma', 'Abdoulaye Doucouré', 'Dango Ouattara', 'Issa Kaboré', 'Manuel Benson',
+  'Lyle Foster', 'Hannibal Mejbri', 'Marshall Munetsi', 'Tawanda Chirewa'
 ]);
 
 // Get AFCON availability percentage for a specific gameweek
