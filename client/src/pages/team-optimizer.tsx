@@ -178,7 +178,7 @@ export default function TeamOptimizer() {
   const [selectedGameweek, setSelectedGameweek] = useState<number | null>(null);
   const [optimizedLineups, setOptimizedLineups] = useState<Map<number, OptimizedLineup>>(new Map());
   const [isOptimizing, setIsOptimizing] = useState(false);
-  const [gameweekHorizon, setGameweekHorizon] = useState<number>(6);
+  const [gameweekHorizon] = useState<number>(12); // Fixed at 12 gameweeks
   const [freeHitOptimizations, setFreeHitOptimizations] = useState<Map<number, number>>(new Map());
   const [isOptimizingFreeHit, setIsOptimizingFreeHit] = useState(false);
   
@@ -1006,34 +1006,10 @@ export default function TeamOptimizer() {
           </CardContent>
         </Card>
 
-        {/* Settings */}
-        <Card>
-          <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="text-sm sm:text-base md:text-lg">Settings</CardTitle>
-            <CardDescription className="text-xs sm:text-sm">Configure projection horizon</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">Projection Horizon</label>
-              <Select value={gameweekHorizon.toString()} onValueChange={(v) => setGameweekHorizon(parseInt(v))}>
-                <SelectTrigger className="w-full text-xs sm:text-sm" data-testid="select-gameweek-horizon">
-                  <SelectValue placeholder="Select gameweek horizon" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="6" data-testid="option-6gw">Next 6 Gameweeks</SelectItem>
-                  <SelectItem value="8" data-testid="option-8gw">Next 8 Gameweeks</SelectItem>
-                  <SelectItem value="10" data-testid="option-10gw">Next 10 Gameweeks</SelectItem>
-                  <SelectItem value="12" data-testid="option-12gw">Next 12 Gameweeks</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Summary Card - Total Points */}
         <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
           <CardHeader className="pb-3 sm:pb-4">
-            <CardTitle className="text-white text-sm sm:text-base md:text-lg">Next {gameweekHorizon} Gameweeks Total Points</CardTitle>
+            <CardTitle className="text-white text-sm sm:text-base md:text-lg">Next 12 Gameweeks Total Points</CardTitle>
           </CardHeader>
           <CardContent className="pb-4 sm:pb-6">
             {isOptimizing || optimizedLineups.size === 0 ? (
