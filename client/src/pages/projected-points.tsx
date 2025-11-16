@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, Heart, XCircle, Clock, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -182,6 +183,7 @@ export default function ProjectedPoints() {
   const [optimizedLineups, setOptimizedLineups] = useState<Map<number, OptimizedLineup>>(new Map());
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [gameweekHorizon, setGameweekHorizon] = useState<number>(6);
   
   const { toast } = useToast();
 
@@ -223,9 +225,40 @@ export default function ProjectedPoints() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch projections for next 12 gameweeks
+  // Calculate start and end gameweeks based on horizon
+  const gameweekRange = useMemo(() => {
+    if (!bootstrapData) return { start: 12, end: 23 };
+    
+    const nextEvent = bootstrapData.events.find(e => !e.finished && !e.is_current);
+    let startGW = nextEvent?.id || 1;
+    
+    if (!nextEvent) {
+      const currentEvent = bootstrapData.events.find(e => e.is_current);
+      if (currentEvent) {
+        startGW = currentEvent.id + 1;
+      } else {
+        const lastFinished = bootstrapData.events.filter(e => e.finished).sort((a, b) => b.id - a.id)[0];
+        if (lastFinished) {
+          startGW = lastFinished.id + 1;
+        }
+      }
+    }
+    
+    return {
+      start: startGW,
+      end: Math.min(startGW + gameweekHorizon - 1, 38)
+    };
+  }, [bootstrapData, gameweekHorizon]);
+
+  // Fetch projections based on selected horizon
   const { data: playerProjections6GW, isLoading: isLoadingProjections, refetch: refetchProjections } = useQuery<any[]>({
-    queryKey: ["/api/player-total-points"],
+    queryKey: ["/api/player-total-points", gameweekRange.start, gameweekRange.end],
+    queryFn: async () => {
+      const response = await fetch(`/api/player-total-points?startGameweek=${gameweekRange.start}&endGameweek=${gameweekRange.end}`);
+      if (!response.ok) throw new Error('Failed to fetch player projections');
+      return response.json();
+    },
+    enabled: !!bootstrapData,
     staleTime: 10 * 60 * 1000,
   });
 
@@ -325,7 +358,7 @@ export default function ProjectedPoints() {
     }
   };
 
-  // Get next 12 gameweeks
+  // Get next N gameweeks based on horizon
   const getNextGameweeks = () => {
     if (!bootstrapData) return [];
     
@@ -345,7 +378,7 @@ export default function ProjectedPoints() {
     }
     
     const nextGameweeks = [];
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < gameweekHorizon; i++) {
       const gwNumber = startGW + i;
       const gw = bootstrapData.events.find(e => e.id === gwNumber);
       if (gw && gwNumber <= 38) {
@@ -844,7 +877,7 @@ export default function ProjectedPoints() {
                 <p className="text-sm text-gray-600">
                   {isLoadingTeam 
                     ? "Fetching your team lineup and player details from FPL" 
-                    : "Generating 12 gameweeks of projected points for 450+ players"}
+                    : `Generating ${gameweekHorizon} gameweeks of projected points for 450+ players`}
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
                   This may take a few seconds...
@@ -909,30 +942,47 @@ export default function ProjectedPoints() {
           </CardContent>
         </Card>
 
-        {/* Mode Toggle */}
+        {/* Mode Toggle & Projection Horizon */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base sm:text-lg">Lineup Mode</CardTitle>
-            <CardDescription className="text-sm">Choose between your manual lineup or auto-optimized lineup</CardDescription>
+            <CardTitle className="text-base sm:text-lg">Settings</CardTitle>
+            <CardDescription className="text-sm">Configure lineup mode and projection horizon</CardDescription>
           </CardHeader>
-          <CardContent>
-            <Tabs value={plannerMode} onValueChange={(v) => setPlannerMode(v as "auto" | "manual")}>
-              <TabsList className="grid w-full grid-cols-2 h-auto">
-                <TabsTrigger value="manual" className="text-sm py-2.5 px-3" data-testid="tab-manual-lineup">
-                  Current Lineup
-                </TabsTrigger>
-                <TabsTrigger value="auto" className="text-sm py-2.5 px-3" data-testid="tab-auto-lineup">
-                  Auto Optimized
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Lineup Mode</label>
+              <Tabs value={plannerMode} onValueChange={(v) => setPlannerMode(v as "auto" | "manual")}>
+                <TabsList className="grid w-full grid-cols-2 h-auto">
+                  <TabsTrigger value="manual" className="text-sm py-2.5 px-3" data-testid="tab-manual-lineup">
+                    Current Lineup
+                  </TabsTrigger>
+                  <TabsTrigger value="auto" className="text-sm py-2.5 px-3" data-testid="tab-auto-lineup">
+                    Auto Optimized
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Projection Horizon</label>
+              <Select value={gameweekHorizon.toString()} onValueChange={(v) => setGameweekHorizon(parseInt(v))}>
+                <SelectTrigger className="w-full" data-testid="select-gameweek-horizon">
+                  <SelectValue placeholder="Select gameweek horizon" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="6" data-testid="option-6gw">Next 6 Gameweeks</SelectItem>
+                  <SelectItem value="8" data-testid="option-8gw">Next 8 Gameweeks</SelectItem>
+                  <SelectItem value="10" data-testid="option-10gw">Next 10 Gameweeks</SelectItem>
+                  <SelectItem value="12" data-testid="option-12gw">Next 12 Gameweeks</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Summary Card - Total 12 GW Points */}
+        {/* Summary Card - Total Points */}
         <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
           <CardHeader>
-            <CardTitle className="text-white text-base sm:text-lg">Next 12 Gameweeks Total Projected Points</CardTitle>
+            <CardTitle className="text-white text-base sm:text-lg">Next {gameweekHorizon} Gameweeks Total Projected Points</CardTitle>
           </CardHeader>
           <CardContent>
             {plannerMode === "auto" && (isOptimizing || optimizedLineups.size === 0) ? (
@@ -1074,7 +1124,7 @@ export default function ProjectedPoints() {
                             GW{gw.id}
                           </TableHead>
                         ))}
-                        <TableHead className="text-center text-xs sm:text-sm">Total (12GW)</TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm">Total ({gameweekHorizon}GW)</TableHead>
                       </>
                     ) : (
                       <TableHead className="text-center text-xs sm:text-sm">GW{selectedGameweek} Pts</TableHead>
@@ -1173,7 +1223,7 @@ export default function ProjectedPoints() {
                   Chip Recommendations
                 </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
-                  Based on next 12 gameweek projections for your current team
+                  Based on next {gameweekHorizon} gameweek projections for your current team
                 </CardDescription>
               </CardHeader>
               <CardContent>
