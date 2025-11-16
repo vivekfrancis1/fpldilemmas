@@ -4470,72 +4470,37 @@ export default function TransferPlanner() {
         </div>
       </div>
 
-      {/* Manager ID Input */}
-      <Card>
-        <CardHeader className="pb-2 md:pb-4">
-          <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-            <Users className="h-4 w-4 md:h-5 md:w-5" />
-            Manager ID
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button className="inline-flex items-center">
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent className="w-80 md:w-96 p-4">
-                  <div className="space-y-2 text-sm">
-                    <p className="font-semibold">To find your Manager ID:</p>
-                    <ol className="list-decimal list-inside space-y-1.5 text-left">
-                      <li className="pl-1">Visit fantasy.premierleague.com from your web browser (not the mobile app) and sign in to your account</li>
-                      <li className="pl-1">Click on the Points tab</li>
-                      <li className="pl-1">Check the URL in your browser's address bar</li>
-                      <li className="pl-1">Your Manager ID is the number in the URL after "entry"</li>
-                      <li className="pl-1">For example, in https://fantasy.premierleague.com/entry/<strong>123456</strong>/event/3, the Manager ID is <strong>123456</strong></li>
-                    </ol>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-2 md:pt-4">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Input
-              type="number"
-              placeholder="Enter FPL Manager ID"
-              value={managerId}
-              onChange={(e) => setManagerId(e.target.value)}
-              onKeyPress={handleKeyPress}
-              className="flex-1 h-8 md:h-10 text-sm md:text-base"
-              data-testid="input-manager-id"
-              disabled={isLoadingTeam}
-            />
-            <Button 
-              onClick={handleSearch}
-              className="h-8 md:h-10 text-sm md:text-base"
-              data-testid="button-search-manager"
-              disabled={!managerId.trim() || isLoadingTeam}
-            >
-              {isLoadingTeam ? "Loading..." : "Load Team"}
-            </Button>
-            {getManagerIdFromCache() && !searchedId && !isLoadingTeam && (
-              <Button 
-                onClick={() => {
-                  const cachedId = getManagerIdFromCache();
-                  if (cachedId) {
-                    setManagerId(cachedId);
-                    // Don't set searchedId - user must click Load Team button to fetch data
-                  }
-                }}
-                variant="outline"
-                className="h-8 md:h-10 text-sm md:text-base" 
-                data-testid="button-load-last-manager"
-              >
-                <TrendingUp className="h-3 w-3 md:h-4 md:w-4 mr-2" />
-                Load Last Manager
-              </Button>
-            )}
+      {/* Manager Search Section */}
+      <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
+        <CardContent className="p-4 sm:p-6">
+          <div className="max-w-2xl mx-auto">
+            <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
+              Manager ID
+            </label>
+            <div className="flex flex-col gap-3">
+              <Input
+                id="manager-id"
+                type="text"
+                placeholder="Enter your FPL Manager ID (e.g., 123456)"
+                value={managerId}
+                onChange={(e) => setManagerId(e.target.value)}
+                onKeyPress={handleKeyPress}
+                className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                data-testid="input-manager-id"
+                disabled={isLoadingTeam}
+              />
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
+                <Button 
+                  onClick={handleSearch} 
+                  disabled={!managerId.trim() || isLoadingTeam}
+                  className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200"
+                  data-testid="button-search-manager"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  {isLoadingTeam ? "Loading..." : "Load Team"}
+                </Button>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

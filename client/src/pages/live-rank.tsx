@@ -151,65 +151,40 @@ export default function LiveRank() {
           </div>
         </div>
 
-        {/* Search Section */}
-        <div className="fpl-card">
-          <div className="fpl-card-header">
-            <div className="fpl-card-title">
-              <Target className="h-5 w-5" />
-              Manager Search
+        {/* Manager Search Section */}
+        <Card className="mb-6 sm:mb-8 border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardContent className="p-4 sm:p-6">
+            <div className="max-w-2xl mx-auto">
+              <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
+                Manager ID
+              </label>
+              <div className="flex flex-col gap-3">
+                <Input
+                  id="manager-id"
+                  type="text"
+                  placeholder="Enter your FPL Manager ID (e.g., 123456)"
+                  value={managerId}
+                  onChange={(e) => setManagerId(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
+                  data-testid="input-manager-id"
+                  disabled={isLoading}
+                />
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
+                  <Button 
+                    onClick={handleSearch} 
+                    disabled={!managerId.trim() || isLoading}
+                    className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200"
+                    data-testid="button-search-manager"
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    {isLoading ? "Searching..." : "Search Manager"}
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="fpl-card-content">
-            <p className="fpl-text-body mb-4">
-              Enter your FPL Manager ID. You can find this in your FPL URL when logged in.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Input
-                data-testid="input-manager-id"
-                placeholder="Enter Manager ID (e.g., 123456)"
-                value={managerId}
-                onChange={(e) => setManagerId(e.target.value)}
-                onKeyPress={handleKeyPress}
-                className="flex-1 text-base"
-                disabled={isLoading}
-              />
-              <Button 
-                data-testid="button-search-manager"
-                onClick={handleSearch} 
-                disabled={!managerId.trim() || isLoading}
-                className="fpl-button-primary"
-              >
-                {isLoading ? "Searching..." : "Search"}
-              </Button>
-              {getManagerIdFromCache() && !searchedId && !isLoading && (
-                <Button 
-                  onClick={() => {
-                    const cachedId = getManagerIdFromCache();
-                    if (cachedId) {
-                      setManagerId(cachedId);
-                      // Don't set searchedId - user must click Search button to fetch data
-                    }
-                  }}
-                  variant="outline"
-                  className="w-full sm:w-auto" 
-                  data-testid="button-load-last-manager"
-                >
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Load Last Manager
-                </Button>
-              )}
-            </div>
-            
-            <div className="mt-6 fpl-text-muted">
-              <p className="font-semibold mb-2">How to find your Manager ID:</p>
-              <ol className="list-decimal list-inside space-y-1">
-                <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">fantasy.premierleague.com</a></li>
-                <li>Sign in and go to "Pick Team" or "Points"</li>
-                <li>Your Manager ID is the number in the URL (e.g., /entry/123456/)</li>
-              </ol>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Error Display */}
         {error && (

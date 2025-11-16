@@ -124,57 +124,38 @@ export default function TransferRecommendations() {
           <p className="text-lg text-gray-600">Maximize your projected points for remaining gameweeks</p>
         </div>
 
-        {/* Search Controls */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-end">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Manager ID</label>
+        {/* Manager Search Section */}
+        <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardContent className="p-4 sm:p-6">
+            <div className="max-w-2xl mx-auto">
+              <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
+                Manager ID
+              </label>
+              <div className="flex flex-col gap-3">
                 <Input
+                  id="manager-id"
                   type="text"
+                  placeholder="Enter your FPL Manager ID (e.g., 123456)"
                   value={managerId}
                   onChange={(e) => setManagerId(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && !isLoadingRecommendations && handleSearch()}
-                  placeholder="Enter Manager ID"
-                  className="text-base min-h-11"
+                  className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                   data-testid="input-manager-id"
                   disabled={isLoadingRecommendations}
                 />
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
+                  <Button 
+                    onClick={handleSearch} 
+                    disabled={!managerId.trim() || isLoadingRecommendations}
+                    className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200"
+                    data-testid="button-search-manager"
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    {isLoadingRecommendations ? "Analyzing..." : "Search Manager"}
+                  </Button>
+                </div>
               </div>
-              <Button 
-                onClick={handleSearch} 
-                className="w-full sm:w-auto min-h-11" 
-                data-testid="button-search-manager"
-                disabled={isLoadingRecommendations || !managerId.trim()}
-              >
-                <Search className="h-4 w-4 mr-2" />
-                {isLoadingRecommendations ? "Analyzing..." : "Search"}
-              </Button>
-              {getManagerIdFromCache() && !searchedId && !isLoadingRecommendations && (
-                <Button 
-                  onClick={() => {
-                    const cachedId = getManagerIdFromCache();
-                    if (cachedId) {
-                      setManagerId(cachedId);
-                      setSearchedId(cachedId);
-                      saveManagerIdToCache(cachedId);
-                    }
-                  }}
-                  variant="outline"
-                  className="w-full sm:w-auto min-h-11" 
-                  data-testid="button-load-last-manager"
-                >
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Load Last Manager
-                </Button>
-              )}
             </div>
-            {isLoadingRecommendations && (
-              <div className="mt-4 flex items-center gap-2 text-sm text-gray-600">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-600"></div>
-                <span>Calculating optimal transfers... This may take 10-20 seconds</span>
-              </div>
-            )}
           </CardContent>
         </Card>
 

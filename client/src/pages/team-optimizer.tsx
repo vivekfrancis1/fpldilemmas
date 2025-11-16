@@ -985,28 +985,35 @@ export default function TeamOptimizer() {
           </p>
         </div>
 
-        {/* Manager ID Search */}
-        <Card>
-          <CardHeader className="pb-2 sm:pb-3">
-            <CardTitle className="text-sm sm:text-base md:text-lg">Search Manager</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-4 sm:pt-6">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-end">
-              <div className="flex-1">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">Manager ID</label>
+        {/* Manager Search Section */}
+        <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardContent className="p-4 sm:p-6">
+            <div className="max-w-2xl mx-auto">
+              <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
+                Manager ID
+              </label>
+              <div className="flex flex-col gap-3">
                 <Input
+                  id="manager-id"
                   type="text"
+                  placeholder="Enter your FPL Manager ID (e.g., 123456)"
                   value={managerId}
                   onChange={(e) => setManagerId(e.target.value)}
-                  placeholder="Enter Manager ID"
-                  className="text-sm sm:text-base min-h-10 sm:min-h-11"
+                  className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                   data-testid="input-manager-id"
                 />
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
+                  <Button 
+                    onClick={handleSearch} 
+                    disabled={!managerId.trim()}
+                    className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200"
+                    data-testid="button-search-manager"
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    Search Manager
+                  </Button>
+                </div>
               </div>
-              <Button onClick={handleSearch} className="w-full sm:w-auto min-h-10 sm:min-h-11 text-sm sm:text-base" data-testid="button-search-manager">
-                <Search className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                Search
-              </Button>
             </div>
           </CardContent>
         </Card>

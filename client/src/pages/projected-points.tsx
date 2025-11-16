@@ -593,58 +593,35 @@ export default function ProjectedPoints() {
               <CardTitle className="text-2xl">My Team Projected Points</CardTitle>
               <CardDescription>View projected points for your current FPL team</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
+            <CardContent className="p-4 sm:p-6">
+              <div className="max-w-2xl mx-auto">
                 <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
                   Manager ID
                 </label>
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col gap-3">
                   <Input
                     id="manager-id"
                     type="text"
-                    placeholder="Enter your FPL Manager ID"
+                    placeholder="Enter your FPL Manager ID (e.g., 123456)"
                     value={managerId}
                     onChange={(e) => setManagerId(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && !isLoadingTeam && handleSearch()}
+                    className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                     data-testid="input-manager-id"
                     disabled={isLoadingTeam}
-                    className="flex-1"
                   />
-                  <Button
-                    onClick={handleSearch}
-                    className="flex items-center gap-2"
-                    data-testid="button-search-manager"
-                    disabled={!managerId.trim() || isLoadingTeam}
-                  >
-                    <Search className="h-4 w-4" />
-                    {isLoadingTeam ? "Loading..." : "Search"}
-                  </Button>
-                  {getManagerIdFromCache() && !searchedId && !isLoadingTeam && (
-                    <Button 
-                      onClick={() => {
-                        const cachedId = getManagerIdFromCache();
-                        if (cachedId) {
-                          setManagerId(cachedId);
-                          // Don't set searchedId - user must click Search button to fetch data
-                        }
-                      }}
-                      variant="outline"
-                      className="w-full sm:w-auto" 
-                      data-testid="button-load-last-manager"
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
+                    <Button
+                      onClick={handleSearch}
+                      disabled={!managerId.trim() || isLoadingTeam}
+                      className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200"
+                      data-testid="button-search-manager"
                     >
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      Load Last Manager
+                      <Search className="h-4 w-4 mr-2" />
+                      {isLoadingTeam ? "Loading..." : "Search Manager"}
                     </Button>
-                  )}
+                  </div>
                 </div>
-              </div>
-              <div className="text-xs text-gray-500">
-                <p className="font-medium">To find your Manager ID:</p>
-                <ol className="list-decimal list-inside space-y-1 mt-2 ml-2">
-                  <li>Visit fantasy.premierleague.com and sign in</li>
-                  <li>Click on the Points tab</li>
-                  <li>Check the URL - your Manager ID is the number after "entry"</li>
-                </ol>
               </div>
             </CardContent>
           </Card>
