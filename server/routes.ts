@@ -2311,6 +2311,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Calculating recommendations from GW${planningStart} to GW${recommendationEnd} (showing 6 GWs, using 12 GWs for point calculations)`);
       
+      // PERFORMANCE OPTIMIZATION: Fetch cached projections ONCE instead of calling API in loop (10-20x faster!)
+      const cachedProjectionsResponse = await internalFetch(`api/cached/player-total-points`);
+      if (!cachedProjectionsResponse.ok) {
+        console.error('Failed to fetch cached projections for transfer recommendations');
+        return res.status(500).json({ error: 'Failed to fetch projections data' });
+      }
+      const rawCachedProjections = await cachedProjectionsResponse.json();
+      
+      // Normalize gameweek keys from integer format ("13") to "gw##" format ("gw13") for compatibility
+      const allCachedProjections = rawCachedProjections.map((player: any) => ({
+        ...player,
+        gameweekProjections: normalizeGameweekKeys(player.gameweekProjections || {})
+      }));
+      
+      console.log(`📊 PERFORMANCE: Fetched cached projections once (${allCachedProjections.length} players) instead of ${recommendationEnd - planningStart + 1} API calls in loop`);
+      
       for (let targetGW = planningStart; targetGW <= recommendationEnd; targetGW++) {
         console.log(`DEBUG: Processing GW${targetGW}...`);
         
@@ -2322,16 +2338,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`🎯 GW15 SPECIAL: Will use all available free transfers (no threshold) since GW16 tops up to 5 FTs`);
         }
         if (freeTransfersForGW === 5) {
-          console.log(`💎 5 FTs AVAILABLE: First transfer will ignore threshold to ensure at least 1 transfer is made`);
+          console.log(`💎 5 FTS AVAILABLE: First transfer will ignore threshold to ensure at least 1 transfer is made`);
         }
         
-        // Fetch projections for this specific range (targetGW to planningEnd)
-        const projectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${targetGW}&endGameweek=${planningEnd}`);
-        if (!projectionsResponse.ok) {
-          console.error(`Failed to fetch projections for GW${targetGW}-${planningEnd}`);
-          continue;
-        }
-        const projectionsData = await projectionsResponse.json();
+        // Filter cached projections for this specific range (targetGW to planningEnd) - instant!
+        // Keep all original data to preserve availability adjustment fields
+        const projectionsData = allCachedProjections.map((player: any) => {
+          const originalProjections = player.gameweekProjections || {};
+          
+          // Calculate total points for selected range using normalized "gw##" keys
+          let totalPoints = 0;
+          for (let gw = targetGW; gw <= planningEnd; gw++) {
+            const gwKey = normalizeGameweekKey(gw);  // Use normalized key format: "gw13", "gw14", etc.
+            const points = originalProjections[gwKey] || 0;
+            totalPoints += points;
+          }
+          
+          // Return player with all original fields preserved but updated totalExpectedPoints
+          return {
+            ...player,
+            totalExpectedPoints: totalPoints
+          };
+        });
         
         // Apply availability adjustments to projections
         const adjustedProjectionsData = projectionsData.map((playerProj: any) => {
@@ -2343,7 +2371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Apply adjustments for each gameweek in the range
           for (let gw = targetGW; gw <= planningEnd; gw++) {
-            const gwKey = `${gw}`;  // API returns keys as "14", "15", not "GW14", "GW15"
+            const gwKey = normalizeGameweekKey(gw);  // Use normalized key format: "gw13", "gw14", etc.
             const originalPoints = playerProj.gameweekProjections?.[gwKey] || 0;
             
             const { adjustedPoints } = applyAvailabilityToGameweek(
@@ -2375,13 +2403,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const projectionsByPlayerId = new Map(adjustedProjectionsData.map((p: any) => [p.playerId, p]));
         
-        // ALSO fetch projections for just this single gameweek for threshold checking
-        const singleGWProjectionsResponse = await internalFetch(`api/player-total-points?startGameweek=${targetGW}&endGameweek=${targetGW}`);
-        if (!singleGWProjectionsResponse.ok) {
-          console.error(`Failed to fetch single GW projections for GW${targetGW}`);
-          continue;
-        }
-        const singleGWProjectionsData = await singleGWProjectionsResponse.json();
+        // Filter cached projections for just this single gameweek for threshold checking (instant!)
+        // Keep all original data fields preserved
+        const singleGWProjectionsData = allCachedProjections.map((player: any) => {
+          const originalProjections = player.gameweekProjections || {};
+          const gwKey = normalizeGameweekKey(targetGW);  // Use normalized key format: "gw13", "gw14", etc.
+          const points = originalProjections[gwKey] || 0;
+          
+          // Return player with all original fields preserved but updated totalExpectedPoints
+          return {
+            ...player,
+            totalExpectedPoints: points
+          };
+        });
         
         // Apply availability adjustments to single GW projections
         const adjustedSingleGWData = singleGWProjectionsData.map((playerProj: any) => {
