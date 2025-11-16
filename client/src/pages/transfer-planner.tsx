@@ -3306,47 +3306,54 @@ export default function TransferPlanner() {
     } else {
       try {
         const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${draftLetter}`);
-        if (response.ok) {
-          const data = await response.json();
-          const draft = data.draft;
-          
-          console.log("DEBUG switchToDraft - Fetched draft data:", draft);
-          console.log("DEBUG switchToDraft - Captain info from draft:", {
-            captainPlayerId: draft.captainPlayerId,
-            viceCaptainPlayerId: draft.viceCaptainPlayerId
-          });
-          
-          // Reset ALL state for complete draft isolation
-          // CRITICAL: Deep clone to prevent shared references between drafts
-          setGameweekTransfers(JSON.parse(JSON.stringify(draft.gameweekTransfers || {})));
-          setPlannedChips(JSON.parse(JSON.stringify(draft.plannedChips || {}))); // Load planned chips
-          setPlannerMode(draft.mode);
-          
-          // Save captain/vice-captain info to be applied AFTER useEffect rebuilds lineup
-          const captainInfo = {
-            captainPlayerId: draft.captainPlayerId || null,
-            viceCaptainPlayerId: draft.viceCaptainPlayerId || null
-          };
-          
-          console.log("DEBUG switchToDraft - Setting savedCaptainInfo to:", captainInfo);
-          setSavedCaptainInfo(captainInfo);
-          
-          // Set active draft - this will trigger useEffect to rebuild lineup
-          setActiveDraft(draftLetter);
-          setHasUnsavedChanges(false);
-          
-          // Reset transferred out players and completed transfers
-          setTransferredOutPlayers([]);
-          setCompletedTransfers([]);
-          
-          // Allow autosave again after a short delay (to let state settle)
-          setTimeout(() => {
-            isLoadingDraftRef.current = false;
-          }, 1000);
-          
-          toast({ title: "Draft Loaded", description: `Switched to Draft ${draftLetter}` });
+        if (!response.ok) {
+          console.error("Failed to fetch draft:", response.status, response.statusText);
+          isLoadingDraftRef.current = false;
+          toast({ title: "Error", description: "Failed to load draft", variant: "destructive" });
+          return;
         }
+        
+        const data = await response.json();
+        const draft = data.draft;
+        
+        console.log("DEBUG switchToDraft - Fetched draft data:", draft);
+        console.log("DEBUG switchToDraft - Captain info from draft:", {
+          captainPlayerId: draft.captainPlayerId,
+          viceCaptainPlayerId: draft.viceCaptainPlayerId
+        });
+        
+        // Reset ALL state for complete draft isolation
+        // CRITICAL: Deep clone to prevent shared references between drafts
+        setGameweekTransfers(JSON.parse(JSON.stringify(draft.gameweekTransfers || {})));
+        setPlannedChips(JSON.parse(JSON.stringify(draft.plannedChips || {}))); // Load planned chips
+        setPlannerMode(draft.mode);
+        
+        // Save captain/vice-captain info to be applied AFTER useEffect rebuilds lineup
+        const captainInfo = {
+          captainPlayerId: draft.captainPlayerId || null,
+          viceCaptainPlayerId: draft.viceCaptainPlayerId || null
+        };
+        
+        console.log("DEBUG switchToDraft - Setting savedCaptainInfo to:", captainInfo);
+        setSavedCaptainInfo(captainInfo);
+        
+        // Set active draft - this will trigger useEffect to rebuild lineup
+        setActiveDraft(draftLetter);
+        setHasUnsavedChanges(false);
+        
+        // Reset transferred out players and completed transfers
+        setTransferredOutPlayers([]);
+        setCompletedTransfers([]);
+        
+        // Allow autosave again after a short delay (to let state settle)
+        setTimeout(() => {
+          isLoadingDraftRef.current = false;
+        }, 1000);
+        
+        toast({ title: "Draft Loaded", description: `Switched to Draft ${draftLetter}` });
       } catch (error) {
+        console.error("Error in switchToDraft:", error);
+        isLoadingDraftRef.current = false;
         toast({ title: "Error", description: "Failed to load draft", variant: "destructive" });
       }
     }
