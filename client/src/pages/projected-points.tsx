@@ -703,6 +703,63 @@ export default function ProjectedPoints() {
     return total;
   };
 
+  // Render player row for manual mode (no projections)
+  const renderPlayerRowManual = (pick: any, idx: number | string) => {
+    const player = getPlayerById(pick.element);
+    if (!player) return null;
+
+    const position = getPositionName(player);
+    const teamName = getTeamName(player);
+    const isCaptain = pick.is_captain;
+    const isViceCaptain = pick.is_vice_captain;
+    const isStarting = pick.position <= 11;
+
+    return (
+      <TableRow key={idx} className={!isStarting ? "bg-gray-50 dark:bg-gray-900" : ""}>
+        <TableCell className={`sticky left-0 z-10 font-medium min-w-[120px] sm:min-w-[140px] md:min-w-[180px] ${!isStarting ? 'bg-gray-50 dark:bg-gray-900' : 'bg-white dark:bg-background'}`}>
+          <div className="flex items-center gap-1 sm:gap-1.5">
+            <div className="min-w-0 flex-1">
+              <div className="font-semibold text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">{player.web_name}</div>
+            </div>
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              {isCaptain && (
+                <Badge className="bg-yellow-500 text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 h-4 sm:h-4.5 flex items-center gap-0.5">
+                  <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                  <span>C</span>
+                </Badge>
+              )}
+              {isViceCaptain && (
+                <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 h-4 sm:h-4.5 border-yellow-500 text-yellow-600 dark:text-yellow-400 flex items-center gap-0.5">
+                  <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                  <span>V</span>
+                </Badge>
+              )}
+              <PlayerAvailabilityBadge player={player} />
+            </div>
+          </div>
+        </TableCell>
+        <TableCell className="text-center text-xs sm:text-sm">
+          <Badge className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 ${
+            position === 'GKP' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+            position === 'DEF' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+            position === 'MID' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+            'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+          }`}>
+            {position}
+          </Badge>
+        </TableCell>
+        <TableCell className="text-center text-xs sm:text-sm">
+          <Badge variant="outline" className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5">
+            {teamName}
+          </Badge>
+        </TableCell>
+        <TableCell className="text-center font-medium text-gray-900 dark:text-gray-100 text-xs sm:text-sm">
+          £{(player.now_cost / 10).toFixed(1)}m
+        </TableCell>
+      </TableRow>
+    );
+  };
+
   // Render player row for list view
   const renderPlayerRow = (pick: any, idx: number | string) => {
     const player = getPlayerById(pick.element || pick.element);
@@ -1486,39 +1543,30 @@ export default function ProjectedPoints() {
                         )}
                       </div>
                     </TableHead>
-                    <TableHead className="hidden lg:table-cell text-center text-[10px] sm:text-xs">Price</TableHead>
-                    {plannerMode === "manual" ? (
-                      <>
-                        {nextGameweeks.map((gw, i) => (
-                          <TableHead 
-                            key={gw.id} 
-                            className={`text-center text-[10px] sm:text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                              i >= 2 && gw.id !== selectedGameweek ? 'hidden md:table-cell' : 
-                              i >= 4 ? 'hidden lg:table-cell' : ''
-                            }`}
-                            onClick={() => handleSort(`gw${gw.id}`)}
-                          >
-                            <div className="flex items-center justify-center gap-1">
-                              GW{gw.id}
-                              {sortColumn === `gw${gw.id}` && (
-                                sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                              )}
-                            </div>
-                          </TableHead>
-                        ))}
-                        <TableHead 
-                          className="text-center text-[10px] sm:text-xs sticky right-0 bg-white dark:bg-background cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
-                          onClick={() => handleSort('total')}
-                        >
-                          <div className="flex items-center justify-center gap-1">
-                            Total
-                            {sortColumn === 'total' && (
-                              sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            )}
-                          </div>
-                        </TableHead>
-                      </>
-                    ) : (
+                    <TableHead 
+                      className="text-center text-[10px] sm:text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                      onClick={() => plannerMode === "manual" && handleSort('position')}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        Pos
+                        {plannerMode === "manual" && sortColumn === 'position' && (
+                          sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="text-center text-[10px] sm:text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                      onClick={() => plannerMode === "manual" && handleSort('team')}
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        Team
+                        {plannerMode === "manual" && sortColumn === 'team' && (
+                          sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-center text-[10px] sm:text-xs">Price</TableHead>
+                    {plannerMode === "auto" && (
                       <TableHead className="text-center text-[10px] sm:text-xs">GW{selectedGameweek} Pts</TableHead>
                     )}
                   </TableRow>
@@ -1531,7 +1579,7 @@ export default function ProjectedPoints() {
                         
                         return (
                           <>
-                            {allPlayers.map((pick, idx) => renderPlayerRow(pick, idx))}
+                            {allPlayers.map((pick, idx) => renderPlayerRowManual(pick, idx))}
                           </>
                         );
                       })()
