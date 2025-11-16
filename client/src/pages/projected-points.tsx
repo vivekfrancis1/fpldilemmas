@@ -728,7 +728,7 @@ export default function ProjectedPoints() {
     console.log('✅ Chip recommendations calculation starting:', { usedChipsCount: usedChips.length, nextGWCount: nextGWs.length });
     
     // Split gameweeks into two sets
-    const set1GWs = nextGWs.filter(gw => gw.id < 19); // GW 12-18
+    const set1GWs = nextGWs.filter(gw => gw.id <= 19); // GW 12-19 (on or before GW 19)
     const set2GWs = nextGWs.filter(gw => gw.id >= 20); // GW 20-38
 
     const recommendations = { 
@@ -1314,83 +1314,78 @@ export default function ProjectedPoints() {
                   <span className="truncate">Chip Recommendations</span>
                 </CardTitle>
                 <CardDescription className="text-[10px] sm:text-xs md:text-sm">
-                  Based on Auto optimized lineup (Set 1: GW 12-18, Set 2: GW 20-38)
+                  Based on Auto optimized lineup (Set 1: GW 12-19, Set 2: GW 20-38)
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2 sm:space-y-3">
-                  {(recommendations.bboost1 || recommendations.bboost2) && (
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
-                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-green-700 dark:text-green-300 sm:min-w-[120px] sm:pt-1">
-                        Bench Boost:
+                <div className="space-y-1.5 sm:space-y-2">
+                  {recommendations.bboost1 && (
+                    <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-green-700 dark:text-green-300">
+                        Bench Boost 1:
                       </span>
-                      <div className="flex gap-1 sm:gap-1.5 flex-wrap">
-                        {recommendations.bboost1 && (
-                          <div className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-green-700 dark:text-green-300">
-                              Bench Boost 1: GW{recommendations.bboost1.gw} (+{recommendations.bboost1.additionalPoints.toFixed(1)} pts)
-                            </span>
-                          </div>
-                        )}
-                        {recommendations.bboost2 && (
-                          <div className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
-                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-green-700 dark:text-green-300">
-                              Bench Boost 2: GW{recommendations.bboost2.gw} (+{recommendations.bboost2.additionalPoints.toFixed(1)} pts)
-                            </span>
-                          </div>
-                        )}
+                      <span className="text-[10px] sm:text-xs md:text-sm font-medium text-green-700 dark:text-green-300">
+                        GW{recommendations.bboost1.gw} (+{recommendations.bboost1.additionalPoints.toFixed(1)} pts)
+                      </span>
+                    </div>
+                  )}
+                  {recommendations.bboost2 && (
+                    <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-green-700 dark:text-green-300">
+                        Bench Boost 2:
+                      </span>
+                      <span className="text-[10px] sm:text-xs md:text-sm font-medium text-green-700 dark:text-green-300">
+                        GW{recommendations.bboost2.gw} (+{recommendations.bboost2.additionalPoints.toFixed(1)} pts)
+                      </span>
+                    </div>
+                  )}
+                  {recommendations.tripleC1 && (
+                    <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-purple-700 dark:text-purple-300">
+                        Triple Captain 1:
+                      </span>
+                      <span className="text-[10px] sm:text-xs md:text-sm font-medium text-purple-700 dark:text-purple-300">
+                        GW{recommendations.tripleC1.gw} (+{recommendations.tripleC1.additionalPoints.toFixed(1)} pts)
+                      </span>
+                    </div>
+                  )}
+                  {recommendations.tripleC2 && (
+                    <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
+                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-purple-700 dark:text-purple-300">
+                        Triple Captain 2:
+                      </span>
+                      <span className="text-[10px] sm:text-xs md:text-sm font-medium text-purple-700 dark:text-purple-300">
+                        GW{recommendations.tripleC2.gw} (+{recommendations.tripleC2.additionalPoints.toFixed(1)} pts)
+                      </span>
+                    </div>
+                  )}
+                  {recommendations.freehit1 && (
+                    <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-blue-700 dark:text-blue-300">
+                        Free Hit 1:
+                      </span>
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] sm:text-xs md:text-sm font-medium text-blue-700 dark:text-blue-300">
+                          GW{recommendations.freehit1.gw}
+                        </span>
+                        <span className="text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400">
+                          Normal: {recommendations.freehit1.normalPoints.toFixed(1)} | FH: ~{recommendations.freehit1.freeHitPoints.toFixed(1)}
+                        </span>
                       </div>
                     </div>
                   )}
-                  {(recommendations.tripleC1 || recommendations.tripleC2) && (
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
-                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-purple-700 dark:text-purple-300 sm:min-w-[120px] sm:pt-1">
-                        Triple Captain:
+                  {recommendations.freehit2 && (
+                    <div className="flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-blue-700 dark:text-blue-300">
+                        Free Hit 2:
                       </span>
-                      <div className="flex gap-1 sm:gap-1.5 flex-wrap">
-                        {recommendations.tripleC1 && (
-                          <div className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
-                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-purple-700 dark:text-purple-300">
-                              Triple Captain 1: GW{recommendations.tripleC1.gw} (+{recommendations.tripleC1.additionalPoints.toFixed(1)} pts)
-                            </span>
-                          </div>
-                        )}
-                        {recommendations.tripleC2 && (
-                          <div className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800">
-                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-purple-700 dark:text-purple-300">
-                              Triple Captain 2: GW{recommendations.tripleC2.gw} (+{recommendations.tripleC2.additionalPoints.toFixed(1)} pts)
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {(recommendations.freehit1 || recommendations.freehit2) && (
-                    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-2">
-                      <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-blue-700 dark:text-blue-300 sm:min-w-[120px] sm:pt-1">
-                        Free Hit:
-                      </span>
-                      <div className="flex gap-1 sm:gap-1.5 flex-wrap">
-                        {recommendations.freehit1 && (
-                          <div className="inline-flex flex-col gap-0.5 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-blue-700 dark:text-blue-300">
-                              Free Hit 1: GW{recommendations.freehit1.gw}
-                            </span>
-                            <span className="text-[9px] sm:text-[10px] md:text-xs text-blue-600 dark:text-blue-400">
-                              Normal: {recommendations.freehit1.normalPoints.toFixed(1)} | FH: ~{recommendations.freehit1.freeHitPoints.toFixed(1)}
-                            </span>
-                          </div>
-                        )}
-                        {recommendations.freehit2 && (
-                          <div className="inline-flex flex-col gap-0.5 px-1.5 sm:px-2 md:px-3 py-1 sm:py-1.5 rounded-md bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
-                            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-blue-700 dark:text-blue-300">
-                              Free Hit 2: GW{recommendations.freehit2.gw}
-                            </span>
-                            <span className="text-[9px] sm:text-[10px] md:text-xs text-blue-600 dark:text-blue-400">
-                              Normal: {recommendations.freehit2.normalPoints.toFixed(1)} | FH: ~{recommendations.freehit2.freeHitPoints.toFixed(1)}
-                            </span>
-                          </div>
-                        )}
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] sm:text-xs md:text-sm font-medium text-blue-700 dark:text-blue-300">
+                          GW{recommendations.freehit2.gw}
+                        </span>
+                        <span className="text-[9px] sm:text-[10px] text-blue-600 dark:text-blue-400">
+                          Normal: {recommendations.freehit2.normalPoints.toFixed(1)} | FH: ~{recommendations.freehit2.freeHitPoints.toFixed(1)}
+                        </span>
                       </div>
                     </div>
                   )}
