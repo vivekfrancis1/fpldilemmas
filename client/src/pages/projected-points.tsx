@@ -204,12 +204,12 @@ export default function ProjectedPoints() {
     }
   };
 
-  // Load cached manager ID on component mount
+  // Load cached manager ID on component mount (but don't auto-search)
   useEffect(() => {
     const cachedId = getManagerIdFromCache();
     if (cachedId) {
       setManagerId(cachedId);
-      setSearchedId(cachedId);
+      // Don't auto-search - let user click "Search" or "Load Last Manager"
     }
   }, []);
 
@@ -598,24 +598,44 @@ export default function ProjectedPoints() {
                 <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
                   Manager ID
                 </label>
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Input
                     id="manager-id"
                     type="text"
                     placeholder="Enter your FPL Manager ID"
                     value={managerId}
                     onChange={(e) => setManagerId(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    onKeyDown={(e) => e.key === "Enter" && !isLoadingTeam && handleSearch()}
                     data-testid="input-manager-id"
+                    disabled={isLoadingTeam}
+                    className="flex-1"
                   />
                   <Button
                     onClick={handleSearch}
                     className="flex items-center gap-2"
                     data-testid="button-search-manager"
+                    disabled={!managerId.trim() || isLoadingTeam}
                   >
                     <Search className="h-4 w-4" />
-                    Search
+                    {isLoadingTeam ? "Loading..." : "Search"}
                   </Button>
+                  {getManagerIdFromCache() && !searchedId && !isLoadingTeam && (
+                    <Button 
+                      onClick={() => {
+                        const cachedId = getManagerIdFromCache();
+                        if (cachedId) {
+                          setManagerId(cachedId);
+                          // Don't set searchedId - user must click Search button to fetch data
+                        }
+                      }}
+                      variant="outline"
+                      className="w-full sm:w-auto" 
+                      data-testid="button-load-last-manager"
+                    >
+                      <TrendingUp className="h-4 w-4 mr-2" />
+                      Load Last Manager
+                    </Button>
+                  )}
                 </div>
               </div>
               <div className="text-xs text-gray-500">
@@ -706,11 +726,17 @@ export default function ProjectedPoints() {
                     placeholder="Enter Manager ID"
                     className="text-sm sm:text-base min-h-10 sm:min-h-11"
                     data-testid="input-manager-id"
+                    disabled={isLoadingTeam}
                   />
                 </div>
-                <Button onClick={handleSearch} className="w-full sm:w-auto min-h-10 sm:min-h-11 text-sm sm:text-base" data-testid="button-search-manager">
+                <Button 
+                  onClick={handleSearch} 
+                  className="w-full sm:w-auto min-h-10 sm:min-h-11 text-sm sm:text-base" 
+                  data-testid="button-search-manager"
+                  disabled={!managerId.trim() || isLoadingTeam}
+                >
                   <Search className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Search
+                  {isLoadingTeam ? "Loading..." : "Search"}
                 </Button>
               </div>
               
