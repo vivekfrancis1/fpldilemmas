@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, Heart, XCircle, Clock, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -1251,17 +1252,21 @@ export default function ProjectedPoints() {
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-4">
             <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">Lineup Mode</label>
-              <Tabs value={plannerMode} onValueChange={(v) => setPlannerMode(v as "auto" | "manual")}>
-                <TabsList className="grid w-full grid-cols-2 h-auto">
-                  <TabsTrigger value="manual" className="text-xs sm:text-sm py-2 sm:py-2.5 px-2 sm:px-3" data-testid="tab-manual-lineup">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sm:mb-3">Lineup Mode</label>
+              <RadioGroup value={plannerMode} onValueChange={(v) => setPlannerMode(v as "auto" | "manual")} className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="manual" id="manual" data-testid="radio-manual-lineup" />
+                  <Label htmlFor="manual" className="text-xs sm:text-sm font-normal cursor-pointer">
                     Current Lineup
-                  </TabsTrigger>
-                  <TabsTrigger value="auto" className="text-xs sm:text-sm py-2 sm:py-2.5 px-2 sm:px-3" data-testid="tab-auto-lineup">
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="auto" id="auto" data-testid="radio-auto-lineup" />
+                  <Label htmlFor="auto" className="text-xs sm:text-sm font-normal cursor-pointer">
                     Auto Optimized
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+                  </Label>
+                </div>
+              </RadioGroup>
             </div>
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">Projection Horizon</label>
