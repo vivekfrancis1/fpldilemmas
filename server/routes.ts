@@ -2153,6 +2153,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Fetch chips data from history endpoint
+      const historyResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`);
+      if (historyResponse.ok) {
+        const historyData = await historyResponse.json();
+        // Add chips array to the response
+        data.chips = historyData.chips || [];
+        console.log("DEBUG: Chips data added to team response:", JSON.stringify(data.chips));
+      } else {
+        // If history fetch fails, set chips to empty array
+        data.chips = [];
+        console.log("DEBUG: History fetch failed, chips set to empty array");
+      }
+      
       console.log("DEBUG: Final transfers object:", JSON.stringify(data.transfers));
       
       res.json(data);
