@@ -225,6 +225,12 @@ export default function ProjectedPoints() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch fixtures data
+  const { data: fixturesData } = useQuery<any[]>({
+    queryKey: ["/api/fixtures"],
+    staleTime: 10 * 60 * 1000,
+  });
+
   // Calculate start and end gameweeks based on horizon
   const gameweekRange = useMemo(() => {
     if (!bootstrapData) return { start: 12, end: 23 };
@@ -410,6 +416,26 @@ export default function ProjectedPoints() {
       'Forward': 'FWD'
     };
     return positionMap[position?.singular_name || ''] || position?.singular_name || '';
+  };
+
+  // Get fixture information for a team in a specific gameweek
+  const getFixtureInfo = (teamId: number, gameweek: number): { opponent: string; isHome: boolean } | null => {
+    if (!fixturesData || !bootstrapData?.teams) return null;
+    
+    const fixture = fixturesData.find((f: any) => 
+      f.event === gameweek && (f.team_h === teamId || f.team_a === teamId)
+    );
+    
+    if (!fixture) return null;
+    
+    const isHome = fixture.team_h === teamId;
+    const opponentId = isHome ? fixture.team_a : fixture.team_h;
+    const opponent = bootstrapData.teams.find((t: any) => t.id === opponentId);
+    
+    return {
+      opponent: opponent?.short_name || '',
+      isHome
+    };
   };
 
   // Calculate formation from starting 11
@@ -612,56 +638,61 @@ export default function ProjectedPoints() {
     const position = getPositionName(player);
     const teamName = getTeamName(player);
     const points = getPlayerProjectedPoints(player.id, gameweek);
+    const fixtureInfo = getFixtureInfo(player.team, gameweek);
     
     const isStarting = !pick.benchPosition;
     const isCaptain = pick.isCaptain;
     const isViceCaptain = pick.isViceCaptain;
 
     return (
-      <TableRow key={idx} className={!isStarting ? "bg-gray-50" : ""}>
-        <TableCell className={`sticky left-0 z-10 font-medium min-w-[140px] sm:min-w-[180px] ${!isStarting ? 'bg-gray-50' : 'bg-white'}`}>
-          <div className="flex items-center gap-1.5 sm:gap-2">
+      <TableRow key={idx} className={!isStarting ? "bg-gray-50 dark:bg-gray-900" : ""}>
+        <TableCell className={`sticky left-0 z-10 font-medium min-w-[120px] sm:min-w-[140px] md:min-w-[180px] ${!isStarting ? 'bg-gray-50 dark:bg-gray-900' : 'bg-white dark:bg-background'}`}>
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <div className="min-w-0 flex-1">
-              <div className="font-semibold text-gray-900 text-sm sm:text-base truncate">{player.web_name}</div>
-              <div className="flex items-center gap-1 sm:gap-1.5 mt-0.5 sm:mt-1 flex-wrap">
-                <Badge className={`text-[10px] sm:text-xs px-0.5 sm:px-1 py-0 h-3.5 sm:h-4 ${
-                  position === 'GKP' ? 'bg-yellow-100 text-yellow-800' :
-                  position === 'DEF' ? 'bg-green-100 text-green-800' :
-                  position === 'MID' ? 'bg-blue-100 text-blue-800' :
-                  'bg-red-100 text-red-800'
+              <div className="font-semibold text-gray-900 dark:text-gray-100 text-xs sm:text-sm truncate">{player.web_name}</div>
+              <div className="flex items-center gap-0.5 sm:gap-1 mt-0.5 flex-wrap">
+                <Badge className={`text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0 h-3 sm:h-3.5 ${
+                  position === 'GKP' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                  position === 'DEF' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                  position === 'MID' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                  'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                 }`}>
                   {position}
                 </Badge>
-                <Badge variant="outline" className="text-[10px] sm:text-xs px-0.5 sm:px-1 py-0 h-3.5 sm:h-4 text-gray-600">
+                <Badge variant="outline" className="text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0 h-3 sm:h-3.5 text-gray-600 dark:text-gray-400">
                   {teamName}
                 </Badge>
-                {!isStarting && (
-                  <Badge variant="outline" className="hidden sm:inline-flex text-xs px-1 py-0 h-4 text-orange-600 border-orange-300">
-                    Bench
+                {fixtureInfo && (
+                  <Badge variant="outline" className="text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0 h-3 sm:h-3.5 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600">
+                    vs {fixtureInfo.opponent} ({fixtureInfo.isHome ? 'H' : 'A'})
                   </Badge>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-0.5 flex-shrink-0">
               {isCaptain && (
-                <Badge className="bg-yellow-500 text-white text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 h-4 sm:h-5 flex items-center gap-0.5 sm:gap-1">
-                  <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />C
+                <Badge className="bg-yellow-500 text-white text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0.5 h-3.5 sm:h-4 flex items-center gap-0.5">
+                  <Crown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                  <span className="hidden sm:inline">C</span>
                 </Badge>
               )}
               {isViceCaptain && (
-                <Badge variant="outline" className="text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 h-4 sm:h-5 border-yellow-500 text-yellow-600 flex items-center gap-0.5 sm:gap-1">
-                  <Crown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />V
+                <Badge variant="outline" className="text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0.5 h-3.5 sm:h-4 border-yellow-500 text-yellow-600 dark:text-yellow-400 flex items-center gap-0.5">
+                  <Crown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                  <span className="hidden sm:inline">V</span>
                 </Badge>
               )}
-              <PlayerAvailabilityBadge player={player} />
+              <div className="hidden sm:block">
+                <PlayerAvailabilityBadge player={player} />
+              </div>
             </div>
           </div>
         </TableCell>
-        <TableCell className="text-center font-medium text-gray-900 text-xs sm:text-sm">
+        <TableCell className="hidden lg:table-cell text-center font-medium text-gray-900 dark:text-gray-100 text-xs">
           £{(player.now_cost / 10).toFixed(1)}m
         </TableCell>
         <TableCell className="text-center">
-          <span className="font-bold text-purple-600 text-sm sm:text-base">
+          <span className="font-bold text-purple-600 dark:text-purple-400 text-xs sm:text-sm">
             {points.toFixed(1)}
           </span>
         </TableCell>
@@ -1143,7 +1174,7 @@ export default function ProjectedPoints() {
                         <TableHead className="text-center text-[10px] sm:text-xs sticky right-0 bg-white dark:bg-background">Total</TableHead>
                       </>
                     ) : (
-                      <TableHead className="text-center text-[10px] sm:text-xs">GW{selectedGameweek}</TableHead>
+                      <TableHead className="text-center text-[10px] sm:text-xs">GW{selectedGameweek} Pts</TableHead>
                     )}
                   </TableRow>
                 </TableHeader>
