@@ -1615,6 +1615,16 @@ export default function TransferPlanner() {
     if (optimizationUndoState[optimizedLineupKey]) {
       // Use the optimized lineup instead
       lineupWithTransfers = JSON.parse(JSON.stringify(optimizationUndoState[optimizedLineupKey]));
+      
+      // Re-apply transferred out flags (they can happen after optimization)
+      gwTransfers.transferredOut.forEach(transferOut => {
+        lineupWithTransfers = lineupWithTransfers.map(pick => {
+          if (pick.position === transferOut.position) {
+            return { ...pick, is_transferred_out: true };
+          }
+          return pick;
+        });
+      });
     } else {
       // Apply saved captain/vice-captain if available (from draft loading)
       if (savedCaptainInfo && (savedCaptainInfo.captainPlayerId || savedCaptainInfo.viceCaptainPlayerId)) {
