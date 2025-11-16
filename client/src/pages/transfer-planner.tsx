@@ -3323,6 +3323,8 @@ export default function TransferPlanner() {
   };
 
   const switchToDraft = async (draftLetter: string) => {
+    console.log("🔄 switchToDraft called with draftLetter:", draftLetter);
+    
     // Flush any pending autosave before switching
     await flushAutosave();
     
@@ -3345,9 +3347,16 @@ export default function TransferPlanner() {
       toast({ title: "Base Draft", description: "Switched to base team (no transfers)" });
     } else {
       try {
-        const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${draftLetter}`);
+        const url = `/api/transfer-planner/drafts/${searchedId}/${draftLetter}`;
+        console.log("🌐 Fetching draft from URL:", url);
+        
+        const response = await fetch(url);
+        
+        console.log("📡 Response status:", response.status, response.statusText);
+        
         if (!response.ok) {
-          console.error("Failed to fetch draft:", response.status, response.statusText);
+          const errorText = await response.text();
+          console.error("❌ Failed to fetch draft:", response.status, response.statusText, errorText);
           isLoadingDraftRef.current = false;
           toast({ title: "Error", description: "Failed to load draft", variant: "destructive" });
           return;
@@ -3356,11 +3365,13 @@ export default function TransferPlanner() {
         const data = await response.json();
         const draft = data.draft;
         
-        console.log("DEBUG switchToDraft - Fetched draft data:", draft);
-        console.log("DEBUG switchToDraft - Captain info from draft:", {
-          captainPlayerId: draft.captainPlayerId,
-          viceCaptainPlayerId: draft.viceCaptainPlayerId
-        });
+        console.log("✅ Fetched draft data:", draft);
+        console.log("✅ Draft letter from server:", draft.draftLetter);
+        console.log("✅ Requested draft letter:", draftLetter);
+        
+        if (draft.draftLetter !== draftLetter) {
+          console.error("⚠️ MISMATCH: Requested draft", draftLetter, "but got draft", draft.draftLetter);
+        }
         
         // Reset ALL state for complete draft isolation
         // CRITICAL: Deep clone to prevent shared references between drafts
@@ -3374,7 +3385,6 @@ export default function TransferPlanner() {
           viceCaptainPlayerId: draft.viceCaptainPlayerId || null
         };
         
-        console.log("DEBUG switchToDraft - Setting savedCaptainInfo to:", captainInfo);
         setSavedCaptainInfo(captainInfo);
         
         // Set active draft - this will trigger useEffect to rebuild lineup
@@ -3392,9 +3402,15 @@ export default function TransferPlanner() {
         
         toast({ title: "Draft Loaded", description: `Switched to Draft ${draftLetter}` });
       } catch (error) {
-        console.error("Error in switchToDraft:", error);
+        console.error("❌ Error in switchToDraft:", error);
+        console.error("❌ Error type:", typeof error);
+        console.error("❌ Error stringified:", JSON.stringify(error));
+        if (error instanceof Error) {
+          console.error("❌ Error message:", error.message);
+          console.error("❌ Error stack:", error.stack);
+        }
         isLoadingDraftRef.current = false;
-        toast({ title: "Error", description: "Failed to load draft", variant: "destructive" });
+        toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to load draft", variant: "destructive" });
       }
     }
   };
