@@ -1537,9 +1537,8 @@ export default function TransferPlanner() {
   useEffect(() => {
     if (!selectedGameweek || !teamData?.picks) return;
     
-    // Clear player popup and optimized lineup when gameweek changes
+    // Clear player popup when gameweek changes
     setSelectedPlayer(null);
-    setOptimizedLineup(null);
     
     // Helper to apply buy price overrides to lineup
     const applyBuyPriceOverrides = (lineup: TeamPick[]) => {
@@ -3286,9 +3285,6 @@ export default function TransferPlanner() {
   const switchToDraft = async (draftLetter: string) => {
     // Flush any pending autosave before switching
     await flushAutosave();
-    
-    // Always clear optimized lineup when switching drafts
-    setOptimizedLineup(null);
     
     // Mark that we're loading a draft to prevent autosave during load
     isLoadingDraftRef.current = true;
@@ -5897,8 +5893,12 @@ export default function TransferPlanner() {
       )}
 
 
-      {/* Draft Comparison Table */}
-      {searchedId && teamData && playerProjections && playerProjections6GW && (
+      {/* Draft Comparison Table - Only show if there are at least 2 unique (non-duplicate) drafts */}
+      {searchedId && teamData && playerProjections && playerProjections6GW && (() => {
+        const duplicateInfo = identifyDuplicateDrafts();
+        const uniqueDraftsCount = savedDrafts.filter(draft => !duplicateInfo[draft.draftLetter]?.isDuplicate).length;
+        return uniqueDraftsCount >= 2;
+      })() && (
         <Collapsible open={isDraftComparisonOpen} onOpenChange={setIsDraftComparisonOpen}>
           <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
             <CardHeader>
