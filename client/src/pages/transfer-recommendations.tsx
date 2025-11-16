@@ -10,7 +10,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingExperience } from "@/components/loading-experience";
-import { applyAvailabilityAdjustments, type BootstrapData } from "@/lib/availability-adjustments";
 
 export default function TransferRecommendations() {
   const [managerId, setManagerId] = useState("");
@@ -44,20 +43,6 @@ export default function TransferRecommendations() {
     }
   }, []);
 
-  // Fetch bootstrap data for availability adjustments
-  const { data: bootstrapData } = useQuery<BootstrapData>({
-    queryKey: ["/api/bootstrap-static"],
-    staleTime: 5 * 60 * 1000,
-  });
-
-  // Fetch current gameweek
-  const { data: currentGWData } = useQuery<{ current_event: number }>({
-    queryKey: ["/api/current-gameweek"],
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const currentGameweek = currentGWData?.current_event || 1;
-
   // Fetch recommended transfers
   const { data: recommendedTransfers, isLoading: isLoadingRecommendations, error: recommendationsError } = useQuery<any>({
     queryKey: ["/api/manager", searchedId, "recommended-transfers"],
@@ -66,76 +51,8 @@ export default function TransferRecommendations() {
     refetchOnWindowFocus: false,
   });
 
-  // Apply availability adjustments to transfer recommendations
-  const adjustedRecommendations = useMemo(() => {
-    if (!recommendedTransfers?.gameweeks || !bootstrapData) return recommendedTransfers;
-
-    const adjusted = { ...recommendedTransfers };
-    const adjustedGameweeks: any = {};
-
-    Object.entries(recommendedTransfers.gameweeks).forEach(([gw, gwData]: [string, any]) => {
-      const adjustedRecs = gwData.recommendations?.map((rec: any) => {
-        // Safety check: ensure playerOut and playerIn exist
-        if (!rec.playerOut || !rec.playerIn) return rec;
-
-        // Create player objects with required fields for availability adjustments
-        const playerOutWithProjections = {
-          playerName: rec.playerOut.webName,
-          chanceOfPlayingNextRound: rec.playerOut.chanceOfPlayingNextRound,
-          status: rec.playerOut.status,
-          news: rec.playerOut.news,
-          gameweekProjections: { [gw]: rec.playerOut.projectedPoints },
-          totalExpectedPoints: rec.playerOut.projectedPoints,
-          price: rec.playerOut.sellingPrice / 10,
-        };
-
-        const playerInWithProjections = {
-          playerName: rec.playerIn.webName,
-          chanceOfPlayingNextRound: rec.playerIn.chanceOfPlayingNextRound,
-          status: rec.playerIn.status,
-          news: rec.playerIn.news,
-          gameweekProjections: { [gw]: rec.playerIn.projectedPoints },
-          totalExpectedPoints: rec.playerIn.projectedPoints,
-          price: rec.playerIn.nowCost / 10,
-        };
-
-        // Apply availability adjustments
-        const adjustedPlayerOut = applyAvailabilityAdjustments(playerOutWithProjections, bootstrapData, currentGameweek);
-        const adjustedPlayerIn = applyAvailabilityAdjustments(playerInWithProjections, bootstrapData, currentGameweek);
-
-        // Calculate new points gain based on adjusted points
-        const adjustedOutPoints = adjustedPlayerOut.gameweekProjections[gw] || 0;
-        const adjustedInPoints = adjustedPlayerIn.gameweekProjections[gw] || 0;
-        const adjustedPointsGain = adjustedInPoints - adjustedOutPoints;
-
-        return {
-          ...rec,
-          playerOut: {
-            ...rec.playerOut,
-            projectedPoints: adjustedOutPoints,
-            originalProjectedPoints: rec.playerOut.projectedPoints,
-            availabilityAdjusted: adjustedOutPoints !== rec.playerOut.projectedPoints,
-          },
-          playerIn: {
-            ...rec.playerIn,
-            projectedPoints: adjustedInPoints,
-            originalProjectedPoints: rec.playerIn.projectedPoints,
-            availabilityAdjusted: adjustedInPoints !== rec.playerIn.projectedPoints,
-          },
-          pointsGain: adjustedPointsGain,
-          originalPointsGain: rec.pointsGain,
-        };
-      });
-
-      adjustedGameweeks[gw] = {
-        ...gwData,
-        recommendations: adjustedRecs,
-      };
-    });
-
-    adjusted.gameweeks = adjustedGameweeks;
-    return adjusted;
-  }, [recommendedTransfers, bootstrapData, currentGameweek]);
+  // Backend now applies availability adjustments, so we just use the data as-is
+  const adjustedRecommendations = recommendedTransfers;
 
   // Memoized calculation of budget and free transfers timeline for each gameweek
   const gameweekFinances = useMemo(() => {
