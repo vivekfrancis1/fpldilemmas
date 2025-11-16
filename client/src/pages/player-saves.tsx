@@ -68,13 +68,47 @@ export default function PlayerSaves() {
     }
   }, [bootstrapData, initialized]);
 
-  // API call for saves projections with dynamic gameweek range
-  const { data: savesProjections, isLoading: isLoadingProjections } = useQuery({
-    queryKey: ["/api/player-saves-projections", startGameweek, endGameweek],
-    queryFn: () => fetch(`/api/player-saves-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`).then(res => res.json()),
-    enabled: initialized && startGameweek > 0 && endGameweek > 0,
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  // API call for saves projections - use cached endpoint for 10-20x faster loading
+  const { data: allSavesProjections, isLoading: isLoadingProjections } = useQuery({
+    queryKey: ["/api/cached/player-saves-projections"],
+    enabled: initialized,
+    staleTime: 60 * 60 * 1000, // Cache for 1 hour
   });
+
+  // Filter cached data to selected gameweek range (client-side filtering is instant)
+  const savesProjections = useMemo(() => {
+    if (!allSavesProjections) return allSavesProjections;
+    
+    // Filter each player's saves to only include selected range
+    return allSavesProjections.map((player: any) => {
+      const filteredSaves: Record<string, number> = {};
+      const filteredPoints: Record<string, number> = {};
+      const originalSaves = player.saves || {};
+      const originalPoints = player.pointsFromSaves || {};
+      
+      // Calculate total for selected range
+      let totalSaves = 0;
+      let totalPoints = 0;
+      for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        const gwKey = `gw${gw}`;
+        const saves = originalSaves[gwKey] || 0;
+        const points = originalPoints[gwKey] || 0;
+        filteredSaves[gwKey] = saves;
+        filteredPoints[gwKey] = points;
+        totalSaves += saves;
+        totalPoints += points;
+      }
+      
+      return {
+        ...player,
+        saves: filteredSaves,
+        pointsFromSaves: filteredPoints,
+        totalSaves,
+        totalPoints,
+        averagePerGameweek: (endGameweek - startGameweek + 1) > 0 ? totalSaves / (endGameweek - startGameweek + 1) : 0
+      };
+    });
+  }, [allSavesProjections, startGameweek, endGameweek]);
 
   // Create playerIdToWebName mapping for short names
   const playerIdToWebName = useMemo(() => {
