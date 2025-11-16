@@ -2348,6 +2348,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             adjustedTotal = adjustedTotal - originalPoints + adjustedPoints;
           }
           
+          // Debug logging for Mbeumo and Sarr
+          if (element.web_name === 'Mbeumo' || element.web_name === 'Sarr') {
+            console.log(`📊 ${playerName} GW${targetGW}-${planningEnd}: Original=${playerProj.totalExpectedPoints?.toFixed(2)} → Adjusted=${adjustedTotal.toFixed(2)}`);
+          }
+          
           return {
             ...playerProj,
             totalExpectedPoints: adjustedTotal,
