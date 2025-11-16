@@ -924,8 +924,7 @@ export default function TeamOptimizer() {
                         const cachedId = getManagerIdFromCache();
                         if (cachedId) {
                           setManagerId(cachedId);
-                          setSearchedId(cachedId);
-                          saveManagerIdToCache(cachedId);
+                          // Don't set searchedId - user must click Search button to fetch data
                         }
                       }}
                       variant="outline"

@@ -664,8 +664,7 @@ export default function MyDashboard() {
                         const cachedId = getManagerIdFromCache();
                         if (cachedId) {
                           setManagerId(cachedId);
-                          setSearchedId(cachedId);
-                          saveManagerIdToCache(cachedId);
+                          // Don't set searchedId - user must click Search Manager button to fetch data
                         }
                       }}
                       variant="outline"

@@ -8,7 +8,7 @@ Preferred communication style: Simple, everyday language.
 **Development Protocol**: Always ask permission before making any changes to logic, calculations, or functionality. No unauthorized modifications are permitted.
 Site tagline: "FPL made smarter with predictive analytics." displayed in header.
 Navigation priority: Goals and Clean Sheets as default landing page (home route '/'), with side navigation for all tools.
-Manager ID caching: All FPL manager tools (My Live Rank, My Team, My Leagues) now automatically save and pre-load the last searched Manager ID using localStorage for seamless cross-tool experience.
+Manager ID caching: All FPL manager tools (My Live Rank, My Leagues, My Dashboard, Team Optimizer, Transfer Planner) save the last searched Manager ID to localStorage. Tools pre-populate the input field on load but require explicit user action via "Search" or "Load Last Manager" button to fetch data, improving user control and reducing unnecessary API calls.
 Projection Tools Limit: Both team-level and player-level projection tools now generate 12 gameweeks of data with dropdown filters showing 12 weeks but defaulting to 6 gameweeks view for consistent user experience. All tools show only future gameweeks excluding current/finished gameweeks. Player projection pages (goals, assists, goals scored, bonus points, saves, total points) use shared gameweek utilities with proper validation and loading states.
 Most popular tools: Player Statistics, My Live Rank, and Fixture Analyzer.
 Fixture Analyzer display: Shows 6 gameweeks by default with user customization up to GW38.
