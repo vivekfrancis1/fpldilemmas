@@ -75,6 +75,9 @@ export default function TransferRecommendations() {
 
     Object.entries(recommendedTransfers.gameweeks).forEach(([gw, gwData]: [string, any]) => {
       const adjustedRecs = gwData.recommendations?.map((rec: any) => {
+        // Safety check: ensure playerOut and playerIn exist
+        if (!rec.playerOut || !rec.playerIn) return rec;
+
         // Create player objects with required fields for availability adjustments
         const playerOutWithProjections = {
           playerName: rec.playerOut.webName,
