@@ -15529,9 +15529,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ Transfer Planner Draft API routes registered successfully");
 
-  // Manual cache refresh endpoint for admin/testing
+  // Manual cache refresh endpoint for admin/testing (protected with API key)
   app.post("/api/admin/refresh-cache", async (req, res) => {
     try {
+      // Verify API key
+      const apiKey = req.headers['x-api-key'] || req.body?.apiKey;
+      const validApiKey = process.env.ADMIN_API_KEY || 'dev-cache-refresh-key-2024';
+      
+      if (apiKey !== validApiKey) {
+        console.warn('⚠️ Unauthorized cache refresh attempt');
+        return res.status(401).json({ 
+          error: 'Unauthorized',
+          message: 'Invalid API key. Provide a valid key in X-API-Key header or apiKey body field.'
+        });
+      }
+      
       console.log('🔄 Manual cache refresh triggered...');
       
       // Import the daily projections service

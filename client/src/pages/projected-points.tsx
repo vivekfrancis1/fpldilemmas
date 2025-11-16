@@ -179,7 +179,8 @@ export default function ProjectedPoints() {
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<number | null>(null);
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
-  const [gameweekHorizon, setGameweekHorizon] = useState<number>(6);
+  const [startGameweek, setStartGameweek] = useState<number | null>(null);
+  const [endGameweek, setEndGameweek] = useState<number | null>(null);
   const [sortColumn, setSortColumn] = useState<string>("total");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   
@@ -229,30 +230,55 @@ export default function ProjectedPoints() {
     staleTime: 10 * 60 * 1000,
   });
 
-  // Calculate start and end gameweeks based on horizon
-  const gameweekRange = useMemo(() => {
-    if (!bootstrapData) return { start: 12, end: 23 };
+  // Initialize start and end gameweeks with defaults (next 6 gameweeks)
+  useEffect(() => {
+    if (!bootstrapData || startGameweek !== null) return;
     
     const nextEvent = bootstrapData.events.find(e => !e.finished && !e.is_current);
-    let startGW = nextEvent?.id || 1;
+    let firstGW = nextEvent?.id || 1;
     
     if (!nextEvent) {
       const currentEvent = bootstrapData.events.find(e => e.is_current);
       if (currentEvent) {
-        startGW = currentEvent.id + 1;
+        firstGW = currentEvent.id + 1;
       } else {
         const lastFinished = bootstrapData.events.filter(e => e.finished).sort((a, b) => b.id - a.id)[0];
         if (lastFinished) {
-          startGW = lastFinished.id + 1;
+          firstGW = lastFinished.id + 1;
         }
       }
     }
     
-    return {
-      start: startGW,
-      end: Math.min(startGW + gameweekHorizon - 1, 38)
-    };
-  }, [bootstrapData, gameweekHorizon]);
+    // Default to next 6 gameweeks
+    setStartGameweek(firstGW);
+    setEndGameweek(Math.min(firstGW + 5, 38));
+  }, [bootstrapData, startGameweek]);
+  
+  // Get available gameweek options (next 12 gameweeks)
+  const getAvailableGameweeks = (): number[] => {
+    if (!bootstrapData) return [];
+    
+    const nextEvent = bootstrapData.events.find(e => !e.finished && !e.is_current);
+    let firstGW = nextEvent?.id || 1;
+    
+    if (!nextEvent) {
+      const currentEvent = bootstrapData.events.find(e => e.is_current);
+      if (currentEvent) {
+        firstGW = currentEvent.id + 1;
+      } else {
+        const lastFinished = bootstrapData.events.filter(e => e.finished).sort((a, b) => b.id - a.id)[0];
+        if (lastFinished) {
+          firstGW = lastFinished.id + 1;
+        }
+      }
+    }
+    
+    const gameweeks = [];
+    for (let i = 0; i < 12 && (firstGW + i) <= 38; i++) {
+      gameweeks.push(firstGW + i);
+    }
+    return gameweeks;
+  };
 
   // Fetch projections using cached endpoint for faster loading
   const { data: allPlayerProjections, isLoading: isLoadingProjections, refetch: refetchProjections } = useQuery<any[]>({
@@ -314,30 +340,14 @@ export default function ProjectedPoints() {
     }
   }, [bootstrapData, selectedGameweek]);
 
-  // Get next N gameweeks based on horizon
+  // Get gameweeks between start and end (inclusive)
   const getNextGameweeks = () => {
-    if (!bootstrapData) return [];
-    
-    const nextEvent = bootstrapData.events.find(e => !e.finished && !e.is_current);
-    let startGW = nextEvent?.id || 1;
-    
-    if (!nextEvent) {
-      const currentEvent = bootstrapData.events.find(e => e.is_current);
-      if (currentEvent) {
-        startGW = currentEvent.id + 1;
-      } else {
-        const lastFinished = bootstrapData.events.filter(e => e.finished).sort((a, b) => b.id - a.id)[0];
-        if (lastFinished) {
-          startGW = lastFinished.id + 1;
-        }
-      }
-    }
+    if (!bootstrapData || startGameweek === null || endGameweek === null) return [];
     
     const nextGameweeks = [];
-    for (let i = 0; i < gameweekHorizon; i++) {
-      const gwNumber = startGW + i;
+    for (let gwNumber = startGameweek; gwNumber <= endGameweek && gwNumber <= 38; gwNumber++) {
       const gw = bootstrapData.events.find(e => e.id === gwNumber);
-      if (gw && gwNumber <= 38) {
+      if (gw) {
         nextGameweeks.push(gw);
       }
     }
@@ -640,7 +650,7 @@ export default function ProjectedPoints() {
                 <p className="text-sm text-gray-600">
                   {isLoadingTeam 
                     ? "Fetching your team lineup and player details from FPL" 
-                    : `Generating ${gameweekHorizon} gameweeks of projected points for 450+ players`}
+                    : "Calculating projected points for your team"}
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
                   This may take a few seconds...
@@ -685,22 +695,115 @@ export default function ProjectedPoints() {
         {/* Controls */}
         <Card>
           <CardContent className="pt-4 sm:pt-6">
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-end">
-              <div className="flex-1">
-                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">Manager ID</label>
-                <Input
-                  type="text"
-                  value={managerId}
-                  onChange={(e) => setManagerId(e.target.value)}
-                  placeholder="Enter Manager ID"
-                  className="text-sm sm:text-base min-h-10 sm:min-h-11"
-                  data-testid="input-manager-id"
-                />
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-end">
+                <div className="flex-1">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">Manager ID</label>
+                  <Input
+                    type="text"
+                    value={managerId}
+                    onChange={(e) => setManagerId(e.target.value)}
+                    placeholder="Enter Manager ID"
+                    className="text-sm sm:text-base min-h-10 sm:min-h-11"
+                    data-testid="input-manager-id"
+                  />
+                </div>
+                <Button onClick={handleSearch} className="w-full sm:w-auto min-h-10 sm:min-h-11 text-sm sm:text-base" data-testid="button-search-manager">
+                  <Search className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  Search
+                </Button>
               </div>
-              <Button onClick={handleSearch} className="w-full sm:w-auto min-h-10 sm:min-h-11 text-sm sm:text-base" data-testid="button-search-manager">
-                <Search className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                Search
-              </Button>
+              
+              {searchedId && (
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-end border-t pt-4">
+                  <div className="flex-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+                      Start Gameweek
+                    </label>
+                    <Select 
+                      value={startGameweek?.toString() || ""} 
+                      onValueChange={(value) => {
+                        const newStart = parseInt(value);
+                        setStartGameweek(newStart);
+                        // Ensure end is not before start - update immediately
+                        if (endGameweek !== null && endGameweek < newStart) {
+                          setEndGameweek(newStart);
+                        } else if (endGameweek === null) {
+                          // If end not set, set it to start
+                          setEndGameweek(newStart);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="text-sm sm:text-base min-h-10 sm:min-h-11" data-testid="select-start-gameweek">
+                        <SelectValue placeholder="Select start GW" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableGameweeks().map(gw => (
+                          <SelectItem 
+                            key={gw} 
+                            value={gw.toString()}
+                            disabled={endGameweek !== null && gw > endGameweek}
+                          >
+                            GW {gw}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex-1">
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
+                      End Gameweek
+                    </label>
+                    <Select 
+                      value={endGameweek?.toString() || ""} 
+                      onValueChange={(value) => {
+                        const newEnd = parseInt(value);
+                        setEndGameweek(newEnd);
+                        // Ensure start is not after end - update immediately
+                        if (startGameweek !== null && startGameweek > newEnd) {
+                          setStartGameweek(newEnd);
+                        } else if (startGameweek === null) {
+                          // If start not set, set it to end
+                          setStartGameweek(newEnd);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="text-sm sm:text-base min-h-10 sm:min-h-11" data-testid="select-end-gameweek">
+                        <SelectValue placeholder="Select end GW" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getAvailableGameweeks().map(gw => (
+                          <SelectItem 
+                            key={gw} 
+                            value={gw.toString()}
+                            disabled={startGameweek !== null && gw < startGameweek}
+                          >
+                            GW {gw}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        const available = getAvailableGameweeks();
+                        if (available.length > 0) {
+                          setStartGameweek(available[0]);
+                          setEndGameweek(Math.min(available[0] + 5, available[available.length - 1]));
+                        }
+                      }}
+                      className="min-h-10 sm:min-h-11 text-xs sm:text-sm"
+                      data-testid="button-reset-6gw"
+                    >
+                      Reset to 6 GW
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
