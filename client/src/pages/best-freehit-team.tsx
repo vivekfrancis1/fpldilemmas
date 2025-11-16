@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus } from "lucide-react";
+import { Star, Trophy, Users, Zap, Shield, Crown, X, Plus, RefreshCw } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -107,19 +107,31 @@ export default function BestFreehitTeam() {
   const [excludePopoverOpen, setExcludePopoverOpen] = useState(false);
   const includeListRef = useRef<HTMLDivElement>(null);
   const excludeListRef = useRef<HTMLDivElement>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch live Player Total Points data for selected gameweek
-  const { data: liveData, isLoading, error } = useQuery({
-    queryKey: ['/api/player-total-points', selectedGameweek, selectedGameweek],
-    queryFn: async () => {
-      const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch total points: ${response.statusText}`);
-      }
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes for live data
+  // Fetch cached Player Total Points data (pre-computed for next 12 gameweeks) - 10-20x faster!
+  const { data: allCachedData, isLoading, error, refetch: refetchProjections } = useQuery({
+    queryKey: ['/api/cached/player-total-points'],
+    staleTime: 60 * 60 * 1000, // 1 hour cache
   });
+
+  // Filter cached data to selected gameweek (instant filtering, no need to refetch!)
+  const liveData = useMemo(() => {
+    if (!allCachedData) return allCachedData;
+    
+    // Filter each player's gameweek projections to only the selected gameweek
+    return allCachedData.map((player: any) => {
+      const originalProjections = player.gameweekProjections || {};
+      const gwKey = selectedGameweek.toString();
+      const points = originalProjections[gwKey] || 0;
+      
+      return {
+        ...player,
+        gameweekProjections: { [gwKey]: points },
+        totalExpectedPoints: points
+      };
+    });
+  }, [allCachedData, selectedGameweek]);
 
   const snapshots: PlayerSnapshot[] = liveData ? liveData.map((player: any) => ({
     playerId: player.playerId || 0,
@@ -150,6 +162,17 @@ export default function BestFreehitTeam() {
   useEffect(() => {
     setOptimalTeam(null);
   }, [selectedGameweek]);
+
+  // Refresh data handler
+  const handleRefreshData = async () => {
+    setIsRefreshing(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await refetchProjections();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Get gameweek options (dynamic range for freehit optimization - next 12 gameweeks)
   const getGameweekOptions = () => {
@@ -1115,10 +1138,25 @@ export default function BestFreehitTeam() {
       {/* Controls */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Team Optimization</CardTitle>
-          <CardDescription>
-            Select a gameweek to optimize your freehit team for maximum points
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Team Optimization</CardTitle>
+              <CardDescription>
+                Select a gameweek to optimize your freehit team for maximum points
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshData}
+              disabled={isRefreshing || isLoading}
+              className="shrink-0"
+              data-testid="button-refresh-freehit-data"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="ml-2 hidden sm:inline">Refresh</span>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Optimization Mode */}

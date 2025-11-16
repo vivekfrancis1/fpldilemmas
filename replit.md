@@ -33,7 +33,7 @@ Loading Experience: Enhanced loading screens implemented across all major slow-l
 - **API Design**: RESTful API endpoints prefixed with `/api/`.
 - **Data Fetching**: Proxy server for official FPL API data.
 - **Caching Strategy**: Database-backed projection caching with PostgreSQL.
-- **Performance Optimization**: Dedicated ProjectionService with intelligent caching. Cache-first architecture implemented across projection endpoints: `/api/cached/player-total-points` for pre-computed aggregated player data, `/api/cached/team-goal-projections` for team-level predictions. Team Optimizer, Player Total Points, Team Goal Projections, and Transfer Planner optimization features (Optimize GW, Optimize All GWs) all use cached endpoints for 10-20x faster loading times.
+- **Performance Optimization**: Dedicated ProjectionService with intelligent caching. Cache-first architecture implemented across projection endpoints: `/api/cached/player-total-points` for pre-computed aggregated player data, `/api/cached/team-goal-projections` for team-level predictions. Team Optimizer, Player Total Points, Team Goal Projections, My Team Projected Points, Best Wildcard Team, Best Free Hit Team, and Transfer Planner optimization features (Optimize GW, Optimize All GWs) all use cached endpoints with client-side filtering for 10-20x faster loading times. Best Free Hit Team additionally benefits from instant gameweek switching with no refetch required.
 
 ### Data Storage Solutions
 - **Primary Storage**: In-memory storage (Map and object caching).
