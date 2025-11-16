@@ -3377,7 +3377,6 @@ export default function TransferPlanner() {
         // CRITICAL: Deep clone to prevent shared references between drafts
         setGameweekTransfers(JSON.parse(JSON.stringify(draft.gameweekTransfers || {})));
         setPlannedChips(JSON.parse(JSON.stringify(draft.plannedChips || {}))); // Load planned chips
-        setPlannerMode(draft.mode);
         
         // Save captain/vice-captain info to be applied AFTER useEffect rebuilds lineup
         const captainInfo = {
