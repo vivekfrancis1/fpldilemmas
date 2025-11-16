@@ -2698,10 +2698,11 @@ export default function TransferPlanner() {
     setManualLineup(optimizedLineup);
 
     const captainPlayer = getPlayerById(optimizedLineup.find(p => p.is_captain)?.element || 0);
+    const formationName = bestFormation?.name || 'Unknown';
     
     toast({
       title: "Team Optimized!",
-      description: `${bestFormation.name} formation selected. Captain: ${captainPlayer?.web_name || 'TBD'}. ${(bestPoints + (sortedByPoints[0]?.points || 0)).toFixed(1)} projected pts.`
+      description: `${formationName} formation selected. Captain: ${captainPlayer?.web_name || 'TBD'}. ${(bestPoints + (sortedByPoints[0]?.points || 0)).toFixed(1)} projected pts.`
     });
 
     // If we were in Base, finalize the new draft
