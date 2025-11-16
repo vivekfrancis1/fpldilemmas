@@ -769,25 +769,15 @@ export default function PlayerTotalPoints() {
     enabled: startGameweek !== null && endGameweek !== null, // Only fetch when gameweek values are initialized
   });
 
-  // Data selection logic - API-first approach with cache fallback for reliability
+  // Data selection logic - Cache-first approach for faster loading
   const totalPointsData = useMemo(() => {
     let selectedData: PlayerTotalPointsData[] | null = null;
     
-    // PRIORITY 1: Use live API data if available and valid (ensures freshest data)
-    if (liveTotalPointsData && liveTotalPointsData.length > 0 && !liveError) {
-      const samplePlayer = liveTotalPointsData[0];
-      
-      // Simplified validation - just check for basic required fields
-      const hasValidLiveData = (samplePlayer.name || samplePlayer.playerName) && 
-        samplePlayer.totalExpectedPoints !== undefined;
-      
-      if (hasValidLiveData) {
-        selectedData = liveTotalPointsData;
-      }
-    }
+    // Check if user selected default range (next 12 GWs from current+1)
+    const isDefaultRange = startGameweek === nextGameweek && endGameweek === maxAvailableGW;
     
-    // PRIORITY 2: Fall back to cached data if live API fails, is loading, or has errors
-    if (!selectedData && cachedTotalPointsData && cachedTotalPointsData.length > 0) {
+    // PRIORITY 1: Use cached data if available and user is viewing default range (fast path)
+    if (isDefaultRange && cachedTotalPointsData && cachedTotalPointsData.length > 0) {
       const samplePlayer = cachedTotalPointsData[0];
       
       // Simplified validation - just check for basic required fields
@@ -796,6 +786,19 @@ export default function PlayerTotalPoints() {
       
       if (hasValidCachedData) {
         selectedData = cachedTotalPointsData;
+      }
+    }
+    
+    // PRIORITY 2: Use live API data for custom ranges or if cache unavailable
+    if (!selectedData && liveTotalPointsData && liveTotalPointsData.length > 0 && !liveError) {
+      const samplePlayer = liveTotalPointsData[0];
+      
+      // Simplified validation - just check for basic required fields
+      const hasValidLiveData = (samplePlayer.name || samplePlayer.playerName) && 
+        samplePlayer.totalExpectedPoints !== undefined;
+      
+      if (hasValidLiveData) {
+        selectedData = liveTotalPointsData;
       }
     }
     
@@ -812,21 +815,23 @@ export default function PlayerTotalPoints() {
     }
     
     return selectedData;
-  }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek, bootstrapData, currentGameweek]);
+  }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek, bootstrapData, currentGameweek, nextGameweek, maxAvailableGW]);
 
-  // Loading state - API-first loading logic: show loading primarily for live API, fallback to cached loading
+  // Loading state - Cache-first loading logic: show loading for cache, then live API if needed
   const isLoading = useMemo(() => {
-    // PRIORITY 1: Show loading while live API is loading (our primary data source)
-    if (liveLoading) return true;
+    const isDefaultRange = startGameweek === nextGameweek && endGameweek === maxAvailableGW;
     
-    // PRIORITY 2: If live API failed or is unavailable, show loading while cached data loads
-    if ((liveError || !liveTotalPointsData) && cachedLoading) return true;
+    // PRIORITY 1: For default range, show loading while cache loads
+    if (isDefaultRange && cachedLoading) return true;
+    
+    // PRIORITY 2: For custom ranges, show loading while live API loads
+    if (!isDefaultRange && liveLoading) return true;
     
     // PRIORITY 3: Show loading if neither data source is available yet
     if (!liveTotalPointsData && !cachedTotalPointsData && !liveError && !cachedError) return true;
     
     return false;
-  }, [liveLoading, liveError, liveTotalPointsData, cachedLoading, cachedTotalPointsData, cachedError]);
+  }, [liveLoading, liveError, liveTotalPointsData, cachedLoading, cachedTotalPointsData, cachedError, startGameweek, endGameweek, nextGameweek, maxAvailableGW]);
 
   // Error handling - API-first: prioritize live API errors, only show cached errors if live API succeeds
   const error = useMemo(() => {
