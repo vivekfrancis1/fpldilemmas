@@ -2252,15 +2252,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Free transfers calculated for next planning GW: ${freeTransfers}`);
       
-      // Calculate the range of gameweeks to analyze (next 12 gameweeks)
+      // Calculate the range of gameweeks for projections (next 12 gameweeks)
       // If current GW is finished, start from next GW
       // If current GW is not finished (between GWs), start from current GW (it's the next one to play)
       const planningStart = isCurrentGWFinished 
         ? Math.min(currentGameweek + 1, 38)
         : Math.min(currentGameweek, 38);
-      const planningEnd = Math.min(planningStart + 11, 38);
+      const planningEnd = Math.min(planningStart + 11, 38); // 12 gameweeks for projection calculations
       
-      console.log(`DEBUG: Gameweek range - currentGW: ${currentGameweek}, finished: ${isCurrentGWFinished}, planningStart: ${planningStart}, planningEnd: ${planningEnd} (12 gameweeks)`);
+      // Only show recommendations for next 6 gameweeks, but calculate points gain based on all 12
+      const recommendationEnd = Math.min(planningStart + 5, 38); // 6 gameweeks for recommendations display
+      
+      console.log(`DEBUG: Gameweek range - currentGW: ${currentGameweek}, finished: ${isCurrentGWFinished}, planningStart: ${planningStart}, recommendationEnd: ${recommendationEnd} (6 GWs shown), planningEnd: ${planningEnd} (12 GWs for calculations)`);
       
       // If we're at the end of the season
       if (planningStart > 38 || planningStart > planningEnd) {
@@ -2282,7 +2285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         elementType: elementsByPlayerId.get(pick.element)?.element_type
       }));
       
-      // Calculate recommendations for each target gameweek
+      // Calculate recommendations for each target gameweek (only for first 6 GWs)
       const recommendationsByGameweek: any = {};
       const executedTransfers: any[] = []; // Track primary transfers that have been executed
       
@@ -2292,9 +2295,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Track running free transfers across gameweeks with banking logic (max 5 in 2024/25)
       let runningFreeTransfers = freeTransfers;
       
-      console.log(`DEBUG: Calculating recommendations from GW${planningStart} to GW${planningEnd}`);
+      console.log(`DEBUG: Calculating recommendations from GW${planningStart} to GW${recommendationEnd} (showing 6 GWs, using 12 GWs for point calculations)`);
       
-      for (let targetGW = planningStart; targetGW <= planningEnd; targetGW++) {
+      for (let targetGW = planningStart; targetGW <= recommendationEnd; targetGW++) {
         console.log(`DEBUG: Processing GW${targetGW}...`);
         
         // Use the running free transfers count for this gameweek
