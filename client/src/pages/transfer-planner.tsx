@@ -13,6 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { applyAvailabilityAdjustments, AFCON_PLAYERS } from "@/lib/availability-adjustments";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -88,113 +89,6 @@ function PlayerAvailabilityBadge({ player }: { player: any }) {
       </TooltipContent>
     </Tooltip>
   );
-}
-
-// Availability Adjustment Helpers for Frontend
-function parseReturnDate(newsText: string): Date | null {
-  if (!newsText) return null;
-  
-  const patterns = [
-    /(?:expected back|return date|due back|back|suspended until)\s+(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
-    /(?:until|after)\s+(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
-  ];
-  
-  const monthMap: { [key: string]: number } = {
-    jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-    jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
-  };
-  
-  for (const pattern of patterns) {
-    const match = newsText.match(pattern);
-    if (match) {
-      const day = parseInt(match[1]);
-      const monthStr = match[2].toLowerCase();
-      const month = monthMap[monthStr];
-      
-      if (month !== undefined) {
-        const currentYear = new Date().getFullYear();
-        const date = new Date(currentYear, month, day);
-        
-        if (date < new Date()) {
-          date.setFullYear(currentYear + 1);
-        }
-        
-        return date;
-      }
-    }
-  }
-  
-  return null;
-}
-
-function getGameweekFromDate(date: Date, bootstrapData: any): number | null {
-  if (!bootstrapData?.events) return null;
-  
-  const sortedEvents = bootstrapData.events.sort((a: any, b: any) => a.id - b.id);
-  
-  for (const event of sortedEvents) {
-    const deadlineDate = new Date(event.deadline_time);
-    const gameweekEnd = new Date(deadlineDate.getTime() + 24 * 60 * 60 * 1000);
-    
-    if (date <= gameweekEnd) {
-      return event.id;
-    }
-  }
-  
-  const lastEvent = sortedEvents[sortedEvents.length - 1];
-  if (lastEvent) {
-    return lastEvent.id;
-  }
-  
-  return null;
-}
-
-function applyAvailabilityAdjustments(
-  player: any,
-  bootstrapData: any,
-  currentGameweek: number
-): any {
-  const chanceOfPlaying = player.chanceOfPlayingNextRound ?? 100;
-  const status = player.status || 'a';
-  const news = player.news || '';
-  
-  if (chanceOfPlaying >= 100 && status === 'a') {
-    return player;
-  }
-  
-  const adjustedPlayer = { ...player };
-  const adjustedProjections = { ...player.gameweekProjections };
-  const originalProjections = { ...player.gameweekProjections };
-  
-  if (chanceOfPlaying === 0) {
-    const returnDate = parseReturnDate(news);
-    
-    if (returnDate) {
-      const returnGameweek = getGameweekFromDate(returnDate, bootstrapData);
-      
-      Object.keys(adjustedProjections).forEach(gwKey => {
-        const gw = parseInt(gwKey);
-        if (returnGameweek && gw < returnGameweek) {
-          adjustedProjections[gwKey] = 0;
-        }
-      });
-    } else {
-      Object.keys(adjustedProjections).forEach(gwKey => {
-        adjustedProjections[gwKey] = 0;
-      });
-    }
-  } else if (chanceOfPlaying === 25 || chanceOfPlaying === 50 || chanceOfPlaying === 75) {
-    const nextGameweek = (currentGameweek + 1).toString();
-    if (adjustedProjections[nextGameweek] !== undefined) {
-      const multiplier = chanceOfPlaying / 100;
-      adjustedProjections[nextGameweek] = adjustedProjections[nextGameweek] * multiplier;
-    }
-  }
-  
-  adjustedPlayer.gameweekProjections = adjustedProjections;
-  adjustedPlayer.originalGameweekProjections = originalProjections;
-  
-  return adjustedPlayer;
 }
 
 interface TeamPick {
