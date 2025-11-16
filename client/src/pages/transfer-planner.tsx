@@ -151,28 +151,6 @@ interface BootstrapData {
   }>;
 }
 
-interface OptimizedLineup {
-  formation: string;
-  starting11: Array<{
-    element: number;
-    position: number;
-    projectedPoints: number;
-    web_name: string;
-    isCaptain: boolean;
-    isViceCaptain: boolean;
-  }>;
-  bench: Array<{
-    element: number;
-    position: number;
-    projectedPoints: number;
-    web_name: string;
-    benchPosition: number;
-  }>;
-  totalProjectedPoints: number;
-  captainProjectedPoints: number;
-  gameweek: number;
-}
-
 interface PlayerProjectionData {
   playerId: number;
   name: string;
@@ -1091,7 +1069,7 @@ export default function TransferPlanner() {
     return baseline;
   };
 
-  // Initialize manual lineup when team data loads (only on first load or manager change)
+  // Initialize team lineup when team data loads (only on first load or manager change)
   useEffect(() => {
     if (teamData?.picks && searchedId && initializedManagerRef.current !== searchedId) {
       console.log("DEBUG: Initializing team for manager:", searchedId);
@@ -2203,79 +2181,6 @@ export default function TransferPlanner() {
     return totalPoints;
   };
 
-  // Calculate auto mode points for a draft at a specific gameweek
-  const calculateAutoPointsForGameweek = (squad: TeamPick[], gameweek: number, projections6GW: any[], chipForGameweek?: ChipType | null): number => {
-    if (!projections6GW || !Array.isArray(projections6GW)) return 0;
-    
-    const isBenchBoostActive = chipForGameweek === 'bboost';
-    const isTripleCaptainActive = chipForGameweek === '3xc';
-    
-    // Get all 15 players with their projections for this gameweek
-    const playersWithPoints = squad.map(pick => {
-      const player = getPlayerById(pick.element);
-      const playerData = projections6GW.find((p: any) => p.playerId === pick.element);
-      const gwPoints = playerData?.gameweekProjections?.[gameweek.toString()] || 0;
-      
-      return {
-        element: pick.element,
-        position: player?.element_type || 0,
-        projectedPoints: gwPoints
-      };
-    });
-    
-    if (isBenchBoostActive) {
-      // With Bench Boost, all 15 players score
-      const allPlayersPoints = playersWithPoints.reduce((sum, p) => sum + p.projectedPoints, 0);
-      // Add captain bonus (best player gets 2x normally, 3x with Triple Captain)
-      const captain = playersWithPoints.reduce((best, p) => p.projectedPoints > best.projectedPoints ? p : best, playersWithPoints[0]);
-      const captainBonus = isTripleCaptainActive ? (captain?.projectedPoints || 0) * 2 : (captain?.projectedPoints || 0);
-      return allPlayersPoints + captainBonus;
-    }
-    
-    // Normal auto mode: optimize formation
-    // Group by position and sort by points
-    const gkps = playersWithPoints.filter(p => p.position === 1).sort((a, b) => b.projectedPoints - a.projectedPoints);
-    const defs = playersWithPoints.filter(p => p.position === 2).sort((a, b) => b.projectedPoints - a.projectedPoints);
-    const mids = playersWithPoints.filter(p => p.position === 3).sort((a, b) => b.projectedPoints - a.projectedPoints);
-    const fwds = playersWithPoints.filter(p => p.position === 4).sort((a, b) => b.projectedPoints - a.projectedPoints);
-    
-    // Try all valid formations and find best for this gameweek
-    const validFormations = [
-      { def: 3, mid: 4, fwd: 3 }, { def: 3, mid: 5, fwd: 2 },
-      { def: 4, mid: 3, fwd: 3 }, { def: 4, mid: 4, fwd: 2 },
-      { def: 4, mid: 5, fwd: 1 }, { def: 5, mid: 3, fwd: 2 },
-      { def: 5, mid: 4, fwd: 1 }, { def: 5, mid: 2, fwd: 3 }
-    ];
-    
-    let bestPoints = 0;
-    validFormations.forEach(formation => {
-      if (defs.length >= formation.def && mids.length >= formation.mid && fwds.length >= formation.fwd) {
-        const selected = [
-          gkps[0],
-          ...defs.slice(0, formation.def),
-          ...mids.slice(0, formation.mid),
-          ...fwds.slice(0, formation.fwd)
-        ];
-        
-        const formationPoints = selected.reduce((sum, p) => sum + (p?.projectedPoints || 0), 0);
-        
-        // Find captain (highest points in starting 11)
-        const captain = selected.slice(1).reduce((max, p) => 
-          (p?.projectedPoints || 0) > (max?.projectedPoints || 0) ? p : max
-        , selected[1]);
-        
-        // Captain bonus: 1x normally (for 2x total), 2x with Triple Captain (for 3x total)
-        const captainBonus = isTripleCaptainActive ? (captain?.projectedPoints || 0) * 2 : (captain?.projectedPoints || 0);
-        const totalWithCaptain = formationPoints + captainBonus;
-        
-        if (totalWithCaptain > bestPoints) {
-          bestPoints = totalWithCaptain;
-        }
-      }
-    });
-    
-    return bestPoints;
-  };
 
   // Compute a canonical signature for a draft to detect duplicates
   // Signature includes: squad composition at each GW, captain/vice, transfers, and planned chips
@@ -2373,7 +2278,7 @@ export default function TransferPlanner() {
     return duplicates;
   };
 
-  // Build comparison data for all drafts with both Manual and Auto modes (excludes Base draft)
+  // Build comparison data for all drafts (excludes Base draft)
   const buildDraftComparisonData = () => {
     if (!teamData?.picks || !playerProjections6GW) return [];
     
@@ -2382,17 +2287,17 @@ export default function TransferPlanner() {
     
     const comparisonRows: any[] = [];
     
-    // All saved drafts - both Manual and Auto modes
+    // All saved drafts
     savedDrafts.forEach(draft => {
       // Always use the saved gameweekTransfers from database for accurate comparison
       // This ensures each draft shows its own saved transfers, not mixed with current editing state
       const draftTransfers = draft.gameweekTransfers || {};
       const draftChips = draft.plannedChips || {};
       
-      // Manual mode row
-      const draftManualRow = {
+      // Draft row
+      const draftRow = {
         draftKey: draft.draftLetter,
-        mode: 'Manual lineup',
+        mode: 'Team Selection',
         gameweeks: {} as Record<number, number>,
         total: 0
       };
@@ -2411,27 +2316,10 @@ export default function TransferPlanner() {
         
         const chipForGW = draftChips[gw.id] || draftChips[gw.id.toString()] || null;
         const points = calculateManualPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
-        draftManualRow.gameweeks[gw.id] = points;
-        draftManualRow.total += points;
+        draftRow.gameweeks[gw.id] = points;
+        draftRow.total += points;
       });
-      comparisonRows.push(draftManualRow);
-      
-      // Auto mode row
-      const draftAutoRow = {
-        draftKey: draft.draftLetter,
-        mode: 'Auto lineup',
-        gameweeks: {} as Record<number, number>,
-        total: 0
-      };
-      
-      nextGWs.forEach(gw => {
-        const squad = getSquadAtGameweek(draftTransfers, gw.id);
-        const chipForGW = draftChips[gw.id] || draftChips[gw.id.toString()] || null;
-        const points = calculateAutoPointsForGameweek(squad, gw.id, playerProjections6GW, chipForGW);
-        draftAutoRow.gameweeks[gw.id] = points;
-        draftAutoRow.total += points;
-      });
-      comparisonRows.push(draftAutoRow);
+      comparisonRows.push(draftRow);
     });
     
     return comparisonRows;
@@ -4649,14 +4537,14 @@ export default function TransferPlanner() {
         </Card>
       )}
 
-      {/* Manual Selection Section */}
+      {/* Team Selection Section */}
       {searchedId && teamData && selectedGameweek && (
         <Card ref={teamLineupRef} className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-600" />
-                {activeDraft === "Base" ? "Team Selection - Base Draft (Manual lineup)" : `Team Selection - Draft ${activeDraft} (Manual lineup)`}
+                {activeDraft === "Base" ? "Team Selection - Base Draft" : `Team Selection - Draft ${activeDraft}`}
               </div>
               {(() => {
                 const currentChip = plannedChips[selectedGameweek];
@@ -6065,30 +5953,11 @@ export default function TransferPlanner() {
                 <div className="flex gap-1">
                   <Button
                     size="sm"
-                    variant={comparisonFilter === "all" ? "default" : "outline"}
-                    onClick={() => setComparisonFilter("all")}
+                    variant="default"
                     className="h-7 px-3 text-xs"
                     data-testid="filter-all"
                   >
-                    All Lineups
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={comparisonFilter === "manual" ? "default" : "outline"}
-                    onClick={() => setComparisonFilter("manual")}
-                    className="h-7 px-3 text-xs"
-                    data-testid="filter-manual"
-                  >
-                    Manual Only
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={comparisonFilter === "auto" ? "default" : "outline"}
-                    onClick={() => setComparisonFilter("auto")}
-                    className="h-7 px-3 text-xs"
-                    data-testid="filter-auto"
-                  >
-                    Auto Only
+                    All Drafts
                   </Button>
                 </div>
               </div>
@@ -6104,13 +5973,8 @@ export default function TransferPlanner() {
                 return <p className="text-muted-foreground text-sm">No comparison data available</p>;
               }
               
-              // Filter comparison data based on selected filter
-              const filteredComparisonData = comparisonData.filter(row => {
-                if (comparisonFilter === "all") return true;
-                if (comparisonFilter === "manual") return row.mode === "Manual lineup";
-                if (comparisonFilter === "auto") return row.mode === "Auto lineup";
-                return true;
-              });
+              // Show all comparison data
+              const filteredComparisonData = comparisonData;
               
               // Find the maximum total points from filtered data
               const maxTotal = filteredComparisonData.length > 0 
@@ -6139,29 +6003,21 @@ export default function TransferPlanner() {
                     <tbody>
                       {filteredComparisonData.map((row, idx) => {
                         const isMaxTotal = row.total === maxTotal;
-                        const isDuplicate = row.mode === 'Manual lineup' && duplicateInfo[row.draftKey]?.isDuplicate;
+                        const isDuplicate = duplicateInfo[row.draftKey]?.isDuplicate;
                         const duplicateOf = duplicateInfo[row.draftKey]?.duplicateOfKey;
                         
                         return (
                           <tr 
                             key={`${row.draftKey}-${row.mode}`} 
                             className={`border-b hover:bg-gray-50 dark:hover:bg-gray-900 ${
-                              row.draftKey === activeDraft && row.mode === 'Manual lineup' ? 'bg-blue-50 dark:bg-blue-950/10' : 
-                              row.mode === 'Auto lineup' ? 'bg-purple-50/30 dark:bg-purple-950/10' : ''
+                              row.draftKey === activeDraft ? 'bg-blue-50 dark:bg-blue-950/10' : ''
                             }`}
                             data-testid={`row-${row.draftKey}-${row.mode.toLowerCase()}`}
                           >
                             <td className="p-2 font-medium" data-testid={`cell-draft-${row.draftKey}`}>
                               <div className="flex items-center gap-2">
                                 <span>{row.draftKey}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded ${
-                                  row.mode === 'Manual lineup' 
-                                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' 
-                                    : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
-                                }`}>
-                                  {row.mode}
-                                </span>
-                                {row.draftKey === activeDraft && row.mode === 'Manual lineup' && <span className="text-blue-600">●</span>}
+                                {row.draftKey === activeDraft && <span className="text-blue-600">●</span>}
                                 {isMaxTotal && (
                                   <Badge 
                                     variant="default" 
