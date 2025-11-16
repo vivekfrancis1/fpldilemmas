@@ -2009,39 +2009,78 @@ export default function TransferPlanner() {
     const currentGW = currentEvent?.id || 1;
     const firstPlanningGW = currentGW + 1;
     
-    // For the first gameweek in planning, calculate based on historical transfer accumulation (NEW 2024/25 RULE: Max 5 FTs)
-    if (selectedGameweek === firstPlanningGW) {
-      // Start with 1 FT and look back through history to count accumulated unused transfers
+    // Calculate initial FTs for the first planning gameweek using history (mirroring backend logic)
+    let currentInitial = 1; // Start with base 1 FT
+    
+    if (historyData?.current && historyData.current.length > 0) {
+      // Look back through recent gameweeks to calculate accumulated FTs
       let accumulatedFTs = 1;
+      for (let i = historyData.current.length - 1; i >= Math.max(0, historyData.current.length - 4); i--) {
+        const gw = historyData.current[i];
+        const gwEvent = gw.event;
+        const transfersMade = gw.event_transfers || 0;
+        
+        // Check if a chip was used in this gameweek
+        const chipUsed = historyData.chips?.find((c: any) => c.event === gwEvent);
+        const isFreeHitOrWildcard = chipUsed?.name === 'freehit' || chipUsed?.name === 'wildcard';
+        
+        if (isFreeHitOrWildcard) {
+          // Free Hit or Wildcard: stop looking back (don't bank this week, but keep earlier banking intact)
+          break;
+        } else if (transfersMade === 0 && accumulatedFTs < 5) {
+          // No transfers made: bank 1 FT
+          accumulatedFTs++;
+        } else if (transfersMade > 0) {
+          // Transfers were made: stop looking back
+          break;
+        }
+      }
+      currentInitial = Math.min(5, accumulatedFTs);
+    }
+    
+    // If firstPlanningGW > 16, simulate banking from GW16 through intervening gameweeks
+    // using ACTUAL historical transfer data to get the correct starting FTs
+    if (firstPlanningGW > 16 && historyData?.current) {
+      // Start with 5 FTs at GW16 (AFCON top-up)
+      let runningFTs = 5;
       
-      if (historyData?.current && historyData.current.length > 0) {
-        // Look back through recent gameweeks to calculate accumulated FTs
-        // Start from the current/most recent GW and work backwards (up to 4 previous GWs since max is 5 FTs)
-        for (let i = historyData.current.length - 1; i >= Math.max(0, historyData.current.length - 4); i--) {
-          const gw = historyData.current[i];
-          const transfersMade = gw.event_transfers || 0;
+      // Simulate banking from GW16 to firstPlanningGW using historical data
+      for (let gw = 16; gw < firstPlanningGW; gw++) {
+        // Check if any chip was used in this gameweek
+        const chipUsedThisGW = historyData.chips?.find((c: any) => c.event === gw);
+        const isFreeHitGW = chipUsedThisGW?.name === 'freehit';
+        const isWildcardGW = chipUsedThisGW?.name === 'wildcard';
+        
+        if (isFreeHitGW) {
+          // Free Hit: FTs remain unchanged (no rollover)
+          continue;
+        } else if (isWildcardGW) {
+          // Wildcard: FTs reset to 1 for next gameweek
+          runningFTs = 1;
+        } else {
+          // Normal banking: get actual transfers from history
+          const gwHistory = historyData.current.find((h: any) => h.event === gw);
+          const transfersUsed = gwHistory?.event_transfers || 0;
           
-          if (transfersMade === 0 && accumulatedFTs < 5) {
-            // No transfers made, so 1 FT was banked
-            accumulatedFTs++;
-          } else if (transfersMade > 0) {
-            // Transfers were made, stop looking back
-            break;
-          }
+          // Apply banking logic
+          const remaining = runningFTs - transfersUsed;
+          runningFTs = Math.max(1, Math.min(5, 1 + remaining));
         }
       }
       
-      return Math.min(5, accumulatedFTs); // Cap at 5
+      currentInitial = runningFTs;
     }
     
-    // For subsequent gameweeks: Initial for GW_N = max(1, min(5, 1 + Transfers remaining for GW_(N-1)))
-    // Where Transfers remaining = Initial - Used
-    // EXCEPTIONS:
-    // - Free Hit gameweeks don't affect rollover (transfers don't carry over)
-    // - Wildcard gameweeks: you don't get +1 FT for that GW, but existing FTs carry through
-    // - Maximum of 5 free transfers can be banked
-    let currentInitial = teamData.transfers.limit || 1;
+    // Early return if we're viewing the first planning gameweek
+    if (selectedGameweek === firstPlanningGW) {
+      // Special case: if first planning GW is 16, apply AFCON top-up
+      if (firstPlanningGW === 16) {
+        return 5;
+      }
+      return currentInitial;
+    }
     
+    // For subsequent gameweeks: loop through and apply banking logic
     for (let gw = firstPlanningGW; gw < selectedGameweek; gw++) {
       // Check for chips that affect transfer banking
       const isFreeHitGW = plannedChips[gw] === 'freehit';
