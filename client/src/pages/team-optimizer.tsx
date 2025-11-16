@@ -1204,21 +1204,23 @@ export default function TeamOptimizer() {
             });
           }
           if (recommendations.freehit1) {
+            const gain = recommendations.freehit1.freeHitPoints - recommendations.freehit1.normalPoints;
             chipList.push({
               type: 'freehit',
               name: 'Free Hit 1',
               gw: recommendations.freehit1.gw,
               color: 'blue',
-              display: `GW${recommendations.freehit1.gw} (Normal: ${recommendations.freehit1.normalPoints.toFixed(1)} | FH: ${recommendations.freehit1.freeHitPoints.toFixed(1)})`
+              display: `GW${recommendations.freehit1.gw} (+${gain.toFixed(1)} pts)`
             });
           }
           if (recommendations.freehit2) {
+            const gain = recommendations.freehit2.freeHitPoints - recommendations.freehit2.normalPoints;
             chipList.push({
               type: 'freehit',
               name: 'Free Hit 2',
               gw: recommendations.freehit2.gw,
               color: 'blue',
-              display: `GW${recommendations.freehit2.gw} (Normal: ${recommendations.freehit2.normalPoints.toFixed(1)} | FH: ${recommendations.freehit2.freeHitPoints.toFixed(1)})`
+              display: `GW${recommendations.freehit2.gw} (+${gain.toFixed(1)} pts)`
             });
           }
 
