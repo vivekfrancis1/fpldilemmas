@@ -1057,6 +1057,59 @@ export default function TeamOptimizer() {
           </CardContent>
         </Card>
 
+        {/* Points by Gameweek */}
+        {!isOptimizing && optimizedLineups.size > 0 && nextGameweeks.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg">
+                <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
+                <span className="truncate">Points by Gameweek</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                {nextGameweeks.map(gw => {
+                  const gwLineup = optimizedLineups.get(gw.id);
+                  let gwTotal = 0;
+                  let formation = '';
+                  
+                  if (gwLineup?.starting11) {
+                    gwLineup.starting11.forEach((pick: any) => {
+                      const points = pick.projectedPoints || 0;
+                      const multiplier = pick.isCaptain ? 2 : 1;
+                      gwTotal += points * multiplier;
+                    });
+                    formation = calculateFormation(gwLineup.starting11);
+                  }
+
+                  return (
+                    <Card 
+                      key={gw.id} 
+                      className={`cursor-pointer transition-all min-h-[90px] sm:min-h-[100px] ${
+                        selectedGameweek === gw.id 
+                          ? 'ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-950' 
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-900'
+                      }`}
+                      onClick={() => setSelectedGameweek(gw.id)}
+                      data-testid={`card-gameweek-${gw.id}`}
+                    >
+                      <CardContent className="p-2 sm:p-3 text-center flex flex-col justify-center h-full">
+                        <div className="text-[10px] sm:text-xs font-medium text-gray-600 dark:text-gray-400 mb-0.5 sm:mb-1">GW{gw.id}</div>
+                        <div className="text-base sm:text-lg md:text-xl font-bold text-purple-600 dark:text-purple-400 mb-0.5 sm:mb-1">{gwTotal.toFixed(1)}</div>
+                        {formation && (
+                          <div className="text-[9px] sm:text-[10px] font-medium text-gray-500 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">
+                            {formation}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Gameweek Selector */}
         {nextGameweeks.length > 0 && (
           <Card>
