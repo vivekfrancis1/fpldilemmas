@@ -204,12 +204,12 @@ export default function ProjectedPoints() {
     }
   };
 
-  // Load cached manager ID on component mount (but don't auto-search)
+  // Auto-load cached manager ID on component mount
   useEffect(() => {
     const cachedId = getManagerIdFromCache();
     if (cachedId) {
       setManagerId(cachedId);
-      // Don't auto-search - let user click "Search" or "Load Last Manager"
+      setSearchedId(cachedId); // Auto-trigger data loading
     }
   }, []);
 

@@ -260,12 +260,12 @@ export default function MyDashboard() {
     }
   };
 
-  // Load cached manager ID on component mount (but don't auto-search)
+  // Auto-load cached manager ID on component mount
   useEffect(() => {
     const cachedId = getManagerIdFromCache();
     if (cachedId) {
       setManagerId(cachedId);
-      // Don't auto-search - let user click "Search" or "Load Last Manager"
+      setSearchedId(cachedId); // Auto-trigger data loading
     }
   }, []);
 
@@ -658,22 +658,6 @@ export default function MyDashboard() {
                     <Search className="h-4 w-4 mr-2" />
                     {isLoading ? "Searching..." : "Search Manager"}
                   </Button>
-                  {getManagerIdFromCache() && !searchedId && !isLoading && (
-                    <Button 
-                      onClick={() => {
-                        const cachedId = getManagerIdFromCache();
-                        if (cachedId) {
-                          setManagerId(cachedId);
-                        }
-                      }}
-                      variant="outline"
-                      className="w-full sm:w-auto" 
-                      data-testid="button-load-last-manager"
-                    >
-                      <TrendingUp className="h-4 w-4 mr-2" />
-                      Load Last Manager
-                    </Button>
-                  )}
                   <FplConnectDialog />
                 </div>
               </div>
