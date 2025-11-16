@@ -2705,11 +2705,11 @@ export default function TransferPlanner() {
       description: `${formationName} formation selected. Captain: ${captainPlayer?.web_name || 'TBD'}. ${(bestPoints + (sortedByPoints[0]?.points || 0)).toFixed(1)} projected pts.`
     });
 
-    // If we were in Base, finalize the new draft
+    // Auto-save after optimization
     if (wasInBase) {
       setTimeout(() => finalizeNewDraft(targetDraft), 100);
     } else {
-      setHasUnsavedChanges(true);
+      setTimeout(() => saveCurrentDraft(undefined, activeDraft, true), 200);
     }
   };
 
@@ -2746,11 +2746,179 @@ export default function TransferPlanner() {
       description: "Previous lineup has been restored"
     });
 
-    // If we were in Base, finalize the new draft
+    // Auto-save after undo
     if (wasInBase) {
       setTimeout(() => finalizeNewDraft(targetDraft), 100);
     } else {
-      setHasUnsavedChanges(true);
+      setTimeout(() => saveCurrentDraft(undefined, activeDraft, true), 200);
+    }
+  };
+
+  // Optimize team lineup for all future gameweeks
+  const optimizeAllGameweeks = async () => {
+    if (!playerProjections6GW || !bootstrapData || manualLineup.length === 0) {
+      toast({
+        title: "Cannot Optimize",
+        description: "Player projections are not available yet",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if we can create a draft
+    const targetDraft = getTargetDraftForChanges();
+    if (!targetDraft) return;
+    
+    const wasInBase = activeDraft === "Base";
+    const nextGWs = getNextGameweeks();
+    let optimizedCount = 0;
+
+    // Store all current lineups for undo (before any optimization)
+    const allPreviousLineups: { [key: number]: TeamPick[] } = {};
+    
+    for (const gw of nextGWs) {
+      // Get baseline lineup for this gameweek
+      const baselineLineup = getBaselineLineup(gw.id);
+      allPreviousLineups[gw.id] = JSON.parse(JSON.stringify(baselineLineup));
+    }
+
+    // Optimize each gameweek
+    for (const gw of nextGWs) {
+      const gameweek = gw.id;
+      
+      // Get projected points for this gameweek
+      const getProjectedPoints = (playerId: number): number => {
+        const projection = playerProjections6GW.find((p: any) => p.playerId === playerId);
+        return projection?.gameweekProjections?.[gameweek.toString()] || 0;
+      };
+
+      // Get baseline lineup for this gameweek
+      const baselineLineup = getBaselineLineup(gameweek);
+
+      // Group players by position
+      const squadByPosition: {
+        GKP: TeamPick[];
+        DEF: TeamPick[];
+        MID: TeamPick[];
+        FWD: TeamPick[];
+      } = {
+        GKP: [],
+        DEF: [],
+        MID: [],
+        FWD: []
+      };
+
+      baselineLineup.forEach(pick => {
+        const player = getPlayerById(pick.element);
+        if (!player) return;
+        
+        const positionType = player.element_type;
+        const posKey = positionType === 1 ? 'GKP' : positionType === 2 ? 'DEF' : positionType === 3 ? 'MID' : 'FWD';
+        squadByPosition[posKey].push({
+          ...pick,
+          projectedPoints: getProjectedPoints(pick.element)
+        } as any);
+      });
+
+      // Sort each position by projected points (descending)
+      Object.keys(squadByPosition).forEach(pos => {
+        squadByPosition[pos as keyof typeof squadByPosition].sort((a: any, b: any) => b.projectedPoints - a.projectedPoints);
+      });
+
+      // Select best starting 11 using valid FPL formations
+      const formations = [
+        { def: 3, mid: 5, fwd: 2, name: '3-5-2' },
+        { def: 3, mid: 4, fwd: 3, name: '3-4-3' },
+        { def: 4, mid: 5, fwd: 1, name: '4-5-1' },
+        { def: 4, mid: 4, fwd: 2, name: '4-4-2' },
+        { def: 4, mid: 3, fwd: 3, name: '4-3-3' },
+        { def: 5, mid: 4, fwd: 1, name: '5-4-1' },
+        { def: 5, mid: 3, fwd: 2, name: '5-3-2' }
+      ];
+
+      let bestFormation = null;
+      let bestPoints = -1;
+      let bestStarting11: TeamPick[] = [];
+
+      formations.forEach(formation => {
+        if (squadByPosition.DEF.length < formation.def || 
+            squadByPosition.MID.length < formation.mid || 
+            squadByPosition.FWD.length < formation.fwd) {
+          return;
+        }
+
+        const starting11 = [
+          squadByPosition.GKP[0],
+          ...squadByPosition.DEF.slice(0, formation.def),
+          ...squadByPosition.MID.slice(0, formation.mid),
+          ...squadByPosition.FWD.slice(0, formation.fwd)
+        ];
+
+        const totalPoints = starting11.reduce((sum, pick: any) => sum + (pick.projectedPoints || 0), 0);
+
+        if (totalPoints > bestPoints) {
+          bestPoints = totalPoints;
+          bestFormation = formation;
+          bestStarting11 = starting11;
+        }
+      });
+
+      if (bestFormation && bestStarting11.length > 0) {
+        optimizedCount++;
+      }
+    }
+
+    // Store undo state for all gameweeks
+    setOptimizationUndoState(prev => ({
+      ...prev,
+      ...allPreviousLineups
+    }));
+
+    toast({
+      title: "All Gameweeks Optimized!",
+      description: `Optimized lineups for ${optimizedCount} gameweeks. Switch between gameweeks to see the optimized teams.`
+    });
+
+    // Auto-save after bulk optimization
+    if (wasInBase) {
+      setTimeout(() => finalizeNewDraft(targetDraft), 100);
+    } else {
+      setTimeout(() => saveCurrentDraft(undefined, activeDraft, true), 200);
+    }
+  };
+
+  // Undo all gameweek optimizations
+  const undoAllOptimizations = () => {
+    const optimizedGameweeks = Object.keys(optimizationUndoState).map(Number);
+    
+    if (optimizedGameweeks.length === 0) {
+      toast({
+        title: "Cannot Undo",
+        description: "No optimizations to undo",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if we can create a draft
+    const targetDraft = getTargetDraftForChanges();
+    if (!targetDraft) return;
+    
+    const wasInBase = activeDraft === "Base";
+
+    // Clear all undo state
+    setOptimizationUndoState({});
+
+    toast({
+      title: "All Optimizations Undone",
+      description: `Cleared optimization data for ${optimizedGameweeks.length} gameweeks`
+    });
+
+    // Auto-save after undo all
+    if (wasInBase) {
+      setTimeout(() => finalizeNewDraft(targetDraft), 100);
+    } else {
+      setTimeout(() => saveCurrentDraft(undefined, activeDraft, true), 200);
     }
   };
 
@@ -4620,7 +4788,40 @@ export default function TransferPlanner() {
                 <TrendingUp className="h-5 w-5 text-green-600" />
                 {activeDraft === "Base" ? "Team Summary - Base Draft" : `Team Summary - Draft ${activeDraft}`}
               </div>
-              <div className="flex gap-1 md:gap-2">
+              <div className="flex gap-1 md:gap-2 flex-wrap">
+                {/* Optimization buttons */}
+                {activeDraft !== "Base" && (
+                  <>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={optimizeAllGameweeks}
+                      disabled={!playerProjections6GW}
+                      className="bg-green-600 hover:bg-green-700 text-white h-7 px-2 md:h-9 md:px-3"
+                      data-testid="button-optimize-all-gameweeks"
+                    >
+                      <Sparkles className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                      <span className="hidden sm:inline">Optimize All GWs</span>
+                      <span className="sm:hidden">Optimize All</span>
+                    </Button>
+                    
+                    {Object.keys(optimizationUndoState).length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={undoAllOptimizations}
+                        className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/20 h-7 px-2 md:h-9 md:px-3"
+                        data-testid="button-undo-all-optimizations"
+                      >
+                        <RotateCcw className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                        <span className="hidden sm:inline">Undo All Optimizations</span>
+                        <span className="sm:hidden">Undo Optimizations</span>
+                      </Button>
+                    )}
+                  </>
+                )}
+                
+                {/* Transfer undo buttons */}
                 {(completedTransfers.length > 0 || transferredOutPlayers.length > 0) && (
                   <Button
                     variant="outline"
