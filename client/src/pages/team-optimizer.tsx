@@ -568,7 +568,7 @@ export default function TeamOptimizer() {
     };
   };
 
-  // Calculate chip recommendations with top 3 options for each chip
+  // Calculate chip recommendations
   const getChipRecommendations = () => {
     if (!adjustedPlayerProjections || !teamData || optimizedLineups.size === 0) {
       return null;
@@ -576,13 +576,18 @@ export default function TeamOptimizer() {
 
     const nextGWs = getNextGameweeks();
     const usedChips = teamData.chips || [];
-
-    type ChipOption = { gw: number; points: number };
     
+    // Split gameweeks into two sets
+    const set1GWs = nextGWs.filter(gw => gw.id <= 19);
+    const set2GWs = nextGWs.filter(gw => gw.id >= 20);
+
     const recommendations = { 
-      benchBoost: [] as ChipOption[],
-      tripleCaptain: [] as ChipOption[],
-      freeHit: [] as ChipOption[]
+      bboost1: null as { gw: number; additionalPoints: number } | null,
+      bboost2: null as { gw: number; additionalPoints: number } | null,
+      tripleC1: null as { gw: number; additionalPoints: number } | null,
+      tripleC2: null as { gw: number; additionalPoints: number } | null,
+      freehit1: null as { gw: number; normalPoints: number; freeHitPoints: number } | null,
+      freehit2: null as { gw: number; normalPoints: number; freeHitPoints: number } | null
     };
 
     const chipMaxUses: { [key: string]: number } = {
@@ -599,58 +604,232 @@ export default function TeamOptimizer() {
       return used < max;
     };
 
-    // Calculate Bench Boost top 3 options
+    // Best Bench Boost
     if (hasRemainingUses('bboost')) {
-      const bbScores: ChipOption[] = [];
-      nextGWs.forEach(gw => {
-        const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
-        let benchPoints = 0;
-        benchPlayers.forEach(pick => {
-          const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
-          if (projection?.gameweekProjections) {
-            benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+      const remainingBenchBoosts = chipMaxUses['bboost'] - countChipUses('bboost');
+      
+      if (remainingBenchBoosts >= 2) {
+        // Set 1: GW 12-19
+        if (set1GWs.length > 0) {
+          const gwScores: { gw: number; points: number }[] = [];
+          set1GWs.forEach(gw => {
+            const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
+            let benchPoints = 0;
+            benchPlayers.forEach(pick => {
+              const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
+              if (projection?.gameweekProjections) {
+                benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+              }
+            });
+            gwScores.push({ gw: gw.id, points: benchPoints });
+          });
+          gwScores.sort((a, b) => b.points - a.points);
+          if (gwScores.length > 0) {
+            recommendations.bboost1 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
           }
-        });
-        bbScores.push({ gw: gw.id, points: benchPoints });
-      });
-      bbScores.sort((a, b) => b.points - a.points);
-      recommendations.benchBoost = bbScores.slice(0, 3);
+        }
+
+        // Set 2: GW 20-38
+        if (set2GWs.length > 0) {
+          const gwScores: { gw: number; points: number }[] = [];
+          set2GWs.forEach(gw => {
+            const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
+            let benchPoints = 0;
+            benchPlayers.forEach(pick => {
+              const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
+              if (projection?.gameweekProjections) {
+                benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+              }
+            });
+            gwScores.push({ gw: gw.id, points: benchPoints });
+          });
+          gwScores.sort((a, b) => b.points - a.points);
+          if (gwScores.length > 0) {
+            recommendations.bboost2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+          }
+        }
+      } else if (remainingBenchBoosts === 1) {
+        // Only 1 chip remaining - show only BB2
+        if (set2GWs.length > 0) {
+          const gwScores: { gw: number; points: number }[] = [];
+          set2GWs.forEach(gw => {
+            const benchPlayers = optimizedLineups.get(gw.id)?.bench || [];
+            let benchPoints = 0;
+            benchPlayers.forEach(pick => {
+              const projection = adjustedPlayerProjections.find((p: any) => p.playerId === pick.element);
+              if (projection?.gameweekProjections) {
+                benchPoints += projection.gameweekProjections[gw.id.toString()] || 0;
+              }
+            });
+            gwScores.push({ gw: gw.id, points: benchPoints });
+          });
+          gwScores.sort((a, b) => b.points - a.points);
+          if (gwScores.length > 0) {
+            recommendations.bboost2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+          }
+        }
+      }
     }
 
-    // Calculate Triple Captain top 3 options
+    // Best Triple Captain
     if (hasRemainingUses('3xc')) {
-      const tcScores: ChipOption[] = [];
-      nextGWs.forEach(gw => {
-        let captainBasePoints = 0;
-        const gwLineup = optimizedLineups.get(gw.id);
-        if (gwLineup?.starting11) {
-          const captain = gwLineup.starting11.find(p => p.isCaptain);
-          if (captain) {
-            captainBasePoints = captain.projectedPoints || 0;
+      const remainingTripleCaptains = chipMaxUses['3xc'] - countChipUses('3xc');
+      
+      if (remainingTripleCaptains >= 2) {
+        // Set 1: GW 12-19
+        if (set1GWs.length > 0) {
+          const gwScores: { gw: number; points: number }[] = [];
+          set1GWs.forEach(gw => {
+            let captainBasePoints = 0;
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.starting11) {
+              const captain = gwLineup.starting11.find(p => p.isCaptain);
+              if (captain) {
+                captainBasePoints = captain.projectedPoints || 0;
+              }
+            }
+            gwScores.push({ gw: gw.id, points: captainBasePoints });
+          });
+          gwScores.sort((a, b) => b.points - a.points);
+          if (gwScores.length > 0) {
+            recommendations.tripleC1 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
           }
         }
-        tcScores.push({ gw: gw.id, points: captainBasePoints });
-      });
-      tcScores.sort((a, b) => b.points - a.points);
-      recommendations.tripleCaptain = tcScores.slice(0, 3);
+
+        // Set 2: GW 20-38
+        if (set2GWs.length > 0) {
+          const gwScores: { gw: number; points: number }[] = [];
+          set2GWs.forEach(gw => {
+            let captainBasePoints = 0;
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.starting11) {
+              const captain = gwLineup.starting11.find(p => p.isCaptain);
+              if (captain) {
+                captainBasePoints = captain.projectedPoints || 0;
+              }
+            }
+            gwScores.push({ gw: gw.id, points: captainBasePoints });
+          });
+          gwScores.sort((a, b) => b.points - a.points);
+          if (gwScores.length > 0) {
+            recommendations.tripleC2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+          }
+        }
+      } else if (remainingTripleCaptains === 1) {
+        // Only 1 chip remaining - show only TC2
+        if (set2GWs.length > 0) {
+          const gwScores: { gw: number; points: number }[] = [];
+          set2GWs.forEach(gw => {
+            let captainBasePoints = 0;
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.starting11) {
+              const captain = gwLineup.starting11.find(p => p.isCaptain);
+              if (captain) {
+                captainBasePoints = captain.projectedPoints || 0;
+              }
+            }
+            gwScores.push({ gw: gw.id, points: captainBasePoints });
+          });
+          gwScores.sort((a, b) => b.points - a.points);
+          if (gwScores.length > 0) {
+            recommendations.tripleC2 = { gw: gwScores[0].gw, additionalPoints: gwScores[0].points };
+          }
+        }
+      }
     }
 
-    // Calculate Free Hit top 3 options
+    // Best Free Hit
     if (hasRemainingUses('freehit')) {
-      const fhScores: ChipOption[] = [];
-      nextGWs.forEach(gw => {
-        let startingPoints = 0;
-        const gwLineup = optimizedLineups.get(gw.id);
-        if (gwLineup?.totalProjectedPoints) {
-          startingPoints = gwLineup.totalProjectedPoints;
+      const remainingFreeHits = chipMaxUses['freehit'] - countChipUses('freehit');
+      
+      if (remainingFreeHits >= 2) {
+        // Set 1: GW 12-19
+        if (set1GWs.length > 0) {
+          const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
+          set1GWs.forEach(gw => {
+            let startingPoints = 0;
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.totalProjectedPoints) {
+              startingPoints = gwLineup.totalProjectedPoints;
+            }
+            const realFHPoints = freeHitOptimizations.get(gw.id);
+            const freeHitPoints = realFHPoints !== undefined ? realFHPoints : Math.round(startingPoints * 1.25);
+            const improvement = freeHitPoints - startingPoints;
+            gwScores.push({ 
+              gw: gw.id, 
+              normalPoints: startingPoints,
+              freeHitPoints: freeHitPoints,
+              improvement: improvement
+            });
+          });
+          gwScores.sort((a, b) => b.improvement - a.improvement);
+          if (gwScores.length > 0) {
+            recommendations.freehit1 = { 
+              gw: gwScores[0].gw, 
+              normalPoints: gwScores[0].normalPoints,
+              freeHitPoints: gwScores[0].freeHitPoints
+            };
+          }
         }
-        const realFHPoints = freeHitOptimizations.get(gw.id);
-        const freeHitPoints = realFHPoints !== undefined ? realFHPoints : Math.round(startingPoints * 1.25);
-        const improvement = freeHitPoints - startingPoints;
-        fhScores.push({ gw: gw.id, points: improvement });
-      });
-      fhScores.sort((a, b) => b.points - a.points);
-      recommendations.freeHit = fhScores.slice(0, 3);
+
+        // Set 2: GW 20-38
+        if (set2GWs.length > 0) {
+          const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
+          set2GWs.forEach(gw => {
+            let startingPoints = 0;
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.totalProjectedPoints) {
+              startingPoints = gwLineup.totalProjectedPoints;
+            }
+            const realFHPoints = freeHitOptimizations.get(gw.id);
+            const freeHitPoints = realFHPoints !== undefined ? realFHPoints : Math.round(startingPoints * 1.25);
+            const improvement = freeHitPoints - startingPoints;
+            gwScores.push({ 
+              gw: gw.id, 
+              normalPoints: startingPoints,
+              freeHitPoints: freeHitPoints,
+              improvement: improvement
+            });
+          });
+          gwScores.sort((a, b) => b.improvement - a.improvement);
+          if (gwScores.length > 0) {
+            recommendations.freehit2 = { 
+              gw: gwScores[0].gw, 
+              normalPoints: gwScores[0].normalPoints,
+              freeHitPoints: gwScores[0].freeHitPoints
+            };
+          }
+        }
+      } else if (remainingFreeHits === 1) {
+        // Only 1 chip remaining - show only FH2
+        if (set2GWs.length > 0) {
+          const gwScores: { gw: number; normalPoints: number; freeHitPoints: number; improvement: number }[] = [];
+          set2GWs.forEach(gw => {
+            let startingPoints = 0;
+            const gwLineup = optimizedLineups.get(gw.id);
+            if (gwLineup?.totalProjectedPoints) {
+              startingPoints = gwLineup.totalProjectedPoints;
+            }
+            const realFHPoints = freeHitOptimizations.get(gw.id);
+            const freeHitPoints = realFHPoints !== undefined ? realFHPoints : Math.round(startingPoints * 1.25);
+            const improvement = freeHitPoints - startingPoints;
+            gwScores.push({ 
+              gw: gw.id, 
+              normalPoints: startingPoints,
+              freeHitPoints: freeHitPoints,
+              improvement: improvement
+            });
+          });
+          gwScores.sort((a, b) => b.improvement - a.improvement);
+          if (gwScores.length > 0) {
+            recommendations.freehit2 = { 
+              gw: gwScores[0].gw, 
+              normalPoints: gwScores[0].normalPoints,
+              freeHitPoints: gwScores[0].freeHitPoints
+            };
+          }
+        }
+      }
     }
 
     return recommendations;
@@ -972,61 +1151,81 @@ export default function TeamOptimizer() {
         {(() => {
           const recommendations = getChipRecommendations();
           const hasRecommendations = recommendations && (
-            recommendations.benchBoost.length > 0 || 
-            recommendations.tripleCaptain.length > 0 || 
-            recommendations.freeHit.length > 0
+            recommendations.bboost1 || recommendations.bboost2 || 
+            recommendations.tripleC1 || recommendations.tripleC2 || 
+            recommendations.freehit1 || recommendations.freehit2
           );
           
           if (!hasRecommendations) return null;
 
-          // Create chip list with all chip types and their options
-          type ChipDisplay = {
+          // Collect all chips into an array and sort by gameweek
+          const chipList: Array<{
+            type: string;
             name: string;
+            gw: number;
             color: string;
-            option1Gw: number;
-            option2Gw: number;
-            options: Array<{ gw: number; points: number }>;
-          };
+            display: string;
+          }> = [];
 
-          const chipList: ChipDisplay[] = [];
-
-          if (recommendations.benchBoost.length > 0) {
+          if (recommendations.bboost1) {
             chipList.push({
-              name: 'Bench Boost',
+              type: 'bboost',
+              name: 'Bench Boost 1',
+              gw: recommendations.bboost1.gw,
               color: 'green',
-              option1Gw: recommendations.benchBoost[0].gw,
-              option2Gw: recommendations.benchBoost[1]?.gw || 999,
-              options: recommendations.benchBoost
+              display: `GW${recommendations.bboost1.gw} (+${recommendations.bboost1.additionalPoints.toFixed(1)} pts)`
             });
           }
-
-          if (recommendations.tripleCaptain.length > 0) {
+          if (recommendations.bboost2) {
             chipList.push({
-              name: 'Triple Captain',
+              type: 'bboost',
+              name: 'Bench Boost 2',
+              gw: recommendations.bboost2.gw,
+              color: 'green',
+              display: `GW${recommendations.bboost2.gw} (+${recommendations.bboost2.additionalPoints.toFixed(1)} pts)`
+            });
+          }
+          if (recommendations.tripleC1) {
+            chipList.push({
+              type: 'tripleC',
+              name: 'Triple Captain 1',
+              gw: recommendations.tripleC1.gw,
               color: 'purple',
-              option1Gw: recommendations.tripleCaptain[0].gw,
-              option2Gw: recommendations.tripleCaptain[1]?.gw || 999,
-              options: recommendations.tripleCaptain
+              display: `GW${recommendations.tripleC1.gw} (+${recommendations.tripleC1.additionalPoints.toFixed(1)} pts)`
             });
           }
-
-          if (recommendations.freeHit.length > 0) {
+          if (recommendations.tripleC2) {
             chipList.push({
-              name: 'Free Hit',
+              type: 'tripleC',
+              name: 'Triple Captain 2',
+              gw: recommendations.tripleC2.gw,
+              color: 'purple',
+              display: `GW${recommendations.tripleC2.gw} (+${recommendations.tripleC2.additionalPoints.toFixed(1)} pts)`
+            });
+          }
+          if (recommendations.freehit1) {
+            const gain = recommendations.freehit1.freeHitPoints - recommendations.freehit1.normalPoints;
+            chipList.push({
+              type: 'freehit',
+              name: 'Free Hit 1',
+              gw: recommendations.freehit1.gw,
               color: 'blue',
-              option1Gw: recommendations.freeHit[0].gw,
-              option2Gw: recommendations.freeHit[1]?.gw || 999,
-              options: recommendations.freeHit
+              display: `GW${recommendations.freehit1.gw} (+${gain.toFixed(1)} pts)`
+            });
+          }
+          if (recommendations.freehit2) {
+            const gain = recommendations.freehit2.freeHitPoints - recommendations.freehit2.normalPoints;
+            chipList.push({
+              type: 'freehit',
+              name: 'Free Hit 2',
+              gw: recommendations.freehit2.gw,
+              color: 'blue',
+              display: `GW${recommendations.freehit2.gw} (+${gain.toFixed(1)} pts)`
             });
           }
 
-          // Sort by option1 gameweek, then by option2 gameweek as tiebreaker
-          chipList.sort((a, b) => {
-            if (a.option1Gw !== b.option1Gw) {
-              return a.option1Gw - b.option1Gw;
-            }
-            return a.option2Gw - b.option2Gw;
-          });
+          // Sort by gameweek (ascending)
+          chipList.sort((a, b) => a.gw - b.gw);
           
           return (
             <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50/50 to-white dark:from-blue-950/10 dark:to-background">
@@ -1040,51 +1239,36 @@ export default function TeamOptimizer() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3 sm:space-y-4">
+                <div className="space-y-1.5 sm:space-y-2">
                   {chipList.map((chip, idx) => (
-                    <div key={idx} className="space-y-1.5">
-                      <div className={`text-xs sm:text-sm font-semibold ${
+                    <div 
+                      key={idx}
+                      className={`flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md ${
+                        chip.color === 'green' 
+                          ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800' 
+                          : chip.color === 'purple'
+                          ? 'bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800'
+                          : 'bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800'
+                      }`}
+                    >
+                      <span className={`text-[10px] sm:text-xs md:text-sm font-semibold ${
                         chip.color === 'green'
                           ? 'text-green-700 dark:text-green-300'
                           : chip.color === 'purple'
                           ? 'text-purple-700 dark:text-purple-300'
                           : 'text-blue-700 dark:text-blue-300'
                       }`}>
-                        {chip.name}
-                      </div>
-                      <div className="space-y-1">
-                        {chip.options.map((option, optIdx) => (
-                          <div 
-                            key={optIdx}
-                            className={`flex items-center justify-between gap-2 px-2 sm:px-3 py-1.5 sm:py-2 rounded-md ${
-                              chip.color === 'green' 
-                                ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800' 
-                                : chip.color === 'purple'
-                                ? 'bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800'
-                                : 'bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800'
-                            }`}
-                          >
-                            <span className={`text-[10px] sm:text-xs font-medium ${
-                              chip.color === 'green'
-                                ? 'text-green-600 dark:text-green-400'
-                                : chip.color === 'purple'
-                                ? 'text-purple-600 dark:text-purple-400'
-                                : 'text-blue-600 dark:text-blue-400'
-                            }`}>
-                              Option {optIdx + 1}
-                            </span>
-                            <span className={`text-[10px] sm:text-xs md:text-sm font-medium ${
-                              chip.color === 'green'
-                                ? 'text-green-700 dark:text-green-300'
-                                : chip.color === 'purple'
-                                ? 'text-purple-700 dark:text-purple-300'
-                                : 'text-blue-700 dark:text-blue-300'
-                            }`}>
-                              GW{option.gw} (+{option.points.toFixed(1)} pts)
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+                        {chip.name}:
+                      </span>
+                      <span className={`text-[10px] sm:text-xs md:text-sm font-medium ${
+                        chip.color === 'green'
+                          ? 'text-green-700 dark:text-green-300'
+                          : chip.color === 'purple'
+                          ? 'text-purple-700 dark:text-purple-300'
+                          : 'text-blue-700 dark:text-blue-300'
+                      }`}>
+                        {chip.display}
+                      </span>
                     </div>
                   ))}
                 </div>
