@@ -3676,7 +3676,7 @@ export default function TransferPlanner() {
 
   // Apply recommended transfers for the current gameweek
   const handleApplyRecommendedTransfers = async () => {
-    if (!selectedGameweek || !recommendedTransfers?.gameweeks || !teamData?.picks) {
+    if (!selectedGameweek || !recommendedTransfers?.gameweeks || !teamData?.picks || !bootstrapData) {
       toast({
         title: "Cannot Apply Transfers",
         description: "Transfer recommendations are not available for this gameweek.",
@@ -3711,19 +3711,30 @@ export default function TransferPlanner() {
       return;
     }
 
+    // Get the element_type from the player being transferred out
+    const playerOut = getPlayerById(playerOutId);
+    if (!playerOut) {
+      toast({
+        title: "Error",
+        description: "Could not find player data for transfer.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Apply the transfer out
     await handleTransferOut(pickToTransferOut);
     
-    // Small delay to ensure state updates
+    // Small delay to ensure state updates, then apply transfer in
     setTimeout(() => {
-      // Apply the transfer in
-      handleTransferIn(primaryRec.playerIn.id, primaryRec.playerIn.element_type || getPlayerById(primaryRec.playerIn.id)?.element_type || 1);
+      // Use the transferred-out player's element_type for the position match
+      handleTransferIn(primaryRec.playerIn.id, playerOut.element_type);
       
       toast({
         title: "Transfers Applied",
         description: `${primaryRec.playerOut.webName} → ${primaryRec.playerIn.webName} (+${primaryRec.pointsGain.toFixed(1)} pts)`,
       });
-    }, 300);
+    }, 500);
   };
 
   // Helper function to generate tooltip content for a draft
