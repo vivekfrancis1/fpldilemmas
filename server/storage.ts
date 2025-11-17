@@ -1699,6 +1699,7 @@ export class DatabaseStorage implements IStorage {
           draftLetter: draft.draftLetter,
           gameweekTransfers: draft.gameweekTransfers,
           plannedChips: draft.plannedChips || {},
+          optimizedLineups: draft.optimizedLineups || {},
           mode: draft.mode || 'manual',
           teamBank: draft.teamBank.toString(),
           teamValue: draft.teamValue.toString(),
@@ -1761,6 +1762,9 @@ export class DatabaseStorage implements IStorage {
       }
       if (updates.plannedChips !== undefined) {
         updateData.plannedChips = updates.plannedChips;
+      }
+      if (updates.optimizedLineups !== undefined) {
+        updateData.optimizedLineups = updates.optimizedLineups;
       }
       if (updates.mode !== undefined) {
         updateData.mode = updates.mode;
