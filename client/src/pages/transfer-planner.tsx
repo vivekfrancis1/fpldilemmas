@@ -864,7 +864,13 @@ export default function TransferPlanner() {
   const teamLineupRef = useRef<HTMLDivElement>(null);
   
   // Track when lineup is manually optimized to prevent auto-reset
-  const isLineupOptimizedRef = useRef<{ [gameweek: number]: boolean }>({});
+  // Key format: "draftLetter_gameweek" (e.g., "A_12", "B_15")
+  const isLineupOptimizedRef = useRef<{ [key: string]: boolean }>({});
+  
+  // Helper to generate consistent optimization keys
+  const getOptimizationKey = (draft: string, gameweek: number): string => {
+    return `${draft}_${gameweek}`;
+  };
   
   // Draft management state
   const [activeDraft, setActiveDraft] = useState<string>("A"); // Current working draft
@@ -1556,15 +1562,16 @@ export default function TransferPlanner() {
     // Clear player popup when gameweek changes
     setSelectedPlayer(null);
     
-    console.log("🔄 LINEUP REBUILD useEffect triggered - GW:", selectedGameweek, "Draft:", activeDraft, "Optimization flags:", isLineupOptimizedRef.current);
+    const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+    console.log("🔄 LINEUP REBUILD useEffect triggered - GW:", selectedGameweek, "Draft:", activeDraft, "Key:", optimizationKey, "Flags:", isLineupOptimizedRef.current);
     
-    // CRITICAL: Don't reset lineup if it's been manually optimized for this gameweek
-    if (isLineupOptimizedRef.current[selectedGameweek]) {
-      console.log("🔒 PROTECTED: Skipping lineup reset - GW", selectedGameweek, "is optimized");
+    // CRITICAL: Don't reset lineup if it's been manually optimized for this gameweek+draft
+    if (isLineupOptimizedRef.current[optimizationKey]) {
+      console.log("🔒 PROTECTED: Skipping lineup reset - Key", optimizationKey, "is optimized");
       return;
     }
     
-    console.log("⚠️ REBUILDING lineup for GW", selectedGameweek, "- no optimization flag set");
+    console.log("⚠️ REBUILDING lineup for", optimizationKey, "- no optimization flag set");
     
     // Helper to apply buy price overrides to lineup
     const applyBuyPriceOverrides = (lineup: TeamPick[]) => {
@@ -2740,14 +2747,15 @@ export default function TransferPlanner() {
     // Apply optimized lineup
     console.log("🔧 OPTIMIZE DEBUG: Setting new lineup with positions:", optimizedLineup.map(p => ({ element: p.element, position: p.position, is_captain: p.is_captain })));
     
-    // Mark this gameweek's lineup as manually optimized to prevent auto-reset
+    // Mark this gameweek+draft's lineup as manually optimized to prevent auto-reset
     // CRITICAL: Set this BEFORE setManualLineup to prevent race conditions
+    const optimizationKey = getOptimizationKey(activeDraft, gameweek);
     isLineupOptimizedRef.current = {
       ...isLineupOptimizedRef.current,
-      [gameweek]: true
+      [optimizationKey]: true
     };
     
-    console.log("🔧 OPTIMIZE DEBUG: Marked GW", gameweek, "as optimized. Full flag state:", isLineupOptimizedRef.current);
+    console.log("🔧 OPTIMIZE DEBUG: Marked", optimizationKey, "as optimized. Full flag state:", isLineupOptimizedRef.current);
     
     setManualLineup([...optimizedLineup]); // Force new array reference
 
@@ -2787,10 +2795,11 @@ export default function TransferPlanner() {
     // Restore previous lineup
     setManualLineup(JSON.parse(JSON.stringify(previousLineup)));
     
-    // Clear the optimization flag for this gameweek
-    console.log("🔓 UNDO: Clearing optimization flag for GW", gameweek);
+    // Clear the optimization flag for this gameweek+draft
+    const optimizationKey = getOptimizationKey(activeDraft, gameweek);
+    console.log("🔓 UNDO: Clearing optimization flag for", optimizationKey);
     const newFlags = { ...isLineupOptimizedRef.current };
-    delete newFlags[gameweek];
+    delete newFlags[optimizationKey];
     isLineupOptimizedRef.current = newFlags;
     console.log("🔓 UNDO: New flag state:", isLineupOptimizedRef.current);
 
