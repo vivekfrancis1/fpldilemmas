@@ -2566,10 +2566,15 @@ export default function TransferPlanner() {
 
   // Optimize team lineup for a specific gameweek
   const optimizeTeamLineup = (gameweek: number) => {
+    console.log("🔧 OPTIMIZE CALLED - GW:", gameweek);
+    console.log("🔧 playerProjections6GW:", playerProjections6GW ? `${playerProjections6GW.length} players` : "NULL");
+    console.log("🔧 bootstrapData:", bootstrapData ? "LOADED" : "NULL");
+    console.log("🔧 manualLineup:", manualLineup.length);
+    
     if (!playerProjections6GW || !bootstrapData || manualLineup.length === 0) {
       toast({
         title: "Cannot Optimize",
-        description: "Player projections are not available yet",
+        description: `Missing data: ${!playerProjections6GW ? 'Projections' : ''} ${!bootstrapData ? 'Bootstrap' : ''} ${manualLineup.length === 0 ? 'Lineup' : ''}`,
         variant: "destructive"
       });
       return;
