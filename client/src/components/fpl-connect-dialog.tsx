@@ -177,16 +177,15 @@ export function FplConnectDialog() {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                <strong>How to get your FPL Bearer Token:</strong>
+                <strong>Quick Setup (3 steps):</strong>
                 <ol className="list-decimal list-inside mt-2 space-y-1">
                   <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a> and <strong>sign in</strong></li>
-                  <li>Open DevTools (F12) → <strong>Network tab</strong> → Refresh page (F5)</li>
-                  <li><strong>Right-click</strong> any request → Select <strong>"Copy" → "Copy as cURL"</strong></li>
-                  <li>Look for <strong>-H 'x-api-authorization: Bearer ...'</strong> in the copied text</li>
-                  <li>Copy ONLY the token after "Bearer " <strong>(WITHOUT the quotes)</strong></li>
-                  <li>Token should start with <strong>eyJ</strong> and be 500+ characters long</li>
-                  <li>Also note your Manager ID from the URL (e.g., entry/<strong>123456</strong>/event/10)</li>
+                  <li>Press <strong>F12</strong> → <strong>Network tab</strong> → <strong>F5</strong> to refresh</li>
+                  <li><strong>Right-click</strong> any request → <strong>"Copy as cURL"</strong> → Paste below!</li>
                 </ol>
+                <p className="mt-2 text-xs">
+                  💡 Just paste the entire cURL command - we'll extract the token automatically!
+                </p>
               </AlertDescription>
             </Alert>
 
@@ -195,30 +194,28 @@ export function FplConnectDialog() {
               <Input
                 id="fpl-manager-id"
                 type="number"
-                placeholder="Enter your Manager ID"
+                placeholder="Enter your Manager ID (e.g., 577434)"
                 value={fplManagerId}
                 onChange={(e) => setFplManagerId(e.target.value)}
                 data-testid="input-fpl-manager-id"
               />
               <p className="text-xs text-muted-foreground">
-                Find in URL: fantasy.premierleague.com/entry/[YOUR_ID]/event/10
+                Find in URL: fantasy.premierleague.com/entry/<strong>[YOUR_ID]</strong>/event/10
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="fpl-token">FPL Bearer Token</Label>
-              <Input
+              <Label htmlFor="fpl-token">Paste cURL Command or Bearer Token</Label>
+              <textarea
                 id="fpl-token"
-                type="text"
-                placeholder="Paste your Bearer token here"
+                placeholder="Paste entire cURL command here (or just the Bearer token)"
                 value={fplToken}
                 onChange={(e) => setFplToken(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleConnect()}
                 data-testid="input-fpl-token"
-                className="font-mono text-xs"
+                className="w-full min-h-[100px] p-2 text-xs font-mono border rounded-md resize-y"
               />
               <p className="text-xs text-muted-foreground">
-                Paste the token from the x-api-authorization header (just the part after "Bearer ")
+                ✨ New: Paste the full cURL command and we'll extract the token automatically!
               </p>
             </div>
 

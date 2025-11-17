@@ -904,21 +904,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // FPL Authentication endpoints
   app.post("/api/fpl/connect", requireAuth, async (req: any, res) => {
     try {
-      const { fplToken, fplManagerId } = req.body;
+      let { fplToken, fplManagerId } = req.body;
       const userId = req.session.user.id;
 
-      if (!fplToken || !fplManagerId) {
-        return res.status(400).json({ error: 'FPL Bearer token and manager ID are required' });
+      if (!fplToken) {
+        return res.status(400).json({ error: 'FPL Bearer token or cURL command is required' });
       }
 
-      console.log('🔐 Validating FPL Bearer token...');
+      console.log('🔐 Processing FPL authentication...');
       
-      // Clean the token: trim whitespace and remove any surrounding quotes
+      // Clean the token: trim whitespace
       let cleanToken = fplToken.trim();
-      // Remove surrounding single or double quotes if present
-      if ((cleanToken.startsWith('"') && cleanToken.endsWith('"')) || 
-          (cleanToken.startsWith("'") && cleanToken.endsWith("'"))) {
-        cleanToken = cleanToken.slice(1, -1);
+      
+      // Check if this looks like a cURL command
+      if (cleanToken.toLowerCase().includes('curl') || cleanToken.includes('-H') || cleanToken.includes('--header')) {
+        console.log('📋 Detected cURL command, extracting Bearer token...');
+        
+        // Extract Bearer token from cURL command
+        // Look for patterns like: -H 'x-api-authorization: Bearer TOKEN' or --header "x-api-authorization: Bearer TOKEN"
+        const bearerMatch = cleanToken.match(/(?:-H|--header)\s+['"]?x-api-authorization:\s*Bearer\s+([^'"}\s]+)['"]?/i);
+        
+        if (bearerMatch && bearerMatch[1]) {
+          cleanToken = bearerMatch[1];
+          console.log('✅ Successfully extracted Bearer token from cURL');
+        } else {
+          console.error('❌ Could not find Bearer token in cURL command');
+          return res.status(400).json({ 
+            error: 'Could not find Bearer token in cURL command. Please make sure the cURL includes the x-api-authorization header.' 
+          });
+        }
+        
+        // Try to extract manager ID from URL if not provided
+        if (!fplManagerId) {
+          const entryMatch = cleanToken.match(/entry\/(\d+)/i) || 
+                           fplToken.match(/entry\/(\d+)/i);
+          if (entryMatch && entryMatch[1]) {
+            fplManagerId = parseInt(entryMatch[1]);
+            console.log('✅ Extracted Manager ID from cURL:', fplManagerId);
+          }
+        }
+      } else {
+        // Not a cURL command, treat as direct token
+        // Remove surrounding single or double quotes if present
+        if ((cleanToken.startsWith('"') && cleanToken.endsWith('"')) || 
+            (cleanToken.startsWith("'") && cleanToken.endsWith("'"))) {
+          cleanToken = cleanToken.slice(1, -1);
+        }
+      }
+      
+      if (!fplManagerId) {
+        return res.status(400).json({ error: 'Manager ID is required. Please enter your FPL Manager ID.' });
       }
       
       console.log('📏 Token length:', cleanToken.length);
