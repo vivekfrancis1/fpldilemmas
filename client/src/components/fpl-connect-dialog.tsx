@@ -201,7 +201,7 @@ export function FplConnectDialog() {
               <AlertDescription className="text-sm">
                 <strong>Super Simple Setup:</strong>
                 <ol className="list-decimal list-inside mt-2 space-y-2">
-                  <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a> and <strong>sign in</strong></li>
+                  <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a>, <strong>sign in</strong>, and <strong>click on the Points tab</strong></li>
                   <li><strong>Copy the browser URL</strong> from the address bar → Paste in "Manager ID" field below</li>
                   <li>Press <strong>F12</strong> → <strong>Network tab</strong> → <strong>F5</strong> to refresh</li>
                   <li><strong>Right-click</strong> any request → <strong>"Copy as cURL"</strong> → Paste in "cURL" field below</li>
