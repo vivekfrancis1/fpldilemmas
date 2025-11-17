@@ -3848,6 +3848,13 @@ export default function TransferPlanner() {
     setCompletedTransfers([...completedTransfers, ...newCompletedTransfers]);
     setTransferredOutPlayers([]);
     setGameweekTransfers(updatedGameweekTransfers);
+    
+    // Clear optimized lineup for this gameweek since we've made manual transfers
+    setOptimizedLineups(prev => {
+      const updated = { ...prev };
+      delete updated[selectedGameweek];
+      return updated;
+    });
 
     const transferSummary = newCompletedTransfers.map(t => `${t.outPlayerName} → ${t.inPlayerName}`).join(', ');
     const totalPoints = unappliedRecs.reduce((sum, rec) => sum + (rec.pointsGain || 0), 0);
