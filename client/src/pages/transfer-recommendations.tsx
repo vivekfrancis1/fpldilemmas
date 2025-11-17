@@ -7,13 +7,22 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle } from "lucide-react";
+import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle, Users, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingExperience } from "@/components/loading-experience";
+
+interface TeamPick {
+  element: number;
+  position: number;
+  is_captain: boolean;
+  is_vice_captain: boolean;
+  projectedPoints?: number;
+}
 
 export default function TransferRecommendations() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
+  const [selectedGameweek, setSelectedGameweek] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Cache manager ID functionality
@@ -51,8 +60,47 @@ export default function TransferRecommendations() {
     refetchOnWindowFocus: false,
   });
 
+  // Fetch bootstrap data
+  const { data: bootstrapData } = useQuery<any>({
+    queryKey: ["/api/bootstrap-static"],
+    staleTime: 15 * 60 * 1000,
+  });
+
+  // Fetch team data for current squad
+  const { data: teamData } = useQuery<any>({
+    queryKey: ["/api/manager", searchedId, "team-data"],
+    enabled: !!searchedId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Fetch player projections for the selected gameweek
+  const { data: playerProjections } = useQuery<any[]>({
+    queryKey: ["/api/player-total-points", selectedGameweek],
+    enabled: !!selectedGameweek && selectedGameweek !== null,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      if (!selectedGameweek) return [];
+      const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projections: ${response.statusText}`);
+      }
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    }
+  });
+
   // Backend now applies availability adjustments, so we just use the data as-is
   const adjustedRecommendations = recommendedTransfers;
+
+  // Auto-set first gameweek when recommendations load
+  useEffect(() => {
+    if (adjustedRecommendations?.gameweeks && !selectedGameweek) {
+      const firstGW = Object.keys(adjustedRecommendations.gameweeks)[0];
+      if (firstGW) {
+        setSelectedGameweek(firstGW);
+      }
+    }
+  }, [adjustedRecommendations, selectedGameweek]);
 
   // Memoized calculation of budget and free transfers timeline for each gameweek
   const gameweekFinances = useMemo(() => {
@@ -86,6 +134,175 @@ export default function TransferRecommendations() {
 
     return finances;
   }, [adjustedRecommendations]);
+
+  // Helper to get player data by ID
+  const getPlayerById = (playerId: number) => {
+    return bootstrapData?.elements?.find((p: any) => p.id === playerId);
+  };
+
+  // Apply primary recommended transfers to current team
+  const applyRecommendedTransfers = useMemo(() => {
+    if (!selectedGameweek || !adjustedRecommendations?.gameweeks?.[selectedGameweek] || !teamData?.picks) {
+      return null;
+    }
+
+    const gwData = adjustedRecommendations.gameweeks[selectedGameweek];
+    const freeTransfers = gwData.freeTransfersAvailable || 1;
+    const primaryTransfers = gwData.recommendations?.slice(0, freeTransfers) || [];
+
+    // Skip if roll recommendation
+    if (primaryTransfers.length > 0 && primaryTransfers[0]?.type === 'roll') {
+      return null;
+    }
+
+    // Clone current picks
+    let updatedPicks = teamData.picks.map((pick: any) => ({ ...pick }));
+
+    // Apply each primary transfer
+    primaryTransfers.forEach((rec: any) => {
+      const outIndex = updatedPicks.findIndex((p: any) => p.element === rec.playerOut.id);
+      if (outIndex !== -1) {
+        updatedPicks[outIndex] = {
+          ...updatedPicks[outIndex],
+          element: rec.playerIn.id,
+        };
+      }
+    });
+
+    return updatedPicks;
+  }, [selectedGameweek, adjustedRecommendations, teamData, bootstrapData]);
+
+  // Optimize lineup to maximize points
+  const optimizedTeam = useMemo(() => {
+    if (!applyRecommendedTransfers || !playerProjections || !bootstrapData || !selectedGameweek) {
+      return null;
+    }
+
+    // Get projected points for a player
+    const getProjectedPoints = (playerId: number): number => {
+      const projection = playerProjections.find((p: any) => p.playerId === playerId);
+      return projection?.projectedPoints || 0;
+    };
+
+    // Group players by position
+    const squadByPosition: {
+      GKP: TeamPick[];
+      DEF: TeamPick[];
+      MID: TeamPick[];
+      FWD: TeamPick[];
+    } = {
+      GKP: [],
+      DEF: [],
+      MID: [],
+      FWD: []
+    };
+
+    applyRecommendedTransfers.forEach((pick: any) => {
+      const player = getPlayerById(pick.element);
+      if (!player) return;
+      
+      const positionType = player.element_type;
+      const posKey = positionType === 1 ? 'GKP' : positionType === 2 ? 'DEF' : positionType === 3 ? 'MID' : 'FWD';
+      squadByPosition[posKey].push({
+        ...pick,
+        projectedPoints: getProjectedPoints(pick.element)
+      });
+    });
+
+    // Sort each position by projected points (descending)
+    Object.keys(squadByPosition).forEach(pos => {
+      squadByPosition[pos as keyof typeof squadByPosition].sort((a: any, b: any) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+    });
+
+    // Valid FPL formations
+    const formations = [
+      { def: 3, mid: 5, fwd: 2, name: '3-5-2' },
+      { def: 3, mid: 4, fwd: 3, name: '3-4-3' },
+      { def: 4, mid: 5, fwd: 1, name: '4-5-1' },
+      { def: 4, mid: 4, fwd: 2, name: '4-4-2' },
+      { def: 4, mid: 3, fwd: 3, name: '4-3-3' },
+      { def: 5, mid: 4, fwd: 1, name: '5-4-1' },
+      { def: 5, mid: 3, fwd: 2, name: '5-3-2' },
+    ];
+
+    let bestFormation = null;
+    let bestPoints = -1;
+    let bestLineup: TeamPick[] = [];
+
+    formations.forEach(formation => {
+      const gkp = squadByPosition.GKP[0];
+      const def = squadByPosition.DEF.slice(0, formation.def);
+      const mid = squadByPosition.MID.slice(0, formation.mid);
+      const fwd = squadByPosition.FWD.slice(0, formation.fwd);
+
+      if (!gkp || def.length < formation.def || mid.length < formation.mid || fwd.length < formation.fwd) {
+        return;
+      }
+
+      const starting11 = [gkp, ...def, ...mid, ...fwd];
+      const totalPoints = starting11.reduce((sum, pick) => sum + (pick.projectedPoints || 0), 0);
+
+      if (totalPoints > bestPoints) {
+        bestPoints = totalPoints;
+        bestFormation = formation;
+        bestLineup = starting11;
+      }
+    });
+
+    if (!bestLineup.length) return null;
+
+    // Assign positions (1-11 for starting, 12-15 for bench)
+    const optimized = bestLineup.map((pick, idx) => ({
+      ...pick,
+      position: idx + 1,
+      is_captain: false,
+      is_vice_captain: false,
+    }));
+
+    // Add bench players
+    const benchGKP = squadByPosition.GKP.filter(p => !optimized.find(o => o.element === p.element));
+    const benchDEF = squadByPosition.DEF.filter(p => !optimized.find(o => o.element === p.element));
+    const benchMID = squadByPosition.MID.filter(p => !optimized.find(o => o.element === p.element));
+    const benchFWD = squadByPosition.FWD.filter(p => !optimized.find(o => o.element === p.element));
+
+    const bench = [...benchGKP, ...benchDEF, ...benchMID, ...benchFWD]
+      .sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0))
+      .slice(0, 4)
+      .map((pick, idx) => ({
+        ...pick,
+        position: 12 + idx,
+        is_captain: false,
+        is_vice_captain: false,
+      }));
+
+    const finalLineup = [...optimized, ...bench];
+
+    // Set captain (highest projected in starting 11)
+    const captainPick = optimized.reduce((best, pick) => 
+      (pick.projectedPoints || 0) > (best.projectedPoints || 0) ? pick : best
+    );
+    const captainIndex = finalLineup.findIndex(p => p.element === captainPick.element);
+    if (captainIndex !== -1) {
+      finalLineup[captainIndex].is_captain = true;
+    }
+
+    // Set vice captain (second highest in starting 11)
+    const viceCaptainPick = optimized
+      .filter(p => p.element !== captainPick.element)
+      .reduce((best, pick) => 
+        (pick.projectedPoints || 0) > (best.projectedPoints || 0) ? pick : best
+      );
+    const viceCaptainIndex = finalLineup.findIndex(p => p.element === viceCaptainPick.element);
+    if (viceCaptainIndex !== -1) {
+      finalLineup[viceCaptainIndex].is_vice_captain = true;
+    }
+
+    return {
+      lineup: finalLineup,
+      formation: bestFormation,
+      totalPoints: bestPoints + (captainPick.projectedPoints || 0) // Add captain bonus
+    };
+  }, [applyRecommendedTransfers, playerProjections, bootstrapData, selectedGameweek]);
 
   // Handle search
   const handleSearch = () => {
@@ -208,7 +425,7 @@ export default function TransferRecommendations() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue={Object.keys(adjustedRecommendations.gameweeks)[0]} className="w-full">
+              <Tabs defaultValue={Object.keys(adjustedRecommendations.gameweeks)[0]} className="w-full" onValueChange={setSelectedGameweek}>
                 <div className="overflow-x-auto -mx-6 px-6 mb-4">
                   <TabsList className="inline-flex w-auto min-w-full h-auto gap-2 bg-transparent">
                     {Object.keys(adjustedRecommendations.gameweeks).map((gw) => (
@@ -410,6 +627,152 @@ export default function TransferRecommendations() {
                   );
                 })}
               </Tabs>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Optimized Team After Transfers */}
+        {searchedId && !isLoadingRecommendations && optimizedTeam && selectedGameweek && (
+          <Card className="border-green-200 bg-gradient-to-br from-green-50/50 to-white">
+            <CardHeader className="px-3 sm:px-6">
+              <CardTitle className="flex items-center justify-between flex-wrap gap-2 text-base sm:text-lg">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
+                  Updated Team - GW{selectedGameweek}
+                </div>
+                <Badge className="bg-green-100 text-green-800 border-green-300">
+                  Optimized Lineup
+                </Badge>
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Team with primary transfers applied and optimized for maximum points
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-6">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4 mb-6">
+                <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                  <div className="text-xs sm:text-sm text-muted-foreground mb-1">Formation</div>
+                  <div className="text-xl sm:text-2xl font-bold text-green-600">
+                    {optimizedTeam.formation?.name || 'N/A'}
+                  </div>
+                </div>
+                <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                  <div className="text-xs sm:text-sm text-muted-foreground mb-1">Projected Points</div>
+                  <div className="text-xl sm:text-2xl font-bold text-blue-600">
+                    {optimizedTeam.totalPoints.toFixed(1)}
+                  </div>
+                </div>
+                <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border col-span-2 md:col-span-1">
+                  <div className="text-xs sm:text-sm text-muted-foreground mb-1">Total Players</div>
+                  <div className="text-xl sm:text-2xl font-bold text-purple-600">
+                    {optimizedTeam.lineup.length}
+                  </div>
+                </div>
+              </div>
+
+              {/* Starting 11 */}
+              <div className="mb-6">
+                <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <Target className="h-4 w-4 text-green-600" />
+                  Starting XI
+                </h3>
+                <div className="space-y-2">
+                  {optimizedTeam.lineup.slice(0, 11).map((pick: TeamPick, idx: number) => {
+                    const player = getPlayerById(pick.element);
+                    if (!player) return null;
+                    const position = player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD';
+                    
+                    return (
+                      <div 
+                        key={pick.element} 
+                        className={`p-3 sm:p-4 rounded-lg border-2 transition-all ${
+                          pick.is_captain 
+                            ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-400' 
+                            : pick.is_vice_captain
+                            ? 'bg-gradient-to-r from-orange-50 to-red-50 border-orange-300'
+                            : 'bg-white border-gray-200 hover:border-green-300'
+                        }`}
+                        data-testid={`starting-player-${idx}`}
+                      >
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs shrink-0">
+                                  {position}
+                                </Badge>
+                                {pick.is_captain && <Badge className="bg-yellow-400 text-yellow-900 text-xs shrink-0">C</Badge>}
+                                {pick.is_vice_captain && <Badge className="bg-orange-400 text-orange-900 text-xs shrink-0">VC</Badge>}
+                              </div>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                                <span className="text-sm sm:text-base font-medium text-gray-900 truncate">
+                                  {player.web_name}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {bootstrapData?.teams?.find((t: any) => t.id === player.team)?.short_name || ''}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <div className="text-xs text-gray-500">Projected</div>
+                              <div className="text-sm sm:text-base font-bold text-green-600">
+                                {(pick.projectedPoints || 0).toFixed(1)} pts
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Bench */}
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-3">Bench</h3>
+                <div className="space-y-2">
+                  {optimizedTeam.lineup.slice(11, 15).map((pick: TeamPick, idx: number) => {
+                    const player = getPlayerById(pick.element);
+                    if (!player) return null;
+                    const position = player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD';
+                    
+                    return (
+                      <div 
+                        key={pick.element} 
+                        className="p-3 sm:p-4 rounded-lg bg-gray-50 border border-gray-200"
+                        data-testid={`bench-player-${idx}`}
+                      >
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 flex-1 min-w-0">
+                              <Badge variant="outline" className="text-xs w-fit">
+                                {position}
+                              </Badge>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+                                <span className="text-sm sm:text-base font-medium text-gray-700 truncate">
+                                  {player.web_name}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                  {bootstrapData?.teams?.find((t: any) => t.id === player.team)?.short_name || ''}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs text-gray-500">Projected</div>
+                            <div className="text-sm sm:text-base font-semibold text-gray-600">
+                              {(pick.projectedPoints || 0).toFixed(1)} pts
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
