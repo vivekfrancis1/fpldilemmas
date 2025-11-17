@@ -4712,7 +4712,7 @@ export default function TransferPlanner() {
   };
 
   return (
-    <div className="container mx-auto p-2 md:p-4 lg:p-6 space-y-3 md:space-y-4">
+    <div className="container mx-auto px-3 sm:px-4 py-2 md:p-4 lg:p-6 space-y-3 md:space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
         <div className="p-2 md:p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
@@ -4762,11 +4762,11 @@ export default function TransferPlanner() {
       {/* Combined Selection Section */}
       {searchedId && teamData && selectedGameweek && (
         <Card className="sticky top-0 z-40 bg-background shadow-md">
-          <CardContent className="pt-6 pb-4 space-y-4">
+          <CardContent className="pt-4 sm:pt-6 pb-3 sm:pb-4 space-y-3 sm:space-y-4">
             {/* Draft Subsection */}
             <div>
-              <div className="flex items-center gap-4 flex-wrap mb-2">
-                <div className="text-base font-semibold min-w-[120px]">
+              <div className="flex items-center gap-2 sm:gap-4 flex-wrap mb-2">
+                <div className="text-sm sm:text-base font-semibold min-w-[100px] sm:min-w-[120px]">
                   Select Draft
                   {isSaving && activeDraft !== "Base" && (
                     <span className="ml-2 text-base text-blue-600 font-semibold animate-pulse">● Saving...</span>
@@ -4843,7 +4843,7 @@ export default function TransferPlanner() {
 
               {/* Action Buttons - Below selectors */}
               {activeDraft !== "Base" && (
-                <div className="flex gap-2 flex-wrap pl-[140px] items-center">
+                <div className="flex gap-2 flex-wrap pl-0 sm:pl-[140px] items-center">
                   <Button
                     onClick={() => saveCurrentDraft()}
                     variant="default"
@@ -4895,14 +4895,14 @@ export default function TransferPlanner() {
             <div className="border-t" />
 
             {/* Gameweek Subsection */}
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="text-base font-semibold min-w-[120px]">Select Gameweek</div>
-              <div className="flex gap-2 flex-wrap items-center">
+            <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+              <div className="text-sm sm:text-base font-semibold min-w-[100px] sm:min-w-[120px]">Select Gameweek</div>
+              <div className="flex gap-1.5 sm:gap-2 flex-wrap items-center">
                 {nextGameweeks.map(gw => (
                   <Button
                     key={gw.id}
                     variant={selectedGameweek === gw.id ? "default" : "outline"}
-                    className="h-9 text-base font-semibold min-w-[2.5rem] md:min-w-[3rem] px-3"
+                    className="h-8 sm:h-9 text-sm sm:text-base font-semibold min-w-[2.5rem] md:min-w-[3rem] px-2 sm:px-3"
                     onClick={() => {
                       setSelectedPlayer(null);
                       setSelectedGameweek(gw.id);
@@ -4922,7 +4922,7 @@ export default function TransferPlanner() {
       {searchedId && teamData && selectedGameweek && (
         <Collapsible open={isChipsPlanningOpen} onOpenChange={setIsChipsPlanningOpen}>
           <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background">
-            <CardHeader className="pb-2 md:pb-4">
+            <CardHeader className="px-3 sm:px-6 pb-2 md:pb-4">
               <div className="flex items-start justify-between gap-2">
                 <CardTitle className="flex items-center gap-2 text-base md:text-lg" data-testid="text-chips-planning-title">
                   <Sparkles className="h-4 w-4 md:h-5 md:w-5 text-amber-600" />
@@ -4968,7 +4968,7 @@ export default function TransferPlanner() {
               </div>
             </CardHeader>
             <CollapsibleContent>
-              <CardContent className="space-y-3 md:space-y-4 pt-2 md:pt-4" data-testid="section-chips-planning">
+              <CardContent className="px-3 sm:px-6 space-y-3 md:space-y-4 pt-2 md:pt-4" data-testid="section-chips-planning">
             {/* Important Chip Information */}
             <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
               <Info className="h-4 w-4 text-blue-600" />
@@ -5101,8 +5101,8 @@ export default function TransferPlanner() {
       {/* Team Summary Stats */}
       {searchedId && teamData && selectedGameweek && (
         <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between flex-wrap gap-3">
+          <CardHeader className="px-3 sm:px-6">
+            <CardTitle className="flex items-center justify-between flex-wrap gap-2 sm:gap-3 text-base sm:text-lg">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-green-600" />
                 {activeDraft === "Base" ? "Team Summary - Base Draft" : `Team Summary - Draft ${activeDraft}`}
@@ -5168,12 +5168,12 @@ export default function TransferPlanner() {
               </div>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <CardContent className="px-3 sm:px-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4">
               {/* Formation */}
-              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">Formation</div>
-                <div className="text-2xl font-bold text-indigo-600">
+              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-xs sm:text-sm text-muted-foreground mb-1">Formation</div>
+                <div className="text-xl sm:text-2xl font-bold text-indigo-600">
                   {(() => {
                     const starting11 = manualLineup.slice(0, 11);
                     const defs = starting11.filter(p => getPlayerById(p.element)?.element_type === 2).length;
@@ -5185,8 +5185,8 @@ export default function TransferPlanner() {
               </div>
 
               {/* Total Projected Points for Selected GW */}
-              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-xs sm:text-sm text-muted-foreground mb-1 flex items-center gap-1">
                   <span>GW {selectedGameweek} xPts</span>
                   {plannedChips[selectedGameweek] && (
                     <TooltipProvider>
@@ -5201,7 +5201,7 @@ export default function TransferPlanner() {
                     </TooltipProvider>
                   )}
                 </div>
-                <div className="text-2xl font-bold text-green-600">
+                <div className="text-xl sm:text-2xl font-bold text-green-600">
                   {(() => {
                     const isBenchBoostActive = plannedChips[selectedGameweek] === 'bboost';
                     const isTripleCaptainActive = plannedChips[selectedGameweek] === '3xc';
@@ -5221,8 +5221,8 @@ export default function TransferPlanner() {
               </div>
 
               {/* Total Projected Points for Next 6 GWs */}
-              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-2">
+              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-xs sm:text-sm text-muted-foreground mb-1 flex items-center gap-2">
                   <span>
                     {nextGameweeks.length > 0 
                       ? `GW ${nextGameweeks[0].id}-${nextGameweeks[nextGameweeks.length - 1].id} xPts`
@@ -5250,7 +5250,7 @@ export default function TransferPlanner() {
                     </TooltipProvider>
                   )}
                 </div>
-                <div className="text-2xl font-bold text-blue-600" key={JSON.stringify(plannedChips) + JSON.stringify(optimizedLineups)}>
+                <div className="text-xl sm:text-2xl font-bold text-blue-600" key={JSON.stringify(plannedChips) + JSON.stringify(optimizedLineups)}>
                   {(() => {
                     if (!playerProjections6GW || !Array.isArray(playerProjections6GW) || !teamData?.picks) return '0.0';
                     
@@ -5297,17 +5297,17 @@ export default function TransferPlanner() {
               </div>
 
               {/* Cash in Bank */}
-              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">Cash in Bank</div>
-                <div className={`text-2xl font-bold ${calculateInitialBank() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
+              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-xs sm:text-sm text-muted-foreground mb-1">Cash in Bank</div>
+                <div className={`text-xl sm:text-2xl font-bold ${calculateInitialBank() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
                   £{calculateInitialBank().toFixed(1)}m
                 </div>
               </div>
 
               {/* Cash in Bank After Transfers */}
-              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1">Cash After Transfers</div>
-                <div className={`text-2xl font-bold ${calculateBankAfterTransfers() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
+              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-xs sm:text-sm text-muted-foreground mb-1">Cash After Transfers</div>
+                <div className={`text-xl sm:text-2xl font-bold ${calculateBankAfterTransfers() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
                   £{calculateBankAfterTransfers().toFixed(1)}m
                 </div>
                 {calculateBankAfterTransfers() < 0 && (
@@ -5318,14 +5318,14 @@ export default function TransferPlanner() {
               </div>
 
               {/* Transfers */}
-              <div className="p-4 rounded-lg bg-white dark:bg-gray-900 border">
-                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+              <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
+                <div className="text-xs sm:text-sm text-muted-foreground mb-1 flex items-center gap-1">
                   <span>Transfers</span>
                   {(plannedChips[selectedGameweek] === 'freehit' || plannedChips[selectedGameweek] === 'wildcard') && (
                     <Sparkles className="h-3 w-3 text-amber-600" />
                   )}
                 </div>
-                <div className={`text-2xl font-bold ${(() => {
+                <div className={`text-xl sm:text-2xl font-bold ${(() => {
                   const remaining = calculateTransfersRemaining();
                   return typeof remaining === 'number' && remaining < 0 ? 'text-red-600' : 'text-purple-600';
                 })()}`}>
@@ -5348,8 +5348,8 @@ export default function TransferPlanner() {
       {/* Team Selection Section */}
       {searchedId && teamData && selectedGameweek && (
         <Card ref={teamLineupRef} className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+          <CardHeader className="px-3 sm:px-6">
+            <CardTitle className="flex items-center justify-between flex-wrap gap-2 text-base sm:text-lg">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-600" />
                 {activeDraft === "Base" 
@@ -5385,8 +5385,8 @@ export default function TransferPlanner() {
               })()}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-xs text-muted-foreground mb-2 italic">
+          <CardContent className="px-3 sm:px-6">
+            <div className="text-xs sm:text-sm text-muted-foreground mb-2 italic">
               Click on the player to transfer or swap or set as captain
             </div>
 
