@@ -3490,7 +3490,7 @@ export default function TransferPlanner() {
   };
 
   // Reset all transfers for the current gameweek and restore baseline
-  const handleResetTransfers = () => {
+  const handleResetTransfers = async () => {
     if (!teamData?.picks || !selectedGameweek) return;
     
     // Get the baseline lineup for this gameweek
@@ -3502,22 +3502,36 @@ export default function TransferPlanner() {
     setCompletedTransfers([]);
     
     // Clear from gameweek-specific storage
-    setGameweekTransfers(gwTransfers => ({
-      ...gwTransfers,
+    const updatedGameweekTransfers = {
+      ...gameweekTransfers,
       [selectedGameweek]: {
         transferredOut: [],
         completed: []
       }
-    }));
+    };
+    setGameweekTransfers(updatedGameweekTransfers);
+    
+    // Clear optimized lineup for this gameweek
+    setOptimizedLineups(prev => {
+      const updated = { ...prev };
+      delete updated[selectedGameweek];
+      return updated;
+    });
     
     toast({
       title: "Transfers Reset",
       description: "All transfers for this gameweek have been undone."
     });
+    
+    // Auto-save the draft if not on Base
+    if (activeDraft !== "Base") {
+      const draftToSave = activeDraft;
+      await saveCurrentDraft(updatedGameweekTransfers, draftToSave);
+    }
   };
 
   // Reset all transfers across all gameweeks
-  const handleResetAllTransfers = () => {
+  const handleResetAllTransfers = async () => {
     if (!teamData?.picks || !selectedGameweek) return;
     
     // Reset to original team data
@@ -3528,10 +3542,19 @@ export default function TransferPlanner() {
     setCompletedTransfers([]);
     setGameweekTransfers({});
     
+    // Clear all optimized lineups
+    setOptimizedLineups({});
+    
     toast({
       title: "All Transfers Reset",
       description: "All transfers across all gameweeks have been undone."
     });
+    
+    // Auto-save the draft if not on Base
+    if (activeDraft !== "Base") {
+      const draftToSave = activeDraft;
+      await saveCurrentDraft({}, draftToSave);
+    }
   };
 
   // Undo a specific transfer and restore the baseline player
@@ -5124,7 +5147,7 @@ export default function TransferPlanner() {
                     data-testid="button-reset-gw-transfers"
                   >
                     <RotateCcw className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                    <span className="hidden sm:inline">Undo This GW</span>
+                    <span className="hidden sm:inline">Undo This GW Transfers</span>
                   </Button>
                 )}
                 {Object.keys(gameweekTransfers).some(gw => 
@@ -5139,7 +5162,7 @@ export default function TransferPlanner() {
                     data-testid="button-reset-all-transfers"
                   >
                     <X className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                    <span className="hidden sm:inline">Undo All GWs</span>
+                    <span className="hidden sm:inline">Undo All GW Transfers</span>
                   </Button>
                 )}
               </div>
