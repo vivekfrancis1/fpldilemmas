@@ -4835,6 +4835,16 @@ export default function TransferPlanner() {
               
               if (!primaryRec) return null;
               
+              // Check if this recommended transfer has already been applied
+              const isTransferAlreadyApplied = completedTransfers.some(
+                transfer => 
+                  transfer.outPlayerId === primaryRec.playerOut.id && 
+                  transfer.inPlayerId === primaryRec.playerIn.id
+              );
+              
+              // Don't show button if transfer already applied
+              if (isTransferAlreadyApplied) return null;
+              
               return (
                 <div className="border-t pt-4">
                   <Button
