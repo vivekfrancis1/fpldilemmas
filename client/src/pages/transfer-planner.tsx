@@ -922,11 +922,6 @@ export default function TransferPlanner() {
   // Selected player for pitch view actions
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   
-  // Team optimization undo state - stores pre-optimization lineups per gameweek
-  const [optimizationUndoState, setOptimizationUndoState] = useState<{
-    [gameweek: number]: TeamPick[]
-  }>({});
-  
   const { toast } = useToast();
 
   // Cache manager ID functionality
@@ -2613,12 +2608,6 @@ export default function TransferPlanner() {
     
     const wasInBase = activeDraft === "Base";
 
-    // Store current lineup for undo
-    setOptimizationUndoState(prev => ({
-      ...prev,
-      [gameweek]: JSON.parse(JSON.stringify(manualLineup))
-    }));
-
     // Get projected points for this gameweek
     const getProjectedPoints = (playerId: number): number => {
       const projection = playerProjections6GW.find((p: any) => p.playerId === playerId);
@@ -2823,61 +2812,6 @@ export default function TransferPlanner() {
     }
   };
 
-  // Undo team optimization for a specific gameweek
-  const undoTeamOptimization = (gameweek: number) => {
-    const previousLineup = optimizationUndoState[gameweek];
-    if (!previousLineup) {
-      toast({
-        title: "Cannot Undo",
-        description: "No previous lineup to restore",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Check if we can create a draft
-    const targetDraft = getTargetDraftForChanges();
-    if (!targetDraft) return;
-    
-    const wasInBase = activeDraft === "Base";
-
-    // Restore previous lineup
-    setManualLineup(JSON.parse(JSON.stringify(previousLineup)));
-    
-    // Clear the optimization flag for this gameweek+draft
-    const optimizationKey = getOptimizationKey(activeDraft, gameweek);
-    console.log("🔓 UNDO: Clearing optimization flag for", optimizationKey);
-    const newFlags = { ...isLineupOptimizedRef.current };
-    delete newFlags[optimizationKey];
-    isLineupOptimizedRef.current = newFlags;
-    console.log("🔓 UNDO: New flag state:", isLineupOptimizedRef.current);
-
-    // Clear undo state for this gameweek
-    setOptimizationUndoState(prev => {
-      const newState = { ...prev };
-      delete newState[gameweek];
-      return newState;
-    });
-    
-    // Remove optimized lineup from state and database
-    const updatedOptimizedLineups = { ...optimizedLineups };
-    delete updatedOptimizedLineups[gameweek];
-    setOptimizedLineups(updatedOptimizedLineups);
-    
-    console.log("🔓 UNDO: Removed optimized lineup for GW", gameweek);
-
-    toast({
-      title: "Optimization Undone",
-      description: "Previous lineup has been restored"
-    });
-
-    // Auto-save after undo (will include the updated optimizedLineups without this gameweek)
-    if (wasInBase) {
-      setTimeout(() => finalizeNewDraft(targetDraft), 100);
-    } else {
-      setTimeout(() => saveCurrentDraft(undefined, activeDraft, true), 200);
-    }
-  };
 
   // Optimize team lineup for all future gameweeks
   const optimizeAllGameweeks = async () => {
@@ -2898,15 +2832,8 @@ export default function TransferPlanner() {
     const nextGWs = getNextGameweeks();
     let optimizedCount = 0;
 
-    // Store all current lineups for undo (before any optimization)
-    const allPreviousLineups: { [key: number]: TeamPick[] } = {};
+    // Store all optimized lineups
     const allOptimizedLineups: { [key: number]: TeamPick[] } = {};
-    
-    for (const gw of nextGWs) {
-      // Get baseline lineup for this gameweek
-      const baselineLineup = getBaselineLineup(gw.id);
-      allPreviousLineups[gw.id] = JSON.parse(JSON.stringify(baselineLineup));
-    }
 
     // Optimize each gameweek
     for (const gw of nextGWs) {
@@ -3036,19 +2963,20 @@ export default function TransferPlanner() {
       }
     }
 
-    // Store undo state for all gameweeks (includes both previous and optimized lineups)
-    setOptimizationUndoState(prev => {
-      const newState = { ...prev };
-      // Store previous lineups for undo
-      Object.keys(allPreviousLineups).forEach(gw => {
-        newState[parseInt(gw)] = allPreviousLineups[parseInt(gw)];
-      });
-      // Store optimized lineups separately with a special key
-      Object.keys(allOptimizedLineups).forEach(gw => {
-        newState[`optimized_${gw}`] = allOptimizedLineups[parseInt(gw)];
-      });
-      return newState;
+    // Update optimizedLineups state and persist to database
+    const updatedOptimizedLineups = {
+      ...optimizedLineups,
+      ...allOptimizedLineups
+    };
+    setOptimizedLineups(updatedOptimizedLineups);
+    
+    // Mark all optimized gameweeks as optimized to prevent reset
+    const newFlags = { ...isLineupOptimizedRef.current };
+    Object.keys(allOptimizedLineups).forEach(gw => {
+      const key = getOptimizationKey(activeDraft, parseInt(gw));
+      newFlags[key] = true;
     });
+    isLineupOptimizedRef.current = newFlags;
 
     // If current gameweek was optimized, update manualLineup
     if (allOptimizedLineups[selectedGameweek]) {
@@ -3060,56 +2988,44 @@ export default function TransferPlanner() {
       description: `Optimized lineups for ${optimizedCount} gameweeks. Switch between gameweeks to see the optimized teams.`
     });
 
-    // Auto-save after bulk optimization
-    if (wasInBase) {
-      setTimeout(() => finalizeNewDraft(targetDraft), 100);
-    } else {
-      setTimeout(() => saveCurrentDraft(undefined, activeDraft, true), 200);
-    }
-  };
-
-  // Undo all gameweek optimizations
-  const undoAllOptimizations = () => {
-    // Filter out only regular gameweek keys (not optimized_ keys)
-    const optimizedGameweeks = Object.keys(optimizationUndoState)
-      .filter(key => !key.startsWith('optimized_'))
-      .map(Number);
-    
-    if (optimizedGameweeks.length === 0) {
-      toast({
-        title: "Cannot Undo",
-        description: "No optimizations to undo",
-        variant: "destructive"
+    // Save to database with all optimized lineups
+    if (activeDraft !== "Base" && searchedId) {
+      const captainPick = allOptimizedLineups[selectedGameweek]?.find(p => p.is_captain);
+      const viceCaptainPick = allOptimizedLineups[selectedGameweek]?.find(p => p.is_vice_captain);
+      
+      fetch("/api/transfer-planner/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          managerId: parseInt(searchedId),
+          draftLetter: activeDraft,
+          gameweekTransfers: JSON.parse(JSON.stringify(gameweekTransfers)),
+          plannedChips: JSON.parse(JSON.stringify(plannedChips)),
+          optimizedLineups: updatedOptimizedLineups,
+          mode: "manual",
+          teamBank: calculateBankAfterTransfers(),
+          teamValue: 0,
+          totalProjectedPoints: 0,
+          totalTransfersUsed: Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0),
+          captainPlayerId: captainPick?.element || null,
+          viceCaptainPlayerId: viceCaptainPick?.element || null
+        })
+      }).then(response => {
+        if (response.ok) {
+          console.log("✅ OPTIMIZE ALL: All optimized lineups saved to database successfully");
+          loadDrafts();
+        }
+      }).catch(error => {
+        console.error("❌ OPTIMIZE ALL: Failed to save optimized lineups:", error);
       });
-      return;
     }
 
-    // Check if we can create a draft
-    const targetDraft = getTargetDraftForChanges();
-    if (!targetDraft) return;
-    
-    const wasInBase = activeDraft === "Base";
-
-    // If current gameweek was optimized, restore its lineup
-    if (optimizationUndoState[selectedGameweek]) {
-      setManualLineup(JSON.parse(JSON.stringify(optimizationUndoState[selectedGameweek])));
-    }
-
-    // Clear all undo state
-    setOptimizationUndoState({});
-
-    toast({
-      title: "All Optimizations Undone",
-      description: `Cleared optimization data for ${optimizedGameweeks.length} gameweeks`
-    });
-
-    // Auto-save after undo all
+    // Auto-save after bulk optimization (for Base draft handling)
     if (wasInBase) {
       setTimeout(() => finalizeNewDraft(targetDraft), 100);
-    } else {
-      setTimeout(() => saveCurrentDraft(undefined, activeDraft, true), 200);
     }
   };
+
 
   // Handle captain selection
   const handleSetCaptain = (playerId: number) => {
@@ -5181,20 +5097,6 @@ export default function TransferPlanner() {
                       <span className="hidden sm:inline">Optimize All GWs</span>
                       <span className="sm:hidden">Optimize All</span>
                     </Button>
-                    
-                    {Object.keys(optimizationUndoState).length > 0 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={undoAllOptimizations}
-                        className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/20 h-7 px-2 md:h-9 md:px-3"
-                        data-testid="button-undo-all-optimizations"
-                      >
-                        <RotateCcw className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                        <span className="hidden sm:inline">Undo All Optimizations</span>
-                        <span className="sm:hidden">Undo Optimizations</span>
-                      </Button>
-                    )}
                   </>
                 )}
                 
@@ -5311,7 +5213,7 @@ export default function TransferPlanner() {
                     </TooltipProvider>
                   )}
                 </div>
-                <div className="text-2xl font-bold text-blue-600" key={JSON.stringify(plannedChips) + JSON.stringify(optimizationUndoState)}>
+                <div className="text-2xl font-bold text-blue-600" key={JSON.stringify(plannedChips) + JSON.stringify(optimizedLineups)}>
                   {(() => {
                     if (!playerProjections6GW || !Array.isArray(playerProjections6GW) || !teamData?.picks) return '0.0';
                     
@@ -5321,12 +5223,11 @@ export default function TransferPlanner() {
                     // For each gameweek, calculate the lineup's points for THAT specific gameweek
                     nextGWs.forEach(gw => {
                       // Check if there's an optimized lineup for this gameweek
-                      const optimizedLineupKey = `optimized_${gw}` as any;
                       let lineupForGW: TeamPick[];
                       
-                      if (optimizationUndoState[optimizedLineupKey]) {
+                      if (optimizedLineups[gw]) {
                         // Use optimized lineup
-                        lineupForGW = optimizationUndoState[optimizedLineupKey] as TeamPick[];
+                        lineupForGW = optimizedLineups[gw];
                       } else {
                         // Get the baseline lineup for this specific gameweek (with cumulative transfers applied)
                         lineupForGW = getBaselineLineup(gw);
@@ -5488,18 +5389,6 @@ export default function TransferPlanner() {
                   <Sparkles className="h-4 w-4" />
                   Optimize Team
                 </Button>
-                
-                {selectedGameweek && optimizationUndoState[selectedGameweek] && (
-                  <Button
-                    variant="outline"
-                    onClick={() => selectedGameweek && undoTeamOptimization(selectedGameweek)}
-                    className="flex items-center gap-2"
-                    data-testid="button-undo-optimization"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    Undo
-                  </Button>
-                )}
               </div>
             </div>
 
