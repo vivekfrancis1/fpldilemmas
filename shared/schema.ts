@@ -1608,6 +1608,11 @@ export const transferPlannerDrafts = pgTable("transfer_planner_drafts", {
   // ChipType: 'wildcard' | '3xc' | 'bboost' | 'freehit'
   plannedChips: jsonb("planned_chips").notNull().default(sql`'{}'::jsonb`),
   
+  // Store optimized lineups for each gameweek as JSON
+  // Structure: { [gameweek: number]: TeamPick[] }
+  // TeamPick includes position field for optimized formation
+  optimizedLineups: jsonb("optimized_lineups").notNull().default(sql`'{}'::jsonb`),
+  
   // Store mode (auto/manual)
   mode: varchar("mode", { length: 20 }).notNull().default("manual"),
   
