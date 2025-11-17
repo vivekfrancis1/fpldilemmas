@@ -68,7 +68,7 @@ export default function TransferRecommendations() {
 
   // Fetch team data for current squad
   const { data: teamData } = useQuery<any>({
-    queryKey: ["/api/manager", searchedId, "team-data"],
+    queryKey: ["/api/manager", searchedId, "team"],
     enabled: !!searchedId,
     staleTime: 5 * 60 * 1000,
   });
@@ -332,6 +332,24 @@ export default function TransferRecommendations() {
       error: recommendationsError
     });
   }, [searchedId, recommendedTransfers, isLoadingRecommendations, recommendationsError]);
+
+  // Debug optimized team
+  useEffect(() => {
+    console.log("🔍 Optimized Team Debug:", {
+      selectedGameweek,
+      hasTeamData: !!teamData,
+      teamDataPicks: teamData?.picks?.length,
+      hasAdjustedRecommendations: !!adjustedRecommendations,
+      hasGameweekData: !!adjustedRecommendations?.gameweeks?.[selectedGameweek || ''],
+      hasApplyRecommendedTransfers: !!applyRecommendedTransfers,
+      applyRecommendedTransfersLength: applyRecommendedTransfers?.length,
+      hasPlayerProjections: !!playerProjections,
+      playerProjectionsLength: playerProjections?.length,
+      hasBootstrapData: !!bootstrapData,
+      hasOptimizedTeam: !!optimizedTeam,
+      optimizedTeam
+    });
+  }, [selectedGameweek, teamData, adjustedRecommendations, applyRecommendedTransfers, playerProjections, bootstrapData, optimizedTeam]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
