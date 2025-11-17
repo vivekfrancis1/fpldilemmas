@@ -15486,6 +15486,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Draft not found" });
       }
 
+      console.log(`📦 DEBUG: Draft optimizedLineups for ${draftLetter}:`, JSON.stringify(draft.optimizedLineups));
+
       res.json({ success: true, draft });
 
     } catch (error) {
