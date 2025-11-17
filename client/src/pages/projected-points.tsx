@@ -13,6 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { applyAvailabilityAdjustments, AFCON_PLAYERS, type BootstrapData as AvailabilityBootstrapData } from "@/lib/availability-adjustments";
+import { extractManagerId } from "@/lib/manager-id-utils";
 
 // Player Availability Badge Component
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -602,9 +603,12 @@ export default function ProjectedPoints() {
                   <Input
                     id="manager-id"
                     type="text"
-                    placeholder="Enter your FPL Manager ID (e.g., 123456)"
+                    placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
                     value={managerId}
-                    onChange={(e) => setManagerId(e.target.value)}
+                    onChange={(e) => {
+                      const extractedId = extractManagerId(e.target.value);
+                      setManagerId(extractedId);
+                    }}
                     onKeyDown={(e) => e.key === "Enter" && !isLoadingTeam && handleSearch()}
                     className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                     data-testid="input-manager-id"
@@ -699,8 +703,11 @@ export default function ProjectedPoints() {
                   <Input
                     type="text"
                     value={managerId}
-                    onChange={(e) => setManagerId(e.target.value)}
-                    placeholder="Enter Manager ID"
+                    onChange={(e) => {
+                      const extractedId = extractManagerId(e.target.value);
+                      setManagerId(extractedId);
+                    }}
+                    placeholder="Paste URL or Manager ID"
                     className="text-sm sm:text-base min-h-10 sm:min-h-11"
                     data-testid="input-manager-id"
                     disabled={isLoadingTeam}

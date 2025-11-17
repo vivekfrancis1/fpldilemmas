@@ -14,6 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { applyAvailabilityAdjustments, AFCON_PLAYERS } from "@/lib/availability-adjustments";
+import { extractManagerId } from "@/lib/manager-id-utils";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -4735,9 +4736,12 @@ export default function TransferPlanner() {
               <Input
                 id="manager-id"
                 type="text"
-                placeholder="Enter your FPL Manager ID (e.g., 123456)"
+                placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
                 value={managerId}
-                onChange={(e) => setManagerId(e.target.value)}
+                onChange={(e) => {
+                  const extractedId = extractManagerId(e.target.value);
+                  setManagerId(extractedId);
+                }}
                 onKeyPress={handleKeyPress}
                 className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                 data-testid="input-manager-id"

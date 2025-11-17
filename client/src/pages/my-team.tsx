@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Users, Target, Trophy, Star, DollarSign } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { extractManagerId } from "@/lib/manager-id-utils";
 
 interface TeamPick {
   element: number;
@@ -315,9 +316,12 @@ export default function MyTeam() {
                 <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                     data-testid="input-manager-id"
-                    placeholder="Enter Manager ID (e.g., 123456)"
+                    placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
                     value={managerId}
-                    onChange={(e) => setManagerId(e.target.value)}
+                    onChange={(e) => {
+                      const extractedId = extractManagerId(e.target.value);
+                      setManagerId(extractedId);
+                    }}
                     onKeyPress={handleKeyPress}
                     className="flex-1 text-base"
                   />

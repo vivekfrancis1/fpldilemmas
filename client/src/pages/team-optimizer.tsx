@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { applyAvailabilityAdjustments, AFCON_PLAYERS, type BootstrapData as AvailabilityBootstrapData } from "@/lib/availability-adjustments";
+import { extractManagerId } from "@/lib/manager-id-utils";
 
 // Player Availability Badge Component
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -901,9 +902,12 @@ export default function TeamOptimizer() {
                   <Input
                     id="manager-id"
                     type="text"
-                    placeholder="Enter your FPL Manager ID"
+                    placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
                     value={managerId}
-                    onChange={(e) => setManagerId(e.target.value)}
+                    onChange={(e) => {
+                      const extractedId = extractManagerId(e.target.value);
+                      setManagerId(extractedId);
+                    }}
                     onKeyDown={(e) => e.key === "Enter" && !isLoadingTeam && handleSearch()}
                     data-testid="input-manager-id"
                     disabled={isLoadingTeam}

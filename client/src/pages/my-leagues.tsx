@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Trophy, Users, TrendingUp, Target, Search, Crown, Medal, Award, AlertTriangle, Eye, ChevronDown, ChevronUp, BarChart3, Star, Activity, ArrowLeft } from "lucide-react";
+import { extractManagerId } from "@/lib/manager-id-utils";
 
 interface LeagueEntry {
   id: number;
@@ -175,9 +176,12 @@ function MyLeagues() {
                 <Input
                   id="manager-id"
                   type="text"
-                  placeholder="Enter your FPL Manager ID (e.g., 123456)"
+                  placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
                   value={managerId}
-                  onChange={(e) => setManagerId(e.target.value)}
+                  onChange={(e) => {
+                    const extractedId = extractManagerId(e.target.value);
+                    setManagerId(extractedId);
+                  }}
                   onKeyPress={handleKeyPress}
                   className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                   data-testid="input-manager-id"

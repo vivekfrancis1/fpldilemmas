@@ -38,6 +38,7 @@ import {
 import { Link, useLocation } from "wouter";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { LoadingExperience } from "@/components/loading-experience";
+import { extractManagerId } from "@/lib/manager-id-utils";
 
 
 
@@ -641,9 +642,12 @@ export default function MyDashboard() {
                 <Input
                   id="manager-id"
                   type="text"
-                  placeholder="Enter your FPL Manager ID (e.g., 123456)"
+                  placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
                   value={managerId}
-                  onChange={(e) => setManagerId(e.target.value)}
+                  onChange={(e) => {
+                    const extractedId = extractManagerId(e.target.value);
+                    setManagerId(extractedId);
+                  }}
                   onKeyPress={handleKeyPress}
                   className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                   data-testid="input-manager-id"

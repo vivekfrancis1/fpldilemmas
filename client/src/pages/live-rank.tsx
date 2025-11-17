@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Trophy, Target, Activity, Calendar } from "lucide-react";
+import { TrendingUp, TrendingDown, Trophy, Target, Activity, Calendar, Search } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { extractManagerId } from "@/lib/manager-id-utils";
 
 interface ManagerData {
   id: number;
@@ -156,15 +157,18 @@ export default function LiveRank() {
           <CardContent className="p-4 sm:p-6">
             <div className="max-w-2xl mx-auto">
               <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
-                Manager ID
+                Manager ID or Browser URL
               </label>
               <div className="flex flex-col gap-3">
                 <Input
                   id="manager-id"
                   type="text"
-                  placeholder="Enter your FPL Manager ID (e.g., 123456)"
+                  placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
                   value={managerId}
-                  onChange={(e) => setManagerId(e.target.value)}
+                  onChange={(e) => {
+                    const extractedId = extractManagerId(e.target.value);
+                    setManagerId(extractedId);
+                  }}
                   onKeyPress={handleKeyPress}
                   className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                   data-testid="input-manager-id"

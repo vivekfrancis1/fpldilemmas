@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle, Users, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingExperience } from "@/components/loading-experience";
+import { extractManagerId } from "@/lib/manager-id-utils";
 
 interface TeamPick {
   element: number;
@@ -428,9 +429,12 @@ export default function TransferRecommendations() {
                 <Input
                   id="manager-id"
                   type="text"
-                  placeholder="Enter your FPL Manager ID (e.g., 123456)"
+                  placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
                   value={managerId}
-                  onChange={(e) => setManagerId(e.target.value)}
+                  onChange={(e) => {
+                    const extractedId = extractManagerId(e.target.value);
+                    setManagerId(extractedId);
+                  }}
                   onKeyDown={(e) => e.key === "Enter" && !isLoadingRecommendations && handleSearch()}
                   className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
                   data-testid="input-manager-id"
