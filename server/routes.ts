@@ -912,18 +912,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log('🔐 Validating FPL Bearer token...');
+      console.log('📏 Token length:', fplToken.length);
+      console.log('🔤 Token starts with:', fplToken.substring(0, 20));
+      console.log('🔤 Token ends with:', fplToken.substring(fplToken.length - 20));
+
+      // Trim any whitespace from token
+      const cleanToken = fplToken.trim();
 
       // Validate token by making an authenticated request
       const meResponse = await fetch('https://fantasy.premierleague.com/api/me/', {
         headers: {
-          'x-api-authorization': `Bearer ${fplToken}`,
+          'x-api-authorization': `Bearer ${cleanToken}`,
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
       });
 
       if (!meResponse.ok) {
         console.error('❌ FPL token validation failed:', meResponse.status);
-        return res.status(401).json({ error: 'Invalid FPL Bearer token. Please make sure you copied the correct token from the x-api-authorization header.' });
+        const responseText = await meResponse.text();
+        console.error('❌ FPL API response:', responseText);
+        return res.status(401).json({ 
+          error: 'Invalid FPL Bearer token. Please make sure you copied the correct token from the x-api-authorization header. Token must be fresh (less than a few hours old).' 
+        });
       }
 
       const meData = await meResponse.json();
