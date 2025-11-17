@@ -89,8 +89,31 @@ export default function TransferRecommendations() {
     }
   });
 
+  // Fetch fixtures
+  const { data: fixturesData } = useQuery<any[]>({
+    queryKey: ["/api/fixtures"],
+    staleTime: 15 * 60 * 1000,
+  });
+
   // Backend now applies availability adjustments, so we just use the data as-is
   const adjustedRecommendations = recommendedTransfers;
+
+  // Helper function to get opponent info for a player in a given gameweek
+  const getOpponentInfo = (playerTeamId: number, gameweek: number): string => {
+    if (!fixturesData || !bootstrapData) return '';
+    
+    const fixture = fixturesData.find((f: any) => 
+      f.event === gameweek && (f.team_h === playerTeamId || f.team_a === playerTeamId)
+    );
+    
+    if (!fixture) return '';
+    
+    const isHome = fixture.team_h === playerTeamId;
+    const opponentId = isHome ? fixture.team_a : fixture.team_h;
+    const opponent = bootstrapData.teams?.find((t: any) => t.id === opponentId);
+    
+    return opponent ? `vs ${opponent.short_name} (${isHome ? 'H' : 'A'})` : '';
+  };
 
   // Auto-set first gameweek when recommendations load
   useEffect(() => {
@@ -171,6 +194,19 @@ export default function TransferRecommendations() {
 
     return updatedPicks;
   }, [selectedGameweek, adjustedRecommendations, teamData, bootstrapData]);
+
+  // Track transferred-in players for highlighting
+  const transferredInPlayers = useMemo(() => {
+    if (!selectedGameweek || !adjustedRecommendations?.gameweeks?.[selectedGameweek]) {
+      return new Set<number>();
+    }
+
+    const gwData = adjustedRecommendations.gameweeks[selectedGameweek];
+    const freeTransfers = gwData.freeTransfersAvailable || 1;
+    const primaryTransfers = gwData.recommendations?.slice(0, freeTransfers) || [];
+
+    return new Set(primaryTransfers.map((rec: any) => rec.playerIn.id));
+  }, [selectedGameweek, adjustedRecommendations]);
 
   // Optimize lineup to maximize points
   const optimizedTeam = useMemo((): {
@@ -720,6 +756,8 @@ export default function TransferRecommendations() {
                     const player = getPlayerById(pick.element);
                     if (!player) return null;
                     const position = player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD';
+                    const isTransferredIn = transferredInPlayers.has(pick.element);
+                    const opponentInfo = getOpponentInfo(player.team, parseInt(selectedGameweek!));
                     
                     return (
                       <div 
@@ -729,6 +767,8 @@ export default function TransferRecommendations() {
                             ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-400' 
                             : pick.is_vice_captain
                             ? 'bg-gradient-to-r from-orange-50 to-red-50 border-orange-300'
+                            : isTransferredIn
+                            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400'
                             : 'bg-white border-gray-200 hover:border-green-300'
                         }`}
                         data-testid={`starting-player-${idx}`}
@@ -742,14 +782,16 @@ export default function TransferRecommendations() {
                                 </Badge>
                                 {pick.is_captain && <Badge className="bg-yellow-400 text-yellow-900 text-xs shrink-0">C</Badge>}
                                 {pick.is_vice_captain && <Badge className="bg-orange-400 text-orange-900 text-xs shrink-0">VC</Badge>}
+                                {isTransferredIn && <Badge className="bg-green-500 text-white text-xs shrink-0">NEW</Badge>}
                               </div>
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
                                 <span className="text-sm sm:text-base font-medium text-gray-900 truncate">
                                   {player.web_name}
                                 </span>
-                                <span className="text-xs text-gray-500">
-                                  {bootstrapData?.teams?.find((t: any) => t.id === player.team)?.short_name || ''}
-                                </span>
+                                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                  <span>{bootstrapData?.teams?.find((t: any) => t.id === player.team)?.short_name || ''}</span>
+                                  {opponentInfo && <span className="font-medium">{opponentInfo}</span>}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -776,26 +818,36 @@ export default function TransferRecommendations() {
                     const player = getPlayerById(pick.element);
                     if (!player) return null;
                     const position = player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD';
+                    const isTransferredIn = transferredInPlayers.has(pick.element);
+                    const opponentInfo = getOpponentInfo(player.team, parseInt(selectedGameweek!));
                     
                     return (
                       <div 
                         key={pick.element} 
-                        className="p-3 sm:p-4 rounded-lg bg-gray-50 border border-gray-200"
+                        className={`p-3 sm:p-4 rounded-lg border ${
+                          isTransferredIn 
+                            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-300' 
+                            : 'bg-gray-50 border-gray-200'
+                        }`}
                         data-testid={`bench-player-${idx}`}
                       >
                         <div className="flex items-center justify-between flex-wrap gap-2">
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 flex-1 min-w-0">
-                              <Badge variant="outline" className="text-xs w-fit">
-                                {position}
-                              </Badge>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs w-fit">
+                                  {position}
+                                </Badge>
+                                {isTransferredIn && <Badge className="bg-green-500 text-white text-xs shrink-0">NEW</Badge>}
+                              </div>
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
                                 <span className="text-sm sm:text-base font-medium text-gray-700 truncate">
                                   {player.web_name}
                                 </span>
-                                <span className="text-xs text-gray-500">
-                                  {bootstrapData?.teams?.find((t: any) => t.id === player.team)?.short_name || ''}
-                                </span>
+                                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                  <span>{bootstrapData?.teams?.find((t: any) => t.id === player.team)?.short_name || ''}</span>
+                                  {opponentInfo && <span className="font-medium">{opponentInfo}</span>}
+                                </div>
                               </div>
                             </div>
                           </div>
