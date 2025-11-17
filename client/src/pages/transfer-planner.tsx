@@ -1915,13 +1915,16 @@ export default function TransferPlanner() {
 
     setEditBuyPriceDialog(null);
     setEditBuyPriceValue("");
-    setHasUnsavedChanges(true);
     
     // Show confirmation toast
     toast({ 
       title: "Buy Price Updated", 
       description: `Buy price changed to £${newPrice.toFixed(1)}m. Sell price auto-calculated to £${newSellPrice.toFixed(1)}m.`
     });
+    
+    // Save changes immediately to database
+    setHasUnsavedChanges(true);
+    setTimeout(() => saveCurrentDraft(), 100);
   };
 
   // Cancel editing sell price
@@ -2535,7 +2538,9 @@ export default function TransferPlanner() {
     if (wasInBase) {
       setTimeout(() => finalizeNewDraft(targetDraft), 100);
     } else {
+      // Save changes immediately to database
       setHasUnsavedChanges(true);
+      setTimeout(() => saveCurrentDraft(), 100);
     }
   };
 
@@ -2582,7 +2587,9 @@ export default function TransferPlanner() {
     if (wasInBase) {
       setTimeout(() => finalizeNewDraft(targetDraft), 100);
     } else {
+      // Save changes immediately to database
       setHasUnsavedChanges(true);
+      setTimeout(() => saveCurrentDraft(), 100);
     }
   };
 
