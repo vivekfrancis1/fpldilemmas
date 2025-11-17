@@ -88,6 +88,28 @@ export function FplConnectDialog() {
     },
   });
 
+  // Handle Manager ID input - can be URL or plain ID
+  const handleManagerIdInput = (value: string) => {
+    const trimmed = value.trim();
+    
+    // Check if it's a URL
+    if (trimmed.includes('fantasy.premierleague.com') || trimmed.includes('entry/')) {
+      // Extract Manager ID from URL pattern: entry/123456
+      const match = trimmed.match(/entry\/(\d+)/);
+      if (match && match[1]) {
+        setFplManagerId(match[1]);
+        toast({
+          title: "Manager ID Extracted",
+          description: `Found Manager ID: ${match[1]}`,
+        });
+        return;
+      }
+    }
+    
+    // Otherwise treat as plain Manager ID
+    setFplManagerId(value);
+  };
+
   const handleConnect = () => {
     if (!fplToken || !fplManagerId) {
       toast({
@@ -177,30 +199,31 @@ export function FplConnectDialog() {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-sm">
-                <strong>Quick Setup (3 steps):</strong>
-                <ol className="list-decimal list-inside mt-2 space-y-1">
+                <strong>Super Simple Setup:</strong>
+                <ol className="list-decimal list-inside mt-2 space-y-2">
                   <li>Go to <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-semibold">fantasy.premierleague.com</a> and <strong>sign in</strong></li>
+                  <li><strong>Copy the browser URL</strong> from the address bar → Paste in "Manager ID" field below</li>
                   <li>Press <strong>F12</strong> → <strong>Network tab</strong> → <strong>F5</strong> to refresh</li>
-                  <li><strong>Right-click</strong> any request → <strong>"Copy as cURL"</strong> → Paste below!</li>
+                  <li><strong>Right-click</strong> any request → <strong>"Copy as cURL"</strong> → Paste in "cURL" field below</li>
                 </ol>
-                <p className="mt-2 text-xs">
-                  💡 Just paste the entire cURL command - we'll extract the token automatically!
+                <p className="mt-2 text-xs font-semibold text-green-600">
+                  ✅ That's it! We'll extract everything automatically.
                 </p>
               </AlertDescription>
             </Alert>
 
             <div className="space-y-2">
-              <Label htmlFor="fpl-manager-id">Your FPL Manager ID</Label>
+              <Label htmlFor="fpl-manager-id">Your FPL Manager ID or Browser URL</Label>
               <Input
                 id="fpl-manager-id"
-                type="number"
-                placeholder="Enter your Manager ID (e.g., 577434)"
+                type="text"
+                placeholder="Paste: https://fantasy.premierleague.com/entry/577434/event/10"
                 value={fplManagerId}
-                onChange={(e) => setFplManagerId(e.target.value)}
+                onChange={(e) => handleManagerIdInput(e.target.value)}
                 data-testid="input-fpl-manager-id"
               />
               <p className="text-xs text-muted-foreground">
-                Find in URL: fantasy.premierleague.com/entry/<strong>[YOUR_ID]</strong>/event/10
+                ✨ Paste your browser URL or just the Manager ID number
               </p>
             </div>
 
