@@ -163,7 +163,7 @@ export default function TransferRecommendations() {
     return bootstrapData?.elements?.find((p: any) => p.id === playerId);
   };
 
-  // Apply primary recommended transfers to current team
+  // Apply primary recommended transfers to current team (or return current team if rolling)
   const applyRecommendedTransfers = useMemo(() => {
     if (!selectedGameweek || !adjustedRecommendations?.gameweeks?.[selectedGameweek] || !teamData?.picks) {
       return null;
@@ -173,13 +173,13 @@ export default function TransferRecommendations() {
     const freeTransfers = gwData.freeTransfersAvailable || 1;
     const primaryTransfers = gwData.recommendations?.slice(0, freeTransfers) || [];
 
-    // Skip if roll recommendation
-    if (primaryTransfers.length > 0 && primaryTransfers[0]?.type === 'roll') {
-      return null;
-    }
-
     // Clone current picks
     let updatedPicks = teamData.picks.map((pick: any) => ({ ...pick }));
+
+    // If roll recommendation, just return current team without changes
+    if (primaryTransfers.length > 0 && primaryTransfers[0]?.type === 'roll') {
+      return updatedPicks;
+    }
 
     // Apply each primary transfer
     primaryTransfers.forEach((rec: any) => {
