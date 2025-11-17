@@ -37,6 +37,7 @@ import { syncProjectionService } from './sync-projection-service';
 import { FPLScoringCacheService } from './fpl-scoring-cache-service';
 import { InitializationOrchestrator } from './initialization-orchestrator';
 import { applyAvailabilityToGameweek, AFCON_PLAYERS } from './availability-adjustments';
+import { setupAuth, isAuthenticated } from './replitAuth';
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -799,25 +800,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize team configuration to avoid circular dependency
   const { setAdminGoalSettings, setCreateTeamService } = await import('./team-config');
   
-  // Configure session middleware
-  const pgStore = connectPg(session);
-  const sessionStore = new pgStore({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: false,
-    ttl: 7 * 24 * 60 * 60 // 7 days
-  });
-
-  app.use(session({
-    store: sessionStore,
-    secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      secure: false, // Set to true in production with HTTPS
-      httpOnly: true,
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+  // Set up Replit Auth with OpenID Connect (includes session middleware)
+  await setupAuth(app);
+  
+  // Auth routes - /api/auth/user endpoint
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
     }
-  }));
+  });
 
   // Middleware to check if user is authenticated
   function requireAuth(req: any, res: any, next: any) {

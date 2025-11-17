@@ -1,4 +1,4 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, type User, type UpsertUser, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts, users } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
 import { eq, sql, inArray, desc, and } from "drizzle-orm";
@@ -8,6 +8,10 @@ export interface IStorage {
   setBootstrapData(data: BootstrapData): Promise<void>;
   getPlayerSummary(playerId: number): Promise<PlayerSummary | undefined>;
   setPlayerSummary(playerId: number, data: PlayerSummary): Promise<void>;
+  
+  // User operations (required for Replit Auth)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   
   // Watchlist operations
   getWatchlistEntries(): Promise<WatchlistEntry[]>;
@@ -575,6 +579,27 @@ export class DatabaseStorage implements IStorage {
 
   async setBootstrapData(data: BootstrapData): Promise<void> {
     return this.memFallback.setBootstrapData(data);
+  }
+
+  // User operations (required for Replit Auth)
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
   // Player summary methods (keep using memory for fast access)

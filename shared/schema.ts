@@ -273,8 +273,8 @@ export const sessions = pgTable(
 // User storage table
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique().notNull(),
-  password: varchar("password").notNull(),
+  email: varchar("email").unique(),
+  password: varchar("password"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   role: varchar("role").notNull().default("user"), // "admin" or "user"
@@ -286,6 +286,9 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
+
+export type User = typeof users.$inferSelect;
+export type UpsertUser = typeof users.$inferInsert;
 
 // Daily price tracking table for historical price and transfer data
 export const dailyPlayerPrices = pgTable("daily_player_prices", {
