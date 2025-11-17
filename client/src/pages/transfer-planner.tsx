@@ -3724,8 +3724,11 @@ export default function TransferPlanner() {
       return;
     }
 
-    // Get all unapplied recommendations
-    const unappliedRecs = gwRecommendations.recommendations.filter(rec => 
+    // Get only primary recommendations (max 5)
+    const primaryRecommendations = gwRecommendations.recommendations.slice(0, 5);
+
+    // Get all unapplied recommendations from primary list
+    const unappliedRecs = primaryRecommendations.filter(rec => 
       !completedTransfers.some(
         transfer => 
           transfer.outPlayerId === rec.playerOut.id && 
@@ -5385,7 +5388,10 @@ export default function TransferPlanner() {
                 {/* Apply Recommended Transfers Button */}
                 {selectedGameweek && activeDraft !== "Base" && recommendedTransfers?.gameweeks?.[selectedGameweek]?.recommendations?.length > 0 && (() => {
                   const gwData = recommendedTransfers.gameweeks[selectedGameweek];
-                  const recommendations = gwData?.recommendations || [];
+                  const allRecommendations = gwData?.recommendations || [];
+                  
+                  // Only show primary recommendations (max 5)
+                  const recommendations = allRecommendations.slice(0, 5);
                   
                   if (recommendations.length === 0) return null;
                   
@@ -5442,7 +5448,10 @@ export default function TransferPlanner() {
               {/* Transfer Details - shown below the buttons */}
               {selectedGameweek && activeDraft !== "Base" && recommendedTransfers?.gameweeks?.[selectedGameweek]?.recommendations?.length > 0 && (() => {
                 const gwData = recommendedTransfers.gameweeks[selectedGameweek];
-                const recommendations = gwData?.recommendations || [];
+                const allRecommendations = gwData?.recommendations || [];
+                
+                // Only show primary recommendations (max 5)
+                const recommendations = allRecommendations.slice(0, 5);
                 
                 if (recommendations.length === 0) return null;
                 
