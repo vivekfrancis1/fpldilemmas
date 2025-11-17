@@ -2999,15 +2999,17 @@ export default function TransferPlanner() {
 
     // CRITICAL: Save all optimized lineups to database to persist changes
     if (searchedId) {
-      const captainPick = manualLineup.find(p => p.is_captain);
-      const viceCaptainPick = manualLineup.find(p => p.is_vice_captain);
+      // Use the optimized lineup for the current gameweek (if it exists), otherwise use manualLineup
+      const currentOptimizedLineup = allOptimizedLineups[selectedGameweek] || manualLineup;
+      const captainPick = currentOptimizedLineup.find(p => p.is_captain);
+      const viceCaptainPick = currentOptimizedLineup.find(p => p.is_vice_captain);
       const captainPlayerObj = captainPick ? getPlayerById(captainPick.element) : null;
       const viceCaptainPlayerObj = viceCaptainPick ? getPlayerById(viceCaptainPick.element) : null;
 
       apiRequest(`/api/transfer-planner/drafts/${searchedId}/${targetDraft}`, {
         method: "PUT",
         body: JSON.stringify({
-          manualLineup: JSON.parse(JSON.stringify(manualLineup)),
+          manualLineup: JSON.parse(JSON.stringify(currentOptimizedLineup)),
           gameweekTransfers: JSON.parse(JSON.stringify(gameweekTransfers)),
           plannedChips: JSON.parse(JSON.stringify(plannedChips)),
           optimizedLineups: updatedOptimizedLineups,
