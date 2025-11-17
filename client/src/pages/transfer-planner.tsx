@@ -5098,7 +5098,7 @@ export default function TransferPlanner() {
                 {/* Optimization buttons */}
                 {activeDraft !== "Base" && (() => {
                   const nextGWs = getNextGameweeks();
-                  const allOptimized = nextGWs.length > 0 && nextGWs.every(gw => optimizedLineups[gw.id]);
+                  const allOptimized = nextGWs.length > 0 && nextGWs.every(gw => gw && optimizedLineups[gw.id]);
                   
                   return allOptimized ? (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md h-7 md:h-9">
