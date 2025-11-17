@@ -2463,6 +2463,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const singleGWProjectionsByPlayerId = new Map(adjustedSingleGWData.map((p: any) => [p.playerId, p]));
         
+        // Filter cached projections for the next 4 gameweeks (or remaining gameweeks if less than 4)
+        const fourGWEnd = Math.min(targetGW + 3, planningEnd);
+        const fourGWProjectionsData = allCachedProjections.map((player: any) => {
+          const originalProjections = player.gameweekProjections || {};
+          
+          // Calculate total points for next 4 gameweeks
+          let totalPoints = 0;
+          for (let gw = targetGW; gw <= fourGWEnd; gw++) {
+            const gwKey = normalizeGameweekKey(gw);
+            const points = originalProjections[gwKey] || 0;
+            totalPoints += points;
+          }
+          
+          return {
+            ...player,
+            totalExpectedPoints: totalPoints
+          };
+        });
+        
+        // Apply availability adjustments to 4-gameweek projections
+        const adjustedFourGWData = fourGWProjectionsData.map((playerProj: any) => {
+          const element = elementsByPlayerId.get(playerProj.playerId);
+          if (!element) return playerProj;
+          
+          const playerName = `${element.first_name} ${element.second_name}`;
+          let adjustedTotal = playerProj.totalExpectedPoints || 0;
+          
+          // Apply adjustments for each gameweek in the 4-GW range
+          for (let gw = targetGW; gw <= fourGWEnd; gw++) {
+            const gwKey = normalizeGameweekKey(gw);
+            const originalPoints = playerProj.gameweekProjections?.[gwKey] || 0;
+            
+            const { adjustedPoints } = applyAvailabilityToGameweek(
+              playerName,
+              gw,
+              originalPoints,
+              element.chance_of_playing_next_round,
+              element.status,
+              element.news || '',
+              bootstrapData.events,
+              currentGameweek
+            );
+            
+            // Subtract original and add adjusted to get new total
+            adjustedTotal = adjustedTotal - originalPoints + adjustedPoints;
+          }
+          
+          return {
+            ...playerProj,
+            totalExpectedPoints: adjustedTotal,
+            availabilityAdjusted: adjustedTotal !== playerProj.totalExpectedPoints
+          };
+        });
+        
+        const fourGWProjectionsByPlayerId = new Map(adjustedFourGWData.map((p: any) => [p.playerId, p]));
+        
         // Build current team IDs from the current composition
         const currentTeamIds = new Set(currentTeamComposition.map(p => p.playerId));
         
@@ -2471,6 +2527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const element = elementsByPlayerId.get(pick.playerId);
           const projection = projectionsByPlayerId.get(pick.playerId);
           const singleGWProjection = singleGWProjectionsByPlayerId.get(pick.playerId);
+          const fourGWProjection = fourGWProjectionsByPlayerId.get(pick.playerId);
           const currentPrice = element?.now_cost || 0;
           
           // Debug logging for Sarr
@@ -2486,6 +2543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             elementType: pick.elementType,
             projectedPoints: projection?.totalExpectedPoints || 0,
             singleGWPoints: singleGWProjection?.totalExpectedPoints || 0,
+            fourGWPoints: fourGWProjection?.totalExpectedPoints || 0,
             webName: element?.web_name,
             team: element?.team,
             nowCost: currentPrice
@@ -2522,6 +2580,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const playerInSingleGWProjection = singleGWProjectionsByPlayerId.get(playerIn.id);
             const playerInSingleGWPoints = playerInSingleGWProjection?.totalExpectedPoints || 0;
             
+            const playerInFourGWProjection = fourGWProjectionsByPlayerId.get(playerIn.id);
+            const playerInFourGWPoints = playerInFourGWProjection?.totalExpectedPoints || 0;
+            
             const transferCost = playerIn.now_cost - playerOut.sellingPrice;
             const budget = currentBank + playerOut.sellingPrice;
             
@@ -2541,6 +2602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               const pointsGain = playerInPoints - playerOut.projectedPoints;
               const singleGWPointsGain = playerInSingleGWPoints - playerOut.singleGWPoints;
+              const fourGWPointsGain = playerInFourGWPoints - playerOut.fourGWPoints;
               
               // Debug logging for Sarr → Mbeumo transfer
               if (targetGW === 14 && playerOut.webName === 'Sarr' && playerIn.web_name === 'Mbeumo') {
@@ -2562,11 +2624,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
               const thresholdMultiplier = thresholdByFreeTransfers[freeTransfersForGW] || 1.1;
               const remainingGameweeks = planningEnd - targetGW + 1;
+              const fourGameweeks = Math.min(4, fourGWEnd - targetGW + 1);
               const minPointsGainTotal = remainingGameweeks * thresholdMultiplier;
               const minPointsGainSingleGW = thresholdMultiplier;
+              const minPointsGainFourGW = fourGameweeks * thresholdMultiplier;
               
               // Determine if this transfer meets the normal threshold
-              const meetsNormalThreshold = singleGWPointsGain >= minPointsGainSingleGW && pointsGain >= minPointsGainTotal;
+              // Must meet threshold for: (a) single gameweek, (b) next 4 gameweeks, (c) all remaining gameweeks
+              const meetsNormalThreshold = 
+                singleGWPointsGain >= minPointsGainSingleGW && 
+                fourGWPointsGain >= minPointsGainFourGW && 
+                pointsGain >= minPointsGainTotal;
               
               // Add all transfers with positive points gain to the pool
               // We'll apply threshold filtering later when selecting which to show
