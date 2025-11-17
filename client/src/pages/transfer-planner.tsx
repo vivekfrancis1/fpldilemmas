@@ -5392,16 +5392,25 @@ export default function TransferPlanner() {
 
               {/* Optimization Controls */}
               <div className="flex gap-2">
-                <Button
-                  variant="default"
-                  onClick={() => selectedGameweek && optimizeTeamLineup(selectedGameweek)}
-                  disabled={!selectedGameweek || !playerProjections6GW}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                  data-testid="button-optimize-team"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Optimize Team
-                </Button>
+                {selectedGameweek && optimizedLineups[selectedGameweek] ? (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md">
+                    <Sparkles className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                      Your lineup is optimised
+                    </span>
+                  </div>
+                ) : (
+                  <Button
+                    variant="default"
+                    onClick={() => selectedGameweek && optimizeTeamLineup(selectedGameweek)}
+                    disabled={!selectedGameweek || !playerProjections6GW}
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                    data-testid="button-optimize-team"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Optimize Team
+                  </Button>
+                )}
               </div>
             </div>
 
