@@ -5937,7 +5937,7 @@ export default function TransferPlanner() {
 
             {/* Pitch View */}
             {teamView === "pitch" && (
-              <div className="space-y-4">
+              <div className="space-y-4" key={manualLineup.map(p => `${p.position}-${p.element}`).join('_')}>
                 {/* Pitch */}
                 <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-2 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
                   {/* Pitch Lines and Graphics */}
