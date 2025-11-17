@@ -2997,22 +2997,17 @@ export default function TransferPlanner() {
       setManualLineup(JSON.parse(JSON.stringify(allOptimizedLineups[selectedGameweek])));
     }
 
-    toast({
-      title: "All Gameweeks Optimized!",
-      description: `Optimized lineups for ${optimizedCount} gameweeks. Switch between gameweeks to see the optimized teams.`
-    });
+    // CRITICAL: Save all optimized lineups to database to persist changes
+    if (managerIdRef.current) {
+      const captainPick = manualLineup.find(p => p.is_captain);
+      const viceCaptainPick = manualLineup.find(p => p.is_vice_captain);
+      const captainPlayerObj = captainPick ? getPlayerById(captainPick.element) : null;
+      const viceCaptainPlayerObj = viceCaptainPick ? getPlayerById(viceCaptainPick.element) : null;
 
-    // Save to database with all optimized lineups
-    if (activeDraft !== "Base" && searchedId) {
-      const captainPick = allOptimizedLineups[selectedGameweek]?.find(p => p.is_captain);
-      const viceCaptainPick = allOptimizedLineups[selectedGameweek]?.find(p => p.is_vice_captain);
-      
-      fetch("/api/transfer-planner/drafts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      apiRequest(`/api/transfer-planner/drafts/${managerIdRef.current}/${targetDraft}`, {
+        method: "PUT",
         body: JSON.stringify({
-          managerId: parseInt(searchedId),
-          draftLetter: activeDraft,
+          manualLineup: JSON.parse(JSON.stringify(manualLineup)),
           gameweekTransfers: JSON.parse(JSON.stringify(gameweekTransfers)),
           plannedChips: JSON.parse(JSON.stringify(plannedChips)),
           optimizedLineups: updatedOptimizedLineups,
@@ -3022,17 +3017,24 @@ export default function TransferPlanner() {
           totalProjectedPoints: 0,
           totalTransfersUsed: Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0),
           captainPlayerId: captainPick?.element || null,
-          viceCaptainPlayerId: viceCaptainPick?.element || null
+          captainPlayerName: captainPlayerObj?.web_name || null,
+          viceCaptainPlayerId: viceCaptainPick?.element || null,
+          viceCaptainPlayerName: viceCaptainPlayerObj?.web_name || null
         })
       }).then(response => {
         if (response.ok) {
           console.log("✅ OPTIMIZE ALL: All optimized lineups saved to database successfully");
-          loadDrafts();
+          loadDrafts(); // Refresh drafts list
         }
       }).catch(error => {
         console.error("❌ OPTIMIZE ALL: Failed to save optimized lineups:", error);
       });
     }
+
+    toast({
+      title: "All Gameweeks Optimized!",
+      description: `Optimized lineups for ${optimizedCount} gameweeks. Switch between gameweeks to see the optimized teams.`
+    });
 
     // Auto-save after bulk optimization (for Base draft handling)
     if (wasInBase) {
