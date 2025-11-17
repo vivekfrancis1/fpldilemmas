@@ -806,34 +806,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes - /api/auth/user endpoint
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      res.json(req.user);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
 
-  // Middleware to check if user is authenticated
-  function requireAuth(req: any, res: any, next: any) {
-    if (req.session?.user) {
-      next();
-    } else {
-      res.status(401).json({ error: 'Authentication required' });
-    }
-  }
-
-  // Middleware to check if user is admin
+  // Middleware to check if user is admin (for future use)
   function requireAdmin(req: any, res: any, next: any) {
-    if (req.session?.user?.role === 'admin') {
+    if (req.user?.role === 'admin') {
       next();
     } else {
       res.status(403).json({ error: 'Admin access required' });
     }
   }
 
-  // Authentication routes
+  // Legacy authentication routes removed - using Google OAuth now
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -844,7 +833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Find user by email
       const [user] = await db.select().from(users).where(eq(users.email, email));
       
-      if (!user) {
+      if (!user || !user.password) {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
@@ -856,13 +845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Store user in session
-      (req.session as any).user = {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-        firstName: user.firstName,
-        lastName: user.lastName
-      };
+      (req.session as any).user = user;
 
       res.json({ 
         success: true, 

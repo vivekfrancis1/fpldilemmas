@@ -5,7 +5,7 @@ import { SiGoogle } from "react-icons/si";
 
 export default function Login() {
   const handleGoogleLogin = () => {
-    window.location.href = "/api/login";
+    window.location.href = "/api/auth/google";
   };
 
   return (
