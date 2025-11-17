@@ -205,7 +205,9 @@ export default function TransferRecommendations() {
     const freeTransfers = gwData.freeTransfersAvailable || 1;
     const primaryTransfers = gwData.recommendations?.slice(0, freeTransfers) || [];
 
-    return new Set(primaryTransfers.map((rec: any) => rec.playerIn.id));
+    // Filter out recommendations without playerIn (e.g., roll recommendations)
+    const validTransfers = primaryTransfers.filter((rec: any) => rec.playerIn?.id);
+    return new Set(validTransfers.map((rec: any) => rec.playerIn.id));
   }, [selectedGameweek, adjustedRecommendations]);
 
   // Optimize lineup to maximize points
