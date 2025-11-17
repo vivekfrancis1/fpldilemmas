@@ -1142,6 +1142,14 @@ export default function TransferPlanner() {
     }
   });
 
+  // Fetch recommended transfers for the current manager
+  const { data: recommendedTransfers, isLoading: isLoadingRecommendations } = useQuery<any>({
+    queryKey: ["/api/manager", searchedId, "recommended-transfers"],
+    enabled: !!searchedId,
+    staleTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
   // Get next 6 gameweeks
   const getNextGameweeks = () => {
     if (!bootstrapData) return [];
@@ -3666,6 +3674,58 @@ export default function TransferPlanner() {
     }
   };
 
+  // Apply recommended transfers for the current gameweek
+  const handleApplyRecommendedTransfers = async () => {
+    if (!selectedGameweek || !recommendedTransfers?.gameweeks || !teamData?.picks) {
+      toast({
+        title: "Cannot Apply Transfers",
+        description: "Transfer recommendations are not available for this gameweek.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const gwRecommendations = recommendedTransfers.gameweeks[selectedGameweek];
+    if (!gwRecommendations?.recommendations || gwRecommendations.recommendations.length === 0) {
+      toast({
+        title: "No Recommendations",
+        description: `No transfer recommendations available for GW${selectedGameweek}.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Get the primary (first) recommendation
+    const primaryRec = gwRecommendations.recommendations[0];
+    
+    // Find the player to transfer out in the current lineup
+    const playerOutId = primaryRec.playerOut.id;
+    const pickToTransferOut = manualLineup.find(p => p.element === playerOutId && !p.is_transferred_out);
+    
+    if (!pickToTransferOut) {
+      toast({
+        title: "Player Not Found",
+        description: `${primaryRec.playerOut.webName} is not in your current lineup or has already been transferred out.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Apply the transfer out
+    await handleTransferOut(pickToTransferOut);
+    
+    // Small delay to ensure state updates
+    setTimeout(() => {
+      // Apply the transfer in
+      handleTransferIn(primaryRec.playerIn.id, primaryRec.playerIn.element_type || getPlayerById(primaryRec.playerIn.id)?.element_type || 1);
+      
+      toast({
+        title: "Transfers Applied",
+        description: `${primaryRec.playerOut.webName} → ${primaryRec.playerIn.webName} (+${primaryRec.pointsGain.toFixed(1)} pts)`,
+      });
+    }, 300);
+  };
+
   // Helper function to generate tooltip content for a draft
   const getDraftTooltipContent = (draft: any) => {
     if (!draft.gameweekTransfers || Object.keys(draft.gameweekTransfers).length === 0) {
@@ -4660,6 +4720,29 @@ export default function TransferPlanner() {
                 ))}
               </div>
             </div>
+
+            {/* Apply Recommended Transfers */}
+            {selectedGameweek && activeDraft !== "Base" && recommendedTransfers?.gameweeks?.[selectedGameweek]?.recommendations?.length > 0 && (
+              <div className="border-t pt-4">
+                <Button
+                  onClick={handleApplyRecommendedTransfers}
+                  disabled={isLoadingRecommendations}
+                  className="w-full sm:w-auto bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200"
+                  data-testid="button-apply-recommended-transfers"
+                >
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Apply Recommended Transfers
+                </Button>
+                {recommendedTransfers.gameweeks[selectedGameweek].recommendations[0] && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    {recommendedTransfers.gameweeks[selectedGameweek].recommendations[0].playerOut.webName} → {recommendedTransfers.gameweeks[selectedGameweek].recommendations[0].playerIn.webName} 
+                    <span className="text-green-600 font-semibold ml-1">
+                      (+{recommendedTransfers.gameweeks[selectedGameweek].recommendations[0].pointsGain.toFixed(1)} pts)
+                    </span>
+                  </p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
