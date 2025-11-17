@@ -4861,46 +4861,6 @@ export default function TransferPlanner() {
                 ))}
               </div>
             </div>
-
-            {/* Apply Recommended Transfers */}
-            {selectedGameweek && activeDraft !== "Base" && recommendedTransfers?.gameweeks?.[selectedGameweek]?.recommendations?.length > 0 && (() => {
-              const gwData = recommendedTransfers.gameweeks[selectedGameweek];
-              const primaryRec = gwData?.recommendations?.[0];
-              
-              if (!primaryRec) return null;
-              
-              // Check if this recommended transfer has already been applied
-              const isTransferAlreadyApplied = completedTransfers.some(
-                transfer => 
-                  transfer.outPlayerId === primaryRec.playerOut.id && 
-                  transfer.inPlayerId === primaryRec.playerIn.id
-              );
-              
-              // Don't show button if transfer already applied
-              if (isTransferAlreadyApplied) return null;
-              
-              return (
-                <div className="border-t pt-4">
-                  <Button
-                    onClick={handleApplyRecommendedTransfers}
-                    disabled={isLoadingRecommendations}
-                    className="w-full sm:w-auto bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200"
-                    data-testid="button-apply-recommended-transfers"
-                  >
-                    <TrendingUp className="h-4 w-4 mr-2" />
-                    Apply Recommended Transfers
-                  </Button>
-                  {primaryRec.playerOut?.webName && primaryRec.playerIn?.webName && (
-                    <p className="text-sm text-gray-600 mt-2">
-                      {primaryRec.playerOut.webName} → {primaryRec.playerIn.webName} 
-                      <span className="text-green-600 font-semibold ml-1">
-                        (+{primaryRec.pointsGain?.toFixed(1) || '0.0'} pts)
-                      </span>
-                    </p>
-                  )}
-                </div>
-              );
-            })()}
           </CardContent>
         </Card>
       )}
@@ -5400,6 +5360,37 @@ export default function TransferPlanner() {
                   List View
                 </Button>
               </div>
+
+              {/* Apply Recommended Transfers */}
+              {selectedGameweek && activeDraft !== "Base" && recommendedTransfers?.gameweeks?.[selectedGameweek]?.recommendations?.length > 0 && (() => {
+                const gwData = recommendedTransfers.gameweeks[selectedGameweek];
+                const primaryRec = gwData?.recommendations?.[0];
+                
+                if (!primaryRec) return null;
+                
+                // Check if this recommended transfer has already been applied
+                const isTransferAlreadyApplied = completedTransfers.some(
+                  transfer => 
+                    transfer.outPlayerId === primaryRec.playerOut.id && 
+                    transfer.inPlayerId === primaryRec.playerIn.id
+                );
+                
+                // Don't show button if transfer already applied
+                if (isTransferAlreadyApplied) return null;
+                
+                return (
+                  <Button
+                    onClick={handleApplyRecommendedTransfers}
+                    disabled={isLoadingRecommendations}
+                    className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white"
+                    data-testid="button-apply-recommended-transfers"
+                  >
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Apply Recommended Transfers</span>
+                    <span className="sm:hidden">Apply Transfers</span>
+                  </Button>
+                );
+              })()}
 
               {/* Optimization Controls */}
               <div className="flex gap-2">
