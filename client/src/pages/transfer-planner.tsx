@@ -3676,7 +3676,7 @@ export default function TransferPlanner() {
 
   // Apply recommended transfers for the current gameweek
   const handleApplyRecommendedTransfers = async () => {
-    if (!selectedGameweek || !recommendedTransfers?.gameweeks || !teamData?.picks || !bootstrapData) {
+    if (!selectedGameweek || !recommendedTransfers?.gameweeks || !teamData?.picks || !bootstrapData || !searchedId) {
       toast({
         title: "Cannot Apply Transfers",
         description: "Transfer recommendations are not available for this gameweek.",
@@ -3711,9 +3711,11 @@ export default function TransferPlanner() {
       return;
     }
 
-    // Get the element_type from the player being transferred out
+    // Get player data
     const playerOut = getPlayerById(playerOutId);
-    if (!playerOut) {
+    const playerIn = getPlayerById(primaryRec.playerIn.id);
+    
+    if (!playerOut || !playerIn) {
       toast({
         title: "Error",
         description: "Could not find player data for transfer.",
@@ -3722,27 +3724,113 @@ export default function TransferPlanner() {
       return;
     }
 
-    // STEP 1: Apply the transfer out
-    await handleTransferOut(pickToTransferOut);
+    // Check if trying to transfer from Base draft
+    let isCreatingNewDraft = false;
+    let newDraftLetter = "";
     
-    toast({
-      title: "Step 1/2 Complete",
-      description: `${primaryRec.playerOut.webName} transferred out. Preparing to bring in ${primaryRec.playerIn.webName}...`,
-    });
-    
-    // STEP 2: Wait for state to settle, then apply transfer in
-    setTimeout(() => {
-      // Use the transferred-out player's element_type for the position match
-      handleTransferIn(primaryRec.playerIn.id, playerOut.element_type);
+    if (activeDraft === "Base") {
+      const usedLetters = savedDrafts.map(d => d.draftLetter);
+      const allLetters = 'ABCDE'.split('');
+      const availableLetters = allLetters.filter(l => !usedLetters.includes(l));
       
-      // Final success message after both transfers complete
-      setTimeout(() => {
+      if (availableLetters.length === 0) {
         toast({
-          title: "Transfers Applied Successfully",
-          description: `${primaryRec.playerOut.webName} → ${primaryRec.playerIn.webName} (+${primaryRec.pointsGain.toFixed(1)} pts)`,
+          title: "Draft Limit Reached",
+          description: "You have 5 drafts already. Please make transfers in an existing draft instead of Base.",
+          variant: "destructive"
         });
-      }, 500);
-    }, 2000);
+        return;
+      }
+      
+      newDraftLetter = availableLetters[0];
+      isCreatingNewDraft = true;
+    }
+
+    // Calculate prices
+    const sellingPrice = getSellingPrice(pickToTransferOut);
+    const buyingPrice = playerIn.now_cost / 10;
+
+    // Create transfer records
+    const transferOut: TransferOut = {
+      playerId: playerOut.id,
+      playerName: playerOut.web_name,
+      position: pickToTransferOut.position,
+      elementType: playerOut.element_type,
+      sellingPrice: sellingPrice,
+    };
+
+    const completedTransfer: CompletedTransfer = {
+      outPlayerId: playerOut.id,
+      outPlayerName: playerOut.web_name,
+      sellingPrice: sellingPrice,
+      inPlayerId: playerIn.id,
+      inPlayerName: playerIn.web_name,
+      buyingPrice: buyingPrice,
+    };
+
+    // Update gameweek transfers
+    const updatedGameweekTransfers = {
+      ...gameweekTransfers,
+      [selectedGameweek]: {
+        transferredOut: [], // Empty since we're completing the transfer immediately
+        completed: [...completedTransfers, completedTransfer]
+      }
+    };
+
+    // Update lineup - replace the player at the same position
+    const updatedLineup = manualLineup.map(p => {
+      if (p.position === pickToTransferOut.position) {
+        return {
+          element: playerIn.id,
+          position: pickToTransferOut.position,
+          multiplier: 1,
+          is_captain: p.is_captain,
+          is_vice_captain: p.is_vice_captain,
+          selling_price: playerIn.now_cost,
+          purchase_price: playerIn.now_cost,
+          is_transferred_out: false,
+        };
+      }
+      return p;
+    });
+
+    // Update all states
+    setManualLineup(updatedLineup);
+    setCompletedTransfers([...completedTransfers, completedTransfer]);
+    setTransferredOutPlayers([]);
+    setGameweekTransfers(updatedGameweekTransfers);
+
+    // If creating new draft, save it
+    if (isCreatingNewDraft) {
+      setActiveDraft(newDraftLetter);
+      try {
+        const response = await fetch(`/api/transfer-planner/drafts/${searchedId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            draftLetter: newDraftLetter,
+            gameweekTransfers: JSON.parse(JSON.stringify(updatedGameweekTransfers))
+          })
+        });
+        
+        if (response.ok) {
+          await loadDrafts();
+          toast({
+            title: "Draft Created & Transfer Applied",
+            description: `Draft ${newDraftLetter}: ${primaryRec.playerOut.webName} → ${primaryRec.playerIn.webName} (+${primaryRec.pointsGain.toFixed(1)} pts)`,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to save new draft:", error);
+      }
+    } else {
+      // Save existing draft
+      await saveCurrentDraft(updatedGameweekTransfers, activeDraft, true);
+      toast({
+        title: "Transfer Applied",
+        description: `${primaryRec.playerOut.webName} → ${primaryRec.playerIn.webName} (+${primaryRec.pointsGain.toFixed(1)} pts)`,
+      });
+    }
   };
 
   // Helper function to generate tooltip content for a draft
