@@ -173,7 +173,11 @@ export default function TransferRecommendations() {
   }, [selectedGameweek, adjustedRecommendations, teamData, bootstrapData]);
 
   // Optimize lineup to maximize points
-  const optimizedTeam = useMemo(() => {
+  const optimizedTeam = useMemo((): {
+    lineup: TeamPick[];
+    formation: { def: number; mid: number; fwd: number; name: string } | null;
+    totalPoints: number;
+  } | null => {
     if (!applyRecommendedTransfers || !playerProjections || !bootstrapData || !selectedGameweek) {
       return null;
     }
@@ -225,7 +229,7 @@ export default function TransferRecommendations() {
       { def: 5, mid: 3, fwd: 2, name: '5-3-2' },
     ];
 
-    let bestFormation = null;
+    let bestFormation: { def: number; mid: number; fwd: number; name: string } | null = null;
     let bestPoints = -1;
     let bestLineup: TeamPick[] = [];
 
