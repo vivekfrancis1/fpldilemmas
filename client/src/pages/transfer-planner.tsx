@@ -1104,7 +1104,7 @@ export default function TransferPlanner() {
       // Mark this manager as initialized
       initializedManagerRef.current = searchedId;
     }
-  }, [teamData, searchedId, buyPricesData, buyPriceOverridesData]);
+  }, [teamData, searchedId]); // Removed buyPricesData and buyPriceOverridesData to prevent resetting optimized lineups
 
   // Fetch player projections for the selected gameweek
   const { data: playerProjections, isLoading: projectionsLoading, error: projectionsError } = useQuery<any[]>({
