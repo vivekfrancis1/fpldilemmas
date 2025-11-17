@@ -1556,11 +1556,15 @@ export default function TransferPlanner() {
     // Clear player popup when gameweek changes
     setSelectedPlayer(null);
     
+    console.log("🔄 LINEUP REBUILD useEffect triggered - GW:", selectedGameweek, "Draft:", activeDraft, "Optimization flags:", isLineupOptimizedRef.current);
+    
     // CRITICAL: Don't reset lineup if it's been manually optimized for this gameweek
     if (isLineupOptimizedRef.current[selectedGameweek]) {
-      console.log("🔒 Skipping lineup reset - GW", selectedGameweek, "is optimized");
+      console.log("🔒 PROTECTED: Skipping lineup reset - GW", selectedGameweek, "is optimized");
       return;
     }
+    
+    console.log("⚠️ REBUILDING lineup for GW", selectedGameweek, "- no optimization flag set");
     
     // Helper to apply buy price overrides to lineup
     const applyBuyPriceOverrides = (lineup: TeamPick[]) => {
@@ -2737,7 +2741,13 @@ export default function TransferPlanner() {
     console.log("🔧 OPTIMIZE DEBUG: Setting new lineup with positions:", optimizedLineup.map(p => ({ element: p.element, position: p.position, is_captain: p.is_captain })));
     
     // Mark this gameweek's lineup as manually optimized to prevent auto-reset
-    isLineupOptimizedRef.current[gameweek] = true;
+    // CRITICAL: Set this BEFORE setManualLineup to prevent race conditions
+    isLineupOptimizedRef.current = {
+      ...isLineupOptimizedRef.current,
+      [gameweek]: true
+    };
+    
+    console.log("🔧 OPTIMIZE DEBUG: Marked GW", gameweek, "as optimized. Full flag state:", isLineupOptimizedRef.current);
     
     setManualLineup([...optimizedLineup]); // Force new array reference
 
@@ -2745,7 +2755,6 @@ export default function TransferPlanner() {
     const formationName = bestFormation?.name || 'Unknown';
     
     console.log("🔧 OPTIMIZE DEBUG: Formation:", formationName, "Captain:", captainPlayer?.web_name);
-    console.log("🔧 OPTIMIZE DEBUG: Marked GW", gameweek, "as optimized");
     
     toast({
       title: "Team Optimized!",
@@ -2779,7 +2788,11 @@ export default function TransferPlanner() {
     setManualLineup(JSON.parse(JSON.stringify(previousLineup)));
     
     // Clear the optimization flag for this gameweek
-    delete isLineupOptimizedRef.current[gameweek];
+    console.log("🔓 UNDO: Clearing optimization flag for GW", gameweek);
+    const newFlags = { ...isLineupOptimizedRef.current };
+    delete newFlags[gameweek];
+    isLineupOptimizedRef.current = newFlags;
+    console.log("🔓 UNDO: New flag state:", isLineupOptimizedRef.current);
 
     // Clear undo state for this gameweek
     setOptimizationUndoState(prev => {
