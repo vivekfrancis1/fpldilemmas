@@ -3724,8 +3724,9 @@ export default function TransferPlanner() {
       return;
     }
 
-    // Get only primary recommendations (max 5)
-    const primaryRecommendations = gwRecommendations.recommendations.slice(0, 5);
+    // Get only primary recommendations (first N where N = free transfers available)
+    const freeTransfers = gwRecommendations.freeTransfersAvailable || 1;
+    const primaryRecommendations = gwRecommendations.recommendations.slice(0, freeTransfers);
 
     // Get all unapplied recommendations from primary list
     const unappliedRecs = primaryRecommendations.filter(rec => 
@@ -5389,9 +5390,10 @@ export default function TransferPlanner() {
                 {selectedGameweek && activeDraft !== "Base" && recommendedTransfers?.gameweeks?.[selectedGameweek]?.recommendations?.length > 0 && (() => {
                   const gwData = recommendedTransfers.gameweeks[selectedGameweek];
                   const allRecommendations = gwData?.recommendations || [];
+                  const freeTransfers = gwData?.freeTransfersAvailable || 1;
                   
-                  // Only show primary recommendations (max 5)
-                  const recommendations = allRecommendations.slice(0, 5);
+                  // Only show primary recommendations (first N where N = free transfers available)
+                  const recommendations = allRecommendations.slice(0, freeTransfers);
                   
                   if (recommendations.length === 0) return null;
                   
@@ -5449,9 +5451,10 @@ export default function TransferPlanner() {
               {selectedGameweek && activeDraft !== "Base" && recommendedTransfers?.gameweeks?.[selectedGameweek]?.recommendations?.length > 0 && (() => {
                 const gwData = recommendedTransfers.gameweeks[selectedGameweek];
                 const allRecommendations = gwData?.recommendations || [];
+                const freeTransfers = gwData?.freeTransfersAvailable || 1;
                 
-                // Only show primary recommendations (max 5)
-                const recommendations = allRecommendations.slice(0, 5);
+                // Only show primary recommendations (first N where N = free transfers available)
+                const recommendations = allRecommendations.slice(0, freeTransfers);
                 
                 if (recommendations.length === 0) return null;
                 
