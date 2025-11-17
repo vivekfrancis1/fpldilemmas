@@ -2730,12 +2730,9 @@ export default function TransferPlanner() {
       description: `${formationName} formation selected. Captain: ${captainPlayer?.web_name || 'TBD'}. ${(bestPoints + (sortedByPoints[0]?.points || 0)).toFixed(1)} projected pts.`
     });
 
-    // Auto-save after optimization
-    if (wasInBase) {
-      setTimeout(() => finalizeNewDraft(targetDraft), 100);
-    } else {
-      setTimeout(() => saveCurrentDraft(undefined, activeDraft, true), 200);
-    }
+    // DON'T auto-save because it would reload the draft and reset positions
+    // The optimized lineup is now in state and will be visible immediately
+    // User can manually save when they're ready
   };
 
   // Undo team optimization for a specific gameweek
