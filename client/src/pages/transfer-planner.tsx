@@ -2998,13 +2998,13 @@ export default function TransferPlanner() {
     }
 
     // CRITICAL: Save all optimized lineups to database to persist changes
-    if (managerIdRef.current) {
+    if (searchedId) {
       const captainPick = manualLineup.find(p => p.is_captain);
       const viceCaptainPick = manualLineup.find(p => p.is_vice_captain);
       const captainPlayerObj = captainPick ? getPlayerById(captainPick.element) : null;
       const viceCaptainPlayerObj = viceCaptainPick ? getPlayerById(viceCaptainPick.element) : null;
 
-      apiRequest(`/api/transfer-planner/drafts/${managerIdRef.current}/${targetDraft}`, {
+      apiRequest(`/api/transfer-planner/drafts/${searchedId}/${targetDraft}`, {
         method: "PUT",
         body: JSON.stringify({
           manualLineup: JSON.parse(JSON.stringify(manualLineup)),
