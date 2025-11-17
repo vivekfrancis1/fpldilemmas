@@ -5357,53 +5357,53 @@ export default function TransferPlanner() {
             </div>
 
             {/* View Toggle and Optimization Controls */}
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-2 mb-4">
-              {/* View Toggle - Hidden on mobile */}
-              <div className="hidden md:flex gap-2">
-                <Button
-                  variant={teamView === "pitch" ? "default" : "outline"}
-                  onClick={() => setTeamView("pitch")}
-                  className="flex items-center gap-2"
-                  data-testid="button-team-pitch-view"
-                >
-                  <Target className="h-4 w-4" />
-                  Pitch View
-                </Button>
-                <Button
-                  variant={teamView === "list" ? "default" : "outline"}
-                  onClick={() => setTeamView("list")}
-                  className="flex items-center gap-2"
-                  data-testid="button-team-list-view"
-                >
-                  <Users className="h-4 w-4" />
-                  List View
-                </Button>
-              </div>
+            <div className="flex flex-col gap-3 mb-4">
+              {/* All buttons in one row */}
+              <div className="flex flex-wrap justify-center items-center gap-2">
+                {/* View Toggle - Hidden on mobile */}
+                <div className="hidden md:flex gap-2">
+                  <Button
+                    variant={teamView === "pitch" ? "default" : "outline"}
+                    onClick={() => setTeamView("pitch")}
+                    className="flex items-center gap-2"
+                    data-testid="button-team-pitch-view"
+                  >
+                    <Target className="h-4 w-4" />
+                    Pitch View
+                  </Button>
+                  <Button
+                    variant={teamView === "list" ? "default" : "outline"}
+                    onClick={() => setTeamView("list")}
+                    className="flex items-center gap-2"
+                    data-testid="button-team-list-view"
+                  >
+                    <Users className="h-4 w-4" />
+                    List View
+                  </Button>
+                </div>
 
-              {/* Apply Recommended Transfers */}
-              {selectedGameweek && activeDraft !== "Base" && recommendedTransfers?.gameweeks?.[selectedGameweek]?.recommendations?.length > 0 && (() => {
-                const gwData = recommendedTransfers.gameweeks[selectedGameweek];
-                const recommendations = gwData?.recommendations || [];
-                
-                if (recommendations.length === 0) return null;
-                
-                // Filter out already applied transfers
-                const unappliedRecs = recommendations.filter(rec => 
-                  !completedTransfers.some(
-                    transfer => 
-                      transfer.outPlayerId === rec.playerOut.id && 
-                      transfer.inPlayerId === rec.playerIn.id
-                  )
-                );
-                
-                // Don't show button if all transfers already applied
-                if (unappliedRecs.length === 0) return null;
-                
-                const transferCount = unappliedRecs.length;
-                const totalPointsGain = unappliedRecs.reduce((sum, rec) => sum + (rec.pointsGain || 0), 0);
-                
-                return (
-                  <div className="flex flex-col gap-1">
+                {/* Apply Recommended Transfers Button */}
+                {selectedGameweek && activeDraft !== "Base" && recommendedTransfers?.gameweeks?.[selectedGameweek]?.recommendations?.length > 0 && (() => {
+                  const gwData = recommendedTransfers.gameweeks[selectedGameweek];
+                  const recommendations = gwData?.recommendations || [];
+                  
+                  if (recommendations.length === 0) return null;
+                  
+                  // Filter out already applied transfers
+                  const unappliedRecs = recommendations.filter(rec => 
+                    !completedTransfers.some(
+                      transfer => 
+                        transfer.outPlayerId === rec.playerOut.id && 
+                        transfer.inPlayerId === rec.playerIn.id
+                    )
+                  );
+                  
+                  // Don't show button if all transfers already applied
+                  if (unappliedRecs.length === 0) return null;
+                  
+                  const transferCount = unappliedRecs.length;
+                  
+                  return (
                     <Button
                       onClick={handleApplyRecommendedTransfers}
                       disabled={isLoadingRecommendations}
@@ -5414,22 +5414,10 @@ export default function TransferPlanner() {
                       <span className="hidden sm:inline">Apply {transferCount} Recommended Transfer{transferCount > 1 ? 's' : ''}</span>
                       <span className="sm:hidden">Apply {transferCount} Transfer{transferCount > 1 ? 's' : ''}</span>
                     </Button>
-                    <div className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
-                      {unappliedRecs.map((rec, idx) => (
-                        <p key={idx}>
-                          {rec.playerOut?.webName} → {rec.playerIn?.webName} 
-                          <span className="text-green-600 font-semibold ml-1">
-                            (+{rec.pointsGain?.toFixed(1) || '0.0'} pts)
-                          </span>
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
 
-              {/* Optimization Controls */}
-              <div className="flex gap-2">
+                {/* Optimization Controls */}
                 {selectedGameweek && optimizedLineups[selectedGameweek] ? (
                   <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md">
                     <Sparkles className="h-4 w-4 text-green-600" />
@@ -5450,6 +5438,39 @@ export default function TransferPlanner() {
                   </Button>
                 )}
               </div>
+
+              {/* Transfer Details - shown below the buttons */}
+              {selectedGameweek && activeDraft !== "Base" && recommendedTransfers?.gameweeks?.[selectedGameweek]?.recommendations?.length > 0 && (() => {
+                const gwData = recommendedTransfers.gameweeks[selectedGameweek];
+                const recommendations = gwData?.recommendations || [];
+                
+                if (recommendations.length === 0) return null;
+                
+                // Filter out already applied transfers
+                const unappliedRecs = recommendations.filter(rec => 
+                  !completedTransfers.some(
+                    transfer => 
+                      transfer.outPlayerId === rec.playerOut.id && 
+                      transfer.inPlayerId === rec.playerIn.id
+                  )
+                );
+                
+                // Don't show details if no transfers to apply
+                if (unappliedRecs.length === 0) return null;
+                
+                return (
+                  <div className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5 text-center">
+                    {unappliedRecs.map((rec, idx) => (
+                      <p key={idx}>
+                        {rec.playerOut?.webName} → {rec.playerIn?.webName} 
+                        <span className="text-green-600 font-semibold ml-1">
+                          (+{rec.pointsGain?.toFixed(1) || '0.0'} pts)
+                        </span>
+                      </p>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             <div>
