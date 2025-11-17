@@ -2720,10 +2720,13 @@ export default function TransferPlanner() {
     }
 
     // Apply optimized lineup
-    setManualLineup(optimizedLineup);
+    console.log("🔧 OPTIMIZE DEBUG: Setting new lineup with positions:", optimizedLineup.map(p => ({ element: p.element, position: p.position, is_captain: p.is_captain })));
+    setManualLineup([...optimizedLineup]); // Force new array reference
 
     const captainPlayer = getPlayerById(optimizedLineup.find(p => p.is_captain)?.element || 0);
     const formationName = bestFormation?.name || 'Unknown';
+    
+    console.log("🔧 OPTIMIZE DEBUG: Formation:", formationName, "Captain:", captainPlayer?.web_name);
     
     toast({
       title: "Team Optimized!",
