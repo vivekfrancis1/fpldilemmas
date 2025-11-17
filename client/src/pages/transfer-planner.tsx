@@ -3724,30 +3724,19 @@ export default function TransferPlanner() {
       return;
     }
 
-    // Get the primary (first) recommendation
-    const primaryRec = gwRecommendations.recommendations[0];
-    
-    // Find the player to transfer out in the current lineup
-    const playerOutId = primaryRec.playerOut.id;
-    const pickToTransferOut = manualLineup.find(p => p.element === playerOutId && !p.is_transferred_out);
-    
-    if (!pickToTransferOut) {
-      toast({
-        title: "Player Not Found",
-        description: `${primaryRec.playerOut.webName} is not in your current lineup or has already been transferred out.`,
-        variant: "destructive"
-      });
-      return;
-    }
+    // Get all unapplied recommendations
+    const unappliedRecs = gwRecommendations.recommendations.filter(rec => 
+      !completedTransfers.some(
+        transfer => 
+          transfer.outPlayerId === rec.playerOut.id && 
+          transfer.inPlayerId === rec.playerIn.id
+      )
+    );
 
-    // Get player data
-    const playerOut = getPlayerById(playerOutId);
-    const playerIn = getPlayerById(primaryRec.playerIn.id);
-    
-    if (!playerOut || !playerIn) {
+    if (unappliedRecs.length === 0) {
       toast({
-        title: "Error",
-        description: "Could not find player data for transfer.",
+        title: "Already Applied",
+        description: "All recommended transfers have already been applied.",
         variant: "destructive"
       });
       return;
@@ -3775,59 +3764,89 @@ export default function TransferPlanner() {
       isCreatingNewDraft = true;
     }
 
-    // Calculate prices
-    const sellingPrice = getSellingPrice(pickToTransferOut);
-    const buyingPrice = playerIn.now_cost / 10;
+    // Apply all recommended transfers
+    const newCompletedTransfers: CompletedTransfer[] = [];
+    let updatedLineup = [...manualLineup];
+    
+    for (const rec of unappliedRecs) {
+      // Find the player to transfer out in the current lineup
+      const playerOutId = rec.playerOut.id;
+      const pickToTransferOut = updatedLineup.find(p => p.element === playerOutId && !p.is_transferred_out);
+      
+      if (!pickToTransferOut) {
+        console.warn(`Player ${rec.playerOut.webName} not found or already transferred out`);
+        continue;
+      }
 
-    // Create transfer records
-    const transferOut: TransferOut = {
-      playerId: playerOut.id,
-      playerName: playerOut.web_name,
-      position: pickToTransferOut.position,
-      elementType: playerOut.element_type,
-      sellingPrice: sellingPrice,
-    };
+      // Get player data
+      const playerOut = getPlayerById(playerOutId);
+      const playerIn = getPlayerById(rec.playerIn.id);
+      
+      if (!playerOut || !playerIn) {
+        console.warn(`Could not find player data for transfer`);
+        continue;
+      }
 
-    const completedTransfer: CompletedTransfer = {
-      outPlayerId: playerOut.id,
-      outPlayerName: playerOut.web_name,
-      sellingPrice: sellingPrice,
-      inPlayerId: playerIn.id,
-      inPlayerName: playerIn.web_name,
-      buyingPrice: buyingPrice,
-    };
+      // Calculate prices
+      const sellingPrice = getSellingPrice(pickToTransferOut);
+      const buyingPrice = playerIn.now_cost / 10;
+
+      // Create completed transfer record
+      const completedTransfer: CompletedTransfer = {
+        outPlayerId: playerOut.id,
+        outPlayerName: playerOut.web_name,
+        sellingPrice: sellingPrice,
+        inPlayerId: playerIn.id,
+        inPlayerName: playerIn.web_name,
+        buyingPrice: buyingPrice,
+      };
+
+      newCompletedTransfers.push(completedTransfer);
+
+      // Update lineup - replace the player at the same position
+      updatedLineup = updatedLineup.map(p => {
+        if (p.position === pickToTransferOut.position) {
+          return {
+            element: playerIn.id,
+            position: pickToTransferOut.position,
+            multiplier: 1,
+            is_captain: p.is_captain,
+            is_vice_captain: p.is_vice_captain,
+            selling_price: playerIn.now_cost,
+            purchase_price: playerIn.now_cost,
+            is_transferred_out: false,
+          };
+        }
+        return p;
+      });
+    }
+
+    if (newCompletedTransfers.length === 0) {
+      toast({
+        title: "No Transfers Applied",
+        description: "Could not apply any of the recommended transfers.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     // Update gameweek transfers
     const updatedGameweekTransfers = {
       ...gameweekTransfers,
       [selectedGameweek]: {
-        transferredOut: [], // Empty since we're completing the transfer immediately
-        completed: [...completedTransfers, completedTransfer]
+        transferredOut: [],
+        completed: [...completedTransfers, ...newCompletedTransfers]
       }
     };
 
-    // Update lineup - replace the player at the same position
-    const updatedLineup = manualLineup.map(p => {
-      if (p.position === pickToTransferOut.position) {
-        return {
-          element: playerIn.id,
-          position: pickToTransferOut.position,
-          multiplier: 1,
-          is_captain: p.is_captain,
-          is_vice_captain: p.is_vice_captain,
-          selling_price: playerIn.now_cost,
-          purchase_price: playerIn.now_cost,
-          is_transferred_out: false,
-        };
-      }
-      return p;
-    });
-
     // Update all states
     setManualLineup(updatedLineup);
-    setCompletedTransfers([...completedTransfers, completedTransfer]);
+    setCompletedTransfers([...completedTransfers, ...newCompletedTransfers]);
     setTransferredOutPlayers([]);
     setGameweekTransfers(updatedGameweekTransfers);
+
+    const transferSummary = newCompletedTransfers.map(t => `${t.outPlayerName} → ${t.inPlayerName}`).join(', ');
+    const totalPoints = unappliedRecs.reduce((sum, rec) => sum + (rec.pointsGain || 0), 0);
 
     // If creating new draft, save it
     if (isCreatingNewDraft) {
@@ -3845,8 +3864,8 @@ export default function TransferPlanner() {
         if (response.ok) {
           await loadDrafts();
           toast({
-            title: "Draft Created & Transfer Applied",
-            description: `Draft ${newDraftLetter}: ${primaryRec.playerOut.webName} → ${primaryRec.playerIn.webName} (+${primaryRec.pointsGain.toFixed(1)} pts)`,
+            title: "Draft Created & Transfers Applied",
+            description: `Draft ${newDraftLetter}: ${newCompletedTransfers.length} transfer${newCompletedTransfers.length > 1 ? 's' : ''} (+${totalPoints.toFixed(1)} pts)`,
           });
         }
       } catch (error) {
@@ -3856,8 +3875,8 @@ export default function TransferPlanner() {
       // Save existing draft
       await saveCurrentDraft(updatedGameweekTransfers, activeDraft, true);
       toast({
-        title: "Transfer Applied",
-        description: `${primaryRec.playerOut.webName} → ${primaryRec.playerIn.webName} (+${primaryRec.pointsGain.toFixed(1)} pts)`,
+        title: `${newCompletedTransfers.length} Transfer${newCompletedTransfers.length > 1 ? 's' : ''} Applied`,
+        description: `${transferSummary} (+${totalPoints.toFixed(1)} pts)`,
       });
     }
   };
@@ -5364,19 +5383,24 @@ export default function TransferPlanner() {
               {/* Apply Recommended Transfers */}
               {selectedGameweek && activeDraft !== "Base" && recommendedTransfers?.gameweeks?.[selectedGameweek]?.recommendations?.length > 0 && (() => {
                 const gwData = recommendedTransfers.gameweeks[selectedGameweek];
-                const primaryRec = gwData?.recommendations?.[0];
+                const recommendations = gwData?.recommendations || [];
                 
-                if (!primaryRec) return null;
+                if (recommendations.length === 0) return null;
                 
-                // Check if this recommended transfer has already been applied
-                const isTransferAlreadyApplied = completedTransfers.some(
-                  transfer => 
-                    transfer.outPlayerId === primaryRec.playerOut.id && 
-                    transfer.inPlayerId === primaryRec.playerIn.id
+                // Filter out already applied transfers
+                const unappliedRecs = recommendations.filter(rec => 
+                  !completedTransfers.some(
+                    transfer => 
+                      transfer.outPlayerId === rec.playerOut.id && 
+                      transfer.inPlayerId === rec.playerIn.id
+                  )
                 );
                 
-                // Don't show button if transfer already applied
-                if (isTransferAlreadyApplied) return null;
+                // Don't show button if all transfers already applied
+                if (unappliedRecs.length === 0) return null;
+                
+                const transferCount = unappliedRecs.length;
+                const totalPointsGain = unappliedRecs.reduce((sum, rec) => sum + (rec.pointsGain || 0), 0);
                 
                 return (
                   <div className="flex flex-col gap-1">
@@ -5387,17 +5411,19 @@ export default function TransferPlanner() {
                       data-testid="button-apply-recommended-transfers"
                     >
                       <TrendingUp className="h-4 w-4 mr-2" />
-                      <span className="hidden sm:inline">Apply Recommended Transfers</span>
-                      <span className="sm:hidden">Apply Transfers</span>
+                      <span className="hidden sm:inline">Apply {transferCount} Recommended Transfer{transferCount > 1 ? 's' : ''}</span>
+                      <span className="sm:hidden">Apply {transferCount} Transfer{transferCount > 1 ? 's' : ''}</span>
                     </Button>
-                    {primaryRec.playerOut?.webName && primaryRec.playerIn?.webName && (
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        {primaryRec.playerOut.webName} → {primaryRec.playerIn.webName} 
-                        <span className="text-green-600 font-semibold ml-1">
-                          (+{primaryRec.pointsGain?.toFixed(1) || '0.0'} pts)
-                        </span>
-                      </p>
-                    )}
+                    <div className="text-xs text-gray-600 dark:text-gray-400 space-y-0.5">
+                      {unappliedRecs.map((rec, idx) => (
+                        <p key={idx}>
+                          {rec.playerOut?.webName} → {rec.playerIn?.webName} 
+                          <span className="text-green-600 font-semibold ml-1">
+                            (+{rec.pointsGain?.toFixed(1) || '0.0'} pts)
+                          </span>
+                        </p>
+                      ))}
+                    </div>
                   </div>
                 );
               })()}
