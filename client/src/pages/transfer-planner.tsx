@@ -3722,19 +3722,27 @@ export default function TransferPlanner() {
       return;
     }
 
-    // Apply the transfer out
+    // STEP 1: Apply the transfer out
     await handleTransferOut(pickToTransferOut);
     
-    // Small delay to ensure state updates, then apply transfer in
+    toast({
+      title: "Step 1/2 Complete",
+      description: `${primaryRec.playerOut.webName} transferred out. Preparing to bring in ${primaryRec.playerIn.webName}...`,
+    });
+    
+    // STEP 2: Wait for state to settle, then apply transfer in
     setTimeout(() => {
       // Use the transferred-out player's element_type for the position match
       handleTransferIn(primaryRec.playerIn.id, playerOut.element_type);
       
-      toast({
-        title: "Transfers Applied",
-        description: `${primaryRec.playerOut.webName} → ${primaryRec.playerIn.webName} (+${primaryRec.pointsGain.toFixed(1)} pts)`,
-      });
-    }, 500);
+      // Final success message after both transfers complete
+      setTimeout(() => {
+        toast({
+          title: "Transfers Applied Successfully",
+          description: `${primaryRec.playerOut.webName} → ${primaryRec.playerIn.webName} (+${primaryRec.pointsGain.toFixed(1)} pts)`,
+        });
+      }, 500);
+    }, 2000);
   };
 
   // Helper function to generate tooltip content for a draft
