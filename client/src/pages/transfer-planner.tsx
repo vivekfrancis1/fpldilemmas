@@ -863,6 +863,9 @@ export default function TransferPlanner() {
   // Ref for scrolling to team lineup after transfer
   const teamLineupRef = useRef<HTMLDivElement>(null);
   
+  // Track when lineup is manually optimized to prevent auto-reset
+  const isLineupOptimizedRef = useRef<{ [gameweek: number]: boolean }>({});
+  
   // Draft management state
   const [activeDraft, setActiveDraft] = useState<string>("A"); // Current working draft
   const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
@@ -1552,6 +1555,12 @@ export default function TransferPlanner() {
     
     // Clear player popup when gameweek changes
     setSelectedPlayer(null);
+    
+    // CRITICAL: Don't reset lineup if it's been manually optimized for this gameweek
+    if (isLineupOptimizedRef.current[selectedGameweek]) {
+      console.log("🔒 Skipping lineup reset - GW", selectedGameweek, "is optimized");
+      return;
+    }
     
     // Helper to apply buy price overrides to lineup
     const applyBuyPriceOverrides = (lineup: TeamPick[]) => {
@@ -2726,12 +2735,17 @@ export default function TransferPlanner() {
 
     // Apply optimized lineup
     console.log("🔧 OPTIMIZE DEBUG: Setting new lineup with positions:", optimizedLineup.map(p => ({ element: p.element, position: p.position, is_captain: p.is_captain })));
+    
+    // Mark this gameweek's lineup as manually optimized to prevent auto-reset
+    isLineupOptimizedRef.current[gameweek] = true;
+    
     setManualLineup([...optimizedLineup]); // Force new array reference
 
     const captainPlayer = getPlayerById(optimizedLineup.find(p => p.is_captain)?.element || 0);
     const formationName = bestFormation?.name || 'Unknown';
     
     console.log("🔧 OPTIMIZE DEBUG: Formation:", formationName, "Captain:", captainPlayer?.web_name);
+    console.log("🔧 OPTIMIZE DEBUG: Marked GW", gameweek, "as optimized");
     
     toast({
       title: "Team Optimized!",
@@ -2763,6 +2777,9 @@ export default function TransferPlanner() {
 
     // Restore previous lineup
     setManualLineup(JSON.parse(JSON.stringify(previousLineup)));
+    
+    // Clear the optimization flag for this gameweek
+    delete isLineupOptimizedRef.current[gameweek];
 
     // Clear undo state for this gameweek
     setOptimizationUndoState(prev => {
