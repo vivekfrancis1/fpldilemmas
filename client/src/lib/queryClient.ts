@@ -19,6 +19,12 @@ export async function apiRequest(
     credentials: "include",
   });
 
+  // Handle 401 errors by clearing stale auth cache
+  if (res.status === 401) {
+    queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+    queryClient.removeQueries({ queryKey: ["/api/fpl/status"] });
+  }
+
   await throwIfResNotOk(res);
   return res;
 }
@@ -46,8 +52,14 @@ export const getQueryFn: <T>(options: {
       credentials: "include",
     });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+    // Handle 401 errors by clearing stale auth cache
+    if (res.status === 401) {
+      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.removeQueries({ queryKey: ["/api/fpl/status"] });
+      
+      if (unauthorizedBehavior === "returnNull") {
+        return null;
+      }
     }
 
     await throwIfResNotOk(res);

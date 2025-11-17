@@ -57,8 +57,8 @@ export function FplConnectDialog() {
       toast({
         title: "Connection Failed",
         description: isAuthError 
-          ? "Please log in to your account first. Visit /login to sign in or create an account."
-          : error.message || "Please check your FPL cookies and try again",
+          ? "Your session has expired. Please refresh the page and log in again."
+          : error.message || "Please check your FPL Bearer token and Manager ID and try again",
         variant: "destructive",
       });
     },

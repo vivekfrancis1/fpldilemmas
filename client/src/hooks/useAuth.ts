@@ -17,7 +17,7 @@ export function useAuth() {
   return {
     user,
     isLoading,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && !isLoading,
     isAdmin: user?.role === 'admin',
   };
 }
