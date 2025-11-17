@@ -14426,27 +14426,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("📊 Serving cached team goal projections from database");
       const cachedData = await db.select().from(teamProjections)
-        .where(eq(teamProjections.season, '2025/26'))
-        .orderBy(desc(sql`(${teamProjections.goalProjections}->>'total')::numeric`));
+        .where(eq(teamProjections.season, '2025/26'));
       
-      // Transform to expected format
-      const teamGoalData = cachedData.map((team, index) => {
+      // Transform to expected format and calculate totals for sorting
+      const teamGoalData = cachedData.map((team) => {
         const goalProjections = team.goalProjections as any;
         const totalGoals = Object.values(goalProjections).reduce((sum: number, val: any) => sum + (val || 0), 0);
         
         return {
           id: team.teamId,
+          teamId: team.teamId,
+          teamName: team.teamName,
           team: team.teamName,
           teamShort: team.teamName.slice(0, 3).toUpperCase(),
           gameweekProjections: goalProjections,
           totalProjectedGoals: Math.round(totalGoals * 100) / 100,
-          averageGoalsPerGame: Math.round((totalGoals / 35) * 100) / 100, // GW4-38 remaining
-          confidence: "High",
-          position: index + 1
+          totalGoals: Math.round(totalGoals * 100) / 100,
+          averageGoalsPerGame: Math.round((totalGoals / Math.max(1, Object.keys(goalProjections).length)) * 100) / 100,
+          confidence: "High" as const
         };
       });
       
-      res.json(teamGoalData);
+      // Sort by total goals descending
+      teamGoalData.sort((a, b) => b.totalGoals - a.totalGoals);
+      
+      // Add position after sorting
+      const teamGoalDataWithPosition = teamGoalData.map((team, index) => ({
+        ...team,
+        position: index + 1
+      }));
+      
+      res.json(teamGoalDataWithPosition);
     } catch (error) {
       console.error("Error fetching cached team goal projections:", error);
       res.status(500).json({ error: "Failed to fetch cached team goal projections" });
@@ -14458,11 +14468,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("📊 Serving cached team assist projections from database");
       const cachedData = await db.select().from(teamProjections)
-        .where(eq(teamProjections.season, '2025/26'))
-        .orderBy(desc(sql`(${teamProjections.goalProjections}->>'total')::numeric`));
+        .where(eq(teamProjections.season, '2025/26'));
       
       // Transform to expected format with assist multiplier
-      const teamAssistData = cachedData.map((team, index) => {
+      const teamAssistData = cachedData.map((team) => {
         const goalProjections = team.goalProjections as any;
         const totalGoals = Object.values(goalProjections).reduce((sum: number, val: any) => sum + (val || 0), 0);
         const totalAssists = totalGoals * 0.72; // Standard assist multiplier
@@ -14475,17 +14484,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return {
           id: team.teamId,
+          teamId: team.teamId,
+          teamName: team.teamName,
           team: team.teamName,
           teamShort: team.teamName.slice(0, 3).toUpperCase(),
           gameweekProjections: assistProjections,
           totalProjectedAssists: Math.round(totalAssists * 100) / 100,
-          averageAssistsPerGame: Math.round((totalAssists / 35) * 100) / 100, // GW4-38 remaining
-          confidence: "High",
-          position: index + 1
+          totalAssists: Math.round(totalAssists * 100) / 100,
+          averageAssistsPerGame: Math.round((totalAssists / Math.max(1, Object.keys(goalProjections).length)) * 100) / 100,
+          confidence: "High" as const
         };
       });
       
-      res.json(teamAssistData);
+      // Sort by total assists descending
+      teamAssistData.sort((a, b) => b.totalAssists - a.totalAssists);
+      
+      // Add position after sorting
+      const teamAssistDataWithPosition = teamAssistData.map((team, index) => ({
+        ...team,
+        position: index + 1
+      }));
+      
+      res.json(teamAssistDataWithPosition);
     } catch (error) {
       console.error("Error fetching cached team assist projections:", error);
       res.status(500).json({ error: "Failed to fetch cached team assist projections" });
