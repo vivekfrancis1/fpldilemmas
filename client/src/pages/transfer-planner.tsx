@@ -1564,13 +1564,19 @@ export default function TransferPlanner() {
     const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
     console.log("🔄 LINEUP REBUILD useEffect triggered - GW:", selectedGameweek, "Draft:", activeDraft, "Key:", optimizationKey, "Flags:", isLineupOptimizedRef.current);
     
-    // CRITICAL: Don't reset lineup if it's been manually optimized for this gameweek+draft
-    if (isLineupOptimizedRef.current[optimizationKey]) {
-      console.log("🔒 PROTECTED: Skipping lineup reset - Key", optimizationKey, "is optimized");
+    // CRITICAL: If this gameweek has an optimized lineup, we need to load it (not skip)
+    // The optimization flag just means we shouldn't reset it to transfers-only baseline
+    const hasOptimizedLineup = Boolean(optimizedLineups[selectedGameweek]);
+    if (isLineupOptimizedRef.current[optimizationKey] && !hasOptimizedLineup) {
+      console.log("🔒 PROTECTED: Skipping lineup reset - Key", optimizationKey, "is optimized but no optimized lineup in state");
       return;
     }
     
-    console.log("⚠️ REBUILDING lineup for", optimizationKey, "- no optimization flag set");
+    if (hasOptimizedLineup) {
+      console.log("📦 LOADING OPTIMIZED LINEUP for", optimizationKey);
+    } else {
+      console.log("⚠️ REBUILDING lineup for", optimizationKey, "- no optimization");
+    }
     
     // Helper to apply buy price overrides to lineup
     const applyBuyPriceOverrides = (lineup: TeamPick[]) => {
