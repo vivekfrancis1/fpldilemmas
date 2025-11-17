@@ -5121,35 +5121,6 @@ export default function TransferPlanner() {
                 {activeDraft === "Base" ? "Team Summary - Base Draft" : `Team Summary - Draft ${activeDraft}`}
               </div>
               <div className="flex gap-1 md:gap-2 flex-wrap">
-                {/* Optimization buttons */}
-                {activeDraft !== "Base" && (() => {
-                  const nextGWs = getNextGameweeks();
-                  const allOptimized = nextGWs.length > 0 && nextGWs.every(gw => gw && optimizedLineups[gw.id]);
-                  
-                  return allOptimized ? (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md h-7 md:h-9">
-                      <Sparkles className="h-3 w-3 md:h-4 md:w-4 text-green-600" />
-                      <span className="text-xs md:text-sm font-medium text-green-700 dark:text-green-300">
-                        <span className="hidden sm:inline">Your lineup is optimised for all {nextGWs.length} GWs</span>
-                        <span className="sm:hidden">All {nextGWs.length} GWs optimised</span>
-                      </span>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={optimizeAllGameweeks}
-                      disabled={!playerProjections6GW}
-                      className="bg-green-600 hover:bg-green-700 text-white h-7 px-2 md:h-9 md:px-3"
-                      data-testid="button-optimize-all-gameweeks"
-                    >
-                      <Sparkles className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                      <span className="hidden sm:inline">Optimize All GWs</span>
-                      <span className="sm:hidden">Optimize All</span>
-                    </Button>
-                  );
-                })()}
-                
                 {/* Transfer undo buttons */}
                 {(completedTransfers.length > 0 || transferredOutPlayers.length > 0) && (
                   <Button
