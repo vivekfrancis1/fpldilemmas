@@ -183,7 +183,8 @@ export function FplConnectDialog() {
                   <li>Open DevTools (F12) → <strong>Network tab</strong> → Refresh page (F5)</li>
                   <li><strong>Right-click</strong> any request → Select <strong>"Copy" → "Copy as cURL"</strong></li>
                   <li>Look for <strong>-H 'x-api-authorization: Bearer ...'</strong> in the copied text</li>
-                  <li>Copy everything <strong>after "Bearer "</strong> (the long token starting with eyJ...)</li>
+                  <li>Copy ONLY the token after "Bearer " <strong>(WITHOUT the quotes)</strong></li>
+                  <li>Token should start with <strong>eyJ</strong> and be 500+ characters long</li>
                   <li>Also note your Manager ID from the URL (e.g., entry/<strong>123456</strong>/event/10)</li>
                 </ol>
               </AlertDescription>

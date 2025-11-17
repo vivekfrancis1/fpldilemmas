@@ -912,12 +912,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log('🔐 Validating FPL Bearer token...');
-      console.log('📏 Token length:', fplToken.length);
-      console.log('🔤 Token starts with:', fplToken.substring(0, 20));
-      console.log('🔤 Token ends with:', fplToken.substring(fplToken.length - 20));
-
-      // Trim any whitespace from token
-      const cleanToken = fplToken.trim();
+      
+      // Clean the token: trim whitespace and remove any surrounding quotes
+      let cleanToken = fplToken.trim();
+      // Remove surrounding single or double quotes if present
+      if ((cleanToken.startsWith('"') && cleanToken.endsWith('"')) || 
+          (cleanToken.startsWith("'") && cleanToken.endsWith("'"))) {
+        cleanToken = cleanToken.slice(1, -1);
+      }
+      
+      console.log('📏 Token length:', cleanToken.length);
+      console.log('🔤 Token starts with:', cleanToken.substring(0, 20));
+      console.log('🔤 Token ends with:', cleanToken.substring(cleanToken.length - 20));
 
       // Validate token by making an authenticated request
       const meResponse = await fetch('https://fantasy.premierleague.com/api/me/', {
