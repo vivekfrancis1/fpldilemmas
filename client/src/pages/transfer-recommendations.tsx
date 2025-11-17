@@ -185,7 +185,12 @@ export default function TransferRecommendations() {
     // Get projected points for a player
     const getProjectedPoints = (playerId: number): number => {
       const projection = playerProjections.find((p: any) => p.playerId === playerId);
-      return projection?.projectedPoints || 0;
+      if (!projection) return 0;
+      
+      // The API returns gameweekProjections as an object with gameweek keys
+      // Extract the projected points for the selected gameweek
+      const gwPoints = projection.gameweekProjections?.[selectedGameweek];
+      return gwPoints || projection.totalExpectedPoints || projection.projectedPoints || 0;
     };
 
     // Group players by position
@@ -253,10 +258,18 @@ export default function TransferRecommendations() {
       }
     });
 
-    if (!bestLineup.length) return null;
+    if (!bestLineup.length || !bestFormation) return null;
 
-    // Assign positions (1-11 for starting, 12-15 for bench)
-    const optimized = bestLineup.map((pick, idx) => ({
+    // Reorganize starting 11: GKP, DEF, MID, FWD (in formation order)
+    const starting11 = [
+      squadByPosition.GKP[0], // Goalkeeper
+      ...squadByPosition.DEF.slice(0, bestFormation.def), // Defenders
+      ...squadByPosition.MID.slice(0, bestFormation.mid), // Midfielders
+      ...squadByPosition.FWD.slice(0, bestFormation.fwd)  // Forwards
+    ];
+
+    // Assign positions (1-11 for starting)
+    const optimized = starting11.map((pick, idx) => ({
       ...pick,
       position: idx + 1,
       is_captain: false,
@@ -269,8 +282,11 @@ export default function TransferRecommendations() {
     const benchMID = squadByPosition.MID.filter(p => !optimized.find(o => o.element === p.element));
     const benchFWD = squadByPosition.FWD.filter(p => !optimized.find(o => o.element === p.element));
 
-    const bench = [...benchGKP, ...benchDEF, ...benchMID, ...benchFWD]
-      .sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0))
+    // Bench: GKP first, then outfield players sorted by projected points
+    const benchOutfield = [...benchDEF, ...benchMID, ...benchFWD]
+      .sort((a, b) => (b.projectedPoints || 0) - (a.projectedPoints || 0));
+    
+    const bench = [...benchGKP, ...benchOutfield]
       .slice(0, 4)
       .map((pick, idx) => ({
         ...pick,
