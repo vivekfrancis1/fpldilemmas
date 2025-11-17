@@ -892,6 +892,10 @@ export default function TransferPlanner() {
   // Chip planning state
   const [plannedChips, setPlannedChips] = useState<PlannedChips>({});
   
+  // Optimized lineups state - stores optimized lineup positions per gameweek
+  // Structure: { [gameweek: number]: TeamPick[] }
+  const [optimizedLineups, setOptimizedLineups] = useState<{ [gameweek: number]: TeamPick[] }>({});
+  
   // Collapsible sections state - default to collapsed
   const [isChipsPlanningOpen, setIsChipsPlanningOpen] = useState(false);
   const [isTeamEvolutionOpen, setIsTeamEvolutionOpen] = useState(false);
@@ -1638,11 +1642,14 @@ export default function TransferPlanner() {
     // Apply buy price overrides before setting state
     lineupWithTransfers = applyBuyPriceOverrides(lineupWithTransfers);
     
-    // Check if there's an optimized lineup for this gameweek
-    const optimizedLineupKey = `optimized_${selectedGameweek}`;
-    if (optimizationUndoState[optimizedLineupKey]) {
-      // Use the optimized lineup instead
-      lineupWithTransfers = JSON.parse(JSON.stringify(optimizationUndoState[optimizedLineupKey]));
+    // Check if there's a persisted optimized lineup for this gameweek
+    if (optimizedLineups[selectedGameweek]) {
+      console.log("📦 USING OPTIMIZED LINEUP from database for GW", selectedGameweek);
+      // Use the optimized lineup from database (includes positions, captain, etc.)
+      lineupWithTransfers = JSON.parse(JSON.stringify(optimizedLineups[selectedGameweek]));
+      
+      // Re-apply buy price overrides to the optimized lineup
+      lineupWithTransfers = applyBuyPriceOverrides(lineupWithTransfers);
       
       // Re-apply transferred out flags (they can happen after optimization)
       gwTransfers.transferredOut.forEach(transferOut => {
@@ -1654,7 +1661,7 @@ export default function TransferPlanner() {
         });
       });
     } else {
-      // Apply saved captain/vice-captain if available (from draft loading)
+      // No optimized lineup - apply saved captain/vice-captain if available (from draft loading)
       if (savedCaptainInfo && (savedCaptainInfo.captainPlayerId || savedCaptainInfo.viceCaptainPlayerId)) {
         console.log("DEBUG: Applying saved captain info:", savedCaptainInfo);
         lineupWithTransfers = lineupWithTransfers.map(pick => ({
@@ -1668,7 +1675,7 @@ export default function TransferPlanner() {
     }
     
     setManualLineup(lineupWithTransfers);
-  }, [selectedGameweek, activeDraft, gameweekTransfers, buyPriceOverridesData, buyPricesData, savedCaptainInfo, optimizationUndoState]);
+  }, [selectedGameweek, activeDraft, gameweekTransfers, buyPriceOverridesData, buyPricesData, savedCaptainInfo, optimizedLineups]);
 
   const handleSearch = () => {
     if (managerId.trim()) {
@@ -2769,9 +2776,51 @@ export default function TransferPlanner() {
       description: `${formationName} formation selected. Captain: ${captainPlayer?.web_name || 'TBD'}. ${(bestPoints + (sortedByPoints[0]?.points || 0)).toFixed(1)} projected pts.`
     });
 
-    // DON'T auto-save because it would reload the draft and reset positions
-    // The optimized lineup is now in state and will be visible immediately
-    // User can manually save when they're ready
+    // Save optimized lineup to state and immediately persist to database
+    // This ensures the optimized positions are preserved when switching gameweeks
+    const updatedOptimizedLineups = {
+      ...optimizedLineups,
+      [gameweek]: JSON.parse(JSON.stringify(optimizedLineup)) // Deep clone
+    };
+    setOptimizedLineups(updatedOptimizedLineups);
+    
+    // Immediately save to database with the optimized lineup
+    if (activeDraft !== "Base" && searchedId) {
+      console.log("💾 OPTIMIZE: Saving optimized lineup for GW", gameweek, "to draft", activeDraft);
+      
+      const captainPick = optimizedLineup.find(p => p.is_captain);
+      const viceCaptainPick = optimizedLineup.find(p => p.is_vice_captain);
+      const captainPlayerObj = captainPick ? getPlayerById(captainPick.element) : null;
+      const viceCaptainPlayerObj = viceCaptainPick ? getPlayerById(viceCaptainPick.element) : null;
+      
+      fetch("/api/transfer-planner/drafts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          managerId: parseInt(searchedId),
+          draftLetter: activeDraft,
+          gameweekTransfers: JSON.parse(JSON.stringify(gameweekTransfers)),
+          plannedChips: JSON.parse(JSON.stringify(plannedChips)),
+          optimizedLineups: updatedOptimizedLineups,
+          mode: "manual",
+          teamBank: calculateBankAfterTransfers(),
+          teamValue: 0,
+          totalProjectedPoints: 0,
+          totalTransfersUsed: Object.values(gameweekTransfers).reduce((sum, gw) => sum + gw.completed.length, 0),
+          captainPlayerId: captainPick?.element || null,
+          captainPlayerName: captainPlayerObj?.web_name || null,
+          viceCaptainPlayerId: viceCaptainPick?.element || null,
+          viceCaptainPlayerName: viceCaptainPlayerObj?.web_name || null
+        })
+      }).then(response => {
+        if (response.ok) {
+          console.log("✅ OPTIMIZE: Optimized lineup saved to database successfully");
+          loadDrafts(); // Refresh drafts list
+        }
+      }).catch(error => {
+        console.error("❌ OPTIMIZE: Failed to save optimized lineup:", error);
+      });
+    }
   };
 
   // Undo team optimization for a specific gameweek
@@ -2809,13 +2858,20 @@ export default function TransferPlanner() {
       delete newState[gameweek];
       return newState;
     });
+    
+    // Remove optimized lineup from state and database
+    const updatedOptimizedLineups = { ...optimizedLineups };
+    delete updatedOptimizedLineups[gameweek];
+    setOptimizedLineups(updatedOptimizedLineups);
+    
+    console.log("🔓 UNDO: Removed optimized lineup for GW", gameweek);
 
     toast({
       title: "Optimization Undone",
       description: "Previous lineup has been restored"
     });
 
-    // Auto-save after undo
+    // Auto-save after undo (will include the updated optimizedLineups without this gameweek)
     if (wasInBase) {
       setTimeout(() => finalizeNewDraft(targetDraft), 100);
     } else {
@@ -3940,6 +3996,7 @@ export default function TransferPlanner() {
           draftLetter: draftLetter,
           gameweekTransfers: JSON.parse(JSON.stringify(transfersData)), // Deep clone to prevent shared references
           plannedChips: JSON.parse(JSON.stringify(plannedChips)), // Include planned chips
+          optimizedLineups: JSON.parse(JSON.stringify(optimizedLineups)), // Include optimized lineups
           mode: "manual",
           teamBank: calculateBankAfterTransfers(),
           teamValue: 0,
@@ -4022,6 +4079,7 @@ export default function TransferPlanner() {
       setTransferredOutPlayers([]);
       setCompletedTransfers([]);
       setPlannedChips({}); // Reset planned chips
+      setOptimizedLineups({}); // Reset optimized lineups
       setSavedCaptainInfo(null); // Clear saved captain info
       setActiveDraft("Base");
       setHasUnsavedChanges(false);
@@ -4062,6 +4120,9 @@ export default function TransferPlanner() {
         // CRITICAL: Deep clone to prevent shared references between drafts
         setGameweekTransfers(JSON.parse(JSON.stringify(draft.gameweekTransfers || {})));
         setPlannedChips(JSON.parse(JSON.stringify(draft.plannedChips || {}))); // Load planned chips
+        setOptimizedLineups(JSON.parse(JSON.stringify(draft.optimizedLineups || {}))); // Load optimized lineups
+        
+        console.log("📥 LOADED optimizedLineups from draft:", draft.optimizedLineups);
         
         // Save captain/vice-captain info to be applied AFTER useEffect rebuilds lineup
         const captainInfo = {

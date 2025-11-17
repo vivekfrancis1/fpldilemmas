@@ -15378,7 +15378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Save or update a draft
   app.post("/api/transfer-planner/drafts", async (req, res) => {
     try {
-      const { managerId, draftLetter, gameweekTransfers, plannedChips, mode, teamBank, teamValue, totalProjectedPoints, totalTransfersUsed, captainPlayerId, viceCaptainPlayerId } = req.body;
+      const { managerId, draftLetter, gameweekTransfers, plannedChips, optimizedLineups, mode, teamBank, teamValue, totalProjectedPoints, totalTransfersUsed, captainPlayerId, viceCaptainPlayerId } = req.body;
 
       // Validation
       if (!managerId || !draftLetter || !gameweekTransfers) {
@@ -15401,6 +15401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         draft = await storage.updateTransferPlannerDraft(managerId, draftLetter, {
           gameweekTransfers,
           plannedChips: plannedChips || {},
+          optimizedLineups: optimizedLineups || {},
           mode: mode || 'manual',
           teamBank: teamBank || 0,
           teamValue: teamValue || 0,
@@ -15416,6 +15417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           draftLetter,
           gameweekTransfers,
           plannedChips: plannedChips || {},
+          optimizedLineups: optimizedLineups || {},
           mode: mode || 'manual',
           teamBank: teamBank || 0,
           teamValue: teamValue || 0,
