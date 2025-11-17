@@ -881,10 +881,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // FPL Authentication endpoints
-  app.post("/api/fpl/connect", requireAuth, async (req: any, res) => {
+  app.post("/api/fpl/connect", isAuthenticated, async (req: any, res) => {
     try {
       let { fplToken, fplManagerId } = req.body;
-      const userId = req.session.user.id;
+      const userId = (req.user as any).id;
 
       if (!fplToken) {
         return res.status(400).json({ error: 'FPL Bearer token or cURL command is required' });
@@ -992,9 +992,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/fpl/status", requireAuth, async (req: any, res) => {
+  app.get("/api/fpl/status", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = (req.user as any).id;
       
       const [user] = await db.select({
         fplManagerId: users.fplManagerId,
@@ -1021,9 +1021,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/fpl/disconnect", requireAuth, async (req: any, res) => {
+  app.post("/api/fpl/disconnect", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = (req.user as any).id;
 
       await db.update(users)
         .set({
@@ -1041,9 +1041,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/fpl/my-team", requireAuth, async (req: any, res) => {
+  app.get("/api/fpl/my-team", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.session.user.id;
+      const userId = (req.user as any).id;
 
       // Get user's FPL token
       const [user] = await db.select({
@@ -13152,7 +13152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const TOTAL_POINTS_RESPONSE_CACHE_DURATION = 60 * 60 * 1000; // 1 hour cache (increased)
 
   // COMPREHENSIVE PLAYER PROJECTIONS ENDPOINT - API-first with cache and background job fallback
-  app.get("/api/comprehensive-player-projections", requireAuth, requireAdmin, 
+  app.get("/api/comprehensive-player-projections", isAuthenticated, requireAdmin, 
     requireReadiness(['bootstrap-data', 'team-goals', 'team-assists', 'team-minutes'], 'comprehensive-player-projections'),
     async (req, res) => {
     try {
