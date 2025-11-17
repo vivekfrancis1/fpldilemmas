@@ -5392,6 +5392,11 @@ export default function TransferPlanner() {
                   const allRecommendations = gwData?.recommendations || [];
                   const freeTransfers = gwData?.freeTransfersAvailable || 1;
                   
+                  // Check if recommendation is to roll transfer (no actual transfers recommended)
+                  if (allRecommendations.length > 0 && allRecommendations[0].type === 'roll') {
+                    return null;
+                  }
+                  
                   // Only show primary recommendations (first N where N = free transfers available)
                   const recommendations = allRecommendations.slice(0, freeTransfers);
                   
@@ -5452,6 +5457,11 @@ export default function TransferPlanner() {
                 const gwData = recommendedTransfers.gameweeks[selectedGameweek];
                 const allRecommendations = gwData?.recommendations || [];
                 const freeTransfers = gwData?.freeTransfersAvailable || 1;
+                
+                // Check if recommendation is to roll transfer (no actual transfers recommended)
+                if (allRecommendations.length > 0 && allRecommendations[0].type === 'roll') {
+                  return null;
+                }
                 
                 // Only show primary recommendations (first N where N = free transfers available)
                 const recommendations = allRecommendations.slice(0, freeTransfers);
