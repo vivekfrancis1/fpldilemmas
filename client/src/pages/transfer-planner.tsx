@@ -873,6 +873,9 @@ export default function TransferPlanner() {
   // Key format: "draftLetter_gameweek" (e.g., "A_12", "B_15")
   const isLineupOptimizedRef = useRef<{ [key: string]: boolean }>({});
   
+  // Track if we're currently processing a transfer to prevent useEffect interference
+  const isProcessingTransferRef = useRef<boolean>(false);
+  
   // Helper to generate consistent optimization keys
   const getOptimizationKey = (draft: string, gameweek: number): string => {
     return `${draft}_${gameweek}`;
@@ -1563,6 +1566,12 @@ export default function TransferPlanner() {
   // Save and load transfers when gameweek changes
   useEffect(() => {
     if (!selectedGameweek || !teamData?.picks) return;
+    
+    // Skip if we're currently processing a transfer to prevent interference
+    if (isProcessingTransferRef.current) {
+      console.log("🚫 SKIPPING lineup rebuild - transfer in progress");
+      return;
+    }
     
     // Clear player popup when gameweek changes
     setSelectedPlayer(null);
@@ -3384,8 +3393,14 @@ export default function TransferPlanner() {
 
   // Handle transferring a player in
   const handleTransferIn = (playerId: number, playerElementType: number) => {
+    // Set flag to prevent useEffect from interfering during transfer processing
+    isProcessingTransferRef.current = true;
+    
     const player = getPlayerById(playerId);
-    if (!player) return;
+    if (!player) {
+      isProcessingTransferRef.current = false;
+      return;
+    }
 
     // Check if player is already in the team
     const isAlreadyInTeam = manualLineup.some(pick => 
@@ -3398,6 +3413,7 @@ export default function TransferPlanner() {
         description: `${player.web_name} is already in your team`,
         variant: "destructive"
       });
+      isProcessingTransferRef.current = false;
       return;
     }
 
@@ -3415,6 +3431,7 @@ export default function TransferPlanner() {
         description: `You already have 3 players from ${teamName}. Maximum allowed is 3 players per team.`,
         variant: "destructive"
       });
+      isProcessingTransferRef.current = false;
       return;
     }
 
@@ -3429,6 +3446,7 @@ export default function TransferPlanner() {
         description: "No matching position found for transfer",
         variant: "destructive"
       });
+      isProcessingTransferRef.current = false;
       return;
     }
 
@@ -3534,6 +3552,12 @@ export default function TransferPlanner() {
       const draftToSave = activeDraft; // Capture draft letter before async operation
       setTimeout(() => saveCurrentDraft(updatedGameweekTransfers, draftToSave, true), 200);
     }
+    
+    // Reset the flag after all state updates to allow useEffect to run normally next time
+    // Use setTimeout to ensure it happens after React has processed all the state updates
+    setTimeout(() => {
+      isProcessingTransferRef.current = false;
+    }, 0);
   };
 
   // Reset all transfers for the current gameweek and restore baseline
