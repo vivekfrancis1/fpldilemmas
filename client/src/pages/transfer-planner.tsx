@@ -198,10 +198,15 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   // Scroll to view when requested
   useEffect(() => {
     if (scrollToView && sectionRef.current) {
-      sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (onScrollComplete) {
-        onScrollComplete();
-      }
+      // Add a small delay to ensure the section is rendered
+      setTimeout(() => {
+        if (sectionRef.current) {
+          sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          if (onScrollComplete) {
+            onScrollComplete();
+          }
+        }
+      }, 100);
     }
   }, [scrollToView, onScrollComplete]);
 
