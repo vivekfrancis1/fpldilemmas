@@ -2534,6 +2534,19 @@ export default function TransferPlanner() {
     
     setManualLineup(newLineup);
     
+    // Clear the optimization status for this gameweek since the lineup has changed
+    if (selectedGameweek) {
+      const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+      delete isLineupOptimizedRef.current[optimizationKey];
+      
+      // Remove optimized lineup from state to show the Optimize button again
+      setOptimizedLineups(prev => {
+        const updated = { ...prev };
+        delete updated[selectedGameweek];
+        return updated;
+      });
+    }
+    
     // Show detailed swap confirmation (bench priority excludes GK, so subtract 1)
     const newStartingPlayer = getPlayerById(newLineup[startingIndex].element)?.web_name;
     const newBenchPlayer = getPlayerById(newLineup[11 + benchIndex].element)?.web_name;
@@ -2590,6 +2603,19 @@ export default function TransferPlanner() {
     newLineup[swapIndex].position = swapIndex + 1;
     
     setManualLineup(newLineup);
+    
+    // Clear the optimization status for this gameweek since the lineup has changed
+    if (selectedGameweek) {
+      const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+      delete isLineupOptimizedRef.current[optimizationKey];
+      
+      // Remove optimized lineup from state to show the Optimize button again
+      setOptimizedLineups(prev => {
+        const updated = { ...prev };
+        delete updated[selectedGameweek];
+        return updated;
+      });
+    }
     
     // Show confirmation toast with both players (bench priority excludes GK, so subtract 1)
     const movedPlayerName = getPlayerById(movedPlayer.element)?.web_name;
@@ -3154,6 +3180,20 @@ export default function TransferPlanner() {
           }
         });
       });
+      
+      // Clear the optimization status for this gameweek since the lineup has changed
+      if (selectedGameweek) {
+        const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+        delete isLineupOptimizedRef.current[optimizationKey];
+        
+        // Remove optimized lineup from state to show the Optimize button again
+        setOptimizedLineups(prev => {
+          const updated = { ...prev };
+          delete updated[selectedGameweek];
+          return updated;
+        });
+      }
+      
       setCaptainConfirmation(null);
       setSelectedPlayer(null);
       
@@ -3255,6 +3295,20 @@ export default function TransferPlanner() {
           }
         });
       });
+      
+      // Clear the optimization status for this gameweek since the lineup has changed
+      if (selectedGameweek) {
+        const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+        delete isLineupOptimizedRef.current[optimizationKey];
+        
+        // Remove optimized lineup from state to show the Optimize button again
+        setOptimizedLineups(prev => {
+          const updated = { ...prev };
+          delete updated[selectedGameweek];
+          return updated;
+        });
+      }
+      
       setViceCaptainConfirmation(null);
       setSelectedPlayer(null);
       
@@ -3362,6 +3416,19 @@ export default function TransferPlanner() {
         ? { ...p, is_transferred_out: true }
         : p
     ));
+    
+    // Clear the optimization status for this gameweek since the lineup has changed
+    if (selectedGameweek) {
+      const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+      delete isLineupOptimizedRef.current[optimizationKey];
+      
+      // Remove optimized lineup from state to show the Optimize button again
+      setOptimizedLineups(prev => {
+        const updated = { ...prev };
+        delete updated[selectedGameweek];
+        return updated;
+      });
+    }
 
     const positionName = player.element_type === 1 ? 'Goalkeeper' : player.element_type === 2 ? 'Defender' : player.element_type === 3 ? 'Midfielder' : 'Forward';
     toast({
@@ -3526,6 +3593,19 @@ export default function TransferPlanner() {
     // Update all states
     setCompletedTransfers(newTransfers);
     setTransferredOutPlayers(newTransferredOut);
+    
+    // Clear the optimization status for this gameweek since the lineup has changed
+    if (selectedGameweek) {
+      const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+      delete isLineupOptimizedRef.current[optimizationKey];
+      
+      // Remove optimized lineup from state to show the Optimize button again
+      setOptimizedLineups(prev => {
+        const updated = { ...prev };
+        delete updated[selectedGameweek];
+        return updated;
+      });
+    }
     
     // Save to gameweek-specific storage immediately and capture the updated value
     let updatedGameweekTransfers = gameweekTransfers;
