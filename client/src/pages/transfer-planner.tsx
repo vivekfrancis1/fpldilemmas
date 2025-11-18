@@ -2036,43 +2036,37 @@ export default function TransferPlanner() {
     return calculateBankAfterTransfers();
   };
 
-  // Calculate transfers used for a specific gameweek by comparing with baseline
+  // Calculate transfers used for a specific gameweek by comparing current lineup with baseline
   const calculateTransfersUsedForGameweek = (gameweek: number): number => {
     if (!teamData?.picks) return 0;
     
-    // Get the baseline lineup for this gameweek
+    // Get the baseline lineup for this gameweek (what we started with before any transfers)
     const baseline = getBaselineLineup(gameweek);
     
-    // Get the current/final lineup for this gameweek (with all cumulative transfers applied)
-    let currentLineup = [...baseline];
+    // For the currently selected gameweek, use manualLineup
+    // For other gameweeks, we'd need to reconstruct the lineup, but for now we only call this for selectedGameweek
+    if (gameweek !== selectedGameweek) {
+      console.warn("calculateTransfersUsedForGameweek called for non-selected gameweek:", gameweek);
+      return 0;
+    }
     
-    // Apply all transfers from previous gameweeks
-    const nextGWs = getNextGameweeks();
-    nextGWs.forEach(gw => {
-      if (gw.id <= gameweek) {
-        const gwTransfers = gameweekTransfers[gw.id];
-        if (gwTransfers && gwTransfers.completed) {
-          gwTransfers.completed.forEach(transfer => {
-            // Replace the transferred out player with the transferred in player
-            currentLineup = currentLineup.map(pick => {
-              if (pick.element === transfer.outPlayerId) {
-                return { ...pick, element: transfer.inPlayerId };
-              }
-              return pick;
-            });
-          });
-        }
-      }
-    });
-    
-    // Count how many players are different from the baseline
+    // Count how many players in the current lineup are different from baseline
+    // Ignore transferred out players (they're still pending)
     let transfersUsed = 0;
+    
     baseline.forEach((baselinePick) => {
-      const currentPick = currentLineup.find(p => p.position === baselinePick.position);
-      if (currentPick && currentPick.element !== baselinePick.element) {
+      const currentPick = manualLineup.find(p => p.position === baselinePick.position);
+      
+      // If the player at this position is different from baseline AND not transferred out, count it as a transfer
+      if (currentPick && !currentPick.is_transferred_out && currentPick.element !== baselinePick.element) {
         transfersUsed++;
       }
     });
+    
+    console.log("📊 TRANSFERS USED DEBUG:");
+    console.log("  Baseline lineup:", baseline.map(p => ({ pos: p.position, id: p.element })));
+    console.log("  Current lineup:", manualLineup.map(p => ({ pos: p.position, id: p.element, out: p.is_transferred_out })));
+    console.log("  Transfers used:", transfersUsed);
     
     return transfersUsed;
   };
