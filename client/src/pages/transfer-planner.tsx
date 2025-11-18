@@ -3774,7 +3774,31 @@ export default function TransferPlanner() {
     const originalPlayer = getPlayerById(originalPick.element);
     if (!originalPlayer) return;
     
-    // Remove ALL transfers across ALL gameweeks that involve this position
+    // Build a set of all player IDs that have ever been at this position through transfers
+    const playerIdsAtPosition = new Set<number>();
+    playerIdsAtPosition.add(originalPick.element); // Start with original player
+    
+    // Trace through all gameweeks to find all players that have been at this position
+    Object.keys(gameweekTransfers).forEach(gw => {
+      const gwTransfers = gameweekTransfers[parseInt(gw)];
+      
+      // Check transferred out players at this position
+      gwTransfers.transferredOut.forEach(t => {
+        if (t.position === position) {
+          playerIdsAtPosition.add(t.playerId);
+        }
+      });
+      
+      // Check completed transfers - if a player was transferred in at this position
+      gwTransfers.completed.forEach(t => {
+        // If the out player was at this position, the in player is now at this position
+        if (playerIdsAtPosition.has(t.outPlayerId)) {
+          playerIdsAtPosition.add(t.inPlayerId);
+        }
+      });
+    });
+    
+    // Remove ALL transfers across ALL gameweeks that involve any player who has been at this position
     const updatedGameweekTransfers: typeof gameweekTransfers = {};
     
     Object.keys(gameweekTransfers).forEach(gw => {
@@ -3784,9 +3808,8 @@ export default function TransferPlanner() {
       // Filter out transfers at this position
       const newTransferredOut = gwTransfers.transferredOut.filter(t => t.position !== position);
       const newCompleted = gwTransfers.completed.filter(t => {
-        // Remove any transfer where either the out or in happened at this position
-        const outPosition = teamData.picks.find(p => p.element === t.outPlayerId)?.position;
-        return outPosition !== position;
+        // Remove any transfer that involves a player who has been at this position
+        return !playerIdsAtPosition.has(t.outPlayerId) && !playerIdsAtPosition.has(t.inPlayerId);
       });
       
       // Only keep the gameweek if it still has transfers
