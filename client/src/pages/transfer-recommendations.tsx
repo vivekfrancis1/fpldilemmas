@@ -548,7 +548,7 @@ export default function TransferRecommendations() {
                       )}
                     </div>
                     {gwData.recommendations && gwData.recommendations.length > 0 ? (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {/* Check if this is a roll transfer recommendation */}
                         {gwData.recommendations[0]?.type === 'roll' ? (
                           <div className="flex flex-col items-center justify-center p-6 sm:p-8 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg" data-testid={`roll-transfer-gw${gw}`}>
@@ -563,30 +563,30 @@ export default function TransferRecommendations() {
                             {(() => {
                               const freeTransfers = gwData.freeTransfersAvailable || 1;
                               const primaryTransfers = gwData.recommendations.slice(0, freeTransfers);
-                              const otherTransfers = gwData.recommendations.slice(freeTransfers);
+                              const otherTransfers = gwData.recommendations.slice(freeTransfers, freeTransfers + 5);
                               
                               return (
                                 <>
                                   {primaryTransfers.length > 0 && (
                                 <div>
-                                  <h3 className="text-base font-semibold text-gray-700 mb-3">
+                                  <h3 className="text-base font-semibold text-gray-700 mb-2">
                                     Primary Transfer Recommendation{primaryTransfers.length > 1 ? 's' : ''}
                                   </h3>
-                                  <div className="space-y-3">
+                                  <div className="space-y-2">
                                     {primaryTransfers.map((rec: any, index: number) => (
                                       <div
                                         key={`${rec.playerOut.id}-${rec.playerIn.id}`}
-                                        className="p-3 sm:p-4 bg-gradient-to-r from-orange-50 to-white border-2 border-orange-300 rounded-lg shadow-sm space-y-3"
+                                        className="p-2 sm:p-3 bg-gradient-to-r from-orange-50 to-white border-2 border-orange-300 rounded-lg shadow-sm space-y-2"
                                         data-testid={`transfer-recommendation-gw${gw}-${index}`}
                                       >
-                                        <div className="space-y-2">
+                                        <div className="space-y-1">
                                           <div className="flex items-start gap-2">
                                             <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0">
                                               OUT
                                             </Badge>
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                               <TrendingDown className="h-3.5 w-3.5 text-red-500 shrink-0" />
-                                              <span className="text-sm sm:text-base font-medium text-gray-900 break-words" data-testid={`player-out-name-gw${gw}-${index}`}>{rec.playerOut.webName}</span>
+                                              <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-out-name-gw${gw}-${index}`}>{rec.playerOut.webName}</span>
                                               <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-out-points-gw${gw}-${index}`}>
                                                 ({rec.playerOut.projectedPoints.toFixed(1)} pts)
                                               </span>
@@ -598,27 +598,27 @@ export default function TransferRecommendations() {
                                             </Badge>
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                               <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                                              <span className="text-sm sm:text-base font-medium text-gray-900 break-words" data-testid={`player-in-name-gw${gw}-${index}`}>{rec.playerIn.webName}</span>
+                                              <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-in-name-gw${gw}-${index}`}>{rec.playerIn.webName}</span>
                                               <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-in-points-gw${gw}-${index}`}>
                                                 ({rec.playerIn.projectedPoints.toFixed(1)} pts)
                                               </span>
                                             </div>
                                           </div>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-3 pt-2 border-t border-orange-200">
+                                        <div className="grid grid-cols-3 gap-2 pt-1.5 border-t border-orange-200">
                                           <div className="text-center">
-                                            <div className="text-xs text-gray-500 mb-1">Points Gain</div>
-                                            <div className="text-base sm:text-lg font-bold text-green-600" data-testid={`points-gain-gw${gw}-${index}`}>+{rec.pointsGain.toFixed(1)}</div>
+                                            <div className="text-xs text-gray-500">Points Gain</div>
+                                            <div className="text-sm sm:text-base font-bold text-green-600" data-testid={`points-gain-gw${gw}-${index}`}>+{rec.pointsGain.toFixed(1)}</div>
                                           </div>
                                           <div className="text-center">
-                                            <div className="text-xs text-gray-500 mb-1">Cost</div>
-                                            <div className={`text-sm sm:text-base font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${index}`}>
+                                            <div className="text-xs text-gray-500">Cost</div>
+                                            <div className={`text-xs sm:text-sm font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${index}`}>
                                               {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
                                             </div>
                                           </div>
                                           <div className="text-center">
-                                            <div className="text-xs text-gray-500 mb-1">ITB After</div>
-                                            <div className="text-sm sm:text-base font-medium text-gray-700" data-testid={`budget-after-gw${gw}-${index}`}>
+                                            <div className="text-xs text-gray-500">ITB After</div>
+                                            <div className="text-xs sm:text-sm font-medium text-gray-700" data-testid={`budget-after-gw${gw}-${index}`}>
                                               £{(rec.budgetAfter / 10).toFixed(1)}m
                                             </div>
                                           </div>
@@ -632,24 +632,24 @@ export default function TransferRecommendations() {
                               {/* Other Transfer Recommendations */}
                               {otherTransfers.length > 0 && (
                                 <div>
-                                  <h3 className="text-base font-semibold text-gray-700 mb-3">Other Transfer Recommendations</h3>
-                                  <div className="space-y-3">
+                                  <h3 className="text-base font-semibold text-gray-700 mb-2">Other Transfer Recommendations</h3>
+                                  <div className="space-y-2">
                                     {otherTransfers.map((rec: any, index: number) => {
                                       const offsetIndex = freeTransfers + index;
                                       return (
                                       <div
                                         key={`${rec.playerOut.id}-${rec.playerIn.id}`}
-                                        className="p-3 sm:p-4 bg-white border border-orange-100 rounded-lg hover:border-orange-300 transition-colors space-y-3"
+                                        className="p-2 sm:p-3 bg-white border border-orange-100 rounded-lg hover:border-orange-300 transition-colors space-y-2"
                                         data-testid={`transfer-recommendation-gw${gw}-${offsetIndex}`}
                                       >
-                                        <div className="space-y-2">
+                                        <div className="space-y-1">
                                           <div className="flex items-start gap-2">
                                             <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0">
                                               OUT
                                             </Badge>
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                               <TrendingDown className="h-3.5 w-3.5 text-red-500 shrink-0" />
-                                              <span className="text-sm sm:text-base font-medium text-gray-900 break-words" data-testid={`player-out-name-gw${gw}-${offsetIndex}`}>{rec.playerOut.webName}</span>
+                                              <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-out-name-gw${gw}-${offsetIndex}`}>{rec.playerOut.webName}</span>
                                               <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-out-points-gw${gw}-${offsetIndex}`}>
                                                 ({rec.playerOut.projectedPoints.toFixed(1)} pts)
                                               </span>
@@ -661,27 +661,27 @@ export default function TransferRecommendations() {
                                             </Badge>
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                               <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                                              <span className="text-sm sm:text-base font-medium text-gray-900 break-words" data-testid={`player-in-name-gw${gw}-${offsetIndex}`}>{rec.playerIn.webName}</span>
+                                              <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-in-name-gw${gw}-${offsetIndex}`}>{rec.playerIn.webName}</span>
                                               <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-in-points-gw${gw}-${offsetIndex}`}>
                                                 ({rec.playerIn.projectedPoints.toFixed(1)} pts)
                                               </span>
                                             </div>
                                           </div>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-3 pt-2 border-t border-gray-200">
+                                        <div className="grid grid-cols-3 gap-2 pt-1.5 border-t border-gray-200">
                                           <div className="text-center">
-                                            <div className="text-xs text-gray-500 mb-1">Points Gain</div>
-                                            <div className="text-base sm:text-lg font-bold text-green-600" data-testid={`points-gain-gw${gw}-${offsetIndex}`}>+{rec.pointsGain.toFixed(1)}</div>
+                                            <div className="text-xs text-gray-500">Points Gain</div>
+                                            <div className="text-sm sm:text-base font-bold text-green-600" data-testid={`points-gain-gw${gw}-${offsetIndex}`}>+{rec.pointsGain.toFixed(1)}</div>
                                           </div>
                                           <div className="text-center">
-                                            <div className="text-xs text-gray-500 mb-1">Cost</div>
-                                            <div className={`text-sm sm:text-base font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${offsetIndex}`}>
+                                            <div className="text-xs text-gray-500">Cost</div>
+                                            <div className={`text-xs sm:text-sm font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${offsetIndex}`}>
                                               {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
                                             </div>
                                           </div>
                                           <div className="text-center">
-                                            <div className="text-xs text-gray-500 mb-1">ITB After</div>
-                                            <div className="text-sm sm:text-base font-medium text-gray-700" data-testid={`budget-after-gw${gw}-${offsetIndex}`}>
+                                            <div className="text-xs text-gray-500">ITB After</div>
+                                            <div className="text-xs sm:text-sm font-medium text-gray-700" data-testid={`budget-after-gw${gw}-${offsetIndex}`}>
                                               £{(rec.budgetAfter / 10).toFixed(1)}m
                                             </div>
                                           </div>
