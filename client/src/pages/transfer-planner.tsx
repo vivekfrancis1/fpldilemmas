@@ -3828,13 +3828,31 @@ export default function TransferPlanner() {
     setTransferredOutPlayers(currentGwTransfers.transferredOut);
     setCompletedTransfers(currentGwTransfers.completed);
     
-    // Restore the original player at this position
-    setManualLineup(prev => prev.map(p => {
-      if (p.position === position) {
-        return { ...originalPick };
-      }
-      return p;
-    }));
+    // Restore the original player at this position with their original purchase_price
+    setManualLineup(prev => {
+      const updated = prev.map(p => {
+        if (p.position === position) {
+          console.log("🔄 UNDO ALL DEBUG - Restoring original player at position", position);
+          console.log("  Original pick:", originalPick);
+          console.log("  Current pick:", p);
+          console.log("  Purchase price being restored:", originalPick.purchase_price);
+          return { 
+            ...originalPick,
+            is_transferred_out: false // Ensure the flag is cleared
+          };
+        }
+        return p;
+      });
+      
+      console.log("💰 CASH DEBUG after undo all:");
+      console.log("  Updated lineup purchase prices:", updated.map(p => ({
+        element: p.element,
+        position: p.position,
+        purchase_price: p.purchase_price
+      })));
+      
+      return updated;
+    });
     
     toast({
       title: "All Transfers Undone",
