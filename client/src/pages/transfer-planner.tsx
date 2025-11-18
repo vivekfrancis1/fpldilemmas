@@ -5884,6 +5884,66 @@ export default function TransferPlanner() {
                             if (!player) return null;
                             const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
                             
+                            // Check if this is an empty slot (transferred out) - Mobile version
+                            if (pick.is_transferred_out) {
+                              return (
+                                <div
+                                  key={`empty-${pick.position}`}
+                                  className="flex flex-col p-2 rounded border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-xs gap-2"
+                                  data-testid={`empty-slot-mobile-${pick.position}`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="flex-1">
+                                      <div className="font-medium text-red-600 text-sm">Empty Slot</div>
+                                      <div className="text-[11px] text-muted-foreground">
+                                        {getPositionShortName(player.element_type)} • Tap "Replace" below
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-1.5">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleScrollToReplacement(player.element_type)}
+                                      className="col-span-2 bg-red-600 hover:bg-red-700 text-white h-9 text-xs font-semibold"
+                                      data-testid={`replace-mobile-${pick.position}`}
+                                    >
+                                      Replace Player
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleUndoTransfer(pick.position)}
+                                      className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20 h-9 text-xs"
+                                      data-testid={`undo-transfer-mobile-${pick.position}`}
+                                    >
+                                      <RotateCcw className="h-3 w-3 mr-1" />
+                                      Undo
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleUndoGameweekTransfersForPosition(pick.position)}
+                                      className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/20 h-9 text-xs"
+                                      data-testid={`undo-gw-transfers-mobile-${pick.position}`}
+                                    >
+                                      <RotateCcw className="h-3 w-3 mr-1" />
+                                      Undo GW
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleUndoAllTransfersForPosition(pick.position)}
+                                      className="col-span-2 text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20 h-9 text-xs"
+                                      data-testid={`undo-all-transfers-mobile-${pick.position}`}
+                                    >
+                                      <X className="h-3 w-3 mr-1" />
+                                      Undo All Transfers
+                                    </Button>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            
                             return (
                               <div key={pick.element} className={`relative ${selectedPlayer === pick.element ? 'z-[100]' : ''}`}>
                                 {/* Action Buttons Popup */}
