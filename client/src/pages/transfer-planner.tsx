@@ -6308,9 +6308,9 @@ export default function TransferPlanner() {
                             if (pick.is_transferred_out) {
                               console.log('DEBUG - Showing empty slot for position:', pick.position, 'pick:', pick);
                               return (
-                                <div key={`empty-${pick.position}`} className="flex flex-col items-center w-[22vw] sm:w-44 md:w-48" data-testid={`pitch-empty-${pick.position}`}>
-                                  <div className="relative w-full">
-                                    <div className="rounded-lg p-3 sm:p-4 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-3">
+                                <div key={`empty-${pick.position}`} className="flex flex-col items-center w-[85vw] sm:w-44 md:w-48" data-testid={`pitch-empty-${pick.position}`}>
+                                  <div className="relative w-full max-w-sm">
+                                    <div className="rounded-lg p-4 sm:p-4 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-3">
                                       <div className="text-sm sm:text-base font-bold text-red-600">EMPTY SLOT</div>
                                       <div className="text-xs sm:text-sm text-red-500">{getPositionShortName(player.element_type)}</div>
                                       <div className="text-3xl font-bold text-red-600">-</div>
@@ -6542,9 +6542,9 @@ export default function TransferPlanner() {
                       // Check if bench player is transferred out
                       if (pick.is_transferred_out) {
                         return (
-                          <div key={`empty-bench-${pick.position}`} className="flex flex-col items-center w-[22vw] sm:w-44 md:w-48" data-testid={`pitch-bench-empty-${pick.position}`}>
-                            <div className="relative w-full">
-                              <div className="rounded-lg p-2.5 sm:p-3 text-center shadow-md border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-2">
+                          <div key={`empty-bench-${pick.position}`} className="flex flex-col items-center w-[85vw] sm:w-44 md:w-48" data-testid={`pitch-bench-empty-${pick.position}`}>
+                            <div className="relative w-full max-w-sm">
+                              <div className="rounded-lg p-4 sm:p-3 text-center shadow-md border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-2">
                                 <div className="text-xs sm:text-sm font-bold text-red-600">EMPTY SLOT</div>
                                 <div className="text-[11px] sm:text-xs text-red-500">{getPositionShortName(player.element_type)}</div>
                                 <div className="text-2xl font-bold text-red-600">-</div>
