@@ -5880,9 +5880,11 @@ export default function TransferPlanner() {
                                     <div className="text-right min-w-[32px]">
                                       {projectedPoints !== null ? (
                                         <>
-                                          <div className="text-xs font-bold text-blue-600">{projectedPoints.toFixed(1)}</div>
+                                          <div className="text-xs font-bold text-blue-600">
+                                            {pick.is_captain ? (projectedPoints * 2).toFixed(1) : projectedPoints.toFixed(1)}
+                                          </div>
                                           {pick.is_captain && (
-                                            <div className="text-[10px] text-muted-foreground">({(projectedPoints * 2).toFixed(1)})</div>
+                                            <div className="text-[10px] text-muted-foreground">({projectedPoints.toFixed(1)})</div>
                                           )}
                                         </>
                                       ) : (
@@ -6180,9 +6182,11 @@ export default function TransferPlanner() {
                                   <div className="text-right min-w-[32px]">
                                     {projectedPoints !== null ? (
                                       <>
-                                        <div className="text-xs font-bold text-blue-600">{projectedPoints.toFixed(1)}</div>
+                                        <div className="text-xs font-bold text-blue-600">
+                                          {pick.is_captain ? (projectedPoints * 2).toFixed(1) : projectedPoints.toFixed(1)}
+                                        </div>
                                         {pick.is_captain && (
-                                          <div className="text-[10px] text-muted-foreground">({(projectedPoints * 2).toFixed(1)})</div>
+                                          <div className="text-[10px] text-muted-foreground">({projectedPoints.toFixed(1)})</div>
                                         )}
                                       </>
                                     ) : (
@@ -6549,9 +6553,9 @@ export default function TransferPlanner() {
                                     <text x="202" y="112" fontSize="clamp(28px, 5.5vw, 32px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
                                     <text x="202" y="158" fontSize="clamp(32px, 6vw, 34px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
                                     <text x="202" y="218" fontSize="clamp(42px, 7.2vw, 42px)" fontWeight="bold" textAnchor="middle" fill={textColor}>
-                                      {projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
+                                      {pick.is_captain && projectedPoints !== null ? (projectedPoints * 2).toFixed(1) : projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                       {pick.is_captain && projectedPoints !== null && (
-                                        <tspan fontSize="clamp(26px, 4.4vw, 26px)" dx="5">({(projectedPoints * 2).toFixed(1)})</tspan>
+                                        <tspan fontSize="clamp(26px, 4.4vw, 26px)" dx="5">({projectedPoints.toFixed(1)})</tspan>
                                       )}
                                     </text>
                                     {fixture && (
