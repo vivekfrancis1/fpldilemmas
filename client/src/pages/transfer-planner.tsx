@@ -4752,42 +4752,40 @@ export default function TransferPlanner() {
         
         {/* Centered Popup */}
         <div 
-          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-300 dark:border-gray-600 overflow-hidden w-[320px]"
+          className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-300 dark:border-gray-600 overflow-hidden w-[min(90vw,360px)] max-h-[85vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
           data-testid={`${isBench ? 'bench' : 'list'}-actions-${pick.element}`}
         >
           {/* Header with player info */}
-          <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-700 dark:to-blue-800 px-4 py-3">
-            <div className="text-white text-base font-bold text-center mb-1">{player.web_name}</div>
-            <div className="flex justify-center items-center gap-3 text-white/90 text-xs mb-2">
+          <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-700 dark:to-blue-800 px-4 sm:px-5 py-4">
+            <div className="text-white text-base sm:text-lg font-bold text-center mb-2">{player.web_name}</div>
+            <div className="flex justify-center items-center gap-2 sm:gap-3 text-white/90 text-xs sm:text-sm mb-2">
               <span>{getTeamName(player.team)}</span>
               <span>•</span>
               <span>{getPositionShortName(player.element_type)}</span>
               <span>•</span>
               <span>{player.selected_by_percent}%</span>
             </div>
-            <div className="flex justify-center items-center gap-4 text-white/95 text-[11px] font-medium">
+            <div className="flex flex-wrap justify-center items-center gap-x-3 gap-y-1 text-white/95 text-xs font-medium">
               <span>Buy: £{(pick.purchase_price ? pick.purchase_price / 10 : player.now_cost / 10).toFixed(1)}m</span>
-              <span>•</span>
               <span>Current: £{(player.now_cost / 10).toFixed(1)}m</span>
-              <span>•</span>
               <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
             </div>
             <button
-              className="absolute right-2 top-3 text-white hover:text-gray-200 transition-colors"
+              className="absolute right-2 top-3 text-white hover:text-gray-200 transition-colors p-1"
               onClick={(e) => { e.stopPropagation(); setSelectedPlayer(null); }}
               data-testid={`${isBench ? 'bench' : 'list'}-close-${pick.element}`}
               aria-label="Close"
             >
-              <X className="h-5 w-5" />
+              <X className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
           </div>
           
           {/* Swap Option */}
           {!isBench ? (
             <Select onValueChange={(value) => { swapPlayers(actualIndex, parseInt(value)); setSelectedPlayer(null); }}>
-              <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`${isBench ? 'bench' : 'list'}-swap-${pick.element}`}>
-                <span className="w-full text-center text-base font-semibold">Swap</span>
+              <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`${isBench ? 'bench' : 'list'}-swap-${pick.element}`}>
+                <span className="w-full text-center text-base sm:text-lg font-semibold">Swap</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
                 {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
@@ -4806,8 +4804,8 @@ export default function TransferPlanner() {
             </Select>
           ) : (
             <Select onValueChange={(value) => { swapPlayers(parseInt(value), actualIndex); setSelectedPlayer(null); }}>
-              <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`bench-swap-${pick.element}`}>
-                <span className="w-full text-center text-base font-semibold">Swap</span>
+              <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`bench-swap-${pick.element}`}>
+                <span className="w-full text-center text-base sm:text-lg font-semibold">Swap</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
                 {manualLineup.slice(0, 11).map((startingPick) => {
@@ -4828,7 +4826,7 @@ export default function TransferPlanner() {
           )}
           
           <button 
-            className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
+            className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
             onClick={() => handleTransferOut(pick)} 
             data-testid={`${isBench ? 'bench' : 'list'}-transfer-out-${pick.element}`}
           >
@@ -4836,7 +4834,7 @@ export default function TransferPlanner() {
           </button>
           {!pick.is_captain && (
             <button 
-              className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
+              className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
               onClick={() => handleSetCaptain(pick.element)} 
               data-testid={`${isBench ? 'bench' : 'list'}-make-captain-${pick.element}`}
             >
@@ -4845,7 +4843,7 @@ export default function TransferPlanner() {
           )}
           {!pick.is_vice_captain && (
             <button 
-              className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
+              className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
               onClick={() => handleSetViceCaptain(pick.element)} 
               data-testid={`${isBench ? 'bench' : 'list'}-make-vice-${pick.element}`}
             >
@@ -4853,7 +4851,7 @@ export default function TransferPlanner() {
             </button>
           )}
           <button 
-            className="w-full h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
+            className="w-full h-14 sm:h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
             onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, getSellingPrice(pick)); }} 
             data-testid={`${isBench ? 'bench' : 'list'}-edit-buy-price-${pick.element}`}
           >
