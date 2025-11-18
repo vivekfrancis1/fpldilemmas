@@ -3466,22 +3466,34 @@ export default function TransferPlanner() {
       setGameweekTransfers(updatedGameweekTransfers);
     }
 
-    // Replace the transferred out player at the same position
-    setManualLineup(prev => prev.map(p => {
-      if (p.position === transferredOut.position && p.is_transferred_out) {
-        return {
-          element: playerId,
-          position: transferredOut.position,
-          multiplier: 1,
-          is_captain: false,
-          is_vice_captain: false,
-          selling_price: player.now_cost,
-          purchase_price: player.now_cost, // Set purchase price to current price for new transfers
-          is_transferred_out: false,
-        };
+    // Replace the transferred out player - search by is_transferred_out flag, not position
+    // (positions can change after optimization, making position-based search unreliable)
+    setManualLineup(prev => {
+      const transferredOutIndex = prev.findIndex(p => 
+        p.element === transferredOut.playerId && p.is_transferred_out
+      );
+      
+      if (transferredOutIndex === -1) {
+        console.error("Could not find transferred out player in lineup:", transferredOut);
+        return prev;
       }
-      return p;
-    }));
+      
+      return prev.map((p, idx) => {
+        if (idx === transferredOutIndex) {
+          return {
+            element: playerId,
+            position: p.position, // Preserve the current position
+            multiplier: 1,
+            is_captain: false,
+            is_vice_captain: false,
+            selling_price: player.now_cost,
+            purchase_price: player.now_cost, // Set purchase price to current price for new transfers
+            is_transferred_out: false,
+          };
+        }
+        return p;
+      });
+    });
 
     toast({
       title: "Transfer Completed",
