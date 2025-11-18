@@ -6318,47 +6318,47 @@ export default function TransferPlanner() {
                                       <div className="text-3xl font-bold text-red-600">-</div>
                                       
                                       {/* Action Buttons for Transferred Out */}
-                                      <div className="flex flex-col gap-1.5">
+                                      <div className="flex flex-col gap-2">
                                         <Button
                                           size="sm"
-                                          className="w-full h-8 text-sm font-semibold bg-red-600 text-white hover:bg-red-700"
+                                          className="w-full h-9 text-sm font-semibold bg-red-600 text-white hover:bg-red-700"
                                           onClick={() => handleScrollToReplacement(player.element_type)}
                                           data-testid={`pitch-replace-${pick.position}`}
                                         >
-                                          Replace
+                                          Replace Player
                                         </Button>
-                                        <div className="grid grid-cols-2 gap-1">
+                                        <div className="grid grid-cols-2 gap-1.5">
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            className="h-7 text-[10px] text-blue-600 border-blue-300 bg-white hover:bg-blue-50 px-1"
+                                            className="h-8 text-xs text-blue-600 border-blue-300 bg-white hover:bg-blue-50 font-medium"
                                             onClick={() => handleUndoTransfer(pick.position)}
                                             data-testid={`pitch-undo-${pick.position}`}
                                             title="Undo last transfer"
                                           >
-                                            <RotateCcw className="h-3 w-3 mr-0.5" />
+                                            <RotateCcw className="h-3.5 w-3.5 mr-1" />
                                             Undo
                                           </Button>
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            className="h-7 text-[10px] text-purple-600 border-purple-300 bg-white hover:bg-purple-50 px-1"
+                                            className="h-8 text-xs text-purple-600 border-purple-300 bg-white hover:bg-purple-50 font-medium"
                                             onClick={() => handleUndoGameweekTransfersForPosition(pick.position)}
                                             data-testid={`pitch-undo-gw-${pick.position}`}
                                             title="Undo gameweek transfers"
                                           >
-                                            <RotateCcw className="h-3 w-3 mr-0.5" />
+                                            <RotateCcw className="h-3.5 w-3.5 mr-1" />
                                             GW
                                           </Button>
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            className="h-7 text-[10px] text-orange-600 border-orange-300 bg-white hover:bg-orange-50 px-1 col-span-2"
+                                            className="h-8 text-xs text-orange-600 border-orange-300 bg-white hover:bg-orange-50 font-medium col-span-2"
                                             onClick={() => handleUndoAllTransfersForPosition(pick.position)}
                                             data-testid={`pitch-undo-all-${pick.position}`}
                                             title="Undo all transfers"
                                           >
-                                            <X className="h-3 w-3 mr-0.5" />
+                                            <X className="h-3.5 w-3.5 mr-1" />
                                             Undo All
                                           </Button>
                                         </div>
@@ -6552,20 +6552,20 @@ export default function TransferPlanner() {
                                 <div className="text-2xl font-bold text-red-600">-</div>
                                 
                                 {/* Action Buttons for Transferred Out */}
-                                <div className="flex flex-col gap-1 mt-1">
+                                <div className="flex flex-col gap-1.5 mt-1">
                                   <Button
                                     size="sm"
-                                    className="h-7 text-xs font-semibold bg-red-600 text-white hover:bg-red-700"
+                                    className="h-8 text-xs font-semibold bg-red-600 text-white hover:bg-red-700"
                                     onClick={() => handleScrollToReplacement(player.element_type)}
                                     data-testid={`pitch-bench-replace-${pick.position}`}
                                   >
-                                    Replace
+                                    Replace Player
                                   </Button>
-                                  <div className="flex gap-1">
+                                  <div className="grid grid-cols-2 gap-1">
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="h-7 px-2 text-[10px] flex-1 text-blue-600 border-blue-300"
+                                      className="h-7 text-xs text-blue-600 border-blue-300 bg-white hover:bg-blue-50 font-medium"
                                       onClick={() => handleUndoTransfer(pick.position)}
                                       data-testid={`pitch-bench-undo-${pick.position}`}
                                       title="Undo last transfer"
@@ -6576,13 +6576,24 @@ export default function TransferPlanner() {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="h-7 px-2 text-[10px] flex-1 text-orange-600 border-orange-300"
+                                      className="h-7 text-xs text-purple-600 border-purple-300 bg-white hover:bg-purple-50 font-medium"
+                                      onClick={() => handleUndoGameweekTransfersForPosition(pick.position)}
+                                      data-testid={`pitch-bench-undo-gw-${pick.position}`}
+                                      title="Undo gameweek transfers"
+                                    >
+                                      <RotateCcw className="h-3 w-3 mr-0.5" />
+                                      GW
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs text-orange-600 border-orange-300 bg-white hover:bg-orange-50 font-medium col-span-2"
                                       onClick={() => handleUndoAllTransfersForPosition(pick.position)}
                                       data-testid={`pitch-bench-undo-all-${pick.position}`}
                                       title="Undo all transfers"
                                     >
                                       <X className="h-3 w-3 mr-0.5" />
-                                      All
+                                      Undo All
                                     </Button>
                                   </div>
                                 </div>
