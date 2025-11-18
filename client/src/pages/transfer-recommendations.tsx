@@ -576,55 +576,50 @@ export default function TransferRecommendations() {
                                     {primaryTransfers.map((rec: any, index: number) => (
                                       <div
                                         key={`${rec.playerOut.id}-${rec.playerIn.id}`}
-                                        className="p-2 sm:p-3 bg-gradient-to-r from-orange-50 to-white border-2 border-orange-300 rounded-lg shadow-sm"
+                                        className="p-2 sm:p-3 bg-gradient-to-r from-orange-50 to-white border-2 border-orange-300 rounded-lg shadow-sm space-y-2"
                                         data-testid={`transfer-recommendation-gw${gw}-${index}`}
                                       >
-                                        <div className="flex items-center gap-3">
-                                          {/* Player Info - Left Side */}
-                                          <div className="flex-1 min-w-0 space-y-1">
-                                            <div className="flex items-start gap-2">
-                                              <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0">
-                                                OUT
-                                              </Badge>
-                                              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                                                <TrendingDown className="h-3.5 w-3.5 text-red-500 shrink-0" />
-                                                <span className="text-sm font-medium text-gray-900 truncate" data-testid={`player-out-name-gw${gw}-${index}`}>{rec.playerOut.webName}</span>
-                                                <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-out-points-gw${gw}-${index}`}>
-                                                  ({rec.playerOut.projectedPoints.toFixed(1)} pts)
-                                                </span>
-                                              </div>
-                                            </div>
-                                            <div className="flex items-start gap-2">
-                                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 shrink-0">
-                                                IN
-                                              </Badge>
-                                              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                                                <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                                                <span className="text-sm font-medium text-gray-900 truncate" data-testid={`player-in-name-gw${gw}-${index}`}>{rec.playerIn.webName}</span>
-                                                <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-in-points-gw${gw}-${index}`}>
-                                                  ({rec.playerIn.projectedPoints.toFixed(1)} pts)
-                                                </span>
-                                              </div>
+                                        <div className="space-y-1">
+                                          <div className="flex items-start gap-2">
+                                            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0">
+                                              OUT
+                                            </Badge>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <TrendingDown className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                                              <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-out-name-gw${gw}-${index}`}>{rec.playerOut.webName}</span>
+                                              <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-out-points-gw${gw}-${index}`}>
+                                                ({rec.playerOut.projectedPoints.toFixed(1)} pts)
+                                              </span>
                                             </div>
                                           </div>
-                                          
-                                          {/* Stats - Right Side */}
-                                          <div className="flex flex-col gap-1 border-l border-orange-200 pl-3 shrink-0">
-                                            <div className="text-center">
-                                              <div className="text-xs text-gray-500">Gain</div>
-                                              <div className="text-sm font-bold text-green-600" data-testid={`points-gain-gw${gw}-${index}`}>+{rec.pointsGain.toFixed(1)}</div>
+                                          <div className="flex items-start gap-2">
+                                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 shrink-0">
+                                              IN
+                                            </Badge>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                                              <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-in-name-gw${gw}-${index}`}>{rec.playerIn.webName}</span>
+                                              <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-in-points-gw${gw}-${index}`}>
+                                                ({rec.playerIn.projectedPoints.toFixed(1)} pts)
+                                              </span>
                                             </div>
-                                            <div className="text-center">
-                                              <div className="text-xs text-gray-500">Cost</div>
-                                              <div className={`text-xs font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${index}`}>
-                                                {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
-                                              </div>
+                                          </div>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 pt-1.5 border-t border-orange-200">
+                                          <div className="text-center">
+                                            <div className="text-xs text-gray-500">Points Gain</div>
+                                            <div className="text-sm sm:text-base font-bold text-green-600" data-testid={`points-gain-gw${gw}-${index}`}>+{rec.pointsGain.toFixed(1)}</div>
+                                          </div>
+                                          <div className="text-center">
+                                            <div className="text-xs text-gray-500">Cost</div>
+                                            <div className={`text-xs sm:text-sm font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${index}`}>
+                                              {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
                                             </div>
-                                            <div className="text-center">
-                                              <div className="text-xs text-gray-500">ITB</div>
-                                              <div className="text-xs font-medium text-gray-700" data-testid={`budget-after-gw${gw}-${index}`}>
-                                                £{(rec.budgetAfter / 10).toFixed(1)}m
-                                              </div>
+                                          </div>
+                                          <div className="text-center">
+                                            <div className="text-xs text-gray-500">ITB After</div>
+                                            <div className="text-xs sm:text-sm font-medium text-gray-700" data-testid={`budget-after-gw${gw}-${index}`}>
+                                              £{(rec.budgetAfter / 10).toFixed(1)}m
                                             </div>
                                           </div>
                                         </div>
@@ -644,55 +639,50 @@ export default function TransferRecommendations() {
                                       return (
                                       <div
                                         key={`${rec.playerOut.id}-${rec.playerIn.id}`}
-                                        className="p-2 sm:p-3 bg-white border border-orange-100 rounded-lg hover:border-orange-300 transition-colors"
+                                        className="p-2 sm:p-3 bg-white border border-orange-100 rounded-lg hover:border-orange-300 transition-colors space-y-2"
                                         data-testid={`transfer-recommendation-gw${gw}-${offsetIndex}`}
                                       >
-                                        <div className="flex items-center gap-3">
-                                          {/* Player Info - Left Side */}
-                                          <div className="flex-1 min-w-0 space-y-1">
-                                            <div className="flex items-start gap-2">
-                                              <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0">
-                                                OUT
-                                              </Badge>
-                                              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                                                <TrendingDown className="h-3.5 w-3.5 text-red-500 shrink-0" />
-                                                <span className="text-sm font-medium text-gray-900 truncate" data-testid={`player-out-name-gw${gw}-${offsetIndex}`}>{rec.playerOut.webName}</span>
-                                                <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-out-points-gw${gw}-${offsetIndex}`}>
-                                                  ({rec.playerOut.projectedPoints.toFixed(1)} pts)
-                                                </span>
-                                              </div>
-                                            </div>
-                                            <div className="flex items-start gap-2">
-                                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 shrink-0">
-                                                IN
-                                              </Badge>
-                                              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                                                <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                                                <span className="text-sm font-medium text-gray-900 truncate" data-testid={`player-in-name-gw${gw}-${offsetIndex}`}>{rec.playerIn.webName}</span>
-                                                <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-in-points-gw${gw}-${offsetIndex}`}>
-                                                  ({rec.playerIn.projectedPoints.toFixed(1)} pts)
-                                                </span>
-                                              </div>
+                                        <div className="space-y-1">
+                                          <div className="flex items-start gap-2">
+                                            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0">
+                                              OUT
+                                            </Badge>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <TrendingDown className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                                              <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-out-name-gw${gw}-${offsetIndex}`}>{rec.playerOut.webName}</span>
+                                              <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-out-points-gw${gw}-${offsetIndex}`}>
+                                                ({rec.playerOut.projectedPoints.toFixed(1)} pts)
+                                              </span>
                                             </div>
                                           </div>
-                                          
-                                          {/* Stats - Right Side */}
-                                          <div className="flex flex-col gap-1 border-l border-gray-200 pl-3 shrink-0">
-                                            <div className="text-center">
-                                              <div className="text-xs text-gray-500">Gain</div>
-                                              <div className="text-sm font-bold text-green-600" data-testid={`points-gain-gw${gw}-${offsetIndex}`}>+{rec.pointsGain.toFixed(1)}</div>
+                                          <div className="flex items-start gap-2">
+                                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 shrink-0">
+                                              IN
+                                            </Badge>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                                              <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-in-name-gw${gw}-${offsetIndex}`}>{rec.playerIn.webName}</span>
+                                              <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-in-points-gw${gw}-${offsetIndex}`}>
+                                                ({rec.playerIn.projectedPoints.toFixed(1)} pts)
+                                              </span>
                                             </div>
-                                            <div className="text-center">
-                                              <div className="text-xs text-gray-500">Cost</div>
-                                              <div className={`text-xs font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${offsetIndex}`}>
-                                                {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
-                                              </div>
+                                          </div>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 pt-1.5 border-t border-gray-200">
+                                          <div className="text-center">
+                                            <div className="text-xs text-gray-500">Points Gain</div>
+                                            <div className="text-sm sm:text-base font-bold text-green-600" data-testid={`points-gain-gw${gw}-${offsetIndex}`}>+{rec.pointsGain.toFixed(1)}</div>
+                                          </div>
+                                          <div className="text-center">
+                                            <div className="text-xs text-gray-500">Cost</div>
+                                            <div className={`text-xs sm:text-sm font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${offsetIndex}`}>
+                                              {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
                                             </div>
-                                            <div className="text-center">
-                                              <div className="text-xs text-gray-500">ITB</div>
-                                              <div className="text-xs font-medium text-gray-700" data-testid={`budget-after-gw${gw}-${offsetIndex}`}>
-                                                £{(rec.budgetAfter / 10).toFixed(1)}m
-                                              </div>
+                                          </div>
+                                          <div className="text-center">
+                                            <div className="text-xs text-gray-500">ITB After</div>
+                                            <div className="text-xs sm:text-sm font-medium text-gray-700" data-testid={`budget-after-gw${gw}-${offsetIndex}`}>
+                                              £{(rec.budgetAfter / 10).toFixed(1)}m
                                             </div>
                                           </div>
                                         </div>
