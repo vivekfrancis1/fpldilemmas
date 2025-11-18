@@ -3447,17 +3447,26 @@ export default function TransferPlanner() {
 
     // Replace the transferred out player FIRST - search by is_transferred_out flag, not position
     // (positions can change after optimization, making position-based search unreliable)
+    console.log("🔍 TRANSFER IN DEBUG:");
+    console.log("  Looking for transferred out player ID:", transferredOut.playerId);
+    console.log("  Current manual lineup:", manualLineup.map(p => ({ id: p.element, out: p.is_transferred_out })));
+    console.log("  Transferred out players list:", transferredOutPlayers);
+    
     setManualLineup(prev => {
       const transferredOutIndex = prev.findIndex(p => 
         p.element === transferredOut.playerId && p.is_transferred_out
       );
       
+      console.log("  Found at index:", transferredOutIndex);
+      
       if (transferredOutIndex === -1) {
-        console.error("Could not find transferred out player in lineup:", transferredOut);
-        console.log("Current lineup:", prev);
-        console.log("Looking for player:", transferredOut.playerId);
+        console.error("❌ Could not find transferred out player in lineup:", transferredOut);
+        console.log("  Current lineup full details:", prev);
+        console.log("  Looking for player ID:", transferredOut.playerId, "with is_transferred_out: true");
         return prev;
       }
+      
+      console.log("✅ Replacing player at index", transferredOutIndex, "with new player", playerId);
       
       return prev.map((p, idx) => {
         if (idx === transferredOutIndex) {
