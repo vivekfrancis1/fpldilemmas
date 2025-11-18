@@ -6308,55 +6308,55 @@ export default function TransferPlanner() {
                             if (pick.is_transferred_out) {
                               console.log('DEBUG - Showing empty slot for position:', pick.position, 'pick:', pick);
                               return (
-                                <div key={`empty-${pick.position}`} className="flex flex-col items-center w-[18vw] sm:w-40" data-testid={`pitch-empty-${pick.position}`}>
+                                <div key={`empty-${pick.position}`} className="flex flex-col items-center w-[22vw] sm:w-44 md:w-48" data-testid={`pitch-empty-${pick.position}`}>
                                   <div className="relative w-full">
-                                    <div className="rounded-lg p-3 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-2">
-                                      <div className="text-sm font-bold text-red-600">EMPTY SLOT</div>
-                                      <div className="text-xs text-red-500">{getPositionShortName(player.element_type)}</div>
+                                    <div className="rounded-lg p-3 sm:p-4 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-3">
+                                      <div className="text-sm sm:text-base font-bold text-red-600">EMPTY SLOT</div>
+                                      <div className="text-xs sm:text-sm text-red-500">{getPositionShortName(player.element_type)}</div>
                                       <div className="text-3xl font-bold text-red-600">-</div>
                                       
                                       {/* Action Buttons for Transferred Out */}
                                       <div className="flex flex-col gap-2">
                                         <Button
                                           size="sm"
-                                          className="w-full h-9 text-sm font-semibold bg-red-600 text-white hover:bg-red-700"
+                                          className="w-full h-11 sm:h-10 text-sm sm:text-base font-semibold bg-red-600 text-white hover:bg-red-700"
                                           onClick={() => handleScrollToReplacement(player.element_type)}
                                           data-testid={`pitch-replace-${pick.position}`}
                                         >
-                                          Replace Player
+                                          Replace
                                         </Button>
-                                        <div className="grid grid-cols-2 gap-1.5">
+                                        <div className="flex flex-col gap-1.5">
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            className="h-8 text-xs text-blue-600 border-blue-300 bg-white hover:bg-blue-50 font-medium"
+                                            className="w-full h-10 sm:h-9 text-xs sm:text-sm text-blue-600 border-blue-300 bg-white hover:bg-blue-50 font-medium"
                                             onClick={() => handleUndoTransfer(pick.position)}
                                             data-testid={`pitch-undo-${pick.position}`}
                                             title="Undo last transfer"
                                           >
-                                            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                                            <RotateCcw className="h-4 w-4 mr-1.5" />
                                             Undo
                                           </Button>
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            className="h-8 text-xs text-purple-600 border-purple-300 bg-white hover:bg-purple-50 font-medium"
+                                            className="w-full h-10 sm:h-9 text-xs sm:text-sm text-purple-600 border-purple-300 bg-white hover:bg-purple-50 font-medium"
                                             onClick={() => handleUndoGameweekTransfersForPosition(pick.position)}
                                             data-testid={`pitch-undo-gw-${pick.position}`}
                                             title="Undo gameweek transfers"
                                           >
-                                            <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                                            GW
+                                            <RotateCcw className="h-4 w-4 mr-1.5" />
+                                            Undo GW
                                           </Button>
                                           <Button
                                             size="sm"
                                             variant="outline"
-                                            className="h-8 text-xs text-orange-600 border-orange-300 bg-white hover:bg-orange-50 font-medium col-span-2"
+                                            className="w-full h-10 sm:h-9 text-xs sm:text-sm text-orange-600 border-orange-300 bg-white hover:bg-orange-50 font-medium"
                                             onClick={() => handleUndoAllTransfersForPosition(pick.position)}
                                             data-testid={`pitch-undo-all-${pick.position}`}
                                             title="Undo all transfers"
                                           >
-                                            <X className="h-3.5 w-3.5 mr-1" />
+                                            <X className="h-4 w-4 mr-1.5" />
                                             Undo All
                                           </Button>
                                         </div>
@@ -6542,55 +6542,55 @@ export default function TransferPlanner() {
                       // Check if bench player is transferred out
                       if (pick.is_transferred_out) {
                         return (
-                          <div key={`empty-bench-${pick.position}`} className="flex flex-col items-center w-[18vw] sm:w-40" data-testid={`pitch-bench-empty-${pick.position}`}>
+                          <div key={`empty-bench-${pick.position}`} className="flex flex-col items-center w-[22vw] sm:w-44 md:w-48" data-testid={`pitch-bench-empty-${pick.position}`}>
                             <div className="relative w-full">
-                              <div className="rounded-lg p-2 text-center shadow-md border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-1.5">
-                                <div className="text-xs font-bold text-red-600">EMPTY SLOT</div>
-                                <div className="text-[11px] text-red-500">{getPositionShortName(player.element_type)}</div>
+                              <div className="rounded-lg p-2.5 sm:p-3 text-center shadow-md border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-2">
+                                <div className="text-xs sm:text-sm font-bold text-red-600">EMPTY SLOT</div>
+                                <div className="text-[11px] sm:text-xs text-red-500">{getPositionShortName(player.element_type)}</div>
                                 <div className="text-2xl font-bold text-red-600">-</div>
                                 
                                 {/* Action Buttons for Transferred Out */}
-                                <div className="flex flex-col gap-1.5 mt-1">
+                                <div className="flex flex-col gap-2 mt-1">
                                   <Button
                                     size="sm"
-                                    className="h-8 text-xs font-semibold bg-red-600 text-white hover:bg-red-700"
+                                    className="w-full h-10 sm:h-9 text-xs sm:text-sm font-semibold bg-red-600 text-white hover:bg-red-700"
                                     onClick={() => handleScrollToReplacement(player.element_type)}
                                     data-testid={`pitch-bench-replace-${pick.position}`}
                                   >
-                                    Replace Player
+                                    Replace
                                   </Button>
-                                  <div className="grid grid-cols-2 gap-1">
+                                  <div className="flex flex-col gap-1.5">
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="h-7 text-xs text-blue-600 border-blue-300 bg-white hover:bg-blue-50 font-medium"
+                                      className="w-full h-9 sm:h-8 text-xs text-blue-600 border-blue-300 bg-white hover:bg-blue-50 font-medium"
                                       onClick={() => handleUndoTransfer(pick.position)}
                                       data-testid={`pitch-bench-undo-${pick.position}`}
                                       title="Undo last transfer"
                                     >
-                                      <RotateCcw className="h-3 w-3 mr-0.5" />
+                                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
                                       Undo
                                     </Button>
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="h-7 text-xs text-purple-600 border-purple-300 bg-white hover:bg-purple-50 font-medium"
+                                      className="w-full h-9 sm:h-8 text-xs text-purple-600 border-purple-300 bg-white hover:bg-purple-50 font-medium"
                                       onClick={() => handleUndoGameweekTransfersForPosition(pick.position)}
                                       data-testid={`pitch-bench-undo-gw-${pick.position}`}
                                       title="Undo gameweek transfers"
                                     >
-                                      <RotateCcw className="h-3 w-3 mr-0.5" />
-                                      GW
+                                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                                      Undo GW
                                     </Button>
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      className="h-7 text-xs text-orange-600 border-orange-300 bg-white hover:bg-orange-50 font-medium col-span-2"
+                                      className="w-full h-9 sm:h-8 text-xs text-orange-600 border-orange-300 bg-white hover:bg-orange-50 font-medium"
                                       onClick={() => handleUndoAllTransfersForPosition(pick.position)}
                                       data-testid={`pitch-bench-undo-all-${pick.position}`}
                                       title="Undo all transfers"
                                     >
-                                      <X className="h-3 w-3 mr-0.5" />
+                                      <X className="h-3.5 w-3.5 mr-1" />
                                       Undo All
                                     </Button>
                                   </div>
