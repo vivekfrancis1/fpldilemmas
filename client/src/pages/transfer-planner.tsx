@@ -6775,16 +6775,14 @@ export default function TransferPlanner() {
                   const prevGameweekId = gwIndex === 0 ? null : getNextGameweeks()[gwIndex - 1].id;
                   const prevHadFreeHit = prevGameweekId && plannedChips[prevGameweekId] === 'freehit';
                   
-                  // Find transferred in players - compare finalLineup (after transfers) against gwLineup (before transfers)
+                  // Find transferred in players - only mark players who were actually transferred in via completed transfers
                   // If previous GW had Free Hit, don't mark any players as transfers (they're reverting back)
-                  const baselinePlayerIds = new Set(gwLineup.map(p => p.element));
                   const transferredInIds = new Set<number>();
                   
                   if (!prevHadFreeHit) {
-                    finalLineup.forEach(pick => {
-                      if (!baselinePlayerIds.has(pick.element)) {
-                        transferredInIds.add(pick.element);
-                      }
+                    // Only mark players as transferred in if they appear in completed transfers
+                    gwTransfers.completed.forEach(transfer => {
+                      transferredInIds.add(transfer.inPlayerId);
                     });
                   }
                   
