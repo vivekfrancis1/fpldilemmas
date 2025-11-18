@@ -5579,50 +5579,50 @@ export default function TransferPlanner() {
                               return (
                                 <div
                                   key={`empty-${pick.position}`}
-                                  className="flex items-center justify-between p-1.5 rounded border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-xs"
+                                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-1.5 rounded border-2 border-dashed border-red-300 bg-red-50 dark:bg-red-950/20 text-xs gap-2"
                                   data-testid={`empty-slot-${pick.position}`}
                                 >
                                   <div className="flex items-center gap-3 flex-1">
                                     <div className="flex-1">
                                       <div className="font-medium text-red-600">Empty Slot</div>
-                                      <div className="text-sm text-muted-foreground">
+                                      <div className="text-[10px] sm:text-sm text-muted-foreground">
                                         {getPositionShortName(player.element_type)} • Click "Replace" to find a player
                                       </div>
                                     </div>
                                   </div>
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleUndoTransfer(pick.position)}
-                                      className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20"
+                                      className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20 h-7 px-2 text-xs"
                                       data-testid={`undo-transfer-${pick.position}`}
                                     >
-                                      <RotateCcw className="h-4 w-4 mr-1" />
-                                      Undo
+                                      <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                      <span className="hidden sm:inline">Undo</span>
                                     </Button>
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleUndoGameweekTransfersForPosition(pick.position)}
-                                      className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/20"
+                                      className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/20 h-7 px-2 text-xs"
                                       data-testid={`undo-gw-transfers-${pick.position}`}
                                     >
-                                      <RotateCcw className="h-4 w-4 mr-1" />
-                                      Undo GW
+                                      <RotateCcw className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                      <span className="hidden xs:inline">Undo GW</span>
                                     </Button>
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       onClick={() => handleUndoAllTransfersForPosition(pick.position)}
-                                      className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                                      className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20 h-7 px-2 text-xs"
                                       data-testid={`undo-all-transfers-${pick.position}`}
                                     >
-                                      <X className="h-4 w-4 mr-1" />
-                                      Undo All
+                                      <X className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                                      <span className="hidden xs:inline">Undo All</span>
                                     </Button>
                                     <div 
-                                      className="text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+                                      className="text-xs sm:text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-2 sm:px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
                                       onClick={() => handleScrollToReplacement(player.element_type)}
                                       data-testid={`replace-${pick.position}`}
                                     >
