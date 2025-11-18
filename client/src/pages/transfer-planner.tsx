@@ -3463,12 +3463,20 @@ export default function TransferPlanner() {
         console.error("❌ Could not find transferred out player in lineup:", transferredOut);
         console.log("  Current lineup full details:", prev);
         console.log("  Looking for player ID:", transferredOut.playerId, "with is_transferred_out: true");
+        
+        // Show error toast to user
+        toast({
+          title: "Transfer Failed",
+          description: `Could not find ${transferredOut.playerName} in your lineup. Try refreshing the page.`,
+          variant: "destructive"
+        });
+        
         return prev;
       }
       
       console.log("✅ Replacing player at index", transferredOutIndex, "with new player", playerId);
       
-      return prev.map((p, idx) => {
+      const updatedLineup = prev.map((p, idx) => {
         if (idx === transferredOutIndex) {
           return {
             element: playerId,
@@ -3483,6 +3491,14 @@ export default function TransferPlanner() {
         }
         return p;
       });
+      
+      // Show success toast when transfer completes
+      toast({
+        title: "Transfer Completed",
+        description: `Transferred out ${transferredOut.playerName} for ${player.web_name} (Sold for £${transferredOut.sellingPrice.toFixed(1)}m, Bought for £${buyingPrice.toFixed(1)}m)`
+      });
+      
+      return updatedLineup;
     });
 
     // Calculate new states
@@ -3505,11 +3521,6 @@ export default function TransferPlanner() {
       };
       setGameweekTransfers(updatedGameweekTransfers);
     }
-
-    toast({
-      title: "Transfer Completed",
-      description: `Transferred out ${transferredOut.playerName} for ${player.web_name} (Sold for £${transferredOut.sellingPrice.toFixed(1)}m, Bought for £${buyingPrice.toFixed(1)}m)`
-    });
 
     // Scroll back to team lineup to see the new player
     setTimeout(() => {
