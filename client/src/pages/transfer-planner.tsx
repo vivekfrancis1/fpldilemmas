@@ -1956,7 +1956,7 @@ export default function TransferPlanner() {
 
   // Calculate initial bank for the selected gameweek (before any transfers in that GW)
   const calculateInitialBank = (): number => {
-    if (!teamData?.transfers?.bank || !selectedGameweek) return 0;
+    if (!teamData?.transfers?.bank || !teamData?.picks || !selectedGameweek) return 0;
     
     const nextGWs = getNextGameweeks();
     const firstGW = nextGWs[0]?.id;
@@ -1966,50 +1966,69 @@ export default function TransferPlanner() {
       return teamData.transfers.bank / 10; // Convert from API format
     }
     
-    // For subsequent gameweeks, initial bank = max(0, Cash after transfers from previous GW)
+    // For subsequent gameweeks, calculate based on squad value changes from previous gameweeks
     const previousGW = selectedGameweek - 1;
+    const originalBank = teamData.transfers.bank / 10;
     
-    // Calculate cash after transfers for previous gameweek
-    const teamBank = teamData.transfers.bank / 10;
-    let cumulativeBank = teamBank;
+    // Get original squad value
+    const originalSquadValue = teamData.picks.reduce((sum, pick) => {
+      return sum + (pick.purchase_price || 0) / 10;
+    }, 0);
     
-    nextGWs.forEach(gw => {
-      if (gw.id <= previousGW) {
-        const gwTransfers = gameweekTransfers[gw.id];
-        if (gwTransfers) {
-          // Add completed transfers effect
-          if (gwTransfers.completed) {
-            gwTransfers.completed.forEach(transfer => {
-              cumulativeBank += transfer.sellingPrice - transfer.buyingPrice;
-            });
-          }
-          
-          // Add pending transferred out players' selling prices
-          if (gw.id === previousGW && gwTransfers.transferredOut) {
-            gwTransfers.transferredOut.forEach(transfer => {
-              cumulativeBank += transfer.sellingPrice;
-            });
-          }
-        }
-      }
-    });
+    // Get the baseline lineup at the end of previous gameweek
+    const previousGWBaseline = getBaselineLineup(previousGW);
     
-    // Return max(0, previous GW's cash after transfers)
-    return Math.max(0, cumulativeBank);
+    // Calculate squad value at end of previous gameweek
+    const previousGWSquadValue = previousGWBaseline.reduce((sum, pick) => {
+      return sum + (pick.purchase_price || 0) / 10;
+    }, 0);
+    
+    // Initial bank for current GW = Original bank + (Original squad value - Previous GW squad value)
+    const initialBank = originalBank + originalSquadValue - previousGWSquadValue;
+    
+    return Math.max(0, initialBank);
   };
 
   // Calculate bank after transfers for the selected gameweek
   const calculateBankAfterTransfers = (): number => {
+    if (!teamData?.picks || !selectedGameweek) return 0;
+    
     const initialBank = calculateInitialBank();
     
-    // Add effect of current gameweek's transfers
-    const totalBuyingPrice = completedTransfers.reduce((sum, t) => sum + t.buyingPrice, 0);
-    const totalSellingPrice = completedTransfers.reduce((sum, t) => sum + t.sellingPrice, 0);
+    // Get the baseline lineup for this gameweek (what the lineup would be without current GW's transfers)
+    const baseline = getBaselineLineup(selectedGameweek);
     
-    // Add selling prices from players transferred out but not yet replaced
-    const pendingSellingPrice = transferredOutPlayers.reduce((sum, t) => sum + t.sellingPrice, 0);
+    // Calculate baseline squad value (sum of purchase prices)
+    const baselineSquadValue = baseline.reduce((sum, pick) => {
+      return sum + (pick.purchase_price || 0) / 10;
+    }, 0);
     
-    return initialBank + totalSellingPrice + pendingSellingPrice - totalBuyingPrice;
+    // Calculate current squad value (excluding transferred out players, including pending sells)
+    let currentSquadValue = 0;
+    let pendingSellValue = 0;
+    
+    manualLineup.forEach(pick => {
+      if (pick.is_transferred_out) {
+        // For transferred out players, add their selling price to pending sells
+        const sellingPrice = getSellingPrice(pick);
+        pendingSellValue += sellingPrice;
+      } else {
+        // For current players, add their purchase price
+        currentSquadValue += (pick.purchase_price || 0) / 10;
+      }
+    });
+    
+    // Cash after transfers = Initial bank + (Baseline squad value - Current squad value) + Pending sells
+    const cashAfterTransfers = initialBank + baselineSquadValue - currentSquadValue + pendingSellValue;
+    
+    console.log("💰 CASH CALCULATION DEBUG:");
+    console.log("  Initial bank:", initialBank.toFixed(1));
+    console.log("  Baseline squad value:", baselineSquadValue.toFixed(1));
+    console.log("  Current squad value:", currentSquadValue.toFixed(1));
+    console.log("  Pending sell value:", pendingSellValue.toFixed(1));
+    console.log("  Cash after transfers:", cashAfterTransfers.toFixed(1));
+    
+    return cashAfterTransfers;
   };
 
   // Calculate current bank based on initial bank and completed transfers (DEPRECATED - use calculateBankAfterTransfers)
