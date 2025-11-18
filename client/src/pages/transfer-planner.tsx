@@ -1646,9 +1646,10 @@ export default function TransferPlanner() {
     });
     
     // Apply current gameweek's pending transfers (transferred out but not yet replaced)
+    // CRITICAL: Match by player ID, not position (positions can change after optimization)
     gwTransfers.transferredOut.forEach(transferOut => {
       lineupWithTransfers = lineupWithTransfers.map(pick => {
-        if (pick.position === transferOut.position) {
+        if (pick.element === transferOut.playerId) {
           return { ...pick, is_transferred_out: true };
         }
         return pick;
@@ -1668,9 +1669,10 @@ export default function TransferPlanner() {
       lineupWithTransfers = applyBuyPriceOverrides(lineupWithTransfers);
       
       // Re-apply transferred out flags (they can happen after optimization)
+      // CRITICAL: Match by player ID, not position (positions can change after optimization)
       gwTransfers.transferredOut.forEach(transferOut => {
         lineupWithTransfers = lineupWithTransfers.map(pick => {
-          if (pick.position === transferOut.position) {
+          if (pick.element === transferOut.playerId) {
             return { ...pick, is_transferred_out: true };
           }
           return pick;
