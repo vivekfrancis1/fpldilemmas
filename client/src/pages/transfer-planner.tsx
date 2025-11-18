@@ -1761,15 +1761,13 @@ export default function TransferPlanner() {
     };
   };
 
-  // Check if a player is transferred in (different from the baseline for this gameweek)
+  // Check if a player is transferred in (appears in completed transfers as inPlayerId)
   const isPlayerTransferredIn = (pick: TeamPick): boolean => {
     if (!selectedGameweek) return false;
     
-    const baseline = getBaselineLineup(selectedGameweek);
-    const baselinePick = baseline.find(p => p.position === pick.position);
-    
-    // Player is transferred in if their ID is different from baseline
-    return baselinePick ? pick.element !== baselinePick.element : false;
+    // Player is transferred in ONLY if they appear in completed transfers for this gameweek
+    // Not just because they're at a different position (could be optimized/swapped)
+    return completedTransfers.some(transfer => transfer.inPlayerId === pick.element);
   };
 
   // Get selling price - prioritize calculation from buy price (editable) over API data
