@@ -2669,6 +2669,7 @@ export default function TransferPlanner() {
 
   const handleDrop = (e: React.DragEvent, targetPick: TeamPick, targetIsBench: boolean) => {
     e.preventDefault();
+    e.stopPropagation(); // Stop event propagation
     setDragOverPlayer(null);
     
     if (!draggedPlayer) return;
@@ -2696,14 +2697,25 @@ export default function TransferPlanner() {
       return;
     }
     
+    console.log('🔄 DRAG DROP: Performing swap', {
+      draggedPlayer: draggedPlayer.element,
+      draggedPosition: draggedPlayer.position,
+      targetPlayer: targetPick.element,
+      targetPosition: targetIndex,
+      draggedIsStarting,
+      targetIsStarting
+    });
+    
     // Call swapPlayers with the correct indices
     if (draggedIsStarting && !targetIsStarting) {
       // Starting player being swapped with bench player
       const benchIndex = targetIndex - 11;
+      console.log('🔄 Calling swapPlayers:', draggedPlayer.position, benchIndex);
       swapPlayers(draggedPlayer.position, benchIndex);
     } else if (!draggedIsStarting && targetIsStarting) {
       // Bench player being swapped with starting player
       const benchIndex = draggedPlayer.position - 11;
+      console.log('🔄 Calling swapPlayers:', targetIndex, benchIndex);
       swapPlayers(targetIndex, benchIndex);
     }
     
