@@ -1,0 +1,110 @@
+injected.js:214  GET https://00c7758c-2db5-4390-9b1d-53e6702fda67-00-7wfo4681kb2j.janeway.replit.dev/api/auth/user 401 (Unauthorized)
+apply @ injected.js:214
+(anonymous) @ queryClient.ts:51
+fetchFn @ @tanstack_react-query.js?v=ef0ae67c:1066
+run @ @tanstack_react-query.js?v=ef0ae67c:776
+start @ @tanstack_react-query.js?v=ef0ae67c:818
+fetch @ @tanstack_react-query.js?v=ef0ae67c:1113
+#executeFetch @ @tanstack_react-query.js?v=ef0ae67c:1432
+setOptions @ @tanstack_react-query.js?v=ef0ae67c:1362
+(anonymous) @ @tanstack_react-query.js?v=ef0ae67c:3253
+commitHookEffectListMount @ chunk-E22KYI7D.js?v=ef0ae67c:16963
+commitPassiveMountOnFiber @ chunk-E22KYI7D.js?v=ef0ae67c:18206
+commitPassiveMountEffects_complete @ chunk-E22KYI7D.js?v=ef0ae67c:18179
+commitPassiveMountEffects_begin @ chunk-E22KYI7D.js?v=ef0ae67c:18169
+commitPassiveMountEffects @ chunk-E22KYI7D.js?v=ef0ae67c:18159
+flushPassiveEffectsImpl @ chunk-E22KYI7D.js?v=ef0ae67c:19543
+flushPassiveEffects @ chunk-E22KYI7D.js?v=ef0ae67c:19500
+commitRootImpl @ chunk-E22KYI7D.js?v=ef0ae67c:19469
+commitRoot @ chunk-E22KYI7D.js?v=ef0ae67c:19330
+performSyncWorkOnRoot @ chunk-E22KYI7D.js?v=ef0ae67c:18948
+flushSyncCallbacks @ chunk-E22KYI7D.js?v=ef0ae67c:9166
+(anonymous) @ chunk-E22KYI7D.js?v=ef0ae67c:18677Understand this error
+injected.js:214  GET https://00c7758c-2db5-4390-9b1d-53e6702fda67-00-7wfo4681kb2j.janeway.replit.dev/api/auth/user 401 (Unauthorized)
+apply @ injected.js:214
+(anonymous) @ queryClient.ts:51
+fetchFn @ @tanstack_react-query.js?v=ef0ae67c:1066
+run @ @tanstack_react-query.js?v=ef0ae67c:776
+start @ @tanstack_react-query.js?v=ef0ae67c:818
+fetch @ @tanstack_react-query.js?v=ef0ae67c:1113
+#executeFetch @ @tanstack_react-query.js?v=ef0ae67c:1432
+setOptions @ @tanstack_react-query.js?v=ef0ae67c:1362
+(anonymous) @ @tanstack_react-query.js?v=ef0ae67c:3253
+commitHookEffectListMount @ chunk-E22KYI7D.js?v=ef0ae67c:16963
+commitPassiveMountOnFiber @ chunk-E22KYI7D.js?v=ef0ae67c:18206
+commitPassiveMountEffects_complete @ chunk-E22KYI7D.js?v=ef0ae67c:18179
+commitPassiveMountEffects_begin @ chunk-E22KYI7D.js?v=ef0ae67c:18169
+commitPassiveMountEffects @ chunk-E22KYI7D.js?v=ef0ae67c:18159
+flushPassiveEffectsImpl @ chunk-E22KYI7D.js?v=ef0ae67c:19543
+flushPassiveEffects @ chunk-E22KYI7D.js?v=ef0ae67c:19500
+performSyncWorkOnRoot @ chunk-E22KYI7D.js?v=ef0ae67c:18921
+flushSyncCallbacks @ chunk-E22KYI7D.js?v=ef0ae67c:9166
+commitRootImpl @ chunk-E22KYI7D.js?v=ef0ae67c:19485
+commitRoot @ chunk-E22KYI7D.js?v=ef0ae67c:19330
+finishConcurrentRender @ chunk-E22KYI7D.js?v=ef0ae67c:18858
+performConcurrentWorkOnRoot @ chunk-E22KYI7D.js?v=ef0ae67c:18768
+workLoop @ chunk-E22KYI7D.js?v=ef0ae67c:197
+flushWork @ chunk-E22KYI7D.js?v=ef0ae67c:176
+performWorkUntilDeadline @ chunk-E22KYI7D.js?v=ef0ae67c:384Understand this error
+injected.js:214  GET https://00c7758c-2db5-4390-9b1d-53e6702fda67-00-7wfo4681kb2j.janeway.replit.dev/api/auth/user 401 (Unauthorized)
+apply @ injected.js:214
+(anonymous) @ queryClient.ts:51
+fetchFn @ @tanstack_react-query.js?v=ef0ae67c:1066
+run @ @tanstack_react-query.js?v=ef0ae67c:776
+start @ @tanstack_react-query.js?v=ef0ae67c:818
+fetch @ @tanstack_react-query.js?v=ef0ae67c:1113
+#executeFetch @ @tanstack_react-query.js?v=ef0ae67c:1432
+setOptions @ @tanstack_react-query.js?v=ef0ae67c:1362
+(anonymous) @ @tanstack_react-query.js?v=ef0ae67c:3253
+commitHookEffectListMount @ chunk-E22KYI7D.js?v=ef0ae67c:16963
+commitPassiveMountOnFiber @ chunk-E22KYI7D.js?v=ef0ae67c:18206
+commitPassiveMountEffects_complete @ chunk-E22KYI7D.js?v=ef0ae67c:18179
+commitPassiveMountEffects_begin @ chunk-E22KYI7D.js?v=ef0ae67c:18169
+commitPassiveMountEffects @ chunk-E22KYI7D.js?v=ef0ae67c:18159
+flushPassiveEffectsImpl @ chunk-E22KYI7D.js?v=ef0ae67c:19543
+flushPassiveEffects @ chunk-E22KYI7D.js?v=ef0ae67c:19500
+performSyncWorkOnRoot @ chunk-E22KYI7D.js?v=ef0ae67c:18921
+flushSyncCallbacks @ chunk-E22KYI7D.js?v=ef0ae67c:9166
+commitRootImpl @ chunk-E22KYI7D.js?v=ef0ae67c:19485
+commitRoot @ chunk-E22KYI7D.js?v=ef0ae67c:19330
+finishConcurrentRender @ chunk-E22KYI7D.js?v=ef0ae67c:18858
+performConcurrentWorkOnRoot @ chunk-E22KYI7D.js?v=ef0ae67c:18768
+workLoop @ chunk-E22KYI7D.js?v=ef0ae67c:197
+flushWork @ chunk-E22KYI7D.js?v=ef0ae67c:176
+performWorkUntilDeadline @ chunk-E22KYI7D.js?v=ef0ae67c:384Understand this error
+injected.js:214  GET https://00c7758c-2db5-4390-9b1d-53e6702fda67-00-7wfo4681kb2j.janeway.replit.dev/api/auth/user 401 (Unauthorized)
+apply @ injected.js:214
+(anonymous) @ queryClient.ts:51
+fetchFn @ @tanstack_react-query.js?v=ef0ae67c:1066
+run @ @tanstack_react-query.js?v=ef0ae67c:776
+start @ @tanstack_react-query.js?v=ef0ae67c:818
+fetch @ @tanstack_react-query.js?v=ef0ae67c:1113
+#executeFetch @ @tanstack_react-query.js?v=ef0ae67c:1432
+setOptions @ @tanstack_react-query.js?v=ef0ae67c:1362
+(anonymous) @ @tanstack_react-query.js?v=ef0ae67c:3253
+commitHookEffectListMount @ chunk-E22KYI7D.js?v=ef0ae67c:16963
+commitPassiveMountOnFiber @ chunk-E22KYI7D.js?v=ef0ae67c:18206
+commitPassiveMountEffects_complete @ chunk-E22KYI7D.js?v=ef0ae67c:18179
+commitPassiveMountEffects_begin @ chunk-E22KYI7D.js?v=ef0ae67c:18169
+commitPassiveMountEffects @ chunk-E22KYI7D.js?v=ef0ae67c:18159
+flushPassiveEffectsImpl @ chunk-E22KYI7D.js?v=ef0ae67c:19543
+flushPassiveEffects @ chunk-E22KYI7D.js?v=ef0ae67c:19500
+performSyncWorkOnRoot @ chunk-E22KYI7D.js?v=ef0ae67c:18921
+flushSyncCallbacks @ chunk-E22KYI7D.js?v=ef0ae67c:9166
+commitRootImpl @ chunk-E22KYI7D.js?v=ef0ae67c:19485
+commitRoot @ chunk-E22KYI7D.js?v=ef0ae67c:19330
+finishConcurrentRender @ chunk-E22KYI7D.js?v=ef0ae67c:18858
+performConcurrentWorkOnRoot @ chunk-E22KYI7D.js?v=ef0ae67c:18768
+workLoop @ chunk-E22KYI7D.js?v=ef0ae67c:197
+flushWork @ chunk-E22KYI7D.js?v=ef0ae67c:176
+performWorkUntilDeadline @ chunk-E22KYI7D.js?v=ef0ae67c:384Understand this error
+faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://00c7758c-2db5-4390-9b1…:1  GET https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://00c7758c-2db5-4390-9b1d-53e6702fda67-00-7wfo4681kb2j.janeway.replit.dev/&size=32 404 (Not Found)
+Image
+uG @ ed1e693c96a75807.js:2
+e @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2
+iB @ ed1e693c96a75807.js:2
+iT @ ed1e693c96a75807.js:2
+r6 @ ed1e693c96a75807.js:2
+(anonymous) @ ed1e693c96a75807.js:2Understand this error
+faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://00c7758c-2db5-4390-9b1d…:1  GET https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://00c7758c-2db5-4390-9b1d-53e6702fda67-00-7wfo4681kb2j.janeway.replit.dev&size=32 404 (Not Found)
