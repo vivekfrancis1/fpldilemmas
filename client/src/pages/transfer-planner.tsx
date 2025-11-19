@@ -2572,17 +2572,16 @@ export default function TransferPlanner() {
     
     setManualLineup(newLineup);
     
-    // Clear the optimization status for this gameweek since the lineup has changed
+    // Save the swapped lineup as optimized lineup so it persists across useEffect rebuilds
     if (selectedGameweek) {
       const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
-      delete isLineupOptimizedRef.current[optimizationKey];
+      isLineupOptimizedRef.current[optimizationKey] = true;
       
-      // Remove optimized lineup from state to show the Optimize button again
-      setOptimizedLineups(prev => {
-        const updated = { ...prev };
-        delete updated[selectedGameweek];
-        return updated;
-      });
+      // Save the swapped lineup to optimizedLineups state (deep clone)
+      setOptimizedLineups(prev => ({
+        ...prev,
+        [selectedGameweek]: JSON.parse(JSON.stringify(newLineup))
+      }));
     }
     
     // Show detailed swap confirmation (bench priority excludes GK, so subtract 1)
@@ -2642,17 +2641,16 @@ export default function TransferPlanner() {
     
     setManualLineup(newLineup);
     
-    // Clear the optimization status for this gameweek since the lineup has changed
+    // Save the updated lineup as optimized lineup so it persists across useEffect rebuilds
     if (selectedGameweek) {
       const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
-      delete isLineupOptimizedRef.current[optimizationKey];
+      isLineupOptimizedRef.current[optimizationKey] = true;
       
-      // Remove optimized lineup from state to show the Optimize button again
-      setOptimizedLineups(prev => {
-        const updated = { ...prev };
-        delete updated[selectedGameweek];
-        return updated;
-      });
+      // Save the updated lineup to optimizedLineups state (deep clone)
+      setOptimizedLineups(prev => ({
+        ...prev,
+        [selectedGameweek]: JSON.parse(JSON.stringify(newLineup))
+      }));
     }
     
     // Show confirmation toast with both players (bench priority excludes GK, so subtract 1)
