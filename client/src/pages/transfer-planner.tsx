@@ -5865,7 +5865,7 @@ export default function TransferPlanner() {
             <div>
             {/* List View */}
             {teamView === "list" && (
-            <div>
+            <div key={`list-view-${manualLineup.map(p => `${p.position}-${p.element}`).join(',')}`}>
               {/* Desktop Layout - Hidden on mobile */}
               <div className="hidden lg:block space-y-3">
                 {(() => {
