@@ -5885,6 +5885,7 @@ export default function TransferPlanner() {
                 
                 {/* Horizontal layout with starting and bench aligned */}
                 {[1, 2, 3, 4].map((posType, posIndex) => {
+                  // Force re-render by creating a stable key from the actual player IDs in this position
                   const positionPlayers = manualLineup.slice(0, 11).filter(pick => {
                     const player = getPlayerById(pick.element);
                     return player?.element_type === posType;
@@ -5908,8 +5909,11 @@ export default function TransferPlanner() {
                     });
                   }
                   
+                  // Create unique key based on actual players in this position group to force re-render on swap
+                  const positionKey = `${posType}-${positionPlayers.map(p => p.element).join('-')}`;
+                  
                   return (
-                    <div key={posType}>
+                    <div key={positionKey}>
                       <div className="flex items-center gap-2 mb-1">
                         <div className="text-[10px] font-semibold text-muted-foreground uppercase min-w-[30px]">
                           {posType === 1 ? 'GKP' : posType === 2 ? 'DEF' : posType === 3 ? 'MID' : 'FWD'}
@@ -6246,8 +6250,11 @@ export default function TransferPlanner() {
                     
                     if (positionPlayers.length === 0) return null;
                     
+                    // Create unique key based on actual players in this position group to force re-render on swap
+                    const positionKey = `${posType}-${positionPlayers.map(p => p.element).join('-')}`;
+                    
                     return (
-                      <div key={posType}>
+                      <div key={positionKey}>
                         <div className="flex items-center gap-2 mb-1">
                           <div className="text-[10px] font-semibold text-muted-foreground uppercase min-w-[30px]">
                             {posType === 1 ? 'GKP' : posType === 2 ? 'DEF' : posType === 3 ? 'MID' : 'FWD'}
