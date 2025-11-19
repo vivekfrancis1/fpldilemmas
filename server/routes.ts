@@ -13606,6 +13606,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               averagePerGameweek: player.averagePerGameweek || 0,
               averageValue: Math.round(averageValue * 100) / 100,
               avgMinutesPerGameweek: Math.round(avgMinutesPerGameweek * 100) / 100,
+              // Add availability status fields from bootstrap data
+              chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
+              status: bootstrapPlayer?.status || 'a',
+              news: bootstrapPlayer?.news || '',
               // Add breakdown fields that frontend expects
               pointsFromGoals: player.pointsFromGoals || {},
               pointsFromAssists: player.pointsFromAssists || {},
