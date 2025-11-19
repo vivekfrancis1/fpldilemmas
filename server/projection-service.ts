@@ -331,32 +331,32 @@ class ProjectionService {
             pointsFromMinutes[gw.toString()] = minutesPoints; // Use numeric string for consistency
             totalMinutesPoints += minutesPoints;
             
-            // 2. GOALS CALCULATION (per 90 minutes, scaled by expected minutes)
+            // 2. GOALS CALCULATION (per 90 minutes, NOT scaled by expected minutes)
             let goalsExpected;
             if (position === 'FWD') {
-              goalsExpected = (adjustedForm * 0.12 + seasonPerformance * 0.05) * difficultyMultiplier * (expectedMinutes / 90);
+              goalsExpected = (adjustedForm * 0.12 + seasonPerformance * 0.05) * difficultyMultiplier;
             } else if (position === 'MID') {
-              goalsExpected = (adjustedForm * 0.06 + seasonPerformance * 0.03) * difficultyMultiplier * (expectedMinutes / 90);
+              goalsExpected = (adjustedForm * 0.06 + seasonPerformance * 0.03) * difficultyMultiplier;
             } else if (position === 'DEF') {
-              goalsExpected = (adjustedForm * 0.02 + seasonPerformance * 0.01) * difficultyMultiplier * (expectedMinutes / 90);
+              goalsExpected = (adjustedForm * 0.02 + seasonPerformance * 0.01) * difficultyMultiplier;
             } else {
-              goalsExpected = adjustedForm * 0.005 * difficultyMultiplier * (expectedMinutes / 90); // GKP
+              goalsExpected = adjustedForm * 0.005 * difficultyMultiplier; // GKP
             }
             
             const gwGoalPoints = goalsExpected * goalPoints;
             pointsFromGoals[gw.toString()] = Math.round(gwGoalPoints * 100) / 100; // Use numeric string for consistency
             totalGoalPoints += gwGoalPoints;
             
-            // 3. ASSISTS CALCULATION
+            // 3. ASSISTS CALCULATION (NOT scaled by expected minutes)
             let assistsExpected;
             if (position === 'MID') {
-              assistsExpected = (adjustedForm * 0.08 + seasonPerformance * 0.04) * difficultyMultiplier * (expectedMinutes / 90);
+              assistsExpected = (adjustedForm * 0.08 + seasonPerformance * 0.04) * difficultyMultiplier;
             } else if (position === 'FWD') {
-              assistsExpected = (adjustedForm * 0.04 + seasonPerformance * 0.02) * difficultyMultiplier * (expectedMinutes / 90);
+              assistsExpected = (adjustedForm * 0.04 + seasonPerformance * 0.02) * difficultyMultiplier;
             } else if (position === 'DEF') {
-              assistsExpected = (adjustedForm * 0.025 + seasonPerformance * 0.01) * difficultyMultiplier * (expectedMinutes / 90);
+              assistsExpected = (adjustedForm * 0.025 + seasonPerformance * 0.01) * difficultyMultiplier;
             } else {
-              assistsExpected = adjustedForm * 0.003 * difficultyMultiplier * (expectedMinutes / 90); // GKP
+              assistsExpected = adjustedForm * 0.003 * difficultyMultiplier; // GKP
             }
             
             const gwAssistPoints = assistsExpected * assistPoints;
