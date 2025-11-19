@@ -923,6 +923,10 @@ export default function TransferPlanner() {
   const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
+  // Drag and drop state
+  const [draggedPlayer, setDraggedPlayer] = useState<{ element: number; position: number; isBench: boolean } | null>(null);
+  const [dragOverPlayer, setDragOverPlayer] = useState<number | null>(null);
+  
   // Auto-save state
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
@@ -2626,6 +2630,80 @@ export default function TransferPlanner() {
       setHasUnsavedChanges(true);
       setTimeout(() => saveCurrentDraft(), 100);
     }
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, pick: TeamPick, isBench: boolean) => {
+    const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
+    setDraggedPlayer({ element: pick.element, position: actualIndex, isBench });
+    e.dataTransfer.effectAllowed = 'move';
+    // Add a slight delay to allow the drag image to be set
+    setTimeout(() => {
+      if (e.target instanceof HTMLElement) {
+        e.target.style.opacity = '0.5';
+      }
+    }, 0);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    if (e.target instanceof HTMLElement) {
+      e.target.style.opacity = '1';
+    }
+    setDraggedPlayer(null);
+    setDragOverPlayer(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, pick: TeamPick) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverPlayer(pick.element);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    setDragOverPlayer(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetPick: TeamPick, targetIsBench: boolean) => {
+    e.preventDefault();
+    setDragOverPlayer(null);
+    
+    if (!draggedPlayer) return;
+    
+    // Don't allow drop on self
+    if (draggedPlayer.element === targetPick.element) {
+      setDraggedPlayer(null);
+      return;
+    }
+    
+    const targetIndex = manualLineup.findIndex(p => p.position === targetPick.position);
+    
+    // Determine if this is a starting-to-bench or bench-to-starting swap
+    const draggedIsStarting = draggedPlayer.position < 11;
+    const targetIsStarting = targetIndex < 11;
+    
+    // Only allow swaps between starting 11 and bench
+    if (draggedIsStarting === targetIsStarting) {
+      toast({
+        title: "Invalid Swap",
+        description: "You can only swap between starting 11 and bench players",
+        variant: "destructive"
+      });
+      setDraggedPlayer(null);
+      return;
+    }
+    
+    // Call swapPlayers with the correct indices
+    if (draggedIsStarting && !targetIsStarting) {
+      // Starting player being swapped with bench player
+      const benchIndex = targetIndex - 11;
+      swapPlayers(draggedPlayer.position, benchIndex);
+    } else if (!draggedIsStarting && targetIsStarting) {
+      // Bench player being swapped with starting player
+      const benchIndex = draggedPlayer.position - 11;
+      swapPlayers(targetIndex, benchIndex);
+    }
+    
+    setDraggedPlayer(null);
   };
 
   // Move bench player up or down (excluding GK)
@@ -5873,8 +5951,16 @@ export default function TransferPlanner() {
                                 
                                 {/* Player Card */}
                                 <div
+                                  draggable={!pick.is_transferred_out}
+                                  onDragStart={(e) => !pick.is_transferred_out && handleDragStart(e, pick, false)}
+                                  onDragEnd={handleDragEnd}
+                                  onDragOver={(e) => !pick.is_transferred_out && handleDragOver(e, pick)}
+                                  onDragLeave={handleDragLeave}
+                                  onDrop={(e) => !pick.is_transferred_out && handleDrop(e, pick, false)}
                                   className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] cursor-pointer transition-all ${
                                     selectedPlayer === pick.element ? 'ring-2 ring-blue-500 ring-offset-2' : ''
+                                  } ${
+                                    dragOverPlayer === pick.element ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-950/30' : ''
                                   } ${
                                     pick.is_captain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
                                     pick.is_vice_captain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
@@ -6021,8 +6107,16 @@ export default function TransferPlanner() {
                         
                         {/* Player Card */}
                         <div
+                          draggable={!pick.is_transferred_out}
+                          onDragStart={(e) => !pick.is_transferred_out && handleDragStart(e, pick, true)}
+                          onDragEnd={handleDragEnd}
+                          onDragOver={(e) => !pick.is_transferred_out && handleDragOver(e, pick)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => !pick.is_transferred_out && handleDrop(e, pick, true)}
                           className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] cursor-pointer transition-all ${
                             selectedPlayer === pick.element ? 'ring-2 ring-blue-500 ring-offset-2' : ''
+                          } ${
+                            dragOverPlayer === pick.element ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-950/30' : ''
                           } ${
                             isPlayerTransferredIn(pick) 
                               ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
