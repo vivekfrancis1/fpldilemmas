@@ -2704,10 +2704,12 @@ export default function TransferPlanner() {
       return;
     }
     
+    // Find current indices in manualLineup
+    const draggedIndex = manualLineup.findIndex(p => p.element === draggedPlayer.element);
     const targetIndex = manualLineup.findIndex(p => p.position === targetPick.position);
     
     // Determine if this is a starting-to-bench or bench-to-starting swap
-    const draggedIsStarting = draggedPlayer.position < 11;
+    const draggedIsStarting = draggedIndex < 11;
     const targetIsStarting = targetIndex < 11;
     
     // Only allow swaps between starting 11 and bench
@@ -2723,9 +2725,9 @@ export default function TransferPlanner() {
     
     console.log('🔄 DRAG DROP: Performing swap', {
       draggedPlayer: draggedPlayer.element,
-      draggedPosition: draggedPlayer.position,
+      draggedIndex: draggedIndex,
       targetPlayer: targetPick.element,
-      targetPosition: targetIndex,
+      targetIndex: targetIndex,
       draggedIsStarting,
       targetIsStarting
     });
@@ -2734,11 +2736,11 @@ export default function TransferPlanner() {
     if (draggedIsStarting && !targetIsStarting) {
       // Starting player being swapped with bench player
       const benchIndex = targetIndex - 11;
-      console.log('🔄 Calling swapPlayers:', draggedPlayer.position, benchIndex);
-      swapPlayers(draggedPlayer.position, benchIndex);
+      console.log('🔄 Calling swapPlayers:', draggedIndex, benchIndex);
+      swapPlayers(draggedIndex, benchIndex);
     } else if (!draggedIsStarting && targetIsStarting) {
       // Bench player being swapped with starting player
-      const benchIndex = draggedPlayer.position - 11;
+      const benchIndex = draggedIndex - 11;
       console.log('🔄 Calling swapPlayers:', targetIndex, benchIndex);
       swapPlayers(targetIndex, benchIndex);
     }
