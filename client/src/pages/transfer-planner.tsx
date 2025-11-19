@@ -18,7 +18,8 @@ import { extractManagerId } from "@/lib/manager-id-utils";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: any }) {
-  const chanceOfPlaying = player.chanceOfPlayingNextRound ?? 100;
+  // Handle both camelCase and snake_case field names
+  const chanceOfPlaying = player.chanceOfPlayingNextRound ?? player.chance_of_playing_next_round ?? 100;
   const status = player.status || 'a';
   const news = player.news || '';
 
@@ -215,9 +216,31 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     staleTime: 60 * 60 * 1000,
   });
 
-  const { data: bootstrapData } = useQuery<BootstrapData>({
+  const { data: rawBootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
+
+  // Apply manual availability overrides to bootstrap data
+  const bootstrapData = useMemo(() => {
+    if (!rawBootstrapData) return rawBootstrapData;
+    
+    const modifiedData = { ...rawBootstrapData };
+    if (modifiedData.elements) {
+      modifiedData.elements = modifiedData.elements.map(player => {
+        // Manual override for Semenyo and Gabriel (75% chance of playing)
+        if (player.web_name === 'Semenyo' || player.web_name === 'Gabriel') {
+          return {
+            ...player,
+            chance_of_playing_next_round: 75,
+            status: 'd', // Doubtful
+            news: '75% chance of playing'
+          };
+        }
+        return player;
+      });
+    }
+    return modifiedData;
+  }, [rawBootstrapData]);
 
   // Create playerId to web_name mapping
   const playerIdToWebName = useMemo(() => {
@@ -6562,6 +6585,12 @@ export default function TransferPlanner() {
                                       <text x="202" y="270" fontSize="clamp(26px, 5vw, 30px)" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                                     )}
                                   </svg>
+                                  {/* Availability Badge for Pitch View */}
+                                  <div className="flex justify-center mt-1">
+                                    <TooltipProvider>
+                                      <PlayerAvailabilityBadge player={player} />
+                                    </TooltipProvider>
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -6786,6 +6815,12 @@ export default function TransferPlanner() {
                                 <text x="202" y="268" fontSize="clamp(26px, 5vw, 30px)" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
                               )}
                             </svg>
+                            {/* Availability Badge for Bench Players */}
+                            <div className="flex justify-center mt-1">
+                              <TooltipProvider>
+                                <PlayerAvailabilityBadge player={player} />
+                              </TooltipProvider>
+                            </div>
                           </div>
                         </div>
                       );
