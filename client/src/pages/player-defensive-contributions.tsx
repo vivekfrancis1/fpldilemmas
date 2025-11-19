@@ -215,8 +215,10 @@ export default function PlayerDefensiveContributions() {
     setEndGameweek(Math.min(gameweekRange.start + 5, 38)); // Default to 6 gameweeks
   }, [gameweekRange]);
   
-  // All gameweeks are already in the correct range from API
-  const gameweeks = allGameweeks;
+  // Filter gameweeks based on selected range
+  const gameweeks = useMemo(() => {
+    return allGameweeks.filter(gw => gw >= startGameweek && gw <= endGameweek);
+  }, [allGameweeks, startGameweek, endGameweek]);
 
   // Calculate totals for each player
   const playersWithTotals = useMemo(() => {
