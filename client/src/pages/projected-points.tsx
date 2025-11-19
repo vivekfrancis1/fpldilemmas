@@ -358,6 +358,18 @@ export default function ProjectedPoints() {
 
   // Get player by ID
   const getPlayerById = (id: number) => {
+    // First try to get from adjusted projections (has availability data)
+    const adjustedPlayer = adjustedPlayerProjections?.find(p => p.playerId === id);
+    if (adjustedPlayer) {
+      // Merge with bootstrap data for other fields
+      const bootstrapPlayer = bootstrapData?.elements.find(p => p.id === id);
+      return {
+        ...bootstrapPlayer,
+        chanceOfPlayingNextRound: adjustedPlayer.chanceOfPlayingNextRound,
+        status: adjustedPlayer.status,
+        news: adjustedPlayer.news
+      };
+    }
     return bootstrapData?.elements.find(p => p.id === id);
   };
 

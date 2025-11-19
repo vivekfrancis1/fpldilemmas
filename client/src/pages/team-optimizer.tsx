@@ -308,6 +308,18 @@ export default function TeamOptimizer() {
 
   // Get player by ID helper
   const getPlayerById = (id: number): Player | undefined => {
+    // First try to get from adjusted projections (has availability data)
+    const adjustedPlayer = adjustedPlayerProjections?.find(p => p.playerId === id);
+    if (adjustedPlayer) {
+      // Merge with bootstrap data for other fields
+      const bootstrapPlayer = bootstrapData?.elements.find(p => p.id === id);
+      return {
+        ...bootstrapPlayer,
+        chanceOfPlayingNextRound: adjustedPlayer.chanceOfPlayingNextRound,
+        status: adjustedPlayer.status,
+        news: adjustedPlayer.news
+      } as Player;
+    }
     return bootstrapData?.elements.find(p => p.id === id);
   };
 
