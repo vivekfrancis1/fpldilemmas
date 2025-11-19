@@ -5980,18 +5980,12 @@ export default function TransferPlanner() {
                             }
                             
                             return (
-                              <div key={pick.element} className={`relative ${selectedPlayer === pick.element ? 'z-[100]' : ''}`}>
+                              <div key={`${pick.element}-${pick.position}`} className={`relative ${selectedPlayer === pick.element ? 'z-[100]' : ''}`}>
                                 {/* Action Buttons Popup */}
                                 {selectedPlayer === pick.element && <PlayerActionPopup pick={pick} player={player} actualIndex={actualIndex} />}
                                 
                                 {/* Player Card */}
                                 <div
-                                  draggable={!pick.is_transferred_out}
-                                  onDragStart={(e) => !pick.is_transferred_out && handleDragStart(e, pick, false)}
-                                  onDragEnd={handleDragEnd}
-                                  onDragOver={(e) => !pick.is_transferred_out && handleDragOver(e, pick)}
-                                  onDragLeave={handleDragLeave}
-                                  onDrop={(e) => !pick.is_transferred_out && handleDrop(e, pick, false)}
                                   className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] cursor-pointer transition-all ${
                                     selectedPlayer === pick.element ? 'ring-2 ring-blue-500 ring-offset-2' : ''
                                   } ${
@@ -6002,6 +5996,12 @@ export default function TransferPlanner() {
                                     isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
                                     'border-gray-200 hover:bg-gray-50'
                                   }`}
+                                  draggable={!pick.is_transferred_out}
+                                  onDragStart={(e) => !pick.is_transferred_out && handleDragStart(e, pick, false)}
+                                  onDragEnd={handleDragEnd}
+                                  onDragOver={(e) => !pick.is_transferred_out && handleDragOver(e, pick)}
+                                  onDragLeave={handleDragLeave}
+                                  onDrop={(e) => !pick.is_transferred_out && handleDrop(e, pick, false)}
                                   onClick={() => {
                                     if (!isDragging) {
                                       setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element);
@@ -6140,18 +6140,12 @@ export default function TransferPlanner() {
                     const benchIndex = manualLineup.findIndex(p => p.position === pick.position);
                     
                     return (
-                      <div key={pick.element} className={`relative ${selectedPlayer === pick.element ? 'z-[100]' : ''}`}>
+                      <div key={`${pick.element}-${pick.position}`} className={`relative ${selectedPlayer === pick.element ? 'z-[100]' : ''}`}>
                         {/* Action Buttons Popup */}
                         {selectedPlayer === pick.element && <PlayerActionPopup pick={pick} player={player} actualIndex={benchIndex} isBench={true} />}
                         
                         {/* Player Card */}
                         <div
-                          draggable={!pick.is_transferred_out}
-                          onDragStart={(e) => !pick.is_transferred_out && handleDragStart(e, pick, true)}
-                          onDragEnd={handleDragEnd}
-                          onDragOver={(e) => !pick.is_transferred_out && handleDragOver(e, pick)}
-                          onDragLeave={handleDragLeave}
-                          onDrop={(e) => !pick.is_transferred_out && handleDrop(e, pick, true)}
                           className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] cursor-pointer transition-all ${
                             selectedPlayer === pick.element ? 'ring-2 ring-blue-500 ring-offset-2' : ''
                           } ${
@@ -6161,6 +6155,12 @@ export default function TransferPlanner() {
                               ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
                               : 'border-gray-200 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100'
                           }`}
+                          draggable={!pick.is_transferred_out}
+                          onDragStart={(e) => !pick.is_transferred_out && handleDragStart(e, pick, true)}
+                          onDragEnd={handleDragEnd}
+                          onDragOver={(e) => !pick.is_transferred_out && handleDragOver(e, pick)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => !pick.is_transferred_out && handleDrop(e, pick, true)}
                           onClick={() => {
                             if (!isDragging) {
                               setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element);
