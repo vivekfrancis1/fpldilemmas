@@ -658,7 +658,12 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               {filteredPlayers.map((player) => {
                 // Merge bootstrap player data for availability fields
                 const bootstrapPlayer = bootstrapData?.elements.find(p => p.id === player.playerId);
-                const mergedPlayer = bootstrapPlayer ? { ...player, ...bootstrapPlayer } : player;
+                const mergedPlayer = bootstrapPlayer ? {
+                  ...player,
+                  chance_of_playing_next_round: bootstrapPlayer.chance_of_playing_next_round,
+                  status: bootstrapPlayer.status,
+                  news: bootstrapPlayer.news
+                } : player;
                 
                 return (
                   <tr
