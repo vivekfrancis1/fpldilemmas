@@ -926,6 +926,7 @@ export default function TransferPlanner() {
   // Drag and drop state
   const [draggedPlayer, setDraggedPlayer] = useState<{ element: number; position: number; isBench: boolean } | null>(null);
   const [dragOverPlayer, setDragOverPlayer] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   
   // Auto-save state
   const [isSaving, setIsSaving] = useState(false);
@@ -2636,6 +2637,7 @@ export default function TransferPlanner() {
   const handleDragStart = (e: React.DragEvent, pick: TeamPick, isBench: boolean) => {
     const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
     setDraggedPlayer({ element: pick.element, position: actualIndex, isBench });
+    setIsDragging(true);
     e.dataTransfer.effectAllowed = 'move';
     // Add a slight delay to allow the drag image to be set
     setTimeout(() => {
@@ -2651,6 +2653,8 @@ export default function TransferPlanner() {
     }
     setDraggedPlayer(null);
     setDragOverPlayer(null);
+    // Reset isDragging after a short delay to prevent click event from firing
+    setTimeout(() => setIsDragging(false), 100);
   };
 
   const handleDragOver = (e: React.DragEvent, pick: TeamPick) => {
@@ -5967,7 +5971,11 @@ export default function TransferPlanner() {
                                     isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
                                     'border-gray-200 hover:bg-gray-50'
                                   }`}
-                                  onClick={() => setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element)}
+                                  onClick={() => {
+                                    if (!isDragging) {
+                                      setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element);
+                                    }
+                                  }}
                                   data-testid={`starting-player-${pick.element}`}
                                 >
                                   <div className="flex items-center gap-1 flex-1 min-w-0">
@@ -6122,7 +6130,11 @@ export default function TransferPlanner() {
                               ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
                               : 'border-gray-200 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100'
                           }`}
-                          onClick={() => setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element)}
+                          onClick={() => {
+                            if (!isDragging) {
+                              setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element);
+                            }
+                          }}
                           data-testid={`bench-player-${pick.element}`}
                         >
                           <div className="flex items-center gap-1 flex-1 min-w-0">
