@@ -2602,7 +2602,8 @@ export default function TransferPlanner() {
       newLineup[11 + benchIndex] = { ...newLineup[11 + benchIndex], is_captain: false, is_vice_captain: false };
     }
     
-    setManualLineup(newLineup);
+    // Force a complete state update with new array reference to trigger re-render
+    setManualLineup([...newLineup]);
     
     // Clear the optimization status for this gameweek since the lineup has changed
     if (selectedGameweek) {
@@ -2767,7 +2768,8 @@ export default function TransferPlanner() {
     newLineup[actualIndex].position = actualIndex + 1;
     newLineup[swapIndex].position = swapIndex + 1;
     
-    setManualLineup(newLineup);
+    // Force a complete state update with new array reference to trigger re-render
+    setManualLineup([...newLineup]);
     
     // Clear the optimization status for this gameweek since the lineup has changed
     if (selectedGameweek) {
