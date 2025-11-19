@@ -2688,11 +2688,15 @@ export default function TransferPlanner() {
   };
 
   const handleDrop = (e: React.DragEvent, targetPick: TeamPick, targetIsBench: boolean) => {
+    console.log('🔄 HANDLE DROP CALLED');
     e.preventDefault();
     e.stopPropagation(); // Stop event propagation
     setDragOverPlayer(null);
     
-    if (!draggedPlayer) return;
+    if (!draggedPlayer) {
+      console.log('🔄 DROP ABORTED: No dragged player');
+      return;
+    }
     
     // Don't allow drop on self
     if (draggedPlayer.element === targetPick.element) {
