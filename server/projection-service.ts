@@ -312,6 +312,10 @@ class ProjectionService {
             const seasonPerformance = totalPoints / Math.max(minutes / 90, 1); // Points per 90 minutes
             const adjustedForm = Math.max(form * 0.7 + seasonPerformance * 0.3, 1.0);
             
+            // Calculate average minutes per game from season data
+            const gamesPlayed = Math.max(currentGameweek - 1, 1); // Number of gameweeks that have finished
+            const averageMinutesPerGame = minutes > 0 ? (minutes / gamesPlayed) : 45; // Default to 45 if no data
+            
             // 1. MINUTES CALCULATION
             const injuryRisk = (fplPlayer.chance_of_playing_next_round || 100) / 100;
             const rotationRisk = selectedBy > 30 ? 0.95 : selectedBy > 10 ? 0.85 : 0.75; // Popular players less rotated
@@ -377,12 +381,12 @@ class ProjectionService {
               if (!isHomeFixture) cleanSheetProb *= 0.9; // Away fixtures slightly harder
             }
             
-            const gwCleanSheetPoints = cleanSheetProb * cleanSheetPoints;
+            const gwCleanSheetPoints = cleanSheetProb * cleanSheetPoints * (averageMinutesPerGame / 90);
             pointsFromCleanSheets[gw.toString()] = Math.round(gwCleanSheetPoints * 100) / 100; // Use numeric string for consistency
             
             // 5. SAVES CALCULATION (Goalkeepers Only) - Official FPL Rules: 1pt per 3 saves, 5pts per penalty save
             let savesPoints = 0;
-            if (position === 'GKP' && expectedMinutes >= 1) {
+            if (position === 'GKP' && averageMinutesPerGame >= 1) {
               // NEW FORMULA: (Goalkeeper Avg Saves/Game × Opponent AGR) / 1.35
               // Get goalkeeper's historical average saves per game from FPL data
               const goalkeeperAvgSavesPerGame = fplPlayer.saves && fplPlayer.minutes > 0 
@@ -395,8 +399,8 @@ class ProjectionService {
                                   opponentStrengthSeed <= 9 ? 1.5 : // vs Strong teams  
                                   opponentStrengthSeed <= 14 ? 1.2 : 0.8; // vs Average/Weak teams
               
-              // Calculate expected saves using new formula
-              const expectedSaves = (goalkeeperAvgSavesPerGame * opponentAGR / 1.35) * (expectedMinutes / 90);
+              // Calculate expected saves using average minutes instead of expected minutes
+              const expectedSaves = (goalkeeperAvgSavesPerGame * opponentAGR / 1.35) * (averageMinutesPerGame / 90);
               
               // 1 point for every 3 saves (according to FPL rules)
               savesPoints = Math.floor(expectedSaves / 3);
@@ -410,14 +414,14 @@ class ProjectionService {
             
             // 6. GOALS CONCEDED (Goalkeepers and Defenders Only) - Official FPL Rules: -1pt per 2 goals conceded
             let goalsConcededPoints = 0;
-            if ((position === 'GKP' || position === 'DEF') && expectedMinutes >= 1) {
+            if ((position === 'GKP' || position === 'DEF') && averageMinutesPerGame >= 1) {
               // Expected goals conceded based on team defense vs opponent attack
               const opponentAttackStrength = opponentStrengthSeed <= 4 ? 2.1 : // vs Elite teams
                                             opponentStrengthSeed <= 9 ? 1.6 : // vs Strong teams
                                             opponentStrengthSeed <= 14 ? 1.2 : 0.9; // vs Average/Weak teams
               
               const teamDefenseStrength = (adjustedForm * 0.05) + 0.85; // Base 85% + form
-              const expectedGoalsConceded = (opponentAttackStrength / teamDefenseStrength) * (expectedMinutes / 90);
+              const expectedGoalsConceded = (opponentAttackStrength / teamDefenseStrength) * (averageMinutesPerGame / 90);
               
               // -1 point for every 2 goals conceded (official FPL rule)
               goalsConcededPoints = -(Math.floor(expectedGoalsConceded / 2));
@@ -425,7 +429,7 @@ class ProjectionService {
             
             // 7. YELLOW CARDS (All Positions) - Official FPL Rules: -1pt per yellow card
             let yellowCardPoints = 0;
-            if (expectedMinutes >= 1) {
+            if (averageMinutesPerGame >= 1) {
               // Card probability based on position and playing style (empirical data from Premier League)
               let yellowCardProbability;
               if (position === 'DEF') {
@@ -442,12 +446,13 @@ class ProjectionService {
               if (opponentStrengthSeed <= 4) yellowCardProbability *= 1.3; // vs Elite teams
               else if (opponentStrengthSeed <= 9) yellowCardProbability *= 1.1; // vs Strong teams
               
-              yellowCardPoints = yellowCardProbability * (-1); // -1 point per yellow card (official FPL rule)
+              // Scale by average minutes
+              yellowCardPoints = yellowCardProbability * (-1) * (averageMinutesPerGame / 90); // -1 point per yellow card (official FPL rule)
             }
             
             // 8. RED CARDS (All Positions) - Official FPL Rules: -3pts per red card
             let redCardPoints = 0;
-            if (expectedMinutes >= 1) {
+            if (averageMinutesPerGame >= 1) {
               // Red card probability (much rarer than yellow cards)
               let redCardProbability;
               if (position === 'DEF') {
@@ -460,12 +465,13 @@ class ProjectionService {
                 redCardProbability = 0.005 * (adjustedForm / 10); // Goalkeepers very rare
               }
               
-              redCardPoints = redCardProbability * (-3); // -3 points per red card (official FPL rule)
+              // Scale by average minutes
+              redCardPoints = redCardProbability * (-3) * (averageMinutesPerGame / 90); // -3 points per red card (official FPL rule)
             }
             
             // 9. BONUS POINTS (All Positions) - Official FPL Rules: 1-3pts based on BPS system
             let bonusPoints = 0;
-            if (expectedMinutes >= 1) {
+            if (averageMinutesPerGame >= 1) {
               // Bonus probability based on overall performance and position
               const overallPerformance = goalsExpected + assistsExpected + (cleanSheetProb * 0.5);
               
@@ -485,7 +491,8 @@ class ProjectionService {
               bonusProbability *= Math.min(adjustedForm / 8, 1.2); // Form boost (capped)
               
               // Expected bonus points (average 1.5 points when bonus is awarded, 1-3pt range)
-              bonusPoints = bonusProbability * 1.5;
+              // Scale by average minutes
+              bonusPoints = bonusProbability * 1.5 * (averageMinutesPerGame / 90);
             }
             totalCleanSheetPoints += gwCleanSheetPoints;
             
