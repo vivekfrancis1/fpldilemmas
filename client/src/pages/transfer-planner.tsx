@@ -3199,35 +3199,34 @@ export default function TransferPlanner() {
       }
     } else {
       // Already in a draft, apply the change directly
-      setManualLineup(prev => {
-        const currentCaptain = prev.find(p => p.is_captain);
-        const currentViceCaptain = prev.find(p => p.is_vice_captain);
-        const newCaptainIsCurrentViceCaptain = currentViceCaptain?.element === playerId;
-        
-        return prev.map(pick => {
-          if (pick.element === playerId) {
-            return { ...pick, is_captain: true, is_vice_captain: false };
-          } else if (newCaptainIsCurrentViceCaptain && pick.element === currentCaptain?.element) {
-            return { ...pick, is_captain: false, is_vice_captain: true };
-          } else if (pick.is_captain) {
-            return { ...pick, is_captain: false };
-          } else {
-            return pick;
-          }
-        });
+      const currentCaptain = manualLineup.find(p => p.is_captain);
+      const currentViceCaptain = manualLineup.find(p => p.is_vice_captain);
+      const newCaptainIsCurrentViceCaptain = currentViceCaptain?.element === playerId;
+      
+      const newLineup = manualLineup.map(pick => {
+        if (pick.element === playerId) {
+          return { ...pick, is_captain: true, is_vice_captain: false };
+        } else if (newCaptainIsCurrentViceCaptain && pick.element === currentCaptain?.element) {
+          return { ...pick, is_captain: false, is_vice_captain: true };
+        } else if (pick.is_captain) {
+          return { ...pick, is_captain: false };
+        } else {
+          return pick;
+        }
       });
       
-      // Clear the optimization status for this gameweek since the lineup has changed
+      setManualLineup(newLineup);
+      
+      // Save the updated lineup as optimized lineup so it persists across useEffect rebuilds
       if (selectedGameweek) {
         const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
-        delete isLineupOptimizedRef.current[optimizationKey];
+        isLineupOptimizedRef.current[optimizationKey] = true;
         
-        // Remove optimized lineup from state to show the Optimize button again
-        setOptimizedLineups(prev => {
-          const updated = { ...prev };
-          delete updated[selectedGameweek];
-          return updated;
-        });
+        // Save the updated lineup to optimizedLineups state (deep clone)
+        setOptimizedLineups(prev => ({
+          ...prev,
+          [selectedGameweek]: JSON.parse(JSON.stringify(newLineup))
+        }));
       }
       
       setCaptainConfirmation(null);
@@ -3314,35 +3313,34 @@ export default function TransferPlanner() {
       }
     } else {
       // Already in a draft, apply the change directly
-      setManualLineup(prev => {
-        const currentCaptain = prev.find(p => p.is_captain);
-        const currentViceCaptain = prev.find(p => p.is_vice_captain);
-        const newViceCaptainIsCurrentCaptain = currentCaptain?.element === playerId;
-        
-        return prev.map(pick => {
-          if (pick.element === playerId) {
-            return { ...pick, is_vice_captain: true, is_captain: false };
-          } else if (newViceCaptainIsCurrentCaptain && pick.element === currentViceCaptain?.element) {
-            return { ...pick, is_vice_captain: false, is_captain: true };
-          } else if (pick.is_vice_captain) {
-            return { ...pick, is_vice_captain: false };
-          } else {
-            return pick;
-          }
-        });
+      const currentCaptain = manualLineup.find(p => p.is_captain);
+      const currentViceCaptain = manualLineup.find(p => p.is_vice_captain);
+      const newViceCaptainIsCurrentCaptain = currentCaptain?.element === playerId;
+      
+      const newLineup = manualLineup.map(pick => {
+        if (pick.element === playerId) {
+          return { ...pick, is_vice_captain: true, is_captain: false };
+        } else if (newViceCaptainIsCurrentCaptain && pick.element === currentViceCaptain?.element) {
+          return { ...pick, is_vice_captain: false, is_captain: true };
+        } else if (pick.is_vice_captain) {
+          return { ...pick, is_vice_captain: false };
+        } else {
+          return pick;
+        }
       });
       
-      // Clear the optimization status for this gameweek since the lineup has changed
+      setManualLineup(newLineup);
+      
+      // Save the updated lineup as optimized lineup so it persists across useEffect rebuilds
       if (selectedGameweek) {
         const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
-        delete isLineupOptimizedRef.current[optimizationKey];
+        isLineupOptimizedRef.current[optimizationKey] = true;
         
-        // Remove optimized lineup from state to show the Optimize button again
-        setOptimizedLineups(prev => {
-          const updated = { ...prev };
-          delete updated[selectedGameweek];
-          return updated;
-        });
+        // Save the updated lineup to optimizedLineups state (deep clone)
+        setOptimizedLineups(prev => ({
+          ...prev,
+          [selectedGameweek]: JSON.parse(JSON.stringify(newLineup))
+        }));
       }
       
       setViceCaptainConfirmation(null);
