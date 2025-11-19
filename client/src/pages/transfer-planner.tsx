@@ -2497,6 +2497,8 @@ export default function TransferPlanner() {
 
   // Swap a starting 11 player with a bench player
   const swapPlayers = (startingIndex: number, benchIndex: number) => {
+    console.log('🔄 SWAP PLAYERS CALLED:', { startingIndex, benchIndex });
+    
     // Check if we can create a draft
     const targetDraft = getTargetDraftForChanges();
     if (!targetDraft) return;
@@ -2505,6 +2507,17 @@ export default function TransferPlanner() {
     
     const startingPick = manualLineup[startingIndex];
     const benchPick = manualLineup[11 + benchIndex];
+    
+    console.log('🔄 SWAP DETAILS:', {
+      startingPick: {
+        element: startingPick?.element,
+        position: startingPick?.position
+      },
+      benchPick: {
+        element: benchPick?.element,
+        position: benchPick?.position
+      }
+    });
     
     const startingPlayer = getPlayerById(startingPick.element);
     const benchPlayer = getPlayerById(benchPick.element);
@@ -2636,6 +2649,12 @@ export default function TransferPlanner() {
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, pick: TeamPick, isBench: boolean) => {
     const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
+    console.log('🔄 DRAG START:', { 
+      element: pick.element, 
+      position: actualIndex, 
+      isBench,
+      pickPosition: pick.position 
+    });
     setDraggedPlayer({ element: pick.element, position: actualIndex, isBench });
     setIsDragging(true);
     e.dataTransfer.effectAllowed = 'move';
