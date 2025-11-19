@@ -5668,7 +5668,7 @@ export default function TransferPlanner() {
                 })()}
 
                 {/* Optimization Controls */}
-                {selectedGameweek && optimizedLineups[selectedGameweek] ? (
+                {selectedGameweek && isLineupOptimizedRef.current[getOptimizationKey(activeDraft, selectedGameweek)] ? (
                   <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md">
                     <Sparkles className="h-4 w-4 text-green-600" />
                     <span className="text-sm font-medium text-green-700 dark:text-green-300">
