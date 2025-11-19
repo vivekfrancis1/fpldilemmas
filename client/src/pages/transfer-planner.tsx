@@ -656,20 +656,6 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             </thead>
             <tbody>
               {filteredPlayers.map((player) => {
-                // Find the corresponding bootstrap player to get availability data
-                const bootstrapPlayer = bootstrapData?.elements.find(p => p.id === player.playerId);
-                
-                // Create merged player with availability fields explicitly set
-                const mergedPlayer: any = {
-                  ...player
-                };
-                
-                if (bootstrapPlayer) {
-                  mergedPlayer.chance_of_playing_next_round = bootstrapPlayer.chance_of_playing_next_round;
-                  mergedPlayer.status = bootstrapPlayer.status;
-                  mergedPlayer.news = bootstrapPlayer.news;
-                }
-                
                 return (
                   <tr
                     key={player.playerId}
@@ -682,7 +668,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                           {(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.name}
                         </div>
                         <TooltipProvider>
-                          <PlayerAvailabilityBadge player={mergedPlayer} />
+                          <PlayerAvailabilityBadge player={player} />
                         </TooltipProvider>
                       </div>
                       <div className="text-[10px] md:text-xs text-muted-foreground truncate">
@@ -922,11 +908,6 @@ export default function TransferPlanner() {
   const [activeDraft, setActiveDraft] = useState<string>("A"); // Current working draft
   const [savedDrafts, setSavedDrafts] = useState<any[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  
-  // Drag and drop state
-  const [draggedPlayer, setDraggedPlayer] = useState<{ element: number; position: number; isBench: boolean } | null>(null);
-  const [dragOverPlayer, setDragOverPlayer] = useState<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   
   // Auto-save state
   const [isSaving, setIsSaving] = useState(false);
@@ -2497,9 +2478,6 @@ export default function TransferPlanner() {
 
   // Swap a starting 11 player with a bench player
   const swapPlayers = (startingIndex: number, benchIndex: number) => {
-    console.log('🔄 SWAP PLAYERS CALLED:', { startingIndex, benchIndex });
-    console.log('🔄 CURRENT LINEUP BEFORE SWAP:', manualLineup.map(p => ({ pos: p.position, id: p.element })));
-    
     // Check if we can create a draft
     const targetDraft = getTargetDraftForChanges();
     if (!targetDraft) return;
@@ -2508,17 +2486,6 @@ export default function TransferPlanner() {
     
     const startingPick = manualLineup[startingIndex];
     const benchPick = manualLineup[11 + benchIndex];
-    
-    console.log('🔄 SWAP DETAILS:', {
-      startingPick: {
-        element: startingPick?.element,
-        position: startingPick?.position
-      },
-      benchPick: {
-        element: benchPick?.element,
-        position: benchPick?.position
-      }
-    });
     
     const startingPlayer = getPlayerById(startingPick.element);
     const benchPlayer = getPlayerById(benchPick.element);
@@ -2603,11 +2570,7 @@ export default function TransferPlanner() {
       newLineup[11 + benchIndex] = { ...newLineup[11 + benchIndex], is_captain: false, is_vice_captain: false };
     }
     
-    // Force a complete state update with new array reference to trigger re-render
-    const updatedLineup = [...newLineup];
-    console.log('🔄 SETTING NEW LINEUP:', updatedLineup.map(p => ({ pos: p.position, id: p.element })));
-    setManualLineup(updatedLineup);
-    console.log('🔄 STATE UPDATE TRIGGERED');
+    setManualLineup(newLineup);
     
     // Clear the optimization status for this gameweek since the lineup has changed
     if (selectedGameweek) {
@@ -2651,107 +2614,6 @@ export default function TransferPlanner() {
     }
   };
 
-  // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent, pick: TeamPick, isBench: boolean) => {
-    const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
-    console.log('🔄 DRAG START:', { 
-      element: pick.element, 
-      position: actualIndex, 
-      isBench,
-      pickPosition: pick.position 
-    });
-    setDraggedPlayer({ element: pick.element, position: actualIndex, isBench });
-    setIsDragging(true);
-    e.dataTransfer.effectAllowed = 'move';
-    // Add a slight delay to allow the drag image to be set
-    setTimeout(() => {
-      if (e.target instanceof HTMLElement) {
-        e.target.style.opacity = '0.5';
-      }
-    }, 0);
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    if (e.target instanceof HTMLElement) {
-      e.target.style.opacity = '1';
-    }
-    setDraggedPlayer(null);
-    setDragOverPlayer(null);
-    // Reset isDragging after a short delay to prevent click event from firing
-    setTimeout(() => setIsDragging(false), 100);
-  };
-
-  const handleDragOver = (e: React.DragEvent, pick: TeamPick) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverPlayer(pick.element);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    setDragOverPlayer(null);
-  };
-
-  const handleDrop = (e: React.DragEvent, targetPick: TeamPick, targetIsBench: boolean) => {
-    console.log('🔄 HANDLE DROP CALLED');
-    e.preventDefault();
-    e.stopPropagation(); // Stop event propagation
-    setDragOverPlayer(null);
-    
-    if (!draggedPlayer) {
-      console.log('🔄 DROP ABORTED: No dragged player');
-      return;
-    }
-    
-    // Don't allow drop on self
-    if (draggedPlayer.element === targetPick.element) {
-      setDraggedPlayer(null);
-      return;
-    }
-    
-    // Find current indices in manualLineup
-    const draggedIndex = manualLineup.findIndex(p => p.element === draggedPlayer.element);
-    const targetIndex = manualLineup.findIndex(p => p.position === targetPick.position);
-    
-    // Determine if this is a starting-to-bench or bench-to-starting swap
-    const draggedIsStarting = draggedIndex < 11;
-    const targetIsStarting = targetIndex < 11;
-    
-    // Only allow swaps between starting 11 and bench
-    if (draggedIsStarting === targetIsStarting) {
-      toast({
-        title: "Invalid Swap",
-        description: "You can only swap between starting 11 and bench players",
-        variant: "destructive"
-      });
-      setDraggedPlayer(null);
-      return;
-    }
-    
-    console.log('🔄 DRAG DROP: Performing swap', {
-      draggedPlayer: draggedPlayer.element,
-      draggedIndex: draggedIndex,
-      targetPlayer: targetPick.element,
-      targetIndex: targetIndex,
-      draggedIsStarting,
-      targetIsStarting
-    });
-    
-    // Call swapPlayers with the correct indices
-    if (draggedIsStarting && !targetIsStarting) {
-      // Starting player being swapped with bench player
-      const benchIndex = targetIndex - 11;
-      console.log('🔄 Calling swapPlayers:', draggedIndex, benchIndex);
-      swapPlayers(draggedIndex, benchIndex);
-    } else if (!draggedIsStarting && targetIsStarting) {
-      // Bench player being swapped with starting player
-      const benchIndex = draggedIndex - 11;
-      console.log('🔄 Calling swapPlayers:', targetIndex, benchIndex);
-      swapPlayers(targetIndex, benchIndex);
-    }
-    
-    setDraggedPlayer(null);
-  };
-
   // Move bench player up or down (excluding GK)
   const moveBenchPlayer = (benchIndex: number, direction: 'up' | 'down') => {
     // Check if we can create a draft
@@ -2778,8 +2640,7 @@ export default function TransferPlanner() {
     newLineup[actualIndex].position = actualIndex + 1;
     newLineup[swapIndex].position = swapIndex + 1;
     
-    // Force a complete state update with new array reference to trigger re-render
-    setManualLineup([...newLineup]);
+    setManualLineup(newLineup);
     
     // Clear the optimization status for this gameweek since the lineup has changed
     if (selectedGameweek) {
@@ -5001,7 +4862,7 @@ export default function TransferPlanner() {
           {!isBench ? (
             <Select onValueChange={(value) => { swapPlayers(actualIndex, parseInt(value)); setSelectedPlayer(null); }}>
               <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`${isBench ? 'bench' : 'list'}-swap-${pick.element}`}>
-                <span className="w-full text-center text-base sm:text-lg font-semibold">Switch player</span>
+                <span className="w-full text-center text-base sm:text-lg font-semibold">Swap</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
                 {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
@@ -5021,7 +4882,7 @@ export default function TransferPlanner() {
           ) : (
             <Select onValueChange={(value) => { swapPlayers(parseInt(value), actualIndex); setSelectedPlayer(null); }}>
               <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`bench-swap-${pick.element}`}>
-                <span className="w-full text-center text-base sm:text-lg font-semibold">Switch player</span>
+                <span className="w-full text-center text-base sm:text-lg font-semibold">Swap</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
                 {manualLineup.slice(0, 11).map((startingPick) => {
@@ -5869,7 +5730,7 @@ export default function TransferPlanner() {
             <div>
             {/* List View */}
             {teamView === "list" && (
-            <div key={`list-view-${manualLineup.map(p => `${p.position}-${p.element}`).join(',')}`}>
+            <div>
               {/* Desktop Layout - Hidden on mobile */}
               <div className="hidden lg:block space-y-3">
                 {(() => {
@@ -5891,7 +5752,6 @@ export default function TransferPlanner() {
                 
                 {/* Horizontal layout with starting and bench aligned */}
                 {[1, 2, 3, 4].map((posType, posIndex) => {
-                  // Force re-render by creating a stable key from the actual player IDs in this position
                   const positionPlayers = manualLineup.slice(0, 11).filter(pick => {
                     const player = getPlayerById(pick.element);
                     return player?.element_type === posType;
@@ -5915,11 +5775,8 @@ export default function TransferPlanner() {
                     });
                   }
                   
-                  // Create unique key based on actual players in this position group to force re-render on swap
-                  const positionKey = `${posType}-${positionPlayers.map(p => p.element).join('-')}`;
-                  
                   return (
-                    <div key={positionKey}>
+                    <div key={posType}>
                       <div className="flex items-center gap-2 mb-1">
                         <div className="text-[10px] font-semibold text-muted-foreground uppercase min-w-[30px]">
                           {posType === 1 ? 'GKP' : posType === 2 ? 'DEF' : posType === 3 ? 'MID' : 'FWD'}
@@ -5996,7 +5853,7 @@ export default function TransferPlanner() {
                             }
                             
                             return (
-                              <div key={`${pick.element}-${pick.position}`} className={`relative ${selectedPlayer === pick.element ? 'z-[100]' : ''}`}>
+                              <div key={pick.element} className={`relative ${selectedPlayer === pick.element ? 'z-[100]' : ''}`}>
                                 {/* Action Buttons Popup */}
                                 {selectedPlayer === pick.element && <PlayerActionPopup pick={pick} player={player} actualIndex={actualIndex} />}
                                 
@@ -6005,24 +5862,12 @@ export default function TransferPlanner() {
                                   className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] cursor-pointer transition-all ${
                                     selectedPlayer === pick.element ? 'ring-2 ring-blue-500 ring-offset-2' : ''
                                   } ${
-                                    dragOverPlayer === pick.element ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-950/30' : ''
-                                  } ${
                                     pick.is_captain ? 'border-yellow-400 bg-yellow-50 dark:bg-yellow-950/20' :
                                     pick.is_vice_captain ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' :
                                     isPlayerTransferredIn(pick) ? 'border-green-500 bg-green-50 dark:bg-green-950/20' :
                                     'border-gray-200 hover:bg-gray-50'
                                   }`}
-                                  draggable={!pick.is_transferred_out}
-                                  onDragStart={(e) => !pick.is_transferred_out && handleDragStart(e, pick, false)}
-                                  onDragEnd={handleDragEnd}
-                                  onDragOver={(e) => !pick.is_transferred_out && handleDragOver(e, pick)}
-                                  onDragLeave={handleDragLeave}
-                                  onDrop={(e) => !pick.is_transferred_out && handleDrop(e, pick, false)}
-                                  onClick={() => {
-                                    if (!isDragging) {
-                                      setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element);
-                                    }
-                                  }}
+                                  onClick={() => setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element)}
                                   data-testid={`starting-player-${pick.element}`}
                                 >
                                   <div className="flex items-center gap-1 flex-1 min-w-0">
@@ -6156,7 +6001,7 @@ export default function TransferPlanner() {
                     const benchIndex = manualLineup.findIndex(p => p.position === pick.position);
                     
                     return (
-                      <div key={`${pick.element}-${pick.position}`} className={`relative ${selectedPlayer === pick.element ? 'z-[100]' : ''}`}>
+                      <div key={pick.element} className={`relative ${selectedPlayer === pick.element ? 'z-[100]' : ''}`}>
                         {/* Action Buttons Popup */}
                         {selectedPlayer === pick.element && <PlayerActionPopup pick={pick} player={player} actualIndex={benchIndex} isBench={true} />}
                         
@@ -6165,23 +6010,11 @@ export default function TransferPlanner() {
                           className={`flex items-center justify-between p-1.5 rounded border gap-0 min-h-[52px] cursor-pointer transition-all ${
                             selectedPlayer === pick.element ? 'ring-2 ring-blue-500 ring-offset-2' : ''
                           } ${
-                            dragOverPlayer === pick.element ? 'ring-2 ring-green-500 bg-green-50 dark:bg-green-950/30' : ''
-                          } ${
                             isPlayerTransferredIn(pick) 
                               ? 'border-green-500 bg-green-50 dark:bg-green-950/20' 
                               : 'border-gray-200 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100'
                           }`}
-                          draggable={!pick.is_transferred_out}
-                          onDragStart={(e) => !pick.is_transferred_out && handleDragStart(e, pick, true)}
-                          onDragEnd={handleDragEnd}
-                          onDragOver={(e) => !pick.is_transferred_out && handleDragOver(e, pick)}
-                          onDragLeave={handleDragLeave}
-                          onDrop={(e) => !pick.is_transferred_out && handleDrop(e, pick, true)}
-                          onClick={() => {
-                            if (!isDragging) {
-                              setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element);
-                            }
-                          }}
+                          onClick={() => setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element)}
                           data-testid={`bench-player-${pick.element}`}
                         >
                           <div className="flex items-center gap-1 flex-1 min-w-0">
@@ -6256,11 +6089,8 @@ export default function TransferPlanner() {
                     
                     if (positionPlayers.length === 0) return null;
                     
-                    // Create unique key based on actual players in this position group to force re-render on swap
-                    const positionKey = `${posType}-${positionPlayers.map(p => p.element).join('-')}`;
-                    
                     return (
-                      <div key={positionKey}>
+                      <div key={posType}>
                         <div className="flex items-center gap-2 mb-1">
                           <div className="text-[10px] font-semibold text-muted-foreground uppercase min-w-[30px]">
                             {posType === 1 ? 'GKP' : posType === 2 ? 'DEF' : posType === 3 ? 'MID' : 'FWD'}
@@ -6666,7 +6496,7 @@ export default function TransferPlanner() {
                                         
                                         <Select onValueChange={(value) => { swapPlayers(actualIndex, parseInt(value)); setSelectedPlayer(null); }}>
                                           <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`pitch-swap-${pick.element}`}>
-                                            <span className="w-full text-center text-base font-semibold">Switch player</span>
+                                            <span className="w-full text-center text-base font-semibold">Swap</span>
                                           </SelectTrigger>
                                           <SelectContent className="z-[200]">
                                             {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
@@ -6906,7 +6736,7 @@ export default function TransferPlanner() {
                                   
                                   <Select onValueChange={(value) => { swapPlayers(parseInt(value), benchIndex); setSelectedPlayer(null); }}>
                                     <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`pitch-bench-swap-${pick.element}`}>
-                                      <span className="w-full text-center text-base font-semibold">Switch player</span>
+                                      <span className="w-full text-center text-base font-semibold">Swap</span>
                                     </SelectTrigger>
                                     <SelectContent className="z-[200]">
                                       {manualLineup.slice(0, 11).map((startPick, startIndex) => {
