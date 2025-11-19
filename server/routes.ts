@@ -13560,8 +13560,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalPointsCache.delete(currentCacheKey); // Clear corrupted cache
             // Continue to fresh calculation
           } else {
-            console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${cachedData.data.length} players)`);
-            return res.json(cachedData.data);
+            // Enrich cached data with latest availability info from bootstrap data
+            const enrichedData = cachedData.data.map((player: any) => {
+              const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
+              return {
+                ...player,
+                chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
+                status: bootstrapPlayer?.status || 'a',
+                news: bootstrapPlayer?.news || ''
+              };
+            });
+            
+            console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${enrichedData.length} players)`);
+            return res.json(enrichedData);
           }
         }
       }
