@@ -656,6 +656,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
             </thead>
             <tbody>
               {filteredPlayers.map((player) => {
+                // Merge bootstrap player data for availability fields
+                const bootstrapPlayer = bootstrapData?.elements.find(p => p.id === player.playerId);
+                const mergedPlayer = bootstrapPlayer ? { ...player, ...bootstrapPlayer } : player;
+                
                 return (
                   <tr
                     key={player.playerId}
@@ -668,7 +672,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                           {(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.name}
                         </div>
                         <TooltipProvider>
-                          <PlayerAvailabilityBadge player={player} />
+                          <PlayerAvailabilityBadge player={mergedPlayer} />
                         </TooltipProvider>
                       </div>
                       <div className="text-[10px] md:text-xs text-muted-foreground truncate">
