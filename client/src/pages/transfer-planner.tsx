@@ -2498,6 +2498,7 @@ export default function TransferPlanner() {
   // Swap a starting 11 player with a bench player
   const swapPlayers = (startingIndex: number, benchIndex: number) => {
     console.log('🔄 SWAP PLAYERS CALLED:', { startingIndex, benchIndex });
+    console.log('🔄 CURRENT LINEUP BEFORE SWAP:', manualLineup.map(p => ({ pos: p.position, id: p.element })));
     
     // Check if we can create a draft
     const targetDraft = getTargetDraftForChanges();
@@ -2603,7 +2604,10 @@ export default function TransferPlanner() {
     }
     
     // Force a complete state update with new array reference to trigger re-render
-    setManualLineup([...newLineup]);
+    const updatedLineup = [...newLineup];
+    console.log('🔄 SETTING NEW LINEUP:', updatedLineup.map(p => ({ pos: p.position, id: p.element })));
+    setManualLineup(updatedLineup);
+    console.log('🔄 STATE UPDATE TRIGGERED');
     
     // Clear the optimization status for this gameweek since the lineup has changed
     if (selectedGameweek) {
