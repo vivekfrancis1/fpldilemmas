@@ -386,7 +386,7 @@ class ProjectionService {
             
             // 5. SAVES CALCULATION (Goalkeepers Only) - Official FPL Rules: 1pt per 3 saves, 5pts per penalty save
             let savesPoints = 0;
-            if (position === 'GKP' && averageMinutesPerGame >= 1) {
+            if (position === 'GKP') {
               // NEW FORMULA: (Goalkeeper Avg Saves/Game × Opponent AGR) / 1.35
               // Get goalkeeper's historical average saves per game from FPL data
               const goalkeeperAvgSavesPerGame = fplPlayer.saves && fplPlayer.minutes > 0 
@@ -399,8 +399,8 @@ class ProjectionService {
                                   opponentStrengthSeed <= 9 ? 1.5 : // vs Strong teams  
                                   opponentStrengthSeed <= 14 ? 1.2 : 0.8; // vs Average/Weak teams
               
-              // Calculate expected saves using average minutes instead of expected minutes
-              const expectedSaves = (goalkeeperAvgSavesPerGame * opponentAGR / 1.35) * (averageMinutesPerGame / 90);
+              // Calculate expected saves (no minutes multiplier)
+              const expectedSaves = (goalkeeperAvgSavesPerGame * opponentAGR / 1.35);
               
               // 1 point for every 3 saves (according to FPL rules)
               savesPoints = Math.floor(expectedSaves / 3);
@@ -471,29 +471,26 @@ class ProjectionService {
             
             // 9. BONUS POINTS (All Positions) - Official FPL Rules: 1-3pts based on BPS system
             let bonusPoints = 0;
-            if (averageMinutesPerGame >= 1) {
-              // Bonus probability based on overall performance and position
-              const overallPerformance = goalsExpected + assistsExpected + (cleanSheetProb * 0.5);
-              
-              let bonusProbability;
-              if (overallPerformance >= 1.0) {
-                bonusProbability = 0.25; // High performers get 25% chance
-              } else if (overallPerformance >= 0.5) {
-                bonusProbability = 0.15; // Medium performers get 15% chance  
-              } else if (overallPerformance >= 0.2) {
-                bonusProbability = 0.08; // Low performers get 8% chance
-              } else {
-                bonusProbability = 0.02; // Very poor performance 2% chance
-              }
-              
-              // Adjust for form and ownership (popular players more likely to get bonus)
-              bonusProbability *= (1 + (selectedBy / 200)); // Ownership boost
-              bonusProbability *= Math.min(adjustedForm / 8, 1.2); // Form boost (capped)
-              
-              // Expected bonus points (average 1.5 points when bonus is awarded, 1-3pt range)
-              // Scale by average minutes
-              bonusPoints = bonusProbability * 1.5 * (averageMinutesPerGame / 90);
+            // Bonus probability based on overall performance and position
+            const overallPerformance = goalsExpected + assistsExpected + (cleanSheetProb * 0.5);
+            
+            let bonusProbability;
+            if (overallPerformance >= 1.0) {
+              bonusProbability = 0.25; // High performers get 25% chance
+            } else if (overallPerformance >= 0.5) {
+              bonusProbability = 0.15; // Medium performers get 15% chance  
+            } else if (overallPerformance >= 0.2) {
+              bonusProbability = 0.08; // Low performers get 8% chance
+            } else {
+              bonusProbability = 0.02; // Very poor performance 2% chance
             }
+            
+            // Adjust for form and ownership (popular players more likely to get bonus)
+            bonusProbability *= (1 + (selectedBy / 200)); // Ownership boost
+            bonusProbability *= Math.min(adjustedForm / 8, 1.2); // Form boost (capped)
+            
+            // Expected bonus points (average 1.5 points when bonus is awarded, 1-3pt range)
+            bonusPoints = bonusProbability * 1.5;
             totalCleanSheetPoints += gwCleanSheetPoints;
             
             // 10. DEFENSIVE CONTRIBUTIONS (2025/26 season) - Threshold-based scoring
