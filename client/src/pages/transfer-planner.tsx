@@ -658,12 +658,19 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
               {filteredPlayers.map((player) => {
                 // Merge bootstrap player data for availability fields
                 const bootstrapPlayer = bootstrapData?.elements.find(p => p.id === player.playerId);
-                const mergedPlayer = bootstrapPlayer ? {
+                // Create a simple object with just the availability fields we need for the badge
+                const playerWithAvailability = bootstrapPlayer ? {
                   ...player,
-                  chance_of_playing_next_round: bootstrapPlayer.chance_of_playing_next_round,
-                  status: bootstrapPlayer.status,
-                  news: bootstrapPlayer.news
-                } : player;
+                  chance_of_playing_next_round: bootstrapPlayer.chance_of_playing_next_round ?? 100,
+                  status: bootstrapPlayer.status ?? 'a',
+                  news: bootstrapPlayer.news ?? ''
+                } : {
+                  ...player,
+                  chance_of_playing_next_round: 100,
+                  status: 'a',
+                  news: ''
+                };
+                const mergedPlayer = playerWithAvailability;
                 
                 return (
                   <tr
