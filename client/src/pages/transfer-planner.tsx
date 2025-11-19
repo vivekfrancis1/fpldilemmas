@@ -2572,12 +2572,13 @@ export default function TransferPlanner() {
     
     setManualLineup(newLineup);
     
-    // Save the swapped lineup as optimized lineup so it persists across useEffect rebuilds
+    // Save the swapped lineup to persist it, but DON'T mark as optimized (it's a manual change)
     if (selectedGameweek) {
       const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
-      isLineupOptimizedRef.current[optimizationKey] = true;
+      // Clear the optimization flag since this is a manual change
+      delete isLineupOptimizedRef.current[optimizationKey];
       
-      // Save the swapped lineup to optimizedLineups state (deep clone)
+      // Save the swapped lineup to optimizedLineups state for persistence (deep clone)
       setOptimizedLineups(prev => ({
         ...prev,
         [selectedGameweek]: JSON.parse(JSON.stringify(newLineup))
@@ -2641,12 +2642,13 @@ export default function TransferPlanner() {
     
     setManualLineup(newLineup);
     
-    // Save the updated lineup as optimized lineup so it persists across useEffect rebuilds
+    // Save the updated lineup to persist it, but DON'T mark as optimized (it's a manual change)
     if (selectedGameweek) {
       const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
-      isLineupOptimizedRef.current[optimizationKey] = true;
+      // Clear the optimization flag since this is a manual change
+      delete isLineupOptimizedRef.current[optimizationKey];
       
-      // Save the updated lineup to optimizedLineups state (deep clone)
+      // Save the updated lineup to optimizedLineups state for persistence (deep clone)
       setOptimizedLineups(prev => ({
         ...prev,
         [selectedGameweek]: JSON.parse(JSON.stringify(newLineup))
@@ -3217,12 +3219,13 @@ export default function TransferPlanner() {
       
       setManualLineup(newLineup);
       
-      // Save the updated lineup as optimized lineup so it persists across useEffect rebuilds
+      // Save the updated lineup to persist it, but DON'T mark as optimized (it's a manual change)
       if (selectedGameweek) {
         const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
-        isLineupOptimizedRef.current[optimizationKey] = true;
+        // Clear the optimization flag since this is a manual change
+        delete isLineupOptimizedRef.current[optimizationKey];
         
-        // Save the updated lineup to optimizedLineups state (deep clone)
+        // Save the updated lineup to optimizedLineups state for persistence (deep clone)
         setOptimizedLineups(prev => ({
           ...prev,
           [selectedGameweek]: JSON.parse(JSON.stringify(newLineup))
@@ -3331,12 +3334,13 @@ export default function TransferPlanner() {
       
       setManualLineup(newLineup);
       
-      // Save the updated lineup as optimized lineup so it persists across useEffect rebuilds
+      // Save the updated lineup to persist it, but DON'T mark as optimized (it's a manual change)
       if (selectedGameweek) {
         const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
-        isLineupOptimizedRef.current[optimizationKey] = true;
+        // Clear the optimization flag since this is a manual change
+        delete isLineupOptimizedRef.current[optimizationKey];
         
-        // Save the updated lineup to optimizedLineups state (deep clone)
+        // Save the updated lineup to optimizedLineups state for persistence (deep clone)
         setOptimizedLineups(prev => ({
           ...prev,
           [selectedGameweek]: JSON.parse(JSON.stringify(newLineup))
