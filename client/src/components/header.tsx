@@ -1,4 +1,4 @@
-import { Menu, LogOut, User } from "lucide-react";
+import { Menu, LogOut, User, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
@@ -69,6 +69,18 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
         
         <div className="flex items-center space-x-2">
           <RefreshButton />
+          {!isLoading && !isAuthenticated && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.href = "/api/auth/google"}
+              className="text-fpl-purple border-fpl-purple hover:bg-fpl-purple/10 min-h-[44px] min-w-[44px] touch-manipulation"
+              data-testid="button-login-google"
+            >
+              <LogIn className="h-4 w-4" />
+              {!isMobile && <span className="ml-2">Login with Google</span>}
+            </Button>
+          )}
           {!isLoading && isAuthenticated && (
             <div className="flex items-center space-x-2">
               {!isMobile && (
