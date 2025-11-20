@@ -15734,6 +15734,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ Admin API routes registered successfully");
 
+  // Twitter preview endpoint - shows what would be posted without posting
+  app.get("/api/admin/twitter/preview", async (req, res) => {
+    try {
+      console.log('👀 Twitter preview requested...');
+      
+      // Import storage and service
+      const { storage } = await import('./storage');
+      const { twitterService } = await import('./services/twitterService');
+      
+      // Get recent changes
+      const allChanges = await storage.getPriceChanges(100);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const todayChanges = allChanges.filter((change: any) => {
+        const changeDate = new Date(change.changeDate);
+        changeDate.setHours(0, 0, 0, 0);
+        return changeDate.getTime() === today.getTime();
+      });
+      
+      const risers = todayChanges
+        .filter((change: any) => change.priceChange > 0)
+        .map((change: any) => ({
+          player_name: change.playerName,
+          new_price: change.newPrice / 10,
+          old_price: change.oldPrice / 10,
+          ownership: typeof change.ownership === 'string' ? parseFloat(change.ownership) : change.ownership
+        }))
+        .sort((a: any, b: any) => b.ownership - a.ownership);
+      
+      const fallers = todayChanges
+        .filter((change: any) => change.priceChange < 0)
+        .map((change: any) => ({
+          player_name: change.playerName,
+          new_price: change.newPrice / 10,
+          old_price: change.oldPrice / 10,
+          ownership: typeof change.ownership === 'string' ? parseFloat(change.ownership) : change.ownership
+        }))
+        .sort((a: any, b: any) => b.ownership - a.ownership);
+      
+      const date = new Date().toLocaleDateString('en-GB', { 
+        day: 'numeric', 
+        month: 'short', 
+        year: 'numeric' 
+      });
+      
+      // Format preview tweets using private method logic
+      const formatPreview = (changes: any[], type: 'RISERS' | 'FALLERS', emoji: string) => {
+        const header = `💰 FPL Price Changes - ${date}\n${emoji} ${type} (${changes.length})`;
+        const playerLines = changes.map((change: any) => {
+          const ownership = `${change.ownership.toFixed(1)}%`;
+          const priceChange = `${change.old_price.toFixed(1)} → ${change.new_price.toFixed(1)}`;
+          return `${change.player_name} ${priceChange} (${ownership})`;
+        });
+        const footer = `\nFull list: https://fpldilemmas.com/recent-price-changes\n#FPL #FantasyPremierLeague`;
+        
+        let tweet = header;
+        for (const line of playerLines) {
+          const testTweet = `${tweet}\n${line}${footer}`;
+          if (testTweet.length > 280) break;
+          tweet += `\n${line}`;
+        }
+        tweet += footer;
+        return tweet;
+      };
+      
+      const risersTweet = risers.length > 0 ? formatPreview(risers, 'RISERS', '📈') : null;
+      const fallersTweet = fallers.length > 0 ? formatPreview(fallers, 'FALLERS', '📉') : null;
+      
+      res.json({ 
+        success: true,
+        date,
+        total_changes: todayChanges.length,
+        risers: {
+          count: risers.length,
+          tweet: risersTweet,
+          length: risersTweet?.length || 0
+        },
+        fallers: {
+          count: fallers.length,
+          tweet: fallersTweet,
+          length: fallersTweet?.length || 0
+        },
+        raw_data: {
+          risers: risers.slice(0, 5), // Show first 5
+          fallers: fallers.slice(0, 5)
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Twitter preview failed:', error);
+      res.status(500).json({ 
+        error: 'Failed to generate preview',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Twitter test endpoint for manual posting
+  app.post("/api/admin/twitter/test", async (req, res) => {
+    try {
+      console.log('🐦 Manual Twitter test triggered...');
+      
+      // Import the Twitter scheduler
+      const { twitterScheduler } = await import('./twitter-scheduler');
+      
+      // Trigger manual post
+      await twitterScheduler.triggerManualPost();
+      
+      console.log('✅ Twitter test post completed successfully');
+      res.json({ 
+        success: true, 
+        message: 'Twitter test post completed',
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Twitter test post failed:', error);
+      res.status(500).json({ 
+        error: 'Failed to post tweet',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Twitter connection test endpoint
+  app.get("/api/admin/twitter/status", async (req, res) => {
+    try {
+      console.log('🔍 Testing Twitter API connection...');
+      
+      // Import the Twitter service
+      const { twitterService } = await import('./services/twitterService');
+      
+      // Test connection
+      const isConnected = await twitterService.testConnection();
+      
+      res.json({ 
+        success: isConnected, 
+        message: isConnected ? 'Twitter API connected successfully' : 'Twitter API connection failed',
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error('❌ Twitter connection test failed:', error);
+      res.status(500).json({ 
+        error: 'Failed to test connection',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  console.log("✓ Twitter API routes registered successfully");
+
   const httpServer = createServer(app);
   return httpServer;
 }

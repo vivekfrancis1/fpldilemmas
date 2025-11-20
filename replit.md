@@ -56,6 +56,7 @@ Loading Experience: Enhanced loading screens implemented across all major slow-l
 - **Transfer Tracker**: Authentic transfer data analysis using real FPL API data.
 - **Open FPL Projections**: Advanced machine learning projection tool with position-specific ensemble models, multi-horizon forecasting, and hourly updates.
 - **Price Tracker**: FPL API-based system tracking actual price changes.
+- **Twitter Integration**: Automated daily price change posting at 7 AM IST using Twitter API v2 with OAuth 1.0a authentication. Posts 2 separate tweets (risers and fallers) sorted by ownership percentage with full ownership data. Includes manual preview endpoint (`/api/admin/twitter/preview`) and test posting endpoint (`/api/admin/twitter/test`). Lazy initialization of Twitter client allows server to run without credentials in development.
 - **Results Projections**: Match prediction tool displaying predicted scores, win probabilities, expected goals, and clean sheet odds for future gameweeks.
 - **Results and Fixtures**: Comprehensive match schedule with LIVE match indicators, clickable player stats, and automatic 30-second background refresh during live matches. Player Stats modal displays categorized performance data.
 - **Historical Data**: Year selection functionality for player statistics from 2016/17 season onwards.

@@ -5,6 +5,7 @@ import { gameweekCacheScheduler } from "./gameweek-cache-scheduler";
 import { priceSplitWorker } from "./price-split-worker";
 import { projectionCacheScheduler } from "./projection-cache-scheduler";
 import { fplScoringCacheScheduler } from "./fpl-scoring-cache-scheduler";
+import { twitterScheduler } from "./twitter-scheduler";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedContentCreators } from "./seed-database";
 import { seedAdminUser } from "./seed-admin-user";
@@ -107,17 +108,9 @@ app.use((req, res, next) => {
       // Start schedulers after server is running
       console.log("🚀 Starting schedulers...");
       
-      // Start price scheduler if it has a start method
-      if (typeof priceScheduler.start === 'function') {
-        priceScheduler.start();
-        console.log("✓ Price scheduler started");
-      }
-      
-      // Start price split worker if it has a start method
-      if (typeof priceSplitWorker.start === 'function') {
-        priceSplitWorker.start();
-        console.log("✓ Price split worker started");
-      }
+      // Price scheduler and price split worker auto-start in constructor
+      console.log("✓ Price scheduler started");
+      console.log("✓ Price split worker started");
       
       // Start gameweek cache scheduler
       gameweekCacheScheduler.start();
@@ -130,6 +123,10 @@ app.use((req, res, next) => {
       // Start FPL scoring cache scheduler (runs twice daily)
       fplScoringCacheScheduler.start();
       console.log("✓ FPL scoring cache scheduler started");
+      
+      // Start Twitter scheduler (posts price changes at 7 AM IST daily)
+      twitterScheduler.start();
+      console.log("✓ Twitter scheduler started");
       
       // Start daily projections scheduler (runs at 3 AM daily for ultra-fast performance)
       import('./daily-projections-scheduler').then(({ dailyProjectionsScheduler }) => {
