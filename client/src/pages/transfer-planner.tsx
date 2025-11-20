@@ -2572,17 +2572,17 @@ export default function TransferPlanner() {
     
     setManualLineup(newLineup);
     
-    // Clear the optimization status for this gameweek since the lineup has changed
+    // Save the swapped lineup to persist it, but DON'T mark as optimized (it's a manual change)
     if (selectedGameweek) {
       const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+      // Clear the optimization flag since this is a manual change
       delete isLineupOptimizedRef.current[optimizationKey];
       
-      // Remove optimized lineup from state to show the Optimize button again
-      setOptimizedLineups(prev => {
-        const updated = { ...prev };
-        delete updated[selectedGameweek];
-        return updated;
-      });
+      // Save the swapped lineup to optimizedLineups state for persistence (deep clone)
+      setOptimizedLineups(prev => ({
+        ...prev,
+        [selectedGameweek]: JSON.parse(JSON.stringify(newLineup))
+      }));
     }
     
     // Show detailed swap confirmation (bench priority excludes GK, so subtract 1)
@@ -2600,7 +2600,7 @@ export default function TransferPlanner() {
     }
     
     toast({
-      title: "Players Swapped",
+      title: "Players Switched",
       description: `${newStartingPlayer} has been moved to Starting 11, instead of ${newBenchPlayer} who is now in bench position ${benchPriority}.${extraInfo}`
     });
     
@@ -2642,17 +2642,17 @@ export default function TransferPlanner() {
     
     setManualLineup(newLineup);
     
-    // Clear the optimization status for this gameweek since the lineup has changed
+    // Save the updated lineup to persist it, but DON'T mark as optimized (it's a manual change)
     if (selectedGameweek) {
       const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+      // Clear the optimization flag since this is a manual change
       delete isLineupOptimizedRef.current[optimizationKey];
       
-      // Remove optimized lineup from state to show the Optimize button again
-      setOptimizedLineups(prev => {
-        const updated = { ...prev };
-        delete updated[selectedGameweek];
-        return updated;
-      });
+      // Save the updated lineup to optimizedLineups state for persistence (deep clone)
+      setOptimizedLineups(prev => ({
+        ...prev,
+        [selectedGameweek]: JSON.parse(JSON.stringify(newLineup))
+      }));
     }
     
     // Show confirmation toast with both players (bench priority excludes GK, so subtract 1)
@@ -3201,35 +3201,35 @@ export default function TransferPlanner() {
       }
     } else {
       // Already in a draft, apply the change directly
-      setManualLineup(prev => {
-        const currentCaptain = prev.find(p => p.is_captain);
-        const currentViceCaptain = prev.find(p => p.is_vice_captain);
-        const newCaptainIsCurrentViceCaptain = currentViceCaptain?.element === playerId;
-        
-        return prev.map(pick => {
-          if (pick.element === playerId) {
-            return { ...pick, is_captain: true, is_vice_captain: false };
-          } else if (newCaptainIsCurrentViceCaptain && pick.element === currentCaptain?.element) {
-            return { ...pick, is_captain: false, is_vice_captain: true };
-          } else if (pick.is_captain) {
-            return { ...pick, is_captain: false };
-          } else {
-            return pick;
-          }
-        });
+      const currentCaptain = manualLineup.find(p => p.is_captain);
+      const currentViceCaptain = manualLineup.find(p => p.is_vice_captain);
+      const newCaptainIsCurrentViceCaptain = currentViceCaptain?.element === playerId;
+      
+      const newLineup = manualLineup.map(pick => {
+        if (pick.element === playerId) {
+          return { ...pick, is_captain: true, is_vice_captain: false };
+        } else if (newCaptainIsCurrentViceCaptain && pick.element === currentCaptain?.element) {
+          return { ...pick, is_captain: false, is_vice_captain: true };
+        } else if (pick.is_captain) {
+          return { ...pick, is_captain: false };
+        } else {
+          return pick;
+        }
       });
       
-      // Clear the optimization status for this gameweek since the lineup has changed
+      setManualLineup(newLineup);
+      
+      // Save the updated lineup to persist it, but DON'T mark as optimized (it's a manual change)
       if (selectedGameweek) {
         const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+        // Clear the optimization flag since this is a manual change
         delete isLineupOptimizedRef.current[optimizationKey];
         
-        // Remove optimized lineup from state to show the Optimize button again
-        setOptimizedLineups(prev => {
-          const updated = { ...prev };
-          delete updated[selectedGameweek];
-          return updated;
-        });
+        // Save the updated lineup to optimizedLineups state for persistence (deep clone)
+        setOptimizedLineups(prev => ({
+          ...prev,
+          [selectedGameweek]: JSON.parse(JSON.stringify(newLineup))
+        }));
       }
       
       setCaptainConfirmation(null);
@@ -3316,35 +3316,35 @@ export default function TransferPlanner() {
       }
     } else {
       // Already in a draft, apply the change directly
-      setManualLineup(prev => {
-        const currentCaptain = prev.find(p => p.is_captain);
-        const currentViceCaptain = prev.find(p => p.is_vice_captain);
-        const newViceCaptainIsCurrentCaptain = currentCaptain?.element === playerId;
-        
-        return prev.map(pick => {
-          if (pick.element === playerId) {
-            return { ...pick, is_vice_captain: true, is_captain: false };
-          } else if (newViceCaptainIsCurrentCaptain && pick.element === currentViceCaptain?.element) {
-            return { ...pick, is_vice_captain: false, is_captain: true };
-          } else if (pick.is_vice_captain) {
-            return { ...pick, is_vice_captain: false };
-          } else {
-            return pick;
-          }
-        });
+      const currentCaptain = manualLineup.find(p => p.is_captain);
+      const currentViceCaptain = manualLineup.find(p => p.is_vice_captain);
+      const newViceCaptainIsCurrentCaptain = currentCaptain?.element === playerId;
+      
+      const newLineup = manualLineup.map(pick => {
+        if (pick.element === playerId) {
+          return { ...pick, is_vice_captain: true, is_captain: false };
+        } else if (newViceCaptainIsCurrentCaptain && pick.element === currentViceCaptain?.element) {
+          return { ...pick, is_vice_captain: false, is_captain: true };
+        } else if (pick.is_vice_captain) {
+          return { ...pick, is_vice_captain: false };
+        } else {
+          return pick;
+        }
       });
       
-      // Clear the optimization status for this gameweek since the lineup has changed
+      setManualLineup(newLineup);
+      
+      // Save the updated lineup to persist it, but DON'T mark as optimized (it's a manual change)
       if (selectedGameweek) {
         const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+        // Clear the optimization flag since this is a manual change
         delete isLineupOptimizedRef.current[optimizationKey];
         
-        // Remove optimized lineup from state to show the Optimize button again
-        setOptimizedLineups(prev => {
-          const updated = { ...prev };
-          delete updated[selectedGameweek];
-          return updated;
-        });
+        // Save the updated lineup to optimizedLineups state for persistence (deep clone)
+        setOptimizedLineups(prev => ({
+          ...prev,
+          [selectedGameweek]: JSON.parse(JSON.stringify(newLineup))
+        }));
       }
       
       setViceCaptainConfirmation(null);
@@ -4103,11 +4103,16 @@ export default function TransferPlanner() {
     setGameweekTransfers(updatedGameweekTransfers);
     
     // Clear optimized lineup for this gameweek since we've made manual transfers
-    setOptimizedLineups(prev => {
-      const updated = { ...prev };
-      delete updated[selectedGameweek];
-      return updated;
-    });
+    if (selectedGameweek) {
+      const optimizationKey = getOptimizationKey(activeDraft, selectedGameweek);
+      delete isLineupOptimizedRef.current[optimizationKey];
+      
+      setOptimizedLineups(prev => {
+        const updated = { ...prev };
+        delete updated[selectedGameweek];
+        return updated;
+      });
+    }
 
     const transferSummary = newCompletedTransfers.map(t => `${t.outPlayerName} → ${t.inPlayerName}`).join(', ');
     const totalPoints = unappliedRecs.reduce((sum, rec) => sum + (rec.pointsGain || 0), 0);
@@ -4858,11 +4863,11 @@ export default function TransferPlanner() {
             </button>
           </div>
           
-          {/* Swap Option */}
+          {/* Switch Player Option */}
           {!isBench ? (
             <Select onValueChange={(value) => { swapPlayers(actualIndex, parseInt(value)); setSelectedPlayer(null); }}>
               <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`${isBench ? 'bench' : 'list'}-swap-${pick.element}`}>
-                <span className="w-full text-center text-base sm:text-lg font-semibold">Swap</span>
+                <span className="w-full text-center text-base sm:text-lg font-semibold">Switch Player</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
                 {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
@@ -4882,7 +4887,7 @@ export default function TransferPlanner() {
           ) : (
             <Select onValueChange={(value) => { swapPlayers(parseInt(value), actualIndex); setSelectedPlayer(null); }}>
               <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`bench-swap-${pick.element}`}>
-                <span className="w-full text-center text-base sm:text-lg font-semibold">Swap</span>
+                <span className="w-full text-center text-base sm:text-lg font-semibold">Switch Player</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
                 {manualLineup.slice(0, 11).map((startingPick) => {
@@ -4940,21 +4945,21 @@ export default function TransferPlanner() {
   };
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-2 md:p-3 lg:p-4 space-y-2 md:space-y-3">
+    <div className="container mx-auto px-3 sm:px-4 py-2 md:p-4 lg:p-6 space-y-3 md:space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
         <div className="p-2 md:p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
           <Target className="h-5 w-5 md:h-8 md:w-8 text-white" />
         </div>
         <div>
-          <h1 className="text-lg md:text-xl lg:text-2xl font-bold">Transfer Planner</h1>
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Transfer Planner</h1>
           <p className="text-xs md:text-sm text-muted-foreground">Plan transfers & optimize your team</p>
         </div>
       </div>
 
       {/* Manager Search Section */}
       <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-        <CardContent className="p-3 sm:p-4">
+        <CardContent className="p-4 sm:p-6">
           <div className="max-w-2xl mx-auto">
             <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
               Manager ID
@@ -5155,7 +5160,7 @@ export default function TransferPlanner() {
           <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background">
             <CardHeader className="px-3 sm:px-6 pb-2 md:pb-4">
               <div className="flex items-start justify-between gap-2">
-                <CardTitle className="flex items-center gap-2 text-sm md:text-base" data-testid="text-chips-planning-title">
+                <CardTitle className="flex items-center gap-2 text-base md:text-lg" data-testid="text-chips-planning-title">
                   <Sparkles className="h-4 w-4 md:h-5 md:w-5 text-amber-600" />
                   <span>Chips Planning</span>
                   <TooltipProvider>
@@ -5333,7 +5338,7 @@ export default function TransferPlanner() {
       {searchedId && teamData && selectedGameweek && (
         <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
           <CardHeader className="px-3 sm:px-6">
-            <CardTitle className="flex items-center justify-between flex-wrap gap-2 sm:gap-3 text-sm sm:text-base">
+            <CardTitle className="flex items-center justify-between flex-wrap gap-2 sm:gap-3 text-base sm:text-lg">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-green-600" />
                 {activeDraft === "Base" ? "Team Summary - Base Draft" : `Team Summary - Draft ${activeDraft}`}
@@ -5375,7 +5380,7 @@ export default function TransferPlanner() {
               {/* Formation */}
               <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-xs sm:text-sm text-muted-foreground mb-1">Formation</div>
-                <div className="text-lg sm:text-xl font-bold text-indigo-600">
+                <div className="text-xl sm:text-2xl font-bold text-indigo-600">
                   {(() => {
                     const starting11 = manualLineup.slice(0, 11);
                     const defs = starting11.filter(p => getPlayerById(p.element)?.element_type === 2).length;
@@ -5403,7 +5408,7 @@ export default function TransferPlanner() {
                     </TooltipProvider>
                   )}
                 </div>
-                <div className="text-lg sm:text-xl font-bold text-green-600">
+                <div className="text-xl sm:text-2xl font-bold text-green-600">
                   {(() => {
                     const isBenchBoostActive = plannedChips[selectedGameweek] === 'bboost';
                     const isTripleCaptainActive = plannedChips[selectedGameweek] === '3xc';
@@ -5452,7 +5457,7 @@ export default function TransferPlanner() {
                     </TooltipProvider>
                   )}
                 </div>
-                <div className="text-lg sm:text-xl font-bold text-blue-600" key={JSON.stringify(plannedChips) + JSON.stringify(optimizedLineups)}>
+                <div className="text-xl sm:text-2xl font-bold text-blue-600" key={JSON.stringify(plannedChips) + JSON.stringify(optimizedLineups)}>
                   {(() => {
                     if (!playerProjections6GW || !Array.isArray(playerProjections6GW) || !teamData?.picks) return '0.0';
                     
@@ -5501,7 +5506,7 @@ export default function TransferPlanner() {
               {/* Cash in Bank */}
               <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-xs sm:text-sm text-muted-foreground mb-1">Cash in Bank</div>
-                <div className={`text-lg sm:text-xl font-bold ${calculateInitialBank() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
+                <div className={`text-xl sm:text-2xl font-bold ${calculateInitialBank() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
                   £{calculateInitialBank().toFixed(1)}m
                 </div>
               </div>
@@ -5509,7 +5514,7 @@ export default function TransferPlanner() {
               {/* Cash in Bank After Transfers */}
               <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
                 <div className="text-xs sm:text-sm text-muted-foreground mb-1">Cash After Transfers</div>
-                <div className={`text-lg sm:text-xl font-bold ${calculateBankAfterTransfers() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
+                <div className={`text-xl sm:text-2xl font-bold ${calculateBankAfterTransfers() < 0 ? 'text-red-600' : 'text-yellow-600'}`}>
                   £{calculateBankAfterTransfers().toFixed(1)}m
                 </div>
                 {calculateBankAfterTransfers() < 0 && (
@@ -5527,7 +5532,7 @@ export default function TransferPlanner() {
                     <Sparkles className="h-3 w-3 text-amber-600" />
                   )}
                 </div>
-                <div className={`text-lg sm:text-xl font-bold ${(() => {
+                <div className={`text-xl sm:text-2xl font-bold ${(() => {
                   const remaining = calculateTransfersRemaining();
                   return typeof remaining === 'number' && remaining < 0 ? 'text-red-600' : 'text-purple-600';
                 })()}`}>
@@ -5551,7 +5556,7 @@ export default function TransferPlanner() {
       {searchedId && teamData && selectedGameweek && (
         <Card ref={teamLineupRef} className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
           <CardHeader className="px-3 sm:px-6">
-            <CardTitle className="flex items-center justify-between flex-wrap gap-2 text-sm sm:text-base">
+            <CardTitle className="flex items-center justify-between flex-wrap gap-2 text-base sm:text-lg">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-600" />
                 {activeDraft === "Base" 
@@ -5663,7 +5668,7 @@ export default function TransferPlanner() {
                 })()}
 
                 {/* Optimization Controls */}
-                {selectedGameweek && optimizedLineups[selectedGameweek] ? (
+                {selectedGameweek && isLineupOptimizedRef.current[getOptimizationKey(activeDraft, selectedGameweek)] ? (
                   <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-md">
                     <Sparkles className="h-4 w-4 text-green-600" />
                     <span className="text-sm font-medium text-green-700 dark:text-green-300">
@@ -6314,7 +6319,7 @@ export default function TransferPlanner() {
               <div className="pt-4 border-t">
                 <div className="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                   <span className="font-semibold">Total Projected Points (GW{selectedGameweek})</span>
-                  <span className="text-lg sm:text-xl font-bold text-blue-600">
+                  <span className="text-2xl font-bold text-blue-600">
                     {manualLineup
                       .slice(0, 11)
                       .reduce((total, pick) => {
@@ -6333,7 +6338,7 @@ export default function TransferPlanner() {
             {teamView === "pitch" && (
               <div className="space-y-4" key={manualLineup.map(p => `${p.position}-${p.element}`).join('_')}>
                 {/* Pitch */}
-                <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-2 sm:p-4 md:p-5 lg:p-6 overflow-hidden">
+                <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-2 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
                   {/* Pitch Lines and Graphics */}
                   <div className="absolute inset-0 opacity-30 pointer-events-none">
                     <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
@@ -6362,7 +6367,7 @@ export default function TransferPlanner() {
                     <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
                   </div>
 
-                  <div className="relative space-y-1 sm:space-y-3 md:space-y-4 lg:space-y-5">
+                  <div className="relative space-y-2 sm:space-y-6 md:space-y-8 lg:space-y-10">
                     {/* Formation sections */}
                     {[1, 2, 3, 4].map((posType) => {
                       const positionPlayers = manualLineup.slice(0, 11).filter(pick => {
@@ -6394,7 +6399,7 @@ export default function TransferPlanner() {
                                     <div className="rounded-lg p-4 sm:p-4 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-3">
                                       <div className="text-sm sm:text-base font-bold text-red-600">EMPTY SLOT</div>
                                       <div className="text-xs sm:text-sm text-red-500">{getPositionShortName(player.element_type)}</div>
-                                      <div className="text-xl font-bold text-red-600">-</div>
+                                      <div className="text-3xl font-bold text-red-600">-</div>
                                       
                                       {/* Action Buttons for Transferred Out */}
                                       <div className="flex flex-col gap-2">
@@ -6449,7 +6454,7 @@ export default function TransferPlanner() {
                             }
                             
                             return (
-                              <div key={pick.element} className={`flex flex-col items-center w-[18vw] sm:w-24 md:w-28 lg:w-32 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-player-${player.id}`}>
+                              <div key={pick.element} className={`flex flex-col items-center w-[18vw] sm:w-32 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
                                   {/* Action Buttons Popup */}
                                   {selectedPlayer === pick.element && (
@@ -6496,7 +6501,7 @@ export default function TransferPlanner() {
                                         
                                         <Select onValueChange={(value) => { swapPlayers(actualIndex, parseInt(value)); setSelectedPlayer(null); }}>
                                           <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`pitch-swap-${pick.element}`}>
-                                            <span className="w-full text-center text-base font-semibold">Swap</span>
+                                            <span className="w-full text-center text-base font-semibold">Switch Player</span>
                                           </SelectTrigger>
                                           <SelectContent className="z-[200]">
                                             {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
@@ -6634,7 +6639,7 @@ export default function TransferPlanner() {
                               <div className="rounded-lg p-4 sm:p-3 text-center shadow-md border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-2">
                                 <div className="text-xs sm:text-sm font-bold text-red-600">EMPTY SLOT</div>
                                 <div className="text-[11px] sm:text-xs text-red-500">{getPositionShortName(player.element_type)}</div>
-                                <div className="text-xl font-bold text-red-600">-</div>
+                                <div className="text-2xl font-bold text-red-600">-</div>
                                 
                                 {/* Action Buttons for Transferred Out */}
                                 <div className="flex flex-col gap-2 mt-1">
@@ -6736,7 +6741,7 @@ export default function TransferPlanner() {
                                   
                                   <Select onValueChange={(value) => { swapPlayers(parseInt(value), benchIndex); setSelectedPlayer(null); }}>
                                     <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`pitch-bench-swap-${pick.element}`}>
-                                      <span className="w-full text-center text-base font-semibold">Swap</span>
+                                      <span className="w-full text-center text-base font-semibold">Switch Player</span>
                                     </SelectTrigger>
                                     <SelectContent className="z-[200]">
                                       {manualLineup.slice(0, 11).map((startPick, startIndex) => {
@@ -6835,7 +6840,7 @@ export default function TransferPlanner() {
                 <div className="border-t pt-4">
                   <div className="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                     <span className="font-semibold">Total Projected Points (GW{selectedGameweek})</span>
-                    <span className="text-lg sm:text-xl font-bold text-blue-600">
+                    <span className="text-2xl font-bold text-blue-600">
                       {manualLineup
                         .slice(0, 11)
                         .reduce((total, pick) => {
