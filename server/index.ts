@@ -91,49 +91,57 @@ app.use((req, res, next) => {
       port,
       host: "0.0.0.0",
       reusePort: true,
-    }, async () => {
+    }, () => {
       log(`serving on port ${port}`);
       
-      // Initialize production cache with dependency management (only runs if cache is empty)
-      console.log("🔧 Initializing dependency orchestrator...");
-      const orchestrator = initializeGlobalOrchestrator();
-      
-      // Register cache jobs with global orchestrator
-      await productionCacheInitializer.initializeProductionCache(orchestrator);
-      
-      // Execute all dependency jobs before starting schedulers
-      await orchestrator.executeAll();
-      console.log("✅ Global dependency orchestrator execution completed");
-      
-      // Start schedulers after server is running
-      console.log("🚀 Starting schedulers...");
-      
-      // Price scheduler and price split worker auto-start in constructor
-      console.log("✓ Price scheduler started");
-      console.log("✓ Price split worker started");
-      
-      // Start gameweek cache scheduler
-      gameweekCacheScheduler.start();
-      console.log("✓ Gameweek cache scheduler started");
-      
-      // Start projection cache scheduler (runs at 7 AM and 7 PM daily)
-      projectionCacheScheduler.start();
-      console.log("✓ Projection cache scheduler started");
-      
-      // Start FPL scoring cache scheduler (runs twice daily)
-      fplScoringCacheScheduler.start();
-      console.log("✓ FPL scoring cache scheduler started");
-      
-      // Start Twitter scheduler (posts price changes at 7 AM IST daily)
-      twitterScheduler.start();
-      console.log("✓ Twitter scheduler started");
-      
-      // Start daily projections scheduler (runs at 3 AM daily for ultra-fast performance)
-      import('./daily-projections-scheduler').then(({ dailyProjectionsScheduler }) => {
-        dailyProjectionsScheduler.start();
-        console.log("✓ Daily projections scheduler started");
-      }).catch((error) => {
-        console.error("Failed to start daily projections scheduler:", error);
+      // Run cache initialization and schedulers in background (non-blocking)
+      // This ensures the server can start serving requests immediately
+      setImmediate(async () => {
+        try {
+          // Initialize production cache with dependency management (only runs if cache is empty)
+          console.log("🔧 Initializing dependency orchestrator...");
+          const orchestrator = initializeGlobalOrchestrator();
+          
+          // Register cache jobs with global orchestrator
+          await productionCacheInitializer.initializeProductionCache(orchestrator);
+          
+          // Execute all dependency jobs before starting schedulers
+          await orchestrator.executeAll();
+          console.log("✅ Global dependency orchestrator execution completed");
+          
+          // Start schedulers after server is running
+          console.log("🚀 Starting schedulers...");
+          
+          // Price scheduler and price split worker auto-start in constructor
+          console.log("✓ Price scheduler started");
+          console.log("✓ Price split worker started");
+          
+          // Start gameweek cache scheduler
+          gameweekCacheScheduler.start();
+          console.log("✓ Gameweek cache scheduler started");
+          
+          // Start projection cache scheduler (runs at 7 AM and 7 PM daily)
+          projectionCacheScheduler.start();
+          console.log("✓ Projection cache scheduler started");
+          
+          // Start FPL scoring cache scheduler (runs twice daily)
+          fplScoringCacheScheduler.start();
+          console.log("✓ FPL scoring cache scheduler started");
+          
+          // Start Twitter scheduler (posts price changes at 7 AM IST daily)
+          twitterScheduler.start();
+          console.log("✓ Twitter scheduler started");
+          
+          // Start daily projections scheduler (runs at 3 AM daily for ultra-fast performance)
+          import('./daily-projections-scheduler').then(({ dailyProjectionsScheduler }) => {
+            dailyProjectionsScheduler.start();
+            console.log("✓ Daily projections scheduler started");
+          }).catch((error) => {
+            console.error("Failed to start daily projections scheduler:", error);
+          });
+        } catch (error) {
+          console.error("⚠️ Background initialization failed (server still running):", error);
+        }
       });
     });
 
