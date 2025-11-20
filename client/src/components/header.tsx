@@ -18,6 +18,15 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
+  // Debug logging
+  console.log('🔐 Header Auth State:', { 
+    user, 
+    isAuthenticated, 
+    isLoading, 
+    shouldShowLogin: !isLoading && !isAuthenticated,
+    shouldShowLogout: !isLoading && isAuthenticated 
+  });
+
   const handleLogout = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout");
