@@ -3364,6 +3364,13 @@ export default function TransferPlanner() {
     const player = getPlayerById(pick.element);
     if (!player) return;
 
+    // IMPORTANT: Always use the current pick from manualLineup to get latest purchase_price from buy price edits
+    const currentPick = manualLineup.find(p => p.element === pick.element);
+    if (!currentPick) {
+      toast({ title: "Error", description: "Player not found in lineup", variant: "destructive" });
+      return;
+    }
+
     let isCreatingNewDraft = false;
     let newDraftLetter = "";
 
@@ -3405,12 +3412,12 @@ export default function TransferPlanner() {
       });
     }
 
-    const sellingPrice = getSellingPrice(pick);
+    const sellingPrice = getSellingPrice(currentPick);
 
     const transferOut: TransferOut = {
       playerId: player.id,
       playerName: player.web_name,
-      position: pick.position,
+      position: currentPick.position,
       elementType: player.element_type,
       sellingPrice: sellingPrice,
     };
@@ -3453,7 +3460,7 @@ export default function TransferPlanner() {
     
     // Mark player as transferred out instead of removing
     setManualLineup(prev => prev.map(p => 
-      p.element === pick.element 
+      p.element === currentPick.element 
         ? { ...p, is_transferred_out: true }
         : p
     ));
