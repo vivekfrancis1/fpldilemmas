@@ -58,7 +58,7 @@ export const getQueryFn: <T>(options: {
       queryClient.removeQueries({ queryKey: ["/api/fpl/status"] });
       
       if (unauthorizedBehavior === "returnNull") {
-        return null;
+        return null as any;
       }
     }
 
