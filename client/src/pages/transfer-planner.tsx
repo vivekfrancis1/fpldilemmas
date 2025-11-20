@@ -2027,13 +2027,13 @@ export default function TransferPlanner() {
     // Calculate money gained from selling players
     let moneyFromSales = 0;
     currentGwTransfers.forEach(transfer => {
-      moneyFromSales += transfer.outPlayerSellPrice || 0;
+      moneyFromSales += transfer.sellingPrice || 0;
     });
     
     // Calculate money spent on buying players
     let moneySpent = 0;
     currentGwTransfers.forEach(transfer => {
-      moneySpent += transfer.inPlayerBuyPrice || 0;
+      moneySpent += transfer.buyingPrice || 0;
     });
     
     // Cash after transfers = Initial bank + Money from sales - Money spent
