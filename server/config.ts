@@ -17,8 +17,9 @@ export const getApiBaseUrl = (): string => {
       return productionUrl;
     }
     
-    // Production domain for fpldilemmas.com
-    return 'https://fpldilemmas.com';
+    // Use localhost for internal API calls in production
+    // This ensures the server can reach its own routes during cache initialization
+    return 'http://localhost:5000';
   }
   
   // Development environment - use localhost

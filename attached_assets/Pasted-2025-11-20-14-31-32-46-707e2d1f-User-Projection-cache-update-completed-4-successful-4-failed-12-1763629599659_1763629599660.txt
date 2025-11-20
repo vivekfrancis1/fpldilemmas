@@ -1,0 +1,139 @@
+2025-11-20 14:31:32.46
+707e2d1f
+User
+✅ Projection cache update completed: 4 successful, 4 failed (124800ms)
+2025-11-20 14:31:32.46
+707e2d1f
+User
+at async Promise.allSettled (index 4)
+2025-11-20 14:31:32.46
+707e2d1f
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-11-20 14:31:32.46
+707e2d1f
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-11-20 14:31:32.46
+707e2d1f
+User
+at async ProjectionCacheScheduler.runCacheUpdate (file:///home/runner/workspace/dist/index.js:7738:13)
+2025-11-20 14:31:32.46
+707e2d1f
+User
+at async Promise.allSettled (index 1)
+2025-11-20 14:31:32.46
+707e2d1f
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-11-20 14:31:32.46
+707e2d1f
+User
+at async ProjectionCacheScheduler.runCacheUpdate (file:///home/runner/workspace/dist/index.js:7738:13)
+2025-11-20 14:31:32.46
+707e2d1f
+User
+at ProjectionCacheWorker.cacheAssistProjections (file:///home/runner/workspace/dist/index.js:6928:19)
+2025-11-20 14:31:32.46
+707e2d1f
+User
+at async Promise.allSettled (index 5)
+2025-11-20 14:31:32.46
+707e2d1f
+User
+at async ProjectionCacheWorker.cacheAllProjections (file:///home/runner/workspace/dist/index.js:6770:27)
+2025-11-20 14:31:32.46
+707e2d1f
+User
+at async ProjectionCacheWorker.cacheAllProjections (file:///home/runner/workspace/dist/index.js:6770:27)
+2025-11-20 14:31:32.46
+707e2d1f
+User
+at async ProjectionCacheScheduler.runCacheUpdate (file:///home/runner/workspace/dist/index.js:7738:13)
+2025-11-20 14:31:35.44
+707e2d1f
+User
+🔍 DEBUG: Checking Player Goals API status...
+2025-11-20 14:31:35.45
+707e2d1f
+User
+🚀 API-FIRST: Attempting live calculation for Player Goals = Goal Share × Team Goal Projections
+2025-11-20 14:31:35.45
+707e2d1f
+User
+🌐 Internal API call: https://fpldilemmas.com/api/goal-share-season
+2025-11-20 14:31:35.45
+707e2d1f
+User
+🌐 Internal API call: https://fpldilemmas.com/api/team-goal-projections
+2025-11-20 14:31:35.46
+707e2d1f
+User
+🌐 Internal API call: https://fpldilemmas.com/api/cached/player-goals-projections
+2025-11-20 14:31:35.46
+707e2d1f
+User
+⚠️ LIVE API FAILED: API response failed: goalShare=404, teamProjections=404, attempting cache fallback...
+2025-11-20 14:31:35.47
+707e2d1f
+User
+❌ COMPLETE FAILURE: Player goal projections unavailable: Error: Both live API and cache failed. Live: API response failed: goalShare=404, teamProjections=404, Cache: Cache also failed: 404
+2025-11-20 14:31:35.47
+707e2d1f
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-11-20 14:31:35.47
+707e2d1f
+User
+❌ CACHE FAILED: Cache also failed: 404
+2025-11-20 14:31:35.47
+707e2d1f
+User
+at file:///home/runner/workspace/dist/index.js:14141:17
+2025-11-20 14:31:35.47
+707e2d1f
+User
+9:01:35 AM [express] GET /api/player-goals-scored-projections 500 in 27ms :: {"error":"Failed to get…
+2025-11-20 14:31:35.47
+707e2d1f
+User
+🔍 DEBUG: Player Goals API failed with status 500
+2025-11-20 14:31:35.47
+707e2d1f
+User
+🔍 DEBUG: Checking Player Assists API status...
+2025-11-20 14:31:35.48
+707e2d1f
+User
+🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections
+2025-11-20 14:31:35.48
+707e2d1f
+User
+🌐 Internal API call: https://fpldilemmas.com/api/assist-share-season
+2025-11-20 14:31:35.48
+707e2d1f
+User
+🌐 Internal API call: https://fpldilemmas.com/api/team-assist-projections
+2025-11-20 14:31:35.48
+707e2d1f
+User
+🌐 Internal API call: https://fpldilemmas.com/api/cached/player-assists-projections
+2025-11-20 14:31:35.48
+707e2d1f
+User
+⚠️ LIVE API FAILED: API response failed: assistShare=404, teamProjections=404, attempting cache fallback...
+2025-11-20 14:31:35.55
+efb6ffc0
+System
+system: received signal terminated
+2025-11-20 14:31:35.56
+707e2d1f
+User
+9:01:35 AM [express] GET /api/player-assist-projections 500 in 14ms :: {"error":"Failed to get playe…
+2025-11-20 14:31:35.56
+707e2d1f
+User
+at file:///home/runner/workspace/dist/index.js:14441:17
+2025-11-20 14:31:35.96
+707e2d1f
+User
