@@ -17,10 +17,8 @@ export const getApiBaseUrl = (): string => {
       return productionUrl;
     }
     
-    // Production: Use localhost for internal server-to-server calls
-    // This prevents the server from trying to call itself via the external domain
-    const port = process.env.PORT || '5000';
-    return `http://localhost:${port}`;
+    // Production domain for fpldilemmas.com
+    return 'https://fpldilemmas.com';
   }
   
   // Development environment - use localhost
