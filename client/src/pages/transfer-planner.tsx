@@ -2021,34 +2021,28 @@ export default function TransferPlanner() {
     // Get the baseline lineup for this gameweek (what the lineup would be without current GW's transfers)
     const baseline = getBaselineLineup(selectedGameweek);
     
-    // Calculate baseline squad value (sum of purchase prices)
-    const baselineSquadValue = baseline.reduce((sum, pick) => {
-      return sum + (pick.purchase_price || 0) / 10;
-    }, 0);
+    // Get completed transfers for this gameweek
+    const currentGwTransfers = gameweekTransfers[selectedGameweek]?.completed || [];
     
-    // Calculate current squad value (excluding transferred out players, including pending sells)
-    let currentSquadValue = 0;
-    let pendingSellValue = 0;
-    
-    manualLineup.forEach(pick => {
-      if (pick.is_transferred_out) {
-        // For transferred out players, add their selling price to pending sells
-        const sellingPrice = getSellingPrice(pick);
-        pendingSellValue += sellingPrice;
-      } else {
-        // For current players, add their purchase price
-        currentSquadValue += (pick.purchase_price || 0) / 10;
-      }
+    // Calculate money gained from selling players
+    let moneyFromSales = 0;
+    currentGwTransfers.forEach(transfer => {
+      moneyFromSales += transfer.outPlayerSellPrice || 0;
     });
     
-    // Cash after transfers = Initial bank + (Baseline squad value - Current squad value) + Pending sells
-    const cashAfterTransfers = initialBank + baselineSquadValue - currentSquadValue + pendingSellValue;
+    // Calculate money spent on buying players
+    let moneySpent = 0;
+    currentGwTransfers.forEach(transfer => {
+      moneySpent += transfer.inPlayerBuyPrice || 0;
+    });
+    
+    // Cash after transfers = Initial bank + Money from sales - Money spent
+    const cashAfterTransfers = initialBank + moneyFromSales - moneySpent;
     
     console.log("💰 CASH CALCULATION DEBUG:");
     console.log("  Initial bank:", initialBank.toFixed(1));
-    console.log("  Baseline squad value:", baselineSquadValue.toFixed(1));
-    console.log("  Current squad value:", currentSquadValue.toFixed(1));
-    console.log("  Pending sell value:", pendingSellValue.toFixed(1));
+    console.log("  Money from sales:", moneyFromSales.toFixed(1));
+    console.log("  Money spent:", moneySpent.toFixed(1));
     console.log("  Cash after transfers:", cashAfterTransfers.toFixed(1));
     
     return cashAfterTransfers;
