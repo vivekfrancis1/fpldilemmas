@@ -2038,8 +2038,12 @@ export default function TransferPlanner() {
     
     // Also add money from partial transfers (players marked as transferred out but not yet replaced)
     const partialTransfers = manualLineup.filter(p => p.is_transferred_out);
+    console.log("🔍 PARTIAL TRANSFER DEBUG:");
+    console.log("  Manual lineup:", manualLineup.map(p => ({ id: p.element, out: p.is_transferred_out, pp: p.purchase_price })));
+    console.log("  Partial transfers found:", partialTransfers.length);
     partialTransfers.forEach(transferredOutPick => {
       const sellingPrice = getSellingPrice(transferredOutPick);
+      console.log(`  Partial transfer: Player ${transferredOutPick.element}, purchase_price: ${transferredOutPick.purchase_price}, selling price: ${sellingPrice.toFixed(1)}`);
       moneyFromSales += sellingPrice;
     });
     
