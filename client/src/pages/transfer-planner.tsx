@@ -1919,7 +1919,7 @@ export default function TransferPlanner() {
   };
 
   // Save buy price from dialog
-  const saveBuyPriceFromDialog = () => {
+  const saveBuyPriceFromDialog = async () => {
     if (!editBuyPriceDialog) return;
     
     const newPrice = parseFloat(editBuyPriceValue);
@@ -1960,15 +1960,36 @@ export default function TransferPlanner() {
     setEditBuyPriceDialog(null);
     setEditBuyPriceValue("");
     
-    // Show confirmation toast
-    toast({ 
-      title: "Buy Price Updated", 
-      description: `Buy price changed to £${newPrice.toFixed(1)}m. Sell price auto-calculated to £${newSellPrice.toFixed(1)}m.`
-    });
-    
-    // Save changes immediately to database
-    setHasUnsavedChanges(true);
-    setTimeout(() => saveCurrentDraft(), 100);
+    // Save to database to persist across drafts and page reloads
+    try {
+      const response = await fetch(`/api/manager/${searchedId}/buy-price-overrides`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          playerId: pick.element,
+          buyPrice: updatedPick.purchase_price // Store purchase price in tenths
+        })
+      });
+      
+      if (response.ok) {
+        // Refetch overrides to ensure persistence across drafts
+        await refetchBuyPriceOverrides();
+        
+        toast({
+          title: "Buy Price Updated",
+          description: `Buy price set to £${newPrice.toFixed(1)}m (sell price: £${newSellPrice.toFixed(1)}m) and saved`
+        });
+      } else {
+        throw new Error("Failed to save buy price");
+      }
+    } catch (error) {
+      console.error("Failed to save buy price:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save buy price to database. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Cancel editing sell price
