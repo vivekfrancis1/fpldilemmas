@@ -422,6 +422,17 @@ export default function RecentPriceChanges() {
                       </th>
                       <th 
                         className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
+                        onClick={() => handleSort('ownership')}
+                      >
+                        <div className="flex items-center justify-end gap-1">
+                          Ownership %
+                          {sortField === 'ownership' && (
+                            sortDirection === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                          )}
+                        </div>
+                      </th>
+                      <th 
+                        className="text-right p-3 font-medium cursor-pointer hover:bg-muted/30 transition-colors"
                         onClick={() => handleSort('old_price')}
                       >
                         <div className="flex items-center justify-end gap-1">
@@ -466,7 +477,7 @@ export default function RecentPriceChanges() {
                         <React.Fragment key={`${change.player_id}-${index}`}>
                           {isNewDateGroup && index > 0 && (
                             <tr>
-                              <td colSpan={7} className="p-0">
+                              <td colSpan={8} className="p-0">
                                 <div className="border-t-2 border-gray-200 dark:border-gray-700"></div>
                               </td>
                             </tr>
@@ -499,6 +510,13 @@ export default function RecentPriceChanges() {
                         </td>
                         <td className="p-3">
                           <div className="text-sm text-muted-foreground">{change.position}</div>
+                        </td>
+                        <td className="p-3 text-right font-medium">
+                          <div className="text-sm">
+                            {typeof change.ownership === 'number' 
+                              ? `${change.ownership.toFixed(1)}%` 
+                              : `${parseFloat(change.ownership || "0").toFixed(1)}%`}
+                          </div>
                         </td>
                         <td className="p-3 text-right font-medium">
                           {formatPrice(change.old_price)}
