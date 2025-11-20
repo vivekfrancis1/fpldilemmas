@@ -305,6 +305,14 @@ export class MemStorage implements IStorage {
   async setLastManagerId(managerId: string): Promise<void> {
     this.lastManagerId = managerId;
   }
+
+  async getUser(id: string): Promise<User | undefined> {
+    return undefined;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    throw new Error("User operations not supported in MemStorage");
+  }
   
   async getUpsetConfig(): Promise<UpsetConfig | undefined> {
     return this.upsetConfig;
