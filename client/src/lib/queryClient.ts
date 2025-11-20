@@ -53,11 +53,8 @@ export const getQueryFn: <T>(options: {
         credentials: "include",
       });
 
-      // Handle 401 errors by clearing stale auth cache
+      // Handle 401 errors - just return null, don't clear cache
       if (res.status === 401) {
-        queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
-        queryClient.removeQueries({ queryKey: ["/api/fpl/status"] });
-        
         if (unauthorizedBehavior === "returnNull") {
           console.log("🔐 Query returned 401, returning null for:", url);
           return null as any;
