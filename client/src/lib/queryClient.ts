@@ -48,22 +48,28 @@ export const getQueryFn: <T>(options: {
       url = queryKey.join("/") as string;
     }
     
-    const res = await fetch(url, {
-      credentials: "include",
-    });
+    try {
+      const res = await fetch(url, {
+        credentials: "include",
+      });
 
-    // Handle 401 errors by clearing stale auth cache
-    if (res.status === 401) {
-      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
-      queryClient.removeQueries({ queryKey: ["/api/fpl/status"] });
-      
-      if (unauthorizedBehavior === "returnNull") {
-        return null as any;
+      // Handle 401 errors by clearing stale auth cache
+      if (res.status === 401) {
+        queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+        queryClient.removeQueries({ queryKey: ["/api/fpl/status"] });
+        
+        if (unauthorizedBehavior === "returnNull") {
+          console.log("🔐 Query returned 401, returning null for:", url);
+          return null as any;
+        }
       }
-    }
 
-    await throwIfResNotOk(res);
-    return await res.json();
+      await throwIfResNotOk(res);
+      return await res.json();
+    } catch (error) {
+      console.error("🔥 Query error for", url, ":", error);
+      throw error;
+    }
   };
 
 export const queryClient = new QueryClient({
