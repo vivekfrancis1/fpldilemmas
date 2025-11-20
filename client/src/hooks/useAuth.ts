@@ -10,10 +10,21 @@ interface AuthUser {
 }
 
 export function useAuth() {
-  const { data: user, isLoading } = useQuery<AuthUser | null>({
+  const queryResult = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
+  });
+
+  const { data: user, isLoading, isPending, isFetching, status } = queryResult;
+
+  console.log("🔍 useAuth query state:", { 
+    user, 
+    isLoading, 
+    isPending, 
+    isFetching, 
+    status,
+    hasData: !!user 
   });
 
   return {

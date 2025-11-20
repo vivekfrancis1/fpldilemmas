@@ -1,0 +1,43 @@
+VM443:8 [Coframe] Replit Enterprise watcher loaded
+9c44f0dae08a8daa.js:2 
+      /////////////////////
+   ///////////////////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////        Curious and driven?
+  ///////////////@@@@@@@///////        Work with us!
+  ///////////////@@@@@@@///////
+  ///////////////@@@@@@@///////        https://join.replit.com/hack.with.us
+  ////////@@@@@@@//////////////
+  ////////@@@@@@@//////////////
+  ////////@@@@@@#//////////////
+   ///////////////////////////
+      /////////////////////
+      
+9c44f0dae08a8daa.js:2 Download the Apollo DevTools for a better development experience: https://chrome.google.com/webstore/detail/apollo-client-developer-t/jdkknkkbebbapilgoeccciglkfbmbnfm
+9c44f0dae08a8daa.js:2 [LaunchDarkly] LaunchDarkly client initialized
+injected.js:37 [vite] connecting...
+injected.js:37 [vite] connected.
+injected.js:37 🔐 Header Auth State: [object Object]
+injected.js:37 🔍 Error monitoring activated for React hooks violations and common errors
+injected.js:37 🔐 Header Auth State: [object Object]
+injected.js:37 🔍 Gameweek Calculation Debug: [object Object]
+injected.js:37 [vite] hot updated: /src/App.tsx
+injected.js:37 [vite] hot updated: /src/pages/admin.tsx
+injected.js:37 [vite] hot updated: /src/components/watchlist-manager.tsx
+injected.js:37 [vite] hot updated: /src/components/fpl-connect-dialog.tsx
+injected.js:37 [vite] hot updated: /src/components/header.tsx
+injected.js:37 [vite] hot updated: /src/components/protected-route.tsx
+injected.js:37 [vite] hot updated: /src/components/sidebar.tsx
+injected.js:37 [vite] hot updated: /src/index.css
+injected.js:37 🔐 Header Auth State: [object Object]
+injected.js:37 🔍 Error monitoring activated for React hooks violations and common errors
+injected.js:37 🔐 Header Auth State: [object Object]
+injected.js:37 [vite] server connection lost. Polling for restart...
+injected.js:37 [vite] connecting...
+injected.js:37 [vite] connected.
+injected.js:37 🔐 Header Auth State: Object
+injected.js:37 🔍 Error monitoring activated for React hooks violations and common errors
+injected.js:37 🔐 Header Auth State: ObjectisAuthenticated: falseisLoading: trueshouldShowLogin: falseshouldShowLogout: falseuser: undefined[[Prototype]]: Object
+injected.js:37 🔐 Query returned 401, returning null for: /api/auth/user
+injected.js:37 🔍 Gameweek Calculation Debug: Object
