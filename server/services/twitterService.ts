@@ -2,6 +2,8 @@ import { TwitterApi } from 'twitter-api-v2';
 
 interface PriceChange {
   player_name: string;
+  team_name: string;
+  position: string;
   new_price: number;
   old_price: number;
   ownership: number;
@@ -53,9 +55,9 @@ export class TwitterService {
     const header = `💰 FPL Price Changes - ${date}\n${emoji} ${type} (${changes.length})`;
     
     const playerLines = changes.map(change => {
-      const ownership = `${change.ownership.toFixed(1)}%`;
+      const playerInfo = `${change.player_name} (${change.team_name}, ${change.position}, ${change.ownership.toFixed(1)}%)`;
       const priceChange = `${change.old_price.toFixed(1)} → ${change.new_price.toFixed(1)}`;
-      return `${change.player_name} ${priceChange} (${ownership})`;
+      return `${playerInfo} ${priceChange}`;
     });
 
     const footer = `\nFull list: https://fpldilemmas.com/recent-price-changes\n#FPL #FantasyPremierLeague`;

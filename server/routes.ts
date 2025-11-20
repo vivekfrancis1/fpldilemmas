@@ -15758,6 +15758,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter((change: any) => change.priceChange > 0)
         .map((change: any) => ({
           player_name: change.playerName,
+          team_name: change.teamName || 'N/A',
+          position: change.position || 'N/A',
           new_price: change.newPrice / 10,
           old_price: change.oldPrice / 10,
           ownership: typeof change.ownership === 'string' ? parseFloat(change.ownership) : change.ownership
@@ -15768,6 +15770,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .filter((change: any) => change.priceChange < 0)
         .map((change: any) => ({
           player_name: change.playerName,
+          team_name: change.teamName || 'N/A',
+          position: change.position || 'N/A',
           new_price: change.newPrice / 10,
           old_price: change.oldPrice / 10,
           ownership: typeof change.ownership === 'string' ? parseFloat(change.ownership) : change.ownership
@@ -15784,9 +15788,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const formatPreview = (changes: any[], type: 'RISERS' | 'FALLERS', emoji: string) => {
         const header = `💰 FPL Price Changes - ${date}\n${emoji} ${type} (${changes.length})`;
         const playerLines = changes.map((change: any) => {
-          const ownership = `${change.ownership.toFixed(1)}%`;
+          const playerInfo = `${change.player_name} (${change.team_name}, ${change.position}, ${change.ownership.toFixed(1)}%)`;
           const priceChange = `${change.old_price.toFixed(1)} → ${change.new_price.toFixed(1)}`;
-          return `${change.player_name} ${priceChange} (${ownership})`;
+          return `${playerInfo} ${priceChange}`;
         });
         const footer = `\nFull list: https://fpldilemmas.com/recent-price-changes\n#FPL #FantasyPremierLeague`;
         

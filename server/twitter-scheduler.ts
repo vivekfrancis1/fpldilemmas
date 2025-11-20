@@ -153,6 +153,8 @@ export class TwitterScheduler {
           
           return {
             player_name: change.playerName,
+            team_name: change.teamName || 'N/A',
+            position: change.position || 'N/A',
             new_price: change.newPrice / 10, // Convert to actual price (stored as 10x)
             old_price: change.oldPrice / 10,
             ownership: typeof change.ownership === 'string' ? parseFloat(change.ownership) : change.ownership
@@ -171,6 +173,8 @@ export class TwitterScheduler {
           
           return {
             player_name: change.playerName,
+            team_name: change.teamName || 'N/A',
+            position: change.position || 'N/A',
             new_price: change.newPrice / 10,
             old_price: change.oldPrice / 10,
             ownership: typeof change.ownership === 'string' ? parseFloat(change.ownership) : change.ownership
