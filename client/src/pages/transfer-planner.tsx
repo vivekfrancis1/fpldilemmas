@@ -2024,16 +2024,23 @@ export default function TransferPlanner() {
     // Get completed transfers for this gameweek
     const currentGwTransfers = gameweekTransfers[selectedGameweek]?.completed || [];
     
-    // Calculate money gained from selling players
+    // Calculate money gained from selling players (completed transfers)
     let moneyFromSales = 0;
     currentGwTransfers.forEach(transfer => {
       moneyFromSales += transfer.sellingPrice || 0;
     });
     
-    // Calculate money spent on buying players
+    // Calculate money spent on buying players (completed transfers)
     let moneySpent = 0;
     currentGwTransfers.forEach(transfer => {
       moneySpent += transfer.buyingPrice || 0;
+    });
+    
+    // Also add money from partial transfers (players marked as transferred out but not yet replaced)
+    const partialTransfers = manualLineup.filter(p => p.is_transferred_out);
+    partialTransfers.forEach(transferredOutPick => {
+      const sellingPrice = getSellingPrice(transferredOutPick);
+      moneyFromSales += sellingPrice;
     });
     
     // Cash after transfers = Initial bank + Money from sales - Money spent
@@ -2041,7 +2048,9 @@ export default function TransferPlanner() {
     
     console.log("💰 CASH CALCULATION DEBUG:");
     console.log("  Initial bank:", initialBank.toFixed(1));
-    console.log("  Money from sales:", moneyFromSales.toFixed(1));
+    console.log("  Money from completed sales:", currentGwTransfers.reduce((sum, t) => sum + (t.sellingPrice || 0), 0).toFixed(1));
+    console.log("  Money from partial sales:", partialTransfers.reduce((sum, p) => sum + getSellingPrice(p), 0).toFixed(1));
+    console.log("  Total money from sales:", moneyFromSales.toFixed(1));
     console.log("  Money spent:", moneySpent.toFixed(1));
     console.log("  Cash after transfers:", cashAfterTransfers.toFixed(1));
     
