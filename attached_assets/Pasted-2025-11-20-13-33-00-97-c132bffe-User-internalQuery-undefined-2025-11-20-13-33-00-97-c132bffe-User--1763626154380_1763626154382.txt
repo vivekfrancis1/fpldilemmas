@@ -1,0 +1,103 @@
+2025-11-20 13:33:00.97
+c132bffe
+User
+internalQuery: undefined,
+2025-11-20 13:33:00.97
+c132bffe
+User
+length: 219,
+2025-11-20 13:33:00.97
+c132bffe
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-11-20 13:33:00.97
+c132bffe
+User
+file: 'nbtinsert.c',
+2025-11-20 13:33:00.97
+c132bffe
+User
+constraint: 'users_email_unique',
+2025-11-20 13:33:00.97
+c132bffe
+User
+detail: 'Key (email)=(fpldilemmas@gmail.com) already exists.',
+2025-11-20 13:33:00.97
+c132bffe
+User
+dataType: undefined,
+2025-11-20 13:33:00.97
+c132bffe
+User
+hint: undefined,
+2025-11-20 13:33:00.97
+c132bffe
+User
+internalPosition: undefined,
+2025-11-20 13:33:00.97
+c132bffe
+User
+Server error: error: duplicate key value violates unique constraint "users_email_unique"
+2025-11-20 13:33:00.97
+c132bffe
+User
+}
+2025-11-20 13:33:00.97
+c132bffe
+User
+routine: '_bt_check_unique'
+2025-11-20 13:33:00.97
+c132bffe
+User
+table: 'users',
+2025-11-20 13:33:00.97
+c132bffe
+User
+at async DatabaseStorage.upsertUser (file:///home/runner/workspace/dist/index.js:1999:24)
+2025-11-20 13:33:00.97
+c132bffe
+User
+schema: 'public',
+2025-11-20 13:33:00.97
+c132bffe
+User
+line: '666',
+2025-11-20 13:33:00.97
+c132bffe
+User
+position: undefined,
+2025-11-20 13:33:00.97
+c132bffe
+User
+where: undefined,
+2025-11-20 13:33:00.97
+c132bffe
+User
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-11-20 13:33:00.97
+c132bffe
+User
+at async Strategy._verify (file:///home/runner/workspace/dist/index.js:5922:24) {
+2025-11-20 13:33:00.97
+c132bffe
+User
+severity: 'ERROR',
+2025-11-20 13:33:00.97
+c132bffe
+User
+code: '23505',
+2025-11-20 13:33:00.97
+c132bffe
+User
+column: undefined,
+2025-11-20 13:33:00.97
+c132bffe
+User
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-11-20 13:33:01.02
+c132bffe
+User
+8:03:01 AM [express] GET /api/auth/google/callback 500 in 422ms :: {"message":"duplicate key value v…
+2025-11-20 13:35:16.72
+ed732bb5
+System
