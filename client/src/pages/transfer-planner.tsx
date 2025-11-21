@@ -7554,7 +7554,11 @@ export default function TransferPlanner() {
           <div className="bg-white dark:bg-gray-950 rounded-lg shadow-2xl max-w-xs w-full border border-gray-200 dark:border-gray-800">
             <div className="p-4 sm:p-6 relative">
               <button
-                onClick={() => setShowTransferOutModal(false)}
+                onClick={() => {
+                  if (transferredOutPlayers.length > 0) {
+                    handleUndoTransfer(transferredOutPlayers[0].position);
+                  }
+                }}
                 className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
                 data-testid="close-transfer-modal"
                 aria-label="Close"
