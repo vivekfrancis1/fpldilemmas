@@ -5018,7 +5018,7 @@ export default function TransferPlanner() {
         </div>
         <div>
           <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Transfer Planner</h1>
-          <p className="text-xs md:text-sm text-muted-foreground">Plan transfers & optimize your team</p>
+          <p className="text-xs md:text-sm text-muted-foreground">Plan transfers & optimise your lineup</p>
         </div>
       </div>
 
@@ -5746,10 +5746,10 @@ export default function TransferPlanner() {
                     onClick={() => selectedGameweek && optimizeTeamLineup(selectedGameweek)}
                     disabled={!selectedGameweek || !playerProjections6GW}
                     className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                    data-testid="button-optimize-team"
+                    data-testid="button-optimise-lineup"
                   >
                     <Sparkles className="h-4 w-4" />
-                    Optimize Team
+                    Optimise Lineup
                   </Button>
                 )}
               </div>
