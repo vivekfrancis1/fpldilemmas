@@ -4969,7 +4969,7 @@ export default function TransferPlanner() {
           )}
           <button 
             className="w-full h-14 sm:h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
-            onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, getSellingPrice(pick)); }} 
+            onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, (pick.purchase_price || 0) / 10); }} 
             data-testid={`${isBench ? 'bench' : 'list'}-edit-buy-price-${pick.element}`}
           >
             Edit Buy Price
