@@ -4097,7 +4097,10 @@ export default function TransferPlanner() {
 
       newCompletedTransfers.push(completedTransfer);
 
-      // Update lineup - replace the player at the same position
+      // Update lineup - first remove incoming player if already in squad to avoid duplicates
+      updatedLineup = updatedLineup.filter(p => p.element !== playerIn.id);
+      
+      // Then replace the player at the same position
       updatedLineup = updatedLineup.map(p => {
         if (p.position === pickToTransferOut.position) {
           return {
