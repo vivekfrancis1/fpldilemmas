@@ -5991,45 +5991,6 @@ export default function TransferPlanner() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1 md:gap-2 flex-wrap">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleUndoTransfer(pick.position)}
-                              className="text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/20 h-7 px-2 md:h-9 md:px-3"
-                              data-testid={`undo-transfer-bench-${pick.position}`}
-                            >
-                              <RotateCcw className="h-3 w-3 md:h-4 md:w-4 md:mr-1" />
-                              <span className="hidden md:inline">Undo</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleUndoGameweekTransfersForPosition(pick.position)}
-                              className="text-purple-600 border-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/20 h-7 px-2 md:h-9 md:px-3"
-                              data-testid={`undo-gw-transfers-bench-${pick.position}`}
-                            >
-                              <RotateCcw className="h-3 w-3 md:h-4 md:w-4 md:mr-1" />
-                              <span className="hidden md:inline">Undo GW</span>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleUndoAllTransfersForPosition(pick.position)}
-                              className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20 h-7 px-2 md:h-9 md:px-3"
-                              data-testid={`undo-all-transfers-bench-${pick.position}`}
-                            >
-                              <X className="h-3 w-3 md:h-4 md:w-4 md:mr-1" />
-                              <span className="hidden md:inline">Undo All</span>
-                            </Button>
-                            <div 
-                              className="text-xs md:text-sm text-red-600 font-medium bg-red-100 dark:bg-red-900 px-2 md:px-3 py-1 rounded cursor-pointer hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
-                              onClick={() => handleScrollToReplacement(player.element_type)}
-                              data-testid={`replace-bench-${pick.position}`}
-                            >
-                              Replace
-                            </div>
-                          </div>
                         </div>
                       );
                     }
