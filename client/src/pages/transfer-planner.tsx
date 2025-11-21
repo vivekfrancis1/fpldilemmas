@@ -2944,6 +2944,16 @@ export default function TransferPlanner() {
       return;
     }
 
+    // Check if squad has exactly 15 players
+    if (manualLineup.length !== 15) {
+      toast({
+        title: "Cannot Optimize",
+        description: `Your squad has ${manualLineup.length} players. You must have exactly 15 players before optimizing. Please undo or complete your transfers.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Check if we can create a draft
     const targetDraft = getTargetDraftForChanges();
     if (!targetDraft) return;
