@@ -2944,6 +2944,16 @@ export default function TransferPlanner() {
       return;
     }
 
+    // Check if there are any pending transfers (transferred out but not replaced)
+    if (transferredOutPlayers.length > 0) {
+      toast({
+        title: "Cannot Optimize",
+        description: `You have ${transferredOutPlayers.length} player(s) awaiting replacement. Please undo or complete these transfers before optimizing.`,
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Check if squad has exactly 15 players (count only players not transferred out)
     const activePlayersCount = manualLineup.filter(p => !p.is_transferred_out).length;
     if (activePlayersCount !== 15) {
