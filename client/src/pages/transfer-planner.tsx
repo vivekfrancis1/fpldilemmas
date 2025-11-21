@@ -3473,6 +3473,7 @@ export default function TransferPlanner() {
 
     const newTransferredOut = [...transferredOutPlayers, transferOut];
     setTransferredOutPlayers(newTransferredOut);
+    setShowTransferOutModal(true);
     
     // Save to gameweek-specific storage immediately and capture updated value
     let updatedGameweekTransfers = gameweekTransfers;
