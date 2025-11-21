@@ -5992,6 +5992,17 @@ export default function TransferPlanner() {
                               </div>
                             </div>
                           </div>
+                          <button
+                            onClick={() => {
+                              setTransferredOutPlayers([]);
+                              setShowTransferOutModal(false);
+                            }}
+                            className="text-red-600 hover:text-red-700 transition-colors ml-2"
+                            data-testid={`close-bench-empty-${pick.position}`}
+                            aria-label="Close"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
                         </div>
                       );
                     }
@@ -6596,57 +6607,24 @@ export default function TransferPlanner() {
                         return (
                           <div key={`empty-bench-${pick.position}`} className="flex flex-col items-center w-[85vw] sm:w-44 md:w-48" data-testid={`pitch-bench-empty-${pick.position}`}>
                             <div className="relative w-full max-w-sm">
-                              <div className="rounded-lg p-4 sm:p-3 text-center shadow-md border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-2">
-                                <div className="text-xs sm:text-sm font-bold text-red-600">EMPTY SLOT</div>
-                                <div className="text-[11px] sm:text-xs text-red-500">{getPositionShortName(player.element_type)}</div>
-                                <div className="text-2xl font-bold text-red-600">-</div>
-                                
-                                {/* Action Buttons for Transferred Out */}
-                                <div className="flex flex-col gap-2 mt-1">
-                                  <Button
-                                    size="sm"
-                                    className="w-full h-10 sm:h-9 text-xs sm:text-sm font-semibold bg-red-600 text-white hover:bg-red-700"
-                                    onClick={() => handleScrollToReplacement(player.element_type)}
-                                    data-testid={`pitch-bench-replace-${pick.position}`}
+                              <div className="rounded-lg p-4 sm:p-4 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-3">
+                                <div className="flex justify-between items-start mb-2">
+                                  <div className="flex-1"></div>
+                                  <button
+                                    onClick={() => {
+                                      setTransferredOutPlayers([]);
+                                      setShowTransferOutModal(false);
+                                    }}
+                                    className="text-red-600 hover:text-red-700 transition-colors"
+                                    data-testid={`close-pitch-bench-empty-${pick.position}`}
+                                    aria-label="Close"
                                   >
-                                    Replace
-                                  </Button>
-                                  <div className="flex flex-col gap-1.5">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="w-full h-9 sm:h-8 text-xs text-blue-600 border-blue-300 bg-white hover:bg-blue-50 font-medium"
-                                      onClick={() => handleUndoTransfer(pick.position)}
-                                      data-testid={`pitch-bench-undo-${pick.position}`}
-                                      title="Undo last transfer"
-                                    >
-                                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                                      Undo
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="w-full h-9 sm:h-8 text-xs text-purple-600 border-purple-300 bg-white hover:bg-purple-50 font-medium"
-                                      onClick={() => handleUndoGameweekTransfersForPosition(pick.position)}
-                                      data-testid={`pitch-bench-undo-gw-${pick.position}`}
-                                      title="Undo gameweek transfers"
-                                    >
-                                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                                      Undo GW
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="w-full h-9 sm:h-8 text-xs text-orange-600 border-orange-300 bg-white hover:bg-orange-50 font-medium"
-                                      onClick={() => handleUndoAllTransfersForPosition(pick.position)}
-                                      data-testid={`pitch-bench-undo-all-${pick.position}`}
-                                      title="Undo all transfers"
-                                    >
-                                      <X className="h-3.5 w-3.5 mr-1" />
-                                      Undo All
-                                    </Button>
-                                  </div>
+                                    <X className="h-5 w-5" />
+                                  </button>
                                 </div>
+                                <div className="text-sm sm:text-base font-bold text-red-600">EMPTY SLOT</div>
+                                <div className="text-xs sm:text-sm text-red-500">{getPositionShortName(player.element_type)}</div>
+                                <div className="text-3xl font-bold text-red-600">-</div>
                               </div>
                             </div>
                           </div>
