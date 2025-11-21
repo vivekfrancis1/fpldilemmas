@@ -5,7 +5,8 @@ import { storage } from "./storage";
 const IST_OFFSET = 5.5 * 60 * 60 * 1000;
 
 /**
- * Daily Twitter scheduler that posts price changes at 7 AM IST
+ * Daily Twitter scheduler that posts price changes at 7:05 AM IST
+ * (5 minutes after FPL updates prices at 7:00 AM IST)
  */
 export class TwitterScheduler {
   private interval: NodeJS.Timeout | null = null;
@@ -18,14 +19,14 @@ export class TwitterScheduler {
   start() {
     const now = Date.now();
     const istNow = new Date(now + IST_OFFSET);
-    const sevenAMToday = new Date(istNow);
-    sevenAMToday.setHours(7, 0, 0, 0);
+    const sevenO5AMToday = new Date(istNow);
+    sevenO5AMToday.setHours(7, 5, 0, 0);
     
-    const isAfter7AMToday = istNow.getTime() >= sevenAMToday.getTime();
+    const isAfter705AMToday = istNow.getTime() >= sevenO5AMToday.getTime();
     
-    // If we're past 7 AM IST today, run immediately then schedule for tomorrow
-    if (isAfter7AMToday) {
-      console.log('🚀 Server started after 7 AM IST - running Twitter post immediately');
+    // If we're past 7:05 AM IST today, run immediately then schedule for tomorrow
+    if (isAfter705AMToday) {
+      console.log('🚀 Server started after 7:05 AM IST - running Twitter post immediately');
       this.postDailyPriceChanges().then(() => {
         console.log('✅ Immediate Twitter post completed');
       }).catch(err => {
@@ -33,11 +34,11 @@ export class TwitterScheduler {
       });
     }
     
-    // Schedule next run (tomorrow at 7 AM IST)
-    const nextRun = this.getNext7AMIST();
+    // Schedule next run (tomorrow at 7:05 AM IST)
+    const nextRun = this.getNext705AMIST();
     const timeUntilRun = nextRun.getTime() - Date.now();
     
-    console.log(`Next scheduled Twitter post: ${nextRun.toISOString()} (IST 7:00 AM) - in ${Math.round(timeUntilRun / 1000 / 60 / 60)} hours`);
+    console.log(`Next scheduled Twitter post: ${nextRun.toISOString()} (IST 7:05 AM) - in ${Math.round(timeUntilRun / 1000 / 60 / 60)} hours`);
     
     // Set initial timeout for next scheduled run
     setTimeout(() => {
@@ -50,15 +51,15 @@ export class TwitterScheduler {
     }, timeUntilRun);
   }
 
-  private getNext7AMIST(): Date {
+  private getNext705AMIST(): Date {
     const now = new Date();
     const istNow = new Date(now.getTime() + IST_OFFSET);
     
-    // Create target time: 7:00 AM IST today
+    // Create target time: 7:05 AM IST today
     const target = new Date(istNow);
-    target.setHours(7, 0, 0, 0);
+    target.setHours(7, 5, 0, 0);
     
-    // If we've already passed 7:00 AM IST today, schedule for tomorrow
+    // If we've already passed 7:05 AM IST today, schedule for tomorrow
     if (istNow.getTime() >= target.getTime()) {
       target.setDate(target.getDate() + 1);
     }
@@ -78,6 +79,10 @@ export class TwitterScheduler {
     
     try {
       console.log("🐦 Starting daily Twitter price changes post at", new Date().toISOString());
+      
+      // First, refresh price changes from FPL API
+      console.log("🔄 Refreshing price changes from FPL API...");
+      await this.refreshPricesFromFPL();
       
       // Get today's price changes
       const todayChanges = await this.getTodaysPriceChanges();
@@ -109,6 +114,75 @@ export class TwitterScheduler {
     } finally {
       this.isRunning = false;
     }
+  }
+
+  private async refreshPricesFromFPL(): Promise<void> {
+    try {
+      // Fetch fresh bootstrap data from FPL API
+      const response = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch FPL bootstrap data: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const players = data.elements || [];
+      const now = new Date();
+      const todayDateStr = now.toISOString().split('T')[0];
+      
+      console.log(`📊 Fetched ${players.length} players from FPL API`);
+      
+      // For each player, check if price has changed and store it
+      for (const player of players) {
+        const existingChanges = await storage.getPriceChanges(100);
+        const lastChange = existingChanges.find(c => c.playerId === player.id);
+        
+        // If we have a last price and it's different from current price
+        if (lastChange) {
+          const currentPrice = player.now_cost;
+          const lastPrice = lastChange.newPrice;
+          
+          if (currentPrice !== lastPrice) {
+            const priceChange = currentPrice - lastPrice;
+            
+            // Add new price change record
+            await storage.addPriceChange({
+              playerId: player.id,
+              playerName: player.web_name,
+              teamId: player.team,
+              teamName: data.teams.find((t: any) => t.id === player.team)?.name || 'N/A',
+              position: this.getPositionName(player.element_type),
+              oldPrice: lastPrice,
+              newPrice: currentPrice,
+              priceChange: priceChange,
+              changeDate: todayDateStr,
+              ownership: player.selected_by_percent || '0',
+              transfersIn: player.transfers_in || 0,
+              transfersOut: player.transfers_out || 0,
+              transfersInGw: player.transfers_in_event || 0,
+              transfersOutGw: player.transfers_out_event || 0,
+              totalSeasonChange: 0
+            });
+            
+            console.log(`📈 Recorded price change for ${player.web_name}: ${lastPrice} → ${currentPrice}`);
+          }
+        }
+      }
+      
+      console.log("✅ Price refresh from FPL API completed");
+    } catch (error) {
+      console.error("⚠️ Error refreshing prices from FPL API:", error);
+      // Continue anyway - we'll use whatever prices we have
+    }
+  }
+
+  private getPositionName(elementType: number): string {
+    const positions: Record<number, string> = {
+      1: 'GKP',
+      2: 'DEF',
+      3: 'MID',
+      4: 'FWD'
+    };
+    return positions[elementType] || 'N/A';
   }
 
   private async getTodaysPriceChanges() {
@@ -214,7 +288,7 @@ export class TwitterScheduler {
    * Get scheduler status
    */
   getStatus(): { isRunning: boolean; nextRun: string } {
-    const nextRun = this.getNext7AMIST();
+    const nextRun = this.getNext705AMIST();
     return {
       isRunning: this.isRunning,
       nextRun: nextRun.toISOString()
