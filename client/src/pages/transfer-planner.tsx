@@ -6390,6 +6390,20 @@ export default function TransferPlanner() {
                                 <div key={`empty-${pick.position}`} className="flex flex-col items-center w-[85vw] sm:w-44 md:w-48" data-testid={`pitch-empty-${pick.position}`}>
                                   <div className="relative w-full max-w-sm">
                                     <div className="rounded-lg p-4 sm:p-4 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-3">
+                                      <div className="flex justify-between items-start mb-2">
+                                        <div className="flex-1"></div>
+                                        <button
+                                          onClick={() => {
+                                            setTransferredOutPlayers([]);
+                                            setShowTransferOutModal(false);
+                                          }}
+                                          className="text-red-600 hover:text-red-700 transition-colors"
+                                          data-testid={`close-empty-slot-${pick.position}`}
+                                          aria-label="Close"
+                                        >
+                                          <X className="h-5 w-5" />
+                                        </button>
+                                      </div>
                                       <div className="text-sm sm:text-base font-bold text-red-600">EMPTY SLOT</div>
                                       <div className="text-xs sm:text-sm text-red-500">{getPositionShortName(player.element_type)}</div>
                                       <div className="text-3xl font-bold text-red-600">-</div>
@@ -7556,10 +7570,18 @@ export default function TransferPlanner() {
       </AlertDialog>
 
       {/* Transfer Out Popup Modal - rendered outside main container for proper z-index */}
-      {transferredOutPlayers.length > 0 && (
+      {transferredOutPlayers.length > 0 && showTransferOutModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-3 sm:p-4">
           <div className="bg-white dark:bg-gray-950 rounded-lg shadow-2xl max-w-xs w-full border border-gray-200 dark:border-gray-800">
-            <div className="p-4 sm:p-6">
+            <div className="p-4 sm:p-6 relative">
+              <button
+                onClick={() => setShowTransferOutModal(false)}
+                className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+                data-testid="close-transfer-modal"
+                aria-label="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
               <div className="space-y-3 mb-6 max-h-[200px] overflow-y-auto">
                 {transferredOutPlayers.map((player, idx) => (
                   <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -7591,6 +7613,7 @@ export default function TransferPlanner() {
                   onClick={() => {
                     if (transferredOutPlayers.length > 0) {
                       handleUndoTransfer(transferredOutPlayers[0].position);
+                      setShowTransferOutModal(false);
                     }
                   }}
                   variant="outline"
@@ -7604,6 +7627,7 @@ export default function TransferPlanner() {
                   onClick={() => {
                     if (transferredOutPlayers.length > 0) {
                       handleUndoGameweekTransfersForPosition(transferredOutPlayers[0].position);
+                      setShowTransferOutModal(false);
                     }
                   }}
                   variant="outline"
