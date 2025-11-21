@@ -7693,7 +7693,7 @@ export default function TransferPlanner() {
                 {transferredOutPlayers.map((player, idx) => (
                   <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                     <p className="font-semibold text-gray-900 dark:text-white">
-                      {playerIdToWebName?.get(player.playerId) || player.playerName}
+                      {player.playerName}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
                       {player.position} • Sell: £{player.sellingPrice.toFixed(1)}m
