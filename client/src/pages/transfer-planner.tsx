@@ -2944,11 +2944,12 @@ export default function TransferPlanner() {
       return;
     }
 
-    // Check if squad has exactly 15 players
-    if (manualLineup.length !== 15) {
+    // Check if squad has exactly 15 players (count only players not transferred out)
+    const activePlayersCount = manualLineup.filter(p => !p.is_transferred_out).length;
+    if (activePlayersCount !== 15) {
       toast({
         title: "Cannot Optimize",
-        description: `Your squad has ${manualLineup.length} players. You must have exactly 15 players before optimizing. Please undo or complete your transfers.`,
+        description: `Your squad has ${activePlayersCount} players. You must have exactly 15 players before optimizing. Please undo or complete your transfers.`,
         variant: "destructive"
       });
       return;
