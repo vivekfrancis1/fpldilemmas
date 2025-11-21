@@ -5016,7 +5016,7 @@ export default function TransferPlanner() {
         <div className="fixed inset-0 bg-black/50 z-40" />
       )}
       
-      <div className={`container mx-auto px-3 sm:px-4 py-2 md:p-4 lg:p-6 space-y-3 md:space-y-4 ${transferredOutPlayers.length > 0 ? 'pointer-events-none' : ''}`}>
+      <div className="container mx-auto px-3 sm:px-4 py-2 md:p-4 lg:p-6 space-y-3 md:space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
         <div className="p-2 md:p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
@@ -7679,6 +7679,85 @@ export default function TransferPlanner() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Transfer Out Popup Modal - rendered outside main container for proper z-index */}
+      {transferredOutPlayers.length > 0 && (
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white dark:bg-gray-950 rounded-lg shadow-2xl max-w-md w-full border border-gray-200 dark:border-gray-800">
+            <div className="p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4">
+                {transferredOutPlayers.length} Player{transferredOutPlayers.length > 1 ? 's' : ''} Awaiting Replacement
+              </h2>
+              
+              <div className="space-y-3 mb-6 max-h-[200px] overflow-y-auto">
+                {transferredOutPlayers.map((player, idx) => (
+                  <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <p className="font-semibold text-gray-900 dark:text-white">
+                      {playerIdToWebName?.get(player.playerId) || player.playerName}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {player.position} • Sell: £{player.sellingPrice.toFixed(1)}m
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-2">
+                <Button
+                  onClick={() => {
+                    if (transferredOutPlayers.length > 0) {
+                      handleScrollToReplacement(transferredOutPlayers[0].elementType);
+                    }
+                  }}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 h-auto"
+                  data-testid="button-replace-player"
+                >
+                  Replace Player
+                </Button>
+                
+                <Button
+                  onClick={() => {
+                    if (transferredOutPlayers.length > 0) {
+                      handleUndoTransfer(transferredOutPlayers[0].position);
+                    }
+                  }}
+                  variant="outline"
+                  className="w-full font-semibold py-2 h-auto"
+                  data-testid="button-undo-transfer"
+                >
+                  Undo
+                </Button>
+                
+                <Button
+                  onClick={() => {
+                    if (transferredOutPlayers.length > 0) {
+                      handleUndoGameweekTransfersForPosition(transferredOutPlayers[0].position);
+                    }
+                  }}
+                  variant="outline"
+                  className="w-full font-semibold py-2 h-auto"
+                  data-testid="button-undo-gw"
+                >
+                  Undo This GW
+                </Button>
+                
+                <Button
+                  onClick={() => {
+                    if (transferredOutPlayers.length > 0) {
+                      handleUndoAllTransfersForPosition(transferredOutPlayers[0].position);
+                    }
+                  }}
+                  variant="outline"
+                  className="w-full font-semibold py-2 h-auto text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                  data-testid="button-undo-all"
+                >
+                  Undo All
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </>
   );
