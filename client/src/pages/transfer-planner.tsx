@@ -5010,7 +5010,13 @@ export default function TransferPlanner() {
   };
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-2 md:p-4 lg:p-6 space-y-3 md:space-y-4">
+    <>
+      {/* Modal Overlay - blocks interaction when transfers are pending */}
+      {transferredOutPlayers.length > 0 && (
+        <div className="fixed inset-0 bg-black/50 z-40" />
+      )}
+      
+      <div className={`container mx-auto px-3 sm:px-4 py-2 md:p-4 lg:p-6 space-y-3 md:space-y-4 ${transferredOutPlayers.length > 0 ? 'pointer-events-none' : ''}`}>
       {/* Header */}
       <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
         <div className="p-2 md:p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
@@ -7674,5 +7680,6 @@ export default function TransferPlanner() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </>
   );
 }
