@@ -880,6 +880,7 @@ export default function TransferPlanner() {
   
   // Current gameweek's transfers (for convenience)
   const [transferredOutPlayers, setTransferredOutPlayers] = useState<TransferOut[]>([]);
+  const [showTransferOutModal, setShowTransferOutModal] = useState(false);
   const [completedTransfers, setCompletedTransfers] = useState<CompletedTransfer[]>([]);
   
   // Player projections tab state for quick navigation
