@@ -6396,7 +6396,7 @@ export default function TransferPlanner() {
                             const fixture = getPlayerFixture(pick.element, selectedGameweek);
                             
                             // Check if player is transferred out
-                            if (pick.is_transferred_out) {
+                            if (pick.is_transferred_out && showTransferOutModal) {
                               console.log('DEBUG - Showing empty slot for position:', pick.position, 'pick:', pick);
                               return (
                                 <div key={`empty-${pick.position}`} className="flex flex-col items-center w-[85vw] sm:w-44 md:w-48" data-testid={`pitch-empty-${pick.position}`}>
@@ -6604,7 +6604,7 @@ export default function TransferPlanner() {
                       const actualIndex = 11 + benchIndex;
                       
                       // Check if bench player is transferred out
-                      if (pick.is_transferred_out) {
+                      if (pick.is_transferred_out && showTransferOutModal) {
                         return (
                           <div key={`empty-bench-${pick.position}`} className="flex flex-col items-center w-[85vw] sm:w-44 md:w-48" data-testid={`pitch-bench-empty-${pick.position}`}>
                             <div className="relative w-full max-w-sm">
