@@ -7559,10 +7559,6 @@ export default function TransferPlanner() {
         <div className="fixed inset-0 flex items-center justify-center z-50 p-3 sm:p-4">
           <div className="bg-white dark:bg-gray-950 rounded-lg shadow-2xl max-w-md w-full border border-gray-200 dark:border-gray-800">
             <div className="p-4 sm:p-6">
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4">
-                {transferredOutPlayers.length} Player{transferredOutPlayers.length > 1 ? 's' : ''} Awaiting Replacement
-              </h2>
-              
               <div className="space-y-3 mb-6 max-h-[200px] overflow-y-auto">
                 {transferredOutPlayers.map((player, idx) => (
                   <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -7570,7 +7566,7 @@ export default function TransferPlanner() {
                       {player.playerName}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Sell: £{player.sellingPrice.toFixed(1)}m
+                      Sell Price: £{player.sellingPrice.toFixed(1)}m
                     </p>
                   </div>
                 ))}
