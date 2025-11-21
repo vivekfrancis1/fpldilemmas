@@ -5014,7 +5014,7 @@ export default function TransferPlanner() {
   return (
     <>
       {/* Modal Overlay - blocks interaction when transfers are pending */}
-      {transferredOutPlayers.length > 0 && (
+      {transferredOutPlayers.length > 0 && showTransferOutModal && (
         <div className="fixed inset-0 bg-black/50 z-40" />
       )}
       
