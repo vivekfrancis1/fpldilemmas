@@ -4081,6 +4081,13 @@ export default function TransferPlanner() {
         continue;
       }
 
+      // Check if incoming player is already in the squad - skip transfer if they are
+      const isPlayerAlreadyInSquad = updatedLineup.some(p => p.element === playerIn.id);
+      if (isPlayerAlreadyInSquad) {
+        console.warn(`${playerIn.web_name} is already in the squad, skipping this recommended transfer`);
+        continue;
+      }
+
       // Calculate prices
       const sellingPrice = getSellingPrice(pickToTransferOut);
       const buyingPrice = playerIn.now_cost / 10;
@@ -4097,10 +4104,7 @@ export default function TransferPlanner() {
 
       newCompletedTransfers.push(completedTransfer);
 
-      // Update lineup - first remove incoming player if already in squad to avoid duplicates
-      updatedLineup = updatedLineup.filter(p => p.element !== playerIn.id);
-      
-      // Then replace the player at the same position
+      // Update lineup - replace the player at the same position
       updatedLineup = updatedLineup.map(p => {
         if (p.position === pickToTransferOut.position) {
           return {
