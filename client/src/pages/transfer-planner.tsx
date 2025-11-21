@@ -7696,7 +7696,7 @@ export default function TransferPlanner() {
                       {player.playerName}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {player.position} • Sell: £{player.sellingPrice.toFixed(1)}m
+                      Sell: £{player.sellingPrice.toFixed(1)}m
                     </p>
                   </div>
                 ))}
@@ -7739,19 +7739,6 @@ export default function TransferPlanner() {
                   data-testid="button-undo-gw"
                 >
                   Undo This GW
-                </Button>
-                
-                <Button
-                  onClick={() => {
-                    if (transferredOutPlayers.length > 0) {
-                      handleUndoAllTransfersForPosition(transferredOutPlayers[0].position);
-                    }
-                  }}
-                  variant="outline"
-                  className="w-full font-semibold py-2 h-auto text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
-                  data-testid="button-undo-all"
-                >
-                  Undo All
                 </Button>
               </div>
             </div>
