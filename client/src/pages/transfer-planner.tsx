@@ -7583,7 +7583,7 @@ export default function TransferPlanner() {
                   onClick={() => {
                     if (transferredOutPlayers.length > 0) {
                       handleScrollToReplacement(transferredOutPlayers[0].elementType);
-                      setTransferredOutPlayers([]);
+                      setShowTransferOutModal(false);
                     }
                   }}
                   className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 h-auto"
