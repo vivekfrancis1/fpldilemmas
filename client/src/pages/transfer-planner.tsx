@@ -1810,11 +1810,12 @@ export default function TransferPlanner() {
     if (!player) return 0;
     
     // Priority 1: Calculate using FPL formula if we have purchase_price (from user edit or API)
-    // For every 0.2m rise (2 in API units), you get 0.1m profit (1 in API units)
+    // For every 0.2m rise (2 in API units), you get 0.1m profit (1 in API units), max 0.3m profit
     if (pick.purchase_price !== undefined && !isNaN(pick.purchase_price)) {
       const purchasePrice = pick.purchase_price;
       const currentPrice = player.now_cost;
-      const profitPerRise = Math.floor((currentPrice - purchasePrice) / 2);
+      const priceIncrease = currentPrice - purchasePrice;
+      const profitPerRise = Math.min(Math.floor(priceIncrease / 2), 3); // Cap at 3 tenths (0.3m)
       const sellingPrice = purchasePrice + profitPerRise;
       return sellingPrice / 10;
     }
@@ -1947,10 +1948,11 @@ export default function TransferPlanner() {
     // Update the pick with the new purchase price
     const updatedPick = { ...pick, purchase_price: Math.round(newPrice * 10) };
     
-    // Calculate the new sell price
+    // Calculate the new sell price (capped at 0.3m profit)
     const player = getPlayerById(pick.element);
     const currentPrice = player?.now_cost || 0;
-    const profitPerRise = Math.floor((currentPrice - updatedPick.purchase_price) / 2);
+    const priceIncrease = currentPrice - updatedPick.purchase_price;
+    const profitPerRise = Math.min(Math.floor(priceIncrease / 2), 3); // Cap at 3 tenths (0.3m)
     const newSellPrice = (updatedPick.purchase_price + profitPerRise) / 10;
     
     // Update manualLineup
@@ -7542,9 +7544,10 @@ export default function TransferPlanner() {
               const currentMarketPrice = player ? player.now_cost / 10 : 0;
               const currentSellPrice = pick ? getSellingPrice(pick) : 0;
               
-              // Calculate new sell price based on input value
+              // Calculate new sell price based on input value (capped at 0.3m profit)
               const newBuyPrice = parseFloat(editBuyPriceValue) || 0;
-              const profitPerRise = Math.floor((player?.now_cost || 0) - (newBuyPrice * 10)) / 2;
+              const priceIncrease = (player?.now_cost || 0) - (newBuyPrice * 10);
+              const profitPerRise = Math.min(Math.floor(priceIncrease / 2), 3); // Cap at 3 tenths (0.3m)
               const newSellPrice = (newBuyPrice * 10 + profitPerRise) / 10;
               
               return (
