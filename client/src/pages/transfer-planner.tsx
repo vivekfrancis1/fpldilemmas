@@ -7557,7 +7557,7 @@ export default function TransferPlanner() {
       {/* Transfer Out Popup Modal - rendered outside main container for proper z-index */}
       {transferredOutPlayers.length > 0 && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-3 sm:p-4">
-          <div className="bg-white dark:bg-gray-950 rounded-lg shadow-2xl max-w-sm w-full border border-gray-200 dark:border-gray-800">
+          <div className="bg-white dark:bg-gray-950 rounded-lg shadow-2xl max-w-xs w-full border border-gray-200 dark:border-gray-800">
             <div className="p-4 sm:p-6">
               <div className="space-y-3 mb-6 max-h-[200px] overflow-y-auto">
                 {transferredOutPlayers.map((player, idx) => (
