@@ -2107,21 +2107,38 @@ export default function TransferPlanner() {
     // Count transfers by comparing player IDs, not positions
     // A transfer = a player ID in baseline is no longer in current lineup
     // This prevents position swaps/optimization from being counted as transfers
-    let transfersUsed = 0;
     
-    // Get set of current player IDs (excluding transferred out pending players)
-    const currentPlayerIds = new Set(manualLineup.filter(p => !p.is_transferred_out).map(p => p.element));
+    const baselinePlayerIds = new Set(baseline.map(p => p.element));
     
+    // Count completed transfers (baseline players COMPLETELY REMOVED from lineup)
+    // Don't count if player is still in lineup but marked as transferred_out (that's a pending transfer)
+    let transfersOut = 0;
     baseline.forEach((baselinePick) => {
-      // If this baseline player is not in the current lineup, it was transferred out
-      if (!currentPlayerIds.has(baselinePick.element)) {
-        transfersUsed++;
+      // Check if this baseline player still exists in current lineup (even if marked as transferred_out)
+      const stillInLineup = manualLineup.find(p => p.element === baselinePick.element);
+      
+      // Only count if player is completely removed (not just pending transfer out)
+      if (!stillInLineup) {
+        transfersOut++;
       }
     });
     
+    // Count new players added (current players not in baseline, excluding pending transfers out)
+    let transfersIn = 0;
+    manualLineup.filter(p => !p.is_transferred_out).forEach((currentPick) => {
+      if (!baselinePlayerIds.has(currentPick.element)) {
+        transfersIn++;
+      }
+    });
+    
+    // In valid FPL scenarios, transfersOut should equal transfersIn
+    // Use max for safety in case of edge cases
+    const transfersUsed = Math.max(transfersOut, transfersIn);
+    
     console.log("📊 TRANSFERS USED DEBUG:");
-    console.log("  Baseline player IDs:", baseline.map(p => p.element));
-    console.log("  Current player IDs:", Array.from(currentPlayerIds));
+    console.log("  Baseline player IDs:", Array.from(baselinePlayerIds));
+    console.log("  Current lineup player IDs:", manualLineup.map(p => ({ id: p.element, out: p.is_transferred_out })));
+    console.log("  Transfers out (completed):", transfersOut, "| Transfers in:", transfersIn);
     console.log("  Transfers used:", transfersUsed);
     
     return transfersUsed;
