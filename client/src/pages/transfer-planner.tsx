@@ -2104,22 +2104,24 @@ export default function TransferPlanner() {
       return 0;
     }
     
-    // Count how many players in the current lineup are different from baseline
-    // Ignore transferred out players (they're still pending)
+    // Count transfers by comparing player IDs, not positions
+    // A transfer = a player ID in baseline is no longer in current lineup
+    // This prevents position swaps/optimization from being counted as transfers
     let transfersUsed = 0;
     
+    // Get set of current player IDs (excluding transferred out pending players)
+    const currentPlayerIds = new Set(manualLineup.filter(p => !p.is_transferred_out).map(p => p.element));
+    
     baseline.forEach((baselinePick) => {
-      const currentPick = manualLineup.find(p => p.position === baselinePick.position);
-      
-      // If the player at this position is different from baseline AND not transferred out, count it as a transfer
-      if (currentPick && !currentPick.is_transferred_out && currentPick.element !== baselinePick.element) {
+      // If this baseline player is not in the current lineup, it was transferred out
+      if (!currentPlayerIds.has(baselinePick.element)) {
         transfersUsed++;
       }
     });
     
     console.log("📊 TRANSFERS USED DEBUG:");
-    console.log("  Baseline lineup:", baseline.map(p => ({ pos: p.position, id: p.element })));
-    console.log("  Current lineup:", manualLineup.map(p => ({ pos: p.position, id: p.element, out: p.is_transferred_out })));
+    console.log("  Baseline player IDs:", baseline.map(p => p.element));
+    console.log("  Current player IDs:", Array.from(currentPlayerIds));
     console.log("  Transfers used:", transfersUsed);
     
     return transfersUsed;
