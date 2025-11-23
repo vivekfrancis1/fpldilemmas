@@ -1649,11 +1649,11 @@ export default function MyDashboard() {
               
               {nextTeamData && teamData && (
                 <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg">
-                  <CardHeader className="p-4 sm:p-6">
+                  <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
                     <CardTitle className="text-lg sm:text-xl text-green-900">
                       Your GW {getNextGameweekDashboard()} Team Preview
                     </CardTitle>
-                    <CardDescription className="text-green-700 mt-2">
+                    <CardDescription className="text-green-700 mt-1">
                       Your team for the upcoming gameweek.
                     </CardDescription>
                   </CardHeader>
@@ -1739,7 +1739,7 @@ export default function MyDashboard() {
                     </div>
 
                     {/* View Toggle - Hidden on mobile */}
-                    <div className="hidden md:flex justify-center gap-2">
+                    <div className="hidden md:flex justify-center gap-2 mb-2">
                       <Button
                         variant={nextTeamView === "pitch" ? "default" : "outline"}
                         onClick={() => setNextTeamView("pitch")}
@@ -1762,7 +1762,7 @@ export default function MyDashboard() {
 
                     {/* Pitch View - Hidden on mobile */}
                     {nextTeamView === "pitch" && (
-                      <div className="space-y-4 hidden md:block">
+                      <div className="space-y-4 hidden md:block mt-6">
                         {/* Pitch with players */}
                         <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
                           {/* Pitch Lines */}
