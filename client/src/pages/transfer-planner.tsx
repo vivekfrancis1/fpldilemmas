@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { applyAvailabilityAdjustments, AFCON_PLAYERS } from "@/lib/availability-adjustments";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
+import { useAuth } from "@/hooks/useAuth";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -876,6 +877,8 @@ export default function TransferPlanner() {
   });
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
   
+  const { user } = useAuth();
+  
   // Store transfers per gameweek for cumulative effect
   const [gameweekTransfers, setGameweekTransfers] = useState<GameweekTransfers>({});
   
@@ -1029,11 +1032,17 @@ export default function TransferPlanner() {
     queryKey: ["/api/fixtures"],
   });
 
+  // Check if user is viewing their own team
+  const isOwnTeam = user?.fplManagerId && searchedId && Number(searchedId) === user.fplManagerId;
+
+  // Use authenticated my-team endpoint for own team (shows GW 13 unconfirmed team)
+  // Otherwise use public picks endpoint (GW 12 confirmed team)
   const { data: teamData, isLoading: isLoadingTeam } = useQuery<TeamData>({
-    queryKey: ["/api/manager", searchedId, "team"],
+    queryKey: isOwnTeam ? ["/api/fpl/my-team"] : ["/api/manager", searchedId, "team"],
     enabled: !!searchedId,
     staleTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false, // Prevent auto-refetch that would reset transfers
+    retry: false, // Don't auto-retry if FPL session expired
   });
 
   // Fetch manager history to get used chips
