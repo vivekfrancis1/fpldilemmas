@@ -1857,7 +1857,7 @@ export default function MyDashboard() {
                                     return (
                                       <div key={pick.element} className="flex flex-col items-center w-[19.5%]">
                                         <div className="relative w-full">
-                                          <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
+                                          <svg viewBox="0 0 224 152" className="w-full drop-shadow-xl">
                                             <defs>
                                               <clipPath id={`next-jersey-clip-${positionType}-${player.id}`}>
                                                 <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" />
@@ -1939,7 +1939,7 @@ export default function MyDashboard() {
                                   return (
                                     <div key={pick.element} className="flex flex-col items-center w-[19.5%]">
                                       <div className="relative w-full">
-                                        <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
+                                        <svg viewBox="0 0 224 152" className="w-full drop-shadow-xl">
                                           <defs>
                                             <clipPath id={`next-bench-jersey-clip-${player.id}`}>
                                               <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" />
