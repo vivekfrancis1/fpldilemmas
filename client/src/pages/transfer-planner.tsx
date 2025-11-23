@@ -4298,14 +4298,27 @@ export default function TransferPlanner() {
       const gwData = draft.gameweekTransfers[gw];
       if (gwData.completed && gwData.completed.length > 0) {
         // Get the squad BEFORE this gameweek's transfers (cumulative from previous GWs)
-        const previousGW = gw - 1;
-        const squadBeforeTransfers = getSquadAtGameweek(draft.gameweekTransfers, previousGW);
+        // For GW 13, use base team. For GW 14+, use squad after previous GW's transfers
+        const squadBeforeTransfers = gw === firstPlanningGW 
+          ? (teamData?.picks || [])
+          : getSquadAtGameweek(draft.gameweekTransfers, gw - 1);
         const squadPlayerIds = new Set(squadBeforeTransfers.map(p => p.element));
         
+        console.log(`🔍 TOOLTIP DEBUG GW${gw}:`, {
+          draftLetter: draft.draftLetter,
+          allTransfers: gwData.completed.map((t: any) => `${t.outPlayerName}(${t.outPlayerId}) → ${t.inPlayerName}(${t.inPlayerId})`),
+          squadPlayerIds: Array.from(squadPlayerIds),
+          firstPlanningGW
+        });
+        
         // Only show valid transfers where the out player actually exists in the squad
-        const validTransfers = gwData.completed.filter((transfer: CompletedTransfer) => 
-          squadPlayerIds.has(transfer.outPlayerId)
-        );
+        const validTransfers = gwData.completed.filter((transfer: CompletedTransfer) => {
+          const isValid = squadPlayerIds.has(transfer.outPlayerId);
+          if (!isValid) {
+            console.log(`  ❌ INVALID: ${transfer.outPlayerName}(${transfer.outPlayerId}) not in squad`);
+          }
+          return isValid;
+        });
         
         if (validTransfers.length > 0) {
           tooltipLines.push(`GW${gw}:`);
