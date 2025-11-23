@@ -11,6 +11,7 @@ import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCirc
 import { useToast } from "@/hooks/use-toast";
 import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 
 interface TeamPick {
   element: number;
@@ -450,6 +451,7 @@ export default function TransferRecommendations() {
                     <Search className="h-4 w-4 mr-2" />
                     {isLoadingRecommendations ? "Analyzing..." : "Search Manager"}
                   </Button>
+                  <FplConnectDialog />
                 </div>
               </div>
             </div>
