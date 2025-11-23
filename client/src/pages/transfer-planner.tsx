@@ -15,6 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { applyAvailabilityAdjustments, AFCON_PLAYERS } from "@/lib/availability-adjustments";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -5081,6 +5082,7 @@ export default function TransferPlanner() {
                   <Search className="h-4 w-4 mr-2" />
                   {isLoadingTeam ? "Loading..." : "Load Team"}
                 </Button>
+                <FplConnectDialog />
               </div>
             </div>
           </div>
