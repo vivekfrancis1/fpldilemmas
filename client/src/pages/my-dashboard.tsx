@@ -39,6 +39,7 @@ import { Link, useLocation } from "wouter";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { useAuth } from "@/hooks/useAuth";
 
 
 
@@ -232,6 +233,7 @@ interface Transfer {
 
 export default function MyDashboard() {
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
   // Default to pitch view on desktop (>=768px), list view on mobile
@@ -291,9 +293,14 @@ export default function MyDashboard() {
   });
 
   // Fetch next gameweek's team data
+  // Check if user is viewing their own team
+  const isOwnTeam = user?.fplManagerId && searchedId && Number(searchedId) === user.fplManagerId;
   const nextGameweek = bootstrapData?.events.find(e => e.is_current)?.id ? Math.min((bootstrapData.events.find(e => e.is_current)?.id || 1) + 1, 38) : 2;
+  
+  // Use authenticated my-team endpoint for own team (shows current working team before confirmation)
+  // Otherwise use public picks endpoint (only works after confirmation)
   const { data: nextTeamData, isLoading: isLoadingNextTeam } = useQuery<TeamData>({
-    queryKey: [`/api/manager/${searchedId}/team?gameweek=${nextGameweek}`],
+    queryKey: isOwnTeam ? ["/api/fpl/my-team"] : [`/api/manager/${searchedId}/team?gameweek=${nextGameweek}`],
     enabled: !!searchedId && !!teamData && !!bootstrapData, // Only fetch if we have current team data and bootstrap data
   });
 
