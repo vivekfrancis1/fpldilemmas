@@ -4682,7 +4682,7 @@ export default function TransferPlanner() {
           setCompletedTransfers([]);
           
           // Rebuild the lineup based on Draft A's cumulative transfers
-          const updatedSquad = getSquadAtGameweek(draft.gameweekTransfers || {}, selectedGW);
+          const updatedSquad = selectedGameweek ? getSquadAtGameweek(draft.gameweekTransfers || {}, selectedGameweek) : [];
           if (updatedSquad.length > 0) {
             setManualLineup(updatedSquad);
           } else if (teamData?.picks) {
