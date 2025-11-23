@@ -2188,6 +2188,12 @@ export default function TransferPlanner() {
     const currentGW = currentEvent?.id || 1;
     const firstPlanningGW = currentGW + 1;
     
+    // When using authenticated my-team endpoint for the first planning GW, 
+    // trust the FPL API's transfer limit directly (it knows the correct value)
+    if (isOwnTeam && selectedGameweek === firstPlanningGW && teamData.transfers.limit !== undefined) {
+      return teamData.transfers.limit;
+    }
+    
     // Calculate initial FTs for the first planning gameweek using history (mirroring backend logic)
     let currentInitial = 1; // Start with base 1 FT
     
