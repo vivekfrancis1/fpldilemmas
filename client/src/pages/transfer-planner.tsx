@@ -1045,6 +1045,13 @@ export default function TransferPlanner() {
     retry: false, // Don't auto-retry if FPL session expired
   });
 
+  // Debug: log teamData.transfers when using authenticated endpoint
+  useEffect(() => {
+    if (isOwnTeam && teamData) {
+      console.log("🔍 Authenticated my-team data transfers:", teamData.transfers);
+    }
+  }, [isOwnTeam, teamData]);
+
   // Fetch manager history to get used chips
   const { data: historyData } = useQuery<ManagerHistory>({
     queryKey: ["/api/manager", searchedId, "history"],
