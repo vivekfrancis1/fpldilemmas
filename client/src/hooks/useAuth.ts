@@ -7,6 +7,8 @@ interface AuthUser {
   role: string;
   firstName?: string;
   lastName?: string;
+  fplManagerId?: number;
+  fplEmail?: string;
 }
 
 export function useAuth() {

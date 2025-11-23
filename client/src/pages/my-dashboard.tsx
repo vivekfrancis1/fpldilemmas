@@ -105,7 +105,7 @@ interface TeamData {
     element_out: number;
     event: number;
   }>;
-  entry_history: {
+  entry_history?: {
     event: number;
     points: number;
     total_points: number;
@@ -118,6 +118,13 @@ interface TeamData {
     event_transfers: number;
     event_transfers_cost: number;
     points_on_bench: number;
+  };
+  transfers?: {
+    bank: number;
+    limit: number;
+    cost: number;
+    status: string;
+    made: number;
   };
 }
 
@@ -1680,21 +1687,19 @@ export default function MyDashboard() {
                       Your GW {getNextGameweekDashboard()} Team Preview
                     </CardTitle>
                     <CardDescription className="text-green-700 mt-2">
-                      This is your confirmed team for the upcoming gameweek. Points shown are based on current gameweek performance.
+                      Your team for the upcoming gameweek.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-6">
-                    <Alert className="mb-6 border-blue-200 bg-blue-50">
-                      <AlertDescription className="text-sm text-blue-800">
-                        <strong>Note:</strong> This tab shows your confirmed team for GW {getNextGameweekDashboard()}. 
-                        Points displayed are from the current gameweek (GW {getCurrentGameweekDashboard()}) for reference.
-                        {nextTeamData.active_chip && (
-                          <span className="block mt-2 font-semibold text-blue-900">
+                    {nextTeamData.active_chip && (
+                      <Alert className="mb-6 border-blue-200 bg-blue-50">
+                        <AlertDescription className="text-sm text-blue-800">
+                          <span className="font-semibold text-blue-900">
                             Active Chip: {nextTeamData.active_chip.toUpperCase()}
                           </span>
-                        )}
-                      </AlertDescription>
-                    </Alert>
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
                     {/* Team Overview Cards */}
                     <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 mb-6">
@@ -1755,7 +1760,7 @@ export default function MyDashboard() {
                             <div className="min-w-0 flex-1">
                               <p className="text-xs sm:text-sm font-medium text-amber-700 mb-1">Bank</p>
                               <p className="text-xl sm:text-2xl font-bold text-amber-900">
-                                {formatPrice(nextTeamData.entry_history?.bank || 0)}
+                                {formatPrice(nextTeamData.transfers?.bank || nextTeamData.entry_history?.bank || 0)}
                               </p>
                             </div>
                             <div className="p-2 bg-amber-200 rounded-full">
@@ -1782,26 +1787,20 @@ export default function MyDashboard() {
                               <CardContent className="p-3 sm:p-4">
                                 <div className="flex items-center justify-between gap-3">
                                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <div className="flex-shrink-0">
-                                      <Badge variant={pick.is_captain ? "default" : pick.is_vice_captain ? "outline" : "secondary"} 
-                                             className={pick.is_captain ? "bg-yellow-400 text-black" : pick.is_vice_captain ? "border-yellow-400" : ""}>
-                                        {pick.is_captain ? "C" : pick.is_vice_captain ? "V" : getPositionName(player.element_type)}
-                                      </Badge>
-                                    </div>
+                                    {(pick.is_captain || pick.is_vice_captain) && (
+                                      <div className="flex-shrink-0">
+                                        <Badge variant={pick.is_captain ? "default" : "outline"} 
+                                               className={pick.is_captain ? "bg-yellow-400 text-black" : "border-yellow-400"}>
+                                          {pick.is_captain ? "C" : "V"}
+                                        </Badge>
+                                      </div>
+                                    )}
                                     <div className="flex-1 min-w-0">
                                       <div className="font-semibold text-gray-900 truncate">{player.web_name}</div>
                                       <div className="text-sm text-gray-600 flex items-center gap-2 mt-1">
-                                        <span className="truncate">{playerTeam?.short_name || 'UNK'}</span>
-                                        <span className="text-xs">•</span>
-                                        <span>{formatPrice(player.now_cost)}</span>
+                                        <span className="truncate">{playerTeam?.short_name || 'UNK'}. {getPositionName(player.element_type)}. {formatPrice(player.now_cost)}</span>
                                       </div>
                                     </div>
-                                  </div>
-                                  <div className="text-right flex-shrink-0">
-                                    <div className="text-lg font-bold text-green-600">
-                                      {player.event_points || 0}{pick.is_captain ? 'x2' : ''}
-                                    </div>
-                                    <div className="text-xs text-gray-500">GW{getCurrentGameweekDashboard()} pts</div>
                                   </div>
                                 </div>
                               </CardContent>
@@ -1823,23 +1822,12 @@ export default function MyDashboard() {
                               <CardContent className="p-3 sm:p-4">
                                 <div className="flex items-center justify-between gap-3">
                                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <div className="flex-shrink-0">
-                                      <Badge variant="secondary">{getPositionName(player.element_type)}</Badge>
-                                    </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="font-semibold text-gray-700 truncate">{player.web_name}</div>
                                       <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
-                                        <span className="truncate">{playerTeam?.short_name || 'UNK'}</span>
-                                        <span className="text-xs">•</span>
-                                        <span>{formatPrice(player.now_cost)}</span>
+                                        <span className="truncate">{playerTeam?.short_name || 'UNK'}. {getPositionName(player.element_type)}. {formatPrice(player.now_cost)}</span>
                                       </div>
                                     </div>
-                                  </div>
-                                  <div className="text-right flex-shrink-0">
-                                    <div className="text-lg font-bold text-gray-600">
-                                      {player.event_points || 0}
-                                    </div>
-                                    <div className="text-xs text-gray-400">GW{getCurrentGameweekDashboard()} pts</div>
                                   </div>
                                 </div>
                               </CardContent>
