@@ -2195,38 +2195,44 @@ export default function TransferPlanner() {
       currentInitial = teamData.transfers.limit;
       console.log(`✅ Using API limit (${currentInitial}) as starting point for banking calculation`);
     } else if (bootstrapData && historyData?.current && historyData.current.length > 0) {
-      // Calculate from history if no API data available
-      // Only look at finished gameweeks for banking
-      const finishedHistory = historyData.current.filter((h: any) => {
-        const gwData = bootstrapData.events.find((e: any) => e.id === h.event);
-        return gwData?.finished === true;
-      });
+      // Calculate from history using forward simulation (mirroring backend logic)
+      // Start with 1 FT and simulate forward through each finished gameweek
+      let runningFTs = 1;
       
-      if (finishedHistory.length > 0) {
-        // Look back through recent finished gameweeks to calculate accumulated FTs
-        let accumulatedFTs = 1;
-        for (let i = finishedHistory.length - 1; i >= Math.max(0, finishedHistory.length - 4); i--) {
-          const gw = finishedHistory[i];
-          const gwEvent = gw.event;
-          const transfersMade = gw.event_transfers || 0;
-          
-          // Check if a chip was used in this gameweek
-          const chipUsed = historyData.chips?.find((c: any) => c.event === gwEvent);
-          const isFreeHitOrWildcard = chipUsed?.name === 'freehit' || chipUsed?.name === 'wildcard';
-          
-          if (isFreeHitOrWildcard) {
-            // Free Hit or Wildcard: stop looking back (don't bank this week, but keep earlier banking intact)
-            break;
-          } else if (transfersMade === 0 && accumulatedFTs < 5) {
-            // No transfers made: bank 1 FT
-            accumulatedFTs++;
-          } else if (transfersMade > 0) {
-            // Transfers were made: stop looking back
-            break;
-          }
+      // Get all finished gameweeks in chronological order
+      const finishedHistory = historyData.current
+        .filter((h: any) => {
+          const gwData = bootstrapData.events.find((e: any) => e.id === h.event);
+          return gwData?.finished === true;
+        })
+        .sort((a: any, b: any) => a.event - b.event);
+      
+      console.log(`📊 FORWARD SIMULATION: Starting with 1 FT, simulating through ${finishedHistory.length} finished GWs`);
+      
+      for (const gw of finishedHistory) {
+        const gwEvent = gw.event;
+        const transfersMade = gw.event_transfers || 0;
+        
+        // Check if a chip was used in this gameweek
+        const chipUsed = historyData.chips?.find((c: any) => c.event === gwEvent);
+        const isWildcard = chipUsed?.name === 'wildcard';
+        const isFreeHit = chipUsed?.name === 'freehit';
+        
+        if (isWildcard || isFreeHit) {
+          // Wildcard or Free Hit: reset to 1 FT for next gameweek
+          console.log(`  GW${gwEvent}: ${isWildcard ? 'Wildcard' : 'Free Hit'} used → Reset to 1 FT`);
+          runningFTs = 1;
+        } else {
+          // Normal banking: subtract transfers used, add 1, clamp to cap (2 for normal, 5 for AFCON)
+          const remaining = runningFTs - transfersMade;
+          const cap = gwEvent === 15 ? 5 : 2; // AFCON gives 5 FT cap at GW16, calculated at end of GW15
+          runningFTs = Math.max(1, Math.min(cap, 1 + remaining));
+          console.log(`  GW${gwEvent}: Had ${runningFTs - 1 + transfersMade} FTs, used ${transfersMade}, banked ${remaining}, next GW has ${runningFTs} FTs (cap: ${cap})`);
         }
-        currentInitial = Math.min(5, accumulatedFTs);
       }
+      
+      currentInitial = runningFTs;
+      console.log(`✅ FORWARD SIMULATION RESULT: ${currentInitial} FTs for GW ${firstPlanningGW}`);
     }
     
     // If firstPlanningGW > 16, simulate banking from GW16 through intervening gameweeks
