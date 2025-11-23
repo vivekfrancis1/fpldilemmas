@@ -2218,16 +2218,19 @@ export default function TransferPlanner() {
         const isWildcard = chipUsed?.name === 'wildcard';
         const isFreeHit = chipUsed?.name === 'freehit';
         
+        // Subtract transfers used first (clamped to >= 0)
+        const remaining = Math.max(0, runningFTs - transfersMade);
+        
         if (isWildcard || isFreeHit) {
-          // Wildcard or Free Hit: reset to 1 FT for next gameweek
-          console.log(`  GW${gwEvent}: ${isWildcard ? 'Wildcard' : 'Free Hit'} used → Reset to 1 FT`);
-          runningFTs = 1;
+          // Wildcard or Free Hit: Keep banked FTs but don't add +1 for this gameweek
+          const cap = gwEvent === 15 ? 5 : 2; // AFCON cap
+          runningFTs = Math.min(cap, remaining);
+          console.log(`  GW${gwEvent}: ${isWildcard ? 'Wildcard' : 'Free Hit'} used → Bank carries through at ${remaining} FTs (capped to ${runningFTs})`);
         } else {
-          // Normal banking: subtract transfers used, add 1, clamp to cap (2 for normal, 5 for AFCON)
-          const remaining = runningFTs - transfersMade;
+          // Normal banking: add +1 and clamp to cap (2 for normal, 5 for AFCON)
           const cap = gwEvent === 15 ? 5 : 2; // AFCON gives 5 FT cap at GW16, calculated at end of GW15
-          runningFTs = Math.max(1, Math.min(cap, 1 + remaining));
-          console.log(`  GW${gwEvent}: Had ${runningFTs - 1 + transfersMade} FTs, used ${transfersMade}, banked ${remaining}, next GW has ${runningFTs} FTs (cap: ${cap})`);
+          runningFTs = Math.max(1, Math.min(cap, remaining + 1));
+          console.log(`  GW${gwEvent}: Had ${runningFTs - 1 + transfersMade} FTs, used ${transfersMade}, remaining ${remaining}, next GW gets ${remaining}+1=${remaining + 1}, capped to ${runningFTs} (cap: ${cap})`);
         }
       }
       
@@ -2296,21 +2299,22 @@ export default function TransferPlanner() {
       const isFreeHitGW = plannedChips[gw] === 'freehit';
       const isWildcardGW = plannedChips[gw] === 'wildcard';
       
+      // Get transfers used in this gameweek
+      const used = calculateTransfersUsedForGameweek(gw);
+      // Calculate what's left after using transfers (clamped to >= 0)
+      const remaining = Math.max(0, currentInitial - used);
+      
       if (isFreeHitGW || isWildcardGW) {
-        // Free Hit or Wildcard: next gameweek resets to 1 FT (no banking)
-        console.log(`  🎯 CHIP USED in GW ${gw}: ${isFreeHitGW ? 'Free Hit' : 'Wildcard'} - Resetting to 1 FT for GW ${nextGW}`);
-        currentInitial = 1;
+        // Free Hit or Wildcard: Keep banked FTs but don't add +1 for this gameweek
+        currentInitial = Math.min(5, remaining);
+        console.log(`  🎯 CHIP USED in GW ${gw}: ${isFreeHitGW ? 'Free Hit' : 'Wildcard'} - Bank carries through at ${remaining} FTs (capped to ${currentInitial})`);
       } else {
         // Normal banking logic:
-        // 1. Get transfers used in this gameweek
-        const used = calculateTransfersUsedForGameweek(gw);
-        // 2. Calculate what's left after using transfers
-        const remaining = currentInitial - used;
-        // 3. Next gameweek gets automatic +1 FT plus any remaining (banked)
-        const nextGWInitial = 1 + remaining;
-        // 4. Cap between 1 and 5 FTs
+        // Next gameweek gets automatic +1 FT plus any remaining (banked)
+        const nextGWInitial = remaining + 1;
+        // Cap between 1 and 5 FTs
         const newInitial = Math.max(1, Math.min(5, nextGWInitial));
-        console.log(`  📊 GW ${gw}: started with ${currentInitial} FTs, used ${used}, remaining ${remaining}, next GW gets 1+${remaining}=${nextGWInitial}, capped to ${newInitial}`);
+        console.log(`  📊 GW ${gw}: started with ${currentInitial} FTs, used ${used}, remaining ${remaining}, next GW gets ${remaining}+1=${nextGWInitial}, capped to ${newInitial}`);
         currentInitial = newInitial;
       }
     }
