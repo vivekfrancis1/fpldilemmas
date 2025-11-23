@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { applyAvailabilityAdjustments, AFCON_PLAYERS, type BootstrapData as AvailabilityBootstrapData } from "@/lib/availability-adjustments";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
+import { useAuth } from "@/hooks/useAuth";
 
 // Player Availability Badge Component
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -187,6 +188,7 @@ export default function ProjectedPoints() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
@@ -219,11 +221,17 @@ export default function ProjectedPoints() {
     queryKey: ["/api/bootstrap-static"],
   });
 
+  // Check if user is viewing their own team
+  const isOwnTeam = user?.fplManagerId && searchedId && Number(searchedId) === user.fplManagerId;
+  
+  // Use authenticated my-team endpoint for own team (shows GW 13 unconfirmed team)
+  // Otherwise use public picks endpoint (GW 12 confirmed team)
   const { data: teamData, isLoading: isLoadingTeam } = useQuery<TeamData>({
-    queryKey: ["/api/manager", searchedId, "team"],
+    queryKey: isOwnTeam ? ["/api/fpl/my-team"] : ["/api/manager", searchedId, "team"],
     enabled: !!searchedId,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: false, // Don't auto-retry if FPL session expired
   });
 
   // Fetch fixtures data
