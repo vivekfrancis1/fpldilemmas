@@ -803,10 +803,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up Replit Auth with OpenID Connect (includes session middleware)
   await setupAuth(app);
   
-  // Auth routes - /api/auth/user endpoint
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Unified auth user endpoint - handles both Google OAuth and local login
+  app.get('/api/auth/user', async (req: any, res) => {
     try {
-      res.json(req.user);
+      // Check passport user (Google OAuth) or session user (local login)
+      const user = req.user || req.session?.user;
+      if (user) {
+        res.json(user);
+      } else {
+        res.status(401).json(null);
+      }
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -815,14 +821,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Middleware to check if user is admin (for future use)
   function requireAdmin(req: any, res: any, next: any) {
-    if (req.user?.role === 'admin') {
+    const user = req.user || req.session?.user;
+    if (user?.role === 'admin') {
       next();
     } else {
       res.status(403).json({ error: 'Admin access required' });
     }
   }
 
-  // Legacy authentication routes removed - using Google OAuth now
+  // Local username/password login
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
@@ -844,18 +851,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      // Store user in session
-      (req.session as any).user = user;
+      // Upsert user into storage so passport can deserialize them
+      // Convert ID to string to match storage's string-based ID system
+      const storageUser = await storage.upsertUser({
+        id: String(user.id),
+        email: user.email || undefined,
+        firstName: user.firstName || undefined,
+        lastName: user.lastName || undefined,
+      });
 
-      res.json({ 
-        success: true, 
-        user: {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          firstName: user.firstName,
-          lastName: user.lastName
+      // Use passport's login to maintain consistency with Google OAuth
+      req.login(storageUser, (err) => {
+        if (err) {
+          console.error('Session login error:', err);
+          return res.status(500).json({ error: 'Failed to establish session' });
         }
+
+        res.json({ 
+          success: true, 
+          user: {
+            id: storageUser.id,
+            email: storageUser.email,
+            role: user.role, // Role is from database user, not storage
+            firstName: storageUser.firstName,
+            lastName: storageUser.lastName
+          }
+        });
       });
     } catch (error) {
       console.error('Login error:', error);
@@ -863,28 +884,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Unified logout endpoint - handles both Google OAuth and local login
   app.post("/api/auth/logout", (req: any, res) => {
-    req.session.destroy((err: any) => {
-      if (err) {
-        return res.status(500).json({ error: 'Could not log out' });
+    // Clear passport session (for Google OAuth users)
+    req.logout(() => {
+      // Clear local session (for local login users)
+      if (req.session) {
+        req.session.destroy((err: any) => {
+          if (err) {
+            console.error('Session destroy error:', err);
+            return res.status(500).json({ error: 'Could not log out' });
+          }
+          res.json({ success: true, message: 'Logged out successfully' });
+        });
+      } else {
+        res.json({ success: true, message: 'Logged out successfully' });
       }
-      res.json({ success: true, message: 'Logged out successfully' });
     });
-  });
-
-  app.get("/api/auth/user", (req: any, res) => {
-    if (req.session?.user) {
-      res.json(req.session.user);
-    } else {
-      res.json(null);
-    }
   });
 
   // FPL Authentication endpoints
   app.post("/api/fpl/connect", isAuthenticated, async (req: any, res) => {
     try {
       let { fplToken, fplManagerId } = req.body;
-      const userId = (req.user as any).id;
+      // Get user ID from either passport (Google OAuth) or session (local login)
+      const userId = (req.user as any)?.id || (req.session as any)?.user?.id;
 
       if (!fplToken) {
         return res.status(400).json({ error: 'FPL Bearer token or cURL command is required' });

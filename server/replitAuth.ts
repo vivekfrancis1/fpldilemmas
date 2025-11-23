@@ -98,7 +98,8 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  if (req.isAuthenticated()) {
+  // Check both passport authentication (Google OAuth) and session authentication (local login)
+  if (req.isAuthenticated() || (req.session as any)?.user) {
     return next();
   }
   return res.status(401).json({ message: "Unauthorized" });
