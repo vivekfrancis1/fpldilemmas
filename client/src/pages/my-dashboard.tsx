@@ -1868,8 +1868,8 @@ export default function MyDashboard() {
                                             <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
                                             {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
                                             {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
-                                            <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                            <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                            <text x="140" y="80" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                            <text x="140" y="115" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
                                             {(() => {
                                               const nextGW = getNextGameweekDashboard();
                                               const gwFixtures = (() => {
@@ -1897,13 +1897,13 @@ export default function MyDashboard() {
                                               const nextThreeFixtures = gwFixtures.slice(1);
                                               return (
                                                 <>
-                                                  <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{currentFixture?.opponent || 'BGW'}</text>
+                                                  <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{currentFixture?.opponent || 'BGW'}</text>
                                                   {nextThreeFixtures.map((fixture, idx) => {
                                                     const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
                                                     return (
                                                       <g key={idx}>
-                                                        <rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} />
-                                                        <text x={86 + (idx * 53)} y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
+                                                        <rect x={47 + (idx * 62)} y="165" width="58" height="20" rx="5" fill={diffColor} />
+                                                        <text x={76 + (idx * 62)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
                                                       </g>
                                                     );
                                                   })}
