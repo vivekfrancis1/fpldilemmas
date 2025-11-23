@@ -33,7 +33,8 @@ import {
   ChevronUp,
   ChevronDown,
   ExternalLink,
-  ArrowLeftRight
+  ArrowLeftRight,
+  RefreshCw
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
@@ -312,9 +313,10 @@ export default function MyDashboard() {
   
   // Use authenticated my-team endpoint for own team (shows current working team before confirmation)
   // Otherwise use public picks endpoint (only works after confirmation)
-  const { data: nextTeamData, isLoading: isLoadingNextTeam } = useQuery<TeamData>({
+  const { data: nextTeamData, isLoading: isLoadingNextTeam, error: nextTeamError, refetch: refetchNextTeam } = useQuery<TeamData>({
     queryKey: isOwnTeam ? ["/api/fpl/my-team"] : [`/api/manager/${searchedId}/team?gameweek=${nextGameweek}`],
     enabled: !!searchedId && !!teamData && !!bootstrapData, // Only fetch if we have current team data and bootstrap data
+    retry: false, // Don't auto-retry if FPL session expired
   });
 
   // Get fixtures for teams
@@ -1598,9 +1600,48 @@ export default function MyDashboard() {
                       <div className="text-lg font-semibold text-blue-900">
                         GW {getNextGameweekDashboard()} Team Not Available
                       </div>
-                      <p className="text-sm text-blue-700">
-                        Team data for the upcoming gameweek will be available once you've confirmed your team in FPL.
-                      </p>
+                      {nextTeamError ? (
+                        <>
+                          <p className="text-sm text-red-700">
+                            {isOwnTeam 
+                              ? "Failed to fetch your upcoming team. Your FPL session may have expired."
+                              : "Team data for the upcoming gameweek is not available yet."}
+                          </p>
+                          {isOwnTeam && (
+                            <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4">
+                              <Button
+                                onClick={() => refetchNextTeam()}
+                                variant="outline"
+                                className="bg-white hover:bg-blue-50"
+                                data-testid="button-refetch-next-team"
+                              >
+                                <RefreshCw className="w-4 h-4 mr-2" />
+                                Try Again
+                              </Button>
+                              <FplConnectDialog />
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-blue-700">
+                            {isOwnTeam 
+                              ? "Your upcoming team will show here once you make changes in FPL."
+                              : "Team data for the upcoming gameweek will be available once confirmed in FPL."}
+                          </p>
+                          {isOwnTeam && (
+                            <Button
+                              onClick={() => refetchNextTeam()}
+                              variant="outline"
+                              className="bg-white hover:bg-blue-50 mt-4"
+                              data-testid="button-fetch-next-team"
+                            >
+                              <RefreshCw className="w-4 h-4 mr-2" />
+                              Fetch Team
+                            </Button>
+                          )}
+                        </>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
