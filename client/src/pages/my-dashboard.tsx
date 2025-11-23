@@ -1783,8 +1783,8 @@ export default function MyDashboard() {
                                             <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
                                             {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
                                             {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
-                                            <text x="140" y="70" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                            <text x="140" y="118" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                            <text x="140" y="80" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                            <text x="140" y="115" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
                                             {(() => {
                                               const nextGW = getNextGameweekDashboard();
                                               const gwFixtures = (() => {
@@ -1812,7 +1812,7 @@ export default function MyDashboard() {
                                               const nextThreeFixtures = gwFixtures.slice(1);
                                               return (
                                                 <>
-                                                  <text x="140" y="165" fontSize="18" fontWeight="bold" textAnchor="middle" fill={textColor}>{currentFixture?.opponent || 'BGW'}</text>
+                                                  <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{currentFixture?.opponent || 'BGW'}</text>
                                                   {nextThreeFixtures.map((fixture, idx) => {
                                                     const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
                                                     return (
@@ -1863,8 +1863,8 @@ export default function MyDashboard() {
                                           <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#next-bench-jersey-clip-${player.id})`} />
                                           <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
                                           <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                          <text x="140" y="70" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                          <text x="140" y="118" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                          <text x="140" y="80" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                          <text x="140" y="115" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
                                           {(() => {
                                             const nextGW = getNextGameweekDashboard();
                                             const gwFixtures = (() => {
@@ -1892,7 +1892,7 @@ export default function MyDashboard() {
                                             const nextThreeFixtures = gwFixtures.slice(1);
                                             return (
                                               <>
-                                                <text x="140" y="165" fontSize="18" fontWeight="bold" textAnchor="middle" fill={textColor}>{currentFixture?.opponent || 'BGW'}</text>
+                                                <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{currentFixture?.opponent || 'BGW'}</text>
                                                 {nextThreeFixtures.map((fixture, idx) => {
                                                   const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
                                                   return (
