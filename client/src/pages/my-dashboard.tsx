@@ -567,7 +567,7 @@ export default function MyDashboard() {
     if (!currentFixture) return displayPoints.toString();
     
     if (!currentFixture.started || (!currentFixture.finished && points === 0)) {
-      return `vs ${currentFixture.opponent.substring(0, 3)} (${currentFixture.isHome ? 'H' : 'A'})`;
+      return `${currentFixture.opponent.substring(0, 3)} (${currentFixture.isHome ? 'H' : 'A'})`;
     }
     
     if (currentFixture.finished && points === 0) {
@@ -1240,17 +1240,17 @@ export default function MyDashboard() {
                                         )}
                                         
                                         {/* Team Name */}
-                                        <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="70" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {playerTeam?.short_name || 'UNK'}
                                         </text>
                                         
                                         {/* Player Name */}
-                                        <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="118" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {player.web_name}
                                         </text>
                                         
                                         {/* Points */}
-                                        <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        <text x="140" y="165" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </text>
                                       </svg>
@@ -1407,9 +1407,9 @@ export default function MyDashboard() {
                                     <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
                                     <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
                                     {player.in_dreamteam && (<g><circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" /></g>)}
-                                    <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                    <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                    <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, false)}</text>
+                                    <text x="140" y="70" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                    <text x="140" y="118" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                    <text x="140" y="165" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, false)}</text>
                                   </svg>
                                 </div>
                               </div>
