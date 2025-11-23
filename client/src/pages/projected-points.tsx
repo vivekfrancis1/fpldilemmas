@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { applyAvailabilityAdjustments, AFCON_PLAYERS, type BootstrapData as AvailabilityBootstrapData } from "@/lib/availability-adjustments";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 
 // Player Availability Badge Component
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -734,6 +735,7 @@ export default function ProjectedPoints() {
                   <Search className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   {isLoadingTeam ? "Loading..." : "Search"}
                 </Button>
+                <FplConnectDialog />
               </div>
               
               {searchedId && (
