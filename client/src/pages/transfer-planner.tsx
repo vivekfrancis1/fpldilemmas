@@ -2178,8 +2178,9 @@ export default function TransferPlanner() {
     
     // When using authenticated my-team endpoint for the first planning GW, 
     // trust the FPL API's transfer limit directly (it knows the correct value)
+    console.log(`🔍 FT CONDITION DEBUG - isOwnTeam=${isOwnTeam}, selectedGW=${selectedGameweek}, firstPlanningGW=${firstPlanningGW}, limit=${teamData.transfers.limit}`);
     if (isOwnTeam && selectedGameweek === firstPlanningGW && teamData.transfers.limit !== undefined) {
-      console.log(`🔍 FT DEBUG - Using FPL API limit for GW ${firstPlanningGW}:`, teamData.transfers.limit);
+      console.log(`✅ FT DEBUG - Using FPL API limit for GW ${firstPlanningGW}:`, teamData.transfers.limit);
       return teamData.transfers.limit;
     }
     
