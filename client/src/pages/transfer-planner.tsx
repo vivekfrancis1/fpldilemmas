@@ -4297,13 +4297,14 @@ export default function TransferPlanner() {
     gameweeks.forEach(gw => {
       const gwData = draft.gameweekTransfers[gw];
       if (gwData.completed && gwData.completed.length > 0) {
-        // Get baseline lineup for this gameweek to validate transfers
-        const baselineLineup = getBaselineLineup(gw);
-        const baselinePlayerIds = new Set(baselineLineup.map(p => p.element));
+        // Get the squad BEFORE this gameweek's transfers (cumulative from previous GWs)
+        const previousGW = gw - 1;
+        const squadBeforeTransfers = getSquadAtGameweek(draft.gameweekTransfers, previousGW);
+        const squadPlayerIds = new Set(squadBeforeTransfers.map(p => p.element));
         
-        // Only show valid transfers where the out player actually exists in the baseline
+        // Only show valid transfers where the out player actually exists in the squad
         const validTransfers = gwData.completed.filter((transfer: CompletedTransfer) => 
-          baselinePlayerIds.has(transfer.outPlayerId)
+          squadPlayerIds.has(transfer.outPlayerId)
         );
         
         if (validTransfers.length > 0) {
