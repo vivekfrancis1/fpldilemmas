@@ -293,7 +293,7 @@ export default function MyDashboard() {
   // Fetch next gameweek's team data
   const nextGameweek = bootstrapData?.events.find(e => e.is_current)?.id ? Math.min((bootstrapData.events.find(e => e.is_current)?.id || 1) + 1, 38) : 2;
   const { data: nextTeamData, isLoading: isLoadingNextTeam } = useQuery<TeamData>({
-    queryKey: ["/api/manager", searchedId, "team", `gameweek=${nextGameweek}`],
+    queryKey: [`/api/manager/${searchedId}/team?gameweek=${nextGameweek}`],
     enabled: !!searchedId && !!teamData && !!bootstrapData, // Only fetch if we have current team data and bootstrap data
   });
 
