@@ -1681,9 +1681,14 @@ export default function MyDashboard() {
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1">Transfers Made</p>
+                              <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1">Transfers</p>
                               <p className="text-xl sm:text-2xl font-bold text-blue-900">
-                                {nextTeamData.entry_history?.event_transfers || 0}
+                                {nextTeamData.entry_history?.event_transfers || 0}/{(() => {
+                                  const transfersMade = nextTeamData.entry_history?.event_transfers || 0;
+                                  const transferCost = nextTeamData.entry_history?.event_transfers_cost || 0;
+                                  const freeTransfers = transfersMade - (transferCost / 4);
+                                  return freeTransfers || (nextTeamData.transfers?.limit || 1);
+                                })()}
                               </p>
                             </div>
                             <div className="p-2 bg-blue-200 rounded-full">
