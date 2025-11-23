@@ -2191,6 +2191,7 @@ export default function TransferPlanner() {
     // When using authenticated my-team endpoint for the first planning GW, 
     // trust the FPL API's transfer limit directly (it knows the correct value)
     if (isOwnTeam && selectedGameweek === firstPlanningGW && teamData.transfers.limit !== undefined) {
+      console.log(`🔍 FT DEBUG - Using FPL API limit for GW ${firstPlanningGW}:`, teamData.transfers.limit);
       return teamData.transfers.limit;
     }
     
@@ -2270,6 +2271,7 @@ export default function TransferPlanner() {
       if (firstPlanningGW === 16) {
         return 5;
       }
+      console.log(`🔍 FT DEBUG - GW ${firstPlanningGW} initial FTs from calculation:`, currentInitial);
       return currentInitial;
     }
     
@@ -2300,10 +2302,13 @@ export default function TransferPlanner() {
         // 3. Next gameweek gets automatic +1 FT plus any remaining (banked)
         const nextGWInitial = 1 + remaining;
         // 4. Cap between 1 and 5 FTs
-        currentInitial = Math.max(1, Math.min(5, nextGWInitial));
+        const newInitial = Math.max(1, Math.min(5, nextGWInitial));
+        console.log(`🔍 FT DEBUG - GW ${gw}: current=${currentInitial}, used=${used}, remaining=${remaining}, next=${nextGWInitial}, final=${newInitial}`);
+        currentInitial = newInitial;
       }
     }
     
+    console.log(`🔍 FT DEBUG - Final FTs for GW ${selectedGameweek}:`, currentInitial);
     return currentInitial;
   };
 
