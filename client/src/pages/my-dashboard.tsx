@@ -1533,26 +1533,6 @@ export default function MyDashboard() {
                                               <span className="text-xs md:text-sm font-medium text-gray-700">{getTeamName(player)}</span>
                                               <span className="text-[10px] md:text-xs text-gray-500">Form: {player.form}</span>
                                             </div>
-                                            
-                                            {/* Next 3 fixtures - Simplified on mobile */}
-                                            <div className="space-y-0.5 md:space-y-1">
-                                              <div className="text-[10px] md:text-xs font-medium text-gray-600 hidden md:block">Next 3 fixtures:</div>
-                                              <div className="flex gap-0.5 md:gap-1 flex-wrap">
-                                                {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
-                                                  <div 
-                                                    key={idx}
-                                                    className={`flex items-center gap-0.5 md:gap-1 px-1 md:px-1.5 py-0.5 rounded text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
-                                                    title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
-                                                  >
-                                                    <span className="truncate max-w-[30px] md:max-w-[40px]">{fixture.opponent}</span>
-                                                    <span className="text-[9px] md:text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
-                                                  </div>
-                                                ))}
-                                                {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
-                                                  <span className="text-[10px] md:text-xs text-gray-400">No fixtures</span>
-                                                )}
-                                              </div>
-                                            </div>
                                           </div>
                                         </div>
                                       </div>
@@ -1619,26 +1599,6 @@ export default function MyDashboard() {
                                       <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                                         <span className="text-xs md:text-sm font-medium text-gray-700">{getTeamName(player)}</span>
                                         <span className="text-[10px] md:text-xs text-gray-500">Form: {player.form}</span>
-                                      </div>
-                                      
-                                      {/* Next 3 fixtures - Simplified on mobile */}
-                                      <div className="space-y-0.5 md:space-y-1">
-                                        <div className="text-[10px] md:text-xs font-medium text-gray-600 hidden md:block">Next 3 fixtures:</div>
-                                        <div className="flex gap-0.5 md:gap-1 flex-wrap">
-                                          {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).map((fixture, idx) => (
-                                            <div 
-                                              key={idx}
-                                              className={`flex items-center gap-0.5 md:gap-1 px-1 md:px-1.5 py-0.5 rounded text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} whitespace-nowrap`}
-                                              title={`GW${fixture.gameweek} vs ${fixture.opponent} (${fixture.isHome ? 'H' : 'A'}) - Difficulty: ${fixture.difficulty}/5`}
-                                            >
-                                              <span className="truncate max-w-[30px] md:max-w-[40px]">{fixture.opponent}</span>
-                                              <span className="text-[9px] md:text-xs opacity-75">({fixture.isHome ? 'H' : 'A'})</span>
-                                            </div>
-                                          ))}
-                                          {getNextFixtures(getPlayerTeam(player)?.id || 0, 3).length === 0 && (
-                                            <span className="text-[10px] md:text-xs text-gray-400">No fixtures</span>
-                                          )}
-                                        </div>
                                       </div>
                                     </div>
                                   </div>
