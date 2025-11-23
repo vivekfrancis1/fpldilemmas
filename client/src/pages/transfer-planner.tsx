@@ -2344,7 +2344,12 @@ export default function TransferPlanner() {
         const gwTransfers = draftTransfers[gw.id] || draftTransfers[gw.id.toString() as any];
         
         if (gwTransfers?.completed) {
-          gwTransfers.completed.forEach(transfer => {
+          // Only apply valid transfers where the out player exists in current squad
+          const validTransfers = gwTransfers.completed.filter(transfer => 
+            squad.some(pick => pick.element === transfer.outPlayerId)
+          );
+          
+          validTransfers.forEach(transfer => {
             squad = squad.map(pick => {
               if (pick.element === transfer.outPlayerId) {
                 const inPlayer = getPlayerById(transfer.inPlayerId);
