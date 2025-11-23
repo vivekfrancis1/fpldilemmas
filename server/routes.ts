@@ -2346,11 +2346,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Free transfers calculated for next planning GW: ${freeTransfers}`);
       
       // Calculate the range of gameweeks for projections (next 12 gameweeks)
-      // If current GW is finished, start from next GW
-      // If current GW is not finished (between GWs), start from current GW (it's the next one to play)
-      const planningStart = isCurrentGWFinished 
-        ? Math.min(currentGameweek + 1, 38)
-        : Math.min(currentGameweek, 38);
+      // Transfer recommendations always start from the NEXT gameweek (current + 1)
+      // We can't make transfers for the current gameweek since it's already active/being played
+      const planningStart = Math.min(currentGameweek + 1, 38);
       const planningEnd = Math.min(planningStart + 11, 38); // 12 gameweeks for projection calculations
       
       // Only show recommendations for next 6 gameweeks, but calculate points gain based on all 12
