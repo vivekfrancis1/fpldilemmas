@@ -1291,9 +1291,9 @@ export default function MyDashboard() {
                                         {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
                                         {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
                                         {player.in_dreamteam && (<g><circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" /></g>)}
-                                        <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                        <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                        <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
+                                        <text x="140" y="62" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                        <text x="140" y="108" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                        <text x="140" y="150" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
                                       </svg>
                                     </div>
                                   </div>
@@ -1332,9 +1332,9 @@ export default function MyDashboard() {
                                         {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
                                         {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
                                         {player.in_dreamteam && (<g><circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" /></g>)}
-                                        <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                        <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                        <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
+                                        <text x="140" y="62" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                        <text x="140" y="108" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                        <text x="140" y="150" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
                                       </svg>
                                     </div>
                                   </div>
@@ -1373,9 +1373,9 @@ export default function MyDashboard() {
                                         {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
                                         {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
                                         {player.in_dreamteam && (<g><circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" /></g>)}
-                                        <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                        <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                        <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
+                                        <text x="140" y="62" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                        <text x="140" y="108" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                        <text x="140" y="150" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
                                       </svg>
                                     </div>
                                   </div>
