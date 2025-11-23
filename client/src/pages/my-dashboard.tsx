@@ -1857,8 +1857,8 @@ export default function MyDashboard() {
                                                     const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
                                                     return (
                                                       <g key={idx}>
-                                                        <rect x={47 + (idx * 62)} y="165" width="58" height="20" rx="5" fill={diffColor} />
-                                                        <text x={76 + (idx * 62)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
+                                                        <rect x={54 + (idx * 50)} y="165" width="45" height="20" rx="5" fill={diffColor} />
+                                                        <text x={76.5 + (idx * 50)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
                                                       </g>
                                                     );
                                                   })}
@@ -1937,8 +1937,8 @@ export default function MyDashboard() {
                                                   const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
                                                   return (
                                                     <g key={idx}>
-                                                      <rect x={47 + (idx * 62)} y="165" width="58" height="20" rx="5" fill={diffColor} />
-                                                      <text x={76 + (idx * 62)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
+                                                      <rect x={54 + (idx * 50)} y="165" width="45" height="20" rx="5" fill={diffColor} />
+                                                      <text x={76.5 + (idx * 50)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
                                                     </g>
                                                   );
                                                 })}
