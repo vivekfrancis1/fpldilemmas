@@ -726,7 +726,7 @@ export default function MyDashboard() {
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
                   data-testid="tab-team"
                 >
-                  Points
+                  GW {getCurrentGameweekDashboard()} Points
                 </TabsTrigger>
                 <TabsTrigger 
                   value="transfers" 
