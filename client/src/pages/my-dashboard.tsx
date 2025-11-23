@@ -1887,7 +1887,7 @@ export default function MyDashboard() {
                                                   const opponent = getTeamById(opponentId);
                                                   const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
                                                   return {
-                                                    opponent: `${isHome ? '' : '@'}${(opponent?.short_name || 'TBD').substring(0, 3)}`,
+                                                    opponent: `${(opponent?.short_name || 'TBD').substring(0, 3)} (${isHome ? 'H' : 'A'})`,
                                                     isHome,
                                                     difficulty: difficulty || 3
                                                   };
@@ -1967,7 +1967,7 @@ export default function MyDashboard() {
                                                 const opponent = getTeamById(opponentId);
                                                 const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
                                                 return {
-                                                  opponent: `${isHome ? '' : '@'}${(opponent?.short_name || 'TBD').substring(0, 3)}`,
+                                                  opponent: `${(opponent?.short_name || 'TBD').substring(0, 3)} (${isHome ? 'H' : 'A'})`,
                                                   isHome,
                                                   difficulty: difficulty || 3
                                                 };
