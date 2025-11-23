@@ -4252,16 +4252,34 @@ export default function TransferPlanner() {
       return "No transfers in this draft";
     }
 
-    const gameweeks = Object.keys(draft.gameweekTransfers).sort((a, b) => Number(a) - Number(b));
+    // Get the first planning gameweek (GW 13 onwards)
+    const nextGWs = getNextGameweeks();
+    const firstPlanningGW = nextGWs.length > 0 ? nextGWs[0].id : 999;
+
+    const gameweeks = Object.keys(draft.gameweekTransfers)
+      .map(Number)
+      .filter(gw => gw >= firstPlanningGW) // Only show future gameweeks
+      .sort((a, b) => a - b);
     const tooltipLines: string[] = [];
 
     gameweeks.forEach(gw => {
       const gwData = draft.gameweekTransfers[gw];
       if (gwData.completed && gwData.completed.length > 0) {
-        tooltipLines.push(`GW${gw}:`);
-        gwData.completed.forEach((transfer: CompletedTransfer) => {
-          tooltipLines.push(`  ${transfer.outPlayerName} → ${transfer.inPlayerName}`);
-        });
+        // Get baseline lineup for this gameweek to validate transfers
+        const baselineLineup = getBaselineLineup(gw);
+        const baselinePlayerIds = new Set(baselineLineup.map(p => p.element));
+        
+        // Only show valid transfers where the out player actually exists in the baseline
+        const validTransfers = gwData.completed.filter((transfer: CompletedTransfer) => 
+          baselinePlayerIds.has(transfer.outPlayerId)
+        );
+        
+        if (validTransfers.length > 0) {
+          tooltipLines.push(`GW${gw}:`);
+          validTransfers.forEach((transfer: CompletedTransfer) => {
+            tooltipLines.push(`  ${transfer.outPlayerName} → ${transfer.inPlayerName}`);
+          });
+        }
       }
     });
 
