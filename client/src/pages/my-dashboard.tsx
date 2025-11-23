@@ -1462,6 +1462,17 @@ export default function MyDashboard() {
                                               <span className="text-xs md:text-sm font-medium text-gray-700">{getTeamName(player)}</span>
                                               <span className="text-[10px] md:text-xs text-gray-500">Form: {player.form}</span>
                                             </div>
+                                            {/* Fixture Badges */}
+                                            <div className="flex gap-1 flex-wrap">
+                                              {getNextFixtures(player.team, 3).map((fixture, idx) => (
+                                                <Badge 
+                                                  key={idx} 
+                                                  className={`text-[10px] md:text-xs px-1 md:px-1.5 py-0.5 ${getDifficultyColor(fixture.difficulty)}`}
+                                                >
+                                                  {fixture.opponent}{fixture.isHome ? '(H)' : '(A)'}
+                                                </Badge>
+                                              ))}
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
@@ -1528,6 +1539,17 @@ export default function MyDashboard() {
                                       <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                                         <span className="text-xs md:text-sm font-medium text-gray-700">{getTeamName(player)}</span>
                                         <span className="text-[10px] md:text-xs text-gray-500">Form: {player.form}</span>
+                                      </div>
+                                      {/* Fixture Badges */}
+                                      <div className="flex gap-1 flex-wrap">
+                                        {getNextFixtures(player.team, 3).map((fixture, idx) => (
+                                          <Badge 
+                                            key={idx} 
+                                            className={`text-[10px] md:text-xs px-1 md:px-1.5 py-0.5 ${getDifficultyColor(fixture.difficulty)}`}
+                                          >
+                                            {fixture.opponent}{fixture.isHome ? '(H)' : '(A)'}
+                                          </Badge>
+                                        ))}
                                       </div>
                                     </div>
                                   </div>
