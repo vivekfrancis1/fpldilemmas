@@ -290,6 +290,13 @@ export default function MyDashboard() {
     enabled: !!searchedId,
   });
 
+  // Fetch next gameweek's team data
+  const nextGameweek = bootstrapData?.events.find(e => e.is_current)?.id ? Math.min((bootstrapData.events.find(e => e.is_current)?.id || 1) + 1, 38) : 2;
+  const { data: nextTeamData, isLoading: isLoadingNextTeam } = useQuery<TeamData>({
+    queryKey: ["/api/manager", searchedId, "team", `gameweek=${nextGameweek}`],
+    enabled: !!searchedId && !!teamData && !!bootstrapData, // Only fetch if we have current team data and bootstrap data
+  });
+
   // Get fixtures for teams
   const { data: fixturesData } = useQuery({
     queryKey: ["/api/fixtures"],
@@ -493,6 +500,13 @@ export default function MyDashboard() {
   const getCurrentGameweekDashboard = (): number => {
     const currentEvent = bootstrapData?.events.find(e => e.is_current);
     return currentEvent?.id || 1;
+  };
+
+  const getNextGameweekDashboard = (): number => {
+    const currentEvent = bootstrapData?.events.find(e => e.is_current);
+    const currentId = currentEvent?.id || 1;
+    // Return next gameweek, but cap at 38 (max gameweeks in a season)
+    return Math.min(currentId + 1, 38);
   };
 
   const getCurrentGameweekFixture = (teamId: number) => {
@@ -712,8 +726,8 @@ export default function MyDashboard() {
 
             {/* Main Dashboard Tabs */}
             <Tabs defaultValue="overview" className="w-full">
-              {/* Mobile: 3 columns on first row, 2 on second. Desktop: all 5 in one row */}
-              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 gap-1 sm:gap-0 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+              {/* Dynamic grid based on whether next team data is available */}
+              <TabsList className={`grid w-full ${teamData ? 'grid-cols-3 sm:grid-cols-6' : 'grid-cols-3 sm:grid-cols-5'} gap-1 sm:gap-0 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg`}>
                 <TabsTrigger 
                   value="overview" 
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
@@ -728,6 +742,16 @@ export default function MyDashboard() {
                 >
                   GW {getCurrentGameweekDashboard()} Points
                 </TabsTrigger>
+                {/* Next Gameweek Team Tab - only show if FPL is connected (teamData exists) */}
+                {teamData && (
+                  <TabsTrigger 
+                    value="nextteam" 
+                    className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
+                    data-testid="tab-nextteam"
+                  >
+                    GW {getNextGameweekDashboard()} Team
+                  </TabsTrigger>
+                )}
                 <TabsTrigger 
                   value="transfers" 
                   className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
@@ -1616,6 +1640,208 @@ export default function MyDashboard() {
                 <div className="text-center py-8">
                   <div className="text-lg">Loading team data...</div>
                 </div>
+              )}
+            </TabsContent>
+
+            {/* Next Gameweek Team Tab */}
+            <TabsContent value="nextteam" className="space-y-6 mt-6 sm:mt-8">
+              {isLoadingNextTeam && (
+                <div className="text-center py-8">
+                  <div className="text-lg">Loading GW {getNextGameweekDashboard()} team data...</div>
+                </div>
+              )}
+              
+              {!isLoadingNextTeam && !nextTeamData && (
+                <Card className="border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg">
+                  <CardContent className="p-6 sm:p-8 text-center">
+                    <div className="max-w-md mx-auto space-y-4">
+                      <div className="text-lg font-semibold text-blue-900">
+                        GW {getNextGameweekDashboard()} Team Not Available
+                      </div>
+                      <p className="text-sm text-blue-700">
+                        Team data for the upcoming gameweek will be available once you've confirmed your team in FPL.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {nextTeamData && teamData && (
+                <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg">
+                  <CardHeader className="p-4 sm:p-6">
+                    <CardTitle className="text-lg sm:text-xl text-green-900">
+                      Your GW {getNextGameweekDashboard()} Team Preview
+                    </CardTitle>
+                    <CardDescription className="text-green-700 mt-2">
+                      This is your confirmed team for the upcoming gameweek. Points shown are based on current gameweek performance.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 sm:p-6">
+                    <Alert className="mb-6 border-blue-200 bg-blue-50">
+                      <AlertDescription className="text-sm text-blue-800">
+                        <strong>Note:</strong> This tab shows your confirmed team for GW {getNextGameweekDashboard()}. 
+                        Points displayed are from the current gameweek (GW {getCurrentGameweekDashboard()}) for reference.
+                        {nextTeamData.active_chip && (
+                          <span className="block mt-2 font-semibold text-blue-900">
+                            Active Chip: {nextTeamData.active_chip.toUpperCase()}
+                          </span>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+
+                    {/* Team Overview Cards */}
+                    <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 mb-6">
+                      <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs sm:text-sm font-medium text-emerald-700 mb-1">Formation</p>
+                              <p className="text-xl sm:text-2xl font-bold text-emerald-900">
+                                {(() => {
+                                  const starting = nextTeamData.picks.filter(p => p.position <= 11);
+                                  const gks = starting.filter(p => {
+                                    const player = getPlayerById(p.element);
+                                    return player?.element_type === 1;
+                                  }).length;
+                                  const defs = starting.filter(p => {
+                                    const player = getPlayerById(p.element);
+                                    return player?.element_type === 2;
+                                  }).length;
+                                  const mids = starting.filter(p => {
+                                    const player = getPlayerById(p.element);
+                                    return player?.element_type === 3;
+                                  }).length;
+                                  const fwds = starting.filter(p => {
+                                    const player = getPlayerById(p.element);
+                                    return player?.element_type === 4;
+                                  }).length;
+                                  return `${defs}-${mids}-${fwds}`;
+                                })()}
+                              </p>
+                            </div>
+                            <div className="p-2 bg-emerald-200 rounded-full">
+                              <Trophy className="h-5 w-5 text-emerald-700" />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1">Transfers Made</p>
+                              <p className="text-xl sm:text-2xl font-bold text-blue-900">
+                                {nextTeamData.entry_history?.event_transfers || 0}
+                              </p>
+                            </div>
+                            <div className="p-2 bg-blue-200 rounded-full">
+                              <ArrowLeftRight className="h-5 w-5 text-blue-700" />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs sm:text-sm font-medium text-amber-700 mb-1">Bank</p>
+                              <p className="text-xl sm:text-2xl font-bold text-amber-900">
+                                {formatPrice(nextTeamData.entry_history?.bank || 0)}
+                              </p>
+                            </div>
+                            <div className="p-2 bg-amber-200 rounded-full">
+                              <DollarSign className="h-5 w-5 text-amber-700" />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Player List View - Simpler than pitch view */}
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-gray-900 text-lg mb-4">Starting XI</h3>
+                      {nextTeamData.picks
+                        .filter(pick => pick.position <= 11)
+                        .sort((a, b) => a.position - b.position)
+                        .map(pick => {
+                          const player = getPlayerById(pick.element);
+                          if (!player) return null;
+                          const playerTeam = getPlayerTeam(player);
+                          
+                          return (
+                            <Card key={pick.element} className="border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all">
+                              <CardContent className="p-3 sm:p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="flex-shrink-0">
+                                      <Badge variant={pick.is_captain ? "default" : pick.is_vice_captain ? "outline" : "secondary"} 
+                                             className={pick.is_captain ? "bg-yellow-400 text-black" : pick.is_vice_captain ? "border-yellow-400" : ""}>
+                                        {pick.is_captain ? "C" : pick.is_vice_captain ? "V" : getPositionName(player.element_type)}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-semibold text-gray-900 truncate">{player.web_name}</div>
+                                      <div className="text-sm text-gray-600 flex items-center gap-2 mt-1">
+                                        <span className="truncate">{playerTeam?.short_name || 'UNK'}</span>
+                                        <span className="text-xs">•</span>
+                                        <span>{formatPrice(player.now_cost)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right flex-shrink-0">
+                                    <div className="text-lg font-bold text-green-600">
+                                      {player.event_points || 0}{pick.is_captain ? 'x2' : ''}
+                                    </div>
+                                    <div className="text-xs text-gray-500">GW{getCurrentGameweekDashboard()} pts</div>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+
+                      <h3 className="font-semibold text-gray-900 text-lg mb-4 mt-6">Bench</h3>
+                      {nextTeamData.picks
+                        .filter(pick => pick.position > 11)
+                        .sort((a, b) => a.position - b.position)
+                        .map(pick => {
+                          const player = getPlayerById(pick.element);
+                          if (!player) return null;
+                          const playerTeam = getPlayerTeam(player);
+                          
+                          return (
+                            <Card key={pick.element} className="border border-gray-200 bg-gray-50">
+                              <CardContent className="p-3 sm:p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="flex-shrink-0">
+                                      <Badge variant="secondary">{getPositionName(player.element_type)}</Badge>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-semibold text-gray-700 truncate">{player.web_name}</div>
+                                      <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                                        <span className="truncate">{playerTeam?.short_name || 'UNK'}</span>
+                                        <span className="text-xs">•</span>
+                                        <span>{formatPrice(player.now_cost)}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right flex-shrink-0">
+                                    <div className="text-lg font-bold text-gray-600">
+                                      {player.event_points || 0}
+                                    </div>
+                                    <div className="text-xs text-gray-400">GW{getCurrentGameweekDashboard()} pts</div>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </TabsContent>
 
