@@ -1868,9 +1868,48 @@ export default function MyDashboard() {
                                             <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
                                             {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
                                             {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
-                                            <text x="140" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                            <text x="140" y="115" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                            <text x="140" y="150" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{formatPrice(player.now_cost)}</text>
+                                            <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                            <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                            {(() => {
+                                              const nextGW = getNextGameweekDashboard();
+                                              const gwFixtures = (() => {
+                                                if (!fixturesData || !Array.isArray(fixturesData)) return [];
+                                                const gameweeks = [nextGW, nextGW + 1, nextGW + 2, nextGW + 3];
+                                                return gameweeks.map(gw => {
+                                                  const fixture = fixturesData.find((f: any) => 
+                                                    (f.team_h === (playerTeam?.id || 0) || f.team_a === (playerTeam?.id || 0)) && f.event === gw
+                                                  );
+                                                  if (!fixture) {
+                                                    return { opponent: 'BGW', isHome: true, difficulty: 3 };
+                                                  }
+                                                  const isHome = fixture.team_h === (playerTeam?.id || 0);
+                                                  const opponentId = isHome ? fixture.team_a : fixture.team_h;
+                                                  const opponent = getTeamById(opponentId);
+                                                  const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+                                                  return {
+                                                    opponent: `${isHome ? '' : '@'}${(opponent?.short_name || 'TBD').substring(0, 3)}`,
+                                                    isHome,
+                                                    difficulty: difficulty || 3
+                                                  };
+                                                });
+                                              })();
+                                              const currentFixture = gwFixtures[0];
+                                              const nextThreeFixtures = gwFixtures.slice(1);
+                                              return (
+                                                <>
+                                                  <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{currentFixture?.opponent || 'BGW'}</text>
+                                                  {nextThreeFixtures.map((fixture, idx) => {
+                                                    const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
+                                                    return (
+                                                      <g key={idx}>
+                                                        <rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} />
+                                                        <text x={86 + (idx * 53)} y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
+                                                      </g>
+                                                    );
+                                                  })}
+                                                </>
+                                              );
+                                            })()}
                                           </svg>
                                         </div>
                                       </div>
@@ -1880,27 +1919,83 @@ export default function MyDashboard() {
                               );
                             })}
                           </div>
-                        </div>
 
-                        {/* Bench */}
-                        <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg p-4">
-                          <h3 className="font-semibold text-gray-900 text-sm mb-3">Bench</h3>
-                          <div className="grid grid-cols-4 gap-2">
-                            {nextTeamData.picks
-                              .filter(pick => pick.position > 11)
-                              .sort((a, b) => a.position - b.position)
-                              .map(pick => {
-                                const player = getPlayerById(pick.element);
-                                if (!player) return null;
-                                const playerTeam = getPlayerTeam(player);
-                                return (
-                                  <div key={pick.element} className="bg-white rounded p-2 text-center">
-                                    <div className="text-xs font-semibold text-gray-900 truncate">{player.web_name}</div>
-                                    <div className="text-[10px] text-gray-600 mt-1">{playerTeam?.short_name || 'UNK'}</div>
-                                    <div className="text-[10px] text-gray-500">{formatPrice(player.now_cost)}</div>
-                                  </div>
-                                );
-                              })}
+                          {/* Bench - Inside pitch area */}
+                          <div className="relative mt-4 sm:mt-6 md:mt-8">
+                            <div className="text-center mb-2">
+                              <span className="text-white font-bold text-xs sm:text-sm bg-black/20 px-3 py-1 rounded-full">BENCH</span>
+                            </div>
+                            <div className="flex justify-center gap-0.5">
+                              {nextTeamData.picks
+                                .filter(pick => pick.position > 11)
+                                .sort((a, b) => a.position - b.position)
+                                .map(pick => {
+                                  const player = getPlayerById(pick.element);
+                                  if (!player) return null;
+                                  const playerTeam = getPlayerTeam(player);
+                                  const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
+                                  const textColor = getTextColor(jerseyColor);
+
+                                  return (
+                                    <div key={pick.element} className="flex flex-col items-center w-[24.5%]">
+                                      <div className="relative w-full">
+                                        <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
+                                          <defs>
+                                            <clipPath id={`next-bench-jersey-clip-${player.id}`}>
+                                              <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" />
+                                            </clipPath>
+                                          </defs>
+                                          <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#next-bench-jersey-clip-${player.id})`} opacity="0.7" />
+                                          <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                                          <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                                          <text x="140" y="80" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                          <text x="140" y="115" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                          {(() => {
+                                            const nextGW = getNextGameweekDashboard();
+                                            const gwFixtures = (() => {
+                                              if (!fixturesData || !Array.isArray(fixturesData)) return [];
+                                              const gameweeks = [nextGW, nextGW + 1, nextGW + 2, nextGW + 3];
+                                              return gameweeks.map(gw => {
+                                                const fixture = fixturesData.find((f: any) => 
+                                                  (f.team_h === (playerTeam?.id || 0) || f.team_a === (playerTeam?.id || 0)) && f.event === gw
+                                                );
+                                                if (!fixture) {
+                                                  return { opponent: 'BGW', isHome: true, difficulty: 3 };
+                                                }
+                                                const isHome = fixture.team_h === (playerTeam?.id || 0);
+                                                const opponentId = isHome ? fixture.team_a : fixture.team_h;
+                                                const opponent = getTeamById(opponentId);
+                                                const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
+                                                return {
+                                                  opponent: `${isHome ? '' : '@'}${(opponent?.short_name || 'TBD').substring(0, 3)}`,
+                                                  isHome,
+                                                  difficulty: difficulty || 3
+                                                };
+                                              });
+                                            })();
+                                            const currentFixture = gwFixtures[0];
+                                            const nextThreeFixtures = gwFixtures.slice(1);
+                                            return (
+                                              <>
+                                                <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{currentFixture?.opponent || 'BGW'}</text>
+                                                {nextThreeFixtures.map((fixture, idx) => {
+                                                  const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
+                                                  return (
+                                                    <g key={idx}>
+                                                      <rect x={47 + (idx * 62)} y="165" width="58" height="20" rx="5" fill={diffColor} />
+                                                      <text x={76 + (idx * 62)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
+                                                    </g>
+                                                  );
+                                                })}
+                                              </>
+                                            );
+                                          })()}
+                                        </svg>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                            </div>
                           </div>
                         </div>
                       </div>
