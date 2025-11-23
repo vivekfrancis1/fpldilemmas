@@ -2179,15 +2179,23 @@ export default function TransferPlanner() {
     // When using authenticated my-team endpoint for the first planning GW, 
     // trust the FPL API's transfer limit directly (it knows the correct value)
     console.log(`🔍 FT CONDITION DEBUG - isOwnTeam=${isOwnTeam}, selectedGW=${selectedGameweek}, firstPlanningGW=${firstPlanningGW}, limit=${teamData.transfers.limit}`);
+    
+    // For the first planning gameweek when using own team data, use API limit
     if (isOwnTeam && selectedGameweek === firstPlanningGW && teamData.transfers.limit !== undefined) {
       console.log(`✅ FT DEBUG - Using FPL API limit for GW ${firstPlanningGW}:`, teamData.transfers.limit);
       return teamData.transfers.limit;
     }
     
-    // Calculate initial FTs for the first planning gameweek using history (mirroring backend logic)
+    // Calculate initial FTs - if we have API data for first planning GW, use that as starting point
+    // Otherwise fall back to historical calculation
     let currentInitial = 1; // Start with base 1 FT
     
-    if (bootstrapData && historyData?.current && historyData.current.length > 0) {
+    // If we have API data for the first planning GW, use that as the starting point for banking forward
+    if (isOwnTeam && teamData.transfers.limit !== undefined) {
+      currentInitial = teamData.transfers.limit;
+      console.log(`✅ Using API limit (${currentInitial}) as starting point for banking calculation`);
+    } else if (bootstrapData && historyData?.current && historyData.current.length > 0) {
+      // Calculate from history if no API data available
       // Only look at finished gameweeks for banking
       const finishedHistory = historyData.current.filter((h: any) => {
         const gwData = bootstrapData.events.find((e: any) => e.id === h.event);
