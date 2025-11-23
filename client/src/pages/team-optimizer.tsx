@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { applyAvailabilityAdjustments, AFCON_PLAYERS, type BootstrapData as AvailabilityBootstrapData } from "@/lib/availability-adjustments";
 import { extractManagerId } from "@/lib/manager-id-utils";
+import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 
 // Player Availability Badge Component
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -934,6 +935,7 @@ export default function TeamOptimizer() {
                     <Search className="h-4 w-4" />
                     {isLoadingTeam ? "Loading..." : "Search"}
                   </Button>
+                  <FplConnectDialog />
                   {getManagerIdFromCache() && !searchedId && !isLoadingTeam && (
                     <Button 
                       onClick={() => {
@@ -1028,6 +1030,7 @@ export default function TeamOptimizer() {
                     <Search className="h-4 w-4 mr-2" />
                     Search Manager
                   </Button>
+                  <FplConnectDialog />
                 </div>
               </div>
             </div>
