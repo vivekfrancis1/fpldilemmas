@@ -2107,58 +2107,45 @@ export default function TransferPlanner() {
     return calculateBankAfterTransfers();
   };
 
-  // Calculate transfers used for a specific gameweek by comparing current lineup with baseline
+  // Calculate transfers used for a specific gameweek by checking saved transfers
   const calculateTransfersUsedForGameweek = (gameweek: number): number => {
     if (!teamData?.picks) return 0;
     
-    // Get the baseline lineup for this gameweek (what we started with before any transfers)
-    const baseline = getBaselineLineup(gameweek);
-    
-    // For the currently selected gameweek, use manualLineup
-    // For other gameweeks, we'd need to reconstruct the lineup, but for now we only call this for selectedGameweek
-    if (gameweek !== selectedGameweek) {
-      console.warn("calculateTransfersUsedForGameweek called for non-selected gameweek:", gameweek);
-      return 0;
+    // For currently selected gameweek, use the in-memory manualLineup comparison
+    if (gameweek === selectedGameweek) {
+      const baseline = getBaselineLineup(gameweek);
+      const baselinePlayerIds = new Set(baseline.map(p => p.element));
+      
+      let transfersOut = 0;
+      baseline.forEach((baselinePick) => {
+        const stillInLineup = manualLineup.find(p => p.element === baselinePick.element);
+        if (!stillInLineup) {
+          transfersOut++;
+        }
+      });
+      
+      let transfersIn = 0;
+      manualLineup.filter(p => !p.is_transferred_out).forEach((currentPick) => {
+        if (!baselinePlayerIds.has(currentPick.element)) {
+          transfersIn++;
+        }
+      });
+      
+      const transfersUsed = Math.max(transfersOut, transfersIn);
+      
+      console.log("📊 TRANSFERS USED DEBUG:");
+      console.log("  Baseline player IDs:", Array.from(baselinePlayerIds));
+      console.log("  Current lineup player IDs:", manualLineup.map(p => ({ id: p.element, out: p.is_transferred_out })));
+      console.log("  Transfers out (completed):", transfersOut, "| Transfers in:", transfersIn);
+      console.log("  Transfers used:", transfersUsed);
+      
+      return transfersUsed;
     }
     
-    // Count transfers by comparing player IDs, not positions
-    // A transfer = a player ID in baseline is no longer in current lineup
-    // This prevents position swaps/optimization from being counted as transfers
-    
-    const baselinePlayerIds = new Set(baseline.map(p => p.element));
-    
-    // Count completed transfers (baseline players COMPLETELY REMOVED from lineup)
-    // Don't count if player is still in lineup but marked as transferred_out (that's a pending transfer)
-    let transfersOut = 0;
-    baseline.forEach((baselinePick) => {
-      // Check if this baseline player still exists in current lineup (even if marked as transferred_out)
-      const stillInLineup = manualLineup.find(p => p.element === baselinePick.element);
-      
-      // Only count if player is completely removed (not just pending transfer out)
-      if (!stillInLineup) {
-        transfersOut++;
-      }
-    });
-    
-    // Count new players added (current players not in baseline, excluding pending transfers out)
-    let transfersIn = 0;
-    manualLineup.filter(p => !p.is_transferred_out).forEach((currentPick) => {
-      if (!baselinePlayerIds.has(currentPick.element)) {
-        transfersIn++;
-      }
-    });
-    
-    // In valid FPL scenarios, transfersOut should equal transfersIn
-    // Use max for safety in case of edge cases
-    const transfersUsed = Math.max(transfersOut, transfersIn);
-    
-    console.log("📊 TRANSFERS USED DEBUG:");
-    console.log("  Baseline player IDs:", Array.from(baselinePlayerIds));
-    console.log("  Current lineup player IDs:", manualLineup.map(p => ({ id: p.element, out: p.is_transferred_out })));
-    console.log("  Transfers out (completed):", transfersOut, "| Transfers in:", transfersIn);
-    console.log("  Transfers used:", transfersUsed);
-    
-    return transfersUsed;
+    // For other gameweeks, check saved transfers in the current draft
+    const savedTransfers = currentDraft?.transfers || [];
+    const transfersForGW = savedTransfers.filter(t => t.gameweek === gameweek && t.completed);
+    return transfersForGW.length;
   };
 
   // Calculate actual transfers used by comparing with baseline lineup for this gameweek
