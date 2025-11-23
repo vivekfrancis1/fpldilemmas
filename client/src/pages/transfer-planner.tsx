@@ -2265,12 +2265,15 @@ export default function TransferPlanner() {
     }
     
     // For subsequent gameweeks: loop through and apply banking logic
+    console.log(`🔄 FT BANKING LOOP - Selected GW: ${selectedGameweek}, First Planning GW: ${firstPlanningGW}, Starting with ${currentInitial} FTs`);
     for (let gw = firstPlanningGW; gw < selectedGameweek; gw++) {
       const nextGW = gw + 1;
+      console.log(`  ➡️ Processing GW ${gw} (next will be GW ${nextGW}), current FTs: ${currentInitial}`);
       
       // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
       // All managers get 5 free transfers in GW16 regardless of previous banking
       if (nextGW === 16) {
+        console.log(`  🎁 AFCON TOP-UP: GW ${nextGW} gets 5 FTs`);
         currentInitial = 5;
         continue;
       }
@@ -2281,6 +2284,7 @@ export default function TransferPlanner() {
       
       if (isFreeHitGW || isWildcardGW) {
         // Free Hit or Wildcard: next gameweek resets to 1 FT (no banking)
+        console.log(`  🎯 CHIP USED in GW ${gw}: ${isFreeHitGW ? 'Free Hit' : 'Wildcard'} - Resetting to 1 FT for GW ${nextGW}`);
         currentInitial = 1;
       } else {
         // Normal banking logic:
@@ -2292,7 +2296,7 @@ export default function TransferPlanner() {
         const nextGWInitial = 1 + remaining;
         // 4. Cap between 1 and 5 FTs
         const newInitial = Math.max(1, Math.min(5, nextGWInitial));
-        console.log(`🔍 FT DEBUG - GW ${gw}: current=${currentInitial}, used=${used}, remaining=${remaining}, next=${nextGWInitial}, final=${newInitial}`);
+        console.log(`  📊 GW ${gw}: started with ${currentInitial} FTs, used ${used}, remaining ${remaining}, next GW gets 1+${remaining}=${nextGWInitial}, capped to ${newInitial}`);
         currentInitial = newInitial;
       }
     }
