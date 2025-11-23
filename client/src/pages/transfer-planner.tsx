@@ -2142,8 +2142,9 @@ export default function TransferPlanner() {
       return transfersUsed;
     }
     
-    // For other gameweeks, check saved transfers in the current draft
-    const savedTransfers = currentDraft?.transfers || [];
+    // For other gameweeks, check saved transfers in the active draft
+    const draft = savedDrafts.find(d => d.draftLetter === activeDraft);
+    const savedTransfers = draft?.transfers || [];
     const transfersForGW = savedTransfers.filter(t => t.gameweek === gameweek && t.completed);
     return transfersForGW.length;
   };
