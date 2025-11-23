@@ -1462,17 +1462,6 @@ export default function MyDashboard() {
                                               <span className="text-xs md:text-sm font-medium text-gray-700">{getTeamName(player)}</span>
                                               <span className="text-[10px] md:text-xs text-gray-500">Form: {player.form}</span>
                                             </div>
-                                            {/* Fixture Badges */}
-                                            <div className="flex gap-1 flex-wrap">
-                                              {getNextFixtures(player.team, 3).map((fixture, idx) => (
-                                                <Badge 
-                                                  key={idx} 
-                                                  className={`text-[10px] md:text-xs px-1 md:px-1.5 py-0.5 ${getDifficultyColor(fixture.difficulty)}`}
-                                                >
-                                                  {fixture.opponent}{fixture.isHome ? '(H)' : '(A)'}
-                                                </Badge>
-                                              ))}
-                                            </div>
                                           </div>
                                         </div>
                                       </div>
@@ -1539,17 +1528,6 @@ export default function MyDashboard() {
                                       <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
                                         <span className="text-xs md:text-sm font-medium text-gray-700">{getTeamName(player)}</span>
                                         <span className="text-[10px] md:text-xs text-gray-500">Form: {player.form}</span>
-                                      </div>
-                                      {/* Fixture Badges */}
-                                      <div className="flex gap-1 flex-wrap">
-                                        {getNextFixtures(player.team, 3).map((fixture, idx) => (
-                                          <Badge 
-                                            key={idx} 
-                                            className={`text-[10px] md:text-xs px-1 md:px-1.5 py-0.5 ${getDifficultyColor(fixture.difficulty)}`}
-                                          >
-                                            {fixture.opponent}{fixture.isHome ? '(H)' : '(A)'}
-                                          </Badge>
-                                        ))}
                                       </div>
                                     </div>
                                   </div>
@@ -1937,8 +1915,8 @@ export default function MyDashboard() {
                                                   const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
                                                   return (
                                                     <g key={idx}>
-                                                      <rect x={47 + (idx * 62)} y="165" width="58" height="20" rx="5" fill={diffColor} />
-                                                      <text x={76 + (idx * 62)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
+                                                      <rect x={52 + (idx * 58)} y="165" width="50" height="20" rx="5" fill={diffColor} />
+                                                      <text x={77 + (idx * 58)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
                                                     </g>
                                                   );
                                                 })}
@@ -1998,6 +1976,17 @@ export default function MyDashboard() {
                                           <div className="text-sm text-gray-600 flex items-center gap-2 mt-1">
                                             <span className="truncate">{playerTeam?.short_name || 'UNK'}. {getPositionName(player.element_type)}. {formatPrice(player.now_cost)}</span>
                                           </div>
+                                          {/* Fixture Badges */}
+                                          <div className="flex gap-1 flex-wrap mt-2">
+                                            {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => (
+                                              <Badge 
+                                                key={idx} 
+                                                className={`text-[10px] md:text-xs px-1 md:px-1.5 py-0.5 ${getDifficultyColor(fixture.difficulty)}`}
+                                              >
+                                                {fixture.opponent}
+                                              </Badge>
+                                            ))}
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
@@ -2030,6 +2019,17 @@ export default function MyDashboard() {
                                       <div className="font-semibold text-gray-700 truncate">{player.web_name}</div>
                                       <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
                                         <span className="truncate">{playerTeam?.short_name || 'UNK'}. {getPositionName(player.element_type)}. {formatPrice(player.now_cost)}</span>
+                                      </div>
+                                      {/* Fixture Badges */}
+                                      <div className="flex gap-1 flex-wrap mt-2">
+                                        {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => (
+                                          <Badge 
+                                            key={idx} 
+                                            className={`text-[10px] md:text-xs px-1 md:px-1.5 py-0.5 ${getDifficultyColor(fixture.difficulty)}`}
+                                          >
+                                            {fixture.opponent}
+                                          </Badge>
+                                        ))}
                                       </div>
                                     </div>
                                   </div>
