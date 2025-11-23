@@ -1070,26 +1070,6 @@ export default function MyDashboard() {
                     </Card>
                   </div>
 
-                  {/* Legend */}
-                  <Card className="bg-blue-50 border-blue-200">
-                    <CardContent className="p-4 sm:p-5">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold text-blue-900 mb-2">Fixture Difficulty Legend:</h4>
-                        <div className="flex gap-2 items-center">
-                          {[1, 2, 3, 4, 5].map(diff => (
-                            <div key={diff} className="flex items-center gap-1">
-                              <div className={`w-3 h-3 rounded ${getDifficultyColor(diff)}`}></div>
-                              <span className="text-xs font-medium text-gray-700">{diff}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <p className="text-sm text-blue-700">
-                        Each fixture shows opponent team (H for Home, A for Away) with difficulty rating from 1 (easiest) to 5 (hardest)
-                      </p>
-                    </CardContent>
-                  </Card>
-
                   {/* View Toggle - Hidden on mobile */}
                   <div className="hidden md:flex justify-center gap-2">
                     <Button
