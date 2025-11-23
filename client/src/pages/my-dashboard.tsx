@@ -1253,35 +1253,6 @@ export default function MyDashboard() {
                                         <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </text>
-                                        
-                                        {/* Next 3 Fixtures */}
-                                        {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => {
-                                          const diffColor = fixture.difficulty <= 2 ? '#22C55E' : 
-                                                          fixture.difficulty === 3 ? '#EAB308' : 
-                                                          fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                          return (
-                                            <g key={idx}>
-                                              <rect 
-                                                x={61 + (idx * 53)} 
-                                                y="155" 
-                                                width="50" 
-                                                height="24" 
-                                                rx="5" 
-                                                fill={diffColor}
-                                              />
-                                              <text 
-                                                x={86 + (idx * 53)} 
-                                                y="170" 
-                                                fontSize="14" 
-                                                fontWeight="bold" 
-                                                textAnchor="middle" 
-                                                fill="white"
-                                              >
-                                                {fixture.opponent.substring(0, 3)}
-                                              </text>
-                                            </g>
-                                          );
-                                        })}
                                       </svg>
                                     </div>
                                   </div>
@@ -1323,10 +1294,6 @@ export default function MyDashboard() {
                                         <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
                                         <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
                                         <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
-                                        {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => {
-                                          const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                          return (<g key={idx}><rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} /><text x={86 + (idx * 53)} y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
-                                        })}
                                       </svg>
                                     </div>
                                   </div>
@@ -1368,10 +1335,6 @@ export default function MyDashboard() {
                                         <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
                                         <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
                                         <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
-                                        {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => {
-                                          const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                          return (<g key={idx}><rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} /><text x={86 + (idx * 53)} y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
-                                        })}
                                       </svg>
                                     </div>
                                   </div>
@@ -1413,10 +1376,6 @@ export default function MyDashboard() {
                                         <text x="140" y="68" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
                                         <text x="140" y="100" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
                                         <text x="140" y="140" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
-                                        {getNextFixtures(playerTeam?.id || 0, 3).map((fixture, idx) => {
-                                          const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                          return (<g key={idx}><rect x={61 + (idx * 53)} y="155" width="50" height="24" rx="5" fill={diffColor} /><text x={86 + (idx * 53)} y="170" fontSize="14" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent.substring(0, 3)}</text></g>);
-                                        })}
                                       </svg>
                                     </div>
                                   </div>
