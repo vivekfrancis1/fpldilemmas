@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
+import { useAuth } from "@/hooks/useAuth";
 
 interface TeamPick {
   element: number;
@@ -26,6 +27,7 @@ export default function TransferRecommendations() {
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
@@ -54,12 +56,16 @@ export default function TransferRecommendations() {
     }
   }, []);
 
-  // Fetch recommended transfers
+  // Check if user is viewing their own team
+  const isOwnTeam = user?.fplManagerId && searchedId && Number(searchedId) === user.fplManagerId;
+
+  // Fetch recommended transfers - use authenticated endpoint for own team (shows GW 13 unconfirmed data)
   const { data: recommendedTransfers, isLoading: isLoadingRecommendations, error: recommendationsError } = useQuery<any>({
-    queryKey: ["/api/manager", searchedId, "recommended-transfers"],
+    queryKey: isOwnTeam ? ["/api/fpl/recommended-transfers"] : ["/api/manager", searchedId, "recommended-transfers"],
     enabled: !!searchedId,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: false, // Don't auto-retry if FPL session expired
   });
 
   // Fetch bootstrap data

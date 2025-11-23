@@ -1111,6 +1111,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get recommended transfers using authenticated FPL session (shows GW 13 unconfirmed team)
+  app.get("/api/fpl/recommended-transfers", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+
+      // Get user's FPL credentials
+      const [user] = await db.select({
+        fplManagerId: users.fplManagerId,
+        fplSessionCookies: users.fplSessionCookies,
+        fplCookiesExpiry: users.fplCookiesExpiry
+      }).from(users).where(eq(users.id, userId));
+
+      if (!user || !user.fplManagerId || !user.fplSessionCookies) {
+        return res.status(401).json({ error: 'FPL account not connected' });
+      }
+
+      // Check if token is expired
+      if (user.fplCookiesExpiry && new Date(user.fplCookiesExpiry) < new Date()) {
+        return res.status(401).json({ error: 'FPL session expired, please reconnect' });
+      }
+
+      // Extract Bearer token from cURL command if it's a full cURL command
+      let bearerToken = user.fplSessionCookies;
+      const bearerMatch = user.fplSessionCookies.match(/-H\s+'x-api-authorization:\s*Bearer\s+([^']+)'/);
+      if (bearerMatch) {
+        bearerToken = bearerMatch[1];
+      }
+
+      // Fetch authenticated my-team data (includes unconfirmed transfers)
+      const myTeamResponse = await fetch(`https://fantasy.premierleague.com/api/my-team/${user.fplManagerId}/`, {
+        headers: {
+          'x-api-authorization': `Bearer ${bearerToken}`
+        }
+      });
+
+      if (!myTeamResponse.ok) {
+        return res.status(401).json({ error: 'Failed to fetch FPL team data, session may be expired' });
+      }
+
+      const myTeamData = await myTeamResponse.json();
+
+      // Convert my-team format to picks format for compatibility
+      const teamData = {
+        picks: myTeamData.picks.map((pick: any) => ({
+          element: pick.element,
+          position: pick.position,
+          is_captain: pick.is_captain,
+          is_vice_captain: pick.is_vice_captain,
+          selling_price: pick.selling_price
+        })),
+        transfers: {
+          bank: myTeamData.transfers.bank,
+          limit: myTeamData.transfers.limit,
+          made: myTeamData.transfers.made
+        }
+      };
+
+      // Use the standard public endpoint with the converted team data
+      // This allows us to reuse all the recommendation logic
+      const managerId = user.fplManagerId;
+      
+      // Forward to the standard endpoint's logic by calling it internally
+      const internalUrl = `http://localhost:5000/api/manager/${managerId}/recommended-transfers`;
+      const internalResponse = await fetch(internalUrl);
+      
+      if (!internalResponse.ok) {
+        throw new Error('Failed to calculate recommendations');
+      }
+      
+      const recommendations = await internalResponse.json();
+      
+      // Override bank and free transfers with authenticated data
+      recommendations.bank = myTeamData.transfers.bank;
+      
+      // Calculate free transfers based on authenticated transfer data
+      // If user has made transfers in unconfirmed team, adjust accordingly
+      const transfersMade = myTeamData.transfers.made || 0;
+      const transferLimit = myTeamData.transfers.limit || 1;
+      const freeTransfersRemaining = Math.max(0, transferLimit - transfersMade);
+      
+      // Update free transfers in response
+      recommendations.freeTransfers = freeTransfersRemaining;
+      
+      // Update first gameweek's free transfers to match
+      if (recommendations.gameweeks) {
+        const firstGWKey = Object.keys(recommendations.gameweeks)[0];
+        if (firstGWKey && recommendations.gameweeks[firstGWKey]) {
+          recommendations.gameweeks[firstGWKey].freeTransfersAvailable = freeTransfersRemaining;
+          recommendations.gameweeks[firstGWKey].bankBefore = myTeamData.transfers.bank;
+        }
+      }
+      
+      console.log(`✅ Authenticated recommendations for manager ${managerId}: Bank ${myTeamData.transfers.bank}, FTs ${freeTransfersRemaining}`);
+      
+      res.json(recommendations);
+    } catch (error) {
+      console.error('FPL authenticated recommendations error:', error);
+      res.status(500).json({ error: 'Failed to calculate transfer recommendations' });
+    }
+  });
+
   // Dynamic penalty taker adjustment based on FPL metrics
   function getPenaltyTakerAdjustment(playerName: string, playerId: number, bootstrapData?: any): number {
     // Find the player in bootstrap data if available
