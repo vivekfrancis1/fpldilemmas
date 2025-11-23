@@ -2280,12 +2280,11 @@ export default function TransferPlanner() {
       const isWildcardGW = plannedChips[gw] === 'wildcard';
       
       if (isFreeHitGW) {
-        // Free Hit: keep currentInitial unchanged (no rollover effect)
-        continue;
+        // Free Hit: next gameweek resets to 1 FT (no banking from Free Hit GW)
+        currentInitial = 1;
       } else if (isWildcardGW) {
-        // Wildcard GW: transfers carry through unchanged (you don't get +1 FT for the Wildcard GW itself)
-        // currentInitial stays the same for next GW, then gets +1 normally
-        // So do nothing here, just maintain currentInitial
+        // Wildcard: next gameweek resets to 1 FT
+        currentInitial = 1;
       } else {
         // Normal transfer rollover calculation
         const used = calculateTransfersUsedForGameweek(gw);
