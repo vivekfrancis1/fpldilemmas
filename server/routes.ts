@@ -1085,10 +1085,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'FPL session expired, please reconnect' });
       }
 
+      // Extract Bearer token from cURL command if it's a full cURL command
+      let bearerToken = user.fplSessionCookies;
+      const bearerMatch = user.fplSessionCookies.match(/-H\s+'x-api-authorization:\s*Bearer\s+([^']+)'/);
+      if (bearerMatch) {
+        bearerToken = bearerMatch[1];
+      }
+
       // Fetch private team data using Bearer token
       const myTeamResponse = await fetch(`https://fantasy.premierleague.com/api/my-team/${user.fplManagerId}/`, {
         headers: {
-          'x-api-authorization': `Bearer ${user.fplSessionCookies}`
+          'x-api-authorization': `Bearer ${bearerToken}`
         }
       });
 
