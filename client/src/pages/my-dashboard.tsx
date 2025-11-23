@@ -1894,16 +1894,16 @@ export default function MyDashboard() {
                                                 });
                                               })();
                                               const currentFixture = gwFixtures[0];
-                                              const nextThreeFixtures = gwFixtures.slice(1);
+                                              const nextTwoFixtures = gwFixtures.slice(1, 3);
                                               return (
                                                 <>
                                                   <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{currentFixture?.opponent || 'BGW'}</text>
-                                                  {nextThreeFixtures.map((fixture, idx) => {
+                                                  {nextTwoFixtures.map((fixture, idx) => {
                                                     const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
                                                     return (
                                                       <g key={idx}>
-                                                        <rect x={47 + (idx * 62)} y="165" width="58" height="20" rx="5" fill={diffColor} />
-                                                        <text x={76 + (idx * 62)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
+                                                        <rect x={61 + (idx * 78)} y="165" width="58" height="20" rx="5" fill={diffColor} />
+                                                        <text x={90 + (idx * 78)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
                                                       </g>
                                                     );
                                                   })}
@@ -1974,16 +1974,16 @@ export default function MyDashboard() {
                                               });
                                             })();
                                             const currentFixture = gwFixtures[0];
-                                            const nextThreeFixtures = gwFixtures.slice(1);
+                                            const nextTwoFixtures = gwFixtures.slice(1, 3);
                                             return (
                                               <>
                                                 <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{currentFixture?.opponent || 'BGW'}</text>
-                                                {nextThreeFixtures.map((fixture, idx) => {
+                                                {nextTwoFixtures.map((fixture, idx) => {
                                                   const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
                                                   return (
                                                     <g key={idx}>
-                                                      <rect x={47 + (idx * 62)} y="165" width="58" height="20" rx="5" fill={diffColor} />
-                                                      <text x={76 + (idx * 62)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
+                                                      <rect x={61 + (idx * 78)} y="165" width="58" height="20" rx="5" fill={diffColor} />
+                                                      <text x={90 + (idx * 78)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
                                                     </g>
                                                   );
                                                 })}
