@@ -408,8 +408,13 @@ export default function MyDashboard() {
   };
 
   const getPositionName = (elementType: number): string => {
-    const position = bootstrapData?.element_types.find(t => t.id === elementType);
-    return position?.singular_name || "Unknown";
+    const positionMap: Record<number, string> = {
+      1: 'GKP',
+      2: 'DEF',
+      3: 'MID',
+      4: 'FWD'
+    };
+    return positionMap[elementType] || "Unknown";
   };
 
   const getTeamById = (teamId: number) => {
@@ -1771,42 +1776,60 @@ export default function MyDashboard() {
                       </Card>
                     </div>
 
-                    {/* Player List View - Simpler than pitch view */}
+                    {/* Player List View - Grouped by position */}
                     <div className="space-y-3">
                       <h3 className="font-semibold text-gray-900 text-lg mb-4">Starting XI</h3>
-                      {nextTeamData.picks
-                        .filter(pick => pick.position <= 11)
-                        .sort((a, b) => a.position - b.position)
-                        .map(pick => {
-                          const player = getPlayerById(pick.element);
-                          if (!player) return null;
-                          const playerTeam = getPlayerTeam(player);
-                          
-                          return (
-                            <Card key={pick.element} className="border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all">
-                              <CardContent className="p-3 sm:p-4">
-                                <div className="flex items-center justify-between gap-3">
-                                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    {(pick.is_captain || pick.is_vice_captain) && (
-                                      <div className="flex-shrink-0">
-                                        <Badge variant={pick.is_captain ? "default" : "outline"} 
-                                               className={pick.is_captain ? "bg-yellow-400 text-black" : "border-yellow-400"}>
-                                          {pick.is_captain ? "C" : "V"}
-                                        </Badge>
-                                      </div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                      <div className="font-semibold text-gray-900 truncate">{player.web_name}</div>
-                                      <div className="text-sm text-gray-600 flex items-center gap-2 mt-1">
-                                        <span className="truncate">{playerTeam?.short_name || 'UNK'}. {getPositionName(player.element_type)}. {formatPrice(player.now_cost)}</span>
+                      {(() => {
+                        const startingPicks = nextTeamData.picks
+                          .filter(pick => pick.position <= 11)
+                          .sort((a, b) => a.position - b.position);
+                        
+                        // Group by position
+                        const groups = {
+                          1: startingPicks.filter(p => getPlayerById(p.element)?.element_type === 1),
+                          2: startingPicks.filter(p => getPlayerById(p.element)?.element_type === 2),
+                          3: startingPicks.filter(p => getPlayerById(p.element)?.element_type === 3),
+                          4: startingPicks.filter(p => getPlayerById(p.element)?.element_type === 4),
+                        };
+
+                        return [1, 2, 3, 4].map(positionType => (
+                          <div key={positionType} className="space-y-2">
+                            {groups[positionType as keyof typeof groups].map(pick => {
+                              const player = getPlayerById(pick.element);
+                              if (!player) return null;
+                              const playerTeam = getPlayerTeam(player);
+                              
+                              return (
+                                <Card key={pick.element} className="border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all">
+                                  <CardContent className="p-3 sm:p-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-semibold text-gray-900 truncate">{player.web_name}</span>
+                                            {(pick.is_captain || pick.is_vice_captain) && (
+                                              <Badge variant={pick.is_captain ? "default" : "outline"} 
+                                                     className={pick.is_captain ? "bg-yellow-400 text-black text-xs" : "border-yellow-400 text-xs"}>
+                                                {pick.is_captain ? "C" : "V"}
+                                              </Badge>
+                                            )}
+                                          </div>
+                                          <div className="text-sm text-gray-600 flex items-center gap-2 mt-1">
+                                            <span className="truncate">{playerTeam?.short_name || 'UNK'}. {getPositionName(player.element_type)}. {formatPrice(player.now_cost)}</span>
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
+                                  </CardContent>
+                                </Card>
+                              );
+                            })}
+                            {positionType < 4 && groups[positionType as keyof typeof groups].length > 0 && (
+                              <div className="h-4" />
+                            )}
+                          </div>
+                        ));
+                      })()}
 
                       <h3 className="font-semibold text-gray-900 text-lg mb-4 mt-6">Bench</h3>
                       {nextTeamData.picks
