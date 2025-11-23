@@ -4652,23 +4652,54 @@ export default function TransferPlanner() {
         autosaveTimeoutRef.current = null;
       }
 
-      // Mark as no unsaved changes to prevent autosave during switch
-      setHasUnsavedChanges(false);
-
       const draftToDelete = activeDraft;
+      
+      // Prevent any autosave during the deletion process
+      isLoadingDraftRef.current = true;
       
       const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${draftToDelete}`, {
         method: "DELETE"
       });
 
       if (response.ok) {
-        // Switch to Draft A WITHOUT triggering autosave
-        isLoadingDraftRef.current = true; // Prevent autosave
-        await switchToDraft("A");
-        await loadDrafts();
-        toast({ title: "Draft Deleted", description: `Draft ${draftToDelete} has been deleted` });
+        // Manually load Draft A without triggering any autosave
+        const draftAResponse = await fetch(`/api/transfer-planner/drafts/${searchedId}/A`);
+        
+        if (draftAResponse.ok) {
+          const { draft } = await draftAResponse.json();
+          
+          // Update ALL state variables that switchToDraft would update
+          setGameweekTransfers(JSON.parse(JSON.stringify(draft.gameweekTransfers || {})));
+          setPlannedChips(JSON.parse(JSON.stringify(draft.plannedChips || {})));
+          setOptimizedLineups(JSON.parse(JSON.stringify(draft.optimizedLineups || {})));
+          setSavedCaptainInfo(draft.captainPlayerId && draft.viceCaptainPlayerId ? {
+            captainPlayerId: draft.captainPlayerId,
+            viceCaptainPlayerId: draft.viceCaptainPlayerId
+          } : null);
+          setActiveDraft("A");
+          setHasUnsavedChanges(false);
+          setTransferredOutPlayers([]);
+          setCompletedTransfers([]);
+          
+          // Rebuild the lineup based on Draft A's cumulative transfers
+          const updatedSquad = getSquadAtGameweek(draft.gameweekTransfers || {}, selectedGW);
+          if (updatedSquad.length > 0) {
+            setManualLineup(updatedSquad);
+          } else if (teamData?.picks) {
+            setManualLineup([...teamData.picks]);
+          }
+          
+          // Reload drafts list
+          await loadDrafts();
+          
+          toast({ title: "Draft Deleted", description: `Draft ${draftToDelete} has been deleted` });
+        }
+        
+        // Re-enable autosave
+        isLoadingDraftRef.current = false;
       }
     } catch (error) {
+      isLoadingDraftRef.current = false;
       toast({ title: "Error", description: "Failed to delete draft", variant: "destructive" });
     }
   };
