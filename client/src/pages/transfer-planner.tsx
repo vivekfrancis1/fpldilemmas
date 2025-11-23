@@ -2449,12 +2449,25 @@ export default function TransferPlanner() {
     });
     
     // Include transfers for each gameweek in signature
-    // Only use COMPLETED transfers - ignore in-progress transferredOut
+    // Only use COMPLETED and VALID transfers - ignore invalid transfers that shouldn't exist
     signature.transfers = {};
     nextGWs.forEach(gw => {
       const gwTransfers = draftTransfers[gw.id] || { completed: [] };
+      
+      // Get the squad BEFORE this gameweek's transfers to validate
+      const firstPlanningGW = nextGWs.length > 0 ? nextGWs[0].id : 999;
+      const squadBeforeTransfers = gw.id === firstPlanningGW 
+        ? (teamData?.picks || [])
+        : getSquadAtGameweek(draftTransfers, gw.id - 1);
+      const squadPlayerIds = new Set(squadBeforeTransfers.map(p => p.element));
+      
+      // Only include valid transfers where the out player exists in the squad
+      const validTransfers = gwTransfers.completed.filter((transfer: any) => 
+        squadPlayerIds.has(transfer.outPlayerId)
+      );
+      
       signature.transfers[gw.id] = {
-        completed: [...gwTransfers.completed].sort((a, b) => {
+        completed: [...validTransfers].sort((a, b) => {
           if (a.outPlayerId !== b.outPlayerId) return a.outPlayerId - b.outPlayerId;
           return a.inPlayerId - b.inPlayerId;
         })
