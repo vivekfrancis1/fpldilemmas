@@ -2275,32 +2275,31 @@ export default function TransferPlanner() {
     
     // For subsequent gameweeks: loop through and apply banking logic
     for (let gw = firstPlanningGW; gw < selectedGameweek; gw++) {
+      const nextGW = gw + 1;
+      
+      // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
+      // All managers get 5 free transfers in GW16 regardless of previous banking
+      if (nextGW === 16) {
+        currentInitial = 5;
+        continue;
+      }
+      
       // Check for chips that affect transfer banking
       const isFreeHitGW = plannedChips[gw] === 'freehit';
       const isWildcardGW = plannedChips[gw] === 'wildcard';
       
-      if (isFreeHitGW) {
-        // Free Hit: next gameweek resets to 1 FT (no banking from Free Hit GW)
-        currentInitial = 1;
-      } else if (isWildcardGW) {
-        // Wildcard: next gameweek resets to 1 FT
+      if (isFreeHitGW || isWildcardGW) {
+        // Free Hit or Wildcard: next gameweek resets to 1 FT (no banking)
         currentInitial = 1;
       } else {
-        // Normal transfer rollover calculation
+        // Normal banking logic:
+        // 1. Get transfers used in this gameweek
         const used = calculateTransfersUsedForGameweek(gw);
-        // Calculate remaining for this gameweek
+        // 2. Calculate what's left after using transfers
         const remaining = currentInitial - used;
-        // Next gameweek's initial = max(1, min(5, 1 + this gameweek's remaining))
-        let nextGWInitial = 1 + remaining;
-        
-        // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
-        // All managers get 5 free transfers in GW16 regardless of GW15 transfers
-        const nextGW = gw + 1;
-        if (nextGW === 16) {
-          nextGWInitial = 5;
-        }
-        
-        // Cap at 5 FT maximum as per FPL rules
+        // 3. Next gameweek gets automatic +1 FT plus any remaining (banked)
+        const nextGWInitial = 1 + remaining;
+        // 4. Cap between 1 and 5 FTs
         currentInitial = Math.max(1, Math.min(5, nextGWInitial));
       }
     }
