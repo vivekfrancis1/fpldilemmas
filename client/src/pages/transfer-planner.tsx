@@ -4317,21 +4317,10 @@ export default function TransferPlanner() {
           : getSquadAtGameweek(draft.gameweekTransfers, gw - 1);
         const squadPlayerIds = new Set(squadBeforeTransfers.map(p => p.element));
         
-        console.log(`🔍 TOOLTIP DEBUG GW${gw}:`, {
-          draftLetter: draft.draftLetter,
-          allTransfers: gwData.completed.map((t: any) => `${t.outPlayerName}(${t.outPlayerId}) → ${t.inPlayerName}(${t.inPlayerId})`),
-          squadPlayerIds: Array.from(squadPlayerIds),
-          firstPlanningGW
-        });
-        
         // Only show valid transfers where the out player actually exists in the squad
-        const validTransfers = gwData.completed.filter((transfer: CompletedTransfer) => {
-          const isValid = squadPlayerIds.has(transfer.outPlayerId);
-          if (!isValid) {
-            console.log(`  ❌ INVALID: ${transfer.outPlayerName}(${transfer.outPlayerId}) not in squad`);
-          }
-          return isValid;
-        });
+        const validTransfers = gwData.completed.filter((transfer: CompletedTransfer) => 
+          squadPlayerIds.has(transfer.outPlayerId)
+        );
         
         if (validTransfers.length > 0) {
           tooltipLines.push(`GW${gw}:`);
@@ -4657,15 +4646,27 @@ export default function TransferPlanner() {
     }
 
     try {
-      const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${activeDraft}`, {
+      // Clear any pending autosave to prevent recreation
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+        autosaveTimeoutRef.current = null;
+      }
+
+      // Mark as no unsaved changes to prevent autosave during switch
+      setHasUnsavedChanges(false);
+
+      const draftToDelete = activeDraft;
+      
+      const response = await fetch(`/api/transfer-planner/drafts/${searchedId}/${draftToDelete}`, {
         method: "DELETE"
       });
 
       if (response.ok) {
-        // Switch to Draft A
-        switchToDraft("A");
+        // Switch to Draft A WITHOUT triggering autosave
+        isLoadingDraftRef.current = true; // Prevent autosave
+        await switchToDraft("A");
         await loadDrafts();
-        toast({ title: "Draft Deleted", description: `Draft ${activeDraft} has been deleted` });
+        toast({ title: "Draft Deleted", description: `Draft ${draftToDelete} has been deleted` });
       }
     } catch (error) {
       toast({ title: "Error", description: "Failed to delete draft", variant: "destructive" });
