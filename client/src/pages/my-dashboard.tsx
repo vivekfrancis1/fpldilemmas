@@ -250,6 +250,12 @@ export default function MyDashboard() {
     }
     return "list";
   });
+  const [nextTeamView, setNextTeamView] = useState<"list" | "pitch">(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768 ? "pitch" : "list";
+    }
+    return "list";
+  });
 
 
   // Cache manager ID functionality
@@ -1776,7 +1782,132 @@ export default function MyDashboard() {
                       </Card>
                     </div>
 
-                    {/* Player List View - Grouped by position */}
+                    {/* View Toggle - Hidden on mobile */}
+                    <div className="hidden md:flex justify-center gap-2">
+                      <Button
+                        variant={nextTeamView === "pitch" ? "default" : "outline"}
+                        onClick={() => setNextTeamView("pitch")}
+                        className="flex items-center gap-2"
+                        data-testid="button-nextteam-pitch-view"
+                      >
+                        <Target className="h-4 w-4" />
+                        Pitch View
+                      </Button>
+                      <Button
+                        variant={nextTeamView === "list" ? "default" : "outline"}
+                        onClick={() => setNextTeamView("list")}
+                        className="flex items-center gap-2"
+                        data-testid="button-nextteam-list-view"
+                      >
+                        <Users className="h-4 w-4" />
+                        List View
+                      </Button>
+                    </div>
+
+                    {/* Pitch View - Hidden on mobile */}
+                    {nextTeamView === "pitch" && (
+                      <div className="space-y-4 hidden md:block">
+                        {/* Pitch with players */}
+                        <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
+                          {/* Pitch Lines */}
+                          <div className="absolute inset-0 opacity-30 pointer-events-none">
+                            <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full"></div>
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-t-0 border-white"></div>
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-t-0 border-white"></div>
+                            <div className="absolute top-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
+                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
+                              <div className="absolute left-0 top-0 w-1 h-4 bg-white"></div>
+                              <div className="absolute right-0 top-0 w-1 h-4 bg-white"></div>
+                            </div>
+                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-b-0 border-white"></div>
+                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-b-0 border-white"></div>
+                            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
+                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
+                              <div className="absolute left-0 bottom-0 w-1 h-4 bg-white"></div>
+                              <div className="absolute right-0 bottom-0 w-1 h-4 bg-white"></div>
+                            </div>
+                            <div className="absolute top-0 left-0 w-4 h-4 border-2 border-t-0 border-l-0 border-white rounded-br-full"></div>
+                            <div className="absolute top-0 right-0 w-4 h-4 border-2 border-t-0 border-r-0 border-white rounded-bl-full"></div>
+                            <div className="absolute bottom-0 left-0 w-4 h-4 border-2 border-b-0 border-l-0 border-white rounded-tr-full"></div>
+                            <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
+                          </div>
+
+                          <div className="relative space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-10">
+                            {/* GKP */}
+                            {[1, 2, 3, 4].map(positionType => {
+                              const positionPlayers = nextTeamData.picks
+                                .filter(pick => pick.position <= 11)
+                                .filter(pick => {
+                                  const player = getPlayerById(pick.element);
+                                  return player?.element_type === positionType;
+                                });
+
+                              return positionPlayers.length > 0 && (
+                                <div key={positionType} className="flex justify-center gap-0.5">
+                                  {positionPlayers.map(pick => {
+                                    const player = getPlayerById(pick.element);
+                                    if (!player) return null;
+                                    const playerTeam = getPlayerTeam(player);
+                                    const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
+                                    const textColor = getTextColor(jerseyColor);
+
+                                    return (
+                                      <div key={pick.element} className="flex flex-col items-center w-[19.5%]">
+                                        <div className="relative w-full">
+                                          <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
+                                            <defs>
+                                              <clipPath id={`next-jersey-clip-${positionType}-${player.id}`}>
+                                                <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" />
+                                              </clipPath>
+                                            </defs>
+                                            <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#next-jersey-clip-${positionType}-${player.id})`} />
+                                            <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
+                                            <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+                                            {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
+                                            {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
+                                            <text x="140" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
+                                            <text x="140" y="115" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
+                                            <text x="140" y="150" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{formatPrice(player.now_cost)}</text>
+                                          </svg>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Bench */}
+                        <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg p-4">
+                          <h3 className="font-semibold text-gray-900 text-sm mb-3">Bench</h3>
+                          <div className="grid grid-cols-4 gap-2">
+                            {nextTeamData.picks
+                              .filter(pick => pick.position > 11)
+                              .sort((a, b) => a.position - b.position)
+                              .map(pick => {
+                                const player = getPlayerById(pick.element);
+                                if (!player) return null;
+                                const playerTeam = getPlayerTeam(player);
+                                return (
+                                  <div key={pick.element} className="bg-white rounded p-2 text-center">
+                                    <div className="text-xs font-semibold text-gray-900 truncate">{player.web_name}</div>
+                                    <div className="text-[10px] text-gray-600 mt-1">{playerTeam?.short_name || 'UNK'}</div>
+                                    <div className="text-[10px] text-gray-500">{formatPrice(player.now_cost)}</div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* List View - Grouped by position */}
+                    {nextTeamView === "list" && (
                     <div className="space-y-3">
                       <h3 className="font-semibold text-gray-900 text-lg mb-4">Starting XI</h3>
                       {(() => {
@@ -1858,6 +1989,7 @@ export default function MyDashboard() {
                           );
                         })}
                     </div>
+                    )}
                   </CardContent>
                 </Card>
               )}
