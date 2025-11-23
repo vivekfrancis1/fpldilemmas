@@ -1586,7 +1586,7 @@ export default function MyDashboard() {
             </TabsContent>
 
             {/* Next Gameweek Team Tab */}
-            <TabsContent value="nextteam" className="space-y-6 mt-6 sm:mt-8">
+            <TabsContent value="nextteam" className="space-y-6 mt-3 sm:mt-4">
               {isLoadingNextTeam && (
                 <div className="text-center py-8">
                   <div className="text-lg">Loading GW {getNextGameweekDashboard()} team data...</div>
