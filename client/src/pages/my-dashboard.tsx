@@ -1575,64 +1575,66 @@ export default function MyDashboard() {
                         <div className="flex items-start gap-2">
                           <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                           <div>
-                            Login to FPL Dilemmas, and connect your FPL account to fetch your latest team for GW {getNextGameweekDashboard()}.
+                            Login to FPL Dilemmas, and connect your official FPL account to fetch your latest team for GW {getNextGameweekDashboard()}.
                           </div>
                         </div>
                       </AlertDescription>
                     </Alert>
                   )}
                   
-                  <Card className="border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg">
-                    <CardContent className="p-6 sm:p-8 text-center">
-                      <div className="max-w-md mx-auto space-y-4">
-                        <div className="text-lg font-semibold text-blue-900">
-                          GW {getNextGameweekDashboard()} Team Not Available
-                        </div>
-                        {nextTeamError ? (
-                          <>
-                            <p className="text-sm text-red-700">
-                              {isOwnTeam 
-                                ? "Failed to fetch your upcoming team. Your FPL session may have expired."
-                                : "Team data for the upcoming gameweek is not available yet."}
-                            </p>
-                            {isOwnTeam && (
-                              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4">
+                  {user && (
+                    <Card className="border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg">
+                      <CardContent className="p-6 sm:p-8 text-center">
+                        <div className="max-w-md mx-auto space-y-4">
+                          <div className="text-lg font-semibold text-blue-900">
+                            GW {getNextGameweekDashboard()} Team Not Available
+                          </div>
+                          {nextTeamError ? (
+                            <>
+                              <p className="text-sm text-red-700">
+                                {isOwnTeam 
+                                  ? "Failed to fetch your upcoming team. Your FPL session may have expired."
+                                  : "Team data for the upcoming gameweek is not available yet."}
+                              </p>
+                              {isOwnTeam && (
+                                <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4">
+                                  <Button
+                                    onClick={() => refetchNextTeam()}
+                                    variant="outline"
+                                    className="bg-white hover:bg-blue-50"
+                                    data-testid="button-refetch-next-team"
+                                  >
+                                    <RefreshCw className="w-4 h-4 mr-2" />
+                                    Try Again
+                                  </Button>
+                                  <FplConnectDialog />
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm text-blue-700">
+                                {isOwnTeam 
+                                  ? "Your upcoming team will show here once you make changes in FPL."
+                                  : "Team data for the upcoming gameweek will be available once confirmed in FPL."}
+                              </p>
+                              {isOwnTeam && (
                                 <Button
                                   onClick={() => refetchNextTeam()}
                                   variant="outline"
-                                  className="bg-white hover:bg-blue-50"
-                                  data-testid="button-refetch-next-team"
+                                  className="bg-white hover:bg-blue-50 mt-4"
+                                  data-testid="button-fetch-next-team"
                                 >
                                   <RefreshCw className="w-4 h-4 mr-2" />
-                                  Try Again
+                                  Fetch Team
                                 </Button>
-                                <FplConnectDialog />
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <>
-                            <p className="text-sm text-blue-700">
-                              {isOwnTeam 
-                                ? "Your upcoming team will show here once you make changes in FPL."
-                                : "Team data for the upcoming gameweek will be available once confirmed in FPL."}
-                            </p>
-                            {isOwnTeam && (
-                              <Button
-                                onClick={() => refetchNextTeam()}
-                                variant="outline"
-                                className="bg-white hover:bg-blue-50 mt-4"
-                                data-testid="button-fetch-next-team"
-                              >
-                                <RefreshCw className="w-4 h-4 mr-2" />
-                                Fetch Team
-                              </Button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </>
               )}
               
