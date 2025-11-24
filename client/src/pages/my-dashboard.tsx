@@ -1655,7 +1655,7 @@ export default function MyDashboard() {
                           <div className="flex items-start gap-2">
                             <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                             <div>
-                              You are viewing the team from GW {getCurrentGameweekDashboard()}. Login to FPL Dilemmas, and connect your FPL account to view the latest team for GW {getNextGameweekDashboard()}.
+                              Login to FPL Dilemmas, and connect your FPL account to fetch your latest team for GW {getNextGameweekDashboard()}.
                               <div className="mt-2">
                                 <FplConnectDialog />
                               </div>
