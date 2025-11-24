@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { applyAvailabilityAdjustments, AFCON_PLAYERS, type BootstrapData as AvailabilityBootstrapData } from "@/lib/availability-adjustments";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
+import { useAuth } from "@/hooks/useAuth";
 
 // Player Availability Badge Component
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -183,8 +184,10 @@ export default function TeamOptimizer() {
   const [gameweekHorizon] = useState<number>(12); // Fixed at 12 gameweeks
   const [freeHitOptimizations, setFreeHitOptimizations] = useState<Map<number, number>>(new Map());
   const [isOptimizingFreeHit, setIsOptimizingFreeHit] = useState(false);
+  const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
   
   const { toast } = useToast();
+  const { user } = useAuth();
 
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
@@ -217,12 +220,29 @@ export default function TeamOptimizer() {
     queryKey: ["/api/bootstrap-static"],
   });
 
-  const { data: teamData, isLoading: isLoadingTeam } = useQuery<TeamData>({
-    queryKey: ["/api/manager", searchedId, "team"],
+  // Check if user is viewing their own team
+  const isOwnTeam = user?.fplManagerId && searchedId && Number(searchedId) === user.fplManagerId;
+
+  // Determine which endpoint to use (with fallback for expired sessions)
+  const shouldUseAuthenticatedEndpoint = isOwnTeam && !useFallbackEndpoint;
+
+  // Use authenticated my-team endpoint for own team (shows GW 13 unconfirmed team)
+  // Fall back to public picks endpoint if session expired (GW 12 confirmed team)
+  const { data: teamData, isLoading: isLoadingTeam, error: teamDataError } = useQuery<TeamData>({
+    queryKey: shouldUseAuthenticatedEndpoint ? ["/api/fpl/my-team"] : ["/api/manager", searchedId, "team"],
     enabled: !!searchedId,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
+    retry: false, // Don't auto-retry if FPL session expired
   });
+
+  // Handle FPL session expiry - fall back to public endpoint
+  useEffect(() => {
+    if (teamDataError && shouldUseAuthenticatedEndpoint && searchedId) {
+      console.log("⚠️ FPL session expired or unavailable, falling back to manager ID endpoint");
+      setUseFallbackEndpoint(true);
+    }
+  }, [teamDataError, shouldUseAuthenticatedEndpoint, searchedId]);
 
   // Fetch fixtures data
   const { data: fixturesData } = useQuery<any[]>({
@@ -326,6 +346,7 @@ export default function TeamOptimizer() {
 
   const handleSearch = () => {
     if (managerId.trim()) {
+      setUseFallbackEndpoint(false); // Reset fallback flag to try authenticated endpoint first
       setSearchedId(managerId.trim());
       saveManagerIdToCache(managerId.trim());
     }
@@ -1036,6 +1057,21 @@ export default function TeamOptimizer() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Session expiry notification */}
+        {useFallbackEndpoint && isOwnTeam && (
+          <Alert className="bg-blue-50 border-blue-200">
+            <AlertDescription className="text-sm text-blue-800">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <strong>Using last confirmed team:</strong> Your FPL session has expired. 
+                  Showing your last confirmed gameweek team. Connect your FPL account above to view your latest unconfirmed team.
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Summary Card - Total Points */}
         <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
