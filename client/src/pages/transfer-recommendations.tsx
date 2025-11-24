@@ -26,6 +26,7 @@ export default function TransferRecommendations() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<string | null>(null);
+  const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -59,14 +60,26 @@ export default function TransferRecommendations() {
   // Check if user is viewing their own team
   const isOwnTeam = user?.fplManagerId && searchedId && Number(searchedId) === user.fplManagerId;
 
+  // Determine which endpoint to use (with fallback for expired sessions)
+  const shouldUseAuthenticatedEndpoint = isOwnTeam && !useFallbackEndpoint;
+
   // Fetch recommended transfers - use authenticated endpoint for own team (shows GW 13 unconfirmed data)
+  // Fall back to public endpoint if session expired (GW 12 confirmed data)
   const { data: recommendedTransfers, isLoading: isLoadingRecommendations, error: recommendationsError } = useQuery<any>({
-    queryKey: isOwnTeam ? ["/api/fpl/recommended-transfers"] : ["/api/manager", searchedId, "recommended-transfers"],
+    queryKey: shouldUseAuthenticatedEndpoint ? ["/api/fpl/recommended-transfers"] : ["/api/manager", searchedId, "recommended-transfers"],
     enabled: !!searchedId,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false, // Don't auto-retry if FPL session expired
   });
+
+  // Handle FPL session expiry - fall back to public endpoint
+  useEffect(() => {
+    if (recommendationsError && shouldUseAuthenticatedEndpoint && searchedId) {
+      console.log("⚠️ FPL session expired or unavailable, falling back to manager ID endpoint");
+      setUseFallbackEndpoint(true);
+    }
+  }, [recommendationsError, shouldUseAuthenticatedEndpoint, searchedId]);
 
   // Fetch bootstrap data
   const { data: bootstrapData } = useQuery<any>({
@@ -380,6 +393,7 @@ export default function TransferRecommendations() {
       });
       return;
     }
+    setUseFallbackEndpoint(false); // Reset fallback flag to try authenticated endpoint first
     setSearchedId(managerId);
     saveManagerIdToCache(managerId);
   };
@@ -464,8 +478,23 @@ export default function TransferRecommendations() {
           </CardContent>
         </Card>
 
-        {/* Error state */}
-        {recommendationsError && (
+        {/* Session expiry notification */}
+        {useFallbackEndpoint && isOwnTeam && (
+          <Alert className="bg-blue-50 border-blue-200">
+            <AlertDescription className="text-sm text-blue-800">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                <div>
+                  <strong>Using last confirmed team:</strong> Your FPL session has expired. 
+                  Showing recommendations based on your last confirmed gameweek team. Connect your FPL account above to view recommendations for your latest unconfirmed team.
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Error state - only show if fallback also failed */}
+        {recommendationsError && useFallbackEndpoint && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
