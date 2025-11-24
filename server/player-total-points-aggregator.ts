@@ -273,11 +273,13 @@ export class PlayerTotalPointsAggregator {
       const pointsData = component.pointsData || {};
 
       // Add points from this component to each gameweek
+      // NORMALIZE KEYS: Convert "gw13" format to numeric "13" for consistency
       for (const [gameweek, points] of Object.entries(pointsData)) {
-        if (!player.gameweekPoints[gameweek]) {
-          player.gameweekPoints[gameweek] = 0;
+        const normalizedGW = gameweek.replace(/^gw/i, ''); // Remove "gw" prefix if present
+        if (!player.gameweekPoints[normalizedGW]) {
+          player.gameweekPoints[normalizedGW] = 0;
         }
-        player.gameweekPoints[gameweek] += Number(points) || 0;
+        player.gameweekPoints[normalizedGW] += Number(points) || 0;
       }
 
       // Add to total points
@@ -336,11 +338,13 @@ export class PlayerTotalPointsAggregator {
       const pointsData = component.pointsData || {};
 
       // Add points from this component to each gameweek
+      // NORMALIZE KEYS: Convert "gw13" format to numeric "13" for consistency
       for (const [gameweek, points] of Object.entries(pointsData)) {
-        if (!player.gameweekPoints[gameweek]) {
-          player.gameweekPoints[gameweek] = 0;
+        const normalizedGW = gameweek.replace(/^gw/i, ''); // Remove "gw" prefix if present
+        if (!player.gameweekPoints[normalizedGW]) {
+          player.gameweekPoints[normalizedGW] = 0;
         }
-        player.gameweekPoints[gameweek] += Number(points) || 0;
+        player.gameweekPoints[normalizedGW] += Number(points) || 0;
       }
 
       // Add to total points
