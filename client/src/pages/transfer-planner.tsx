@@ -876,6 +876,7 @@ export default function TransferPlanner() {
     return "list";
   });
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
+  const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
   
   const { user } = useAuth();
   
@@ -1035,15 +1036,26 @@ export default function TransferPlanner() {
   // Check if user is viewing their own team
   const isOwnTeam = user?.fplManagerId && searchedId && Number(searchedId) === user.fplManagerId;
 
+  // Determine which endpoint to use (with fallback for expired sessions)
+  const shouldUseAuthenticatedEndpoint = isOwnTeam && !useFallbackEndpoint;
+
   // Use authenticated my-team endpoint for own team (shows GW 13 unconfirmed team)
-  // Otherwise use public picks endpoint (GW 12 confirmed team)
-  const { data: teamData, isLoading: isLoadingTeam } = useQuery<TeamData>({
-    queryKey: isOwnTeam ? ["/api/fpl/my-team"] : ["/api/manager", searchedId, "team"],
+  // Fall back to public picks endpoint if session expired (GW 12 confirmed team)
+  const { data: teamData, isLoading: isLoadingTeam, error: teamDataError } = useQuery<TeamData>({
+    queryKey: shouldUseAuthenticatedEndpoint ? ["/api/fpl/my-team"] : ["/api/manager", searchedId, "team"],
     enabled: !!searchedId,
     staleTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false, // Prevent auto-refetch that would reset transfers
     retry: false, // Don't auto-retry if FPL session expired
   });
+
+  // Handle FPL session expiry - fall back to public endpoint
+  useEffect(() => {
+    if (teamDataError && shouldUseAuthenticatedEndpoint && searchedId) {
+      console.log("⚠️ FPL session expired or unavailable, falling back to manager ID endpoint");
+      setUseFallbackEndpoint(true);
+    }
+  }, [teamDataError, shouldUseAuthenticatedEndpoint, searchedId]);
 
   // Debug: log teamData.transfers when using authenticated endpoint
   useEffect(() => {
@@ -1739,6 +1751,7 @@ export default function TransferPlanner() {
   const handleSearch = () => {
     if (managerId.trim()) {
       const trimmedId = managerId.trim();
+      setUseFallbackEndpoint(false); // Reset fallback flag to try authenticated endpoint first
       setSearchedId(trimmedId);
       saveManagerIdToCache(trimmedId);
     }
@@ -5206,6 +5219,21 @@ export default function TransferPlanner() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Session expiry notification */}
+      {useFallbackEndpoint && isOwnTeam && (
+        <Alert className="bg-blue-50 border-blue-200">
+          <AlertDescription className="text-sm text-blue-800">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <div>
+                <strong>Using last confirmed team:</strong> Your FPL session has expired. 
+                Showing your last confirmed gameweek team. Connect your FPL account above to view your latest unconfirmed team.
+              </div>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Combined Selection Section */}
       {searchedId && teamData && selectedGameweek && (
