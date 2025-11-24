@@ -14,6 +14,47 @@ interface TweetData {
   fallers: PriceChange[];
 }
 
+const TEAM_ABBREVIATIONS: Record<string, string> = {
+  'Arsenal': 'ARS',
+  'Aston Villa': 'AVL',
+  'Bournemouth': 'BOU',
+  'Brentford': 'BRE',
+  'Brighton': 'BHA',
+  'Brighton and Hove Albion': 'BHA',
+  'Chelsea': 'CHE',
+  'Crystal Palace': 'CRY',
+  'Everton': 'EVE',
+  'Fulham': 'FUL',
+  'Ipswich': 'IPS',
+  'Ipswich Town': 'IPS',
+  'Leicester': 'LEI',
+  'Leicester City': 'LEI',
+  'Liverpool': 'LIV',
+  'Man City': 'MCI',
+  'Manchester City': 'MCI',
+  'Man Utd': 'MUN',
+  'Manchester United': 'MUN',
+  'Newcastle': 'NEW',
+  'Newcastle United': 'NEW',
+  'Nott\'m Forest': 'NFO',
+  'Nottingham Forest': 'NFO',
+  'Southampton': 'SOU',
+  'Spurs': 'TOT',
+  'Tottenham': 'TOT',
+  'Tottenham Hotspur': 'TOT',
+  'West Ham': 'WHU',
+  'West Ham United': 'WHU',
+  'Wolves': 'WOL',
+  'Wolverhampton Wanderers': 'WOL'
+};
+
+const POSITION_ABBREVIATIONS: Record<string, string> = {
+  'Goalkeeper': 'GK',
+  'Defender': 'DEF',
+  'Midfielder': 'MID',
+  'Forward': 'FWD'
+};
+
 export class TwitterService {
   private client: TwitterApi | null = null;
 
@@ -46,18 +87,45 @@ export class TwitterService {
     return this.client;
   }
 
+  private getTeamAbbreviation(teamName: string): string {
+    return TEAM_ABBREVIATIONS[teamName] || teamName.substring(0, 3).toUpperCase();
+  }
+
+  private getPositionAbbreviation(position: string): string {
+    return POSITION_ABBREVIATIONS[position] || position;
+  }
+
+  private formatDateWithoutYear(dateStr: string): string {
+    if (dateStr.match(/^\d{1,2}\s+[A-Za-z]{3}\s+\d{4}$/)) {
+      return dateStr.replace(/\s+\d{4}$/, '');
+    }
+    
+    if (dateStr.match(/^\d{1,2}\s+[A-Za-z]{3}$/)) {
+      return dateStr;
+    }
+    
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) {
+      return dateStr;
+    }
+    
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${date.getDate()} ${months[date.getMonth()]}`;
+  }
+
   private formatPriceChangeTweet(
     changes: PriceChange[],
     type: 'RISERS' | 'FALLERS',
     emoji: string,
     date: string
   ): string {
-    const header = `💰 FPL Price Changes - ${date}\n${emoji} ${type} (${changes.length})`;
+    const formattedDate = this.formatDateWithoutYear(date);
+    const header = `💰 FPL Price Changes - ${formattedDate}\n${emoji} ${type}`;
     
     const playerLines = changes.map(change => {
-      const playerInfo = `${change.player_name} (${change.team_name}, ${change.position}, ${change.ownership.toFixed(1)}%)`;
-      const priceChange = `${change.old_price.toFixed(1)} → ${change.new_price.toFixed(1)}`;
-      return `${playerInfo} ${priceChange}`;
+      const teamAbbr = this.getTeamAbbreviation(change.team_name);
+      const posAbbr = this.getPositionAbbreviation(change.position);
+      return `${change.player_name} (${teamAbbr}, ${posAbbr}): ${change.new_price.toFixed(1)}`;
     });
 
     const footer = `\nFull list: https://fpldilemmas.com/recent-price-changes\n#FPL #FantasyPremierLeague`;
