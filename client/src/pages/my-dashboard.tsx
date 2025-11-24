@@ -1631,38 +1631,43 @@ export default function MyDashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-6">
-                    {/* FPL Connection Reminder for Own Team */}
-                    {isOwnTeam && !user?.fplSessionCookies && (
-                      <Alert className="mb-6 border-blue-200 bg-blue-50">
-                        <AlertDescription className="text-sm text-blue-800">
-                          <div className="flex items-start gap-2">
-                            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                            <div>
-                              Your FPL session has expired. You are now viewing your team from GW {getCurrentGameweekDashboard()}. Connect your FPL account to view your latest team for GW {getNextGameweekDashboard()}.
-                              <div className="mt-2">
-                                <FplConnectDialog />
+                    {/* FPL Session Reminder */}
+                    {searchedId && (
+                      <>
+                        {/* For logged-in users viewing their own team with expired FPL session */}
+                        {isOwnTeam && !user?.fplSessionCookies && (
+                          <Alert className="mb-6 border-blue-200 bg-blue-50">
+                            <AlertDescription className="text-sm text-blue-800">
+                              <div className="flex items-start gap-2">
+                                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  Your FPL session has expired. You are now viewing your team from GW {getCurrentGameweekDashboard()}. Connect your FPL account to view your latest team for GW {getNextGameweekDashboard()}.
+                                  <div className="mt-2">
+                                    <FplConnectDialog />
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        </AlertDescription>
-                      </Alert>
-                    )}
+                            </AlertDescription>
+                          </Alert>
+                        )}
 
-                    {/* Notification for non-logged-in users */}
-                    {!user && searchedId && (
-                      <Alert className="mb-6 border-blue-200 bg-blue-50">
-                        <AlertDescription className="text-sm text-blue-800">
-                          <div className="flex items-start gap-2">
-                            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                            <div>
-                              Login to FPL Dilemmas, and connect your FPL account to fetch your latest team for GW {getNextGameweekDashboard()}.
-                              <div className="mt-2">
-                                <FplConnectDialog />
+                        {/* For non-logged-in users */}
+                        {!user && (
+                          <Alert className="mb-6 border-blue-200 bg-blue-50">
+                            <AlertDescription className="text-sm text-blue-800">
+                              <div className="flex items-start gap-2">
+                                <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                <div>
+                                  Login to FPL Dilemmas, and connect your FPL account to fetch your latest team for GW {getNextGameweekDashboard()}.
+                                  <div className="mt-2">
+                                    <FplConnectDialog />
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          </div>
-                        </AlertDescription>
-                      </Alert>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </>
                     )}
 
                     {nextTeamData.active_chip && (
