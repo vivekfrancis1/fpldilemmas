@@ -478,7 +478,7 @@ export default function TransferRecommendations() {
           </CardContent>
         </Card>
 
-        {/* Session expiry notification */}
+        {/* Session expiry notification for logged-in users */}
         {useFallbackEndpoint && isOwnTeam && (() => {
           const currentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 
                            bootstrapData?.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
@@ -491,6 +491,26 @@ export default function TransferRecommendations() {
                   <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div>
                     Your FPL session has expired. The transfer recommendations are based on your team from GW {currentGW}. Connect your FPL account to get transfer recommendation based on your latest team from GW {upcomingGW}.
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          );
+        })()}
+
+        {/* Notification for non-logged-in users */}
+        {!user && searchedId && (() => {
+          const currentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 
+                           bootstrapData?.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+          const upcomingGW = currentGW + 1;
+          
+          return (
+            <Alert className="bg-blue-50 border-blue-200">
+              <AlertDescription className="text-sm text-blue-800">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <div>
+                    The transfer recommendations are based on your team from GW {currentGW}. Login to FPL Dilemmas, and connect your FPL account to get transfer recommendations based on your latest team from GW {upcomingGW}.
                   </div>
                 </div>
               </AlertDescription>

@@ -1648,6 +1648,23 @@ export default function MyDashboard() {
                       </Alert>
                     )}
 
+                    {/* Notification for non-logged-in users */}
+                    {!user && searchedId && (
+                      <Alert className="mb-6 border-blue-200 bg-blue-50">
+                        <AlertDescription className="text-sm text-blue-800">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <div>
+                              You are viewing the team from GW {getCurrentGameweekDashboard()}. Login to FPL Dilemmas, and connect your FPL account to view the latest team for GW {getNextGameweekDashboard()}.
+                              <div className="mt-2">
+                                <FplConnectDialog />
+                              </div>
+                            </div>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                     {nextTeamData.active_chip && (
                       <Alert className="mb-6 border-blue-200 bg-blue-50">
                         <AlertDescription className="text-sm text-blue-800">
