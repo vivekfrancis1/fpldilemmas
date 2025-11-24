@@ -34,7 +34,8 @@ import {
   ChevronDown,
   ExternalLink,
   ArrowLeftRight,
-  RefreshCw
+  RefreshCw,
+  AlertCircle
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
