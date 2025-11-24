@@ -1630,6 +1630,24 @@ export default function MyDashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-6">
+                    {/* FPL Connection Reminder for Own Team */}
+                    {isOwnTeam && !user?.fplSessionCookies && (
+                      <Alert className="mb-6 border-blue-200 bg-blue-50">
+                        <AlertDescription className="text-sm text-blue-800">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <strong>Connect your FPL account</strong> to sync your latest GW {getNextGameweekDashboard()} team with live updates. 
+                              Without connection, you're viewing the last confirmed gameweek team.
+                              <div className="mt-2">
+                                <FplConnectDialog />
+                              </div>
+                            </div>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
                     {nextTeamData.active_chip && (
                       <Alert className="mb-6 border-blue-200 bg-blue-50">
                         <AlertDescription className="text-sm text-blue-800">
