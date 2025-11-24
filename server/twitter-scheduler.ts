@@ -26,11 +26,13 @@ export class TwitterScheduler {
     
     // If we're past 7:05 AM IST today, run immediately then schedule for tomorrow
     if (isAfter705AMToday) {
-      console.log('🚀 Server started after 7:05 AM IST - running Twitter post immediately');
+      const istTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+      console.log(`🚀 Server started after 7:05 AM IST (current IST time: ${istTime}) - running Twitter post immediately`);
       this.postDailyPriceChanges().then(() => {
-        console.log('✅ Immediate Twitter post completed');
+        console.log('✅ Immediate Twitter post completed successfully');
       }).catch(err => {
-        console.error('❌ Immediate Twitter post failed:', err);
+        console.error('❌ Immediate Twitter post failed:', err.message || err);
+        console.error('Full error:', err);
       });
     }
     
@@ -38,7 +40,7 @@ export class TwitterScheduler {
     const nextRun = this.getNext705AMIST();
     const timeUntilRun = nextRun.getTime() - Date.now();
     
-    console.log(`Next scheduled Twitter post: ${nextRun.toISOString()} (IST 7:05 AM) - in ${Math.round(timeUntilRun / 1000 / 60 / 60)} hours`);
+    console.log(`⏰ Next scheduled Twitter post: ${nextRun.toISOString()} (IST 7:05 AM) - in ${Math.round(timeUntilRun / 1000 / 60 / 60)} hours`);
     
     // Set initial timeout for next scheduled run
     setTimeout(() => {
@@ -93,6 +95,12 @@ export class TwitterScheduler {
       }
       
       console.log(`📊 Found ${todayChanges.risers.length} risers and ${todayChanges.fallers.length} fallers`);
+      if (todayChanges.risers.length > 0) {
+        console.log(`📈 Top 3 risers:`, todayChanges.risers.slice(0, 3).map(r => `${r.player_name} (${r.team_name})`));
+      }
+      if (todayChanges.fallers.length > 0) {
+        console.log(`📉 Top 3 fallers:`, todayChanges.fallers.slice(0, 3).map(f => `${f.player_name} (${f.team_name})`));
+      }
       
       // Format date
       const date = new Date().toLocaleDateString('en-GB', { 
@@ -100,6 +108,8 @@ export class TwitterScheduler {
         month: 'short', 
         year: 'numeric' 
       });
+      
+      console.log(`📅 Posting tweets for date: ${date}`);
       
       // Post tweets
       await twitterService.postPriceChangeTweets(todayChanges, date);

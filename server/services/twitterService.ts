@@ -144,27 +144,48 @@ export class TwitterService {
   }
 
   async postPriceChangeTweets(data: TweetData, date: string): Promise<void> {
-    try {
-      const client = this.getClient();
-      const risersSorted = [...data.risers].sort((a, b) => b.ownership - a.ownership);
-      const fallersSorted = [...data.fallers].sort((a, b) => b.ownership - a.ownership);
+    const client = this.getClient();
+    const risersSorted = [...data.risers].sort((a, b) => b.ownership - a.ownership);
+    const fallersSorted = [...data.fallers].sort((a, b) => b.ownership - a.ownership);
 
-      if (risersSorted.length > 0) {
+    let risersSuccess = false;
+    let fallersSuccess = false;
+
+    if (risersSorted.length > 0) {
+      try {
         const risersTweet = this.formatPriceChangeTweet(risersSorted, 'RISERS', '📈', date);
+        console.log(`📤 Posting risers tweet (${risersTweet.length} chars, ${risersSorted.length} players)...`);
         const risersResponse = await client.v2.tweet(risersTweet);
         console.log('✅ Posted risers tweet:', risersResponse.data.id);
+        risersSuccess = true;
+      } catch (error) {
+        console.error('❌ Error posting risers tweet:', error);
       }
+    } else {
+      console.log('ℹ️ No risers to post');
+    }
 
-      if (fallersSorted.length > 0) {
+    if (fallersSorted.length > 0) {
+      try {
         const fallersTweet = this.formatPriceChangeTweet(fallersSorted, 'FALLERS', '📉', date);
+        console.log(`📤 Posting fallers tweet (${fallersTweet.length} chars, ${fallersSorted.length} players)...`);
         const fallersResponse = await client.v2.tweet(fallersTweet);
         console.log('✅ Posted fallers tweet:', fallersResponse.data.id);
+        fallersSuccess = true;
+      } catch (error) {
+        console.error('❌ Error posting fallers tweet:', error);
       }
+    } else {
+      console.log('ℹ️ No fallers to post');
+    }
 
-      console.log('🎉 Successfully posted price change tweets');
-    } catch (error) {
-      console.error('❌ Error posting tweets:', error);
-      throw error;
+    if ((risersSorted.length === 0 || risersSuccess) && (fallersSorted.length === 0 || fallersSuccess)) {
+      console.log('🎉 Successfully posted all price change tweets');
+    } else {
+      const failures = [];
+      if (risersSorted.length > 0 && !risersSuccess) failures.push('risers');
+      if (fallersSorted.length > 0 && !fallersSuccess) failures.push('fallers');
+      throw new Error(`Failed to post ${failures.join(' and ')} tweets`);
     }
   }
 
