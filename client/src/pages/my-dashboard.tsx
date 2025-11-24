@@ -1638,8 +1638,7 @@ export default function MyDashboard() {
                           <div className="flex items-start gap-2">
                             <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                             <div>
-                              <strong>Connect your FPL account</strong> to sync your latest GW {getNextGameweekDashboard()} team with live updates. 
-                              Without connection, you're viewing the last confirmed gameweek team.
+                              Your FPL session has expired. You are now viewing your team from GW {getCurrentGameweekDashboard()}. Connect your FPL account to view your latest team for GW {getNextGameweekDashboard()}.
                               <div className="mt-2">
                                 <FplConnectDialog />
                               </div>
