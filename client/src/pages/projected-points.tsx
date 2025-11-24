@@ -766,19 +766,24 @@ export default function ProjectedPoints() {
               </div>
 
               {/* Session expiry notification */}
-              {useFallbackEndpoint && isOwnTeam && (
-                <Alert className="bg-blue-50 border-blue-200">
-                  <AlertDescription className="text-sm text-blue-800">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <strong>Using last confirmed team:</strong> Your FPL session has expired. 
-                        Showing your last confirmed gameweek team. Connect your FPL account above to view your latest unconfirmed team.
+              {useFallbackEndpoint && isOwnTeam && (() => {
+                const currentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 
+                                 bootstrapData?.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+                const upcomingGW = currentGW + 1;
+                
+                return (
+                  <Alert className="bg-blue-50 border-blue-200">
+                    <AlertDescription className="text-sm text-blue-800">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                        <div>
+                          Your FPL session has expired. You are now viewing your team from GW {currentGW}. Connect your FPL account to view your latest team for GW {upcomingGW}.
+                        </div>
                       </div>
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
+                    </AlertDescription>
+                  </Alert>
+                );
+              })()}
               
               {searchedId && (
                 <div className="flex flex-col sm:flex-row gap-3 sm:items-end border-t pt-4">
