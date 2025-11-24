@@ -186,6 +186,7 @@ export default function ProjectedPoints() {
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
   const [sortColumn, setSortColumn] = useState<string>("total");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -224,15 +225,26 @@ export default function ProjectedPoints() {
   // Check if user is viewing their own team
   const isOwnTeam = user?.fplManagerId && searchedId && Number(searchedId) === user.fplManagerId;
   
+  // Determine which endpoint to use (with fallback for expired sessions)
+  const shouldUseAuthenticatedEndpoint = isOwnTeam && !useFallbackEndpoint;
+  
   // Use authenticated my-team endpoint for own team (shows GW 13 unconfirmed team)
-  // Otherwise use public picks endpoint (GW 12 confirmed team)
-  const { data: teamData, isLoading: isLoadingTeam } = useQuery<TeamData>({
-    queryKey: isOwnTeam ? ["/api/fpl/my-team"] : ["/api/manager", searchedId, "team"],
+  // Fall back to public picks endpoint if session expired (GW 12 confirmed team)
+  const { data: teamData, isLoading: isLoadingTeam, error: teamDataError } = useQuery<TeamData>({
+    queryKey: shouldUseAuthenticatedEndpoint ? ["/api/fpl/my-team"] : ["/api/manager", searchedId, "team"],
     enabled: !!searchedId,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     retry: false, // Don't auto-retry if FPL session expired
   });
+
+  // Handle FPL session expiry - fall back to public endpoint
+  useEffect(() => {
+    if (teamDataError && shouldUseAuthenticatedEndpoint && searchedId) {
+      console.log("⚠️ FPL session expired or unavailable, falling back to manager ID endpoint");
+      setUseFallbackEndpoint(true);
+    }
+  }, [teamDataError, shouldUseAuthenticatedEndpoint, searchedId]);
 
   // Fetch fixtures data
   const { data: fixturesData } = useQuery<any[]>({
@@ -469,6 +481,7 @@ export default function ProjectedPoints() {
       });
       return;
     }
+    setUseFallbackEndpoint(false); // Reset fallback flag to try authenticated endpoint first
     setSearchedId(managerId);
     saveManagerIdToCache(managerId);
   };
@@ -685,7 +698,8 @@ export default function ProjectedPoints() {
     );
   }
 
-  if (!teamData) {
+  // Only show error if both endpoints failed (not just waiting for fallback)
+  if (!teamData && !isLoadingTeam && teamDataError && useFallbackEndpoint) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
         <div className="max-w-2xl mx-auto pt-12">
@@ -697,6 +711,11 @@ export default function ProjectedPoints() {
         </div>
       </div>
     );
+  }
+  
+  // Don't render content while loading or waiting for fallback retry
+  if (!teamData) {
+    return null;
   }
 
   const nextGameweeks = getNextGameweeks();
@@ -745,6 +764,21 @@ export default function ProjectedPoints() {
                 </Button>
                 <FplConnectDialog />
               </div>
+
+              {/* Session expiry notification */}
+              {useFallbackEndpoint && isOwnTeam && (
+                <Alert className="bg-blue-50 border-blue-200">
+                  <AlertDescription className="text-sm text-blue-800">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <strong>Using last confirmed team:</strong> Your FPL session has expired. 
+                        Showing your last confirmed gameweek team. Connect your FPL account above to view your latest unconfirmed team.
+                      </div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
               
               {searchedId && (
                 <div className="flex flex-col sm:flex-row gap-3 sm:items-end border-t pt-4">
