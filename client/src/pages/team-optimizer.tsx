@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, Heart, XCircle, Clock, Sparkles } from "lucide-react";
+import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, AlertCircle, Heart, XCircle, Clock, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
