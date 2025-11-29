@@ -17,26 +17,11 @@ export class TwitterScheduler {
   }
 
   start() {
-    const now = Date.now();
-    const istNow = new Date(now + IST_OFFSET);
-    const sevenO5AMToday = new Date(istNow);
-    sevenO5AMToday.setHours(7, 5, 0, 0);
+    const istTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
+    console.log(`🐦 Twitter scheduler starting (current IST time: ${istTime})`);
+    console.log(`📋 Tweets will ONLY be posted at 7:05 AM IST daily (no immediate posts on server restart)`);
     
-    const isAfter705AMToday = istNow.getTime() >= sevenO5AMToday.getTime();
-    
-    // If we're past 7:05 AM IST today, run immediately then schedule for tomorrow
-    if (isAfter705AMToday) {
-      const istTime = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true });
-      console.log(`🚀 Server started after 7:05 AM IST (current IST time: ${istTime}) - running Twitter post immediately`);
-      this.postDailyPriceChanges().then(() => {
-        console.log('✅ Immediate Twitter post completed successfully');
-      }).catch(err => {
-        console.error('❌ Immediate Twitter post failed:', err.message || err);
-        console.error('Full error:', err);
-      });
-    }
-    
-    // Schedule next run (tomorrow at 7:05 AM IST)
+    // Schedule next run at 7:05 AM IST (never run immediately on restart)
     const nextRun = this.getNext705AMIST();
     const timeUntilRun = nextRun.getTime() - Date.now();
     
