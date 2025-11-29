@@ -538,6 +538,42 @@ export default function MyDashboard() {
     return Math.min(currentId + 1, 38);
   };
 
+  // Helper to get active chip for upcoming gameweek from both API sources
+  const getUpcomingActiveChip = (): string | null => {
+    // First check if nextTeamData has an active chip
+    if (nextTeamData?.active_chip) {
+      return nextTeamData.active_chip.toLowerCase();
+    }
+    
+    // Fallback: check historyData.chips for chip played in upcoming gameweek
+    const nextGw = getNextGameweekDashboard();
+    const chipFromHistory = historyData?.chips?.find(c => c.event === nextGw);
+    if (chipFromHistory?.name) {
+      return chipFromHistory.name.toLowerCase();
+    }
+    
+    return null;
+  };
+
+  // Helper to check if unlimited transfers are active
+  const isUnlimitedTransfersActive = (): boolean => {
+    const chip = getUpcomingActiveChip();
+    return chip === 'freehit' || chip === 'wildcard';
+  };
+
+  // Helper to get formatted chip name for display
+  const getChipDisplayName = (chip: string | null): string => {
+    if (!chip) return '';
+    const chipLower = chip.toLowerCase();
+    switch (chipLower) {
+      case 'freehit': return 'FREE HIT';
+      case 'wildcard': return 'WILDCARD';
+      case 'bboost': return 'BENCH BOOST';
+      case '3xc': return 'TRIPLE CAPTAIN';
+      default: return chip.toUpperCase();
+    }
+  };
+
   const getCurrentGameweekFixture = (teamId: number) => {
     if (!fixturesData || !Array.isArray(fixturesData)) return null;
     
@@ -1689,31 +1725,38 @@ export default function MyDashboard() {
                       </>
                     )}
 
-                    {nextTeamData.active_chip && (
-                      <Alert className="mb-6 border-purple-300 bg-gradient-to-r from-purple-50 to-indigo-50">
-                        <Sparkles className="h-4 w-4 text-purple-600" />
-                        <AlertDescription className="text-sm text-purple-800">
-                          <span className="font-semibold text-purple-900">
-                            {nextTeamData.active_chip.toUpperCase()} Active
-                          </span>
-                          {(nextTeamData.active_chip === 'freehit' || nextTeamData.active_chip === 'wildcard') && (
-                            <span className="text-purple-600 ml-1">
-                              - Unlimited transfers available for GW {getNextGameweekDashboard()}!
+                    {(() => {
+                      const activeChip = getUpcomingActiveChip();
+                      if (!activeChip) return null;
+                      
+                      const nextGw = getNextGameweekDashboard();
+                      
+                      return (
+                        <Alert className="mb-6 border-purple-300 bg-gradient-to-r from-purple-50 to-indigo-50">
+                          <Sparkles className="h-4 w-4 text-purple-600" />
+                          <AlertDescription className="text-sm text-purple-800">
+                            <span className="font-semibold text-purple-900">
+                              {getChipDisplayName(activeChip)} Active
                             </span>
-                          )}
-                          {nextTeamData.active_chip === 'bboost' && (
-                            <span className="text-purple-600 ml-1">
-                              - All 15 players will earn points this gameweek!
-                            </span>
-                          )}
-                          {nextTeamData.active_chip === '3xc' && (
-                            <span className="text-purple-600 ml-1">
-                              - Your captain will earn 3x points this gameweek!
-                            </span>
-                          )}
-                        </AlertDescription>
-                      </Alert>
-                    )}
+                            {isUnlimitedTransfersActive() && (
+                              <span className="text-purple-600 ml-1">
+                                - Unlimited transfers available for GW {nextGw}!
+                              </span>
+                            )}
+                            {activeChip === 'bboost' && (
+                              <span className="text-purple-600 ml-1">
+                                - All 15 players will earn points this gameweek!
+                              </span>
+                            )}
+                            {activeChip === '3xc' && (
+                              <span className="text-purple-600 ml-1">
+                                - Your captain will earn 3x points this gameweek!
+                              </span>
+                            )}
+                          </AlertDescription>
+                        </Alert>
+                      );
+                    })()}
 
                     {/* Team Overview Cards */}
                     <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 mb-6">
@@ -1758,7 +1801,7 @@ export default function MyDashboard() {
                             <div className="min-w-0 flex-1">
                               <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1">Transfers</p>
                               <p className="text-xl sm:text-2xl font-bold text-blue-900">
-                                {(nextTeamData.active_chip === 'freehit' || nextTeamData.active_chip === 'wildcard') ? (
+                                {isUnlimitedTransfersActive() ? (
                                   <span className="text-purple-600">∞ Unlimited</span>
                                 ) : (
                                   <>
