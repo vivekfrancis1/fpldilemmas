@@ -1123,6 +1123,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get authenticated transfers including upcoming gameweek (for Free Hit/Wildcard)
+  app.get("/api/fpl/my-transfers", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = (req.user as any).id;
+
+      // Get user's FPL credentials
+      const [user] = await db.select({
+        fplManagerId: users.fplManagerId,
+        fplSessionCookies: users.fplSessionCookies,
+        fplCookiesExpiry: users.fplCookiesExpiry
+      }).from(users).where(eq(users.id, userId));
+
+      if (!user || !user.fplManagerId || !user.fplSessionCookies) {
+        console.log('DEBUG my-transfers: FPL account not connected');
+        return res.status(401).json({ error: 'FPL account not connected' });
+      }
+
+      // Check if token is expired
+      if (user.fplCookiesExpiry && new Date(user.fplCookiesExpiry) < new Date()) {
+        console.log('DEBUG my-transfers: FPL session expired');
+        return res.status(401).json({ error: 'FPL session expired, please reconnect' });
+      }
+
+      // Extract Bearer token robustly from different formats
+      let bearerToken: string | null = null;
+      const sessionData = user.fplSessionCookies;
+      
+      // Pattern 1: cURL format with single quotes: -H 'x-api-authorization: Bearer xxx'
+      const bearerMatch1 = sessionData.match(/-H\s+'x-api-authorization:\s*Bearer\s+([^']+)'/i);
+      if (bearerMatch1) {
+        bearerToken = bearerMatch1[1].trim();
+        console.log('DEBUG my-transfers: Extracted token via cURL single quote format');
+      }
+      
+      // Pattern 2: cURL format with double quotes: -H "x-api-authorization: Bearer xxx"
+      if (!bearerToken) {
+        const bearerMatch2 = sessionData.match(/-H\s+"x-api-authorization:\s*Bearer\s+([^"]+)"/i);
+        if (bearerMatch2) {
+          bearerToken = bearerMatch2[1].trim();
+          console.log('DEBUG my-transfers: Extracted token via cURL double quote format');
+        }
+      }
+      
+      // Pattern 3: Raw token starting with Bearer
+      if (!bearerToken) {
+        const bearerMatch3 = sessionData.match(/^Bearer\s+(.+)$/i);
+        if (bearerMatch3) {
+          bearerToken = bearerMatch3[1].trim();
+          console.log('DEBUG my-transfers: Extracted token from raw Bearer format');
+        }
+      }
+      
+      // Pattern 4: Just the token itself (alphanumeric/base64-like, 20+ chars)
+      if (!bearerToken && sessionData.match(/^[A-Za-z0-9_-]{20,}$/)) {
+        bearerToken = sessionData.trim();
+        console.log('DEBUG my-transfers: Using raw token value');
+      }
+      
+      if (!bearerToken) {
+        console.log('DEBUG my-transfers: Could not extract valid bearer token from session data');
+        return res.status(401).json({ error: 'Invalid FPL session format, please reconnect' });
+      }
+
+      // Fetch authenticated transfers (includes upcoming gameweek)
+      console.log(`DEBUG my-transfers: Fetching transfers for manager ${user.fplManagerId}`);
+      const transfersResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${user.fplManagerId}/transfers/`, {
+        headers: {
+          'x-api-authorization': `Bearer ${bearerToken}`
+        }
+      });
+
+      if (!transfersResponse.ok) {
+        console.log(`DEBUG my-transfers: FPL API returned ${transfersResponse.status}`);
+        return res.status(401).json({ error: 'Failed to fetch FPL transfers, session may be expired' });
+      }
+
+      const transfersData = await transfersResponse.json();
+      console.log(`DEBUG my-transfers: Found ${transfersData.length} transfers, latest GW: ${transfersData.length > 0 ? Math.max(...transfersData.map((t: any) => t.event)) : 'none'}`);
+      
+      res.json(transfersData);
+    } catch (error) {
+      console.error('FPL my-transfers error:', error);
+      res.status(500).json({ error: 'Failed to fetch FPL transfers' });
+    }
+  });
+
   // Get recommended transfers using authenticated FPL session (shows GW 13 unconfirmed team)
   app.get("/api/fpl/recommended-transfers", isAuthenticated, async (req: any, res) => {
     try {
