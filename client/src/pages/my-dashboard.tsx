@@ -1796,6 +1796,79 @@ export default function MyDashboard() {
                       </Card>
                     </div>
 
+                    {/* GW Transfers Section */}
+                    {(() => {
+                      const nextGw = getNextGameweekDashboard();
+                      const gwTransfers = transfersData?.filter(t => t.event === nextGw) || [];
+                      
+                      if (gwTransfers.length === 0) return null;
+                      
+                      return (
+                        <Card className="mb-6 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-lg flex items-center gap-2 text-orange-900">
+                              <ArrowLeftRight className="h-5 w-5 text-orange-600" />
+                              GW {nextGw} Transfers ({gwTransfers.length})
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            <div className="space-y-3">
+                              {gwTransfers.map((transfer, idx) => {
+                                const playerIn = getPlayerById(transfer.element_in);
+                                const playerOut = getPlayerById(transfer.element_out);
+                                const teamIn = bootstrapData?.teams.find(t => t.id === playerIn?.team);
+                                const teamOut = bootstrapData?.teams.find(t => t.id === playerOut?.team);
+                                
+                                return (
+                                  <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-orange-100 shadow-sm">
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                      <div className="flex flex-col items-center min-w-[80px]">
+                                        <span className="text-xs text-red-600 font-medium mb-1">OUT</span>
+                                        <div className="text-sm font-semibold text-gray-900 truncate max-w-[80px]">
+                                          {playerOut?.web_name || 'Unknown'}
+                                        </div>
+                                        <div className="text-xs text-gray-500">{teamOut?.short_name || ''}</div>
+                                        <div className="text-xs text-red-600">{formatPrice(transfer.element_out_cost)}</div>
+                                      </div>
+                                      
+                                      <div className="flex-shrink-0">
+                                        <ArrowLeftRight className="h-4 w-4 text-orange-500" />
+                                      </div>
+                                      
+                                      <div className="flex flex-col items-center min-w-[80px]">
+                                        <span className="text-xs text-green-600 font-medium mb-1">IN</span>
+                                        <div className="text-sm font-semibold text-gray-900 truncate max-w-[80px]">
+                                          {playerIn?.web_name || 'Unknown'}
+                                        </div>
+                                        <div className="text-xs text-gray-500">{teamIn?.short_name || ''}</div>
+                                        <div className="text-xs text-green-600">{formatPrice(transfer.element_in_cost)}</div>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="text-right ml-2">
+                                      <div className={`text-sm font-medium ${
+                                        transfer.element_out_cost - transfer.element_in_cost > 0 
+                                          ? 'text-green-600' 
+                                          : transfer.element_out_cost - transfer.element_in_cost < 0 
+                                          ? 'text-red-600' 
+                                          : 'text-gray-600'
+                                      }`}>
+                                        {transfer.element_out_cost - transfer.element_in_cost > 0 ? '+' : ''}
+                                        {formatPrice(transfer.element_out_cost - transfer.element_in_cost)}
+                                      </div>
+                                      <div className="text-xs text-gray-400">
+                                        {new Date(transfer.time).toLocaleDateString()}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })()}
+
                     {/* View Toggle - Hidden on mobile */}
                     <div className="hidden md:flex justify-center gap-2 mb-2">
                       <Button
