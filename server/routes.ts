@@ -1104,6 +1104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const myTeamData = await myTeamResponse.json();
+      console.log("DEBUG my-team: active_chip =", myTeamData.active_chip, "| chips =", JSON.stringify(myTeamData.chips));
       res.json(myTeamData);
     } catch (error) {
       console.error('FPL my-team error:', error);
