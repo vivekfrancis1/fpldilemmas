@@ -334,10 +334,10 @@ export default function MyDashboard() {
 
   // Use authenticated transfers endpoint for own team (includes upcoming GW transfers)
   // Otherwise use public transfers endpoint
-  // Include user?.fplManagerId in query key to trigger refetch when auth state changes
+  // Use separate cache keys to ensure proper refetch when auth state changes
   const { data: transfersData, isLoading: isLoadingTransfers, error: transfersError } = useQuery<Transfer[]>({
     queryKey: isOwnTeam 
-      ? ["/api/fpl/my-transfers", user?.fplManagerId] 
+      ? ["/api/fpl/my-transfers"] 
       : ["/api/manager", searchedId, "transfers"],
     enabled: !!searchedId && (isOwnTeam ? !!user : true),
   });
