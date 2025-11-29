@@ -120,6 +120,7 @@ interface TeamData {
     bank: number;
     value: number;
   };
+  active_chip?: string | null;
 }
 
 interface Player {
@@ -1063,6 +1064,40 @@ export default function TransferPlanner() {
       console.log("🔍 Authenticated my-team data transfers:", teamData.transfers);
     }
   }, [isOwnTeam, teamData]);
+
+  // Auto-detect and apply active chip from FPL API for the next gameweek
+  // This syncs the user's FPL website chip activation with Transfer Planner
+  useEffect(() => {
+    if (!isOwnTeam || !teamData || !bootstrapData) return;
+    
+    const activeChip = teamData.active_chip;
+    if (!activeChip) return;
+    
+    // Get the next gameweek (where the chip is active)
+    const nextEvent = bootstrapData.events.find(e => e.is_next);
+    const nextGW = nextEvent?.id;
+    if (!nextGW) return;
+    
+    // Map FPL API chip names to our internal names
+    const chipMapping: Record<string, string> = {
+      'wildcard': 'wildcard',
+      'freehit': 'freehit',
+      'bboost': 'bboost',
+      '3xc': '3xc'
+    };
+    
+    const mappedChip = chipMapping[activeChip.toLowerCase()];
+    if (!mappedChip) return;
+    
+    // Only apply if this chip isn't already set for this gameweek
+    if (plannedChips[nextGW] !== mappedChip) {
+      console.log(`🎯 Auto-detected active chip from FPL: ${activeChip.toUpperCase()} for GW${nextGW}`);
+      setPlannedChips(prev => ({
+        ...prev,
+        [nextGW]: mappedChip as 'wildcard' | 'freehit' | 'bboost' | '3xc'
+      }));
+    }
+  }, [isOwnTeam, teamData, bootstrapData, plannedChips]);
 
   // Fetch manager history to get used chips
   const { data: historyData } = useQuery<ManagerHistory>({
@@ -5597,6 +5632,25 @@ export default function TransferPlanner() {
             </CollapsibleContent>
           </Card>
         </Collapsible>
+      )}
+
+      {/* Active Chip Banner - Shows when FPL account has an active chip */}
+      {searchedId && teamData?.active_chip && isOwnTeam && selectedGameweek && (
+        <Alert className="border-purple-300 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20">
+          <Sparkles className="h-4 w-4 text-purple-600" />
+          <AlertDescription className="text-sm text-purple-800 dark:text-purple-200">
+            <span className="font-semibold">
+              {teamData.active_chip.toUpperCase()} Active
+            </span>
+            {' '}- Synced from your FPL account. 
+            {(teamData.active_chip === 'wildcard' || teamData.active_chip === 'freehit') && (
+              <span className="text-purple-600 dark:text-purple-300"> Unlimited transfers available for GW {(() => {
+                const nextEvent = bootstrapData?.events.find(e => e.is_next);
+                return nextEvent?.id || selectedGameweek;
+              })()}!</span>
+            )}
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Team Summary Stats */}
