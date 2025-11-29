@@ -922,6 +922,15 @@ export default function TransferPlanner() {
   const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isLoadingDraftRef = useRef(false);
   
+  // Refs to track current state for unmount flush
+  const hasUnsavedChangesRef = useRef(false);
+  const activeDraftRef = useRef<string>("A");
+  const searchedIdRef = useRef<string | null>(null);
+  const gameweekTransfersRef = useRef<GameweekTransfers>({});
+  const plannedChipsRef = useRef<PlannedChips>({});
+  const optimizedLineupsRef = useRef<{ [gameweek: number]: TeamPick[] }>({});
+  const manualLineupRef = useRef<TeamPick[]>([]);
+  
   // Store saved captain/vice-captain from draft (to apply after lineup rebuild)
   const [savedCaptainInfo, setSavedCaptainInfo] = useState<{
     captainPlayerId: number | null;
@@ -990,6 +999,70 @@ export default function TransferPlanner() {
     }
   }, []);
 
+  // Keep refs in sync with state for unmount handling
+  useEffect(() => {
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+  
+  useEffect(() => {
+    activeDraftRef.current = activeDraft;
+  }, [activeDraft]);
+  
+  useEffect(() => {
+    searchedIdRef.current = searchedId;
+  }, [searchedId]);
+  
+  useEffect(() => {
+    gameweekTransfersRef.current = gameweekTransfers;
+  }, [gameweekTransfers]);
+  
+  useEffect(() => {
+    plannedChipsRef.current = plannedChips;
+  }, [plannedChips]);
+  
+  useEffect(() => {
+    optimizedLineupsRef.current = optimizedLineups;
+  }, [optimizedLineups]);
+  
+  useEffect(() => {
+    manualLineupRef.current = manualLineup;
+  }, [manualLineup]);
+
+  // Flush autosave on component unmount (when navigating away)
+  useEffect(() => {
+    return () => {
+      // Cancel any pending debounced save
+      if (autosaveTimeoutRef.current) {
+        clearTimeout(autosaveTimeoutRef.current);
+        autosaveTimeoutRef.current = null;
+      }
+      
+      // If there are unsaved changes, save immediately before unmount
+      if (hasUnsavedChangesRef.current && activeDraftRef.current !== "Base" && searchedIdRef.current) {
+        console.log("📤 Flushing autosave on unmount for draft:", activeDraftRef.current);
+        
+        const currentLineup = manualLineupRef.current;
+        const savePayload = JSON.stringify({
+          managerId: searchedIdRef.current,
+          draftLetter: activeDraftRef.current,
+          gameweekTransfers: gameweekTransfersRef.current,
+          plannedChips: plannedChipsRef.current,
+          optimizedLineups: optimizedLineupsRef.current,
+          captainPlayerId: currentLineup.find(p => p.is_captain)?.element || null,
+          viceCaptainPlayerId: currentLineup.find(p => p.is_vice_captain)?.element || null
+        });
+        
+        // Use fetch with keepalive for best effort save
+        fetch('/api/transfer-planner/drafts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: savePayload,
+          keepalive: true
+        }).catch(err => console.error("Failed to save on unmount:", err));
+      }
+    };
+  }, []);
+
   // Comprehensive autosave effect - watches all draft state changes
   useEffect(() => {
     // Skip autosave if:
@@ -1003,13 +1076,6 @@ export default function TransferPlanner() {
 
     // Queue autosave on any state change
     queueAutosave();
-
-    // Cleanup pending autosave on unmount
-    return () => {
-      if (autosaveTimeoutRef.current) {
-        clearTimeout(autosaveTimeoutRef.current);
-      }
-    };
   }, [
     // Watch all state that should trigger autosave
     JSON.stringify(gameweekTransfers),
