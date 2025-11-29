@@ -2528,6 +2528,47 @@ export default function MyDashboard() {
 
               {/* Chips Tab */}
               <TabsContent value="chips" className="space-y-6 mt-6 sm:mt-8">
+                {/* Upcoming Active Chip (Free Hit / Wildcard) */}
+                {isOwnTeam && getUpcomingActiveChip() && (
+                  <Card className="border-0 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg">
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="flex items-center gap-2 text-purple-800 text-lg sm:text-xl">
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
+                        </div>
+                        Active Chip for GW{getNextGameweekDashboard()}
+                      </CardTitle>
+                      <CardDescription className="text-purple-700 text-sm sm:text-base mt-2">
+                        This chip is locked in and cannot be cancelled
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex items-center gap-4 p-4 border-2 border-purple-200 rounded-xl bg-white/70">
+                        <div className="p-3 bg-purple-100 rounded-lg">
+                          <Sparkles className="h-6 w-6 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <Badge className="bg-purple-500 text-white text-sm px-3 py-1">
+                              {getChipDisplayName(getUpcomingActiveChip())}
+                            </Badge>
+                            <Badge variant="outline" className="border-purple-300 text-purple-700 text-xs">
+                              ACTIVE
+                            </Badge>
+                          </div>
+                          <div className="text-sm text-gray-600 mt-1">
+                            Gameweek {getNextGameweekDashboard()} • Cannot be cancelled
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-purple-600 font-medium">UPCOMING</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Previously Used Chips */}
                 <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg">
                   <CardHeader className="p-4 sm:p-6">
                     <CardTitle className="flex items-center gap-2 text-amber-800 text-lg sm:text-xl">
