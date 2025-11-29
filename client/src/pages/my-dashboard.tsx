@@ -35,7 +35,8 @@ import {
   ExternalLink,
   ArrowLeftRight,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
@@ -1689,11 +1690,27 @@ export default function MyDashboard() {
                     )}
 
                     {nextTeamData.active_chip && (
-                      <Alert className="mb-6 border-blue-200 bg-blue-50">
-                        <AlertDescription className="text-sm text-blue-800">
-                          <span className="font-semibold text-blue-900">
-                            Active Chip: {nextTeamData.active_chip.toUpperCase()}
+                      <Alert className="mb-6 border-purple-300 bg-gradient-to-r from-purple-50 to-indigo-50">
+                        <Sparkles className="h-4 w-4 text-purple-600" />
+                        <AlertDescription className="text-sm text-purple-800">
+                          <span className="font-semibold text-purple-900">
+                            {nextTeamData.active_chip.toUpperCase()} Active
                           </span>
+                          {(nextTeamData.active_chip === 'freehit' || nextTeamData.active_chip === 'wildcard') && (
+                            <span className="text-purple-600 ml-1">
+                              - Unlimited transfers available for GW {getNextGameweekDashboard()}!
+                            </span>
+                          )}
+                          {nextTeamData.active_chip === 'bboost' && (
+                            <span className="text-purple-600 ml-1">
+                              - All 15 players will earn points this gameweek!
+                            </span>
+                          )}
+                          {nextTeamData.active_chip === '3xc' && (
+                            <span className="text-purple-600 ml-1">
+                              - Your captain will earn 3x points this gameweek!
+                            </span>
+                          )}
                         </AlertDescription>
                       </Alert>
                     )}
@@ -1741,12 +1758,18 @@ export default function MyDashboard() {
                             <div className="min-w-0 flex-1">
                               <p className="text-xs sm:text-sm font-medium text-blue-700 mb-1">Transfers</p>
                               <p className="text-xl sm:text-2xl font-bold text-blue-900">
-                                {nextTeamData.entry_history?.event_transfers || 0}/{(() => {
-                                  const transfersMade = nextTeamData.entry_history?.event_transfers || 0;
-                                  const transferCost = nextTeamData.entry_history?.event_transfers_cost || 0;
-                                  const freeTransfers = transfersMade - (transferCost / 4);
-                                  return freeTransfers || (nextTeamData.transfers?.limit || 1);
-                                })()}
+                                {(nextTeamData.active_chip === 'freehit' || nextTeamData.active_chip === 'wildcard') ? (
+                                  <span className="text-purple-600">∞ Unlimited</span>
+                                ) : (
+                                  <>
+                                    {nextTeamData.entry_history?.event_transfers || 0}/{(() => {
+                                      const transfersMade = nextTeamData.entry_history?.event_transfers || 0;
+                                      const transferCost = nextTeamData.entry_history?.event_transfers_cost || 0;
+                                      const freeTransfers = transfersMade - (transferCost / 4);
+                                      return freeTransfers || (nextTeamData.transfers?.limit || 1);
+                                    })()}
+                                  </>
+                                )}
                               </p>
                             </div>
                             <div className="p-2 bg-blue-200 rounded-full">
