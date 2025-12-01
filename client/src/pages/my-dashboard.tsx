@@ -1893,12 +1893,7 @@ export default function MyDashboard() {
                                   <span className="text-purple-600">∞ Unlimited</span>
                                 ) : (
                                   <>
-                                    {nextTeamData.entry_history?.event_transfers || 0}/{(() => {
-                                      const transfersMade = nextTeamData.entry_history?.event_transfers || 0;
-                                      const transferCost = nextTeamData.entry_history?.event_transfers_cost || 0;
-                                      const freeTransfers = transfersMade - (transferCost / 4);
-                                      return freeTransfers || (nextTeamData.transfers?.limit || 1);
-                                    })()}
+                                    {nextTeamData.transfers?.made ?? 0}/{nextTeamData.transfers?.limit ?? 1}
                                   </>
                                 )}
                               </p>
