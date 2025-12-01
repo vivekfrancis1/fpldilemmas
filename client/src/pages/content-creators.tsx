@@ -381,7 +381,7 @@ const getContentCreatorColumns = (): ResponsiveTableColumn<CreatorWithLatestData
     className: 'font-mono',
     render: (_, creator) => {
       const bank = creator.latestTracking?.bank;
-      if (bank === undefined || bank === null) return "N/A";
+      if (bank === undefined || bank === null) return "£0.0m";
       
       // Handle both string and number formats
       const parsedBank = typeof bank === 'string' ? parseFloat(bank) : bank;
