@@ -442,7 +442,6 @@ export default function CreatorTeam() {
               </h1>
               <p className="text-muted-foreground text-lg">
                 {teamData?.gameweek ? `Gameweek ${teamData.gameweek}` : 'Team Overview'}
-                {teamData?.message && ` • ${teamData.message}`}
               </p>
             </div>
           </div>
