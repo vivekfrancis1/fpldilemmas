@@ -2285,6 +2285,20 @@ export default function MyDashboard() {
                               if (!player) return null;
                               const playerTeam = getPlayerTeam(player);
                               
+                              const nextGW = getNextGameweekDashboard();
+                              let opponentInfo = 'BGW';
+                              if (fixturesData && Array.isArray(fixturesData)) {
+                                const fixture = fixturesData.find((f: any) => 
+                                  (f.team_h === (playerTeam?.id || 0) || f.team_a === (playerTeam?.id || 0)) && f.event === nextGW
+                                );
+                                if (fixture) {
+                                  const isHome = fixture.team_h === (playerTeam?.id || 0);
+                                  const opponentId = isHome ? fixture.team_a : fixture.team_h;
+                                  const opponent = getTeamById(opponentId);
+                                  opponentInfo = `vs ${opponent?.short_name || 'TBD'} (${isHome ? 'H' : 'A'})`;
+                                }
+                              }
+                              
                               return (
                                 <Card key={pick.element} className="border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all">
                                   <CardContent className="p-3 sm:p-4">
@@ -2301,7 +2315,7 @@ export default function MyDashboard() {
                                             )}
                                           </div>
                                           <div className="text-sm text-gray-600 flex items-center gap-2 mt-1">
-                                            <span className="truncate">{playerTeam?.short_name || 'UNK'}. {getPositionName(player.element_type)}. {formatPrice(player.now_cost)}</span>
+                                            <span className="truncate">{playerTeam?.short_name || 'UNK'}. {getPositionName(player.element_type)}. {formatPrice(player.now_cost)}. <span className="text-purple-600 font-medium">{opponentInfo}</span></span>
                                           </div>
                                         </div>
                                       </div>
@@ -2326,6 +2340,20 @@ export default function MyDashboard() {
                           if (!player) return null;
                           const playerTeam = getPlayerTeam(player);
                           
+                          const nextGW = getNextGameweekDashboard();
+                          let opponentInfo = 'BGW';
+                          if (fixturesData && Array.isArray(fixturesData)) {
+                            const fixture = fixturesData.find((f: any) => 
+                              (f.team_h === (playerTeam?.id || 0) || f.team_a === (playerTeam?.id || 0)) && f.event === nextGW
+                            );
+                            if (fixture) {
+                              const isHome = fixture.team_h === (playerTeam?.id || 0);
+                              const opponentId = isHome ? fixture.team_a : fixture.team_h;
+                              const opponent = getTeamById(opponentId);
+                              opponentInfo = `vs ${opponent?.short_name || 'TBD'} (${isHome ? 'H' : 'A'})`;
+                            }
+                          }
+                          
                           return (
                             <Card key={pick.element} className="border border-gray-200 bg-gray-50">
                               <CardContent className="p-3 sm:p-4">
@@ -2334,7 +2362,7 @@ export default function MyDashboard() {
                                     <div className="flex-1 min-w-0">
                                       <div className="font-semibold text-gray-700 truncate">{player.web_name}</div>
                                       <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
-                                        <span className="truncate">{playerTeam?.short_name || 'UNK'}. {getPositionName(player.element_type)}. {formatPrice(player.now_cost)}</span>
+                                        <span className="truncate">{playerTeam?.short_name || 'UNK'}. {getPositionName(player.element_type)}. {formatPrice(player.now_cost)}. <span className="text-purple-600 font-medium">{opponentInfo}</span></span>
                                       </div>
                                     </div>
                                   </div>
