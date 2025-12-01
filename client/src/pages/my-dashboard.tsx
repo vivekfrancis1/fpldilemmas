@@ -2862,19 +2862,45 @@ export default function MyDashboard() {
                         </CardHeader>
                         <CardContent className="p-4 sm:p-6">
                           <div className="space-y-3">
-                            {historyData.past.slice().reverse().map((season, index) => (
-                              <div key={index} className="flex items-center justify-between p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200">
-                                <div className="text-lg font-semibold text-gray-800">{season.season_name}</div>
-                                <div className="flex items-center gap-4">
-                                  <div className="text-right">
-                                    <div className="text-xl font-bold text-indigo-700">{season.total_points.toLocaleString()} pts</div>
-                                    <div className="text-sm text-gray-600">
-                                      Rank: {formatRank(season.rank)}
+                            {historyData.past.slice().reverse().map((season, index, reversedArray) => {
+                              // Calculate rank change from previous season
+                              // Since array is reversed (newest first), previous season is at index + 1
+                              const prevSeason = reversedArray[index + 1];
+                              const currentRank = season.rank || 0;
+                              const prevRank = prevSeason?.rank || 0;
+                              
+                              // Rank change: positive means rank improved (went from higher number to lower)
+                              const rankChange = prevSeason ? prevRank - currentRank : 0;
+                              
+                              return (
+                                <div key={index} className="flex items-center justify-between p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200">
+                                  <div className="text-lg font-semibold text-gray-800">{season.season_name}</div>
+                                  <div className="flex items-center gap-4">
+                                    <div className="text-right">
+                                      <div className="text-xl font-bold text-indigo-700">{season.total_points.toLocaleString()} pts</div>
+                                      <div className="text-sm text-gray-600">
+                                        Rank: {formatRank(season.rank)}
+                                      </div>
+                                      {prevSeason && rankChange !== 0 && (
+                                        <div className={`flex items-center justify-end gap-1 mt-1 font-medium ${rankChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                          {rankChange > 0 ? (
+                                            <>
+                                              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                                              <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                                              <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
+                                            </>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </CardContent>
                       </Card>
