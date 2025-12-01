@@ -2801,22 +2801,49 @@ export default function MyDashboard() {
                         </CardHeader>
                         <CardContent className="p-4 sm:p-6">
                           <div className="space-y-3">
-                            {historyData.current.slice().reverse().map((gw) => (
-                              <div key={gw.event} className="flex items-center justify-between p-3 sm:p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200 gap-3">
-                                <div className="min-w-0 flex-1">
-                                  <div className="text-base sm:text-lg font-semibold text-gray-800">Gameweek {gw.event}</div>
-                                  <div className="text-xs sm:text-sm text-gray-600 truncate">
-                                    {gw.event_transfers || 0} transfers • {formatPrice(gw.bank || 0)} bank
+                            {historyData.current.slice().reverse().map((gw, index, reversedArray) => {
+                              // Calculate rank change from previous gameweek
+                              // Since array is reversed, previous GW is at index + 1
+                              const prevGw = reversedArray[index + 1];
+                              const currentRank = gw.overall_rank || 0;
+                              const prevRank = prevGw?.overall_rank || 0;
+                              
+                              // Rank change: positive means rank improved (went from higher number to lower)
+                              // negative means rank dropped
+                              const rankChange = prevGw ? prevRank - currentRank : 0;
+                              
+                              return (
+                                <div key={gw.event} className="flex items-center justify-between p-3 sm:p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200 gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-base sm:text-lg font-semibold text-gray-800">Gameweek {gw.event}</div>
+                                    <div className="text-xs sm:text-sm text-gray-600 truncate">
+                                      {gw.event_transfers || 0} transfers • {formatPrice(gw.bank || 0)} bank
+                                    </div>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <div className="text-lg sm:text-xl font-bold text-emerald-700">{gw.points || 0} pts</div>
+                                    <div className="flex items-center justify-end gap-1 text-xs sm:text-sm text-gray-600">
+                                      <span>Rank: {formatRank(gw.overall_rank || 0)}</span>
+                                      {prevGw && rankChange !== 0 && (
+                                        <span className={`flex items-center font-medium ${rankChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                          {rankChange > 0 ? (
+                                            <>
+                                              <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                                              <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                                              <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
+                                            </>
+                                          )}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="text-right shrink-0">
-                                  <div className="text-lg sm:text-xl font-bold text-emerald-700">{gw.points || 0} pts</div>
-                                  <div className="text-xs sm:text-sm text-gray-600">
-                                    Rank: {formatRank(gw.overall_rank || 0)}
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </CardContent>
                       </Card>
