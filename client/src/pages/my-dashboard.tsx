@@ -2812,10 +2812,29 @@ export default function MyDashboard() {
                               // negative means rank dropped
                               const rankChange = prevGw ? prevRank - currentRank : 0;
                               
+                              // Check if a chip was used in this gameweek
+                              const chipUsed = historyData.chips?.find((chip: any) => chip.event === gw.event);
+                              const getChipDisplay = (chipName: string) => {
+                                switch (chipName) {
+                                  case 'freehit': return { name: 'Free Hit', color: 'bg-purple-100 text-purple-700' };
+                                  case 'wildcard': return { name: 'Wildcard', color: 'bg-blue-100 text-blue-700' };
+                                  case '3xc': return { name: 'Triple Captain', color: 'bg-amber-100 text-amber-700' };
+                                  case 'bboost': return { name: 'Bench Boost', color: 'bg-green-100 text-green-700' };
+                                  default: return { name: chipName, color: 'bg-gray-100 text-gray-700' };
+                                }
+                              };
+                              
                               return (
                                 <div key={gw.event} className="flex items-center justify-between p-3 sm:p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200 gap-3">
                                   <div className="min-w-0 flex-1">
-                                    <div className="text-base sm:text-lg font-semibold text-gray-800">Gameweek {gw.event}</div>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-base sm:text-lg font-semibold text-gray-800">Gameweek {gw.event}</span>
+                                      {chipUsed && (
+                                        <Badge className={`text-xs ${getChipDisplay(chipUsed.name).color}`}>
+                                          {getChipDisplay(chipUsed.name).name}
+                                        </Badge>
+                                      )}
+                                    </div>
                                     <div className="text-xs sm:text-sm text-gray-600 truncate">
                                       {gw.event_transfers || 0} transfers • {formatPrice(gw.bank || 0)} bank
                                     </div>
