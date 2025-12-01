@@ -2490,13 +2490,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Current gameweek detected: ${currentGameweek} (is_current: ${currentGW?.is_current}, finished: ${isCurrentGWFinished})`);
       
-      // Get team data - use previous GW if current hasn't started yet
-      const teamDataGameweek = isCurrentGWFinished ? currentGameweek : Math.max(1, currentGameweek - 1);
+      // Get history data FIRST to check for Free Hit chip
+      const historyResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`);
+      if (!historyResponse.ok) {
+        throw new Error("Failed to fetch history data");
+      }
+      const historyData = await historyResponse.json();
+      
+      // Determine which gameweek to fetch team data from
+      let teamDataGameweek = isCurrentGWFinished ? currentGameweek : Math.max(1, currentGameweek - 1);
+      
+      // Check if Free Hit was played in the team data gameweek
+      // If so, we need to fetch the team from the GW BEFORE the Free Hit (the team the user reverts to)
+      const freeHitInTeamDataGW = historyData.chips?.find((chip: any) => 
+        chip.name === 'freehit' && chip.event === teamDataGameweek
+      );
+      
+      if (freeHitInTeamDataGW) {
+        console.log(`DEBUG: Free Hit detected in GW${teamDataGameweek}, fetching team from GW${teamDataGameweek - 1} instead (pre-Free Hit team)`);
+        teamDataGameweek = Math.max(1, teamDataGameweek - 1);
+      }
+      
+      // Get team data - use the determined gameweek
       const teamResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${teamDataGameweek}/picks/`);
       if (!teamResponse.ok) {
         throw new Error("Failed to fetch team data");
       }
       const teamData = await teamResponse.json();
+      
+      console.log(`DEBUG: Team data fetched from GW${teamDataGameweek}${freeHitInTeamDataGW ? ' (pre-Free Hit team)' : ''}`);
       
       // Get entry data for accurate bank balance and transfer info
       const entryResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
@@ -2505,12 +2527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const entryData = await entryResponse.json();
       
-      // Get transfer info from history endpoint which has accurate data
-      const historyResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`);
-      if (!historyResponse.ok) {
-        throw new Error("Failed to fetch history data");
-      }
-      const historyData = await historyResponse.json();
+      // historyData already fetched above for Free Hit detection
       
       // Get the most recent gameweek data from history
       const mostRecentGW = historyData.current?.[historyData.current.length - 1];
