@@ -545,18 +545,12 @@ export default function MyDashboard() {
     return Math.min(currentId + 1, 38);
   };
 
-  // Helper to get active chip for upcoming gameweek from both API sources
+  // Helper to get active chip for upcoming gameweek from nextTeamData API
   const getUpcomingActiveChip = (): string | null => {
-    // First check if nextTeamData has an active chip
+    // Only return active chip if nextTeamData explicitly reports it
+    // This ensures we don't show stale chip data from past gameweeks
     if (nextTeamData?.active_chip) {
       return nextTeamData.active_chip.toLowerCase();
-    }
-    
-    // Fallback: check historyData.chips for chip played in upcoming gameweek
-    const nextGw = getNextGameweekDashboard();
-    const chipFromHistory = historyData?.chips?.find(c => c.event === nextGw);
-    if (chipFromHistory?.name) {
-      return chipFromHistory.name.toLowerCase();
     }
     
     return null;
