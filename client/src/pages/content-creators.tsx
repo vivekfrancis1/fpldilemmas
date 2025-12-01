@@ -386,12 +386,30 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
     }
   },
   {
+    key: 'latestTracking.teamValue',
+    header: 'Team Value',
+    priority: 'optional',
+    align: 'right',
+    mobileLabel: 'Team Value',
+    cardOrder: 7,
+    sortable: true,
+    className: 'font-mono',
+    render: (_, creator) => {
+      const teamValue = creator.latestTracking?.teamValue;
+      if (teamValue === undefined || teamValue === null) return "N/A";
+      
+      // Handle both string and number formats (Team Value = Squad Value + Bank)
+      const parsedValue = typeof teamValue === 'string' ? parseFloat(teamValue) : teamValue;
+      return `£${parsedValue.toFixed(1)}m`;
+    }
+  },
+  {
     key: 'latestTracking.totalTransfers',
     header: 'Transfers',
     priority: 'optional',
     align: 'right',
     mobileLabel: 'Transfers',
-    cardOrder: 6,
+    cardOrder: 8,
     sortable: true,
     className: 'font-mono',
     render: (value, creator) => {
@@ -405,7 +423,7 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
     priority: 'optional',
     align: 'right',
     mobileLabel: 'Chips',
-    cardOrder: 7,
+    cardOrder: 9,
     sortable: true,
     className: 'font-mono',
     render: (value, creator) => {
