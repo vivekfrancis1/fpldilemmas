@@ -731,6 +731,13 @@ export default function ContentCreators() {
         valueB = bankB ? (typeof bankB === 'string' ? parseFloat(bankB) : bankB) : 0;
         break;
       }
+      case "team_value": {
+        const teamValueA = a.latestTracking?.teamValue;
+        const teamValueB = b.latestTracking?.teamValue;
+        valueA = teamValueA ? (typeof teamValueA === 'string' ? parseFloat(teamValueA) : teamValueA) : 0;
+        valueB = teamValueB ? (typeof teamValueB === 'string' ? parseFloat(teamValueB) : teamValueB) : 0;
+        break;
+      }
       case "transfers":
         valueA = a.latestTracking?.totalTransfers || 0;
         valueB = b.latestTracking?.totalTransfers || 0;
@@ -856,6 +863,7 @@ export default function ContentCreators() {
                     'latestTracking.gameweekPoints': 'gw_points',
                     'latestTracking.squadValue': 'squad_value',
                     'latestTracking.bank': 'bank',
+                    'latestTracking.teamValue': 'team_value',
                     'latestTracking.totalTransfers': 'transfers',
                     'chipsUsed': 'chips',
                     'name': 'name'
@@ -871,6 +879,7 @@ export default function ContentCreators() {
                     'gw_points': 'latestTracking.gameweekPoints',
                     'squad_value': 'latestTracking.squadValue',
                     'bank': 'latestTracking.bank',
+                    'team_value': 'latestTracking.teamValue',
                     'transfers': 'latestTracking.totalTransfers',
                     'chips': 'chipsUsed',
                     'name': 'name'
