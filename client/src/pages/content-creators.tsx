@@ -251,7 +251,7 @@ function getRankChangeDisplay(change: number | undefined) {
 }
 
 // Column configuration for ResponsiveTable
-const getContentCreatorColumns = (): ResponsiveTableColumn<CreatorWithLatestData>[] => [
+const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColumn<CreatorWithLatestData>[] => [
   {
     key: 'name',
     header: 'Creator',
@@ -335,10 +335,10 @@ const getContentCreatorColumns = (): ResponsiveTableColumn<CreatorWithLatestData
   },
   {
     key: 'latestTracking.gameweekPoints',
-    header: 'GW Points',
+    header: currentGameweek ? `GW ${currentGameweek} Points` : 'GW Points',
     priority: 'secondary',
     align: 'right',
-    mobileLabel: 'GW Points',
+    mobileLabel: currentGameweek ? `GW ${currentGameweek}` : 'GW Points',
     cardOrder: 4,
     sortable: true,
     render: (value, creator) => {
@@ -437,6 +437,13 @@ export default function ContentCreators() {
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Get current gameweek from bootstrap data
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return undefined;
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    return currentEvent?.id;
+  }, [bootstrapData]);
 
   // Fetch Content Creators teams data using batch endpoint with React Query
   const { 
@@ -816,7 +823,7 @@ export default function ContentCreators() {
             <div className="fpl-table-container">
               <ResponsiveTable
                 data={sortedCreators || []}
-                columns={getContentCreatorColumns()}
+                columns={getContentCreatorColumns(currentGameweek)}
                 enableMobileCards={true}
                 mobileCardTitle={(creator) => creator.name}
                 loading={isLoading}
