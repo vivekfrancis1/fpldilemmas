@@ -2265,7 +2265,22 @@ export default function TransferPlanner() {
 
   // Calculate actual transfers used by comparing with baseline lineup for this gameweek
   const calculateTransfersUsed = (): number => {
-    if (!teamData?.picks || !selectedGameweek) return 0;
+    if (!teamData?.picks || !selectedGameweek || !bootstrapData) return 0;
+    
+    // Get current gameweek and the first planning gameweek
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    const currentGW = currentEvent?.id || 1;
+    const firstPlanningGW = currentGW + 1;
+    
+    // For the first planning gameweek when using own team, include FPL API transfers.made
+    // This represents transfers already confirmed on the FPL website
+    if (isOwnTeam && selectedGameweek === firstPlanningGW && teamData.transfers?.made !== undefined) {
+      const fplApiTransfers = teamData.transfers.made;
+      const plannerTransfers = calculateTransfersUsedForGameweek(selectedGameweek);
+      console.log(`📊 TRANSFERS USED - FPL API: ${fplApiTransfers}, Planner: ${plannerTransfers}`);
+      return fplApiTransfers + plannerTransfers;
+    }
+    
     return calculateTransfersUsedForGameweek(selectedGameweek);
   };
 
