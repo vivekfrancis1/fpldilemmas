@@ -106,7 +106,7 @@ function getRankChangeDisplay(change: number | undefined) {
 }
 
 // Column configuration for ResponsiveTable
-const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
+const getTop25ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn<Top25Manager>[] => [
   {
     key: 'rank',
     header: 'Rank',
@@ -174,10 +174,10 @@ const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
   },
   {
     key: 'latestTracking.gameweekPoints',
-    header: 'GW Points',
+    header: currentGameweek ? `GW ${currentGameweek} Points` : 'GW Points',
     priority: 'secondary',
     align: 'right',
-    mobileLabel: 'GW Points',
+    mobileLabel: currentGameweek ? `GW ${currentGameweek}` : 'GW Points',
     cardOrder: 5,
     sortable: true,
     className: 'font-mono',
@@ -216,7 +216,7 @@ const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
       const bank = manager.latestTracking?.bank;
       return bank !== undefined && bank !== null 
         ? `£${(bank / 10).toFixed(1)}m` 
-        : "N/A";
+        : "£0.0m";
     }
   },
   {
@@ -249,12 +249,33 @@ const getTop25ManagerColumns = (): ResponsiveTableColumn<Top25Manager>[] => [
   }
 ];
 
+interface BootstrapData {
+  events: Array<{
+    id: number;
+    is_current: boolean;
+    is_next: boolean;
+  }>;
+}
+
 export default function Top25Managers() {
   const [managersWithData, setManagersWithData] = useState<Top25Manager[]>(TOP_25_MANAGERS);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [sortField, setSortField] = useState<string>('rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [, navigate] = useLocation();
+
+  // Fetch bootstrap data for current gameweek
+  const { data: bootstrapData } = useQuery<BootstrapData>({
+    queryKey: ["/api/bootstrap-static"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Get current gameweek from bootstrap data
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return undefined;
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    return currentEvent?.id;
+  }, [bootstrapData]);
 
   // Fetch top 50 managers with rank change data
   const { data: top50Data, isLoading: isLoadingTop50 } = useQuery({
@@ -353,6 +374,13 @@ export default function Top25Managers() {
             return manager.latestTracking?.gameweekPoints || 0;
           case 'latestTracking.teamValue':
             return manager.latestTracking?.teamValue || 0;
+          case 'latestTracking.squadValue': {
+            const teamValue = manager.latestTracking?.teamValue || 0;
+            const bank = manager.latestTracking?.bank || 0;
+            return teamValue - bank;
+          }
+          case 'latestTracking.bank':
+            return manager.latestTracking?.bank || 0;
           case 'latestTracking.totalTransfers':
             return manager.latestTracking?.totalTransfers || 0;
           case 'latestTracking.chipsUsed':
@@ -448,7 +476,7 @@ export default function Top25Managers() {
               <CardContent className="p-0">
                 <ResponsiveTable
                   data={sortedManagersData}
-                  columns={getTop25ManagerColumns()}
+                  columns={getTop25ManagerColumns(currentGameweek)}
                   enableMobileCards={true}
                   mobileCardTitle={(manager) => manager.name}
                   loading={isRefreshing}

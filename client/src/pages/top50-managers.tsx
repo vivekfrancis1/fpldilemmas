@@ -208,7 +208,7 @@ function getRankChangeDisplay(change: number | undefined | null) {
 }
 
 // Column configuration for ResponsiveTable
-const getTop50ManagerColumns = (): ResponsiveTableColumn<Top50Manager>[] => [
+const getTop50ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn<Top50Manager>[] => [
   {
     key: 'name',
     header: 'Manager',
@@ -261,10 +261,10 @@ const getTop50ManagerColumns = (): ResponsiveTableColumn<Top50Manager>[] => [
   },
   {
     key: 'latestTracking.gameweekPoints',
-    header: 'GW Points',
+    header: currentGameweek ? `GW ${currentGameweek} Points` : 'GW Points',
     priority: 'secondary',
     align: 'right',
-    mobileLabel: 'GW Points',
+    mobileLabel: currentGameweek ? `GW ${currentGameweek}` : 'GW Points',
     cardOrder: 4,
     sortable: true,
     className: 'font-mono',
@@ -303,7 +303,7 @@ const getTop50ManagerColumns = (): ResponsiveTableColumn<Top50Manager>[] => [
       const bank = manager.latestTracking?.bank;
       return bank !== undefined && bank !== null 
         ? `£${(bank / 10).toFixed(1)}m` 
-        : "N/A";
+        : "£0.0m";
     }
   },
   {
@@ -354,6 +354,13 @@ export default function Top50Managers() {
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Get current gameweek from bootstrap data
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return undefined;
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    return currentEvent?.id;
+  }, [bootstrapData]);
 
   // Fetch Top 50 teams data using batch endpoint with React Query
   const { 
@@ -630,6 +637,17 @@ export default function Top50Managers() {
             return manager.latestTracking?.gameweekPoints || 0;
           case 'latestTracking.teamValue':
             return manager.latestTracking?.teamValue || 0;
+          case 'latestTracking.squadValue': {
+            const teamValue = manager.latestTracking?.teamValue || 0;
+            const bank = manager.latestTracking?.bank || 0;
+            return teamValue - bank;
+          }
+          case 'latestTracking.bank':
+            return manager.latestTracking?.bank || 0;
+          case 'latestTracking.totalTransfers':
+            return manager.latestTracking?.totalTransfers || 0;
+          case 'latestTracking.chipsUsed':
+            return manager.latestTracking?.chipsUsed || 0;
           case 'name':
             return manager.name;
           default:
@@ -732,7 +750,7 @@ export default function Top50Managers() {
         <CardContent className="p-0">
           <ResponsiveTable
             data={sortedManagersData}
-            columns={getTop50ManagerColumns()}
+            columns={getTop50ManagerColumns(currentGameweek)}
             enableMobileCards={true}
             mobileCardTitle={(manager) => manager.name}
             loading={managersWithData.length === 0}
