@@ -264,9 +264,6 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
       <div className="flex items-center gap-3">
         <div>
           <div className="font-medium">{creator.name}</div>
-          {creator.description && (
-            <div className="text-xs text-muted-foreground mt-1 max-w-xs hidden md:block">{creator.description}</div>
-          )}
           <div className="flex flex-wrap gap-3 mt-2 hidden md:flex">
             {creator.twitterHandle && (
               <a
