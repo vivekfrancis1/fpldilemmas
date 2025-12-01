@@ -307,9 +307,9 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
     render: (value, creator) => {
       const latest = creator.latestTracking;
       return (
-        <Badge variant={getRankBadgeVariant(latest?.overallRank)}>
-          {latest?.overallRank ? `#${latest.overallRank.toLocaleString()}` : "N/A"}
-        </Badge>
+        <span className="font-medium">
+          {latest?.overallRank ? latest.overallRank.toLocaleString() : "N/A"}
+        </span>
       );
     }
   },
