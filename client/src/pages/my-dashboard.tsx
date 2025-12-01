@@ -2822,24 +2822,24 @@ export default function MyDashboard() {
                                   </div>
                                   <div className="text-right shrink-0">
                                     <div className="text-lg sm:text-xl font-bold text-emerald-700">{gw.points || 0} pts</div>
-                                    <div className="flex items-center justify-end gap-1 text-xs sm:text-sm text-gray-600">
-                                      <span>Rank: {formatRank(gw.overall_rank || 0)}</span>
-                                      {prevGw && rankChange !== 0 && (
-                                        <span className={`flex items-center font-medium ${rankChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                          {rankChange > 0 ? (
-                                            <>
-                                              <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                                              <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4" />
-                                              <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
-                                            </>
-                                          )}
-                                        </span>
-                                      )}
+                                    <div className="text-xs sm:text-sm text-gray-600">
+                                      Rank: {formatRank(gw.overall_rank || 0)}
                                     </div>
+                                    {prevGw && rankChange !== 0 && (
+                                      <div className={`flex items-center justify-end gap-1 mt-1 font-medium ${rankChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {rankChange > 0 ? (
+                                          <>
+                                            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                                            <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                                            <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               );
