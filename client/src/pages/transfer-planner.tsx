@@ -4240,9 +4240,10 @@ export default function TransferPlanner() {
       return;
     }
 
-    // Get only primary recommendations (first N where N = free transfers available)
+    // Get only primary recommendations (filter by type, then limit to free transfers available)
     const freeTransfers = gwRecommendations.freeTransfersAvailable || 1;
-    const primaryRecommendations = gwRecommendations.recommendations.slice(0, freeTransfers);
+    const primaryOnlyRecs = gwRecommendations.recommendations.filter((rec: any) => rec.type === 'primary');
+    const primaryRecommendations = primaryOnlyRecs.slice(0, freeTransfers);
 
     // Get all unapplied recommendations from primary list
     const unappliedRecs = primaryRecommendations.filter(rec => 
@@ -6034,8 +6035,9 @@ export default function TransferPlanner() {
                     return null;
                   }
                   
-                  // Only show primary recommendations (first N where N = free transfers available)
-                  const recommendations = allRecommendations.slice(0, freeTransfers);
+                  // Only show primary recommendations (filter by type, then limit to free transfers available)
+                  const primaryOnlyRecs = allRecommendations.filter((rec: any) => rec.type === 'primary');
+                  const recommendations = primaryOnlyRecs.slice(0, freeTransfers);
                   
                   if (recommendations.length === 0) return null;
                   
@@ -6100,8 +6102,9 @@ export default function TransferPlanner() {
                   return null;
                 }
                 
-                // Only show primary recommendations (first N where N = free transfers available)
-                const recommendations = allRecommendations.slice(0, freeTransfers);
+                // Only show primary recommendations (filter by type, then limit to free transfers available)
+                const primaryOnlyRecs = allRecommendations.filter((rec: any) => rec.type === 'primary');
+                const recommendations = primaryOnlyRecs.slice(0, freeTransfers);
                 
                 if (recommendations.length === 0) return null;
                 
