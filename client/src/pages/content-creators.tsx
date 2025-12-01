@@ -328,14 +328,14 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
         return (
           <div className="flex items-center justify-end text-green-600 font-medium">
             <TrendingUp className="h-3 w-3 mr-1" />
-            +{change.toLocaleString()}
+            {change.toLocaleString()}
           </div>
         );
       } else {
         return (
           <div className="flex items-center justify-end text-red-600 font-medium">
             <TrendingDown className="h-3 w-3 mr-1" />
-            {change.toLocaleString()}
+            {Math.abs(change).toLocaleString()}
           </div>
         );
       }
