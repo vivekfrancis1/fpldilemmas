@@ -584,6 +584,13 @@ export default function MyDashboard() {
       return [];
     }
     
+    // Additional safety check: if teamData has a chip but nextTeamData doesn't,
+    // the chip was used in a past gameweek and has reverted - don't show synthetic transfers
+    if (teamData?.active_chip && !nextTeamData?.active_chip) {
+      console.log('Chip reverted - teamData has chip but nextTeamData does not, skipping synthetic transfers');
+      return [];
+    }
+    
     // Need both current team and next team data
     if (!teamData?.picks || !nextTeamData?.picks || !bootstrapData) {
       return [];
