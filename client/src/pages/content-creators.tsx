@@ -307,13 +307,38 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
     render: (value, creator) => {
       const latest = creator.latestTracking;
       return (
-        <div className="flex flex-col items-end">
-          <Badge variant={getRankBadgeVariant(latest?.overallRank)} className="mb-1">
-            {latest?.overallRank ? `#${latest.overallRank.toLocaleString()}` : "N/A"}
-          </Badge>
-          {getRankChangeDisplay(creator.rankChange)}
-        </div>
+        <Badge variant={getRankBadgeVariant(latest?.overallRank)}>
+          {latest?.overallRank ? `#${latest.overallRank.toLocaleString()}` : "N/A"}
+        </Badge>
       );
+    }
+  },
+  {
+    key: 'rankChange',
+    header: 'Rank Gain',
+    priority: 'important',
+    align: 'right',
+    mobileLabel: 'Gain',
+    cardOrder: 3,
+    sortable: true,
+    render: (value, creator) => {
+      const change = creator.rankChange;
+      if (!change || change === 0) return <span className="text-gray-400">-</span>;
+      if (change > 0) {
+        return (
+          <div className="flex items-center justify-end text-green-600 font-medium">
+            <TrendingUp className="h-3 w-3 mr-1" />
+            +{change.toLocaleString()}
+          </div>
+        );
+      } else {
+        return (
+          <div className="flex items-center justify-end text-red-600 font-medium">
+            <TrendingDown className="h-3 w-3 mr-1" />
+            {change.toLocaleString()}
+          </div>
+        );
+      }
     }
   },
   {
@@ -698,6 +723,10 @@ export default function ContentCreators() {
         valueA = a.latestTracking?.overallRank || 999999999;
         valueB = b.latestTracking?.overallRank || 999999999;
         break;
+      case "rank_change":
+        valueA = a.rankChange || 0;
+        valueB = b.rankChange || 0;
+        break;
       case "points":
         valueA = a.latestTracking?.overallPoints || 0;
         valueB = b.latestTracking?.overallPoints || 0;
@@ -859,6 +888,7 @@ export default function ContentCreators() {
                   // Map ResponsiveTable field names to our sort keys
                   const sortKeyMap: Record<string, string> = {
                     'latestTracking.overallRank': 'rank',
+                    'rankChange': 'rank_change',
                     'latestTracking.overallPoints': 'points',
                     'latestTracking.gameweekPoints': 'gw_points',
                     'latestTracking.squadValue': 'squad_value',
@@ -875,6 +905,7 @@ export default function ContentCreators() {
                   // Map our sort keys back to ResponsiveTable field names
                   const fieldMap: Record<string, string> = {
                     'rank': 'latestTracking.overallRank',
+                    'rank_change': 'rankChange',
                     'points': 'latestTracking.overallPoints',
                     'gw_points': 'latestTracking.gameweekPoints',
                     'squad_value': 'latestTracking.squadValue',
