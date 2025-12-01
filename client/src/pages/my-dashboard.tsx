@@ -691,6 +691,17 @@ export default function MyDashboard() {
     return syntheticTransfers;
   };
 
+  // Helper to get gameweeks where Free Hit was used (these transfers should be hidden from history)
+  const getFreeHitGameweeks = (): Set<number> => {
+    if (!historyData?.chips) return new Set();
+    
+    const freeHitGameweeks = historyData.chips
+      .filter(c => c.name === 'freehit')
+      .map(c => c.event);
+    
+    return new Set(freeHitGameweeks);
+  };
+
   // Helper to compute pending GW14 transfers after Free Hit reverts
   // Compare pre-chip team (GW12) with next team (GW14) to find actual transfers
   const getPendingTransfers = (): Transfer[] => {
@@ -2582,6 +2593,11 @@ export default function MyDashboard() {
                         <div className="space-y-3">
                           {transfersData
                             .slice()
+                            .filter(transfer => {
+                              // Filter out transfers from Free Hit gameweeks (they reverted and are meaningless)
+                              const freeHitGWs = getFreeHitGameweeks();
+                              return !freeHitGWs.has(transfer.event);
+                            })
                             .sort((a, b) => {
                               // Sort by timestamp (most recent first), then by gameweek (descending)
                               const timeA = new Date(a.time).getTime();
