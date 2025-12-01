@@ -430,6 +430,7 @@ export default function ContentCreators() {
 
   const { data: creators, isLoading } = useQuery<FPLCreator[]>({
     queryKey: ["/api/content-creators"],
+    refetchInterval: 60000, // Auto-refresh every 60 seconds
   });
 
   // Fetch bootstrap data
@@ -458,6 +459,7 @@ export default function ContentCreators() {
     gcTime: 5 * 60 * 1000, // 5 minutes 
     retry: 2,
     refetchOnWindowFocus: false,
+    refetchInterval: 60000, // Auto-refresh every 60 seconds
   });
 
   // Transform the API response to match the expected data structure
