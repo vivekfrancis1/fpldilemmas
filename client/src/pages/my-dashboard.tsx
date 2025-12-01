@@ -2178,43 +2178,20 @@ export default function MyDashboard() {
                                             <text x="140" y="115" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
                                             {(() => {
                                               const nextGW = getNextGameweekDashboard();
-                                              const gwFixtures = (() => {
-                                                if (!fixturesData || !Array.isArray(fixturesData)) return [];
-                                                const gameweeks = [nextGW, nextGW + 1, nextGW + 2, nextGW + 3];
-                                                return gameweeks.map(gw => {
-                                                  const fixture = fixturesData.find((f: any) => 
-                                                    (f.team_h === (playerTeam?.id || 0) || f.team_a === (playerTeam?.id || 0)) && f.event === gw
-                                                  );
-                                                  if (!fixture) {
-                                                    return { opponent: 'BGW', isHome: true, difficulty: 3 };
-                                                  }
-                                                  const isHome = fixture.team_h === (playerTeam?.id || 0);
-                                                  const opponentId = isHome ? fixture.team_a : fixture.team_h;
-                                                  const opponent = getTeamById(opponentId);
-                                                  const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
-                                                  return {
-                                                    opponent: `${(opponent?.short_name || 'TBD').substring(0, 3)} (${isHome ? 'H' : 'A'})`,
-                                                    isHome,
-                                                    difficulty: difficulty || 3
-                                                  };
-                                                });
-                                              })();
-                                              const currentFixture = gwFixtures[0];
-                                              const nextThreeFixtures = gwFixtures.slice(1);
-                                              return (
-                                                <>
-                                                  <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{currentFixture?.opponent || 'BGW'}</text>
-                                                  {nextThreeFixtures.map((fixture, idx) => {
-                                                    const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                                    return (
-                                                      <g key={idx}>
-                                                        <rect x={47 + (idx * 62)} y="165" width="58" height="20" rx="5" fill={diffColor} />
-                                                        <text x={76 + (idx * 62)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
-                                                      </g>
-                                                    );
-                                                  })}
-                                                </>
+                                              if (!fixturesData || !Array.isArray(fixturesData)) {
+                                                return <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>BGW</text>;
+                                              }
+                                              const fixture = fixturesData.find((f: any) => 
+                                                (f.team_h === (playerTeam?.id || 0) || f.team_a === (playerTeam?.id || 0)) && f.event === nextGW
                                               );
+                                              if (!fixture) {
+                                                return <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>BGW</text>;
+                                              }
+                                              const isHome = fixture.team_h === (playerTeam?.id || 0);
+                                              const opponentId = isHome ? fixture.team_a : fixture.team_h;
+                                              const opponent = getTeamById(opponentId);
+                                              const opponentText = `${(opponent?.short_name || 'TBD').substring(0, 3)} (${isHome ? 'H' : 'A'})`;
+                                              return <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{opponentText}</text>;
                                             })()}
                                           </svg>
                                         </div>
@@ -2258,43 +2235,20 @@ export default function MyDashboard() {
                                           <text x="140" y="115" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
                                           {(() => {
                                             const nextGW = getNextGameweekDashboard();
-                                            const gwFixtures = (() => {
-                                              if (!fixturesData || !Array.isArray(fixturesData)) return [];
-                                              const gameweeks = [nextGW, nextGW + 1, nextGW + 2, nextGW + 3];
-                                              return gameweeks.map(gw => {
-                                                const fixture = fixturesData.find((f: any) => 
-                                                  (f.team_h === (playerTeam?.id || 0) || f.team_a === (playerTeam?.id || 0)) && f.event === gw
-                                                );
-                                                if (!fixture) {
-                                                  return { opponent: 'BGW', isHome: true, difficulty: 3 };
-                                                }
-                                                const isHome = fixture.team_h === (playerTeam?.id || 0);
-                                                const opponentId = isHome ? fixture.team_a : fixture.team_h;
-                                                const opponent = getTeamById(opponentId);
-                                                const difficulty = isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty;
-                                                return {
-                                                  opponent: `${(opponent?.short_name || 'TBD').substring(0, 3)} (${isHome ? 'H' : 'A'})`,
-                                                  isHome,
-                                                  difficulty: difficulty || 3
-                                                };
-                                              });
-                                            })();
-                                            const currentFixture = gwFixtures[0];
-                                            const nextThreeFixtures = gwFixtures.slice(1);
-                                            return (
-                                              <>
-                                                <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{currentFixture?.opponent || 'BGW'}</text>
-                                                {nextThreeFixtures.map((fixture, idx) => {
-                                                  const diffColor = fixture.difficulty <= 2 ? '#22C55E' : fixture.difficulty === 3 ? '#EAB308' : fixture.difficulty === 4 ? '#F97316' : '#EF4444';
-                                                  return (
-                                                    <g key={idx}>
-                                                      <rect x={47 + (idx * 62)} y="165" width="58" height="20" rx="5" fill={diffColor} />
-                                                      <text x={76 + (idx * 62)} y="178" fontSize="13" fontWeight="bold" textAnchor="middle" fill="white">{fixture.opponent}</text>
-                                                    </g>
-                                                  );
-                                                })}
-                                              </>
+                                            if (!fixturesData || !Array.isArray(fixturesData)) {
+                                              return <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>BGW</text>;
+                                            }
+                                            const fixture = fixturesData.find((f: any) => 
+                                              (f.team_h === (playerTeam?.id || 0) || f.team_a === (playerTeam?.id || 0)) && f.event === nextGW
                                             );
+                                            if (!fixture) {
+                                              return <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>BGW</text>;
+                                            }
+                                            const isHome = fixture.team_h === (playerTeam?.id || 0);
+                                            const opponentId = isHome ? fixture.team_a : fixture.team_h;
+                                            const opponent = getTeamById(opponentId);
+                                            const opponentText = `${(opponent?.short_name || 'TBD').substring(0, 3)} (${isHome ? 'H' : 'A'})`;
+                                            return <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{opponentText}</text>;
                                           })()}
                                         </svg>
                                       </div>
