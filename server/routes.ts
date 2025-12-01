@@ -3266,17 +3266,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid manager ID" });
       }
       
-      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`);
+      // Fetch transfers and history in parallel
+      const [transfersResponse, historyResponse] = await Promise.all([
+        fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`),
+        fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`)
+      ]);
       
-      if (!response.ok) {
-        if (response.status === 404) {
+      if (!transfersResponse.ok) {
+        if (transfersResponse.status === 404) {
           return res.status(404).json({ message: "Manager transfers not found" });
         }
-        throw new Error(`FPL API responded with status: ${response.status}`);
+        throw new Error(`FPL API responded with status: ${transfersResponse.status}`);
       }
       
-      const data = await response.json();
-      res.json(data);
+      const transfersData = await transfersResponse.json();
+      
+      // Get Free Hit gameweeks to filter out
+      let freeHitGameweeks: number[] = [];
+      if (historyResponse.ok) {
+        const historyData = await historyResponse.json();
+        freeHitGameweeks = (historyData.chips || [])
+          .filter((chip: any) => chip.name === 'freehit')
+          .map((chip: any) => chip.event);
+        
+        if (freeHitGameweeks.length > 0) {
+          console.log(`DEBUG: Filtering out Free Hit transfers from GWs: ${freeHitGameweeks.join(', ')}`);
+        }
+      }
+      
+      // Filter out transfers made during Free Hit gameweeks
+      const filteredTransfers = transfersData.filter((transfer: any) => 
+        !freeHitGameweeks.includes(transfer.event)
+      );
+      
+      res.json(filteredTransfers);
     } catch (error) {
       console.error(`Error fetching manager transfers for ID ${req.params.managerId}:`, error);
       res.status(500).json({
