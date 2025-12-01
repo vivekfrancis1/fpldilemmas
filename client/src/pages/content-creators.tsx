@@ -318,7 +318,7 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
   },
   {
     key: 'latestTracking.overallPoints',
-    header: 'Total Points',
+    header: 'Total Pts',
     priority: 'important',
     align: 'right',
     mobileLabel: 'Points',
@@ -332,10 +332,10 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
   },
   {
     key: 'latestTracking.gameweekPoints',
-    header: currentGameweek ? `GW ${currentGameweek} Points` : 'GW Points',
+    header: currentGameweek ? `GW ${currentGameweek} Pts` : 'GW Pts',
     priority: 'secondary',
     align: 'right',
-    mobileLabel: currentGameweek ? `GW ${currentGameweek}` : 'GW Points',
+    mobileLabel: currentGameweek ? `GW ${currentGameweek}` : 'GW Pts',
     cardOrder: 4,
     sortable: true,
     render: (value, creator) => {
