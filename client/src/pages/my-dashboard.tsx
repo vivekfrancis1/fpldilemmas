@@ -36,7 +36,8 @@ import {
   ArrowLeftRight,
   RefreshCw,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Clock
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
@@ -240,6 +241,7 @@ interface Transfer {
   event: number;
   time: string;
   isUpcoming?: boolean;
+  isPending?: boolean;
   chipName?: string;
 }
 
@@ -321,6 +323,32 @@ export default function MyDashboard() {
     queryKey: isOwnTeam ? ["/api/fpl/my-team"] : [`/api/manager/${searchedId}/team?gameweek=${nextGameweek}`],
     enabled: !!searchedId && !!teamData && !!bootstrapData, // Only fetch if we have current team data and bootstrap data
     retry: false, // Don't auto-retry if FPL session expired
+  });
+
+  // Determine pre-chip baseline gameweek (for Free Hit/Wildcard comparison)
+  // If Free Hit was used in GW13, we need GW12 team as the baseline
+  const getPreChipGameweek = (): number | null => {
+    if (!historyData?.chips) return null;
+    const currentGW = bootstrapData?.events.find(e => e.is_current)?.id || 1;
+    
+    // Find if a Free Hit or Wildcard was used in the current/most recent GW
+    const recentChip = historyData.chips.find(
+      c => c.event === currentGW && (c.name === 'freehit' || c.name === 'wildcard')
+    );
+    
+    if (recentChip) {
+      // Return the gameweek before the chip was used
+      return Math.max(1, recentChip.event - 1);
+    }
+    return null;
+  };
+
+  const preChipGameweek = getPreChipGameweek();
+
+  // Fetch the pre-chip team (e.g., GW12 before Free Hit in GW13)
+  const { data: preChipTeamData } = useQuery<TeamData>({
+    queryKey: [`/api/manager/${searchedId}/team?gameweek=${preChipGameweek}`],
+    enabled: Boolean(searchedId && preChipGameweek && isOwnTeam),
   });
 
   // Get fixtures for teams
@@ -661,6 +689,59 @@ export default function MyDashboard() {
     }
     
     return syntheticTransfers;
+  };
+
+  // Helper to compute pending GW14 transfers after Free Hit reverts
+  // Compare pre-chip team (GW12) with next team (GW14) to find actual transfers
+  const getPendingTransfers = (): Transfer[] => {
+    const nextGw = getNextGameweekDashboard();
+    
+    // If no pre-chip data, or nextTeamData.transfers.made is 0, no pending transfers
+    if (!preChipTeamData?.picks || !nextTeamData?.picks || !bootstrapData) {
+      return [];
+    }
+    
+    // Get transfer count from nextTeamData - if 0, no pending transfers
+    const transfersMade = nextTeamData.transfers?.made || 0;
+    if (transfersMade === 0) {
+      return [];
+    }
+    
+    const preChipPlayerIds = new Set(preChipTeamData.picks.map(p => p.element));
+    const nextPlayerIds = new Set(nextTeamData.picks.map(p => p.element));
+    
+    // Players transferred OUT (in pre-chip team but not in next team)
+    const playersOut = preChipTeamData.picks.filter(p => !nextPlayerIds.has(p.element));
+    
+    // Players transferred IN (in next team but not in pre-chip team)
+    const playersIn = nextTeamData.picks.filter(p => !preChipPlayerIds.has(p.element));
+    
+    // Create pending transfer records - pair up IN and OUT players
+    const pendingTransfers: Transfer[] = [];
+    const maxPairs = Math.min(playersIn.length, playersOut.length, transfersMade);
+    
+    for (let i = 0; i < maxPairs; i++) {
+      const playerIn = playersIn[i];
+      const playerOut = playersOut[i];
+      
+      if (playerIn && playerOut) {
+        const playerInData = getPlayerById(playerIn.element);
+        const playerOutData = getPlayerById(playerOut.element);
+        
+        pendingTransfers.push({
+          element_in: playerIn.element,
+          element_in_cost: playerInData?.now_cost || 0,
+          element_out: playerOut.element,
+          element_out_cost: playerOutData?.now_cost || 0,
+          event: nextGw,
+          time: new Date().toISOString(),
+          entry: 0,
+          isPending: true
+        });
+      }
+    }
+    
+    return pendingTransfers;
   };
 
   const getCurrentGameweekFixture = (teamId: number) => {
@@ -2384,6 +2465,94 @@ export default function MyDashboard() {
                               <div className="flex sm:flex-col justify-between sm:text-right sm:ml-4 pt-2 sm:pt-0 border-t sm:border-t-0">
                                 <Badge className="bg-purple-500 text-white text-xs">
                                   UPCOMING
+                                </Badge>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Pending Transfers Section (GW14 transfers after Free Hit reverts) */}
+                {isOwnTeam && getPendingTransfers().length > 0 && (
+                  <Card className="border-0 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg">
+                    <CardHeader className="p-4 sm:p-6">
+                      <CardTitle className="flex items-center gap-2 text-blue-800 text-lg sm:text-xl">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                        </div>
+                        GW{getNextGameweekDashboard()} Pending Transfers
+                      </CardTitle>
+                      <CardDescription className="text-blue-700 text-sm sm:text-base mt-2">
+                        Transfers made for the upcoming gameweek (not yet confirmed in FPL history)
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="space-y-3">
+                        {getPendingTransfers().map((transfer, index) => {
+                          const playerIn = bootstrapData?.elements.find(p => p.id === transfer.element_in);
+                          const playerOut = bootstrapData?.elements.find(p => p.id === transfer.element_out);
+                          
+                          return (
+                            <div key={`pending-${index}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 bg-white/70 rounded-xl border-2 border-blue-200 shadow-sm hover:shadow-md transition-all duration-200 gap-3">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge className="bg-blue-100 text-blue-800 text-xs">
+                                    PENDING
+                                  </Badge>
+                                  <span className="text-base sm:text-lg font-semibold text-gray-800">Gameweek {transfer.event}</span>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  {playerIn && (
+                                    <div className="flex items-center gap-2 sm:gap-3">
+                                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                                        <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-green-600" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="font-medium text-green-800 text-sm sm:text-base truncate">
+                                            {playerIn.web_name}
+                                          </span>
+                                          <Badge className="bg-green-100 text-green-800 text-xs shrink-0">
+                                            {formatPrice(transfer.element_in_cost)}
+                                          </Badge>
+                                        </div>
+                                        <div className="text-xs sm:text-sm text-gray-600 truncate">
+                                          {getTeamName(playerIn)} • {getPositionName(playerIn.element_type)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                  
+                                  {playerOut && (
+                                    <div className="flex items-center gap-2 sm:gap-3">
+                                      <div className="w-5 h-5 sm:w-6 sm:h-6 bg-red-100 rounded-full flex items-center justify-center shrink-0">
+                                        <TrendingDown className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-red-600" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="font-medium text-red-800 text-sm sm:text-base truncate">
+                                            {playerOut.web_name}
+                                          </span>
+                                          <Badge variant="outline" className="border-red-200 text-red-800 text-xs shrink-0">
+                                            {formatPrice(transfer.element_out_cost)}
+                                          </Badge>
+                                        </div>
+                                        <div className="text-xs sm:text-sm text-gray-600 truncate">
+                                          {getTeamName(playerOut)} • {getPositionName(playerOut.element_type)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="flex sm:flex-col justify-between sm:text-right sm:ml-4 pt-2 sm:pt-0 border-t sm:border-t-0">
+                                <Badge className="bg-blue-500 text-white text-xs">
+                                  PRE-DEADLINE
                                 </Badge>
                               </div>
                             </div>
