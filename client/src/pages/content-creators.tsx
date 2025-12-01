@@ -686,6 +686,35 @@ export default function ContentCreators() {
         valueA = a.name.toLowerCase();
         valueB = b.name.toLowerCase();
         break;
+      case "squad_value": {
+        const teamValueA = a.latestTracking?.teamValue;
+        const bankA = a.latestTracking?.bank;
+        const parsedValueA = teamValueA ? (typeof teamValueA === 'string' ? parseFloat(teamValueA) : teamValueA) : 0;
+        const parsedBankA = bankA ? (typeof bankA === 'string' ? parseFloat(bankA) : bankA) : 0;
+        valueA = parsedValueA - parsedBankA;
+        
+        const teamValueB = b.latestTracking?.teamValue;
+        const bankB = b.latestTracking?.bank;
+        const parsedValueB = teamValueB ? (typeof teamValueB === 'string' ? parseFloat(teamValueB) : teamValueB) : 0;
+        const parsedBankB = bankB ? (typeof bankB === 'string' ? parseFloat(bankB) : bankB) : 0;
+        valueB = parsedValueB - parsedBankB;
+        break;
+      }
+      case "bank": {
+        const bankA = a.latestTracking?.bank;
+        const bankB = b.latestTracking?.bank;
+        valueA = bankA ? (typeof bankA === 'string' ? parseFloat(bankA) : bankA) : 0;
+        valueB = bankB ? (typeof bankB === 'string' ? parseFloat(bankB) : bankB) : 0;
+        break;
+      }
+      case "transfers":
+        valueA = a.latestTracking?.totalTransfers || 0;
+        valueB = b.latestTracking?.totalTransfers || 0;
+        break;
+      case "chips":
+        valueA = a.historyData?.chips ? a.historyData.chips.length : 0;
+        valueB = b.historyData?.chips ? b.historyData.chips.length : 0;
+        break;
       default:
         return 0;
     }
@@ -801,6 +830,10 @@ export default function ContentCreators() {
                     'latestTracking.overallRank': 'rank',
                     'latestTracking.overallPoints': 'points',
                     'latestTracking.gameweekPoints': 'gw_points',
+                    'latestTracking.teamValue': 'squad_value',
+                    'latestTracking.bank': 'bank',
+                    'latestTracking.totalTransfers': 'transfers',
+                    'chipsUsed': 'chips',
                     'name': 'name'
                   };
                   const mappedField = sortKeyMap[field] || field;
@@ -812,6 +845,10 @@ export default function ContentCreators() {
                     'rank': 'latestTracking.overallRank',
                     'points': 'latestTracking.overallPoints',
                     'gw_points': 'latestTracking.gameweekPoints',
+                    'squad_value': 'latestTracking.teamValue',
+                    'bank': 'latestTracking.bank',
+                    'transfers': 'latestTracking.totalTransfers',
+                    'chips': 'chipsUsed',
                     'name': 'name'
                   };
                   return fieldMap[sortBy] || sortBy;
