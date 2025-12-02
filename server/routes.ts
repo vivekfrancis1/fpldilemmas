@@ -2390,31 +2390,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (data.active_chip === 'freehit') {
         console.log(`DEBUG: GW${currentGameweek} was a Free Hit - fetching persistent squad instead`);
         
+        let foundPersistentSquad = false;
+        
         // Try to get the next gameweek's team first (which has the restored squad + any new transfers)
         const nextGW = currentGameweek + 1;
-        const nextGWResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${nextGW}/picks/`);
+        try {
+          const nextGWResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${nextGW}/picks/`);
+          
+          if (nextGWResponse.ok) {
+            const nextGWData = await nextGWResponse.json();
+            console.log(`DEBUG: Using GW${nextGW} team (post-Free Hit restored squad)`);
+            data = nextGWData;
+            currentGameweek = nextGW;
+            foundPersistentSquad = true;
+          }
+        } catch (e) {
+          console.log(`DEBUG: GW${nextGW} fetch failed, will try previous GW`);
+        }
         
-        if (nextGWResponse.ok) {
-          const nextGWData = await nextGWResponse.json();
-          console.log(`DEBUG: Using GW${nextGW} team (post-Free Hit restored squad)`);
-          data = nextGWData;
-          currentGameweek = nextGW;
-        } else {
-          // If next GW not available, fall back to the gameweek before Free Hit
+        // If next GW not available, fall back to the gameweek before Free Hit
+        if (!foundPersistentSquad) {
           const prevGW = currentGameweek - 1;
           if (prevGW >= 1) {
-            const prevGWResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${prevGW}/picks/`);
-            
-            if (prevGWResponse.ok) {
-              const prevGWData = await prevGWResponse.json();
-              // Make sure the previous GW wasn't also a Free Hit (unlikely but possible)
-              if (prevGWData.active_chip !== 'freehit') {
-                console.log(`DEBUG: Using GW${prevGW} team (pre-Free Hit squad)`);
-                data = prevGWData;
-                currentGameweek = prevGW;
+            try {
+              const prevGWResponse = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${prevGW}/picks/`);
+              
+              if (prevGWResponse.ok) {
+                const prevGWData = await prevGWResponse.json();
+                // Make sure the previous GW wasn't also a Free Hit (unlikely but possible)
+                if (prevGWData.active_chip !== 'freehit') {
+                  console.log(`DEBUG: Using GW${prevGW} team (pre-Free Hit squad)`);
+                  data = prevGWData;
+                  currentGameweek = prevGW;
+                  foundPersistentSquad = true;
+                }
               }
+            } catch (e) {
+              console.log(`DEBUG: GW${prevGW} fetch also failed`);
             }
           }
+        }
+        
+        if (!foundPersistentSquad) {
+          console.log(`DEBUG: Could not find persistent squad, using Free Hit team as fallback`);
         }
       }
       
