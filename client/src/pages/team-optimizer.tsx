@@ -627,9 +627,6 @@ export default function TeamOptimizer() {
     const nextGWs = getNextGameweeks();
     const usedChips = teamData.chips || [];
     
-    // Debug: Log chip data
-    console.log('🎲 getChipRecommendations - usedChips from teamData:', usedChips);
-    
     // Get current gameweek
     const currentGameweek = bootstrapData.events.find((e: any) => e.is_current)?.id || 
                            bootstrapData.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
@@ -663,11 +660,23 @@ export default function TeamOptimizer() {
     };
 
     // Track chip uses by season half based on when they were actually used
-    const countChipUses = (chipName: string) => usedChips.filter(c => c.name === chipName).length;
-    const countFirstHalfChipUses = (chipName: string) => 
-      usedChips.filter(c => c.name === chipName && c.event <= 19).length;
-    const countSecondHalfChipUses = (chipName: string) => 
-      usedChips.filter(c => c.name === chipName && c.event >= 20).length;
+    // FPL API returns chips with: status_for_entry ("available" or "played") and played_by_entry (array of GWs used)
+    // Type assertion needed because my-team endpoint returns different structure than manager history
+    const getChipUsedGW = (chipName: string): number | undefined => {
+      const chip = usedChips.find((c: any) => c.name === chipName && (c as any).status_for_entry === 'played');
+      return (chip as any)?.played_by_entry?.[0];
+    };
+    
+    const countChipUses = (chipName: string) => 
+      usedChips.filter((c: any) => c.name === chipName && (c as any).status_for_entry === 'played').length;
+    const countFirstHalfChipUses = (chipName: string) => {
+      const usedGW = getChipUsedGW(chipName);
+      return (usedGW && usedGW <= 19) ? 1 : 0;
+    };
+    const countSecondHalfChipUses = (chipName: string) => {
+      const usedGW = getChipUsedGW(chipName);
+      return (usedGW && usedGW >= 20) ? 1 : 0;
+    };
     
     const hasRemainingUses = (chipName: string) => {
       const used = countChipUses(chipName);
@@ -681,11 +690,8 @@ export default function TeamOptimizer() {
       const secondHalfUsed = countSecondHalfChipUses(chipName);
       const totalMax = chipMaxUses[chipName] || 1;
       
-      console.log(`🎲 hasFirstHalfChipAvailable(${chipName}): firstHalfUsed=${firstHalfUsed}, secondHalfUsed=${secondHalfUsed}, expired=${firstHalfChipsExpired}`);
-      
       // If first-half chip already used, not available
       if (firstHalfUsed > 0) {
-        console.log(`🎲 ${chipName} first half chip ALREADY USED - returning false`);
         return false;
       }
       
@@ -1278,11 +1284,19 @@ export default function TeamOptimizer() {
           };
 
           const usedChips = teamData?.chips || [];
-          console.log('🎲 Chip Debug - usedChips:', usedChips);
+          // FPL API returns chips with: status_for_entry ("available" or "played") and played_by_entry (array of GWs used)
+          // Type assertion needed because my-team endpoint returns different structure than manager history
           const getFirstHalfUsedGW = (chipName: string): number | undefined => {
-            const used = usedChips.find((c: any) => c.name === chipName && c.event <= 19);
-            console.log(`🎲 Checking ${chipName}: found =`, used, 'usedInGW =', used?.event);
-            return used?.event;
+            const chip = usedChips.find((c: any) => c.name === chipName && (c as any).status_for_entry === 'played');
+            const usedGW = (chip as any)?.played_by_entry?.[0];
+            // Only return if it was used in first half (GW1-19)
+            return (usedGW && usedGW <= 19) ? usedGW : undefined;
+          };
+          const getSecondHalfUsedGW = (chipName: string): number | undefined => {
+            const chip = usedChips.find((c: any) => c.name === chipName && (c as any).status_for_entry === 'played');
+            const usedGW = (chip as any)?.played_by_entry?.[0];
+            // Only return if it was used in second half (GW20+)
+            return (usedGW && usedGW >= 20) ? usedGW : undefined;
           };
 
           const chips: ChipDisplay[] = [
@@ -1336,6 +1350,7 @@ export default function TeamOptimizer() {
                 gw: recommendations.bboost2_options[1].gw, 
                 gain: recommendations.bboost2_options[1].additionalPoints 
               } : undefined,
+              usedInGW: getSecondHalfUsedGW('bboost'),
             },
             {
               name: 'Triple Captain 2',
@@ -1348,6 +1363,7 @@ export default function TeamOptimizer() {
                 gw: recommendations.tripleC2_options[1].gw, 
                 gain: recommendations.tripleC2_options[1].additionalPoints 
               } : undefined,
+              usedInGW: getSecondHalfUsedGW('3xc'),
             },
             {
               name: 'Free Hit 2',
@@ -1360,6 +1376,7 @@ export default function TeamOptimizer() {
                 gw: recommendations.freehit2_options[1].gw, 
                 gain: recommendations.freehit2_options[1].freeHitPoints - recommendations.freehit2_options[1].normalPoints 
               } : undefined,
+              usedInGW: getSecondHalfUsedGW('freehit'),
             },
           ];
 
