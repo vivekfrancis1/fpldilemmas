@@ -646,6 +646,7 @@ export default function TeamOptimizer() {
 
     const recommendations = { 
       bboost1_options: [] as ChipOption[],
+      tripleC1_options: [] as ChipOption[],
       freehit1_options: [] as FreeHitOption[],
       bboost2_options: [] as ChipOption[],
       tripleC2_options: [] as ChipOption[],
@@ -783,8 +784,22 @@ export default function TeamOptimizer() {
       }
     }
 
-    // Triple Captain recommendations (only TC2 available - second half GW ≥20)
-    // Note: TC only has 2 total uses, so we only show second-half recommendations
+    // Triple Captain 1 recommendations (first half GW ≤19)
+    if (hasFirstHalfChipAvailable('3xc') && firstHalfGWs.length > 0) {
+      const tc1Scores = firstHalfGWs.map(gw => ({ gw: gw.id, points: getCaptainPoints(gw.id) }));
+      tc1Scores.sort((a, b) => b.points - a.points);
+      
+      if (tc1Scores.length >= 2) {
+        recommendations.tripleC1_options = tc1Scores.slice(0, 2).map(s => ({ gw: s.gw, additionalPoints: s.points }));
+      } else if (tc1Scores.length === 1) {
+        recommendations.tripleC1_options = [
+          { gw: tc1Scores[0].gw, additionalPoints: tc1Scores[0].points },
+          { gw: tc1Scores[0].gw, additionalPoints: tc1Scores[0].points }
+        ];
+      }
+    }
+
+    // Triple Captain 2 recommendations (second half GW ≥20)
     if (hasSecondHalfChipAvailable('3xc') && secondHalfGWs.length > 0) {
       const tc2Scores = secondHalfGWs.map(gw => ({ gw: gw.id, points: getCaptainPoints(gw.id) }));
       tc2Scores.sort((a, b) => b.points - a.points);
@@ -1264,6 +1279,18 @@ export default function TeamOptimizer() {
               option2: recommendations.bboost1_options[1] ? { 
                 gw: recommendations.bboost1_options[1].gw, 
                 gain: recommendations.bboost1_options[1].additionalPoints 
+              } : undefined,
+            },
+            {
+              name: 'Triple Captain 1',
+              color: 'purple',
+              option1: recommendations.tripleC1_options[0] ? { 
+                gw: recommendations.tripleC1_options[0].gw, 
+                gain: recommendations.tripleC1_options[0].additionalPoints 
+              } : undefined,
+              option2: recommendations.tripleC1_options[1] ? { 
+                gw: recommendations.tripleC1_options[1].gw, 
+                gain: recommendations.tripleC1_options[1].additionalPoints 
               } : undefined,
             },
             {
