@@ -15492,16 +15492,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Enrich picks with player data and projected points
+      // Enrich picks with player data and projected points (adjusted for availability)
       const enrichedPicks = picks.map((pick: any) => {
         const player = allPlayers.find((p: any) => p.id === pick.element);
-        const projectedPoints = playerProjections.get(pick.element) || 0;
+        const rawProjectedPoints = playerProjections.get(pick.element) || 0;
+        
+        // Get availability percentage (default to 100 if not set)
+        const availability = player?.chance_of_playing_next_round ?? 100;
+        
+        // Multiply projected points by availability percentage
+        // This ensures players with 0% availability get 0 effective points
+        const projectedPoints = rawProjectedPoints * (availability / 100);
         
         return {
           ...pick,
           player,
           position: player?.element_type,
           projectedPoints,
+          rawProjectedPoints,
+          availability,
           web_name: player?.web_name
         };
       });
@@ -15593,6 +15602,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           element: p.element,
           position: p.position,
           projectedPoints: p.projectedPoints,
+          rawProjectedPoints: p.rawProjectedPoints,
+          availability: p.availability,
           web_name: p.web_name,
           isCaptain: p.element === captain.element,
           isViceCaptain: p.element === viceCaptain.element
@@ -15601,6 +15612,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           element: p.element,
           position: p.position,
           projectedPoints: p.projectedPoints,
+          rawProjectedPoints: p.rawProjectedPoints,
+          availability: p.availability,
           web_name: p.web_name,
           benchPosition: index + 1
         })),
