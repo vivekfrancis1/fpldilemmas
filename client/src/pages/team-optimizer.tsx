@@ -627,6 +627,9 @@ export default function TeamOptimizer() {
     const nextGWs = getNextGameweeks();
     const usedChips = teamData.chips || [];
     
+    // Debug: Log chip data
+    console.log('🎲 getChipRecommendations - usedChips from teamData:', usedChips);
+    
     // Get current gameweek
     const currentGameweek = bootstrapData.events.find((e: any) => e.is_current)?.id || 
                            bootstrapData.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
@@ -678,8 +681,13 @@ export default function TeamOptimizer() {
       const secondHalfUsed = countSecondHalfChipUses(chipName);
       const totalMax = chipMaxUses[chipName] || 1;
       
+      console.log(`🎲 hasFirstHalfChipAvailable(${chipName}): firstHalfUsed=${firstHalfUsed}, secondHalfUsed=${secondHalfUsed}, expired=${firstHalfChipsExpired}`);
+      
       // If first-half chip already used, not available
-      if (firstHalfUsed > 0) return false;
+      if (firstHalfUsed > 0) {
+        console.log(`🎲 ${chipName} first half chip ALREADY USED - returning false`);
+        return false;
+      }
       
       // If we've already used the allotted chips, none available
       if (firstHalfUsed + secondHalfUsed >= totalMax) return false;
@@ -1270,8 +1278,10 @@ export default function TeamOptimizer() {
           };
 
           const usedChips = teamData?.chips || [];
+          console.log('🎲 Chip Debug - usedChips:', usedChips);
           const getFirstHalfUsedGW = (chipName: string): number | undefined => {
             const used = usedChips.find((c: any) => c.name === chipName && c.event <= 19);
+            console.log(`🎲 Checking ${chipName}: found =`, used, 'usedInGW =', used?.event);
             return used?.event;
           };
 
