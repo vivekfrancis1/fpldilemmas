@@ -1266,6 +1266,13 @@ export default function TeamOptimizer() {
             color: string;
             option1?: { gw: number; gain: number };
             option2?: { gw: number; gain: number };
+            usedInGW?: number;
+          };
+
+          const usedChips = teamData?.chips || [];
+          const getFirstHalfUsedGW = (chipName: string): number | undefined => {
+            const used = usedChips.find((c: any) => c.name === chipName && c.event <= 19);
+            return used?.event;
           };
 
           const chips: ChipDisplay[] = [
@@ -1280,6 +1287,7 @@ export default function TeamOptimizer() {
                 gw: recommendations.bboost1_options[1].gw, 
                 gain: recommendations.bboost1_options[1].additionalPoints 
               } : undefined,
+              usedInGW: getFirstHalfUsedGW('bboost'),
             },
             {
               name: 'Triple Captain 1',
@@ -1292,6 +1300,7 @@ export default function TeamOptimizer() {
                 gw: recommendations.tripleC1_options[1].gw, 
                 gain: recommendations.tripleC1_options[1].additionalPoints 
               } : undefined,
+              usedInGW: getFirstHalfUsedGW('3xc'),
             },
             {
               name: 'Free Hit 1',
@@ -1304,6 +1313,7 @@ export default function TeamOptimizer() {
                 gw: recommendations.freehit1_options[1].gw, 
                 gain: recommendations.freehit1_options[1].freeHitPoints - recommendations.freehit1_options[1].normalPoints 
               } : undefined,
+              usedInGW: getFirstHalfUsedGW('freehit'),
             },
             {
               name: 'Bench Boost 2',
@@ -1367,7 +1377,7 @@ export default function TeamOptimizer() {
                           : 'bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800'
                       }`}
                     >
-                      <div className={`text-[11px] sm:text-xs md:text-sm font-semibold mb-1.5 sm:mb-2 ${
+                      <div className={`text-[11px] sm:text-xs md:text-sm font-semibold mb-1.5 sm:mb-2 flex items-center gap-2 ${
                         chip.color === 'green'
                           ? 'text-green-700 dark:text-green-300'
                           : chip.color === 'purple'
@@ -1375,29 +1385,42 @@ export default function TeamOptimizer() {
                           : 'text-blue-700 dark:text-blue-300'
                       }`}>
                         {chip.name}
+                        {chip.usedInGW && (
+                          <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 font-normal">
+                            Already used in GW{chip.usedInGW}
+                          </span>
+                        )}
                       </div>
                       <div className="flex gap-2 flex-wrap">
-                        {chip.option1 && (
-                          <div className={`flex-1 min-w-[100px] px-2 py-1 rounded text-[10px] sm:text-xs ${
-                            chip.color === 'green'
-                              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
-                              : chip.color === 'purple'
-                              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200'
-                              : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200'
-                          }`}>
-                            <span className="font-medium">Option 1:</span> GW{chip.option1.gw} (+{chip.option1.gain.toFixed(1)} pts)
+                        {chip.usedInGW ? (
+                          <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 italic">
+                            No recommendations available - chip already used
                           </div>
-                        )}
-                        {chip.option2 && (
-                          <div className={`flex-1 min-w-[100px] px-2 py-1 rounded text-[10px] sm:text-xs ${
-                            chip.color === 'green'
-                              ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
-                              : chip.color === 'purple'
-                              ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200'
-                              : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200'
-                          }`}>
-                            <span className="font-medium">Option 2:</span> GW{chip.option2.gw} (+{chip.option2.gain.toFixed(1)} pts)
-                          </div>
+                        ) : (
+                          <>
+                            {chip.option1 && (
+                              <div className={`flex-1 min-w-[100px] px-2 py-1 rounded text-[10px] sm:text-xs ${
+                                chip.color === 'green'
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+                                  : chip.color === 'purple'
+                                  ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200'
+                                  : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200'
+                              }`}>
+                                <span className="font-medium">Option 1:</span> GW{chip.option1.gw} (+{chip.option1.gain.toFixed(1)} pts)
+                              </div>
+                            )}
+                            {chip.option2 && (
+                              <div className={`flex-1 min-w-[100px] px-2 py-1 rounded text-[10px] sm:text-xs ${
+                                chip.color === 'green'
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+                                  : chip.color === 'purple'
+                                  ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200'
+                                  : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200'
+                              }`}>
+                                <span className="font-medium">Option 2:</span> GW{chip.option2.gw} (+{chip.option2.gain.toFixed(1)} pts)
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
