@@ -2357,22 +2357,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get current or most recent completed gameweek if not specified
-      let currentGameweek = gameweek;
+      let currentGameweek = gameweek ? Number(gameweek) : null;
+      let bootstrapData: any = null;
+      
       if (!currentGameweek) {
         const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
         if (bootstrapResponse.ok) {
-          const bootstrapData = await bootstrapResponse.json();
+          bootstrapData = await bootstrapResponse.json();
           // Get the current gameweek (the one that is live or most recent)
           const currentGW = bootstrapData.events.find((event: any) => event.is_current);
           // Use current GW if available
           currentGameweek = (currentGW?.id || 1);
           console.log(`DEBUG: Using gameweek ${currentGameweek} for team data (current: ${!!currentGW})`);
         } else {
-          currentGameweek = "1"; // fallback
+          currentGameweek = 1; // fallback
         }
       }
       
-      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
+      // Fetch initial picks for current gameweek
+      let response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`);
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -2381,7 +2384,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         throw new Error(`FPL API responded with status: ${response.status}`);
       }
       
-      const data = await response.json();
+      let data = await response.json();
+      
+      // Check if this gameweek was played with Free Hit - if so, we need to get the persistent squad
+      if (data.active_chip === 'freehit') {
+        console.log(`DEBUG: GW${currentGameweek} was a Free Hit - fetching persistent squad instead`);
+        
+        // Try to get the next gameweek's team first (which has the restored squad + any new transfers)
+        const nextGW = currentGameweek + 1;
+        const nextGWResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${nextGW}/picks/`);
+        
+        if (nextGWResponse.ok) {
+          const nextGWData = await nextGWResponse.json();
+          console.log(`DEBUG: Using GW${nextGW} team (post-Free Hit restored squad)`);
+          data = nextGWData;
+          currentGameweek = nextGW;
+        } else {
+          // If next GW not available, fall back to the gameweek before Free Hit
+          const prevGW = currentGameweek - 1;
+          if (prevGW >= 1) {
+            const prevGWResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${prevGW}/picks/`);
+            
+            if (prevGWResponse.ok) {
+              const prevGWData = await prevGWResponse.json();
+              // Make sure the previous GW wasn't also a Free Hit (unlikely but possible)
+              if (prevGWData.active_chip !== 'freehit') {
+                console.log(`DEBUG: Using GW${prevGW} team (pre-Free Hit squad)`);
+                data = prevGWData;
+                currentGameweek = prevGW;
+              }
+            }
+          }
+        }
+      }
+      
+      // Store which gameweek the picks came from
+      data.resolvedGameweek = currentGameweek;
+      data.wasFreehitAdjusted = data.active_chip === 'freehit' ? false : (response.status === 200);
       
       console.log("DEBUG: Picks transfers object:", JSON.stringify(data.transfers));
       console.log("DEBUG: Full first pick data:", JSON.stringify(data.picks?.[0], null, 2));
