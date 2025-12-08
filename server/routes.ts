@@ -1286,7 +1286,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate free transfers based on authenticated transfer data
       // If user has made transfers in unconfirmed team, adjust accordingly
       const transfersMade = myTeamData.transfers.made || 0;
-      const transferLimit = myTeamData.transfers.limit || 1;
+      let transferLimit = myTeamData.transfers.limit || 1;
+      
+      // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
+      // All managers get 5 free transfers in GW16 regardless of what FPL API reports
+      // Check if planning starts at GW16 (current GW is 15)
+      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      const bootstrapData = await bootstrapResponse.json();
+      const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 
+                        bootstrapData.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
+      const planningStartGW = Math.min(currentGW + 1, 38);
+      
+      if (planningStartGW === 16) {
+        transferLimit = 5;
+        console.log(`🎁 GW16 AFCON BONUS (authenticated): Applying 5 FTs for GW16 (AFCON top-up)`);
+      }
+      
       const freeTransfersRemaining = Math.max(0, transferLimit - transfersMade);
       
       // Update free transfers in response
@@ -2614,6 +2629,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         freeTransfers = Math.min(5, accumulatedFTs); // Cap at 5
+      }
+      
+      // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
+      // If our planning starts at GW16, all managers get 5 free transfers regardless of history
+      const planningStartGW = Math.min(currentGameweek + 1, 38);
+      if (planningStartGW === 16) {
+        freeTransfers = 5;
+        console.log(`🎁 GW16 AFCON BONUS: Starting with 5 FTs for GW16 (AFCON top-up regardless of GW15 activity)`);
       }
       
       console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Free transfers calculated for next planning GW: ${freeTransfers}`);
