@@ -182,7 +182,7 @@ export default function LeagueAnalysisPage() {
             <div className="flex items-center justify-between flex-wrap gap-3">
               <CardTitle className="fpl-heading-card flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                {showLiveStandings ? 'Live Standings' : 'Top 100 League Managers'}
+                {showLiveStandings ? 'Live Standings' : 'Current Standings (confirmed)'}
               </CardTitle>
               <div className="flex items-center gap-2">
                 {showLiveStandings && (
