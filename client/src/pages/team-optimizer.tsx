@@ -660,22 +660,23 @@ export default function TeamOptimizer() {
     };
 
     // Track chip uses by season half based on when they were actually used
-    // FPL API returns chips with: status_for_entry ("available" or "played") and played_by_entry (array of GWs used)
-    // Type assertion needed because my-team endpoint returns different structure than manager history
-    const getChipUsedGW = (chipName: string): number | undefined => {
-      const chip = usedChips.find((c: any) => c.name === chipName && (c as any).status_for_entry === 'played');
-      return (chip as any)?.played_by_entry?.[0];
+    // FPL API my-team endpoint returns chips with: name, time, event (gameweek used)
+    // A chip in the array means it has been used in that gameweek
+    const getChipUsedGWs = (chipName: string): number[] => {
+      return usedChips
+        .filter((c: any) => c.name === chipName && c.event)
+        .map((c: any) => c.event);
     };
     
     const countChipUses = (chipName: string) => 
-      usedChips.filter((c: any) => c.name === chipName && (c as any).status_for_entry === 'played').length;
+      usedChips.filter((c: any) => c.name === chipName && c.event).length;
     const countFirstHalfChipUses = (chipName: string) => {
-      const usedGW = getChipUsedGW(chipName);
-      return (usedGW && usedGW <= 19) ? 1 : 0;
+      const usedGWs = getChipUsedGWs(chipName);
+      return usedGWs.filter(gw => gw <= 19).length;
     };
     const countSecondHalfChipUses = (chipName: string) => {
-      const usedGW = getChipUsedGW(chipName);
-      return (usedGW && usedGW >= 20) ? 1 : 0;
+      const usedGWs = getChipUsedGWs(chipName);
+      return usedGWs.filter(gw => gw >= 20).length;
     };
     
     const hasRemainingUses = (chipName: string) => {
@@ -1284,19 +1285,15 @@ export default function TeamOptimizer() {
           };
 
           const usedChips = teamData?.chips || [];
-          // FPL API returns chips with: status_for_entry ("available" or "played") and played_by_entry (array of GWs used)
-          // Type assertion needed because my-team endpoint returns different structure than manager history
+          // FPL API my-team endpoint returns chips with: name, time, event (gameweek used)
+          // A chip in the array means it has been used in that gameweek
           const getFirstHalfUsedGW = (chipName: string): number | undefined => {
-            const chip = usedChips.find((c: any) => c.name === chipName && (c as any).status_for_entry === 'played');
-            const usedGW = (chip as any)?.played_by_entry?.[0];
-            // Only return if it was used in first half (GW1-19)
-            return (usedGW && usedGW <= 19) ? usedGW : undefined;
+            const chip = usedChips.find((c: any) => c.name === chipName && c.event && c.event <= 19);
+            return chip?.event;
           };
           const getSecondHalfUsedGW = (chipName: string): number | undefined => {
-            const chip = usedChips.find((c: any) => c.name === chipName && (c as any).status_for_entry === 'played');
-            const usedGW = (chip as any)?.played_by_entry?.[0];
-            // Only return if it was used in second half (GW20+)
-            return (usedGW && usedGW >= 20) ? usedGW : undefined;
+            const chip = usedChips.find((c: any) => c.name === chipName && c.event && c.event >= 20);
+            return chip?.event;
           };
 
           const chips: ChipDisplay[] = [
