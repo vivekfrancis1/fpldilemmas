@@ -2153,6 +2153,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         livePlayerStats.set(element.id, element.stats);
       }
       
+      // Fetch fixtures for current gameweek to know which matches have been played
+      const fixturesResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/fixtures/?event=${currentGameweek}`);
+      const fixturesData = fixturesResponse?.ok ? await fixturesResponse.json() : [];
+      
+      // Create a map of team ID -> fixture status (finished or not)
+      const teamFixtureStatus = new Map<number, { finished: boolean; started: boolean }>();
+      for (const fixture of fixturesData) {
+        teamFixtureStatus.set(fixture.team_h, { 
+          finished: fixture.finished || false, 
+          started: fixture.started || false 
+        });
+        teamFixtureStatus.set(fixture.team_a, { 
+          finished: fixture.finished || false, 
+          started: fixture.started || false 
+        });
+      }
+      
+      // Create a map of player ID -> team ID
+      const playerTeams = new Map<number, number>();
+      for (const player of bootstrapData.elements) {
+        playerTeams.set(player.id, player.team);
+      }
+      
       // Fetch league standings
       const standingsResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_new_entries=1&page_standings=1&phase=1`);
       if (!standingsResponse || !standingsResponse.ok) {
@@ -2253,15 +2276,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Calculate auto-subs (only if not using bench boost)
             if (activeChip !== 'bboost') {
-              // Find players who didn't play (0 minutes)
-              const playersNotPlayed = startingPlayersWithStats.filter(
-                p => p.stats && p.stats.minutes === 0
-              );
+              // Find players who didn't play (0 minutes) AND whose match has FINISHED
+              // Don't count players whose match hasn't started yet
+              const playersNotPlayed = startingPlayersWithStats.filter(p => {
+                if (!p.stats || p.stats.minutes !== 0) return false;
+                
+                // Check if this player's team's match has finished
+                const teamId = playerTeams.get(p.pick.element);
+                const fixtureStatus = teamId ? teamFixtureStatus.get(teamId) : null;
+                
+                // Only count as "not played" if the match has FINISHED and they played 0 minutes
+                return fixtureStatus?.finished === true;
+              });
               
-              // Available bench players (who have played)
-              const availableBench = benchPlayersWithStats.filter(
-                p => p.stats && p.stats.minutes > 0
-              );
+              // Available bench players (who have played AND whose match has started)
+              const availableBench = benchPlayersWithStats.filter(p => {
+                if (!p.stats || p.stats.minutes <= 0) return false;
+                
+                // Check if this player's match has started
+                const teamId = playerTeams.get(p.pick.element);
+                const fixtureStatus = teamId ? teamFixtureStatus.get(teamId) : null;
+                
+                return fixtureStatus?.started === true;
+              });
               
               // Simple auto-sub logic (FPL rules are complex, this is a simplified version)
               let subsUsed = 0;

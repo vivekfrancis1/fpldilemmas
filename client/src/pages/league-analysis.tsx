@@ -250,7 +250,7 @@ export default function LeagueAnalysisPage() {
                               {entry.live_rank}
                             </div>
                             <div>
-                              <p className="font-medium flex items-center gap-2">
+                              <div className="font-medium flex items-center gap-2">
                                 {entry.player_name}
                                 {isCurrentManager && <Badge className="bg-blue-600">You</Badge>}
                                 {entry.active_chip && (
@@ -258,8 +258,8 @@ export default function LeagueAnalysisPage() {
                                     {entry.active_chip}
                                   </Badge>
                                 )}
-                              </p>
-                              <p className="text-sm text-muted-foreground">{entry.entry_name}</p>
+                              </div>
+                              <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
