@@ -108,6 +108,12 @@ export default function LeagueAnalysisPage() {
     staleTime: 15000,
   });
 
+  // Get current gameweek for confirmed standings display
+  const { data: bootstrapData } = useQuery<any>({
+    queryKey: ['/api/bootstrap-static'],
+  });
+  const currentGameweek = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 15;
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
@@ -356,7 +362,7 @@ export default function LeagueAnalysisPage() {
                       </div>
                       <div className="text-right">
                         <p className="font-semibold">{entry.total?.toLocaleString()} pts</p>
-                        <p className="text-sm text-muted-foreground">GW: {entry.event_total || 0}</p>
+                        <p className="text-sm text-muted-foreground">GW {currentGameweek}: {entry.event_total || 0} pts</p>
                       </div>
                       </div>
                     </Link>
