@@ -286,7 +286,7 @@ export default function LeagueAnalysisPage() {
                             <p className="text-sm text-muted-foreground">
                               GW {liveStandingsData.current_gameweek}: {entry.live_points}pts
                               {entry.auto_sub_points > 0 && (
-                                <span className="text-orange-600 ml-1">(+autosub)</span>
+                                <span className="text-orange-600 ml-1">(+{entry.auto_sub_points} autosub)</span>
                               )}
                               {entry.bonus_points > 0 && liveStandingsData.has_provisional_bonus && (
                                 <span className="text-green-600 ml-1">(+{entry.bonus_points} prov. bonus)</span>
