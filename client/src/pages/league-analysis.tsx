@@ -264,13 +264,16 @@ export default function LeagueAnalysisPage() {
                           </div>
                           <div className="flex items-center gap-4">
                             <div className="text-right">
-                              <p className="font-bold text-green-700">
-                                {entry.live_points} pts
+                              <p className="font-semibold">{entry.live_total?.toLocaleString()} pts</p>
+                              <p className="text-sm text-muted-foreground">
+                                GW: {entry.live_points}
                                 {entry.auto_sub_points > 0 && (
-                                  <span className="text-xs text-orange-600 ml-1">(+{entry.auto_sub_points} sub)</span>
+                                  <span className="text-orange-600 ml-1">(+{entry.auto_sub_points} sub)</span>
+                                )}
+                                {entry.bonus_points > 0 && (
+                                  <span className="text-green-600 ml-1">(+{entry.bonus_points} bonus)</span>
                                 )}
                               </p>
-                              <p className="text-sm text-muted-foreground">Total: {entry.live_total?.toLocaleString()}</p>
                             </div>
                             {entry.rank_change !== 0 && (
                               <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${

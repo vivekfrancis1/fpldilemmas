@@ -1314,14 +1314,17 @@ export default function MyDashboard() {
                                             </div>
                                             <div className="flex items-center gap-3">
                                               <div className="text-right">
-                                                <div className="font-bold text-green-700 text-xs">
-                                                  {entry.live_points} pts
-                                                  {entry.auto_sub_points > 0 && (
-                                                    <span className="text-[10px] text-orange-600 ml-1">(+{entry.auto_sub_points} sub)</span>
-                                                  )}
+                                                <div className="font-semibold text-gray-800 text-xs">
+                                                  {entry.live_total?.toLocaleString()} pts
                                                 </div>
                                                 <div className="text-[10px] text-gray-500">
-                                                  Total: {entry.live_total.toLocaleString()}
+                                                  GW: {entry.live_points}
+                                                  {entry.auto_sub_points > 0 && (
+                                                    <span className="text-orange-600 ml-1">(+{entry.auto_sub_points} sub)</span>
+                                                  )}
+                                                  {entry.bonus_points > 0 && (
+                                                    <span className="text-green-600 ml-1">(+{entry.bonus_points} bonus)</span>
+                                                  )}
                                                 </div>
                                               </div>
                                               {entry.rank_change !== 0 && (
