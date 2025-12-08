@@ -308,6 +308,7 @@ export default function LeagueAnalysisPage() {
               <div className="space-y-2">
                 {topEntries.map((entry: any, index: number) => {
                   const isCurrentManager = entry.entry.toString() === managerId;
+                  const rankChange = entry.last_rank && entry.last_rank > 0 ? entry.last_rank - entry.rank : 0;
                   return (
                     <Link 
                       key={entry.entry}
@@ -329,10 +330,27 @@ export default function LeagueAnalysisPage() {
                           {entry.rank}
                         </div>
                         <div>
-                          <p className="font-medium">
+                          <div className="font-medium flex items-center gap-2">
                             {entry.player_name}
-                            {isCurrentManager && <Badge className="ml-2 bg-blue-600">You</Badge>}
-                          </p>
+                            {rankChange !== 0 && (
+                              <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${
+                                rankChange > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+                              }`}>
+                                {rankChange > 0 ? (
+                                  <>
+                                    <ChevronUp className="h-3 w-3" />
+                                    <span>{rankChange}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ChevronDown className="h-3 w-3" />
+                                    <span>{Math.abs(rankChange)}</span>
+                                  </>
+                                )}
+                              </div>
+                            )}
+                            {isCurrentManager && <Badge className="bg-blue-600">You</Badge>}
+                          </div>
                           <p className="text-sm text-muted-foreground">{entry.entry_name}</p>
                         </div>
                       </div>
