@@ -268,7 +268,7 @@ export default function LeagueAnalysisPage() {
                             <div className="text-right">
                               <p className="font-semibold">{entry.live_total?.toLocaleString()} pts</p>
                               <p className="text-sm text-muted-foreground">
-                                GW: {entry.live_points}
+                                GW {liveStandingsData.current_gameweek}: {entry.live_points}pts
                                 {entry.auto_sub_points > 0 && (
                                   <span className="text-orange-600 ml-1">(+{entry.auto_sub_points} sub)</span>
                                 )}
