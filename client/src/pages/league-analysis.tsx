@@ -254,6 +254,23 @@ export default function LeagueAnalysisPage() {
                             <div>
                               <div className="font-medium flex items-center gap-2">
                                 {entry.player_name}
+                                {entry.rank_change !== 0 && (
+                                  <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${
+                                    entry.rank_change > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+                                  }`}>
+                                    {entry.rank_change > 0 ? (
+                                      <>
+                                        <ChevronUp className="h-3 w-3" />
+                                        <span>{entry.rank_change}</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ChevronDown className="h-3 w-3" />
+                                        <span>{Math.abs(entry.rank_change)}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
                                 {isCurrentManager && <Badge className="bg-blue-600">You</Badge>}
                                 {entry.active_chip && (
                                   <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
@@ -264,36 +281,17 @@ export default function LeagueAnalysisPage() {
                               <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-4">
-                            <div className="text-right">
-                              <p className="font-semibold">{entry.live_total?.toLocaleString()} pts</p>
-                              <p className="text-sm text-muted-foreground">
-                                GW {liveStandingsData.current_gameweek}: {entry.live_points}pts
-                                {entry.auto_sub_points > 0 && (
-                                  <span className="text-orange-600 ml-1">(+autosub)</span>
-                                )}
-                                {entry.bonus_points > 0 && liveStandingsData.has_provisional_bonus && (
-                                  <span className="text-green-600 ml-1">(+{entry.bonus_points} prov. bonus)</span>
-                                )}
-                              </p>
-                            </div>
-                            {entry.rank_change !== 0 && (
-                              <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${
-                                entry.rank_change > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
-                              }`}>
-                                {entry.rank_change > 0 ? (
-                                  <>
-                                    <ChevronUp className="h-3 w-3" />
-                                    <span>{entry.rank_change}</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <ChevronDown className="h-3 w-3" />
-                                    <span>{Math.abs(entry.rank_change)}</span>
-                                  </>
-                                )}
-                              </div>
-                            )}
+                          <div className="text-right">
+                            <p className="font-semibold">{entry.live_total?.toLocaleString()} pts</p>
+                            <p className="text-sm text-muted-foreground">
+                              GW {liveStandingsData.current_gameweek}: {entry.live_points}pts
+                              {entry.auto_sub_points > 0 && (
+                                <span className="text-orange-600 ml-1">(+autosub)</span>
+                              )}
+                              {entry.bonus_points > 0 && liveStandingsData.has_provisional_bonus && (
+                                <span className="text-green-600 ml-1">(+{entry.bonus_points} prov. bonus)</span>
+                              )}
+                            </p>
                           </div>
                         </div>
                       </Link>

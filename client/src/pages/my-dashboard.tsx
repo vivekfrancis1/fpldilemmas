@@ -1307,45 +1307,43 @@ export default function MyDashboard() {
                                                 {entry.live_rank}
                                               </div>
                                               <div className="min-w-0 flex-1">
-                                                <div className="font-medium text-gray-800 truncate text-xs">
+                                                <div className="font-medium text-gray-800 truncate text-xs flex items-center gap-1">
                                                   {entry.player_name}
+                                                  {entry.rank_change !== 0 && (
+                                                    <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1 py-0.5 rounded ${
+                                                      entry.rank_change > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+                                                    }`}>
+                                                      {entry.rank_change > 0 ? (
+                                                        <>
+                                                          <ChevronUp className="h-2.5 w-2.5" />
+                                                          <span>{entry.rank_change}</span>
+                                                        </>
+                                                      ) : (
+                                                        <>
+                                                          <ChevronDown className="h-2.5 w-2.5" />
+                                                          <span>{Math.abs(entry.rank_change)}</span>
+                                                        </>
+                                                      )}
+                                                    </span>
+                                                  )}
                                                   {isCurrentManager && <Badge className="ml-1 bg-blue-600 text-[10px] py-0 px-1">You</Badge>}
                                                 </div>
                                                 <div className="text-[10px] text-gray-500 truncate">{entry.entry_name}</div>
                                               </div>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                              <div className="text-right">
-                                                <div className="font-semibold text-gray-800 text-xs">
-                                                  {entry.live_total?.toLocaleString()} pts
-                                                </div>
-                                                <div className="text-[10px] text-gray-500">
-                                                  GW {liveStandingsData.current_gameweek}: {entry.live_points}pts
-                                                  {entry.auto_sub_points > 0 && (
-                                                    <span className="text-orange-600 ml-1">(+autosub)</span>
-                                                  )}
-                                                  {entry.bonus_points > 0 && liveStandingsData.has_provisional_bonus && (
-                                                    <span className="text-green-600 ml-1">(+{entry.bonus_points} prov. bonus)</span>
-                                                  )}
-                                                </div>
+                                            <div className="text-right">
+                                              <div className="font-semibold text-gray-800 text-xs">
+                                                {entry.live_total?.toLocaleString()} pts
                                               </div>
-                                              {entry.rank_change !== 0 && (
-                                                <div className={`flex items-center gap-0.5 text-[10px] font-medium px-1 py-0.5 rounded ${
-                                                  entry.rank_change > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
-                                                }`}>
-                                                  {entry.rank_change > 0 ? (
-                                                    <>
-                                                      <ChevronUp className="h-3 w-3" />
-                                                      <span>{entry.rank_change}</span>
-                                                    </>
-                                                  ) : (
-                                                    <>
-                                                      <ChevronDown className="h-3 w-3" />
-                                                      <span>{Math.abs(entry.rank_change)}</span>
-                                                    </>
-                                                  )}
-                                                </div>
-                                              )}
+                                              <div className="text-[10px] text-gray-500">
+                                                GW {liveStandingsData.current_gameweek}: {entry.live_points}pts
+                                                {entry.auto_sub_points > 0 && (
+                                                  <span className="text-orange-600 ml-1">(+autosub)</span>
+                                                )}
+                                                {entry.bonus_points > 0 && liveStandingsData.has_provisional_bonus && (
+                                                  <span className="text-green-600 ml-1">(+{entry.bonus_points} prov. bonus)</span>
+                                                )}
+                                              </div>
                                             </div>
                                           </div>
                                         );
