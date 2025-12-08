@@ -2570,7 +2570,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const historyData = await historyResponse.json();
       
       // Determine which gameweek to fetch team data from
-      let teamDataGameweek = isCurrentGWFinished ? currentGameweek : Math.max(1, currentGameweek - 1);
+      // If current GW has started (is_current=true), fetch from current GW - this gives us the team used for that GW
+      // Only fall back to previous GW if current GW hasn't started yet (pre-season or between GW deadlines)
+      let teamDataGameweek = currentGW?.is_current ? currentGameweek : Math.max(1, currentGameweek - 1);
       
       // Check if Free Hit was played in the team data gameweek
       // If so, we need to fetch the team from the GW BEFORE the Free Hit (the team the user reverts to)
@@ -2590,7 +2592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const teamData = await teamResponse.json();
       
-      console.log(`DEBUG: Team data fetched from GW${teamDataGameweek}${freeHitInTeamDataGW ? ' (pre-Free Hit team)' : ''}`);
+      console.log(`DEBUG: Team data fetched from GW${teamDataGameweek}${freeHitInTeamDataGW ? ' (pre-Free Hit team)' : ''} (current GW${currentGameweek} is_current=${currentGW?.is_current}, finished=${isCurrentGWFinished})`);
       
       // Get entry data for accurate bank balance and transfer info
       const entryResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
