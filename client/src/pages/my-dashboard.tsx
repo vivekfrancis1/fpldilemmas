@@ -231,6 +231,41 @@ interface LeagueStanding {
   entry_name: string;
 }
 
+interface LiveLeagueEntry {
+  id: number;
+  event_total: number;
+  player_name: string;
+  rank: number;
+  last_rank: number;
+  rank_sort: number;
+  total: number;
+  entry: number;
+  entry_name: string;
+  live_points: number;
+  live_total: number;
+  live_rank: number;
+  rank_change: number;
+  auto_sub_points: number;
+  bonus_points: number;
+  players_played: number;
+  captain_points: number;
+  bench_points: number;
+  active_chip: string | null;
+}
+
+interface LiveLeagueStandings {
+  league: {
+    id: number;
+    name: string;
+  };
+  standings: {
+    results: LiveLeagueEntry[];
+  };
+  current_gameweek: number;
+  is_gameweek_finished: boolean;
+  last_updated: string;
+}
+
 
 interface Transfer {
   element_in: number;
@@ -263,6 +298,9 @@ export default function MyDashboard() {
     }
     return "list";
   });
+  
+  // Live standings state - tracks which league's live standings panel is open
+  const [selectedLiveLeague, setSelectedLiveLeague] = useState<number | null>(null);
 
 
   // Cache manager ID functionality
@@ -360,6 +398,14 @@ export default function MyDashboard() {
   const { data: leaguesData, isLoading: isLoadingLeagues, error: leaguesError } = useQuery<LeagueResponse>({
     queryKey: ["/api/manager", searchedId, "leagues"],
     enabled: !!searchedId,
+  });
+
+  // Live standings query for selected league
+  const { data: liveStandingsData, isLoading: isLoadingLiveStandings, refetch: refetchLiveStandings } = useQuery<LiveLeagueStandings>({
+    queryKey: [`/api/leagues-classic/${selectedLiveLeague}/live-standings`],
+    enabled: !!selectedLiveLeague,
+    refetchInterval: 30000, // Auto-refresh every 30 seconds during live matches
+    staleTime: 15000, // Consider data stale after 15 seconds
   });
 
   // Use authenticated transfers endpoint for own team (includes upcoming GW transfers)
@@ -1131,49 +1177,191 @@ export default function MyDashboard() {
                           return a.entry_rank - b.entry_rank;
                         })
                         .map((league, index: number) => {
+                          const isPrivateLeague = league.league_type === 'x' && league.id > 1000;
+                          const isShowingLive = selectedLiveLeague === league.id;
+                          
                           return (
-                            <div 
-                              key={league.id} 
-                              className="mobile-league-item cursor-pointer"
-                              onClick={() => {
-                                setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
-                              }}
-                              data-testid={`league-item-${league.id}`}
-                            >
-                              <div className="mobile-league-info">
-                                <div className="min-w-0 flex-1">
-                                  <div className="font-semibold text-gray-800 truncate" title={league.name}>
-                                    {league.name}
-                                  </div>
-                                  <div className="text-sm text-gray-600">
-                                    {league.rank_count?.toLocaleString()} managers
+                            <div key={league.id} className="space-y-2">
+                              <div 
+                                className="mobile-league-item"
+                                data-testid={`league-item-${league.id}`}
+                              >
+                                <div 
+                                  className="mobile-league-info cursor-pointer flex-1"
+                                  onClick={() => {
+                                    setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
+                                  }}
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <div className="font-semibold text-gray-800 truncate" title={league.name}>
+                                      {league.name}
+                                    </div>
+                                    <div className="text-sm text-gray-600">
+                                      {league.rank_count?.toLocaleString()} managers
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-lg font-bold text-gray-800">
-                                  #{league.entry_rank.toLocaleString()}
-                                </div>
-                                {league.entry_last_rank && league.entry_last_rank !== league.entry_rank && (
-                                  <div className={`inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${
-                                    league.entry_last_rank > league.entry_rank 
-                                      ? 'text-green-700 bg-green-50' 
-                                      : 'text-red-700 bg-red-50'
-                                  }`}>
-                                    {league.entry_last_rank > league.entry_rank ? (
-                                      <>
-                                        <TrendingUp className="h-3 w-3" />
-                                        <span>{(league.entry_last_rank - league.entry_rank).toLocaleString()}</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <TrendingDown className="h-3 w-3" />
-                                        <span>{(league.entry_rank - league.entry_last_rank).toLocaleString()}</span>
-                                      </>
+                                <div className="flex items-center gap-2">
+                                  {/* Live Points Button for private leagues */}
+                                  {isPrivateLeague && (
+                                    <Button
+                                      variant={isShowingLive ? "default" : "outline"}
+                                      size="sm"
+                                      className={`h-7 px-2 text-xs ${isShowingLive ? 'bg-green-600 hover:bg-green-700' : 'border-green-200 text-green-700 hover:bg-green-50'}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (isShowingLive) {
+                                          setSelectedLiveLeague(null);
+                                        } else {
+                                          setSelectedLiveLeague(league.id);
+                                        }
+                                      }}
+                                      data-testid={`live-points-btn-${league.id}`}
+                                    >
+                                      <Activity className="h-3 w-3 mr-1" />
+                                      Live
+                                    </Button>
+                                  )}
+                                  <div 
+                                    className="text-right cursor-pointer"
+                                    onClick={() => {
+                                      setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
+                                    }}
+                                  >
+                                    <div className="text-lg font-bold text-gray-800">
+                                      #{league.entry_rank.toLocaleString()}
+                                    </div>
+                                    {league.entry_last_rank && league.entry_last_rank !== league.entry_rank && (
+                                      <div className={`inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                                        league.entry_last_rank > league.entry_rank 
+                                          ? 'text-green-700 bg-green-50' 
+                                          : 'text-red-700 bg-red-50'
+                                      }`}>
+                                        {league.entry_last_rank > league.entry_rank ? (
+                                          <>
+                                            <TrendingUp className="h-3 w-3" />
+                                            <span>{(league.entry_last_rank - league.entry_rank).toLocaleString()}</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <TrendingDown className="h-3 w-3" />
+                                            <span>{(league.entry_rank - league.entry_last_rank).toLocaleString()}</span>
+                                          </>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
-                                )}
+                                </div>
                               </div>
+                              
+                              {/* Live Standings Panel */}
+                              {isShowingLive && (
+                                <div className="bg-white rounded-lg border border-green-200 p-3 mt-2 animate-in slide-in-from-top-2 duration-200">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-2">
+                                      <Activity className="h-4 w-4 text-green-600 animate-pulse" />
+                                      <span className="text-sm font-semibold text-green-800">Live Standings</span>
+                                      {liveStandingsData && (
+                                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                          GW{liveStandingsData.current_gameweek}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 px-2"
+                                      onClick={() => refetchLiveStandings()}
+                                      disabled={isLoadingLiveStandings}
+                                    >
+                                      <RefreshCw className={`h-3 w-3 ${isLoadingLiveStandings ? 'animate-spin' : ''}`} />
+                                    </Button>
+                                  </div>
+                                  
+                                  {isLoadingLiveStandings ? (
+                                    <div className="space-y-2">
+                                      {[1, 2, 3, 4, 5].map(i => (
+                                        <Skeleton key={i} className="h-10 w-full" />
+                                      ))}
+                                    </div>
+                                  ) : liveStandingsData ? (
+                                    <div className="space-y-1 max-h-80 overflow-y-auto">
+                                      {liveStandingsData.standings.results.map((entry, idx) => {
+                                        const isCurrentManager = entry.entry.toString() === searchedId;
+                                        return (
+                                          <div 
+                                            key={entry.entry}
+                                            className={`flex items-center justify-between p-2 rounded-md text-sm ${
+                                              isCurrentManager ? 'bg-blue-50 border border-blue-200' : 'hover:bg-gray-50'
+                                            }`}
+                                          >
+                                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                                              <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ${
+                                                entry.live_rank === 1 ? 'bg-yellow-100 text-yellow-800' :
+                                                entry.live_rank === 2 ? 'bg-gray-100 text-gray-800' :
+                                                entry.live_rank === 3 ? 'bg-orange-100 text-orange-800' :
+                                                'bg-blue-50 text-blue-800'
+                                              }`}>
+                                                {entry.live_rank}
+                                              </div>
+                                              <div className="min-w-0 flex-1">
+                                                <div className="font-medium text-gray-800 truncate text-xs">
+                                                  {entry.player_name}
+                                                  {isCurrentManager && <Badge className="ml-1 bg-blue-600 text-[10px] py-0 px-1">You</Badge>}
+                                                </div>
+                                                <div className="text-[10px] text-gray-500 truncate">{entry.entry_name}</div>
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                              <div className="text-right">
+                                                <div className="font-bold text-green-700 text-xs">
+                                                  {entry.live_points} pts
+                                                  {entry.auto_sub_points > 0 && (
+                                                    <span className="text-[10px] text-orange-600 ml-1">(+{entry.auto_sub_points} sub)</span>
+                                                  )}
+                                                </div>
+                                                <div className="text-[10px] text-gray-500">
+                                                  Total: {entry.live_total.toLocaleString()}
+                                                </div>
+                                              </div>
+                                              {entry.rank_change !== 0 && (
+                                                <div className={`flex items-center gap-0.5 text-[10px] font-medium px-1 py-0.5 rounded ${
+                                                  entry.rank_change > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+                                                }`}>
+                                                  {entry.rank_change > 0 ? (
+                                                    <>
+                                                      <ChevronUp className="h-3 w-3" />
+                                                      <span>{entry.rank_change}</span>
+                                                    </>
+                                                  ) : (
+                                                    <>
+                                                      <ChevronDown className="h-3 w-3" />
+                                                      <span>{Math.abs(entry.rank_change)}</span>
+                                                    </>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <div className="text-center text-gray-500 text-sm py-4">
+                                      Failed to load live standings
+                                    </div>
+                                  )}
+                                  
+                                  {liveStandingsData && (
+                                    <div className="mt-2 pt-2 border-t border-gray-100 text-[10px] text-gray-400 text-center">
+                                      Updated: {new Date(liveStandingsData.last_updated).toLocaleTimeString()}
+                                      {liveStandingsData.is_gameweek_finished && (
+                                        <span className="ml-2 text-amber-600">(GW Finished)</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           );
                         })}

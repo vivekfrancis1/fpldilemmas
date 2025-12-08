@@ -2119,6 +2119,237 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // League Live Standings - includes live points, bonus, and auto-sub calculations
+  app.get("/api/leagues-classic/:leagueId/live-standings", async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+      
+      if (!leagueId || isNaN(Number(leagueId))) {
+        return res.status(400).json({ message: "Invalid league ID" });
+      }
+      
+      console.log(`DEBUG: Fetching live standings for league ${leagueId}`);
+      
+      // Fetch bootstrap data for current gameweek
+      const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse || !bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      const bootstrapData = await bootstrapResponse.json();
+      const currentGW = bootstrapData.events.find((event: any) => event.is_current);
+      const currentGameweek = currentGW?.id || 1;
+      const isGameweekFinished = currentGW?.finished || false;
+      
+      // Fetch live gameweek data
+      const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${currentGameweek}/live/`);
+      if (!liveResponse || !liveResponse.ok) {
+        throw new Error("Failed to fetch live data");
+      }
+      const liveData = await liveResponse.json();
+      
+      // Create a map of player ID -> live stats
+      const livePlayerStats = new Map<number, any>();
+      for (const element of liveData.elements) {
+        livePlayerStats.set(element.id, element.stats);
+      }
+      
+      // Fetch league standings
+      const standingsResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_new_entries=1&page_standings=1&phase=1`);
+      if (!standingsResponse || !standingsResponse.ok) {
+        throw new Error("Failed to fetch league standings");
+      }
+      const standingsData = await standingsResponse.json();
+      
+      const entries = standingsData.standings?.results || [];
+      
+      // Calculate live points for each manager (limit to first 50 for performance)
+      const managersToProcess = entries.slice(0, 50);
+      
+      const liveStandings = await Promise.all(
+        managersToProcess.map(async (entry: any) => {
+          try {
+            // Fetch manager's picks for current gameweek
+            const picksResponse = await fetchWithRetry(
+              `https://fantasy.premierleague.com/api/entry/${entry.entry}/event/${currentGameweek}/picks/`
+            );
+            
+            if (!picksResponse || !picksResponse.ok) {
+              return {
+                ...entry,
+                live_points: entry.event_total || 0,
+                live_total: entry.total,
+                auto_sub_points: 0,
+                bonus_points: 0,
+                players_played: 0,
+                captain_points: 0,
+                bench_points: 0,
+                active_chip: null
+              };
+            }
+            
+            const picksData = await picksResponse.json();
+            const picks = picksData.picks || [];
+            const activeChip = picksData.active_chip;
+            
+            let livePoints = 0;
+            let benchPoints = 0;
+            let bonusPoints = 0;
+            let captainPoints = 0;
+            let playersPlayed = 0;
+            let autoSubPoints = 0;
+            
+            // Separate starting 11 and bench
+            const starting11 = picks.filter((p: any) => p.position <= 11);
+            const bench = picks.filter((p: any) => p.position > 11).sort((a: any, b: any) => a.position - b.position);
+            
+            // Track which positions need auto-subs
+            interface StartingPlayer {
+              pick: any;
+              stats: any;
+              elementType: number;
+            }
+            const startingPlayersWithStats: StartingPlayer[] = [];
+            const benchPlayersWithStats: { pick: any; stats: any; elementType: number }[] = [];
+            
+            // Get element types for players
+            const playerTypes = new Map<number, number>();
+            for (const player of bootstrapData.elements) {
+              playerTypes.set(player.id, player.element_type);
+            }
+            
+            // Process starting 11
+            for (const pick of starting11) {
+              const stats = livePlayerStats.get(pick.element);
+              const elementType = playerTypes.get(pick.element) || 0;
+              startingPlayersWithStats.push({ pick, stats, elementType });
+              
+              if (stats) {
+                const playerPoints = stats.total_points || 0;
+                const multiplier = pick.multiplier || 1;
+                
+                livePoints += playerPoints * multiplier;
+                bonusPoints += (stats.bonus || 0) * multiplier;
+                
+                if (pick.is_captain) {
+                  captainPoints = playerPoints * multiplier;
+                }
+                
+                if (stats.minutes > 0) {
+                  playersPlayed++;
+                }
+              }
+            }
+            
+            // Process bench
+            for (const pick of bench) {
+              const stats = livePlayerStats.get(pick.element);
+              const elementType = playerTypes.get(pick.element) || 0;
+              benchPlayersWithStats.push({ pick, stats, elementType });
+              
+              if (stats) {
+                benchPoints += stats.total_points || 0;
+              }
+            }
+            
+            // Calculate auto-subs (only if not using bench boost)
+            if (activeChip !== 'bboost') {
+              // Find players who didn't play (0 minutes)
+              const playersNotPlayed = startingPlayersWithStats.filter(
+                p => p.stats && p.stats.minutes === 0
+              );
+              
+              // Available bench players (who have played)
+              const availableBench = benchPlayersWithStats.filter(
+                p => p.stats && p.stats.minutes > 0
+              );
+              
+              // Simple auto-sub logic (FPL rules are complex, this is a simplified version)
+              let subsUsed = 0;
+              const maxSubs = 3;
+              
+              for (const notPlayed of playersNotPlayed) {
+                if (subsUsed >= maxSubs) break;
+                
+                // Find a valid bench player (must maintain valid formation)
+                for (const benchPlayer of availableBench) {
+                  // Check if this bench player can substitute
+                  // Simplified: same position type or flexible positions
+                  const canSub = benchPlayer.elementType === notPlayed.elementType ||
+                    (benchPlayer.elementType >= 2 && notPlayed.elementType >= 2); // Outfield players
+                  
+                  if (canSub && !benchPlayer.pick.used) {
+                    autoSubPoints += benchPlayer.stats.total_points || 0;
+                    benchPlayer.pick.used = true;
+                    subsUsed++;
+                    break;
+                  }
+                }
+              }
+            }
+            
+            // If bench boost is active, add all bench points
+            if (activeChip === 'bboost') {
+              livePoints += benchPoints;
+            }
+            
+            return {
+              ...entry,
+              live_points: livePoints + autoSubPoints,
+              live_total: (entry.total - (entry.event_total || 0)) + livePoints + autoSubPoints,
+              auto_sub_points: autoSubPoints,
+              bonus_points: bonusPoints,
+              players_played: playersPlayed,
+              captain_points: captainPoints,
+              bench_points: benchPoints,
+              active_chip: activeChip
+            };
+          } catch (error) {
+            console.warn(`Failed to get live data for manager ${entry.entry}:`, error);
+            return {
+              ...entry,
+              live_points: entry.event_total || 0,
+              live_total: entry.total,
+              auto_sub_points: 0,
+              bonus_points: 0,
+              players_played: 0,
+              captain_points: 0,
+              bench_points: 0,
+              active_chip: null
+            };
+          }
+        })
+      );
+      
+      // Sort by live total points
+      const sortedStandings = liveStandings.sort((a, b) => b.live_total - a.live_total);
+      
+      // Add live rank
+      sortedStandings.forEach((entry, index) => {
+        entry.live_rank = index + 1;
+        entry.rank_change = entry.rank - entry.live_rank;
+      });
+      
+      console.log(`DEBUG: Calculated live standings for ${sortedStandings.length} managers in league ${leagueId}`);
+      
+      res.json({
+        league: standingsData.league,
+        standings: {
+          ...standingsData.standings,
+          results: sortedStandings
+        },
+        current_gameweek: currentGameweek,
+        is_gameweek_finished: isGameweekFinished,
+        last_updated: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error(`Error fetching live league standings for ID ${req.params.leagueId}:`, error);
+      res.status(500).json({
+        error: "Failed to fetch live league standings",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Top 50 Managers Overall League endpoint with rank change tracking
   app.get("/api/top50-managers", async (req, res) => {
     try {
