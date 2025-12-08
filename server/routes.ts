@@ -2158,17 +2158,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const fixturesData = fixturesResponse?.ok ? await fixturesResponse.json() : [];
       
       // Create a map of team ID -> fixture status (finished or not)
-      const teamFixtureStatus = new Map<number, { finished: boolean; started: boolean }>();
+      const teamFixtureStatus = new Map<number, { finished: boolean; started: boolean; finished_provisional: boolean }>();
       for (const fixture of fixturesData) {
         teamFixtureStatus.set(fixture.team_h, { 
           finished: fixture.finished || false, 
-          started: fixture.started || false 
+          started: fixture.started || false,
+          finished_provisional: fixture.finished_provisional || false
         });
         teamFixtureStatus.set(fixture.team_a, { 
           finished: fixture.finished || false, 
-          started: fixture.started || false 
+          started: fixture.started || false,
+          finished_provisional: fixture.finished_provisional || false
         });
       }
+      
+      // Check if any fixtures are still live (started but not finished) or have provisional bonus
+      const hasLiveFixtures = fixturesData.some((f: any) => f.started && !f.finished);
+      const hasProvisionalBonus = fixturesData.some((f: any) => f.finished_provisional && !f.finished);
       
       // Create a map of player ID -> team ID
       const playerTeams = new Map<number, number>();
@@ -2376,6 +2382,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         current_gameweek: currentGameweek,
         is_gameweek_finished: isGameweekFinished,
+        has_live_fixtures: hasLiveFixtures,
+        has_provisional_bonus: hasProvisionalBonus || hasLiveFixtures,
         last_updated: new Date().toISOString()
       });
     } catch (error) {

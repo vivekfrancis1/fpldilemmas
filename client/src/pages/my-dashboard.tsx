@@ -263,6 +263,8 @@ interface LiveLeagueStandings {
   };
   current_gameweek: number;
   is_gameweek_finished: boolean;
+  has_live_fixtures: boolean;
+  has_provisional_bonus: boolean;
   last_updated: string;
 }
 
@@ -1322,8 +1324,8 @@ export default function MyDashboard() {
                                                   {entry.auto_sub_points > 0 && (
                                                     <span className="text-orange-600 ml-1">(+{entry.auto_sub_points} sub)</span>
                                                   )}
-                                                  {entry.bonus_points > 0 && (
-                                                    <span className="text-green-600 ml-1">(+{entry.bonus_points} bonus)</span>
+                                                  {entry.bonus_points > 0 && liveStandingsData.has_provisional_bonus && (
+                                                    <span className="text-green-600 ml-1">(+{entry.bonus_points} prov. bonus)</span>
                                                   )}
                                                 </div>
                                               </div>
