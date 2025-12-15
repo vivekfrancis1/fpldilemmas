@@ -2778,9 +2778,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Fetch live event data to get accurate player points
-      try {
-        const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${currentGameweek}/live/`);
-        if (liveResponse && liveResponse.ok) {
+      // Guard: ensure currentGameweek is a valid number before fetching
+      if (currentGameweek && typeof currentGameweek === 'number' && currentGameweek > 0) {
+        try {
+          const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${currentGameweek}/live/`);
+          if (liveResponse && liveResponse.ok) {
           const liveData = await liveResponse.json();
           
           // Create a map of player ID -> live stats
@@ -2811,6 +2813,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (liveError) {
         console.log("DEBUG: Error fetching live data:", liveError);
+      }
       }
       
       console.log("DEBUG: Final transfers object:", JSON.stringify(data.transfers));
