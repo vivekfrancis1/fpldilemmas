@@ -22,6 +22,7 @@ export interface PitchPlayer {
   team_short_name?: string;
   team_id?: number;
   event_points?: number;
+  live_minutes?: number;
   in_dreamteam?: boolean;
   fixture_started?: boolean;
   fixture_finished?: boolean;
@@ -49,8 +50,13 @@ function getPointsDisplay(player: PitchPlayer): string {
   if (!player.fixture_started && player.fixture_opponent) {
     return `${player.fixture_opponent} (${player.fixture_is_home ? 'H' : 'A'})`;
   }
-  // If match finished with 0 points (player didn't play), show dash
+  // If match finished with 0 points, check if player actually played
   if (player.fixture_finished && (player.event_points || 0) === 0) {
+    // If player has minutes > 0, they played but scored 0 points - show "0"
+    // If player has 0 minutes or undefined, they didn't play - show "-"
+    if (player.live_minutes && player.live_minutes > 0) {
+      return '0';
+    }
     return '-';
   }
   // Otherwise show points (with captain multiplier)
