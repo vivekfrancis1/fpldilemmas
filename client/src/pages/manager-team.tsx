@@ -47,6 +47,12 @@ type TeamPick = {
   element_type: number;
   player_name: string;
   team_name: string;
+  live_points?: number;
+  live_minutes?: number;
+  live_goals_scored?: number;
+  live_assists?: number;
+  live_bonus?: number;
+  live_bps?: number;
 };
 
 type TeamData = {
@@ -475,15 +481,18 @@ export default function ManagerTeam() {
   }
 
   // Enrich picks with player data from bootstrap
+  // Use live_points from API response (accurate) over event_points from bootstrap (may be stale)
   const enrichedPicks = teamData?.picks?.map(pick => {
     const playerData = getPlayerData(pick.element);
-    const teamData = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    const teamDataLocal = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    // Prefer live_points from API response over bootstrap event_points
+    const points = pick.live_points !== undefined ? pick.live_points : (playerData?.event_points || 0);
     return {
       ...pick,
       player_name: playerData ? `${playerData.first_name} ${playerData.second_name}` : 'Unknown Player',
-      team_name: teamData?.name || 'Unknown Team',
+      team_name: teamDataLocal?.name || 'Unknown Team',
       now_cost: playerData?.now_cost || 0,
-      event_points: playerData?.event_points || 0,
+      event_points: points,
       element_type: playerData?.element_type || 1,
     };
   }) || [];

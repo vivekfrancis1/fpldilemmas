@@ -2777,6 +2777,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("DEBUG: History fetch failed, chips set to empty array");
       }
       
+      // Fetch live event data to get accurate player points
+      try {
+        const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${currentGameweek}/live/`);
+        if (liveResponse && liveResponse.ok) {
+          const liveData = await liveResponse.json();
+          
+          // Create a map of player ID -> live stats
+          const livePlayerStats = new Map<number, any>();
+          for (const element of liveData.elements) {
+            livePlayerStats.set(element.id, element.stats);
+          }
+          
+          // Enhance picks with live points
+          if (data.picks && Array.isArray(data.picks)) {
+            data.picks = data.picks.map((pick: any) => {
+              const liveStats = livePlayerStats.get(pick.element);
+              return {
+                ...pick,
+                live_points: liveStats?.total_points || 0,
+                live_minutes: liveStats?.minutes || 0,
+                live_goals_scored: liveStats?.goals_scored || 0,
+                live_assists: liveStats?.assists || 0,
+                live_bonus: liveStats?.bonus || 0,
+                live_bps: liveStats?.bps || 0,
+              };
+            });
+          }
+          
+          console.log("DEBUG: Added live points to picks");
+        } else {
+          console.log("DEBUG: Could not fetch live data, using static points");
+        }
+      } catch (liveError) {
+        console.log("DEBUG: Error fetching live data:", liveError);
+      }
+      
       console.log("DEBUG: Final transfers object:", JSON.stringify(data.transfers));
       
       res.json(data);
