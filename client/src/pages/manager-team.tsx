@@ -503,10 +503,25 @@ export default function ManagerTeam() {
   const captain = enrichedPicks.find(p => p.is_captain);
   const viceCaptain = enrichedPicks.find(p => p.is_vice_captain);
   
+  // Helper to get fixture status for a player's team
+  const getPlayerFixtureStatus = (teamId: number) => {
+    const fixture = getCurrentGameweekFixture(teamId);
+    if (!fixture) {
+      return { started: false, finished: false, opponent: undefined, isHome: true };
+    }
+    return {
+      started: fixture.started,
+      finished: fixture.finished,
+      opponent: fixture.opponent,
+      isHome: fixture.isHome,
+    };
+  };
+
   // Map enriched picks to PitchPlayer format for pitch view
   const pitchPlayers: PitchPlayer[] = startingEleven.map(pick => {
     const playerData = getPlayerData(pick.element);
-    const teamData = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    const teamDataLocal = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    const fixtureStatus = getPlayerFixtureStatus(playerData?.team || 0);
     
     return {
       element: pick.element,
@@ -518,17 +533,22 @@ export default function ManagerTeam() {
       player_name: pick.player_name,
       web_name: playerData?.web_name,
       team_name: pick.team_name,
-      team_short_name: teamData?.short_name,
+      team_short_name: teamDataLocal?.short_name,
       team_id: playerData?.team,
       event_points: pick.event_points,
       in_dreamteam: playerData?.in_dreamteam || false,
+      fixture_started: fixtureStatus.started,
+      fixture_finished: fixtureStatus.finished,
+      fixture_opponent: fixtureStatus.opponent,
+      fixture_is_home: fixtureStatus.isHome,
     };
   });
 
   // Map bench players to PitchPlayer format
   const benchPlayers: PitchPlayer[] = substitutes.map(pick => {
     const playerData = getPlayerData(pick.element);
-    const teamData = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    const teamDataLocal = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    const fixtureStatus = getPlayerFixtureStatus(playerData?.team || 0);
     
     return {
       element: pick.element,
@@ -540,10 +560,14 @@ export default function ManagerTeam() {
       player_name: pick.player_name,
       web_name: playerData?.web_name,
       team_name: pick.team_name,
-      team_short_name: teamData?.short_name,
+      team_short_name: teamDataLocal?.short_name,
       team_id: playerData?.team,
       event_points: pick.event_points,
       in_dreamteam: playerData?.in_dreamteam || false,
+      fixture_started: fixtureStatus.started,
+      fixture_finished: fixtureStatus.finished,
+      fixture_opponent: fixtureStatus.opponent,
+      fixture_is_home: fixtureStatus.isHome,
     };
   });
 

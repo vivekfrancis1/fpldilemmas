@@ -23,6 +23,10 @@ export interface PitchPlayer {
   team_id?: number;
   event_points?: number;
   in_dreamteam?: boolean;
+  fixture_started?: boolean;
+  fixture_finished?: boolean;
+  fixture_opponent?: string;
+  fixture_is_home?: boolean;
 }
 
 export interface PitchFixture {
@@ -37,6 +41,21 @@ export interface PitchViewProps {
   benchPlayers?: PitchPlayer[];
   getNextFixtures?: (teamId: number, count: number) => PitchFixture[];
   showFixtures?: boolean;
+}
+
+// Helper function to get display text for points/fixture
+function getPointsDisplay(player: PitchPlayer): string {
+  // If match hasn't started, show opponent info
+  if (!player.fixture_started && player.fixture_opponent) {
+    return `${player.fixture_opponent} (${player.fixture_is_home ? 'H' : 'A'})`;
+  }
+  // If match finished with 0 points (player didn't play), show dash
+  if (player.fixture_finished && (player.event_points || 0) === 0) {
+    return '-';
+  }
+  // Otherwise show points (with captain multiplier)
+  const points = (player.event_points || 0) * (player.is_captain ? 2 : player.multiplier || 1);
+  return points.toString();
 }
 
 export function PitchView({ players, benchPlayers = [], getNextFixtures, showFixtures = true }: PitchViewProps) {
@@ -99,8 +118,8 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
                           {player.in_dreamteam && (<g><circle cx="307" cy="72" r="17" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 307 63 L 309 69 L 315 69 L 310 73 L 312 79 L 307 75 L 302 79 L 304 73 L 299 69 L 305 69 Z" fill="white" /></g>)}
                           <text x="202" y="112" className="text-[42px] sm:text-[34px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.team_short_name || 'UNK'}</text>
                           <text x="202" y="165" className="text-[44px] sm:text-[36px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name || player.player_name || 'Unknown'}</text>
-                          <text x="202" y="218" className="text-[49px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{(player.event_points || 0) * (player.is_captain ? 2 : player.multiplier || 1)}</text>
-                          {showFixtures && getNextFixtures && player.team_id && (() => {
+                          <text x="202" y="218" className="text-[49px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPointsDisplay(player)}</text>
+                          {showFixtures && getNextFixtures && player.team_id && player.fixture_started !== false && (() => {
                             const fixtures = getNextFixtures(player.team_id, 1);
                             if (fixtures.length > 0) {
                               const fixture = fixtures[0];
@@ -142,8 +161,8 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
                           {player.in_dreamteam && (<g><circle cx="307" cy="72" r="17" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 307 63 L 309 69 L 315 69 L 310 73 L 312 79 L 307 75 L 302 79 L 304 73 L 299 69 L 305 69 Z" fill="white" /></g>)}
                           <text x="202" y="112" className="text-[42px] sm:text-[34px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.team_short_name || 'UNK'}</text>
                           <text x="202" y="165" className="text-[44px] sm:text-[36px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name || player.player_name || 'Unknown'}</text>
-                          <text x="202" y="218" className="text-[49px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{(player.event_points || 0) * (player.is_captain ? 2 : player.multiplier || 1)}</text>
-                          {showFixtures && getNextFixtures && player.team_id && (() => {
+                          <text x="202" y="218" className="text-[49px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPointsDisplay(player)}</text>
+                          {showFixtures && getNextFixtures && player.team_id && player.fixture_started !== false && (() => {
                             const fixtures = getNextFixtures(player.team_id, 1);
                             if (fixtures.length > 0) {
                               const fixture = fixtures[0];
@@ -186,8 +205,8 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
                           {player.in_dreamteam && (<g><circle cx="307" cy="72" r="17" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 307 63 L 309 69 L 315 69 L 310 73 L 312 79 L 307 75 L 302 79 L 304 73 L 299 69 L 305 69 Z" fill="white" /></g>)}
                           <text x="202" y="112" className="text-[42px] sm:text-[34px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.team_short_name || 'UNK'}</text>
                           <text x="202" y="165" className="text-[44px] sm:text-[36px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name || player.player_name || 'Unknown'}</text>
-                          <text x="202" y="218" className="text-[49px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{(player.event_points || 0) * (player.is_captain ? 2 : player.multiplier || 1)}</text>
-                          {showFixtures && getNextFixtures && player.team_id && (() => {
+                          <text x="202" y="218" className="text-[49px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPointsDisplay(player)}</text>
+                          {showFixtures && getNextFixtures && player.team_id && player.fixture_started !== false && (() => {
                             const fixtures = getNextFixtures(player.team_id, 1);
                             if (fixtures.length > 0) {
                               const fixture = fixtures[0];
@@ -230,8 +249,8 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
                           {player.in_dreamteam && (<g><circle cx="307" cy="72" r="17" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 307 63 L 309 69 L 315 69 L 310 73 L 312 79 L 307 75 L 302 79 L 304 73 L 299 69 L 305 69 Z" fill="white" /></g>)}
                           <text x="202" y="112" className="text-[42px] sm:text-[34px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.team_short_name || 'UNK'}</text>
                           <text x="202" y="165" className="text-[44px] sm:text-[36px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name || player.player_name || 'Unknown'}</text>
-                          <text x="202" y="218" className="text-[49px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{(player.event_points || 0) * (player.is_captain ? 2 : player.multiplier || 1)}</text>
-                          {showFixtures && getNextFixtures && player.team_id && (() => {
+                          <text x="202" y="218" className="text-[49px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPointsDisplay(player)}</text>
+                          {showFixtures && getNextFixtures && player.team_id && player.fixture_started !== false && (() => {
                             const fixtures = getNextFixtures(player.team_id, 1);
                             if (fixtures.length > 0) {
                               const fixture = fixtures[0];
@@ -269,8 +288,8 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
                           {player.in_dreamteam && (<g><circle cx="307" cy="72" r="17" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 307 63 L 309 69 L 315 69 L 310 73 L 312 79 L 307 75 L 302 79 L 304 73 L 299 69 L 305 69 Z" fill="white" /></g>)}
                           <text x="202" y="112" className="text-[43px] sm:text-[34px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.team_short_name || 'UNK'}</text>
                           <text x="202" y="165" className="text-[47px] sm:text-[36px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name || player.player_name || 'Unknown'}</text>
-                          <text x="202" y="218" className="text-[52px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.event_points || 0}</text>
-                          {showFixtures && getNextFixtures && player.team_id && (() => {
+                          <text x="202" y="218" className="text-[52px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPointsDisplay(player)}</text>
+                          {showFixtures && getNextFixtures && player.team_id && player.fixture_started !== false && (() => {
                             const fixtures = getNextFixtures(player.team_id, 1);
                             if (fixtures.length > 0) {
                               const fixture = fixtures[0];
