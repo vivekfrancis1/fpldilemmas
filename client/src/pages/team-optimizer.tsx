@@ -1026,6 +1026,32 @@ export default function TeamOptimizer() {
     );
   }
 
+  if (teamDataError && !teamData) {
+    const errorMessage = (teamDataError as any)?.message || '';
+    const isSessionExpired = errorMessage.includes('session expired') || errorMessage.includes('401');
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
+        <div className="max-w-2xl mx-auto pt-12 space-y-4">
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              {isSessionExpired 
+                ? "Your FPL session has expired. Please reconnect your FPL account or enter a Manager ID to view public team data."
+                : `Unable to load team data for manager ID: ${searchedId}. Please check the ID and try again.`
+              }
+            </AlertDescription>
+          </Alert>
+          {isSessionExpired && (
+            <div className="flex justify-center">
+              <FplConnectDialog />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (!teamData || !teamData.picks || teamData.picks.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
