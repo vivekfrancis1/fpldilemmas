@@ -889,8 +889,15 @@ export default function MyDashboard() {
   };
 
   const getTotalPoints = (): number => {
+    // Use the official FPL total from managerData for consistency (includes transfer costs)
+    if (managerData?.summary_overall_points) {
+      return managerData.summary_overall_points;
+    }
+    // Fallback to history calculation if managerData not available
     if (!historyData || !Array.isArray(historyData?.current)) return 0;
-    return historyData.current.reduce((total: number, gw: any) => total + (gw.points || 0), 0);
+    // Sum points and subtract transfer costs for accurate total
+    return historyData.current.reduce((total: number, gw: any) => 
+      total + (gw.points || 0) - (gw.event_transfers_cost || 0), 0);
   };
 
   const sortPlayersByPosition = (picks: TeamPick[]) => {
