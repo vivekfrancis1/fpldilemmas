@@ -564,6 +564,7 @@ export default function ManagerTeam() {
       team_short_name: teamDataLocal?.short_name,
       team_id: playerData?.team,
       event_points: pick.event_points,
+      live_minutes: pick.live_minutes,
       in_dreamteam: playerData?.in_dreamteam || false,
       fixture_started: fixtureStatus.started,
       fixture_finished: fixtureStatus.finished,
