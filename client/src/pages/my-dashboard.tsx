@@ -988,9 +988,11 @@ export default function MyDashboard() {
         {error && (
           <Alert className="max-w-2xl mx-auto mb-6 sm:mb-8 border-red-200 bg-red-50">
             <AlertDescription className="text-red-700 text-sm sm:text-base">
-              {error instanceof Error 
-                ? error.message 
-                : "Failed to load manager data. Please check the Manager ID and try again."
+              {error instanceof Error && error.message.includes('session expired')
+                ? `FPL session expired. Please reconnect to sync your latest GW ${getNextGameweekDashboard()} team.`
+                : error instanceof Error 
+                  ? error.message 
+                  : "Failed to load manager data. Please check the Manager ID and try again."
               }
             </AlertDescription>
           </Alert>
