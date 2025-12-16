@@ -2009,7 +2009,7 @@ export default function MyDashboard() {
                             <>
                               <p className="text-sm text-red-700">
                                 {isOwnTeam 
-                                  ? "Failed to fetch your upcoming team. Your FPL session may have expired."
+                                  ? `FPL session expired. Please reconnect to sync your latest GW ${getNextGameweekDashboard()} team.`
                                   : "Team data for the upcoming gameweek is not available yet."}
                               </p>
                               {isOwnTeam && (

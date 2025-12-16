@@ -490,7 +490,7 @@ export default function TransferRecommendations() {
                 <div className="flex items-start gap-2">
                   <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div>
-                    Your FPL session has expired. The transfer recommendations are based on your team from GW {currentGW}. Connect your FPL account to get transfer recommendation based on your latest team from GW {upcomingGW}.
+                    FPL session expired. Please reconnect to sync your latest GW {upcomingGW} team.
                   </div>
                 </div>
               </AlertDescription>

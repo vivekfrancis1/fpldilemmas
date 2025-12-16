@@ -1037,7 +1037,7 @@ export default function TeamOptimizer() {
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               {isSessionExpired 
-                ? "Your FPL session has expired. Please reconnect your FPL account or enter a Manager ID to view public team data."
+                ? `FPL session expired. Please reconnect to sync your latest GW ${upcomingGW} team.`
                 : `Unable to load team data for manager ID: ${searchedId}. Please check the ID and try again.`
               }
             </AlertDescription>
@@ -1126,7 +1126,7 @@ export default function TeamOptimizer() {
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div>
-                    Your FPL session has expired. You are now viewing your team from GW {currentGW}. Connect your FPL account to view your latest team for GW {upcomingGW}.
+                    FPL session expired. Please reconnect to sync your latest GW {upcomingGW} team.
                   </div>
                 </div>
               </AlertDescription>

@@ -178,7 +178,7 @@ export function FplConnectDialog() {
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Your session has expired. Please reconnect your FPL account.
+                  FPL session expired. Please reconnect to sync your latest team.
                 </AlertDescription>
               </Alert>
             )}
