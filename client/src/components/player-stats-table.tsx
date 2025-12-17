@@ -253,6 +253,37 @@ export default function PlayerStatsTable({
     setColumnOrder(DEFAULT_COLUMN_ORDER);
   };
 
+  // Reset horizontal scroll position when zoom changes
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft = 0;
+    }
+  }, [zoomLevel]);
+  
+  // Check if we're viewing historical data - current season shows defensive contribution fields
+  const isHistoricalSeason = season && season !== "2025/26" && season !== "current";
+
+  // Get available columns based on current mode (filtered but not reordered - for the selector UI)
+  const availableColumns = useMemo(() => {
+    return COLUMN_DEFINITIONS.filter(col => {
+      if (col.currentSeasonOnly && isHistoricalSeason) return false;
+      if (col.totalsOnly && displayMode !== 'totals') return false;
+      return true;
+    });
+  }, [displayMode, isHistoricalSeason]);
+
+  // Get columns in user's custom order (for display in table and reorder UI)
+  const orderedColumns = useMemo(() => {
+    return columnOrder
+      .map(id => COLUMN_DEFINITIONS.find(c => c.id === id))
+      .filter((col): col is ColumnDefinition => {
+        if (!col) return false;
+        if (col.currentSeasonOnly && isHistoricalSeason) return false;
+        if (col.totalsOnly && displayMode !== 'totals') return false;
+        return true;
+      });
+  }, [columnOrder, displayMode, isHistoricalSeason]);
+
   // Toggle all columns in a category
   const toggleCategory = (category: string) => {
     const categoryColumns = availableColumns.filter(c => c.category === category);
@@ -284,36 +315,16 @@ export default function PlayerStatsTable({
     return visibleCount > 0 && visibleCount < categoryColumns.length;
   };
 
-  // Reset horizontal scroll position when zoom changes
+  // Auto-adjust zoom based on visible column count
   useEffect(() => {
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.scrollLeft = 0;
-    }
-  }, [zoomLevel]);
-  
-  // Check if we're viewing historical data - current season shows defensive contribution fields
-  const isHistoricalSeason = season && season !== "2025/26" && season !== "current";
-
-  // Get available columns based on current mode (filtered but not reordered - for the selector UI)
-  const availableColumns = useMemo(() => {
-    return COLUMN_DEFINITIONS.filter(col => {
-      if (col.currentSeasonOnly && isHistoricalSeason) return false;
-      if (col.totalsOnly && displayMode !== 'totals') return false;
-      return true;
-    });
-  }, [displayMode, isHistoricalSeason]);
-
-  // Get columns in user's custom order (for display in table and reorder UI)
-  const orderedColumns = useMemo(() => {
-    return columnOrder
-      .map(id => COLUMN_DEFINITIONS.find(c => c.id === id))
-      .filter((col): col is ColumnDefinition => {
-        if (!col) return false;
-        if (col.currentSeasonOnly && isHistoricalSeason) return false;
-        if (col.totalsOnly && displayMode !== 'totals') return false;
-        return true;
-      });
-  }, [columnOrder, displayMode, isHistoricalSeason]);
+    const visibleCount = orderedColumns.filter(col => visibleColumns.has(col.id)).length;
+    // Base calculation: fewer columns = higher zoom, more columns = lower zoom
+    // Range: 60% (many columns) to 150% (few columns)
+    const baseColumns = 12; // Reference point for 100% zoom
+    const optimalZoom = Math.round((baseColumns / Math.max(visibleCount, 3)) * 100);
+    const clampedZoom = Math.min(150, Math.max(60, optimalZoom));
+    setZoomLevel(clampedZoom);
+  }, [visibleColumns, orderedColumns]);
 
   // Check if column should be visible
   const isColumnVisible = (columnId: string) => {
