@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye, UserPlus, UserMinus, ZoomIn, ZoomOut, Settings2, Check } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye, UserPlus, UserMinus, ZoomIn, ZoomOut, Settings2, Check, GripVertical, MoveUp, MoveDown, RotateCcw } from "lucide-react";
 import { BootstrapData, Player, Team, ElementType } from "@shared/schema";
 import { FilterState, SortState, SortableField } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -75,6 +75,9 @@ const DEFAULT_VISIBLE_COLUMNS = [
   'form', 'selected_by_percent', 'expected_goals', 'expected_assists', 'expected_goal_involvements',
   'minutes', 'bonus', 'bps'
 ];
+
+// Default column order (matches COLUMN_DEFINITIONS order)
+const DEFAULT_COLUMN_ORDER = COLUMN_DEFINITIONS.map(c => c.id);
 
 const CATEGORY_LABELS: Record<string, string> = {
   core: 'Core Stats',
@@ -164,12 +167,35 @@ export default function PlayerStatsTable({
     }
     return new Set(DEFAULT_VISIBLE_COLUMNS);
   });
+  
+  // Column order state with localStorage persistence
+  const [columnOrder, setColumnOrder] = useState<string[]>(() => {
+    const saved = localStorage.getItem('playerStatsColumnOrder');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Ensure all columns are present (in case new columns were added)
+        const allColumnIds = COLUMN_DEFINITIONS.map(c => c.id);
+        const missingColumns = allColumnIds.filter(id => !parsed.includes(id));
+        return [...parsed.filter((id: string) => allColumnIds.includes(id)), ...missingColumns];
+      } catch {
+        return DEFAULT_COLUMN_ORDER;
+      }
+    }
+    return DEFAULT_COLUMN_ORDER;
+  });
+  
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Save visible columns to localStorage
   useEffect(() => {
     localStorage.setItem('playerStatsVisibleColumns', JSON.stringify(Array.from(visibleColumns)));
   }, [visibleColumns]);
+
+  // Save column order to localStorage
+  useEffect(() => {
+    localStorage.setItem('playerStatsColumnOrder', JSON.stringify(columnOrder));
+  }, [columnOrder]);
 
   // Toggle column visibility
   const toggleColumn = (columnId: string) => {
@@ -184,14 +210,47 @@ export default function PlayerStatsTable({
     });
   };
 
+  // Move column up in order
+  const moveColumnUp = (columnId: string) => {
+    setColumnOrder(prev => {
+      const index = prev.indexOf(columnId);
+      if (index <= 0) return prev;
+      const newOrder = [...prev];
+      [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+      return newOrder;
+    });
+  };
+
+  // Move column down in order
+  const moveColumnDown = (columnId: string) => {
+    setColumnOrder(prev => {
+      const index = prev.indexOf(columnId);
+      if (index < 0 || index >= prev.length - 1) return prev;
+      const newOrder = [...prev];
+      [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+      return newOrder;
+    });
+  };
+
   // Select all columns
   const selectAllColumns = () => {
     setVisibleColumns(new Set(COLUMN_DEFINITIONS.map(c => c.id)));
   };
 
-  // Reset to default columns
+  // Reset to default columns (visibility only)
   const resetColumns = () => {
     setVisibleColumns(new Set(DEFAULT_VISIBLE_COLUMNS));
+  };
+
+  // Reset column order to default
+  const resetColumnOrder = () => {
+    setColumnOrder(DEFAULT_COLUMN_ORDER);
+  };
+
+  // Reset everything (visibility and order)
+  const resetAll = () => {
+    setVisibleColumns(new Set(DEFAULT_VISIBLE_COLUMNS));
+    setColumnOrder(DEFAULT_COLUMN_ORDER);
   };
 
   // Reset horizontal scroll position when zoom changes
@@ -204,7 +263,7 @@ export default function PlayerStatsTable({
   // Check if we're viewing historical data - current season shows defensive contribution fields
   const isHistoricalSeason = season && season !== "2025/26" && season !== "current";
 
-  // Get available columns based on current mode
+  // Get available columns based on current mode (filtered but not reordered - for the selector UI)
   const availableColumns = useMemo(() => {
     return COLUMN_DEFINITIONS.filter(col => {
       if (col.currentSeasonOnly && isHistoricalSeason) return false;
@@ -212,6 +271,18 @@ export default function PlayerStatsTable({
       return true;
     });
   }, [displayMode, isHistoricalSeason]);
+
+  // Get columns in user's custom order (for display in table and reorder UI)
+  const orderedColumns = useMemo(() => {
+    return columnOrder
+      .map(id => COLUMN_DEFINITIONS.find(c => c.id === id))
+      .filter((col): col is ColumnDefinition => {
+        if (!col) return false;
+        if (col.currentSeasonOnly && isHistoricalSeason) return false;
+        if (col.totalsOnly && displayMode !== 'totals') return false;
+        return true;
+      });
+  }, [columnOrder, displayMode, isHistoricalSeason]);
 
   // Check if column should be visible
   const isColumnVisible = (columnId: string) => {
@@ -305,6 +376,129 @@ export default function PlayerStatsTable({
     }
     
     return value;
+  };
+
+  // Helper function to render cell content for a given column
+  const renderCellContent = (columnId: string, player: any, position: string) => {
+    const formatValue = (value: any, type: string) => {
+      if (type === 'decimal') {
+        return parseFloat(value) || 0;
+      }
+      return value;
+    };
+
+    switch (columnId) {
+      case 'now_cost':
+        return <span className="text-gray-900">£{((player.now_cost || player.end_cost || 0) / 10).toFixed(1)}m</span>;
+      case 'games_played':
+        const pointsPerGame = parseFloat(player.points_per_game) || 0;
+        return <span className="text-gray-900">{pointsPerGame > 0 ? Math.round(player.total_points / pointsPerGame) : 0}</span>;
+      case 'total_points':
+        return <span className="font-bold text-fpl-purple">{calculateStat(player, player.total_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'goals_scored':
+        return <span className="text-green-600">{calculateStat(player, player.goals_scored || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'assists':
+        return <span className="text-blue-600">{calculateStat(player, player.assists || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'clean_sheets':
+        return <span className="text-green-600">{calculateStat(player, player.clean_sheets || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'defensive_contribution':
+        return <span className="text-orange-600">{calculateStat(player, player.defensive_contribution || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'defensive_contribution_points':
+        if (isCbitPointsLoading) return <span className="text-gray-400">...</span>;
+        if (isCbitPointsError) return <span className="text-gray-400" title="CBIT points data unavailable">N/A</span>;
+        return <span className="text-yellow-600">{calculateStat(player, getCbitPoints(player.id)).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'value_season':
+        return <span className="text-green-700 font-semibold">{calculateStat(player, parseFloat(player.value_season || player.value_form || 0)).toFixed(1)}</span>;
+      case 'points_per_game':
+        return <span className="text-gray-900">{calculateStat(player, parseFloat(player.points_per_game || player.form || 0)).toFixed(1)}</span>;
+      case 'form':
+        return <span className="text-gray-900">{calculateStat(player, parseFloat(player.form || 0)).toFixed(1)}</span>;
+      case 'selected_by_percent':
+        return <span className="text-purple-700">{formatValue(player.selected_by_percent || 0, 'decimal')}%</span>;
+      case 'expected_goals':
+        return <span className="text-purple-600">{calculateStat(player, parseFloat(player.expected_goals || 0)).toFixed(1)}</span>;
+      case 'expected_assists':
+        return <span className="text-blue-600">{calculateStat(player, parseFloat(player.expected_assists || 0)).toFixed(1)}</span>;
+      case 'expected_goal_involvements':
+        return <span className="text-indigo-600">{calculateStat(player, parseFloat(player.expected_goal_involvements || 0)).toFixed(1)}</span>;
+      case 'expected_goals_conceded':
+        return <span className="text-red-600">{calculateStat(player, parseFloat(player.expected_goals_conceded || 0)).toFixed(1)}</span>;
+      case 'minutes':
+        return <span className="text-gray-900">{displayMode === 'totals' ? (player.minutes || 0) : calculateStat(player, player.minutes || 0).toFixed(0)}</span>;
+      case 'goals_conceded':
+        return <span className="text-red-600">{calculateStat(player, player.goals_conceded || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'saves':
+        return <span className="text-gray-900">{calculateStat(player, player.saves || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'save_points':
+        if (position !== 'GKP') return <span className="text-gray-400">-</span>;
+        if (isSavePointsLoading) return <span className="text-gray-400">...</span>;
+        if (isSavePointsError) return <span className="text-gray-400" title="Save points data unavailable">N/A</span>;
+        return <span className="text-blue-600">{calculateStat(player, getSavePoints(player.id)).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'minutes_points':
+        if (isMinutesPointsLoading) return <span className="text-gray-400">...</span>;
+        if (isMinutesPointsError) return <span className="text-gray-400" title="Minutes points data unavailable">N/A</span>;
+        return <span className="text-orange-600">{calculateStat(player, getMinutesPoints(player.id)).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'tackles':
+        return <span className="text-blue-700">{calculateStat(player, player.tackles || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'recoveries':
+        return <span className="text-green-700">{calculateStat(player, player.recoveries || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'clearances_blocks_interceptions':
+        return <span className="text-purple-700">{calculateStat(player, player.clearances_blocks_interceptions || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'starts':
+        return <span className="text-gray-900">{player.starts || 0}</span>;
+      case 'bonus':
+        return <span className="text-gray-900">{calculateStat(player, player.bonus || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'bps':
+        return <span className="text-gray-900">{calculateStat(player, player.bps || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'event_points':
+        return <span className="text-fpl-purple">{calculateStat(player, player.event_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'transfers_in_event':
+        return <span className="text-green-600">{(player.transfers_in_event || 0).toLocaleString()}</span>;
+      case 'transfers_out_event':
+        return <span className="text-red-600">{(player.transfers_out_event || 0).toLocaleString()}</span>;
+      case 'transfers_in':
+        return <span className="text-green-600">{(player.transfers_in || 0).toLocaleString()}</span>;
+      case 'transfers_out':
+        return <span className="text-red-600">{(player.transfers_out || 0).toLocaleString()}</span>;
+      case 'value_form':
+        return <span className="text-green-700 font-semibold">{formatValue(player.value_form || 0, 'decimal')}</span>;
+      case 'influence':
+        return <span className="text-gray-900">{formatValue(player.influence || 0, 'decimal')}</span>;
+      case 'creativity':
+        return <span className="text-gray-900">{formatValue(player.creativity || 0, 'decimal')}</span>;
+      case 'threat':
+        return <span className="text-gray-900">{formatValue(player.threat || 0, 'decimal')}</span>;
+      case 'ict_index':
+        return <span className="text-fpl-purple">{formatValue(player.ict_index || 0, 'decimal')}</span>;
+      case 'dreamteam_count':
+        return <span className="text-yellow-600">{player.dreamteam_count || 0}</span>;
+      case 'penalties_saved':
+        return <span className="text-green-600">{calculateStat(player, player.penalties_saved || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'penalties_missed':
+        return <span className="text-red-600">{calculateStat(player, player.penalties_missed || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'yellow_cards':
+        return <span className="text-yellow-600">{calculateStat(player, player.yellow_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'red_cards':
+        return <span className="text-red-600">{calculateStat(player, player.red_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'own_goals':
+        return <span className="text-red-600">{calculateStat(player, player.own_goals || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</span>;
+      case 'cost_change_event':
+        const eventChange = player.cost_change_event || 0;
+        return (
+          <span className={eventChange > 0 ? 'text-green-600' : eventChange < 0 ? 'text-red-600' : 'text-gray-900'}>
+            {eventChange > 0 ? '+' : ''}{(eventChange / 10).toFixed(1)}
+          </span>
+        );
+      case 'cost_change_start':
+        const startChange = player.cost_change_start || 0;
+        return (
+          <span className={startChange > 0 ? 'text-green-600' : startChange < 0 ? 'text-red-600' : 'text-gray-900'}>
+            {startChange > 0 ? '+' : ''}{(startChange / 10).toFixed(1)}
+          </span>
+        );
+      default:
+        return <span className="text-gray-500">-</span>;
+    }
   };
 
   const filteredAndSortedPlayers = useMemo(() => {
@@ -662,43 +856,115 @@ export default function PlayerStatsTable({
                   </Badge>
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 max-h-[400px] overflow-y-auto" align="end">
+              <PopoverContent className="w-96 max-h-[500px] overflow-y-auto" align="end">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between border-b pb-2">
-                    <h4 className="font-semibold text-sm">Select Columns</h4>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={selectAllColumns} className="h-7 text-xs px-2">
-                        All
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={resetColumns} className="h-7 text-xs px-2">
-                        Reset
+                    <h4 className="font-semibold text-sm">Column Settings</h4>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={resetAll} 
+                      className="h-7 text-xs px-2 gap-1"
+                      data-testid="button-reset-all"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Reset All
+                    </Button>
+                  </div>
+                  
+                  {/* Visibility Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs font-semibold text-gray-700">Show/Hide Columns</h5>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={selectAllColumns} className="h-6 text-xs px-2">
+                          All
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={resetColumns} className="h-6 text-xs px-2">
+                          Default
+                        </Button>
+                      </div>
+                    </div>
+                    {['core', 'performance', 'defensive', 'expected', 'transfers', 'other'].map(category => {
+                      const categoryColumns = availableColumns.filter(c => c.category === category);
+                      if (categoryColumns.length === 0) return null;
+                      return (
+                        <div key={category} className="space-y-1">
+                          <h6 className="text-xs font-medium text-gray-500">{CATEGORY_LABELS[category]}</h6>
+                          <div className="grid grid-cols-3 gap-1">
+                            {categoryColumns.map(col => (
+                              <label
+                                key={col.id}
+                                className="flex items-center gap-1.5 p-1 rounded hover:bg-gray-50 cursor-pointer text-xs"
+                              >
+                                <Checkbox
+                                  checked={visibleColumns.has(col.id)}
+                                  onCheckedChange={() => toggleColumn(col.id)}
+                                  className="h-3.5 w-3.5"
+                                  data-testid={`checkbox-column-${col.id}`}
+                                />
+                                <span className="truncate" title={col.tooltip}>{col.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Reorder Section */}
+                  <div className="border-t pt-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h5 className="text-xs font-semibold text-gray-700">Reorder Columns</h5>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={resetColumnOrder} 
+                        className="h-6 text-xs px-2 gap-1"
+                        data-testid="button-reset-order"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Default Order
                       </Button>
                     </div>
-                  </div>
-                  {['core', 'performance', 'defensive', 'expected', 'transfers', 'other'].map(category => {
-                    const categoryColumns = availableColumns.filter(c => c.category === category);
-                    if (categoryColumns.length === 0) return null;
-                    return (
-                      <div key={category} className="space-y-2">
-                        <h5 className="text-xs font-semibold text-gray-500 uppercase">{CATEGORY_LABELS[category]}</h5>
-                        <div className="grid grid-cols-2 gap-1">
-                          {categoryColumns.map(col => (
-                            <label
-                              key={col.id}
-                              className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-50 cursor-pointer text-sm"
+                    <p className="text-xs text-gray-500">Use arrows to reorder visible columns:</p>
+                    <div className="max-h-[200px] overflow-y-auto border rounded p-1 space-y-0.5">
+                      {orderedColumns.filter(col => visibleColumns.has(col.id)).map((col, index, arr) => (
+                        <div 
+                          key={col.id} 
+                          className="flex items-center justify-between p-1.5 rounded bg-gray-50 hover:bg-gray-100"
+                        >
+                          <div className="flex items-center gap-2">
+                            <GripVertical className="h-3.5 w-3.5 text-gray-400" />
+                            <span className="text-xs font-medium">{col.label}</span>
+                            <span className="text-xs text-gray-400">{col.tooltip}</span>
+                          </div>
+                          <div className="flex items-center gap-0.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => moveColumnUp(col.id)}
+                              disabled={index === 0}
+                              data-testid={`button-move-up-${col.id}`}
                             >
-                              <Checkbox
-                                checked={visibleColumns.has(col.id)}
-                                onCheckedChange={() => toggleColumn(col.id)}
-                                data-testid={`checkbox-column-${col.id}`}
-                              />
-                              <span className="truncate" title={col.tooltip}>{col.label}</span>
-                            </label>
-                          ))}
+                              <MoveUp className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => moveColumnDown(col.id)}
+                              disabled={index === arr.length - 1}
+                              data-testid={`button-move-down-${col.id}`}
+                            >
+                              <MoveDown className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </PopoverContent>
             </Popover>
@@ -782,233 +1048,12 @@ export default function PlayerStatsTable({
                   C
                 </th>
               )}
-              {/* Dynamic columns based on visibility */}
-              {isColumnVisible('now_cost') && (
-                <th className="px-1 py-1.5 text-center min-w-[50px]">
-                  <SortableHeader field="now_cost" label="£" tooltip="Price" />
+              {/* Dynamic columns in user's custom order */}
+              {orderedColumns.filter(col => visibleColumns.has(col.id)).map(col => (
+                <th key={col.id} className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field={col.field} label={col.label} tooltip={col.tooltip} />
                 </th>
-              )}
-              {isColumnVisible('games_played') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="games_played" label="MP" tooltip="Matches Played" />
-                </th>
-              )}
-              {isColumnVisible('total_points') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="total_points" label="Pts" tooltip="Total Points" />
-                </th>
-              )}
-              {isColumnVisible('goals_scored') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="goals_scored" label="G" tooltip="Goals Scored" />
-                </th>
-              )}
-              {isColumnVisible('assists') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="assists" label="A" tooltip="Assists" />
-                </th>
-              )}
-              {isColumnVisible('clean_sheets') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="clean_sheets" label="CS" tooltip="Clean Sheets" />
-                </th>
-              )}
-              {isColumnVisible('defensive_contribution') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="defensive_contribution" label="DC" tooltip="Defensive Contribution" />
-                </th>
-              )}
-              {isColumnVisible('defensive_contribution_points') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="defensive_contribution_points" label="DCP" tooltip="Defensive Contribution Points" />
-                </th>
-              )}
-              {isColumnVisible('value_season') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="value_season" label="Val" tooltip="Value (Points per Million)" />
-                </th>
-              )}
-              {isColumnVisible('points_per_game') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="points_per_game" label="PPG" tooltip="Points Per Game" />
-                </th>
-              )}
-              {isColumnVisible('form') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="form" label="Form" tooltip="Form (Last 5 Gameweeks)" />
-                </th>
-              )}
-              {isColumnVisible('selected_by_percent') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="selected_by_percent" label="Own%" tooltip="Ownership Percentage" />
-                </th>
-              )}
-              {isColumnVisible('expected_goals') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="expected_goals" label="xG" tooltip="Expected Goals" />
-                </th>
-              )}
-              {isColumnVisible('expected_assists') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="expected_assists" label="xA" tooltip="Expected Assists" />
-                </th>
-              )}
-              {isColumnVisible('expected_goal_involvements') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="expected_goal_involvements" label="xGI" tooltip="Expected Goal Involvements" />
-                </th>
-              )}
-              {isColumnVisible('expected_goals_conceded') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="expected_goals_conceded" label="xGC" tooltip="Expected Goals Conceded" />
-                </th>
-              )}
-              {isColumnVisible('minutes') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="minutes" label="Min" tooltip="Minutes Played" />
-                </th>
-              )}
-              {isColumnVisible('goals_conceded') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="goals_conceded" label="GC" tooltip="Goals Conceded" />
-                </th>
-              )}
-              {isColumnVisible('saves') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="saves" label="Sav" tooltip="Saves" />
-                </th>
-              )}
-              {isColumnVisible('save_points') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="save_points" label="SavP" tooltip="Save Points" />
-                </th>
-              )}
-              {isColumnVisible('minutes_points') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="minutes_points" label="MinP" tooltip="Minutes Points" />
-                </th>
-              )}
-              {isColumnVisible('tackles') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="tackles" label="Tck" tooltip="Tackles" />
-                </th>
-              )}
-              {isColumnVisible('recoveries') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="recoveries" label="Rec" tooltip="Recoveries" />
-                </th>
-              )}
-              {isColumnVisible('clearances_blocks_interceptions') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="clearances_blocks_interceptions" label="CBI" tooltip="Clearances, Blocks, Interceptions" />
-                </th>
-              )}
-              {isColumnVisible('starts') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="starts" label="Starts" />
-                </th>
-              )}
-              {isColumnVisible('bonus') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="bonus" label="Bonus" />
-                </th>
-              )}
-              {isColumnVisible('bps') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="bps" label="BPS" />
-                </th>
-              )}
-              {isColumnVisible('event_points') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="event_points" label="GW Pts" />
-                </th>
-              )}
-              {isColumnVisible('transfers_in_event') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="transfers_in_event" label="GW In" />
-                </th>
-              )}
-              {isColumnVisible('transfers_out_event') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="transfers_out_event" label="GW Out" />
-                </th>
-              )}
-              {isColumnVisible('transfers_in') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="transfers_in" label="Total In" />
-                </th>
-              )}
-              {isColumnVisible('transfers_out') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="transfers_out" label="Total Out" />
-                </th>
-              )}
-              {isColumnVisible('value_form') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="value_form" label="Val Form" />
-                </th>
-              )}
-              {isColumnVisible('influence') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="influence" label="Influence" />
-                </th>
-              )}
-              {isColumnVisible('creativity') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="creativity" label="Creativity" />
-                </th>
-              )}
-              {isColumnVisible('threat') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="threat" label="Threat" />
-                </th>
-              )}
-              {isColumnVisible('ict_index') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="ict_index" label="ICT" />
-                </th>
-              )}
-              {isColumnVisible('dreamteam_count') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="dreamteam_count" label="Dream Team" />
-                </th>
-              )}
-              {isColumnVisible('penalties_saved') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="penalties_saved" label="Pen Saved" />
-                </th>
-              )}
-              {isColumnVisible('penalties_missed') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="penalties_missed" label="Pen Missed" />
-                </th>
-              )}
-              {isColumnVisible('yellow_cards') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="yellow_cards" label="Yellow" />
-                </th>
-              )}
-              {isColumnVisible('red_cards') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="red_cards" label="Red" />
-                </th>
-              )}
-              {isColumnVisible('own_goals') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="own_goals" label="Own Goals" />
-                </th>
-              )}
-              {isColumnVisible('cost_change_event') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="cost_change_event" label="Price Δ GW" />
-                </th>
-              )}
-              {isColumnVisible('cost_change_start') && (
-                <th className="px-1 py-1 text-center min-w-[50px]">
-                  <SortableHeader field="cost_change_start" label="Price Δ Start" />
-                </th>
-              )}
-
+              ))}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -1081,196 +1126,12 @@ export default function PlayerStatsTable({
                       )}
                     </td>
                   )}
-                  {/* Dynamic columns based on visibility */}
-                  {isColumnVisible('now_cost') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">
-                      £{((player.now_cost || player.end_cost || 0) / 10).toFixed(1)}m
+                  {/* Dynamic columns in user's custom order */}
+                  {orderedColumns.filter(col => visibleColumns.has(col.id)).map(col => (
+                    <td key={col.id} className="px-2 py-4 text-center text-sm font-medium">
+                      {renderCellContent(col.id, player, position)}
                     </td>
-                  )}
-                  {isColumnVisible('games_played') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">
-                      {(() => {
-                        const pointsPerGame = parseFloat(player.points_per_game) || 0;
-                        return pointsPerGame > 0 ? Math.round(player.total_points / pointsPerGame) : 0;
-                      })()}
-                    </td>
-                  )}
-                  {isColumnVisible('total_points') && (
-                    <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{calculateStat(player, player.total_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('goals_scored') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{calculateStat(player, player.goals_scored || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('assists') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-blue-600">{calculateStat(player, player.assists || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('clean_sheets') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{calculateStat(player, player.clean_sheets || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('defensive_contribution') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-orange-600">{calculateStat(player, player.defensive_contribution || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('defensive_contribution_points') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-yellow-600" data-testid={`text-cbit-points-${player.id}`}>
-                      {(() => {
-                        if (isCbitPointsLoading) {
-                          return <span className="text-gray-400">...</span>;
-                        }
-                        if (isCbitPointsError) {
-                          return <span className="text-gray-400" title="CBIT points data unavailable">N/A</span>;
-                        }
-                        return calculateStat(player, getCbitPoints(player.id)).toFixed(displayMode === 'totals' ? 0 : 1);
-                      })()}
-                    </td>
-                  )}
-                  {isColumnVisible('value_season') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-green-700 font-semibold">{calculateStat(player, parseFloat(player.value_season || player.value_form || 0)).toFixed(1)}</td>
-                  )}
-                  {isColumnVisible('points_per_game') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, parseFloat(player.points_per_game || player.form || 0)).toFixed(1)}</td>
-                  )}
-                  {isColumnVisible('form') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, parseFloat(player.form || 0)).toFixed(1)}</td>
-                  )}
-                  {isColumnVisible('selected_by_percent') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-purple-700">{formatValue(player.selected_by_percent || 0, 'decimal')}%</td>
-                  )}
-                  {isColumnVisible('expected_goals') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-purple-600">{calculateStat(player, parseFloat(player.expected_goals || 0)).toFixed(1)}</td>
-                  )}
-                  {isColumnVisible('expected_assists') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-blue-600">{calculateStat(player, parseFloat(player.expected_assists || 0)).toFixed(1)}</td>
-                  )}
-                  {isColumnVisible('expected_goal_involvements') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600">{calculateStat(player, parseFloat(player.expected_goal_involvements || 0)).toFixed(1)}</td>
-                  )}
-                  {isColumnVisible('expected_goals_conceded') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, parseFloat(player.expected_goals_conceded || 0)).toFixed(1)}</td>
-                  )}
-                  {isColumnVisible('minutes') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{displayMode === 'totals' ? (player.minutes || 0) : calculateStat(player, player.minutes || 0).toFixed(0)}</td>
-                  )}
-                  {isColumnVisible('goals_conceded') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, player.goals_conceded || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('saves') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, player.saves || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('save_points') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-blue-600" data-testid={`text-save-points-${player.id}`}>
-                      {(() => {
-                        const position = getPositionName(player);
-                        if (position !== 'GKP') {
-                          return <span className="text-gray-400">-</span>;
-                        }
-                        if (isSavePointsLoading) {
-                          return <span className="text-gray-400">...</span>;
-                        }
-                        if (isSavePointsError) {
-                          return <span className="text-gray-400" title="Save points data unavailable">N/A</span>;
-                        }
-                        return calculateStat(player, getSavePoints(player.id)).toFixed(displayMode === 'totals' ? 0 : 1);
-                      })()} 
-                    </td>
-                  )}
-                  {isColumnVisible('minutes_points') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-orange-600" data-testid={`text-minutes-points-${player.id}`}>
-                      {(() => {
-                        if (isMinutesPointsLoading) {
-                          return <span className="text-gray-400">...</span>;
-                        }
-                        if (isMinutesPointsError) {
-                          return <span className="text-gray-400" title="Minutes points data unavailable">N/A</span>;
-                        }
-                        return calculateStat(player, getMinutesPoints(player.id)).toFixed(displayMode === 'totals' ? 0 : 1);
-                      })()}
-                    </td>
-                  )}
-                  {isColumnVisible('tackles') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-blue-700">{calculateStat(player, player.tackles || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('recoveries') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-green-700">{calculateStat(player, player.recoveries || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('clearances_blocks_interceptions') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-purple-700">{calculateStat(player, player.clearances_blocks_interceptions || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('starts') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{player.starts || 0}</td>
-                  )}
-                  {isColumnVisible('bonus') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, player.bonus || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('bps') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, player.bps || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('event_points') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-fpl-purple">{calculateStat(player, player.event_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('transfers_in_event') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{(player.transfers_in_event || 0).toLocaleString()}</td>
-                  )}
-                  {isColumnVisible('transfers_out_event') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{(player.transfers_out_event || 0).toLocaleString()}</td>
-                  )}
-                  {isColumnVisible('transfers_in') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{(player.transfers_in || 0).toLocaleString()}</td>
-                  )}
-                  {isColumnVisible('transfers_out') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{(player.transfers_out || 0).toLocaleString()}</td>
-                  )}
-                  {isColumnVisible('value_form') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-green-700 font-semibold">{formatValue(player.value_form || 0, 'decimal')}</td>
-                  )}
-                  {isColumnVisible('influence') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{formatValue(player.influence || 0, 'decimal')}</td>
-                  )}
-                  {isColumnVisible('creativity') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{formatValue(player.creativity || 0, 'decimal')}</td>
-                  )}
-                  {isColumnVisible('threat') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{formatValue(player.threat || 0, 'decimal')}</td>
-                  )}
-                  {isColumnVisible('ict_index') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-fpl-purple">{formatValue(player.ict_index || 0, 'decimal')}</td>
-                  )}
-                  {isColumnVisible('dreamteam_count') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-yellow-600">{player.dreamteam_count || 0}</td>
-                  )}
-                  {isColumnVisible('penalties_saved') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{calculateStat(player, player.penalties_saved || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('penalties_missed') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, player.penalties_missed || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('yellow_cards') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-yellow-600">{calculateStat(player, player.yellow_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('red_cards') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, player.red_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('own_goals') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, player.own_goals || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  )}
-                  {isColumnVisible('cost_change_event') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium">
-                      <div className="flex items-center justify-center">
-                        <span className={(player.cost_change_event || 0) > 0 ? 'text-green-600' : (player.cost_change_event || 0) < 0 ? 'text-red-600' : 'text-gray-900'}>
-                          {(player.cost_change_event || 0) > 0 ? '+' : ''}{formatValue((player.cost_change_event || 0) / 10, 'decimal')}
-                        </span>
-                      </div>
-                    </td>
-                  )}
-                  {isColumnVisible('cost_change_start') && (
-                    <td className="px-2 py-4 text-center text-sm font-medium">
-                      <div className="flex items-center justify-center">
-                        <span className={(player.cost_change_start || 0) > 0 ? 'text-green-600' : (player.cost_change_start || 0) < 0 ? 'text-red-600' : 'text-gray-900'}>
-                          {(player.cost_change_start || 0) > 0 ? '+' : ''}{formatValue((player.cost_change_start || 0) / 10, 'decimal')}
-                        </span>
-                      </div>
-                    </td>
-                  )}
-
+                  ))}
                 </tr>
               );
             })}
