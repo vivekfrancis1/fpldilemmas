@@ -2925,10 +2925,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate free transfers for next gameweek (NEW 2024/25 RULE: Max 5 FTs)
       // Start with 1 FT and look back through history to count accumulated unused transfers
       let freeTransfers = 1; // Start with base 1 FT
+      const planningStartGW = Math.min(currentGameweek + 1, 38);
       
-      if (historyData.current && historyData.current.length > 0) {
+      // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
+      if (planningStartGW === 16) {
+        // All managers get 5 free transfers in GW16 regardless of history
+        freeTransfers = 5;
+        console.log(`🎁 GW16 AFCON BONUS: Starting with 5 FTs for GW16 (AFCON top-up regardless of GW15 activity)`);
+      } else if (planningStartGW === 17 && historyData.current && historyData.current.length > 0) {
+        // SPECIAL CASE: GW17 - Calculate based on GW16 AFCON bonus
+        // In GW16, all managers had 5 FTs. Calculate: 5 - transfers_used_in_gw16 + 1
+        const gw16Data = historyData.current.find((gw: any) => gw.event === 16);
+        if (gw16Data) {
+          const transfersUsedInGW16 = gw16Data.event_transfers || 0;
+          const unusedFromGW16 = Math.max(0, 5 - transfersUsedInGW16);
+          freeTransfers = Math.min(5, unusedFromGW16 + 1); // Add 1 new FT, cap at 5
+          console.log(`🎁 GW17 POST-AFCON: GW16 had 5 FTs, used ${transfersUsedInGW16}, banked ${unusedFromGW16}, +1 new = ${freeTransfers} FTs for GW17`);
+        } else {
+          // GW16 not found in history, fall back to standard calculation
+          freeTransfers = 1;
+        }
+      } else if (historyData.current && historyData.current.length > 0) {
+        // Standard calculation for other gameweeks
         // Look back through recent gameweeks to calculate accumulated FTs
-        // Start from the current/most recent GW and work backwards
         let accumulatedFTs = 1; // Start with 1 new FT for next gameweek
         
         // Look back through history (up to 4 previous gameweeks since max is 5 FTs)
@@ -2946,14 +2965,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         freeTransfers = Math.min(5, accumulatedFTs); // Cap at 5
-      }
-      
-      // SPECIAL CASE: GW16 AFCON Free Transfer Top-Up (2024/25 season only)
-      // If our planning starts at GW16, all managers get 5 free transfers regardless of history
-      const planningStartGW = Math.min(currentGameweek + 1, 38);
-      if (planningStartGW === 16) {
-        freeTransfers = 5;
-        console.log(`🎁 GW16 AFCON BONUS: Starting with 5 FTs for GW16 (AFCON top-up regardless of GW15 activity)`);
       }
       
       console.log(`DEBUG: Bank: £${(bank / 10).toFixed(1)}m, Free transfers calculated for next planning GW: ${freeTransfers}`);
