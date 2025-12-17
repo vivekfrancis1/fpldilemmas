@@ -1301,49 +1301,57 @@ export default function PlayerTotalPoints() {
             </div>
               </div>
               
-              {/* Opponent Toggle Button */}
+              {/* Gameweek Toggle Section with Opponent Toggle */}
               <div className="mt-4 pt-4 border-t">
-                <Button
-                  variant={showOpponent ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setShowOpponent(!showOpponent)}
-                  className="flex items-center gap-2"
-                  data-testid="button-toggle-opponent"
-                >
-                  <Users className="h-4 w-4" />
-                  {showOpponent ? 'Hide Opponent' : 'Show Opponent'}
-                </Button>
-              </div>
-
-              {/* Gameweek Toggle Section */}
-              <div className="mt-4 pt-4 border-t">
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm font-medium text-gray-700">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <Label className="text-xs sm:text-sm font-medium text-gray-700">
                     Toggle Gameweeks (click to exclude/include):
                   </Label>
-                  {excludedGameweeks.size > 0 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={clearExclusions}
-                      className="text-xs text-gray-500 hover:text-gray-700"
-                      data-testid="button-clear-exclusions"
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowOpponent(!showOpponent)}
+                      className={`flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                        showOpponent 
+                          ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
+                      }`}
+                      data-testid="button-toggle-opponent"
                     >
-                      <X className="h-3 w-3 mr-1" />
-                      Clear exclusions
+                      <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">{showOpponent ? 'Hide Opponent' : 'Show Opponent'}</span>
+                      <span className="sm:hidden">{showOpponent ? 'Hide' : 'Show'}</span>
                     </Button>
-                  )}
+                    {excludedGameweeks.size > 0 && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={clearExclusions}
+                        className="text-xs text-gray-500 hover:text-gray-700 px-2 sm:px-3"
+                        data-testid="button-clear-exclusions"
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        <span className="hidden sm:inline">Clear exclusions</span>
+                        <span className="sm:hidden">Clear</span>
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {fullGameweekRange.map(gw => {
                     const isExcluded = excludedGameweeks.has(gw);
                     return (
                       <Button
                         key={gw}
-                        variant={isExcluded ? "outline" : "default"}
+                        variant="outline"
                         size="sm"
                         onClick={() => toggleGameweekExclusion(gw)}
-                        className={`min-w-[60px] ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                        className={`min-w-[50px] sm:min-w-[60px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                          isExcluded 
+                            ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' 
+                            : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'
+                        }`}
                         data-testid={`button-toggle-gw-${gw}`}
                       >
                         GW{gw}

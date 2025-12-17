@@ -389,54 +389,55 @@ export default function PlayerSaves() {
               </div>
             </div>
 
-            {/* Opponent Toggle */}
-            <div className="mt-4 pt-4 border-t flex items-center gap-4">
-              <Button
-                variant={showOpponent ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowOpponent(!showOpponent)}
-                className={showOpponent ? "bg-purple-600 hover:bg-purple-700" : ""}
-                data-testid="button-toggle-opponent"
-              >
-                {showOpponent ? "Hide Opponent" : "Show Opponent"}
-              </Button>
-              {showOpponent && (
-                <span className="text-xs text-gray-500">
-                  Showing opponent fixtures below saves
-                </span>
-              )}
-            </div>
-
             {/* Gameweek Toggle Section */}
             <div className="mt-4 pt-4 border-t">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-700">
-                  Toggle Gameweeks (click to exclude/include):
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">
+                  Toggle Gameweeks:
                 </label>
                 {excludedGameweeks.size > 0 && (
                   <Button 
                     variant="ghost" 
                     size="sm" 
                     onClick={clearExclusions}
-                    className="text-xs text-gray-500 hover:text-gray-700"
+                    className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 h-auto"
                     data-testid="button-clear-exclusions"
                   >
                     <X className="h-3 w-3 mr-1" />
-                    Clear exclusions
+                    Clear
                   </Button>
                 )}
+                <div className="ml-auto">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowOpponent(!showOpponent)}
+                    className={`text-xs sm:text-sm px-2 sm:px-3 py-1 h-auto ${
+                      showOpponent 
+                        ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
+                    }`}
+                    data-testid="button-toggle-opponent"
+                  >
+                    {showOpponent ? "Hide Opponent" : "Show Opponent"}
+                  </Button>
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {Array.from({ length: endGameweek - startGameweek + 1 }, (_, i) => {
                   const gwNumber = startGameweek + i;
                   const isExcluded = excludedGameweeks.has(gwNumber);
                   return (
                     <Button
                       key={gwNumber}
-                      variant={isExcluded ? "outline" : "default"}
+                      variant="outline"
                       size="sm"
                       onClick={() => toggleGameweekExclusion(gwNumber)}
-                      className={`min-w-[60px] ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
+                      className={`min-w-[50px] sm:min-w-[60px] text-xs sm:text-sm px-2 sm:px-3 py-1 h-auto ${
+                        isExcluded 
+                          ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' 
+                          : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'
+                      }`}
                       data-testid={`button-toggle-gw-${gwNumber}`}
                     >
                       GW{gwNumber}

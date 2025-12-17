@@ -503,8 +503,8 @@ export default function PlayerGoalsScoredProjections() {
 
             {/* Gameweek Toggle Section */}
             <div className="mt-4 pt-4 border-t">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-700">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">
                   Toggle Gameweeks (click to exclude/include):
                 </label>
                 {excludedGameweeks.size > 0 && (
@@ -512,25 +512,34 @@ export default function PlayerGoalsScoredProjections() {
                     variant="ghost" 
                     size="sm" 
                     onClick={clearExclusions}
-                    className="text-xs text-gray-500 hover:text-gray-700"
+                    className="text-xs text-gray-500 hover:text-gray-700 px-2 sm:px-3"
                     data-testid="button-clear-exclusions"
                   >
                     <X className="h-3 w-3 mr-1" />
                     Clear exclusions
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowOpponent(!showOpponent)}
+                  className={`text-xs sm:text-sm px-2 sm:px-3 ${showOpponent ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'}`}
+                  data-testid="button-toggle-opponent"
+                >
+                  {showOpponent ? 'Hide Opponent' : 'Show Opponent'}
+                </Button>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1 sm:gap-2">
                 {startGameweek && endGameweek && Array.from({ length: endGameweek - startGameweek + 1 }, (_, i) => {
                   const gwNumber = startGameweek + i;
                   const isExcluded = excludedGameweeks.has(gwNumber);
                   return (
                     <Button
                       key={gwNumber}
-                      variant={isExcluded ? "outline" : "default"}
+                      variant="outline"
                       size="sm"
                       onClick={() => toggleGameweekExclusion(gwNumber)}
-                      className={`min-w-[60px] ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200' : 'bg-orange-600 hover:bg-orange-700 text-white'}`}
+                      className={`min-w-[50px] sm:min-w-[60px] text-xs sm:text-sm px-2 sm:px-4 ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'}`}
                       data-testid={`button-toggle-gw-${gwNumber}`}
                     >
                       GW{gwNumber}
@@ -543,19 +552,6 @@ export default function PlayerGoalsScoredProjections() {
                   Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
                 </p>
               )}
-              
-              {/* Show Opponent Toggle */}
-              <div className="mt-3 flex items-center gap-2">
-                <Button
-                  variant={showOpponent ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setShowOpponent(!showOpponent)}
-                  className={showOpponent ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'text-gray-600'}
-                  data-testid="button-toggle-opponent"
-                >
-                  {showOpponent ? 'Hide Opponent' : 'Show Opponent'}
-                </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
