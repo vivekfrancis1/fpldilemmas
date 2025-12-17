@@ -1307,12 +1307,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update free transfers in response
       recommendations.freeTransfers = freeTransfersRemaining;
       
-      // Update first gameweek's free transfers to match
+      // Update ALL gameweeks' free transfers to properly account for authenticated data
       if (recommendations.gameweeks) {
-        const firstGWKey = Object.keys(recommendations.gameweeks)[0];
-        if (firstGWKey && recommendations.gameweeks[firstGWKey]) {
-          recommendations.gameweeks[firstGWKey].freeTransfersAvailable = freeTransfersRemaining;
-          recommendations.gameweeks[firstGWKey].bankBefore = myTeamData.transfers.bank;
+        const gwKeys = Object.keys(recommendations.gameweeks).sort((a, b) => parseInt(a) - parseInt(b));
+        let runningFTs = freeTransfersRemaining;
+        
+        for (const gwKey of gwKeys) {
+          const gw = recommendations.gameweeks[gwKey];
+          if (gw) {
+            // Update this gameweek's available FTs
+            gw.freeTransfersAvailable = runningFTs;
+            if (gwKey === gwKeys[0]) {
+              gw.bankBefore = myTeamData.transfers.bank;
+            }
+            
+            // Calculate FTs for next gameweek based on primary transfers recommended
+            const primaryTransfersCount = gw.recommendations?.filter((r: any) => r.isPrimary)?.length || 0;
+            const unusedFTs = Math.max(0, runningFTs - primaryTransfersCount);
+            runningFTs = Math.min(5, unusedFTs + 1); // Bank unused + 1 new, cap at 5
+            
+            // Special case: GW16 AFCON top-up
+            const nextGW = parseInt(gwKey) + 1;
+            if (nextGW === 16) {
+              runningFTs = 5;
+            }
+          }
         }
       }
       
