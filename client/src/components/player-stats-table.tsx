@@ -253,6 +253,37 @@ export default function PlayerStatsTable({
     setColumnOrder(DEFAULT_COLUMN_ORDER);
   };
 
+  // Toggle all columns in a category
+  const toggleCategory = (category: string) => {
+    const categoryColumns = availableColumns.filter(c => c.category === category);
+    const allVisible = categoryColumns.every(c => visibleColumns.has(c.id));
+    
+    setVisibleColumns(prev => {
+      const newSet = new Set(prev);
+      categoryColumns.forEach(c => {
+        if (allVisible) {
+          newSet.delete(c.id);
+        } else {
+          newSet.add(c.id);
+        }
+      });
+      return newSet;
+    });
+  };
+
+  // Check if all columns in a category are visible
+  const isCategoryAllVisible = (category: string) => {
+    const categoryColumns = availableColumns.filter(c => c.category === category);
+    return categoryColumns.length > 0 && categoryColumns.every(c => visibleColumns.has(c.id));
+  };
+
+  // Check if some (but not all) columns in a category are visible
+  const isCategorySomeVisible = (category: string) => {
+    const categoryColumns = availableColumns.filter(c => c.category === category);
+    const visibleCount = categoryColumns.filter(c => visibleColumns.has(c.id)).length;
+    return visibleCount > 0 && visibleCount < categoryColumns.length;
+  };
+
   // Reset horizontal scroll position when zoom changes
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -888,10 +919,30 @@ export default function PlayerStatsTable({
                     {['core', 'performance', 'defensive', 'expected', 'transfers', 'other'].map(category => {
                       const categoryColumns = availableColumns.filter(c => c.category === category);
                       if (categoryColumns.length === 0) return null;
+                      const allVisible = isCategoryAllVisible(category);
+                      const someVisible = isCategorySomeVisible(category);
                       return (
                         <div key={category} className="space-y-1">
-                          <h6 className="text-xs font-medium text-gray-500">{CATEGORY_LABELS[category]}</h6>
-                          <div className="grid grid-cols-3 gap-1">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={allVisible}
+                              ref={(el) => {
+                                if (el) {
+                                  (el as HTMLButtonElement & { indeterminate?: boolean }).indeterminate = someVisible && !allVisible;
+                                }
+                              }}
+                              onCheckedChange={() => toggleCategory(category)}
+                              className="h-3.5 w-3.5"
+                              data-testid={`checkbox-category-${category}`}
+                            />
+                            <h6 
+                              className="text-xs font-medium text-gray-500 cursor-pointer hover:text-gray-700"
+                              onClick={() => toggleCategory(category)}
+                            >
+                              {CATEGORY_LABELS[category]}
+                            </h6>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1 ml-5">
                             {categoryColumns.map(col => (
                               <label
                                 key={col.id}
