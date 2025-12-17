@@ -1322,10 +1322,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               gw.bankBefore = myTeamData.transfers.bank;
             }
             
-            // Calculate FTs for next gameweek based on primary transfers
-            // Use minimum of (actual primaries shown, available FTs) since we can't use more than we have
-            const primaryTransfersCount = gw.recommendations?.filter((r: any) => r.isPrimary)?.length || 0;
-            const transfersUsed = Math.min(primaryTransfersCount, runningFTs); // Can't use more FTs than available
+            // Calculate FTs for next gameweek based on recommendations shown
+            // The recommendations array contains all suggested transfers - we use min(count, available FTs)
+            const recommendationsCount = gw.recommendations?.length || 0;
+            const transfersUsed = Math.min(recommendationsCount, runningFTs); // Can't use more FTs than available
             const unusedFTs = Math.max(0, runningFTs - transfersUsed);
             runningFTs = Math.min(5, unusedFTs + 1); // Bank unused + 1 new, cap at 5
             
@@ -1335,7 +1335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               runningFTs = 5;
             }
             
-            console.log(`DEBUG AUTH: GW${gwKey} - Available: ${gw.freeTransfersAvailable}, Primaries: ${primaryTransfersCount}, Used: ${transfersUsed}, Next GW will have: ${runningFTs}`);
+            console.log(`DEBUG AUTH: GW${gwKey} - Available: ${gw.freeTransfersAvailable}, Recommendations: ${recommendationsCount}, Used: ${transfersUsed}, Next GW will have: ${runningFTs}`);
           }
         }
       }
