@@ -505,7 +505,9 @@ function createPlayerTotalPointsColumns(
   playerIdToWebName: Map<number, string>,
   onPlayerCompareClick?: (player: PlayerTotalPointsData) => void,
   compareList?: PlayerTotalPointsData[],
-  maxCompareReached?: boolean
+  maxCompareReached?: boolean,
+  opponentMap?: Map<string, { opponent: string; opponentId: number; isHome: boolean }>,
+  showOpponent?: boolean
 ): TableColumn<PlayerTotalPointsData>[] {
   return [
     {
@@ -569,9 +571,18 @@ function createPlayerTotalPointsColumns(
           const playerPoints = player.gameweekProjections?.[numericGwKey] || 0;
           const isMaxForGameweek = playerPoints > 0 && playerPoints === maxPointsForGw;
           
+          // Get opponent info for this player's team and gameweek
+          const teamShort = (teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamShort || '';
+          const opponentInfo = opponentMap?.get(`${teamShort}-${gw}`);
+          
           return (
             <div className={`${isMaxForGameweek ? 'bg-gradient-to-br from-green-100 to-emerald-100 rounded-md p-1' : ''}`}>
               <GameweekPointBreakdownTooltip player={player} gameweek={gw} />
+              {showOpponent && opponentInfo && (
+                <div className="text-[9px] text-gray-500 mt-0.5">
+                  {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
+                </div>
+              )}
             </div>
           );
         }
@@ -642,6 +653,12 @@ export default function PlayerTotalPoints() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Fetch fixtures for opponent information
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -660,6 +677,9 @@ export default function PlayerTotalPoints() {
   
   // Gameweek exclusion state
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
+  
+  // Opponent display toggle state
+  const [showOpponent, setShowOpponent] = useState(true);
 
   // Get available gameweeks for dropdown (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
@@ -714,6 +734,35 @@ export default function PlayerTotalPoints() {
     });
     return map;
   }, [bootstrapData?.elements]);
+
+  // Create a mapping of teamShort + gameweek -> opponent info
+  const opponentMap = useMemo(() => {
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    
+    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    
+    fixturesData.forEach((fixture: any) => {
+      const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+      const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+      
+      if (homeTeam && awayTeam && fixture.event) {
+        // Home team's opponent is away team
+        map.set(`${homeTeam.short_name}-${fixture.event}`, {
+          opponent: awayTeam.short_name,
+          opponentId: fixture.team_a,
+          isHome: true
+        });
+        // Away team's opponent is home team
+        map.set(`${awayTeam.short_name}-${fixture.event}`, {
+          opponent: homeTeam.short_name,
+          opponentId: fixture.team_h,
+          isHome: false
+        });
+      }
+    });
+    
+    return map;
+  }, [bootstrapData?.teams, fixturesData]);
 
   // Handle player comparison
   const handlePlayerCompareClick = (player: PlayerTotalPointsData) => {
@@ -1251,6 +1300,20 @@ export default function PlayerTotalPoints() {
               />
             </div>
               </div>
+              
+              {/* Opponent Toggle Button */}
+              <div className="mt-4 pt-4 border-t">
+                <Button
+                  variant={showOpponent ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowOpponent(!showOpponent)}
+                  className="flex items-center gap-2"
+                  data-testid="button-toggle-opponent"
+                >
+                  <Users className="h-4 w-4" />
+                  {showOpponent ? 'Hide Opponent' : 'Show Opponent'}
+                </Button>
+              </div>
 
               {/* Gameweek Toggle Section */}
               <div className="mt-4 pt-4 border-t">
@@ -1347,7 +1410,9 @@ export default function PlayerTotalPoints() {
                       playerIdToWebName,
                       handlePlayerCompareClick, 
                       compareList, 
-                      maxCompareReached
+                      maxCompareReached,
+                      opponentMap,
+                      showOpponent
                     )}
                     onSort={handleSort}
                     sortField={sortField}

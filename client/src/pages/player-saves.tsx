@@ -39,9 +39,15 @@ export default function PlayerSaves() {
   const [endGameweek, setEndGameweek] = useState<number>(0);
   const [initialized, setInitialized] = useState(false);
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
+  const [showOpponent, setShowOpponent] = useState(true);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
     staleTime: 5 * 60 * 1000,
   });
 
@@ -52,6 +58,43 @@ export default function PlayerSaves() {
     }
     return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
   }, [bootstrapData?.events]);
+
+  // Create teamName to short_name mapping
+  const teamNameToShort = useMemo(() => {
+    if (!bootstrapData?.teams) return new Map<string, string>();
+    const map = new Map<string, string>();
+    bootstrapData.teams.forEach((team: any) => {
+      map.set(team.name, team.short_name);
+    });
+    return map;
+  }, [bootstrapData?.teams]);
+
+  // Create a mapping of teamShort + gameweek -> opponent info
+  const opponentMap = useMemo(() => {
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
+    
+    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    
+    fixturesData.forEach((fixture: any) => {
+      const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+      const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+      
+      if (homeTeam && awayTeam && fixture.event) {
+        map.set(`${homeTeam.short_name}-${fixture.event}`, {
+          opponent: awayTeam.short_name,
+          opponentId: fixture.team_a,
+          isHome: true
+        });
+        map.set(`${awayTeam.short_name}-${fixture.event}`, {
+          opponent: homeTeam.short_name,
+          opponentId: fixture.team_h,
+          isHome: false
+        });
+      }
+    });
+    
+    return map;
+  }, [bootstrapData?.teams, fixturesData]);
 
   // Initialize gameweek range once bootstrap data is loaded
   useEffect(() => {
@@ -346,6 +389,24 @@ export default function PlayerSaves() {
               </div>
             </div>
 
+            {/* Opponent Toggle */}
+            <div className="mt-4 pt-4 border-t flex items-center gap-4">
+              <Button
+                variant={showOpponent ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowOpponent(!showOpponent)}
+                className={showOpponent ? "bg-purple-600 hover:bg-purple-700" : ""}
+                data-testid="button-toggle-opponent"
+              >
+                {showOpponent ? "Hide Opponent" : "Show Opponent"}
+              </Button>
+              {showOpponent && (
+                <span className="text-xs text-gray-500">
+                  Showing opponent fixtures below saves
+                </span>
+              )}
+            </div>
+
             {/* Gameweek Toggle Section */}
             <div className="mt-4 pt-4 border-t">
               <div className="flex items-center justify-between mb-2">
@@ -451,11 +512,22 @@ export default function PlayerSaves() {
                               compact={true}
                             />
                           </td>
-                          {dynamicGameweekColumns.map((gw) => (
-                            <td key={`saves-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
-                              {projection.saves?.[`gw${gw}`] ? (projection.saves[`gw${gw}`]).toFixed(2) : '-'}
-                            </td>
-                          ))}
+                          {dynamicGameweekColumns.map((gw) => {
+                            const teamShort = teamNameToShort.get(projection.teamName) || '';
+                            const opponentInfo = opponentMap.get(`${teamShort}-${gw}`);
+                            return (
+                              <td key={`saves-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
+                                <div className="flex flex-col items-center">
+                                  <span>{projection.saves?.[`gw${gw}`] ? (projection.saves[`gw${gw}`]).toFixed(2) : '-'}</span>
+                                  {showOpponent && opponentInfo && (
+                                    <span className={`text-xs mt-0.5 ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                      {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          })}
                           <td className="text-center py-3 px-1 font-semibold bg-blue-50">
                             <span className="text-lg font-bold text-blue-900">
                               {filteredTotal.toFixed(2)}

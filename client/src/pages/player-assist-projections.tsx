@@ -36,6 +36,12 @@ export default function PlayerAssistProjections() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Fetch fixtures for opponent information
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+
   // All useState hooks
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
@@ -47,6 +53,7 @@ export default function PlayerAssistProjections() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
+  const [showOpponent, setShowOpponent] = useState(true);
 
   // Toggle gameweek exclusion
   const toggleGameweekExclusion = (gw: number) => {
@@ -108,6 +115,33 @@ export default function PlayerAssistProjections() {
   );
 
   // ALL useMemo hooks
+  // Create a mapping of teamShort + gameweek -> opponent info
+  const opponentMap = useMemo(() => {
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
+    
+    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    
+    fixturesData.forEach((fixture: any) => {
+      const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+      const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+      
+      if (homeTeam && awayTeam && fixture.event) {
+        map.set(`${homeTeam.short_name}-${fixture.event}`, {
+          opponent: awayTeam.short_name,
+          opponentId: fixture.team_a,
+          isHome: true
+        });
+        map.set(`${awayTeam.short_name}-${fixture.event}`, {
+          opponent: homeTeam.short_name,
+          opponentId: fixture.team_h,
+          isHome: false
+        });
+      }
+    });
+    
+    return map;
+  }, [bootstrapData?.teams, fixturesData]);
+
   // Create playerIdToWebName mapping for short names
   const playerIdToWebName = useMemo(() => {
     if (!bootstrapData?.elements) return null;
@@ -494,6 +528,26 @@ export default function PlayerAssistProjections() {
                 </p>
               )}
             </div>
+
+            {/* Opponent Toggle Section */}
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowOpponent(!showOpponent)}
+                  className="flex items-center gap-2"
+                  data-testid="button-toggle-opponent"
+                >
+                  {showOpponent ? 'Hide Opponent' : 'Show Opponent'}
+                </Button>
+                {showOpponent && (
+                  <span className="text-xs text-gray-500">
+                    Showing opponent info below each projection
+                  </span>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -563,11 +617,22 @@ export default function PlayerAssistProjections() {
                                 compact={true}
                               />
                             </td>
-                            {dynamicGameweekColumns.map((gw) => (
-                              <td key={`assists-cell-${player.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
-                                {(player.gameweekProjections[gw.toString()] || 0) > 0 ? (player.gameweekProjections[gw.toString()] || 0).toFixed(2) : "-"}
-                              </td>
-                            ))}
+                            {dynamicGameweekColumns.map((gw) => {
+                              const projValue = player.gameweekProjections[gw.toString()] || 0;
+                              const opponentInfo = opponentMap.get(`${player.teamShort}-${gw}`);
+                              return (
+                                <td key={`assists-cell-${player.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
+                                  <div className="flex flex-col items-center">
+                                    <span>{projValue > 0 ? projValue.toFixed(2) : "-"}</span>
+                                    {showOpponent && opponentInfo && (
+                                      <span className="text-xs text-gray-500">
+                                        {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            })}
                             <td className="text-center py-3 px-1 font-semibold bg-orange-50">
                               <span className="text-lg font-bold text-orange-900">
                                 {assistsTotal.toFixed(2)}

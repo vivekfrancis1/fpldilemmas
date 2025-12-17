@@ -27,6 +27,12 @@ export default function TeamGoalsAgainstProjections() {
     queryKey: ["/api/bootstrap-static"],
   });
 
+  // Fetch fixtures for opponent information
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+
   // Calculate dynamic gameweek defaults based on bootstrap data (next 6 gameweeks only)
   const defaultGameweekRange = useMemo(() => {
     if (!bootstrapData?.events) {
@@ -41,6 +47,36 @@ export default function TeamGoalsAgainstProjections() {
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
+  const [showOpponent, setShowOpponent] = useState<boolean>(true);
+
+  // Create a mapping of teamShort + gameweek -> opponent info
+  const opponentMap = useMemo(() => {
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
+    
+    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    
+    fixturesData.forEach((fixture: any) => {
+      const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+      const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+      
+      if (homeTeam && awayTeam && fixture.event) {
+        // Home team's opponent is away team
+        map.set(`${homeTeam.short_name}-${fixture.event}`, {
+          opponent: awayTeam.short_name,
+          opponentId: fixture.team_a,
+          isHome: true
+        });
+        // Away team's opponent is home team
+        map.set(`${awayTeam.short_name}-${fixture.event}`, {
+          opponent: homeTeam.short_name,
+          opponentId: fixture.team_h,
+          isHome: false
+        });
+      }
+    });
+    
+    return map;
+  }, [bootstrapData?.teams, fixturesData]);
 
   // Toggle gameweek exclusion
   const toggleGameweekExclusion = (gw: number) => {
@@ -291,6 +327,16 @@ export default function TeamGoalsAgainstProjections() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <Button
+                  variant={showOpponent ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowOpponent(!showOpponent)}
+                  className={showOpponent ? "bg-purple-600 hover:bg-purple-700 text-white" : ""}
+                  data-testid="button-toggle-opponent"
+                >
+                  {showOpponent ? "Hide Opponent" : "Show Opponent"}
+                </Button>
               </div>
 
               {/* Gameweek Toggle Section */}
@@ -407,9 +453,17 @@ export default function TeamGoalsAgainstProjections() {
                         
                         {activeGameweeks.map(gwNumber => {
                           const goalsAgainst = team.gameweekProjections[gwNumber] || 0;
+                          const opponentInfo = opponentMap.get(`${team.teamShort}-${gwNumber}`);
                           return (
                             <td key={gwNumber} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsAgainstColor(goalsAgainst)}`}>
-                              {goalsAgainst > 0 ? (goalsAgainst || 0).toFixed(2) : "-"}
+                              <div className="flex flex-col items-center">
+                                <span>{goalsAgainst > 0 ? (goalsAgainst || 0).toFixed(2) : "-"}</span>
+                                {showOpponent && opponentInfo && (
+                                  <span className="text-xs text-gray-500 mt-0.5">
+                                    {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           );
                         })}

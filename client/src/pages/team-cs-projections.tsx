@@ -90,6 +90,39 @@ export default function TeamCSProjections() {
     queryKey: ["/api/team-cs-projections"],
   });
 
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const [showOpponent, setShowOpponent] = useState(true);
+
+  const opponentMap = useMemo(() => {
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
+    
+    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    
+    fixturesData.forEach((fixture: any) => {
+      const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+      const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+      
+      if (homeTeam && awayTeam && fixture.event) {
+        map.set(`${homeTeam.short_name}-${fixture.event}`, {
+          opponent: awayTeam.short_name,
+          opponentId: fixture.team_a,
+          isHome: true
+        });
+        map.set(`${awayTeam.short_name}-${fixture.event}`, {
+          opponent: homeTeam.short_name,
+          opponentId: fixture.team_h,
+          isHome: false
+        });
+      }
+    });
+    
+    return map;
+  }, [bootstrapData?.teams, fixturesData]);
+
   const filteredProjections = useMemo(() => {
     if (!projectionsData) return [];
     
@@ -230,6 +263,16 @@ export default function TeamCSProjections() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <Button
+                  variant={showOpponent ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowOpponent(!showOpponent)}
+                  className={showOpponent ? "bg-purple-600 hover:bg-purple-700" : ""}
+                  data-testid="button-toggle-opponent"
+                >
+                  {showOpponent ? "Hide Opponent" : "Show Opponent"}
+                </Button>
               </div>
 
               {/* Gameweek Toggle Section */}
@@ -347,9 +390,17 @@ export default function TeamCSProjections() {
                         
                         {activeGameweeks.map(gwNumber => {
                           const csPercentage = team.gameweekProjections[gwNumber] || 0;
+                          const opponentInfo = opponentMap.get(`${team.teamShort}-${gwNumber}`);
                           return (
                             <td key={`${team.id}-gw${gwNumber}`} className={`px-4 py-4 text-center text-sm font-medium ${getCSColor(csPercentage)}`}>
-                              {csPercentage > 0 ? `${csPercentage}%` : "-"}
+                              <div>
+                                {csPercentage > 0 ? `${csPercentage}%` : "-"}
+                              </div>
+                              {showOpponent && opponentInfo && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
+                                </div>
+                              )}
                             </td>
                           );
                         })}

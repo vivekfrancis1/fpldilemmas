@@ -90,6 +90,44 @@ export default function TeamGoalProjections() {
     }
   }, [bootstrapData?.events]);
 
+  // Fetch fixtures for opponent information
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // State for showing opponent info
+  const [showOpponent, setShowOpponent] = useState(true);
+
+  // Create a mapping of teamShort + gameweek -> opponent info
+  const opponentMap = useMemo(() => {
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
+    
+    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    
+    fixturesData.forEach((fixture: any) => {
+      const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+      const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+      
+      if (homeTeam && awayTeam && fixture.event) {
+        // Home team's opponent is away team
+        map.set(`${homeTeam.short_name}-${fixture.event}`, {
+          opponent: awayTeam.short_name,
+          opponentId: fixture.team_a,
+          isHome: true
+        });
+        // Away team's opponent is home team
+        map.set(`${awayTeam.short_name}-${fixture.event}`, {
+          opponent: homeTeam.short_name,
+          opponentId: fixture.team_h,
+          isHome: false
+        });
+      }
+    });
+    
+    return map;
+  }, [bootstrapData?.teams, fixturesData]);
+
   // Use cached endpoint for faster loading
   const { data: projectionsData, isLoading: projectionsLoading, error: projectionsError, refetch: refetchProjections } = useQuery<TeamGoalProjection[]>({
     queryKey: ["/api/cached/team-goal-projections"],
@@ -293,6 +331,18 @@ export default function TeamGoalProjections() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={showOpponent ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setShowOpponent(!showOpponent)}
+                    className={showOpponent ? "bg-purple-600 hover:bg-purple-700" : ""}
+                    data-testid="button-toggle-opponent"
+                  >
+                    {showOpponent ? "Hide Opponent" : "Show Opponent"}
+                  </Button>
+                </div>
               </div>
 
               {/* Gameweek Toggle Section */}
@@ -409,9 +459,17 @@ export default function TeamGoalProjections() {
                         
                         {activeGameweeks.map(gwNumber => {
                           const goals = team.gameweekProjections[gwNumber];
+                          const opponentInfo = opponentMap.get(`${team.teamShort}-${gwNumber}`);
                           return (
                             <td key={`${team.id}-gw${gwNumber}`} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsColor(goals || 0)}`}>
-                              {goals !== undefined ? goals.toFixed(2) : "-"}
+                              <div className="flex flex-col items-center">
+                                <span>{goals !== undefined ? goals.toFixed(2) : "-"}</span>
+                                {showOpponent && opponentInfo && (
+                                  <span className="text-xs text-gray-500 mt-0.5">
+                                    {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
+                                  </span>
+                                )}
+                              </div>
                             </td>
                           );
                         })}
