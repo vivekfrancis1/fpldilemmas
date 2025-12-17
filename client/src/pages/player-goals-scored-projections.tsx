@@ -47,6 +47,66 @@ export default function PlayerGoalsScoredProjections() {
     queryKey: ["/api/bootstrap-static"],
   });
 
+  // Fetch fixtures for opponent information
+  const { data: fixturesData } = useQuery({
+    queryKey: ["/api/fixtures"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Defense tier logic - teams with strong defenses are harder to score against
+  // Uses same team IDs as defensive-contributions for consistency
+  const getDefenseTier = (teamId: number): string => {
+    // Elite defense (hardest to score against) - same as elite attack teams
+    if ([12, 13].includes(teamId)) return "elite"; // Liverpool, Man City
+    // Strong defense - same as strong attack teams  
+    if ([1, 7, 15, 18, 2].includes(teamId)) return "strong"; // Arsenal, Chelsea, Newcastle, Tottenham, Aston Villa
+    // Weak defense (easier to score against) - same as weak attack teams
+    if ([9, 16, 19, 20].includes(teamId)) return "weak"; // Everton, Nottingham Forest, West Ham, Wolves
+    // Promoted teams - easiest to score against
+    if ([3, 11, 17].includes(teamId)) return "promoted"; // Promoted teams
+    return "average";
+  };
+
+  // Color coding: Green = easier to score (favorable), Red = harder to score (unfavorable)
+  const getOpponentColor = (tier: string) => {
+    switch (tier) {
+      case 'elite': return 'bg-red-50 dark:bg-red-900/10 text-red-700 dark:text-red-300';
+      case 'strong': return 'bg-orange-50 dark:bg-orange-900/10 text-orange-700 dark:text-orange-300';
+      case 'weak': return 'bg-green-50 dark:bg-green-900/10 text-green-700 dark:text-green-300';
+      case 'promoted': return 'bg-emerald-50 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-300';
+      default: return 'bg-gray-50 dark:bg-gray-800/10 text-gray-700 dark:text-gray-300';
+    }
+  };
+
+  // Create a mapping of teamShort + gameweek -> opponent info
+  const opponentMap = useMemo(() => {
+    if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
+    
+    const map = new Map<string, { opponent: string; opponentId: number; isHome: boolean }>();
+    
+    fixturesData.forEach((fixture: any) => {
+      const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+      const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+      
+      if (homeTeam && awayTeam && fixture.event) {
+        // Home team's opponent is away team
+        map.set(`${homeTeam.short_name}-${fixture.event}`, {
+          opponent: awayTeam.short_name,
+          opponentId: fixture.team_a,
+          isHome: true
+        });
+        // Away team's opponent is home team
+        map.set(`${awayTeam.short_name}-${fixture.event}`, {
+          opponent: homeTeam.short_name,
+          opponentId: fixture.team_h,
+          isHome: false
+        });
+      }
+    });
+    
+    return map;
+  }, [bootstrapData?.teams, fixturesData]);
+
   // Create playerIdToWebName mapping for short names
   const playerIdToWebName = useMemo(() => {
     if (!bootstrapData?.elements) return null;
@@ -595,9 +655,21 @@ export default function PlayerGoalsScoredProjections() {
                         </td>
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw.toString()] || 0;
+                          const opponentInfo = opponentMap.get(`${player.teamShort}-${gw}`);
+                          const opponentTier = opponentInfo ? getDefenseTier(opponentInfo.opponentId) : 'average';
+                          const opponent = opponentInfo?.opponent || 'TBD';
+                          const isHome = opponentInfo?.isHome ?? true;
+                          
                           return (
-                            <td key={gw} className="px-2 sm:px-4 py-2 sm:py-4 text-center text-sm font-medium text-gray-900">
-                              {goals > 0 ? goals.toFixed(2) : "-"}
+                            <td key={gw} className="px-1 sm:px-2 py-2 sm:py-3 text-center">
+                              <div className={`p-2 rounded text-sm ${getOpponentColor(opponentTier)}`}>
+                                <div className="font-bold">
+                                  {goals > 0 ? goals.toFixed(2) : "-"}
+                                </div>
+                                <div className="text-xs">
+                                  {isHome ? '' : '@'}{opponent}
+                                </div>
+                              </div>
                             </td>
                           );
                         })}
