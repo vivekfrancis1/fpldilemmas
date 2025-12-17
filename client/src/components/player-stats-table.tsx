@@ -319,10 +319,11 @@ export default function PlayerStatsTable({
   useEffect(() => {
     const visibleCount = orderedColumns.filter(col => visibleColumns.has(col.id)).length;
     // Base calculation: fewer columns = higher zoom, more columns = lower zoom
-    // Range: 60% (many columns) to 150% (few columns)
-    const baseColumns = 12; // Reference point for 100% zoom
+    // Range: 70% (many columns) to 180% (few columns)
+    // With ~18 default columns, this gives ~130% zoom
+    const baseColumns = 24; // Reference point calibrated for default columns at 130%
     const optimalZoom = Math.round((baseColumns / Math.max(visibleCount, 3)) * 100);
-    const clampedZoom = Math.min(150, Math.max(60, optimalZoom));
+    const clampedZoom = Math.min(180, Math.max(70, optimalZoom));
     setZoomLevel(clampedZoom);
   }, [visibleColumns, orderedColumns]);
 
