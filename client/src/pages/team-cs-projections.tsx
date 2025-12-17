@@ -97,6 +97,16 @@ export default function TeamCSProjections() {
 
   const [showOpponent, setShowOpponent] = useState(true);
 
+  // Create mapping from team name to FPL short_name
+  const teamNameToShort = useMemo(() => {
+    if (!bootstrapData?.teams) return new Map<string, string>();
+    const map = new Map<string, string>();
+    bootstrapData.teams.forEach((team: any) => {
+      map.set(team.name, team.short_name);
+    });
+    return map;
+  }, [bootstrapData?.teams]);
+
   const opponentMap = useMemo(() => {
     if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
     
@@ -391,7 +401,9 @@ export default function TeamCSProjections() {
                         
                         {activeGameweeks.map(gwNumber => {
                           const csPercentage = team.gameweekProjections[gwNumber] || 0;
-                          const opponentInfo = opponentMap.get(`${team.teamShort}-${gwNumber}`);
+                          // Use team name to get correct FPL short_name for opponent lookup
+                          const fplShortName = teamNameToShort.get(team.team) || teamNameToShort.get(team.teamName) || team.teamShort;
+                          const opponentInfo = opponentMap.get(`${fplShortName}-${gwNumber}`);
                           return (
                             <td key={`${team.id}-gw${gwNumber}`} className={`px-4 py-4 text-center text-sm font-medium ${getCSColor(csPercentage)}`}>
                               <div>

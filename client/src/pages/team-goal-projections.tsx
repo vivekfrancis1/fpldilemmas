@@ -99,7 +99,17 @@ export default function TeamGoalProjections() {
   // State for showing opponent info
   const [showOpponent, setShowOpponent] = useState(true);
 
-  // Create a mapping of teamShort + gameweek -> opponent info
+  // Create mapping from team name to FPL short_name
+  const teamNameToShort = useMemo(() => {
+    if (!bootstrapData?.teams) return new Map<string, string>();
+    const map = new Map<string, string>();
+    bootstrapData.teams.forEach((team: any) => {
+      map.set(team.name, team.short_name);
+    });
+    return map;
+  }, [bootstrapData?.teams]);
+
+  // Create a mapping of FPL short_name + gameweek -> opponent info
   const opponentMap = useMemo(() => {
     if (!bootstrapData?.teams || !Array.isArray(fixturesData)) return new Map();
     
@@ -459,7 +469,9 @@ export default function TeamGoalProjections() {
                         
                         {activeGameweeks.map(gwNumber => {
                           const goals = team.gameweekProjections[gwNumber];
-                          const opponentInfo = opponentMap.get(`${team.teamShort}-${gwNumber}`);
+                          // Use team name to get correct FPL short_name for opponent lookup
+                          const fplShortName = teamNameToShort.get(team.team) || team.teamShort;
+                          const opponentInfo = opponentMap.get(`${fplShortName}-${gwNumber}`);
                           return (
                             <td key={`${team.id}-gw${gwNumber}`} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsColor(goals || 0)}`}>
                               <div className="flex flex-col items-center">
