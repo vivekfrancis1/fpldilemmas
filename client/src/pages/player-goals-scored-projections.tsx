@@ -641,7 +641,7 @@ export default function PlayerGoalsScoredProjections() {
                                   {goals > 0 ? goals.toFixed(2) : "-"}
                                 </div>
                                 <div className="text-xs text-gray-500">
-                                  {isHome ? '' : '@'}{opponent}
+                                  {opponent} ({isHome ? 'H' : 'A'})
                                 </div>
                               </div>
                             </td>
