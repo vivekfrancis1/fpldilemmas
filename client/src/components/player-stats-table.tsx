@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye, UserPlus, UserMinus, ZoomIn, ZoomOut, Settings2, Check, GripVertical, MoveUp, MoveDown, RotateCcw } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye, UserPlus, UserMinus, ZoomIn, ZoomOut, Settings2, Check, GripVertical, MoveUp, MoveDown, RotateCcw, Plus, Minus } from "lucide-react";
 import { BootstrapData, Player, Team, ElementType } from "@shared/schema";
 import { FilterState, SortState, SortableField } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -1053,22 +1053,38 @@ export default function PlayerStatsTable({
 
       {/* Zoom Control */}
       <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
-        <div className="flex items-center gap-4 max-w-md">
-          <div className="flex items-center gap-2">
-            <ZoomOut className="h-4 w-4 text-gray-600" />
-            <span className="text-xs font-medium text-gray-700 whitespace-nowrap">Table Zoom:</span>
-          </div>
+        <div className="flex items-center gap-3 max-w-lg">
+          <span className="text-xs font-medium text-gray-700 whitespace-nowrap">Zoom:</span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setZoomLevel(prev => Math.max(50, prev - 10))}
+            disabled={zoomLevel <= 50}
+            className="h-7 w-7 p-0"
+            data-testid="button-zoom-out"
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </Button>
           <Slider
             value={[zoomLevel]}
             onValueChange={(value) => setZoomLevel(value[0])}
             min={50}
             max={200}
             step={10}
-            className="flex-1"
+            className="flex-1 min-w-[100px]"
             data-testid="slider-table-zoom"
           />
-          <ZoomIn className="h-4 w-4 text-gray-600" />
-          <span className="text-xs font-semibold text-gray-900 w-12 text-center" data-testid="text-zoom-level">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setZoomLevel(prev => Math.min(200, prev + 10))}
+            disabled={zoomLevel >= 200}
+            className="h-7 w-7 p-0"
+            data-testid="button-zoom-in"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+          <span className="text-xs font-semibold text-gray-900 w-10 text-center" data-testid="text-zoom-level">
             {zoomLevel}%
           </span>
           <Button
