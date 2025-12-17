@@ -1,5 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from "react";
-import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye, UserPlus, UserMinus, ZoomIn, ZoomOut } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye, UserPlus, UserMinus, ZoomIn, ZoomOut, Settings2, Check } from "lucide-react";
 import { BootstrapData, Player, Team, ElementType } from "@shared/schema";
 import { FilterState, SortState, SortableField } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,82 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { useQuery } from "@tanstack/react-query";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+
+interface ColumnDefinition {
+  id: string;
+  field: SortableField;
+  label: string;
+  tooltip: string;
+  category: 'core' | 'performance' | 'defensive' | 'expected' | 'transfers' | 'other';
+  currentSeasonOnly?: boolean;
+  totalsOnly?: boolean;
+}
+
+const COLUMN_DEFINITIONS: ColumnDefinition[] = [
+  { id: 'now_cost', field: 'now_cost', label: '£', tooltip: 'Price', category: 'core' },
+  { id: 'games_played', field: 'games_played', label: 'MP', tooltip: 'Matches Played', category: 'core', totalsOnly: true },
+  { id: 'total_points', field: 'total_points', label: 'Pts', tooltip: 'Total Points', category: 'core' },
+  { id: 'goals_scored', field: 'goals_scored', label: 'G', tooltip: 'Goals Scored', category: 'performance' },
+  { id: 'assists', field: 'assists', label: 'A', tooltip: 'Assists', category: 'performance' },
+  { id: 'clean_sheets', field: 'clean_sheets', label: 'CS', tooltip: 'Clean Sheets', category: 'performance' },
+  { id: 'defensive_contribution', field: 'defensive_contribution', label: 'DC', tooltip: 'Defensive Contribution', category: 'defensive', currentSeasonOnly: true },
+  { id: 'defensive_contribution_points', field: 'defensive_contribution_points', label: 'DCP', tooltip: 'Defensive Contribution Points', category: 'defensive', currentSeasonOnly: true },
+  { id: 'value_season', field: 'value_season', label: 'Val', tooltip: 'Value (Points per Million)', category: 'core' },
+  { id: 'points_per_game', field: 'points_per_game', label: 'PPG', tooltip: 'Points Per Game', category: 'core', totalsOnly: true },
+  { id: 'form', field: 'form', label: 'Form', tooltip: 'Form (Last 5 Gameweeks)', category: 'core', currentSeasonOnly: true, totalsOnly: true },
+  { id: 'selected_by_percent', field: 'selected_by_percent', label: 'Own%', tooltip: 'Ownership Percentage', category: 'core', currentSeasonOnly: true },
+  { id: 'expected_goals', field: 'expected_goals', label: 'xG', tooltip: 'Expected Goals', category: 'expected', currentSeasonOnly: true },
+  { id: 'expected_assists', field: 'expected_assists', label: 'xA', tooltip: 'Expected Assists', category: 'expected', currentSeasonOnly: true },
+  { id: 'expected_goal_involvements', field: 'expected_goal_involvements', label: 'xGI', tooltip: 'Expected Goal Involvements', category: 'expected', currentSeasonOnly: true },
+  { id: 'expected_goals_conceded', field: 'expected_goals_conceded', label: 'xGC', tooltip: 'Expected Goals Conceded', category: 'expected', currentSeasonOnly: true },
+  { id: 'minutes', field: 'minutes', label: 'Min', tooltip: 'Minutes Played', category: 'core' },
+  { id: 'goals_conceded', field: 'goals_conceded', label: 'GC', tooltip: 'Goals Conceded', category: 'performance' },
+  { id: 'saves', field: 'saves', label: 'Sav', tooltip: 'Saves', category: 'performance' },
+  { id: 'save_points', field: 'save_points', label: 'SavP', tooltip: 'Save Points', category: 'defensive', currentSeasonOnly: true },
+  { id: 'minutes_points', field: 'minutes_points', label: 'MinP', tooltip: 'Minutes Points', category: 'defensive', currentSeasonOnly: true },
+  { id: 'tackles', field: 'tackles', label: 'Tck', tooltip: 'Tackles', category: 'defensive', currentSeasonOnly: true },
+  { id: 'recoveries', field: 'recoveries', label: 'Rec', tooltip: 'Recoveries', category: 'defensive', currentSeasonOnly: true },
+  { id: 'clearances_blocks_interceptions', field: 'clearances_blocks_interceptions', label: 'CBI', tooltip: 'Clearances, Blocks, Interceptions', category: 'defensive', currentSeasonOnly: true },
+  { id: 'starts', field: 'starts', label: 'Starts', tooltip: 'Starts', category: 'core', currentSeasonOnly: true, totalsOnly: true },
+  { id: 'bonus', field: 'bonus', label: 'Bonus', tooltip: 'Bonus Points', category: 'performance' },
+  { id: 'bps', field: 'bps', label: 'BPS', tooltip: 'Bonus Points System', category: 'performance' },
+  { id: 'event_points', field: 'event_points', label: 'GW Pts', tooltip: 'Gameweek Points', category: 'other', currentSeasonOnly: true, totalsOnly: true },
+  { id: 'transfers_in_event', field: 'transfers_in_event', label: 'GW In', tooltip: 'Transfers In This Gameweek', category: 'transfers', currentSeasonOnly: true, totalsOnly: true },
+  { id: 'transfers_out_event', field: 'transfers_out_event', label: 'GW Out', tooltip: 'Transfers Out This Gameweek', category: 'transfers', currentSeasonOnly: true, totalsOnly: true },
+  { id: 'transfers_in', field: 'transfers_in', label: 'Total In', tooltip: 'Total Transfers In', category: 'transfers', currentSeasonOnly: true, totalsOnly: true },
+  { id: 'transfers_out', field: 'transfers_out', label: 'Total Out', tooltip: 'Total Transfers Out', category: 'transfers', currentSeasonOnly: true, totalsOnly: true },
+  { id: 'value_form', field: 'value_form', label: 'Val Form', tooltip: 'Value Form', category: 'other', currentSeasonOnly: true, totalsOnly: true },
+  { id: 'influence', field: 'influence', label: 'Influence', tooltip: 'Influence', category: 'other', totalsOnly: true },
+  { id: 'creativity', field: 'creativity', label: 'Creativity', tooltip: 'Creativity', category: 'other', totalsOnly: true },
+  { id: 'threat', field: 'threat', label: 'Threat', tooltip: 'Threat', category: 'other', totalsOnly: true },
+  { id: 'ict_index', field: 'ict_index', label: 'ICT', tooltip: 'ICT Index', category: 'other', totalsOnly: true },
+  { id: 'dreamteam_count', field: 'dreamteam_count', label: 'Dream Team', tooltip: 'Dream Team Appearances', category: 'other', currentSeasonOnly: true, totalsOnly: true },
+  { id: 'penalties_saved', field: 'penalties_saved', label: 'Pen Saved', tooltip: 'Penalties Saved', category: 'performance' },
+  { id: 'penalties_missed', field: 'penalties_missed', label: 'Pen Missed', tooltip: 'Penalties Missed', category: 'performance' },
+  { id: 'yellow_cards', field: 'yellow_cards', label: 'Yellow', tooltip: 'Yellow Cards', category: 'other' },
+  { id: 'red_cards', field: 'red_cards', label: 'Red', tooltip: 'Red Cards', category: 'other' },
+  { id: 'own_goals', field: 'own_goals', label: 'Own Goals', tooltip: 'Own Goals', category: 'other' },
+  { id: 'cost_change_event', field: 'cost_change_event', label: 'Price Δ GW', tooltip: 'Price Change This Gameweek', category: 'other', currentSeasonOnly: true, totalsOnly: true },
+  { id: 'cost_change_start', field: 'cost_change_start', label: 'Price Δ Start', tooltip: 'Price Change Since Start', category: 'other', totalsOnly: true },
+];
+
+const DEFAULT_VISIBLE_COLUMNS = [
+  'now_cost', 'games_played', 'total_points', 'goals_scored', 'assists', 'clean_sheets',
+  'defensive_contribution', 'defensive_contribution_points', 'value_season', 'points_per_game',
+  'form', 'selected_by_percent', 'expected_goals', 'expected_assists', 'expected_goal_involvements',
+  'minutes', 'bonus', 'bps'
+];
+
+const CATEGORY_LABELS: Record<string, string> = {
+  core: 'Core Stats',
+  performance: 'Performance',
+  defensive: 'Defensive',
+  expected: 'Expected Stats',
+  transfers: 'Transfers',
+  other: 'Other'
+};
 
 interface PlayerStatsTableProps {
   data?: BootstrapData;
@@ -77,8 +153,47 @@ export default function PlayerStatsTable({
   const [displayMode, setDisplayMode] = useState<'totals' | 'per_match' | 'per_start' | 'per_90'>('totals');
   const [venueFilter, setVenueFilter] = useState<'all' | 'home' | 'away'>('all');
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('playerStatsVisibleColumns');
+    if (saved) {
+      try {
+        return new Set(JSON.parse(saved));
+      } catch {
+        return new Set(DEFAULT_VISIBLE_COLUMNS);
+      }
+    }
+    return new Set(DEFAULT_VISIBLE_COLUMNS);
+  });
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  
+
+  // Save visible columns to localStorage
+  useEffect(() => {
+    localStorage.setItem('playerStatsVisibleColumns', JSON.stringify(Array.from(visibleColumns)));
+  }, [visibleColumns]);
+
+  // Toggle column visibility
+  const toggleColumn = (columnId: string) => {
+    setVisibleColumns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(columnId)) {
+        newSet.delete(columnId);
+      } else {
+        newSet.add(columnId);
+      }
+      return newSet;
+    });
+  };
+
+  // Select all columns
+  const selectAllColumns = () => {
+    setVisibleColumns(new Set(COLUMN_DEFINITIONS.map(c => c.id)));
+  };
+
+  // Reset to default columns
+  const resetColumns = () => {
+    setVisibleColumns(new Set(DEFAULT_VISIBLE_COLUMNS));
+  };
+
   // Reset horizontal scroll position when zoom changes
   useEffect(() => {
     if (scrollContainerRef.current) {
@@ -88,6 +203,24 @@ export default function PlayerStatsTable({
   
   // Check if we're viewing historical data - current season shows defensive contribution fields
   const isHistoricalSeason = season && season !== "2025/26" && season !== "current";
+
+  // Get available columns based on current mode
+  const availableColumns = useMemo(() => {
+    return COLUMN_DEFINITIONS.filter(col => {
+      if (col.currentSeasonOnly && isHistoricalSeason) return false;
+      if (col.totalsOnly && displayMode !== 'totals') return false;
+      return true;
+    });
+  }, [displayMode, isHistoricalSeason]);
+
+  // Check if column should be visible
+  const isColumnVisible = (columnId: string) => {
+    const col = COLUMN_DEFINITIONS.find(c => c.id === columnId);
+    if (!col) return false;
+    if (col.currentSeasonOnly && isHistoricalSeason) return false;
+    if (col.totalsOnly && displayMode !== 'totals') return false;
+    return visibleColumns.has(columnId);
+  };
   
   // Fetch CBIT points data from the API
   const { data: cbitPointsData, isLoading: isCbitPointsLoading, isError: isCbitPointsError } = useQuery<CbitPointsData>({
@@ -519,6 +652,56 @@ export default function PlayerStatsTable({
                 <SelectItem value="away">Away Matches only</SelectItem>
               </SelectContent>
             </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-1" data-testid="button-column-selector">
+                  <Settings2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Columns</span>
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                    {Array.from(visibleColumns).filter(id => availableColumns.some(c => c.id === id)).length}
+                  </Badge>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 max-h-[400px] overflow-y-auto" align="end">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <h4 className="font-semibold text-sm">Select Columns</h4>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="sm" onClick={selectAllColumns} className="h-7 text-xs px-2">
+                        All
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={resetColumns} className="h-7 text-xs px-2">
+                        Reset
+                      </Button>
+                    </div>
+                  </div>
+                  {['core', 'performance', 'defensive', 'expected', 'transfers', 'other'].map(category => {
+                    const categoryColumns = availableColumns.filter(c => c.category === category);
+                    if (categoryColumns.length === 0) return null;
+                    return (
+                      <div key={category} className="space-y-2">
+                        <h5 className="text-xs font-semibold text-gray-500 uppercase">{CATEGORY_LABELS[category]}</h5>
+                        <div className="grid grid-cols-2 gap-1">
+                          {categoryColumns.map(col => (
+                            <label
+                              key={col.id}
+                              className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-50 cursor-pointer text-sm"
+                            >
+                              <Checkbox
+                                checked={visibleColumns.has(col.id)}
+                                onCheckedChange={() => toggleColumn(col.id)}
+                                data-testid={`checkbox-column-${col.id}`}
+                              />
+                              <span className="truncate" title={col.tooltip}>{col.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </PopoverContent>
+            </Popover>
             <span className="text-xs sm:text-sm text-gray-600" data-testid="text-results-count">
               Showing {filteredAndSortedPlayers.length} players
             </span>
@@ -599,201 +782,228 @@ export default function PlayerStatsTable({
                   C
                 </th>
               )}
-              {/* Priority columns first */}
-              <th className="px-1 py-1.5 text-center min-w-[50px]">
-                <SortableHeader field="now_cost" label="£" tooltip="Price" />
-              </th>
-              {displayMode === 'totals' && (
+              {/* Dynamic columns based on visibility */}
+              {isColumnVisible('now_cost') && (
+                <th className="px-1 py-1.5 text-center min-w-[50px]">
+                  <SortableHeader field="now_cost" label="£" tooltip="Price" />
+                </th>
+              )}
+              {isColumnVisible('games_played') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="games_played" label="MP" tooltip="Matches Played" />
                 </th>
               )}
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="total_points" label="Pts" tooltip="Total Points" />
-              </th>
-              {/* Key Performance Stats - immediately after points */}
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="goals_scored" label="G" tooltip="Goals Scored" />
-              </th>
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="assists" label="A" tooltip="Assists" />
-              </th>
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="clean_sheets" label="CS" tooltip="Clean Sheets" />
-              </th>
-              {/* Defensive Contribution Fields - positioned after Clean Sheets */}
-              {!isHistoricalSeason && (
+              {isColumnVisible('total_points') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="total_points" label="Pts" tooltip="Total Points" />
+                </th>
+              )}
+              {isColumnVisible('goals_scored') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="goals_scored" label="G" tooltip="Goals Scored" />
+                </th>
+              )}
+              {isColumnVisible('assists') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="assists" label="A" tooltip="Assists" />
+                </th>
+              )}
+              {isColumnVisible('clean_sheets') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="clean_sheets" label="CS" tooltip="Clean Sheets" />
+                </th>
+              )}
+              {isColumnVisible('defensive_contribution') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="defensive_contribution" label="DC" tooltip="Defensive Contribution" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {isColumnVisible('defensive_contribution_points') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="defensive_contribution_points" label="DCP" tooltip="Defensive Contribution Points" />
                 </th>
               )}
-              {/* Key Performance Metrics - positioned after Defensive Contributions */}
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="value_season" label="Val" tooltip="Value (Points per Million)" />
-              </th>
-              {displayMode === 'totals' && (
+              {isColumnVisible('value_season') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="value_season" label="Val" tooltip="Value (Points per Million)" />
+                </th>
+              )}
+              {isColumnVisible('points_per_game') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="points_per_game" label="PPG" tooltip="Points Per Game" />
                 </th>
               )}
-              {!isHistoricalSeason && displayMode === 'totals' && (
+              {isColumnVisible('form') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="form" label="Form" tooltip="Form (Last 5 Gameweeks)" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {isColumnVisible('selected_by_percent') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="selected_by_percent" label="Own%" tooltip="Ownership Percentage" />
                 </th>
               )}
-              {/* Expected Stats */}
-              {!isHistoricalSeason && (
+              {isColumnVisible('expected_goals') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="expected_goals" label="xG" tooltip="Expected Goals" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {isColumnVisible('expected_assists') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="expected_assists" label="xA" tooltip="Expected Assists" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {isColumnVisible('expected_goal_involvements') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="expected_goal_involvements" label="xGI" tooltip="Expected Goal Involvements" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {isColumnVisible('expected_goals_conceded') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="expected_goals_conceded" label="xGC" tooltip="Expected Goals Conceded" />
                 </th>
               )}
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="minutes" label="Min" tooltip="Minutes Played" />
-              </th>
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="goals_conceded" label="GC" tooltip="Goals Conceded" />
-              </th>
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="saves" label="Sav" tooltip="Saves" />
-              </th>
-              {!isHistoricalSeason && (
+              {isColumnVisible('minutes') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="minutes" label="Min" tooltip="Minutes Played" />
+                </th>
+              )}
+              {isColumnVisible('goals_conceded') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="goals_conceded" label="GC" tooltip="Goals Conceded" />
+                </th>
+              )}
+              {isColumnVisible('saves') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="saves" label="Sav" tooltip="Saves" />
+                </th>
+              )}
+              {isColumnVisible('save_points') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="save_points" label="SavP" tooltip="Save Points" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {isColumnVisible('minutes_points') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="minutes_points" label="MinP" tooltip="Minutes Points" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {isColumnVisible('tackles') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="tackles" label="Tck" tooltip="Tackles" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {isColumnVisible('recoveries') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="recoveries" label="Rec" tooltip="Recoveries" />
                 </th>
               )}
-              {!isHistoricalSeason && (
+              {isColumnVisible('clearances_blocks_interceptions') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="clearances_blocks_interceptions" label="CBI" tooltip="Clearances, Blocks, Interceptions" />
                 </th>
               )}
-              {!isHistoricalSeason && displayMode === 'totals' && (
+              {isColumnVisible('starts') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="starts" label="Starts" />
                 </th>
               )}
-              {/* All other data points */}
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="bonus" label="Bonus" />
-              </th>
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="bps" label="BPS" />
-              </th>
-              {!isHistoricalSeason && displayMode === 'totals' && (
+              {isColumnVisible('bonus') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="bonus" label="Bonus" />
+                </th>
+              )}
+              {isColumnVisible('bps') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="bps" label="BPS" />
+                </th>
+              )}
+              {isColumnVisible('event_points') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="event_points" label="GW Pts" />
                 </th>
               )}
-              {!isHistoricalSeason && displayMode === 'totals' && (
+              {isColumnVisible('transfers_in_event') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="transfers_in_event" label="GW In" />
                 </th>
               )}
-              {!isHistoricalSeason && displayMode === 'totals' && (
+              {isColumnVisible('transfers_out_event') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="transfers_out_event" label="GW Out" />
                 </th>
               )}
-              {!isHistoricalSeason && displayMode === 'totals' && (
+              {isColumnVisible('transfers_in') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="transfers_in" label="Total In" />
                 </th>
               )}
-              {!isHistoricalSeason && displayMode === 'totals' && (
+              {isColumnVisible('transfers_out') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="transfers_out" label="Total Out" />
                 </th>
               )}
-              {!isHistoricalSeason && displayMode === 'totals' && (
+              {isColumnVisible('value_form') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="value_form" label="Val Form" />
                 </th>
               )}
-              {displayMode === 'totals' && (
+              {isColumnVisible('influence') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="influence" label="Influence" />
                 </th>
               )}
-              {displayMode === 'totals' && (
+              {isColumnVisible('creativity') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="creativity" label="Creativity" />
                 </th>
               )}
-              {displayMode === 'totals' && (
+              {isColumnVisible('threat') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="threat" label="Threat" />
                 </th>
               )}
-              {displayMode === 'totals' && (
+              {isColumnVisible('ict_index') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="ict_index" label="ICT" />
                 </th>
               )}
-              {!isHistoricalSeason && displayMode === 'totals' && (
+              {isColumnVisible('dreamteam_count') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="dreamteam_count" label="Dream Team" />
                 </th>
               )}
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="penalties_saved" label="Pen Saved" />
-              </th>
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="penalties_missed" label="Pen Missed" />
-              </th>
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="yellow_cards" label="Yellow" />
-              </th>
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="red_cards" label="Red" />
-              </th>
-              <th className="px-1 py-1 text-center min-w-[50px]">
-                <SortableHeader field="own_goals" label="Own Goals" />
-              </th>
-              {!isHistoricalSeason && displayMode === 'totals' && (
+              {isColumnVisible('penalties_saved') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="penalties_saved" label="Pen Saved" />
+                </th>
+              )}
+              {isColumnVisible('penalties_missed') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="penalties_missed" label="Pen Missed" />
+                </th>
+              )}
+              {isColumnVisible('yellow_cards') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="yellow_cards" label="Yellow" />
+                </th>
+              )}
+              {isColumnVisible('red_cards') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="red_cards" label="Red" />
+                </th>
+              )}
+              {isColumnVisible('own_goals') && (
+                <th className="px-1 py-1 text-center min-w-[50px]">
+                  <SortableHeader field="own_goals" label="Own Goals" />
+                </th>
+              )}
+              {isColumnVisible('cost_change_event') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="cost_change_event" label="Price Δ GW" />
                 </th>
               )}
-              {displayMode === 'totals' && (
+              {isColumnVisible('cost_change_start') && (
                 <th className="px-1 py-1 text-center min-w-[50px]">
                   <SortableHeader field="cost_change_start" label="Price Δ Start" />
                 </th>
@@ -871,11 +1081,13 @@ export default function PlayerStatsTable({
                       )}
                     </td>
                   )}
-                  {/* Priority columns first */}
-                  <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">
-                    £{((player.now_cost || player.end_cost || 0) / 10).toFixed(1)}m
-                  </td>
-                  {displayMode === 'totals' && (
+                  {/* Dynamic columns based on visibility */}
+                  {isColumnVisible('now_cost') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">
+                      £{((player.now_cost || player.end_cost || 0) / 10).toFixed(1)}m
+                    </td>
+                  )}
+                  {isColumnVisible('games_played') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">
                       {(() => {
                         const pointsPerGame = parseFloat(player.points_per_game) || 0;
@@ -883,16 +1095,22 @@ export default function PlayerStatsTable({
                       })()}
                     </td>
                   )}
-                  <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{calculateStat(player, player.total_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  {/* Key Performance Stats - immediately after points */}
-                  <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{calculateStat(player, player.goals_scored || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-4 text-center text-sm font-medium text-blue-600">{calculateStat(player, player.assists || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{calculateStat(player, player.clean_sheets || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  {/* Defensive Contribution Fields - positioned after Clean Sheets */}
-                  {!isHistoricalSeason && (
+                  {isColumnVisible('total_points') && (
+                    <td className="px-2 py-4 text-center text-sm font-bold text-fpl-purple">{calculateStat(player, player.total_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('goals_scored') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{calculateStat(player, player.goals_scored || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('assists') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-blue-600">{calculateStat(player, player.assists || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('clean_sheets') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{calculateStat(player, player.clean_sheets || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('defensive_contribution') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-orange-600">{calculateStat(player, player.defensive_contribution || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {isColumnVisible('defensive_contribution_points') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-yellow-600" data-testid={`text-cbit-points-${player.id}`}>
                       {(() => {
                         if (isCbitPointsLoading) {
@@ -905,33 +1123,40 @@ export default function PlayerStatsTable({
                       })()}
                     </td>
                   )}
-                  <td className="px-2 py-4 text-center text-sm font-medium text-green-700 font-semibold">{calculateStat(player, parseFloat(player.value_season || player.value_form || 0)).toFixed(1)}</td>
-                  {displayMode === 'totals' && (
+                  {isColumnVisible('value_season') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-green-700 font-semibold">{calculateStat(player, parseFloat(player.value_season || player.value_form || 0)).toFixed(1)}</td>
+                  )}
+                  {isColumnVisible('points_per_game') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, parseFloat(player.points_per_game || player.form || 0)).toFixed(1)}</td>
                   )}
-                  {!isHistoricalSeason && displayMode === 'totals' && (
+                  {isColumnVisible('form') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, parseFloat(player.form || 0)).toFixed(1)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {isColumnVisible('selected_by_percent') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-purple-700">{formatValue(player.selected_by_percent || 0, 'decimal')}%</td>
                   )}
-                  {/* Expected Stats */}
-                  {!isHistoricalSeason && (
+                  {isColumnVisible('expected_goals') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-purple-600">{calculateStat(player, parseFloat(player.expected_goals || 0)).toFixed(1)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {isColumnVisible('expected_assists') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-blue-600">{calculateStat(player, parseFloat(player.expected_assists || 0)).toFixed(1)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {isColumnVisible('expected_goal_involvements') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-indigo-600">{calculateStat(player, parseFloat(player.expected_goal_involvements || 0)).toFixed(1)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {isColumnVisible('expected_goals_conceded') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, parseFloat(player.expected_goals_conceded || 0)).toFixed(1)}</td>
                   )}
-                  <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{displayMode === 'totals' ? (player.minutes || 0) : calculateStat(player, player.minutes || 0).toFixed(0)}</td>
-                  <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, player.goals_conceded || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, player.saves || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  {!isHistoricalSeason && (
+                  {isColumnVisible('minutes') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{displayMode === 'totals' ? (player.minutes || 0) : calculateStat(player, player.minutes || 0).toFixed(0)}</td>
+                  )}
+                  {isColumnVisible('goals_conceded') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, player.goals_conceded || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('saves') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, player.saves || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('save_points') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-blue-600" data-testid={`text-save-points-${player.id}`}>
                       {(() => {
                         const position = getPositionName(player);
@@ -948,7 +1173,7 @@ export default function PlayerStatsTable({
                       })()} 
                     </td>
                   )}
-                  {!isHistoricalSeason && (
+                  {isColumnVisible('minutes_points') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-orange-600" data-testid={`text-minutes-points-${player.id}`}>
                       {(() => {
                         if (isMinutesPointsLoading) {
@@ -961,60 +1186,73 @@ export default function PlayerStatsTable({
                       })()}
                     </td>
                   )}
-                  {!isHistoricalSeason && (
+                  {isColumnVisible('tackles') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-blue-700">{calculateStat(player, player.tackles || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {isColumnVisible('recoveries') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-green-700">{calculateStat(player, player.recoveries || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
-                  {!isHistoricalSeason && (
+                  {isColumnVisible('clearances_blocks_interceptions') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-purple-700">{calculateStat(player, player.clearances_blocks_interceptions || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
-                  {!isHistoricalSeason && displayMode === 'totals' && (
+                  {isColumnVisible('starts') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{player.starts || 0}</td>
                   )}
-                  {/* All other data points */}
-                  <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, player.bonus || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, player.bps || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  {!isHistoricalSeason && displayMode === 'totals' && (
+                  {isColumnVisible('bonus') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, player.bonus || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('bps') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{calculateStat(player, player.bps || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('event_points') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-fpl-purple">{calculateStat(player, player.event_points || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
                   )}
-                  {!isHistoricalSeason && displayMode === 'totals' && (
+                  {isColumnVisible('transfers_in_event') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{(player.transfers_in_event || 0).toLocaleString()}</td>
                   )}
-                  {!isHistoricalSeason && displayMode === 'totals' && (
+                  {isColumnVisible('transfers_out_event') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{(player.transfers_out_event || 0).toLocaleString()}</td>
                   )}
-                  {!isHistoricalSeason && displayMode === 'totals' && (
+                  {isColumnVisible('transfers_in') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{(player.transfers_in || 0).toLocaleString()}</td>
                   )}
-                  {!isHistoricalSeason && displayMode === 'totals' && (
+                  {isColumnVisible('transfers_out') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{(player.transfers_out || 0).toLocaleString()}</td>
                   )}
-                  {!isHistoricalSeason && displayMode === 'totals' && (
+                  {isColumnVisible('value_form') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-green-700 font-semibold">{formatValue(player.value_form || 0, 'decimal')}</td>
                   )}
-                  {displayMode === 'totals' && (
+                  {isColumnVisible('influence') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{formatValue(player.influence || 0, 'decimal')}</td>
                   )}
-                  {displayMode === 'totals' && (
+                  {isColumnVisible('creativity') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{formatValue(player.creativity || 0, 'decimal')}</td>
                   )}
-                  {displayMode === 'totals' && (
+                  {isColumnVisible('threat') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-gray-900">{formatValue(player.threat || 0, 'decimal')}</td>
                   )}
-                  {displayMode === 'totals' && (
+                  {isColumnVisible('ict_index') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-fpl-purple">{formatValue(player.ict_index || 0, 'decimal')}</td>
                   )}
-                  {!isHistoricalSeason && displayMode === 'totals' && (
+                  {isColumnVisible('dreamteam_count') && (
                     <td className="px-2 py-4 text-center text-sm font-medium text-yellow-600">{player.dreamteam_count || 0}</td>
                   )}
-                  <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{calculateStat(player, player.penalties_saved || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, player.penalties_missed || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-4 text-center text-sm font-medium text-yellow-600">{calculateStat(player, player.yellow_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, player.red_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, player.own_goals || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
-                  {!isHistoricalSeason && displayMode === 'totals' && (
+                  {isColumnVisible('penalties_saved') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-green-600">{calculateStat(player, player.penalties_saved || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('penalties_missed') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, player.penalties_missed || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('yellow_cards') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-yellow-600">{calculateStat(player, player.yellow_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('red_cards') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, player.red_cards || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('own_goals') && (
+                    <td className="px-2 py-4 text-center text-sm font-medium text-red-600">{calculateStat(player, player.own_goals || 0).toFixed(displayMode === 'totals' ? 0 : 1)}</td>
+                  )}
+                  {isColumnVisible('cost_change_event') && (
                     <td className="px-2 py-4 text-center text-sm font-medium">
                       <div className="flex items-center justify-center">
                         <span className={(player.cost_change_event || 0) > 0 ? 'text-green-600' : (player.cost_change_event || 0) < 0 ? 'text-red-600' : 'text-gray-900'}>
@@ -1023,7 +1261,7 @@ export default function PlayerStatsTable({
                       </div>
                     </td>
                   )}
-                  {displayMode === 'totals' && (
+                  {isColumnVisible('cost_change_start') && (
                     <td className="px-2 py-4 text-center text-sm font-medium">
                       <div className="flex items-center justify-center">
                         <span className={(player.cost_change_start || 0) > 0 ? 'text-green-600' : (player.cost_change_start || 0) < 0 ? 'text-red-600' : 'text-gray-900'}>
