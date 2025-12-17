@@ -69,12 +69,7 @@ const COLUMN_DEFINITIONS: ColumnDefinition[] = [
   { id: 'cost_change_start', field: 'cost_change_start', label: 'Price Δ Start', tooltip: 'Price Change Since Start', category: 'other', totalsOnly: true },
 ];
 
-const DEFAULT_VISIBLE_COLUMNS = [
-  'now_cost', 'games_played', 'total_points', 'goals_scored', 'assists', 'clean_sheets',
-  'defensive_contribution', 'defensive_contribution_points', 'value_season', 'points_per_game',
-  'form', 'selected_by_percent', 'expected_goals', 'expected_assists', 'expected_goal_involvements',
-  'minutes', 'bonus', 'bps'
-];
+const DEFAULT_VISIBLE_COLUMNS = COLUMN_DEFINITIONS.map(c => c.id);
 
 // Default column order (matches COLUMN_DEFINITIONS order)
 const DEFAULT_COLUMN_ORDER = COLUMN_DEFINITIONS.map(c => c.id);
@@ -315,17 +310,6 @@ export default function PlayerStatsTable({
     return visibleCount > 0 && visibleCount < categoryColumns.length;
   };
 
-  // Auto-adjust zoom based on visible column count
-  useEffect(() => {
-    const visibleCount = orderedColumns.filter(col => visibleColumns.has(col.id)).length;
-    // Base calculation: fewer columns = higher zoom, more columns = lower zoom
-    // Range: 70% (many columns) to 180% (few columns)
-    // With ~18 default columns, this gives ~130% zoom
-    const baseColumns = 24; // Reference point calibrated for default columns at 130%
-    const optimalZoom = Math.round((baseColumns / Math.max(visibleCount, 3)) * 100);
-    const clampedZoom = Math.min(180, Math.max(70, optimalZoom));
-    setZoomLevel(clampedZoom);
-  }, [visibleColumns, orderedColumns]);
 
   // Check if column should be visible
   const isColumnVisible = (columnId: string) => {
