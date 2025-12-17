@@ -31,6 +31,7 @@ export default function PlayerGoalsScoredProjections() {
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
+  const [showOpponent, setShowOpponent] = useState(true);
   const [initialized, setInitialized] = useState(false);
   
   const queryClient = useQueryClient();
@@ -542,6 +543,19 @@ export default function PlayerGoalsScoredProjections() {
                   Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
                 </p>
               )}
+              
+              {/* Show Opponent Toggle */}
+              <div className="mt-3 flex items-center gap-2">
+                <Button
+                  variant={showOpponent ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowOpponent(!showOpponent)}
+                  className={showOpponent ? 'bg-purple-600 hover:bg-purple-700 text-white' : 'text-gray-600'}
+                  data-testid="button-toggle-opponent"
+                >
+                  {showOpponent ? 'Hide Opponent' : 'Show Opponent'}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -640,9 +654,11 @@ export default function PlayerGoalsScoredProjections() {
                                 <div className="font-bold text-gray-900">
                                   {goals > 0 ? goals.toFixed(2) : "-"}
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                  {opponent} ({isHome ? 'H' : 'A'})
-                                </div>
+                                {showOpponent && (
+                                  <div className="text-xs text-gray-500">
+                                    {opponent} ({isHome ? 'H' : 'A'})
+                                  </div>
+                                )}
                               </div>
                             </td>
                           );
