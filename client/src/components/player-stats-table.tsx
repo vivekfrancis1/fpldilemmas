@@ -133,6 +133,7 @@ interface MinutesPointsData {
 }
 
 const ITEMS_PER_PAGE = 20;
+const COLUMN_SETTINGS_VERSION = 2; // Increment to reset user's column visibility to new defaults
 
 export default function PlayerStatsTable({ 
   data, 
@@ -152,6 +153,13 @@ export default function PlayerStatsTable({
   const [venueFilter, setVenueFilter] = useState<'all' | 'home' | 'away'>('all');
   const [zoomLevel, setZoomLevel] = useState(100);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(() => {
+    const savedVersion = localStorage.getItem('playerStatsColumnsVersion');
+    const currentVersion = String(COLUMN_SETTINGS_VERSION);
+    if (savedVersion !== currentVersion) {
+      localStorage.setItem('playerStatsColumnsVersion', currentVersion);
+      localStorage.removeItem('playerStatsVisibleColumns');
+      return new Set(DEFAULT_VISIBLE_COLUMNS);
+    }
     const saved = localStorage.getItem('playerStatsVisibleColumns');
     if (saved) {
       try {
