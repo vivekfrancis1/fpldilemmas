@@ -1308,6 +1308,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       recommendations.freeTransfers = freeTransfersRemaining;
       
       // Update ALL gameweeks' free transfers to properly account for authenticated data
+      // The base endpoint calculated recommendations with wrong FT count, so we must recalculate
       if (recommendations.gameweeks) {
         const gwKeys = Object.keys(recommendations.gameweeks).sort((a, b) => parseInt(a) - parseInt(b));
         let runningFTs = freeTransfersRemaining;
@@ -1321,9 +1322,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               gw.bankBefore = myTeamData.transfers.bank;
             }
             
-            // Calculate FTs for next gameweek based on primary transfers recommended
+            // Calculate FTs for next gameweek based on primary transfers
+            // Use minimum of (actual primaries shown, available FTs) since we can't use more than we have
             const primaryTransfersCount = gw.recommendations?.filter((r: any) => r.isPrimary)?.length || 0;
-            const unusedFTs = Math.max(0, runningFTs - primaryTransfersCount);
+            const transfersUsed = Math.min(primaryTransfersCount, runningFTs); // Can't use more FTs than available
+            const unusedFTs = Math.max(0, runningFTs - transfersUsed);
             runningFTs = Math.min(5, unusedFTs + 1); // Bank unused + 1 new, cap at 5
             
             // Special case: GW16 AFCON top-up
@@ -1331,6 +1334,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (nextGW === 16) {
               runningFTs = 5;
             }
+            
+            console.log(`DEBUG AUTH: GW${gwKey} - Available: ${gw.freeTransfersAvailable}, Primaries: ${primaryTransfersCount}, Used: ${transfersUsed}, Next GW will have: ${runningFTs}`);
           }
         }
       }
