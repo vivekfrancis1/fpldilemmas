@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw, UserPlus, Heart, AlertTriangle, XCircle, Clock, CheckCircle } from "lucide-react";
+import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw, UserPlus, Heart, AlertTriangle, XCircle, Clock, CheckCircle, X } from "lucide-react";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -657,6 +657,9 @@ export default function PlayerTotalPoints() {
   // Comparison state
   const [compareList, setCompareList] = useState<PlayerTotalPointsData[]>([]);
   const [isCompareModalOpen, setIsCompareModalOpen] = useState(false);
+  
+  // Gameweek exclusion state
+  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
 
   // Get available gameweeks for dropdown (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
@@ -880,8 +883,26 @@ export default function PlayerTotalPoints() {
     }
   };
 
-  // Generate gameweek range for table headers
-  const gameweekRange = useMemo(() => {
+  // Toggle gameweek exclusion
+  const toggleGameweekExclusion = (gw: number) => {
+    setExcludedGameweeks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(gw)) {
+        newSet.delete(gw);
+      } else {
+        newSet.add(gw);
+      }
+      return newSet;
+    });
+  };
+
+  // Clear all exclusions
+  const clearExclusions = () => {
+    setExcludedGameweeks(new Set());
+  };
+
+  // Generate full gameweek range (for toggle display)
+  const fullGameweekRange = useMemo(() => {
     if (!startGameweek || !endGameweek) return [];
     const range = [];
     for (let gw = startGameweek; gw <= endGameweek; gw++) {
@@ -889,6 +910,11 @@ export default function PlayerTotalPoints() {
     }
     return range;
   }, [startGameweek, endGameweek]);
+
+  // Generate active gameweek range for table headers (excluding excluded ones)
+  const gameweekRange = useMemo(() => {
+    return fullGameweekRange.filter(gw => !excludedGameweeks.has(gw));
+  }, [fullGameweekRange, excludedGameweeks]);
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
@@ -1225,6 +1251,49 @@ export default function PlayerTotalPoints() {
               />
             </div>
               </div>
+
+              {/* Gameweek Toggle Section */}
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-sm font-medium text-gray-700">
+                    Toggle Gameweeks (click to exclude/include):
+                  </Label>
+                  {excludedGameweeks.size > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={clearExclusions}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                      data-testid="button-clear-exclusions"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Clear exclusions
+                    </Button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {fullGameweekRange.map(gw => {
+                    const isExcluded = excludedGameweeks.has(gw);
+                    return (
+                      <Button
+                        key={gw}
+                        variant={isExcluded ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => toggleGameweekExclusion(gw)}
+                        className={`min-w-[60px] ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}
+                        data-testid={`button-toggle-gw-${gw}`}
+                      >
+                        GW{gw}
+                      </Button>
+                    );
+                  })}
+                </div>
+                {excludedGameweeks.size > 0 && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
@@ -1245,6 +1314,11 @@ export default function PlayerTotalPoints() {
                   <div className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-indigo-600" />
                     <h2 className="fpl-card-title">Player Points Projections: GW{startGameweek}-GW{endGameweek}</h2>
+                    {excludedGameweeks.size > 0 && (
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {excludedGameweeks.size} excluded
+                      </Badge>
+                    )}
                   </div>
                   <Badge className="bg-indigo-100 text-indigo-700">
                     {filteredAndSortedData.length} players

@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2 } from "lucide-react";
+import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface TeamCSProjection {
   id: number;
@@ -36,8 +37,37 @@ export default function TeamCSProjections() {
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
+  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("average");
+
+  const activeGameweeks = useMemo(() => {
+    const startGW = parseInt(startGameweek);
+    const endGW = parseInt(endGameweek);
+    const gameweeks: number[] = [];
+    for (let gw = startGW; gw <= endGW; gw++) {
+      if (!excludedGameweeks.has(gw)) {
+        gameweeks.push(gw);
+      }
+    }
+    return gameweeks;
+  }, [startGameweek, endGameweek, excludedGameweeks]);
+
+  const toggleGameweekExclusion = (gw: number) => {
+    setExcludedGameweeks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(gw)) {
+        newSet.delete(gw);
+      } else {
+        newSet.add(gw);
+      }
+      return newSet;
+    });
+  };
+
+  const clearExclusions = () => {
+    setExcludedGameweeks(new Set());
+  };
 
   // Get available gameweeks for dropdown options (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
@@ -75,15 +105,13 @@ export default function TeamCSProjections() {
         
         switch (sortBy) {
           case "average": {
-            // Calculate period average for sorting
-            const startGW = parseInt(startGameweek);
-            const endGW = parseInt(endGameweek);
-            const aPeriodAvg = Object.keys(a.gameweekProjections)
-              .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
-              .reduce((sum, gw, _, arr) => sum + (a.gameweekProjections[parseInt(gw)] || 0) / arr.length, 0);
-            const bPeriodAvg = Object.keys(b.gameweekProjections)
-              .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
-              .reduce((sum, gw, _, arr) => sum + (b.gameweekProjections[parseInt(gw)] || 0) / arr.length, 0);
+            // Calculate period average for sorting using active gameweeks only
+            const aPeriodAvg = activeGameweeks.length > 0
+              ? activeGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0) / activeGameweeks.length
+              : 0;
+            const bPeriodAvg = activeGameweeks.length > 0
+              ? activeGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0) / activeGameweeks.length
+              : 0;
             return bPeriodAvg - aPeriodAvg;
           }
           case "season": return b.averageCSProbability - a.averageCSProbability;
@@ -91,7 +119,7 @@ export default function TeamCSProjections() {
           default: return b.averageCSProbability - a.averageCSProbability;
         }
       });
-  }, [projectionsData, selectedTeam, sortBy]);
+  }, [projectionsData, selectedTeam, sortBy, activeGameweeks]);
 
   const getConfidenceColor = (confidence: string) => {
     switch (confidence) {
@@ -203,6 +231,50 @@ export default function TeamCSProjections() {
                   </Select>
                 </div>
               </div>
+
+              {/* Gameweek Toggle Section */}
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Toggle Gameweeks (click to exclude/include):
+                  </label>
+                  {excludedGameweeks.size > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={clearExclusions}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                      data-testid="button-clear-exclusions"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Clear exclusions
+                    </Button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
+                    const gwNumber = parseInt(startGameweek) + i;
+                    const isExcluded = excludedGameweeks.has(gwNumber);
+                    return (
+                      <Button
+                        key={gwNumber}
+                        variant={isExcluded ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => toggleGameweekExclusion(gwNumber)}
+                        className={`min-w-[60px] ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
+                        data-testid={`button-toggle-gw-${gwNumber}`}
+                      >
+                        GW{gwNumber}
+                      </Button>
+                    );
+                  })}
+                </div>
+                {excludedGameweeks.size > 0 && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -211,7 +283,12 @@ export default function TeamCSProjections() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
-                Team Clean Sheet Projections: Gameweeks {startGameweek}-{endGameweek}
+                {`Team Clean Sheet Projections: GW${startGameweek}-GW${endGameweek}`}
+                {excludedGameweeks.size > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {excludedGameweeks.size} excluded
+                  </Badge>
+                )}
                 <Badge variant="outline" className="ml-2">
                   {filteredProjections.length} teams
                 </Badge>
@@ -228,21 +305,18 @@ export default function TeamCSProjections() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
                         Team
                       </th>
-                      {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
-                        const gwNumber = parseInt(startGameweek) + i;
-                        return (
-                          <th 
-                            key={gwNumber} 
-                            className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                            onClick={() => setSortBy(`gw${gwNumber}`)}
-                          >
-                            <div className="flex items-center justify-center gap-1">
-                              GW{gwNumber}
-                              {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
-                            </div>
-                          </th>
-                        );
-                      })}
+                      {activeGameweeks.map(gwNumber => (
+                        <th 
+                          key={gwNumber} 
+                          className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                          onClick={() => setSortBy(`gw${gwNumber}`)}
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            GW{gwNumber}
+                            {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
+                          </div>
+                        </th>
+                      ))}
 
                       <th 
                         className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors"
@@ -271,11 +345,10 @@ export default function TeamCSProjections() {
                           </div>
                         </td>
                         
-                        {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, weekIndex) => {
-                          const gwNumber = parseInt(startGameweek) + weekIndex;
+                        {activeGameweeks.map(gwNumber => {
                           const csPercentage = team.gameweekProjections[gwNumber] || 0;
                           return (
-                            <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getCSColor(csPercentage)}`}>
+                            <td key={`${team.id}-gw${gwNumber}`} className={`px-4 py-4 text-center text-sm font-medium ${getCSColor(csPercentage)}`}>
                               {csPercentage > 0 ? `${csPercentage}%` : "-"}
                             </td>
                           );
@@ -286,11 +359,7 @@ export default function TeamCSProjections() {
                         <td className="px-4 py-4 text-center bg-blue-50">
                           <span className="text-lg font-bold text-blue-900">
                             {(() => {
-                              const startGW = parseInt(startGameweek);
-                              const endGW = parseInt(endGameweek);
-                              const periodValues = Object.keys(team.gameweekProjections)
-                                .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
-                                .map(gw => team.gameweekProjections[parseInt(gw)] || 0);
+                              const periodValues = activeGameweeks.map(gw => team.gameweekProjections[gw] || 0);
                               const periodAvg = periodValues.length > 0 ? periodValues.reduce((sum, val) => sum + val, 0) / periodValues.length : 0;
                               return `${periodAvg.toFixed(1)}%`;
                             })()}

@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Star, Search, ArrowUpDown, Users, Loader2 } from "lucide-react";
+import { Star, Search, ArrowUpDown, Users, Loader2, X } from "lucide-react";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { PlayerNameCell } from "@/components/enhanced-table";
 
 interface BootstrapData {
@@ -37,6 +38,7 @@ export default function PlayerBonusPoints() {
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [startGameweek, setStartGameweek] = useState<number>(0);
   const [endGameweek, setEndGameweek] = useState<number>(0);
+  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [initialized, setInitialized] = useState(false);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
@@ -92,19 +94,39 @@ export default function PlayerBonusPoints() {
 
   const positions = ["GKP", "DEF", "MID", "FWD"];
 
-  // Generate dynamic gameweek columns based on selected range
+  // Toggle gameweek exclusion
+  const toggleGameweekExclusion = (gw: number) => {
+    setExcludedGameweeks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(gw)) {
+        newSet.delete(gw);
+      } else {
+        newSet.add(gw);
+      }
+      return newSet;
+    });
+  };
+
+  // Clear all exclusions
+  const clearExclusions = () => {
+    setExcludedGameweeks(new Set());
+  };
+
+  // Generate dynamic gameweek columns based on selected range (excluding excluded gameweeks)
   const dynamicGameweekColumns = useMemo(() => {
     const columns = [];
     for (let gw = startGameweek; gw <= endGameweek; gw++) {
-      columns.push(gw);
+      if (!excludedGameweeks.has(gw)) {
+        columns.push(gw);
+      }
     }
     return columns;
-  }, [startGameweek, endGameweek]);
+  }, [startGameweek, endGameweek, excludedGameweeks]);
 
-  // Calculate dynamic totals based on selected gameweek range
+  // Calculate dynamic totals based on selected gameweek range (using filtered columns)
   const getFilteredTotal = (player: BonusPointsProjection) => {
     let total = 0;
-    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+    for (const gw of dynamicGameweekColumns) {
       total += player.bonusPoints?.[`gw${gw}`] || 0;
     }
     return total;
@@ -161,7 +183,7 @@ export default function PlayerBonusPoints() {
     });
 
     return filtered;
-  }, [bonusPointsProjections, searchTerm, positionFilter, teamFilter, sortField, sortDirection, startGameweek, endGameweek]);
+  }, [bonusPointsProjections, searchTerm, positionFilter, teamFilter, sortField, sortDirection, dynamicGameweekColumns]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -290,6 +312,50 @@ export default function PlayerBonusPoints() {
               </div>
             </div>
 
+            {/* Gameweek Toggle Section */}
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Toggle Gameweeks (click to exclude/include):
+                </label>
+                {excludedGameweeks.size > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={clearExclusions}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                    data-testid="button-clear-exclusions"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Clear exclusions
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {Array.from({ length: endGameweek - startGameweek + 1 }, (_, i) => {
+                  const gwNumber = startGameweek + i;
+                  const isExcluded = excludedGameweeks.has(gwNumber);
+                  return (
+                    <Button
+                      key={gwNumber}
+                      variant={isExcluded ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => toggleGameweekExclusion(gwNumber)}
+                      className={`min-w-[60px] ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}
+                      data-testid={`button-toggle-gw-${gwNumber}`}
+                    >
+                      GW{gwNumber}
+                    </Button>
+                  );
+                })}
+              </div>
+              {excludedGameweeks.size > 0 && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
+                </p>
+              )}
+            </div>
+
             <div className="flex items-center gap-2 text-sm text-gray-600 mt-4">
               <Users className="h-4 w-4" />
               <span>{filteredAndSortedData.length} players</span>
@@ -301,7 +367,14 @@ export default function PlayerBonusPoints() {
         {filteredAndSortedData.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Bonus Points Projections</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                Bonus Points Projections
+                {excludedGameweeks.size > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {excludedGameweeks.size} excluded
+                  </Badge>
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="border rounded-lg overflow-hidden">

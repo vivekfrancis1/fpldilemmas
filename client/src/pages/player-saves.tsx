@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, Search, ArrowUpDown, Users, Loader2 } from "lucide-react";
+import { Shield, Search, ArrowUpDown, Users, Loader2, X } from "lucide-react";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,7 @@ export default function PlayerSaves() {
   const [startGameweek, setStartGameweek] = useState<number>(0);
   const [endGameweek, setEndGameweek] = useState<number>(0);
   const [initialized, setInitialized] = useState(false);
+  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -79,24 +80,29 @@ export default function PlayerSaves() {
   const savesProjections = useMemo(() => {
     if (!allSavesProjections) return allSavesProjections;
     
-    // Filter each player's saves to only include selected range
+    // Filter each player's saves to only include selected range (excluding excluded gameweeks)
     return allSavesProjections.map((player: any) => {
       const filteredSaves: Record<string, number> = {};
       const filteredPoints: Record<string, number> = {};
       const originalSaves = player.saves || {};
       const originalPoints = player.pointsFromSaves || {};
       
-      // Calculate total for selected range
+      // Calculate total for selected range (only active gameweeks)
       let totalSaves = 0;
       let totalPoints = 0;
+      let activeCount = 0;
       for (let gw = startGameweek; gw <= endGameweek; gw++) {
         const gwKey = `gw${gw}`;
         const saves = originalSaves[gwKey] || 0;
         const points = originalPoints[gwKey] || 0;
         filteredSaves[gwKey] = saves;
         filteredPoints[gwKey] = points;
-        totalSaves += saves;
-        totalPoints += points;
+        // Only sum non-excluded gameweeks
+        if (!excludedGameweeks.has(gw)) {
+          totalSaves += saves;
+          totalPoints += points;
+          activeCount++;
+        }
       }
       
       return {
@@ -105,10 +111,10 @@ export default function PlayerSaves() {
         pointsFromSaves: filteredPoints,
         totalSaves,
         totalPoints,
-        averagePerGameweek: (endGameweek - startGameweek + 1) > 0 ? totalSaves / (endGameweek - startGameweek + 1) : 0
+        averagePerGameweek: activeCount > 0 ? totalSaves / activeCount : 0
       };
     });
-  }, [allSavesProjections, startGameweek, endGameweek]);
+  }, [allSavesProjections, startGameweek, endGameweek, excludedGameweeks]);
 
   // Create playerIdToWebName mapping for short names
   const playerIdToWebName = useMemo(() => {
@@ -126,19 +132,39 @@ export default function PlayerSaves() {
     return uniqueTeams.sort();
   }, [savesProjections]);
 
-  // Generate dynamic gameweek columns based on selected range
+  // Toggle gameweek exclusion
+  const toggleGameweekExclusion = (gw: number) => {
+    setExcludedGameweeks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(gw)) {
+        newSet.delete(gw);
+      } else {
+        newSet.add(gw);
+      }
+      return newSet;
+    });
+  };
+
+  // Clear all exclusions
+  const clearExclusions = () => {
+    setExcludedGameweeks(new Set());
+  };
+
+  // Generate dynamic gameweek columns based on selected range (excluding excluded gameweeks)
   const dynamicGameweekColumns = useMemo(() => {
     const columns = [];
     for (let gw = startGameweek; gw <= endGameweek; gw++) {
-      columns.push(gw);
+      if (!excludedGameweeks.has(gw)) {
+        columns.push(gw);
+      }
     }
     return columns;
-  }, [startGameweek, endGameweek]);
+  }, [startGameweek, endGameweek, excludedGameweeks]);
 
-  // Calculate dynamic totals based on selected gameweek range
+  // Calculate dynamic totals based on selected gameweek range (using filtered columns)
   const getFilteredTotal = (player: SavesProjection) => {
     let total = 0;
-    for (let gw = startGameweek; gw <= endGameweek; gw++) {
+    for (const gw of dynamicGameweekColumns) {
       total += player.saves?.[`gw${gw}`] || 0;
     }
     return total;
@@ -319,6 +345,50 @@ export default function PlayerSaves() {
                 <span>{filteredAndSortedData.length} goalkeepers</span>
               </div>
             </div>
+
+            {/* Gameweek Toggle Section */}
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Toggle Gameweeks (click to exclude/include):
+                </label>
+                {excludedGameweeks.size > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={clearExclusions}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                    data-testid="button-clear-exclusions"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Clear exclusions
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {Array.from({ length: endGameweek - startGameweek + 1 }, (_, i) => {
+                  const gwNumber = startGameweek + i;
+                  const isExcluded = excludedGameweeks.has(gwNumber);
+                  return (
+                    <Button
+                      key={gwNumber}
+                      variant={isExcluded ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => toggleGameweekExclusion(gwNumber)}
+                      className={`min-w-[60px] ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
+                      data-testid={`button-toggle-gw-${gwNumber}`}
+                    >
+                      GW{gwNumber}
+                    </Button>
+                  );
+                })}
+              </div>
+              {excludedGameweeks.size > 0 && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -329,6 +399,11 @@ export default function PlayerSaves() {
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-blue-600" />
                 Expected Saves: GW{startGameweek}-GW{endGameweek}
+                {excludedGameweeks.size > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {excludedGameweeks.size} excluded
+                  </Badge>
+                )}
               </CardTitle>
               <CardDescription>
                 Projected number of saves for each goalkeeper based on opponent strength and team defensive quality

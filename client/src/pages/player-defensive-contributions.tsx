@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Shield, Filter, Clock, Target, Search, Loader2 } from "lucide-react";
+import { Shield, Filter, Clock, Target, Search, Loader2, X } from "lucide-react";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean }>;
@@ -85,6 +85,7 @@ export default function PlayerDefensiveContributions() {
   const [avgSortOrder, setAvgSortOrder] = useState<"asc" | "desc">("desc");
   const [sortByDCPoints, setSortByDCPoints] = useState<boolean>(false);
   const [dcPointsSortOrder, setDCPointsSortOrder] = useState<"asc" | "desc">("desc");
+  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
 
   // Dynamic gameweek range state (fetch 12 gameweeks for API, default display to 6)
   const [gameweekRange, setGameweekRange] = useState(() => {
@@ -220,6 +221,29 @@ export default function PlayerDefensiveContributions() {
     return allGameweeks.filter(gw => gw >= startGameweek && gw <= endGameweek);
   }, [allGameweeks, startGameweek, endGameweek]);
 
+  // Get active gameweeks (range minus excluded)
+  const activeGameweeks = useMemo(() => {
+    return gameweeks.filter(gw => !excludedGameweeks.has(gw));
+  }, [gameweeks, excludedGameweeks]);
+
+  // Toggle gameweek exclusion
+  const toggleGameweekExclusion = (gw: number) => {
+    setExcludedGameweeks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(gw)) {
+        newSet.delete(gw);
+      } else {
+        newSet.add(gw);
+      }
+      return newSet;
+    });
+  };
+
+  // Clear all exclusions
+  const clearExclusions = () => {
+    setExcludedGameweeks(new Set());
+  };
+
   // Calculate totals for each player
   const playersWithTotals = useMemo(() => {
     return players.map(player => {
@@ -239,22 +263,25 @@ export default function PlayerDefensiveContributions() {
         return { ...gw, dcPoints };
       });
       
-      // Filter projections to selected gameweek range
-      const filteredProjections = gameweekPoints.filter(gw => gw.gameweek >= startGameweek && gw.gameweek <= endGameweek);
+      // Filter projections to selected gameweek range (for table display)
+      const rangeProjections = gameweekPoints.filter(gw => gw.gameweek >= startGameweek && gw.gameweek <= endGameweek);
+      
+      // Filter to active gameweeks only (excluding excluded ones) for totals/averages
+      const activeProjections = gameweekPoints.filter(gw => activeGameweeks.includes(gw.gameweek));
       
       return {
         ...player,
-        gameweekProjections: filteredProjections,
-        totalDC: filteredProjections.reduce((sum, gw) => sum + gw.defensiveContribution, 0),
-        avgDC: filteredProjections.length > 0 ? filteredProjections.reduce((sum, gw) => sum + gw.defensiveContribution, 0) / filteredProjections.length : 0,
-        totalTackles: filteredProjections.reduce((sum, gw) => sum + gw.tackles, 0),
-        totalRecoveries: filteredProjections.reduce((sum, gw) => sum + gw.recoveries, 0),
-        totalCBI: filteredProjections.reduce((sum, gw) => sum + gw.cbi, 0),
-        totalDCPoints: filteredProjections.reduce((sum, gw) => sum + gw.dcPoints, 0),
-        avgDCPoints: filteredProjections.length > 0 ? filteredProjections.reduce((sum, gw) => sum + gw.dcPoints, 0) / filteredProjections.length : 0
+        gameweekProjections: rangeProjections,
+        totalDC: activeProjections.reduce((sum, gw) => sum + gw.defensiveContribution, 0),
+        avgDC: activeProjections.length > 0 ? activeProjections.reduce((sum, gw) => sum + gw.defensiveContribution, 0) / activeProjections.length : 0,
+        totalTackles: activeProjections.reduce((sum, gw) => sum + gw.tackles, 0),
+        totalRecoveries: activeProjections.reduce((sum, gw) => sum + gw.recoveries, 0),
+        totalCBI: activeProjections.reduce((sum, gw) => sum + gw.cbi, 0),
+        totalDCPoints: activeProjections.reduce((sum, gw) => sum + gw.dcPoints, 0),
+        avgDCPoints: activeProjections.length > 0 ? activeProjections.reduce((sum, gw) => sum + gw.dcPoints, 0) / activeProjections.length : 0
       };
     });
-  }, [players, startGameweek, endGameweek]);
+  }, [players, startGameweek, endGameweek, activeGameweeks]);
 
   // Filter and sort players
   const filteredPlayers = useMemo(() => {
@@ -500,10 +527,11 @@ export default function PlayerDefensiveContributions() {
               <div className="flex items-center">
                 <Clock className="h-8 w-8 text-orange-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-orange-900">Gameweeks</p>
-                  <p className="text-2xl font-bold text-orange-700">{gameweeks.length}</p>
+                  <p className="text-sm font-medium text-orange-900">Active Gameweeks</p>
+                  <p className="text-2xl font-bold text-orange-700">{activeGameweeks.length}</p>
                   <p className="text-sm text-orange-600">
-                    {gameweeks.length > 0 ? `GW${gameweeks[0]} - GW${gameweeks[gameweeks.length - 1]}` : "Select range"}
+                    {activeGameweeks.length > 0 ? `${activeGameweeks.length} of ${gameweeks.length} GWs` : "Select range"}
+                    {excludedGameweeks.size > 0 && ` (${excludedGameweeks.size} excluded)`}
                   </p>
                 </div>
               </div>
@@ -594,13 +622,63 @@ export default function PlayerDefensiveContributions() {
             </div>
 
           </div>
+
+          {/* Gameweek Toggle Section */}
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium text-gray-700">
+                Toggle Gameweeks (click to exclude/include):
+              </label>
+              {excludedGameweeks.size > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={clearExclusions}
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                  data-testid="button-clear-exclusions"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear exclusions
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {gameweeks.map(gwNumber => {
+                const isExcluded = excludedGameweeks.has(gwNumber);
+                return (
+                  <Button
+                    key={gwNumber}
+                    variant={isExcluded ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => toggleGameweekExclusion(gwNumber)}
+                    className={`min-w-[60px] ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
+                    data-testid={`button-toggle-gw-${gwNumber}`}
+                  >
+                    GW{gwNumber}
+                  </Button>
+                );
+              })}
+            </div>
+            {excludedGameweeks.size > 0 && (
+              <p className="text-xs text-gray-500 mt-2">
+                Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
       {/* Main Content */}
       <Card>
         <CardHeader>
-          <CardTitle>Player Defensive Contributions Projections: GW{startGameweek}-GW{endGameweek}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Player Defensive Contributions Projections: GW{startGameweek}-GW{endGameweek}
+            {excludedGameweeks.size > 0 && (
+              <Badge variant="secondary" className="ml-1 text-xs">
+                {excludedGameweeks.size} excluded
+              </Badge>
+            )}
+          </CardTitle>
           <CardDescription>
             Fixture-aware projections with opponent difficulty indicators
           </CardDescription>
@@ -628,7 +706,7 @@ export default function PlayerDefensiveContributions() {
                       )}
                     </div>
                   </TableHead>
-                  {gameweeks.map(gw => (
+                  {activeGameweeks.map(gw => (
                     <TableHead 
                       key={gw} 
                       className="text-center min-w-[100px] cursor-pointer hover:bg-muted/50"
@@ -649,7 +727,7 @@ export default function PlayerDefensiveContributions() {
                     onClick={handleTotalSort}
                   >
                     <div className="flex items-center justify-center gap-1">
-                      {gameweeks.length} GW DC
+                      {activeGameweeks.length} GW DC
                       {sortByTotal && (
                         <span className="text-xs">
                           {totalSortOrder === "desc" ? "↓" : "↑"}
@@ -675,7 +753,7 @@ export default function PlayerDefensiveContributions() {
                     onClick={handleDCPointsSort}
                   >
                     <div className="flex items-center justify-center gap-1">
-                      {gameweeks.length}GW DC Pts
+                      {activeGameweeks.length}GW DC Pts
                       {sortByDCPoints && (
                         <span className="text-xs">
                           {dcPointsSortOrder === "desc" ? "↓" : "↑"}
@@ -704,7 +782,9 @@ export default function PlayerDefensiveContributions() {
                     <TableCell className="hidden md:table-cell font-mono sticky left-[150px] bg-background z-10 px-1 py-2">
                       {player.currentSeasonStats.dcPer90.toFixed(1)}
                     </TableCell>
-                    {player.gameweekProjections.map((gw) => (
+                    {player.gameweekProjections
+                      .filter(gw => activeGameweeks.includes(gw.gameweek))
+                      .map((gw) => (
                       <TableCell key={gw.gameweek} className="text-center">
                         <div className={`p-2 rounded text-sm ${getOpponentColor(gw.opponentTier)} ${gw.isActual ? 'border-2 border-blue-400' : ''}`}>
                           <div className="font-bold">

@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2 } from "lucide-react";
+import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface TeamGoalsAgainstProjection {
   id: number;
@@ -37,8 +38,40 @@ export default function TeamGoalsAgainstProjections() {
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
+  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
+
+  // Toggle gameweek exclusion
+  const toggleGameweekExclusion = (gw: number) => {
+    setExcludedGameweeks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(gw)) {
+        newSet.delete(gw);
+      } else {
+        newSet.add(gw);
+      }
+      return newSet;
+    });
+  };
+
+  // Clear all exclusions
+  const clearExclusions = () => {
+    setExcludedGameweeks(new Set());
+  };
+
+  // Active gameweeks (excluding excluded ones)
+  const activeGameweeks = useMemo(() => {
+    const startGW = parseInt(startGameweek);
+    const endGW = parseInt(endGameweek);
+    const allGameweeks = [];
+    for (let gw = startGW; gw <= endGW; gw++) {
+      if (!excludedGameweeks.has(gw)) {
+        allGameweeks.push(gw);
+      }
+    }
+    return allGameweeks;
+  }, [startGameweek, endGameweek, excludedGameweeks]);
 
   // Get available gameweeks for dropdown options (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
@@ -78,15 +111,11 @@ export default function TeamGoalsAgainstProjections() {
         
         switch (sortBy) {
           case "total": {
-            // Calculate period total for sorting (lower is better)
-            const startGW = parseInt(startGameweek);
-            const endGW = parseInt(endGameweek);
-            const aPeriodTotal = Object.keys(a.gameweekProjections)
-              .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
-              .reduce((sum, gw) => sum + (a.gameweekProjections[parseInt(gw)] || 0), 0);
-            const bPeriodTotal = Object.keys(b.gameweekProjections)
-              .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
-              .reduce((sum, gw) => sum + (b.gameweekProjections[parseInt(gw)] || 0), 0);
+            // Calculate period total for sorting using active gameweeks only (lower is better)
+            const aPeriodTotal = activeGameweeks
+              .reduce((sum, gw) => sum + (a.gameweekProjections[gw] || 0), 0);
+            const bPeriodTotal = activeGameweeks
+              .reduce((sum, gw) => sum + (b.gameweekProjections[gw] || 0), 0);
             return aPeriodTotal - bPeriodTotal;
           }
           case "season": return a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst; // Lower is better
@@ -95,7 +124,7 @@ export default function TeamGoalsAgainstProjections() {
           default: return a.totalProjectedGoalsAgainst - b.totalProjectedGoalsAgainst;
         }
       });
-  }, [projectionsData, selectedTeam, sortBy]);
+  }, [projectionsData, selectedTeam, sortBy, activeGameweeks]);
 
   const totalGoalsAgainst = useMemo(() => {
     if (!filteredProjections.length || !bootstrapData?.events) return { gameweekTotals: {}, overallTotal: 0, seasonTotal: 0, averagePerGame: 0 };
@@ -104,12 +133,10 @@ export default function TeamGoalsAgainstProjections() {
     let overallTotal = 0;
     let seasonTotal = 0;
     
-    const startGW = parseInt(startGameweek);
-    const endGW = parseInt(endGameweek);
-    const totalWeeks = endGW - startGW + 1;
+    const totalWeeks = activeGameweeks.length;
     
-    // Calculate totals for selected gameweek range
-    for (let gwNumber = startGW; gwNumber <= endGW; gwNumber++) {
+    // Calculate totals for active gameweeks only (excluding excluded ones)
+    for (const gwNumber of activeGameweeks) {
       const gwTotal = filteredProjections.reduce((sum, team) => sum + (team.gameweekProjections[gwNumber] || 0), 0);
       gameweekTotals[gwNumber] = gwTotal;
       overallTotal += gwTotal;
@@ -121,10 +148,10 @@ export default function TeamGoalsAgainstProjections() {
       seasonTotal += gwTotal;
     }
     
-    const averagePerGame = overallTotal / totalWeeks;
+    const averagePerGame = totalWeeks > 0 ? overallTotal / totalWeeks : 0;
     
     return { gameweekTotals, overallTotal, seasonTotal, averagePerGame };
-  }, [filteredProjections, bootstrapData, startGameweek, endGameweek]);
+  }, [filteredProjections, bootstrapData, activeGameweeks]);
 
   const getConfidenceColor = (confidence: string) => {
     switch (confidence) {
@@ -265,6 +292,50 @@ export default function TeamGoalsAgainstProjections() {
                   </Select>
                 </div>
               </div>
+
+              {/* Gameweek Toggle Section */}
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Toggle Gameweeks (click to exclude/include):
+                  </label>
+                  {excludedGameweeks.size > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={clearExclusions}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                      data-testid="button-clear-exclusions"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Clear exclusions
+                    </Button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
+                    const gwNumber = parseInt(startGameweek) + i;
+                    const isExcluded = excludedGameweeks.has(gwNumber);
+                    return (
+                      <Button
+                        key={gwNumber}
+                        variant={isExcluded ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => toggleGameweekExclusion(gwNumber)}
+                        className={`min-w-[60px] ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}
+                        data-testid={`button-toggle-gw-${gwNumber}`}
+                      >
+                        GW{gwNumber}
+                      </Button>
+                    );
+                  })}
+                </div>
+                {excludedGameweeks.size > 0 && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -274,6 +345,11 @@ export default function TeamGoalsAgainstProjections() {
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
                 {`Team Goals Conceded Projections: GW${startGameweek}-GW${endGameweek}`}
+                {excludedGameweeks.size > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {excludedGameweeks.size} excluded
+                  </Badge>
+                )}
                 <Badge variant="outline" className="ml-2">
                   {filteredProjections.length} teams
                 </Badge>
@@ -290,21 +366,18 @@ export default function TeamGoalsAgainstProjections() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
                         Team
                       </th>
-                      {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, i) => {
-                        const gwNumber = parseInt(startGameweek) + i;
-                        return (
-                          <th 
-                            key={gwNumber} 
-                            className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-                            onClick={() => setSortBy(`gw${gwNumber}`)}
-                          >
-                            <div className="flex items-center justify-center gap-1">
-                              GW{gwNumber}
-                              {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
-                            </div>
-                          </th>
-                        );
-                      })}
+                      {activeGameweeks.map(gwNumber => (
+                        <th 
+                          key={gwNumber} 
+                          className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                          onClick={() => setSortBy(`gw${gwNumber}`)}
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            GW{gwNumber}
+                            {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
+                          </div>
+                        </th>
+                      ))}
                       <th 
                         className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors"
                         onClick={() => setSortBy('total')}
@@ -332,11 +405,10 @@ export default function TeamGoalsAgainstProjections() {
                           </div>
                         </td>
                         
-                        {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, weekIndex) => {
-                          const gwNumber = parseInt(startGameweek) + weekIndex;
+                        {activeGameweeks.map(gwNumber => {
                           const goalsAgainst = team.gameweekProjections[gwNumber] || 0;
                           return (
-                            <td key={weekIndex} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsAgainstColor(goalsAgainst)}`}>
+                            <td key={gwNumber} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsAgainstColor(goalsAgainst)}`}>
                               {goalsAgainst > 0 ? (goalsAgainst || 0).toFixed(2) : "-"}
                             </td>
                           );
@@ -344,14 +416,7 @@ export default function TeamGoalsAgainstProjections() {
                         
                         <td className="px-4 py-4 text-center bg-blue-50">
                           <span className="text-lg font-bold text-blue-900">
-                            {(() => {
-                              const startGW = parseInt(startGameweek);
-                              const endGW = parseInt(endGameweek);
-                              const periodTotal = Object.keys(team.gameweekProjections)
-                                .filter(gw => parseInt(gw) >= startGW && parseInt(gw) <= endGW)
-                                .reduce((sum, gw) => sum + (team.gameweekProjections[parseInt(gw)] || 0), 0);
-                              return periodTotal.toFixed(2);
-                            })()}
+                            {activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0).toFixed(2)}
                           </span>
                         </td>
                         
@@ -373,11 +438,10 @@ export default function TeamGoalsAgainstProjections() {
                         </div>
                       </td>
                       
-                      {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, weekIndex) => {
-                        const gwNumber = parseInt(startGameweek) + weekIndex;
+                      {activeGameweeks.map(gwNumber => {
                         const gwTotal = totalGoalsAgainst.gameweekTotals[gwNumber] || 0;
                         return (
-                          <td key={weekIndex} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
+                          <td key={gwNumber} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
                             {gwTotal > 0 ? (gwTotal || 0).toFixed(2) : "-"}
                           </td>
                         );

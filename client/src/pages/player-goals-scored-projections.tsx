@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Loader2 } from "lucide-react";
+import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Loader2, X } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +30,7 @@ export default function PlayerGoalsScoredProjections() {
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
+  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [initialized, setInitialized] = useState(false);
   
   const queryClient = useQueryClient();
@@ -104,15 +105,36 @@ export default function PlayerGoalsScoredProjections() {
   // Get current gameweek from bootstrap data (for display purposes)
   const currentGameweek = bootstrapData?.events?.find(event => event.is_current)?.id || 3;
 
+  // Toggle gameweek exclusion
+  const toggleGameweekExclusion = (gw: number) => {
+    setExcludedGameweeks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(gw)) {
+        newSet.delete(gw);
+      } else {
+        newSet.add(gw);
+      }
+      return newSet;
+    });
+  };
+
+  // Clear all exclusions
+  const clearExclusions = () => {
+    setExcludedGameweeks(new Set());
+  };
+
   // Dynamic gameweek range based on user selection (default: starts from next gameweek)
+  // Filters out excluded gameweeks
   const selectedGameweeks = useMemo(() => {
     if (!startGameweek || !endGameweek) return [];
     const gameweeks = [];
     for (let gw = startGameweek; gw <= endGameweek; gw++) {
-      gameweeks.push(gw);
+      if (!excludedGameweeks.has(gw)) {
+        gameweeks.push(gw);
+      }
     }
     return gameweeks;
-  }, [startGameweek, endGameweek]);
+  }, [startGameweek, endGameweek, excludedGameweeks]);
 
   // Filter and sort data
   const filteredProjections = useMemo(() => {
@@ -441,10 +463,50 @@ export default function PlayerGoalsScoredProjections() {
                   data-testid="input-search-players"
                 />
               </div>
+            </div>
 
-
-
-
+            {/* Gameweek Toggle Section */}
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Toggle Gameweeks (click to exclude/include):
+                </label>
+                {excludedGameweeks.size > 0 && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={clearExclusions}
+                    className="text-xs text-gray-500 hover:text-gray-700"
+                    data-testid="button-clear-exclusions"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Clear exclusions
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {startGameweek && endGameweek && Array.from({ length: endGameweek - startGameweek + 1 }, (_, i) => {
+                  const gwNumber = startGameweek + i;
+                  const isExcluded = excludedGameweeks.has(gwNumber);
+                  return (
+                    <Button
+                      key={gwNumber}
+                      variant={isExcluded ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => toggleGameweekExclusion(gwNumber)}
+                      className={`min-w-[60px] ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200' : 'bg-orange-600 hover:bg-orange-700 text-white'}`}
+                      data-testid={`button-toggle-gw-${gwNumber}`}
+                    >
+                      GW{gwNumber}
+                    </Button>
+                  );
+                })}
+              </div>
+              {excludedGameweeks.size > 0 && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -457,6 +519,11 @@ export default function PlayerGoalsScoredProjections() {
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5" />
                   Player Goal Projections: GW{startGameweek}-GW{endGameweek}
+                  {excludedGameweeks.size > 0 && (
+                    <Badge variant="secondary" className="ml-1 text-xs">
+                      {excludedGameweeks.size} excluded
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
