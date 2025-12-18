@@ -7591,18 +7591,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
     
     try {
-      console.log(`🚀 API-FIRST: Attempting live calculation for Player Assists = Assist Share × Team Assist Projections`);
+      console.log(`🚀 API-FIRST: Attempting live calculation for Player Assists = Average(Last6GW + FullSeason) Assist Share × Team Assist Projections`);
       
       // TRY LIVE API CALCULATION FIRST
       try {
-        // Fetch assist share data and team assist projections in parallel
-        const [assistShareResponse, teamProjectionsResponse] = await Promise.all([
-          internalFetch('api/assist-share-season'),
+        // Fetch both full season and last 6 GW assist share data, plus team projections
+        const [assistShareFullResponse, assistShareLast6Response, teamProjectionsResponse] = await Promise.all([
+          internalFetch('api/assist-share-season?filter=full'),
+          internalFetch('api/assist-share-season?filter=last6'),
           internalFetch('api/team-assist-projections')
         ]);
         
-        if (assistShareResponse.ok && teamProjectionsResponse.ok) {
-          const assistShareData = await assistShareResponse.json();
+        if (assistShareFullResponse.ok && assistShareLast6Response.ok && teamProjectionsResponse.ok) {
+          const assistShareFullData = await assistShareFullResponse.json();
+          const assistShareLast6Data = await assistShareLast6Response.json();
           const teamProjectionsData = await teamProjectionsResponse.json();
           
           // Create lookup map for team projections by teamId
@@ -7611,20 +7613,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamProjectionsMap[team.teamId] = team;
           });
           
-          // Calculate player projections using formula: assist share × team projections per gameweek
+          // Create lookup map for last 6 GW assist shares by playerId
+          const last6AssistShareMap: { [playerId: number]: number } = {};
+          assistShareLast6Data.forEach((team: any) => {
+            if (team.players && Array.isArray(team.players)) {
+              team.players.forEach((player: any) => {
+                last6AssistShareMap[player.playerId] = player.assistShare || 0;
+              });
+            }
+          });
+          
+          // Calculate player projections using formula: average assist share × team projections per gameweek
           const playerProjections: any[] = [];
           
-          assistShareData.forEach((team: any) => {
+          assistShareFullData.forEach((team: any) => {
             const teamProjections = teamProjectionsMap[team.teamId];
             
             if (team.players && Array.isArray(team.players) && teamProjections) {
               team.players.forEach((player: any) => {
-                const assistSharePercent = player.assistShare || 0;
+                const fullSeasonAssistShare = player.assistShare || 0;
+                const last6AssistShare = last6AssistShareMap[player.playerId] || 0;
+                
+                // Average of full season and last 6 GW assist shares
+                const averageAssistShare = (fullSeasonAssistShare + last6AssistShare) / 2;
+                
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 
-                // Calculate projected assists for each gameweek
+                // Calculate projected assists for each gameweek using averaged assist share
                 Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamAssists]) => {
-                  gameweekProjections[gameweek] = (assistSharePercent / 100) * (teamAssists as number);
+                  gameweekProjections[gameweek] = (averageAssistShare / 100) * (teamAssists as number);
                 });
                 
                 // Calculate total projected assists across all gameweeks
@@ -7636,7 +7653,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   team: team.teamName,
                   teamShort: team.teamShort,
                   position: player.position,
-                  assistShare: assistSharePercent,
+                  assistShare: Math.round(averageAssistShare * 100) / 100, // Store the averaged assist share
                   gameweekProjections: gameweekProjections,
                   totalProjectedAssists: totalProjectedAssists
                 });
@@ -7647,10 +7664,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Sort by total projected assists (highest first)
           playerProjections.sort((a, b) => b.totalProjectedAssists - a.totalProjectedAssists);
           
-          console.log(`✅ LIVE SUCCESS: Calculated ${playerProjections.length} player assist projections using live APIs`);
+          console.log(`✅ LIVE SUCCESS: Calculated ${playerProjections.length} player assist projections using averaged assist share (full + last6)`);
           return res.json(playerProjections);
         } else {
-          throw new Error(`API response failed: assistShare=${assistShareResponse.status}, teamProjections=${teamProjectionsResponse.status}`);
+          throw new Error(`API response failed: assistShareFull=${assistShareFullResponse.status}, assistShareLast6=${assistShareLast6Response.status}, teamProjections=${teamProjectionsResponse.status}`);
         }
       } catch (liveError) {
         console.warn(`⚠️ LIVE API FAILED: ${liveError.message}, attempting cache fallback...`);
