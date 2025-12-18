@@ -194,8 +194,8 @@ export default function GoalShare() {
             <Card className="border-orange-200 bg-orange-50">
               <CardContent className="p-8 text-center">
                 <Target className="h-12 w-12 text-orange-500 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-orange-800 mb-2">No Season Goal Share Data Available</h3>
-                <p className="text-orange-600">No season goal involvement data found for the selected team filter.</p>
+                <h3 className="text-lg font-semibold text-orange-800 mb-2">No Goal Share Data Available</h3>
+                <p className="text-orange-600">No goal involvement data found for the selected filters.</p>
               </CardContent>
             </Card>
           ) : (
@@ -211,7 +211,7 @@ export default function GoalShare() {
                         <div>
                           <CardTitle className="text-xl font-bold text-gray-900">{team.teamName}</CardTitle>
                           <p className="text-sm text-gray-500">
-                            Season Total (Goals + xG): 
+                            {getFilterLabel()} Total (Goals + xG): 
                             <span className="font-semibold text-gray-700">{team.expectedGoals.toFixed(2)}</span>
                           </p>
                         </div>
