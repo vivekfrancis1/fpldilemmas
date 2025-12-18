@@ -7156,18 +7156,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
     
     try {
-      console.log(`🚀 API-FIRST: Attempting live calculation for Player Goals = Goal Share × Team Goal Projections`);
+      console.log(`🚀 API-FIRST: Attempting live calculation for Player Goals = Average(Last6GW + FullSeason) Goal Share × Team Goal Projections`);
       
       // TRY LIVE API CALCULATION FIRST
       try {
-        // Fetch goal share data and team goal projections in parallel
-        const [goalShareResponse, teamProjectionsResponse] = await Promise.all([
-          internalFetch('api/goal-share-season'),
+        // Fetch both full season and last 6 GW goal share data, plus team projections
+        const [goalShareFullResponse, goalShareLast6Response, teamProjectionsResponse] = await Promise.all([
+          internalFetch('api/goal-share-season?filter=full'),
+          internalFetch('api/goal-share-season?filter=last6'),
           internalFetch('api/team-goal-projections')
         ]);
         
-        if (goalShareResponse.ok && teamProjectionsResponse.ok) {
-          const goalShareData = await goalShareResponse.json();
+        if (goalShareFullResponse.ok && goalShareLast6Response.ok && teamProjectionsResponse.ok) {
+          const goalShareFullData = await goalShareFullResponse.json();
+          const goalShareLast6Data = await goalShareLast6Response.json();
           const teamProjectionsData = await teamProjectionsResponse.json();
           
           // Create lookup map for team projections by teamId
@@ -7176,20 +7178,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamProjectionsMap[team.teamId] = team;
           });
           
-          // Calculate player projections using formula: goal share × team projections per gameweek
+          // Create lookup map for last 6 GW goal shares by playerId
+          const last6GoalShareMap: { [playerId: number]: number } = {};
+          goalShareLast6Data.forEach((team: any) => {
+            if (team.players && Array.isArray(team.players)) {
+              team.players.forEach((player: any) => {
+                last6GoalShareMap[player.playerId] = player.goalShare || 0;
+              });
+            }
+          });
+          
+          // Calculate player projections using formula: average goal share × team projections per gameweek
           const playerProjections: any[] = [];
           
-          goalShareData.forEach((team: any) => {
+          goalShareFullData.forEach((team: any) => {
             const teamProjections = teamProjectionsMap[team.teamId];
             
             if (team.players && Array.isArray(team.players) && teamProjections) {
               team.players.forEach((player: any) => {
-                const goalSharePercent = player.goalShare || 0;
+                const fullSeasonGoalShare = player.goalShare || 0;
+                const last6GoalShare = last6GoalShareMap[player.playerId] || 0;
+                
+                // Average of full season and last 6 GW goal shares
+                const averageGoalShare = (fullSeasonGoalShare + last6GoalShare) / 2;
+                
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 
-                // Calculate projected goals for each gameweek
+                // Calculate projected goals for each gameweek using averaged goal share
                 Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamGoals]) => {
-                  gameweekProjections[gameweek] = (goalSharePercent / 100) * (teamGoals as number);
+                  gameweekProjections[gameweek] = (averageGoalShare / 100) * (teamGoals as number);
                 });
                 
                 // Calculate total projected goals across all gameweeks
@@ -7201,7 +7218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   team: team.teamName,
                   teamShort: team.teamShort,
                   position: player.position,
-                  goalShare: goalSharePercent,
+                  goalShare: Math.round(averageGoalShare * 100) / 100, // Store the averaged goal share
                   gameweekProjections: gameweekProjections,
                   totalProjectedGoals: totalProjectedGoals
                 });
@@ -7212,10 +7229,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Sort by total projected goals (highest first)
           playerProjections.sort((a, b) => b.totalProjectedGoals - a.totalProjectedGoals);
           
-          console.log(`✅ LIVE SUCCESS: Calculated ${playerProjections.length} player goal projections using live APIs`);
+          console.log(`✅ LIVE SUCCESS: Calculated ${playerProjections.length} player goal projections using averaged goal share (full + last6)`);
           return res.json(playerProjections);
         } else {
-          throw new Error(`API response failed: goalShare=${goalShareResponse.status}, teamProjections=${teamProjectionsResponse.status}`);
+          throw new Error(`API response failed: goalShareFull=${goalShareFullResponse.status}, goalShareLast6=${goalShareLast6Response.status}, teamProjections=${teamProjectionsResponse.status}`);
         }
       } catch (liveError) {
         console.warn(`⚠️ LIVE API FAILED: ${liveError.message}, attempting cache fallback...`);
