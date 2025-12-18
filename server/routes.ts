@@ -6176,11 +6176,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { TeamGoalsService } = await import('./team-goals-service');
       const teamGoals = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
       
-      // FORMULA: Team Assists = 72% of Team Goals (as specified by user)
+      // FORMULA: Team Assists = 85% of Team Goals (FPL awards more assists than standard stats)
       const assistProjections = teamGoals.map((tp: any) => {
         const gameweekAssists = Object.fromEntries(
           Object.entries(tp.gameweekProjections || {}).map(([gw, g]: [string, any]) => 
-            [Number(gw), Math.round((g || 0) * 0.72 * 100) / 100]
+            [Number(gw), Math.round((g || 0) * 0.85 * 100) / 100]
           )
         );
         
@@ -6189,8 +6189,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamName: tp.teamName,
           teamShort: tp.teamShort,
           gameweekProjections: gameweekAssists,
-          totalAssists: Math.round((tp.totalGoals || 0) * 0.72 * 100) / 100,
-          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * 0.72 * 100) / 100,
+          totalAssists: Math.round((tp.totalGoals || 0) * 0.85 * 100) / 100,
+          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * 0.85 * 100) / 100,
           confidence: tp.confidence
         };
       });
@@ -15502,12 +15502,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamAssistData = cachedData.map((team) => {
         const goalProjections = team.goalProjections as any;
         const totalGoals = Object.values(goalProjections).reduce((sum: number, val: any) => sum + (val || 0), 0);
-        const totalAssists = totalGoals * 0.72; // Standard assist multiplier
+        const totalAssists = totalGoals * 0.85; // FPL assist multiplier (higher than standard due to FPL's generous assist rules)
         
         // Create assist projections based on goal projections
         const assistProjections: any = {};
         Object.keys(goalProjections).forEach(gw => {
-          assistProjections[gw] = Math.round((goalProjections[gw] || 0) * 0.72 * 100) / 100;
+          assistProjections[gw] = Math.round((goalProjections[gw] || 0) * 0.85 * 100) / 100;
         });
         
         return {
