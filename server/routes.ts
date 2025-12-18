@@ -6637,19 +6637,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // REMOVED: Sample size regression function (Option B simplification)
 
   // Add simple caching for goal share data
-  let goalShareCache: { data: any, timestamp: number } | null = null;
+  let goalShareCache: { data: any, timestamp: number, cacheKey?: string } | null = null;
   let assistShareCache: { data: any, timestamp: number } | null = null;
   const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   // Simplified Goal Share endpoint - player's goals+xG divided by team total
+  // Supports optional filtering by last X gameweeks
   app.get("/api/goal-share-season", async (req, res) => {
     try {
-      // Check memory cache first
-      const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
-      if (goalShareCache && Date.now() - goalShareCache.timestamp < CACHE_DURATION) {
-        console.log(`✅ Serving goal share data from cache`);
-        return res.json(goalShareCache.data);
-      }
+      const filter = req.query.filter as string || 'full'; // 'full', 'last6', 'last8', 'last12'
       
       // Fetch bootstrap data
       const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
@@ -6658,12 +6654,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const bootstrapData = await bootstrapResponse.json();
-      console.log(`DEBUG: Fetched bootstrap data with ${bootstrapData.elements.length} players`);
       
-      // Calculate team totals: goals_scored + expected_goals
+      // Get current gameweek
+      const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 1;
+      const finishedGW = bootstrapData.events.filter((e: any) => e.finished).length;
+      
+      // Determine gameweek range based on filter
+      let startGW = 1;
+      let endGW = finishedGW;
+      
+      if (filter === 'last6') {
+        startGW = Math.max(1, finishedGW - 5);
+      } else if (filter === 'last8') {
+        startGW = Math.max(1, finishedGW - 7);
+      } else if (filter === 'last12') {
+        startGW = Math.max(1, finishedGW - 11);
+      }
+      
+      const cacheKey = `goal-share-${filter}-${finishedGW}`;
+      
+      // Check memory cache for filtered data
+      const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+      if (goalShareCache && goalShareCache.cacheKey === cacheKey && Date.now() - goalShareCache.timestamp < CACHE_DURATION) {
+        console.log(`✅ Serving goal share data from cache (filter: ${filter})`);
+        return res.json(goalShareCache.data);
+      }
+      
+      console.log(`DEBUG: Goal share with filter: ${filter}, GW range: ${startGW}-${endGW}`);
+      
+      // For full season, use bootstrap data directly (faster)
+      if (filter === 'full') {
+        // Calculate team totals: goals_scored + expected_goals
+        const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
+        
+        // Initialize team totals
+        bootstrapData.teams.forEach((team: any) => {
+          teamTotals[team.id] = {
+            total: 0,
+            name: team.name,
+            short_name: team.short_name
+          };
+        });
+        
+        // Sum up goals + xG for each team
+        bootstrapData.elements.forEach((player: any) => {
+          const goalsScored = parseInt(player.goals_scored || 0);
+          const expectedGoals = parseFloat(player.expected_goals || 0);
+          const playerTotal = goalsScored + expectedGoals;
+          
+          if (teamTotals[player.team]) {
+            teamTotals[player.team].total += playerTotal;
+          }
+        });
+        
+        const finalResponse = buildGoalShareResponse(bootstrapData, teamTotals);
+        
+        goalShareCache = {
+          data: finalResponse,
+          timestamp: Date.now(),
+          cacheKey: cacheKey
+        };
+        
+        savedGoalShareData = {
+          timestamp: Date.now(),
+          bootstrapData: bootstrapData,
+          response: finalResponse
+        };
+        
+        return res.json(finalResponse);
+      }
+      
+      // For filtered data, fetch live data for each gameweek in range
+      const playerStats: { [playerId: number]: { goals: number, xg: number } } = {};
+      
+      // Fetch live data for each gameweek in range
+      for (let gw = startGW; gw <= endGW; gw++) {
+        try {
+          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            
+            liveData.elements.forEach((el: any) => {
+              const playerId = el.id;
+              const goals = el.stats?.goals_scored || 0;
+              const xg = parseFloat(el.stats?.expected_goals || 0);
+              
+              if (!playerStats[playerId]) {
+                playerStats[playerId] = { goals: 0, xg: 0 };
+              }
+              playerStats[playerId].goals += goals;
+              playerStats[playerId].xg += xg;
+            });
+          }
+        } catch (err) {
+          console.log(`Warning: Could not fetch GW${gw} live data`);
+        }
+      }
+      
+      // Calculate team totals from filtered data
       const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
       
-      // Initialize team totals
       bootstrapData.teams.forEach((team: any) => {
         teamTotals[team.id] = {
           total: 0,
@@ -6672,81 +6762,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      // Sum up goals + xG for each team
+      // Assign player stats to teams
       bootstrapData.elements.forEach((player: any) => {
-        const goalsScored = parseInt(player.goals_scored || 0);
-        const expectedGoals = parseFloat(player.expected_goals || 0);
-        const playerTotal = goalsScored + expectedGoals;
-        
-        if (teamTotals[player.team]) {
+        const stats = playerStats[player.id];
+        if (stats && teamTotals[player.team]) {
+          const playerTotal = stats.goals + stats.xg;
           teamTotals[player.team].total += playerTotal;
         }
       });
       
-      // Build response with player goal shares
-      const finalResponse: any[] = [];
+      const finalResponse = buildGoalShareResponseFiltered(bootstrapData, teamTotals, playerStats);
       
-      Object.keys(teamTotals).forEach(teamIdStr => {
-        const teamId = parseInt(teamIdStr);
-        const teamData = teamTotals[teamId];
-        
-        // Skip teams with no goals/xG
-        if (teamData.total === 0) return;
-        
-        const teamPlayers: any[] = [];
-        
-        // Get all players for this team
-        const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
-        
-        teamPlayersList.forEach((player: any) => {
-          const goalsScored = parseInt(player.goals_scored || 0);
-          const expectedGoals = parseFloat(player.expected_goals || 0);
-          const playerTotal = goalsScored + expectedGoals;
-          
-          // Only include players with some contribution
-          if (playerTotal > 0) {
-            const goalShare = (playerTotal / teamData.total) * 100;
-            const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
-            
-            teamPlayers.push({
-              playerId: player.id,
-              playerName: `${player.first_name} ${player.second_name}`,
-              position: position,
-              goalShare: Math.round(goalShare * 100) / 100, // Round to 2 decimal places
-              projectedGoals: Math.round(playerTotal * 100) / 100 // goals + xG
-            });
-          }
-        });
-        
-        // Sort players by goal share descending
-        teamPlayers.sort((a, b) => b.goalShare - a.goalShare);
-        
-        if (teamPlayers.length > 0) {
-          finalResponse.push({
-            teamId: teamId,
-            teamName: teamData.name,
-            teamShort: teamData.short_name,
-            expectedGoals: Math.round(teamData.total * 100) / 100,
-            players: teamPlayers
-          });
-        }
-      });
-      
-      // Sort teams by total goals+xG descending
-      finalResponse.sort((a, b) => b.expectedGoals - a.expectedGoals);
-      
-      console.log(`DEBUG: Built simplified goal share response with ${finalResponse.length} teams`);
-      
-      // Update cache and savedGoalShareData
       goalShareCache = {
         data: finalResponse,
-        timestamp: Date.now()
-      };
-      
-      savedGoalShareData = {
         timestamp: Date.now(),
-        bootstrapData: bootstrapData,
-        response: finalResponse
+        cacheKey: cacheKey
       };
       
       return res.json(finalResponse);
@@ -6756,6 +6786,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to generate goal share data" });
     }
   });
+  
+  // Helper function to build goal share response for full season
+  function buildGoalShareResponse(bootstrapData: any, teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } }) {
+    const finalResponse: any[] = [];
+    
+    Object.keys(teamTotals).forEach(teamIdStr => {
+      const teamId = parseInt(teamIdStr);
+      const teamData = teamTotals[teamId];
+      
+      if (teamData.total === 0) return;
+      
+      const teamPlayers: any[] = [];
+      const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
+      
+      teamPlayersList.forEach((player: any) => {
+        const goalsScored = parseInt(player.goals_scored || 0);
+        const expectedGoals = parseFloat(player.expected_goals || 0);
+        const playerTotal = goalsScored + expectedGoals;
+        
+        if (playerTotal > 0) {
+          const goalShare = (playerTotal / teamData.total) * 100;
+          const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
+          
+          teamPlayers.push({
+            playerId: player.id,
+            playerName: `${player.first_name} ${player.second_name}`,
+            position: position,
+            goalShare: Math.round(goalShare * 100) / 100,
+            projectedGoals: Math.round(playerTotal * 100) / 100
+          });
+        }
+      });
+      
+      teamPlayers.sort((a, b) => b.goalShare - a.goalShare);
+      
+      if (teamPlayers.length > 0) {
+        finalResponse.push({
+          teamId: teamId,
+          teamName: teamData.name,
+          teamShort: teamData.short_name,
+          expectedGoals: Math.round(teamData.total * 100) / 100,
+          players: teamPlayers
+        });
+      }
+    });
+    
+    finalResponse.sort((a, b) => b.expectedGoals - a.expectedGoals);
+    return finalResponse;
+  }
+  
+  // Helper function to build goal share response for filtered gameweeks
+  function buildGoalShareResponseFiltered(
+    bootstrapData: any, 
+    teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } },
+    playerStats: { [playerId: number]: { goals: number, xg: number } }
+  ) {
+    const finalResponse: any[] = [];
+    
+    Object.keys(teamTotals).forEach(teamIdStr => {
+      const teamId = parseInt(teamIdStr);
+      const teamData = teamTotals[teamId];
+      
+      if (teamData.total === 0) return;
+      
+      const teamPlayers: any[] = [];
+      const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
+      
+      teamPlayersList.forEach((player: any) => {
+        const stats = playerStats[player.id];
+        if (!stats) return;
+        
+        const playerTotal = stats.goals + stats.xg;
+        
+        if (playerTotal > 0) {
+          const goalShare = (playerTotal / teamData.total) * 100;
+          const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
+          
+          teamPlayers.push({
+            playerId: player.id,
+            playerName: `${player.first_name} ${player.second_name}`,
+            position: position,
+            goalShare: Math.round(goalShare * 100) / 100,
+            projectedGoals: Math.round(playerTotal * 100) / 100
+          });
+        }
+      });
+      
+      teamPlayers.sort((a, b) => b.goalShare - a.goalShare);
+      
+      if (teamPlayers.length > 0) {
+        finalResponse.push({
+          teamId: teamId,
+          teamName: teamData.name,
+          teamShort: teamData.short_name,
+          expectedGoals: Math.round(teamData.total * 100) / 100,
+          players: teamPlayers
+        });
+      }
+    });
+    
+    finalResponse.sort((a, b) => b.expectedGoals - a.expectedGoals);
+    return finalResponse;
+  }
 
   // Helper function to calculate defensive contribution based on position
   const calculateDefensiveContribution = (elementType: number, cbi: number, tackles: number, recoveries: number): number => {

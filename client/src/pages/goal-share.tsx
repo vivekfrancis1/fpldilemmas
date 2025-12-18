@@ -27,6 +27,7 @@ export default function GoalShare() {
   const queryClient = useQueryClient();
   
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [gameweekFilter, setGameweekFilter] = useState<string>("full");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
@@ -34,9 +35,14 @@ export default function GoalShare() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch current season goal share data using simplified calculation
+  // Fetch current season goal share data using simplified calculation with filter
   const { data: goalShareData, isLoading: goalShareLoading } = useQuery<SeasonGoalShareData[]>({
-    queryKey: ["/api/goal-share-season"],
+    queryKey: ["/api/goal-share-season", gameweekFilter],
+    queryFn: async () => {
+      const response = await fetch(`/api/goal-share-season?filter=${gameweekFilter}`);
+      if (!response.ok) throw new Error("Failed to fetch goal share data");
+      return response.json();
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes for fresh data
   });
 
@@ -63,10 +69,20 @@ export default function GoalShare() {
     setIsRefreshing(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-      await queryClient.invalidateQueries({ queryKey: ["/api/goal-share-season"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/goal-share-season"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/goal-share-season", gameweekFilter] });
+      await queryClient.refetchQueries({ queryKey: ["/api/goal-share-season", gameweekFilter] });
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  // Get filter label for display
+  const getFilterLabel = () => {
+    switch (gameweekFilter) {
+      case 'last6': return 'Last 6 Gameweeks';
+      case 'last8': return 'Last 8 Gameweeks';
+      case 'last12': return 'Last 12 Gameweeks';
+      default: return 'Full Season';
     }
   };
 
@@ -102,10 +118,10 @@ export default function GoalShare() {
               <Target className="h-8 w-8 text-blue-600" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4" data-testid="text-page-title">
-              Goal Share - 2025/26 Season
+              Goal Share - {getFilterLabel()}
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto" data-testid="text-page-description">
-              Each player's percentage share of their team's goals using current season data (goals scored + expected goals)
+              Each player's percentage share of their team's goals using {gameweekFilter === 'full' ? 'full season' : getFilterLabel().toLowerCase()} data (goals scored + expected goals)
             </p>
             <div className="mt-6">
               <Button
@@ -127,10 +143,25 @@ export default function GoalShare() {
             <CardContent className="p-6">
               <div className="flex flex-wrap gap-4 items-center">
                 <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-blue-600" />
+                  <label className="text-sm font-medium text-gray-700">Period:</label>
+                  <Select value={gameweekFilter} onValueChange={setGameweekFilter}>
+                    <SelectTrigger className="w-48" data-testid="select-period-filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="last6">Last 6 Gameweeks</SelectItem>
+                      <SelectItem value="last8">Last 8 Gameweeks</SelectItem>
+                      <SelectItem value="last12">Last 12 Gameweeks</SelectItem>
+                      <SelectItem value="full">Full Season</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
                   <Filter className="h-5 w-5 text-blue-600" />
                   <label className="text-sm font-medium text-gray-700">Team:</label>
                   <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                    <SelectTrigger className="w-48">
+                    <SelectTrigger className="w-48" data-testid="select-team-filter">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
