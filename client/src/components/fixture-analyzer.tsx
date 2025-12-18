@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, TrendingUp, TrendingDown, ArrowRight } from "lucide-react";
+import { Calendar, TrendingUp, TrendingDown, ArrowRight, X } from "lucide-react";
 import { BootstrapData, Fixture } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -13,11 +13,13 @@ interface FixtureAnalyzerProps {
 }
 
 export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProps) {
-  const [selectedGameweeks, setSelectedGameweeks] = useState("5");
+  const [selectedGameweeks, setSelectedGameweeks] = useState("6");
   const [selectedTeam, setSelectedTeam] = useState("all");
   const [sortBy, setSortBy] = useState("easiest");
   const [viewMode, setViewMode] = useState<"teams" | "gameweeks">("teams");
   const [difficultyType, setDifficultyType] = useState<"attacking" | "defensive">("attacking");
+  const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
+  const [excludedTeams, setExcludedTeams] = useState<Set<number>>(new Set());
 
   // Team tier assignments based on server-side configuration
   const getAttackingTier = (teamId: number): string => {
@@ -81,44 +83,92 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  // Toggle gameweek exclusion
+  const toggleGameweekExclusion = (gw: number) => {
+    setExcludedGameweeks(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(gw)) {
+        newSet.delete(gw);
+      } else {
+        newSet.add(gw);
+      }
+      return newSet;
+    });
+  };
+
+  // Toggle team exclusion
+  const toggleTeamExclusion = (teamId: number) => {
+    setExcludedTeams(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(teamId)) {
+        newSet.delete(teamId);
+      } else {
+        newSet.add(teamId);
+      }
+      return newSet;
+    });
+  };
+
+  // Clear all exclusions
+  const clearGameweekExclusions = () => setExcludedGameweeks(new Set());
+  const clearTeamExclusions = () => setExcludedTeams(new Set());
+
+  // Get available gameweeks from fixtures
+  const availableGameweeks = useMemo(() => {
+    if (!fixtures) return [];
+    const upcomingFixtures = fixtures.filter(fixture => !fixture.finished);
+    const gameweekSet = new Set<number>();
+    upcomingFixtures.forEach(f => {
+      if (f.event) gameweekSet.add(f.event);
+    });
+    return Array.from(gameweekSet).sort((a, b) => a - b).slice(0, parseInt(selectedGameweeks));
+  }, [fixtures, selectedGameweeks]);
+
+  // Get active gameweeks (excluding excluded ones)
+  const activeGameweeks = useMemo(() => {
+    return availableGameweeks.filter(gw => !excludedGameweeks.has(gw));
+  }, [availableGameweeks, excludedGameweeks]);
+
   const teamFixtures = useMemo(() => {
     if (!data || !fixtures) return [];
 
     const upcomingFixtures = fixtures.filter(fixture => !fixture.finished);
     
-    return data.teams.map(team => {
-      const teamUpcomingFixtures = upcomingFixtures
-        .filter(fixture => fixture.team_h === team.id || fixture.team_a === team.id)
-        .slice(0, parseInt(selectedGameweeks))
-        .map(fixture => {
-          const isHome = fixture.team_h === team.id;
-          const opponentId = isHome ? fixture.team_a : fixture.team_h;
-          const opponent = data.teams.find(t => t.id === opponentId);
-          // Use custom difficulty calculation based on selected type
-          const difficulty = difficultyType === 'attacking' 
-            ? getAttackingDifficulty(opponentId) 
-            : getDefensiveDifficulty(opponentId);
-          
-          return {
-            ...fixture,
-            isHome,
-            opponent: opponent?.short_name || "",
-            difficulty,
-            gameweek: fixture.event || 0
-          };
-        });
+    return data.teams
+      .filter(team => !excludedTeams.has(team.id)) // Filter out excluded teams
+      .map(team => {
+        const teamUpcomingFixtures = upcomingFixtures
+          .filter(fixture => fixture.team_h === team.id || fixture.team_a === team.id)
+          .filter(fixture => fixture.event && activeGameweeks.includes(fixture.event)) // Only include active gameweeks
+          .map(fixture => {
+            const isHome = fixture.team_h === team.id;
+            const opponentId = isHome ? fixture.team_a : fixture.team_h;
+            const opponent = data.teams.find(t => t.id === opponentId);
+            // Use custom difficulty calculation based on selected type
+            const difficulty = difficultyType === 'attacking' 
+              ? getAttackingDifficulty(opponentId) 
+              : getDefensiveDifficulty(opponentId);
+            
+            return {
+              ...fixture,
+              isHome,
+              opponent: opponent?.short_name || "",
+              difficulty,
+              gameweek: fixture.event || 0
+            };
+          });
 
-      const avgDifficulty = teamUpcomingFixtures.length > 0 
-        ? teamUpcomingFixtures.reduce((sum, f) => sum + f.difficulty, 0) / teamUpcomingFixtures.length
-        : 0;
+        const avgDifficulty = teamUpcomingFixtures.length > 0 
+          ? teamUpcomingFixtures.reduce((sum, f) => sum + f.difficulty, 0) / teamUpcomingFixtures.length
+          : 0;
 
-      return {
-        team,
-        fixtures: teamUpcomingFixtures,
-        avgDifficulty: parseFloat(avgDifficulty.toFixed(2))
-      };
-    });
-  }, [data, fixtures, selectedGameweeks, difficultyType]);
+        return {
+          team,
+          fixtures: teamUpcomingFixtures,
+          avgDifficulty: parseFloat(avgDifficulty.toFixed(2))
+        };
+      });
+  }, [data, fixtures, activeGameweeks, difficultyType, excludedTeams]);
 
   const filteredTeamFixtures = useMemo(() => {
     if (selectedTeam === "all") return teamFixtures;
@@ -149,7 +199,7 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
 
     upcomingFixtures.forEach(fixture => {
       const gameweek = fixture.event || 0;
-      if (gameweek === 0) return;
+      if (gameweek === 0 || !activeGameweeks.includes(gameweek)) return; // Filter by active gameweeks
 
       if (!gameweekMap.has(gameweek)) {
         gameweekMap.set(gameweek, []);
@@ -158,7 +208,8 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
       const homeTeam = data.teams.find(t => t.id === fixture.team_h);
       const awayTeam = data.teams.find(t => t.id === fixture.team_a);
 
-      if (homeTeam && awayTeam) {
+      // Filter out fixtures involving excluded teams
+      if (homeTeam && awayTeam && !excludedTeams.has(homeTeam.id) && !excludedTeams.has(awayTeam.id)) {
         gameweekMap.get(gameweek).push({
           ...fixture,
           homeTeam,
@@ -168,10 +219,9 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
       }
     });
 
-    // Convert to array and sort by gameweek, limit to selected gameweeks
+    // Convert to array and sort by gameweek
     return Array.from(gameweekMap.entries())
       .sort(([a], [b]) => a - b)
-      .slice(0, parseInt(selectedGameweeks))
       .map(([gameweek, fixtures]) => ({
         gameweek,
         fixtures: fixtures.sort((a: any, b: any) => {
@@ -180,7 +230,7 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
           }
           return 0;
         }),
-        avgDifficulty: fixtures.reduce((sum: number, f: any) => {
+        avgDifficulty: fixtures.length > 0 ? fixtures.reduce((sum: number, f: any) => {
           const homeTeamDifficulty = difficultyType === 'attacking' 
             ? getAttackingDifficulty(f.team_a) 
             : getDefensiveDifficulty(f.team_a);
@@ -188,9 +238,10 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
             ? getAttackingDifficulty(f.team_h) 
             : getDefensiveDifficulty(f.team_h);
           return sum + homeTeamDifficulty + awayTeamDifficulty;
-        }, 0) / (fixtures.length * 2)
-      }));
-  }, [data, fixtures, selectedGameweeks, difficultyType]);
+        }, 0) / (fixtures.length * 2) : 0
+      }))
+      .filter(gw => gw.fixtures.length > 0); // Remove empty gameweeks
+  }, [data, fixtures, activeGameweeks, difficultyType, excludedTeams]);
 
   const getDifficultyColor = (difficulty: number): string => {
     if (difficulty === 1) return "bg-green-600 text-white"; // Very Easy - Dark Green (softer)
@@ -274,8 +325,13 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
           </h3>
           <Badge variant="outline" className="bg-blue-50 text-blue-800">
             <Calendar className="h-3 w-3 mr-1" />
-            Next {selectedGameweeks} gameweeks
+            {activeGameweeks.length} of {availableGameweeks.length} gameweeks
           </Badge>
+          {excludedTeams.size > 0 && (
+            <Badge variant="outline" className="bg-purple-50 text-purple-800">
+              {20 - excludedTeams.size} teams shown
+            </Badge>
+          )}
         </div>
         
         {/* View Mode Toggle */}
@@ -336,15 +392,19 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
             <label className="block text-sm font-medium text-gray-700 mb-2" data-testid="label-gameweeks">
               Number of Gameweeks
             </label>
-            <Select value={selectedGameweeks} onValueChange={setSelectedGameweeks}>
+            <Select value={selectedGameweeks} onValueChange={(val) => {
+              setSelectedGameweeks(val);
+              setExcludedGameweeks(new Set()); // Clear exclusions when changing range
+            }}>
               <SelectTrigger data-testid="select-gameweeks">
                 <SelectValue placeholder="Select gameweeks" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="3">Next 3 gameweeks</SelectItem>
-                <SelectItem value="5">Next 5 gameweeks</SelectItem>
+                <SelectItem value="6">Next 6 gameweeks</SelectItem>
                 <SelectItem value="8">Next 8 gameweeks</SelectItem>
                 <SelectItem value="10">Next 10 gameweeks</SelectItem>
+                <SelectItem value="12">Next 12 gameweeks</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -385,6 +445,99 @@ export default function FixtureAnalyzer({ data, isLoading }: FixtureAnalyzerProp
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Gameweek Toggle Section */}
+        <div className="mt-4 pt-4 border-t">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <label className="text-xs sm:text-sm font-medium text-gray-700">
+              Toggle Gameweeks (click to exclude/include):
+            </label>
+            {excludedGameweeks.size > 0 && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearGameweekExclusions}
+                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
+                data-testid="button-clear-gw-exclusions"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear GW exclusions
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            {availableGameweeks.map((gw) => {
+              const isExcluded = excludedGameweeks.has(gw);
+              return (
+                <Button
+                  key={gw}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggleGameweekExclusion(gw)}
+                  className={`min-w-[50px] sm:min-w-[60px] text-xs sm:text-sm px-2 sm:px-3 py-1 ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'}`}
+                  data-testid={`button-toggle-gw-${gw}`}
+                >
+                  GW{gw}
+                </Button>
+              );
+            })}
+          </div>
+          {excludedGameweeks.size > 0 && (
+            <p className="text-xs text-gray-500 mt-2">
+              Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
+            </p>
+          )}
+        </div>
+
+        {/* Team Toggle Section */}
+        <div className="mt-4 pt-4 border-t">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <label className="text-xs sm:text-sm font-medium text-gray-700">
+              Toggle Teams (click to exclude/include):
+            </label>
+            {excludedTeams.size > 0 && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearTeamExclusions}
+                className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
+                data-testid="button-clear-team-exclusions"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear team exclusions
+              </Button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            {data?.teams
+              .slice()
+              .sort((a, b) => a.short_name.localeCompare(b.short_name))
+              .map((team) => {
+                const isExcluded = excludedTeams.has(team.id);
+                return (
+                  <Button
+                    key={team.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleTeamExclusion(team.id)}
+                    className={`min-w-[45px] text-xs px-2 py-1 ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300'}`}
+                    data-testid={`button-toggle-team-${team.id}`}
+                  >
+                    {team.short_name}
+                  </Button>
+                );
+              })}
+          </div>
+          {excludedTeams.size > 0 && (
+            <p className="text-xs text-gray-500 mt-2">
+              Excluded: {Array.from(excludedTeams)
+                .map(id => data?.teams.find(t => t.id === id)?.short_name || '')
+                .filter(Boolean)
+                .sort()
+                .join(', ')}
+            </p>
+          )}
         </div>
       </div>
 
