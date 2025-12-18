@@ -23,10 +23,13 @@ interface SeasonAssistShareData {
   }[];
 }
 
+type FilterOption = 'full' | 'last6' | 'last8' | 'last12';
+
 export default function AssistShare() {
   const queryClient = useQueryClient();
   
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [selectedFilter, setSelectedFilter] = useState<FilterOption>("full");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
@@ -34,11 +37,26 @@ export default function AssistShare() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch current season assist share data using simplified calculation
+  // Fetch current season assist share data using simplified calculation with filter
   const { data: assistShareData, isLoading: assistShareLoading } = useQuery<SeasonAssistShareData[]>({
-    queryKey: ["/api/assist-share-season"],
+    queryKey: ["/api/assist-share-season", selectedFilter],
+    queryFn: async () => {
+      const response = await fetch(`/api/assist-share-season?filter=${selectedFilter}`);
+      if (!response.ok) throw new Error('Failed to fetch assist share data');
+      return response.json();
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes for fresh data
   });
+
+  // Dynamic label based on filter
+  const filterLabel = useMemo(() => {
+    switch (selectedFilter) {
+      case 'last6': return 'Last 6 Gameweeks Total';
+      case 'last8': return 'Last 8 Gameweeks Total';
+      case 'last12': return 'Last 12 Gameweeks Total';
+      default: return 'Season Total';
+    }
+  }, [selectedFilter]);
 
   // Use season assist share data directly from API
   const processedAssistShareData = useMemo(() => {
@@ -63,8 +81,8 @@ export default function AssistShare() {
     setIsRefreshing(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
-      await queryClient.invalidateQueries({ queryKey: ["/api/assist-share-season"] });
-      await queryClient.refetchQueries({ queryKey: ["/api/assist-share-season"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/assist-share-season", selectedFilter] });
+      await queryClient.refetchQueries({ queryKey: ["/api/assist-share-season", selectedFilter] });
     } finally {
       setIsRefreshing(false);
     }
@@ -127,6 +145,22 @@ export default function AssistShare() {
             <CardContent className="p-6">
               <div className="flex flex-wrap gap-4 items-center">
                 <div className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-green-600" />
+                  <label className="text-sm font-medium text-gray-700">Period:</label>
+                  <Select value={selectedFilter} onValueChange={(val) => setSelectedFilter(val as FilterOption)}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full">Full Season</SelectItem>
+                      <SelectItem value="last6">Last 6 Gameweeks</SelectItem>
+                      <SelectItem value="last8">Last 8 Gameweeks</SelectItem>
+                      <SelectItem value="last12">Last 12 Gameweeks</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center gap-2">
                   <Filter className="h-5 w-5 text-green-600" />
                   <label className="text-sm font-medium text-gray-700">Team:</label>
                   <Select value={selectedTeam} onValueChange={setSelectedTeam}>
@@ -171,7 +205,7 @@ export default function AssistShare() {
                       </Badge>
                     </CardTitle>
                     <div className="text-sm opacity-90">
-                      Season Total (Assists + xA): <span className="font-bold text-lg">{(teamData?.expectedAssists || 0).toFixed(1)}</span>
+                      {filterLabel} (Assists + xA): <span className="font-bold text-lg">{(teamData?.expectedAssists || 0).toFixed(1)}</span>
                     </div>
                   </CardHeader>
                   <CardContent className="p-4">
