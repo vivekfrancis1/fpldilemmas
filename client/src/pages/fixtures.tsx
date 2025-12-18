@@ -149,12 +149,15 @@ export default function Fixtures() {
   // Extract next gameweek for highlighting purposes
   const nextGameweek = parseInt(defaultGameweekRange.startGameweek);
 
-  // Get available gameweeks for dropdown options (next 12 gameweeks)
+  // Get available gameweeks for dropdown options (from next GW to GW38)
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) {
-      return Array.from({ length: 12 }, (_, i) => i + 10); // Fallback
+      return Array.from({ length: 29 }, (_, i) => i + 10); // Fallback
     }
-    return getNextGameweeksForDropdown(bootstrapData.events, 12);
+    // Find the next unfinished gameweek
+    const nextGW = bootstrapData.events.find(e => !e.finished)?.id || 1;
+    // Return all gameweeks from next GW to 38
+    return Array.from({ length: 38 - nextGW + 1 }, (_, i) => nextGW + i);
   }, [bootstrapData?.events]);
 
   // Update gameweek range when bootstrap data changes (default next 6 gameweeks)
