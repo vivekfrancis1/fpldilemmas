@@ -197,6 +197,13 @@ export default function Fixtures() {
   // Clear all exclusions
   const clearGameweekExclusions = () => setExcludedGameweeks(new Set());
   const clearTeamExclusions = () => setExcludedTeams(new Set());
+  
+  // Exclude all teams
+  const excludeAllTeams = () => {
+    if (bootstrapData?.teams) {
+      setExcludedTeams(new Set(bootstrapData.teams.map(t => t.id)));
+    }
+  };
 
   // Get difficulty rating color class
   const getDifficultyColor = (difficulty: number) => {
@@ -643,18 +650,26 @@ export default function Fixtures() {
                   <label className="text-xs sm:text-sm font-medium text-gray-700">
                     Toggle Teams (click to exclude/include):
                   </label>
-                  {excludedTeams.size > 0 && (
+                  <div className="flex gap-2">
                     <Button 
-                      variant="ghost" 
+                      variant="outline" 
                       size="sm" 
                       onClick={clearTeamExclusions}
-                      className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
-                      data-testid="button-clear-team-exclusions"
+                      className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 py-1"
+                      data-testid="button-include-all-teams"
                     >
-                      <X className="h-3 w-3 mr-1" />
-                      Clear team exclusions
+                      Include All
                     </Button>
-                  )}
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={excludeAllTeams}
+                      className="text-xs bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 py-1"
+                      data-testid="button-exclude-all-teams"
+                    >
+                      Exclude All
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center">
                   {bootstrapData?.teams
