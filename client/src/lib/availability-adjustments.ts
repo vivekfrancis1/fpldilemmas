@@ -207,9 +207,31 @@ export function applyAvailabilityAdjustments<T extends PlayerWithProjections>(
   const newAveragePerGameweek = gameweekCount > 0 ? newTotalExpectedPoints / gameweekCount : 0;
   const newAverageValue = player.price && player.price > 0 ? newAveragePerGameweek / player.price : 0;
   
+  // Calculate overall availability factor based on total change
+  const originalTotal = Object.values(originalProjections).reduce((sum, points) => sum + points, 0);
+  const availabilityFactor = originalTotal > 0 ? newTotalExpectedPoints / originalTotal : 1;
+  
+  // Apply availability factor to component totals (proportional reduction)
+  const componentKeys = [
+    'totalPointsFromGoals', 'totalPointsFromAssists', 'totalPointsFromCleanSheets',
+    'totalPointsFromDefensiveContributions', 'totalPointsFromMinutes', 'totalPointsFromBonus',
+    'totalPointsFromSaves', 'totalPointsFromGoalsConceded', 'totalPointsFromYellowCards', 'totalPointsFromRedCards'
+  ];
+  
+  // Store original component values and apply adjustments
+  const originalComponentTotals: { [key: string]: number } = {};
+  componentKeys.forEach(key => {
+    const originalValue = (player as any)[key];
+    if (originalValue !== undefined) {
+      originalComponentTotals[key] = originalValue;
+      (adjustedPlayer as any)[key] = Math.round(originalValue * availabilityFactor * 100) / 100;
+    }
+  });
+  
   adjustedPlayer.gameweekProjections = adjustedProjections;
   adjustedPlayer.originalGameweekProjections = originalProjections;
   adjustedPlayer.availabilityAdjustments = availabilityAdjustments;
+  (adjustedPlayer as any).originalComponentTotals = originalComponentTotals;
   adjustedPlayer.totalExpectedPoints = Math.round(newTotalExpectedPoints * 100) / 100;
   adjustedPlayer.averagePerGameweek = Math.round(newAveragePerGameweek * 100) / 100;
   adjustedPlayer.averageValue = Math.round(newAverageValue * 100) / 100;

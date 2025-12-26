@@ -382,7 +382,11 @@ function RangeTotalBreakdownTooltip({
             {componentDefs.map(comp => {
               const isExcluded = excludedComponents.has(comp.key);
               const currentValue = (player as any)[comp.totalKey] || 0;
-              const originalValue = originalPlayer ? (originalPlayer as any)[comp.totalKey] || 0 : currentValue;
+              
+              // Use originalComponentTotals from availability adjustments if available
+              const originalComponentTotals = (player as any).originalComponentTotals as { [key: string]: number } | undefined;
+              const originalValue = originalComponentTotals?.[comp.totalKey] ?? 
+                (originalPlayer ? (originalPlayer as any)[comp.totalKey] || 0 : currentValue);
               const hasAdjustment = applyAvailability && Math.abs(currentValue - originalValue) > 0.01;
               
               return (
