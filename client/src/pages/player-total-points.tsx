@@ -299,7 +299,21 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
 }
 
 // Range Total Point Breakdown Tooltip Component
-function RangeTotalBreakdownTooltip({ player, gameweekCount }: { player: PlayerTotalPointsData; gameweekCount: number }) {
+interface RangeTotalBreakdownTooltipProps {
+  player: PlayerTotalPointsData;
+  gameweekCount: number;
+  excludedComponents?: Set<string>;
+  applyAvailability?: boolean;
+  originalPlayer?: PlayerTotalPointsData;
+}
+
+function RangeTotalBreakdownTooltip({ 
+  player, 
+  gameweekCount, 
+  excludedComponents = new Set(), 
+  applyAvailability = true,
+  originalPlayer
+}: RangeTotalBreakdownTooltipProps) {
   const hasBreakdownData = player.totalPointsFromGoals !== undefined;
   
   if (!hasBreakdownData) {
@@ -314,6 +328,25 @@ function RangeTotalBreakdownTooltip({ player, gameweekCount }: { player: PlayerT
     );
   }
 
+  // Component definitions for tooltip display
+  const componentDefs = [
+    { key: 'goals', label: '⚽ Goals', totalKey: 'totalPointsFromGoals', color: 'text-green-700' },
+    { key: 'assists', label: '🎯 Assists', totalKey: 'totalPointsFromAssists', color: 'text-blue-700' },
+    { key: 'cleanSheets', label: '🛡️ Clean Sheets', totalKey: 'totalPointsFromCleanSheets', color: 'text-yellow-700' },
+    { key: 'defensive', label: '⚔️ Defensive', totalKey: 'totalPointsFromDefensiveContributions', color: 'text-orange-700' },
+    { key: 'minutes', label: '⏱️ Minutes', totalKey: 'totalPointsFromMinutes', color: 'text-purple-700' },
+    { key: 'bonus', label: '✨ Bonus', totalKey: 'totalPointsFromBonus', color: 'text-pink-700' },
+    { key: 'saves', label: '🥅 Saves', totalKey: 'totalPointsFromSaves', color: 'text-cyan-700' },
+    { key: 'goalsConceded', label: '🚪 Goals Conceded', totalKey: 'totalPointsFromGoalsConceded', color: 'text-red-600' },
+    { key: 'yellowCards', label: '🟨 Yellow Cards', totalKey: 'totalPointsFromYellowCards', color: 'text-yellow-600' },
+    { key: 'redCards', label: '🟥 Red Cards', totalKey: 'totalPointsFromRedCards', color: 'text-red-700' },
+  ];
+
+  // Calculate if there are any availability adjustments
+  const hasAvailabilityAdjustments = originalPlayer && applyAvailability && 
+    (player as any).availabilityAdjustments && 
+    Object.keys((player as any).availabilityAdjustments).length > 0;
+
   return (
     <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
@@ -327,113 +360,61 @@ function RangeTotalBreakdownTooltip({ player, gameweekCount }: { player: PlayerT
           />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
+      <TooltipContent side="top" className="max-w-md p-4 bg-white shadow-xl border border-gray-200 z-50">
         <div className="space-y-2">
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
             {player.name} - {gameweekCount}GW Total Breakdown
           </div>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">⚽ Goals:</span>
-              <ValueCell 
-                value={player.totalPointsFromGoals || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-green-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">🎯 Assists:</span>
-              <ValueCell 
-                value={player.totalPointsFromAssists || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-blue-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">🛡️ Clean Sheets:</span>
-              <ValueCell 
-                value={player.totalPointsFromCleanSheets || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-yellow-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">⚔️ Defensive:</span>
-              <ValueCell 
-                value={player.totalPointsFromDefensiveContributions || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-orange-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">⏱️ Minutes:</span>
-              <ValueCell 
-                value={player.totalPointsFromMinutes || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-purple-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">✨ Bonus:</span>
-              <ValueCell 
-                value={player.totalPointsFromBonus || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-pink-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">🥅 Saves:</span>
-              <ValueCell 
-                value={player.totalPointsFromSaves || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-cyan-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">🚪 Goals Conceded:</span>
-              <ValueCell 
-                value={player.totalPointsFromGoalsConceded || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-red-600"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">🟨 Yellow Cards:</span>
-              <ValueCell 
-                value={player.totalPointsFromYellowCards || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-yellow-600"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">🟥 Red Cards:</span>
-              <ValueCell 
-                value={player.totalPointsFromRedCards || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-red-700"
-                fontWeight="medium"
-              />
-            </div>
+          
+          {/* Filter status indicators */}
+          <div className="flex flex-wrap gap-1 text-xs mb-2">
+            <span className={`px-1.5 py-0.5 rounded ${applyAvailability ? 'bg-purple-100 text-purple-700' : 'bg-gray-100 text-gray-500'}`}>
+              Avail. Adj: {applyAvailability ? 'ON' : 'OFF'}
+            </span>
+            {excludedComponents.size > 0 && (
+              <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-600">
+                {excludedComponents.size} excluded
+              </span>
+            )}
           </div>
+
+          <div className="space-y-1.5 text-sm">
+            {componentDefs.map(comp => {
+              const isExcluded = excludedComponents.has(comp.key);
+              const currentValue = (player as any)[comp.totalKey] || 0;
+              const originalValue = originalPlayer ? (originalPlayer as any)[comp.totalKey] || 0 : currentValue;
+              const hasAdjustment = applyAvailability && Math.abs(currentValue - originalValue) > 0.01;
+              
+              return (
+                <div 
+                  key={comp.key} 
+                  className={`flex justify-between items-center ${isExcluded ? 'opacity-40' : ''}`}
+                >
+                  <span className={`text-gray-600 ${isExcluded ? 'line-through' : ''}`}>
+                    {comp.label}:
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {hasAdjustment && !isExcluded && (
+                      <span className="text-gray-400 text-xs line-through">
+                        {originalValue.toFixed(1)}
+                      </span>
+                    )}
+                    <ValueCell 
+                      value={isExcluded ? 0 : currentValue} 
+                      format="points" 
+                      decimals={1} 
+                      className={isExcluded ? 'text-gray-400' : comp.color}
+                      fontWeight="medium"
+                    />
+                    {isExcluded && (
+                      <span className="text-xs text-red-500">✕</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
           <div className="border-t pt-2 mt-3">
             <div className="flex justify-between items-center font-semibold">
               <span className="text-gray-800">{gameweekCount}GW Total:</span>
@@ -445,6 +426,12 @@ function RangeTotalBreakdownTooltip({ player, gameweekCount }: { player: PlayerT
                 fontWeight="semibold"
               />
             </div>
+            {hasAvailabilityAdjustments && originalPlayer && (
+              <div className="flex justify-between items-center text-xs text-gray-500 mt-1">
+                <span>Before availability adj:</span>
+                <span>{(originalPlayer.totalExpectedPoints || 0).toFixed(1)} pts</span>
+              </div>
+            )}
           </div>
         </div>
       </TooltipContent>
@@ -507,7 +494,10 @@ function createPlayerTotalPointsColumns(
   compareList?: PlayerTotalPointsData[],
   maxCompareReached?: boolean,
   opponentMap?: Map<string, { opponent: string; opponentId: number; isHome: boolean }>,
-  showOpponent?: boolean
+  showOpponent?: boolean,
+  excludedComponents?: Set<string>,
+  applyAvailability?: boolean,
+  originalPlayerDataMap?: Map<number, PlayerTotalPointsData>
 ): TableColumn<PlayerTotalPointsData>[] {
   return [
     {
@@ -594,7 +584,15 @@ function createPlayerTotalPointsColumns(
       sortable: true,
       align: 'center',
       className: 'min-w-[90px] md:min-w-[100px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300',
-      render: (_, player) => <RangeTotalBreakdownTooltip player={player} gameweekCount={gameweekRange.length} />
+      render: (_, player) => (
+        <RangeTotalBreakdownTooltip 
+          player={player} 
+          gameweekCount={gameweekRange.length} 
+          excludedComponents={excludedComponents}
+          applyAvailability={applyAvailability}
+          originalPlayer={originalPlayerDataMap?.get(player.playerId)}
+        />
+      )
     },
     {
       key: 'averagePerGameweek',
@@ -978,6 +976,17 @@ export default function PlayerTotalPoints() {
       };
     });
   }, [totalPointsData, excludedComponents, POINT_COMPONENTS, applyAvailability]);
+
+  // Create a map of original player data (before any adjustments) for tooltip comparison
+  const originalPlayerDataMap = useMemo(() => {
+    const map = new Map<number, PlayerTotalPointsData>();
+    if (totalPointsData) {
+      (totalPointsData as PlayerTotalPointsData[]).forEach(player => {
+        map.set(player.playerId, player);
+      });
+    }
+    return map;
+  }, [totalPointsData]);
 
   // Loading state - Cache-first loading logic: show loading for cache, then live API if needed
   const isLoading = useMemo(() => {
@@ -1601,7 +1610,10 @@ export default function PlayerTotalPoints() {
                       compareList, 
                       maxCompareReached,
                       opponentMap,
-                      showOpponent
+                      showOpponent,
+                      excludedComponents,
+                      applyAvailability,
+                      originalPlayerDataMap
                     )}
                     onSort={handleSort}
                     sortField={sortField}
