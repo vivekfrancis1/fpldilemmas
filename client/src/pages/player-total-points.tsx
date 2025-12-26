@@ -713,6 +713,9 @@ export default function PlayerTotalPoints() {
   // Include/exclude all components
   const includeAllComponents = () => setExcludedComponents(new Set());
   const excludeAllComponents = () => setExcludedComponents(new Set(POINT_COMPONENTS.map(c => c.key)));
+  
+  // Availability adjustments toggle (default ON)
+  const [applyAvailability, setApplyAvailability] = useState(true);
 
   // Get available gameweeks for dropdown (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
@@ -892,15 +895,15 @@ export default function PlayerTotalPoints() {
       return null;
     }
     
-    // Apply availability adjustments to all players before returning
-    if (bootstrapData && currentGameweek) {
+    // Conditionally apply availability adjustments based on toggle
+    if (applyAvailability && bootstrapData && currentGameweek) {
       return selectedData.map(player => 
-        applyAvailabilityAdjustments(player, bootstrapData, currentGameweek)
-      );
+        applyAvailabilityAdjustments(player as any, bootstrapData, currentGameweek)
+      ) as unknown as PlayerTotalPointsData[];
     }
     
     return selectedData;
-  }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek, bootstrapData, currentGameweek, nextGameweek, maxAvailableGW]);
+  }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek, bootstrapData, currentGameweek, nextGameweek, maxAvailableGW, applyAvailability]);
 
   // Recalculate player data based on excluded point components
   const adjustedPlayerData = useMemo((): PlayerTotalPointsData[] | null => {
@@ -1480,6 +1483,22 @@ export default function PlayerTotalPoints() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  {/* Availability Adjustments Toggle */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setApplyAvailability(!applyAvailability)}
+                    className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                      applyAvailability 
+                        ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
+                        : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'
+                    }`}
+                    data-testid="button-toggle-availability"
+                  >
+                    Availability Adj.
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5">
                   {POINT_COMPONENTS.map(component => {
                     const isExcluded = excludedComponents.has(component.key);
                     return (
