@@ -179,106 +179,53 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
             </div>
           )}
           <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">⚽ Goals:</span>
-              <ValueCell 
-                value={player.pointsFromGoals?.[gwKey] || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-green-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">🎯 Assists:</span>
-              <ValueCell 
-                value={player.pointsFromAssists?.[gwKey] || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-blue-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">🛡️ Clean Sheets:</span>
-              <ValueCell 
-                value={player.pointsFromCleanSheets?.[gwKey] || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-yellow-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">⚔️ Defensive:</span>
-              <ValueCell 
-                value={player.pointsFromDefensiveContributions?.[gwKey] || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-orange-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">⏱️ Minutes:</span>
-              <ValueCell 
-                value={player.pointsFromMinutes?.[gwKey] || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-purple-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">✨ Bonus:</span>
-              <ValueCell 
-                value={player.pointsFromBonus?.[gwKey] || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-pink-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">🥅 Saves:</span>
-              <ValueCell 
-                value={player.pointsFromSaves?.[gwKey] || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-cyan-700"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">🚪 Goals Conceded:</span>
-              <ValueCell 
-                value={player.pointsFromGoalsConceded?.[gwKey] || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-red-600"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">🟨 Yellow Cards:</span>
-              <ValueCell 
-                value={player.pointsFromYellowCards?.[gwKey] || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-yellow-600"
-                fontWeight="medium"
-              />
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">🟥 Red Cards:</span>
-              <ValueCell 
-                value={player.pointsFromRedCards?.[gwKey] || 0} 
-                format="points" 
-                decimals={2} 
-                className="text-red-700"
-                fontWeight="medium"
-              />
-            </div>
+            {(() => {
+              const originalCompProjs = (player as any).originalComponentProjections as { [comp: string]: { [gw: string]: number } } | undefined;
+              const componentDefs = [
+                { key: 'pointsFromGoals', label: '⚽ Goals', color: 'text-green-700' },
+                { key: 'pointsFromAssists', label: '🎯 Assists', color: 'text-blue-700' },
+                { key: 'pointsFromCleanSheets', label: '🛡️ Clean Sheets', color: 'text-yellow-700' },
+                { key: 'pointsFromDefensiveContributions', label: '⚔️ Defensive', color: 'text-orange-700' },
+                { key: 'pointsFromMinutes', label: '⏱️ Minutes', color: 'text-purple-700' },
+                { key: 'pointsFromBonus', label: '✨ Bonus', color: 'text-pink-700' },
+                { key: 'pointsFromSaves', label: '🥅 Saves', color: 'text-cyan-700' },
+                { key: 'pointsFromGoalsConceded', label: '🚪 Goals Conceded', color: 'text-red-600' },
+                { key: 'pointsFromYellowCards', label: '🟨 Yellow Cards', color: 'text-amber-600' },
+                { key: 'pointsFromRedCards', label: '🟥 Red Cards', color: 'text-red-700' },
+              ];
+              
+              return componentDefs.map(comp => {
+                const currentValue = (player as any)[comp.key]?.[gwKey] || 0;
+                const originalValue = originalCompProjs?.[comp.key]?.[gwKey] ?? currentValue;
+                const hasCompAdjustment = hasAdjustment && Math.abs(currentValue - originalValue) > 0.001;
+                
+                return (
+                  <div key={comp.key} className="flex justify-between items-center">
+                    <span className="text-gray-600">{comp.label}:</span>
+                    <div className="flex items-center gap-1.5">
+                      {hasCompAdjustment ? (
+                        <>
+                          <span className="text-gray-400 text-xs line-through">
+                            {originalValue.toFixed(2)}
+                          </span>
+                          <span className={`${comp.color} font-medium`}>
+                            {currentValue.toFixed(2)}
+                          </span>
+                        </>
+                      ) : (
+                        <ValueCell 
+                          value={currentValue} 
+                          format="points" 
+                          decimals={2} 
+                          className={comp.color}
+                          fontWeight="medium"
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
           <div className="border-t pt-2 mt-3">
             <div className="flex justify-between items-center font-semibold">

@@ -20,6 +20,19 @@ export interface PlayerWithProjections {
   price?: number;
   originalGameweekProjections?: { [gameweek: string]: number };
   availabilityAdjustments?: { [gameweek: string]: { original: number; adjusted: number; reason: string } };
+  // Per-gameweek component breakdowns
+  pointsFromGoals?: { [gameweek: string]: number };
+  pointsFromAssists?: { [gameweek: string]: number };
+  pointsFromCleanSheets?: { [gameweek: string]: number };
+  pointsFromDefensiveContributions?: { [gameweek: string]: number };
+  pointsFromMinutes?: { [gameweek: string]: number };
+  pointsFromBonus?: { [gameweek: string]: number };
+  pointsFromSaves?: { [gameweek: string]: number };
+  pointsFromGoalsConceded?: { [gameweek: string]: number };
+  pointsFromYellowCards?: { [gameweek: string]: number };
+  pointsFromRedCards?: { [gameweek: string]: number };
+  // Original per-gameweek component projections (before availability adjustments)
+  originalComponentProjections?: { [component: string]: { [gameweek: string]: number } };
 }
 
 // Parse return date from injury/suspension news text
@@ -212,15 +225,22 @@ export function applyAvailabilityAdjustments<T extends PlayerWithProjections>(
   const availabilityFactor = originalTotal > 0 ? newTotalExpectedPoints / originalTotal : 1;
   
   // Apply availability factor to component totals (proportional reduction)
-  const componentKeys = [
+  const componentTotalKeys = [
     'totalPointsFromGoals', 'totalPointsFromAssists', 'totalPointsFromCleanSheets',
     'totalPointsFromDefensiveContributions', 'totalPointsFromMinutes', 'totalPointsFromBonus',
     'totalPointsFromSaves', 'totalPointsFromGoalsConceded', 'totalPointsFromYellowCards', 'totalPointsFromRedCards'
   ];
   
-  // Store original component values and apply adjustments
+  // Per-gameweek component keys (maps to the per-gameweek breakdown objects)
+  const componentGwKeys = [
+    'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
+    'pointsFromDefensiveContributions', 'pointsFromMinutes', 'pointsFromBonus',
+    'pointsFromSaves', 'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards'
+  ];
+  
+  // Store original component values and apply adjustments to totals
   const originalComponentTotals: { [key: string]: number } = {};
-  componentKeys.forEach(key => {
+  componentTotalKeys.forEach(key => {
     const originalValue = (player as any)[key];
     if (originalValue !== undefined) {
       originalComponentTotals[key] = originalValue;
@@ -228,10 +248,35 @@ export function applyAvailabilityAdjustments<T extends PlayerWithProjections>(
     }
   });
   
+  // Store original per-gameweek component projections and apply adjustments
+  const originalComponentProjections: { [component: string]: { [gameweek: string]: number } } = {};
+  componentGwKeys.forEach(compKey => {
+    const compData = (player as any)[compKey];
+    if (compData && typeof compData === 'object') {
+      // Store original values
+      originalComponentProjections[compKey] = { ...compData };
+      
+      // Apply adjustments per gameweek
+      const adjustedCompData: { [gameweek: string]: number } = {};
+      Object.keys(compData).forEach(gwKey => {
+        const gwAdjustment = availabilityAdjustments[gwKey];
+        if (gwAdjustment) {
+          // Apply the same multiplier used for the total gameweek projection
+          const multiplier = gwAdjustment.original > 0 ? gwAdjustment.adjusted / gwAdjustment.original : 0;
+          adjustedCompData[gwKey] = Math.round(compData[gwKey] * multiplier * 100) / 100;
+        } else {
+          adjustedCompData[gwKey] = compData[gwKey];
+        }
+      });
+      (adjustedPlayer as any)[compKey] = adjustedCompData;
+    }
+  });
+  
   adjustedPlayer.gameweekProjections = adjustedProjections;
   adjustedPlayer.originalGameweekProjections = originalProjections;
   adjustedPlayer.availabilityAdjustments = availabilityAdjustments;
   (adjustedPlayer as any).originalComponentTotals = originalComponentTotals;
+  (adjustedPlayer as any).originalComponentProjections = originalComponentProjections;
   adjustedPlayer.totalExpectedPoints = Math.round(newTotalExpectedPoints * 100) / 100;
   adjustedPlayer.averagePerGameweek = Math.round(newAveragePerGameweek * 100) / 100;
   adjustedPlayer.averageValue = Math.round(newAverageValue * 100) / 100;
