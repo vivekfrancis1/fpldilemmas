@@ -680,6 +680,39 @@ export default function PlayerTotalPoints() {
   
   // Opponent display toggle state
   const [showOpponent, setShowOpponent] = useState(true);
+  
+  // Point component exclusion state
+  const POINT_COMPONENTS = [
+    { key: 'goals', label: 'Goals', totalKey: 'totalPointsFromGoals', gwKey: 'pointsFromGoals' },
+    { key: 'assists', label: 'Assists', totalKey: 'totalPointsFromAssists', gwKey: 'pointsFromAssists' },
+    { key: 'cleanSheets', label: 'Clean Sheets', totalKey: 'totalPointsFromCleanSheets', gwKey: 'pointsFromCleanSheets' },
+    { key: 'defensiveContributions', label: 'Defensive', totalKey: 'totalPointsFromDefensiveContributions', gwKey: 'pointsFromDefensiveContributions' },
+    { key: 'minutes', label: 'Minutes', totalKey: 'totalPointsFromMinutes', gwKey: 'pointsFromMinutes' },
+    { key: 'bonus', label: 'Bonus', totalKey: 'totalPointsFromBonus', gwKey: 'pointsFromBonus' },
+    { key: 'saves', label: 'Saves', totalKey: 'totalPointsFromSaves', gwKey: 'pointsFromSaves' },
+    { key: 'goalsConceded', label: 'Goals Conceded', totalKey: 'totalPointsFromGoalsConceded', gwKey: 'pointsFromGoalsConceded' },
+    { key: 'yellowCards', label: 'Yellow Cards', totalKey: 'totalPointsFromYellowCards', gwKey: 'pointsFromYellowCards' },
+    { key: 'redCards', label: 'Red Cards', totalKey: 'totalPointsFromRedCards', gwKey: 'pointsFromRedCards' },
+  ] as const;
+  
+  const [excludedComponents, setExcludedComponents] = useState<Set<string>>(new Set());
+  
+  // Toggle point component exclusion
+  const toggleComponentExclusion = (componentKey: string) => {
+    setExcludedComponents(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(componentKey)) {
+        newSet.delete(componentKey);
+      } else {
+        newSet.add(componentKey);
+      }
+      return newSet;
+    });
+  };
+  
+  // Include/exclude all components
+  const includeAllComponents = () => setExcludedComponents(new Set());
+  const excludeAllComponents = () => setExcludedComponents(new Set(POINT_COMPONENTS.map(c => c.key)));
 
   // Get available gameweeks for dropdown (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
@@ -869,6 +902,59 @@ export default function PlayerTotalPoints() {
     return selectedData;
   }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek, bootstrapData, currentGameweek, nextGameweek, maxAvailableGW]);
 
+  // Recalculate player data based on excluded point components
+  const adjustedPlayerData = useMemo((): PlayerTotalPointsData[] | null => {
+    if (!totalPointsData) return null;
+    // Cast to PlayerTotalPointsData[] to handle availability adjustments return type
+    const playerData = totalPointsData as PlayerTotalPointsData[];
+    if (excludedComponents.size === 0) return playerData;
+    
+    return playerData.map(player => {
+      // Calculate new totals by summing only included components
+      let newTotal = 0;
+      const newGwProjections: { [key: string]: number } = {};
+      
+      // Get the gameweek keys from the player's projections
+      const gwKeys = Object.keys(player.gameweekProjections || {});
+      
+      // Initialize gameweek projections
+      gwKeys.forEach(gwKey => {
+        newGwProjections[gwKey] = 0;
+      });
+      
+      // Sum up included components
+      POINT_COMPONENTS.forEach(component => {
+        if (!excludedComponents.has(component.key)) {
+          // Add to total
+          const totalValue = (player as any)[component.totalKey] || 0;
+          newTotal += totalValue;
+          
+          // Add to each gameweek projection
+          const gwData = (player as any)[component.gwKey] as { [key: string]: number } | undefined;
+          if (gwData) {
+            gwKeys.forEach(gwKey => {
+              newGwProjections[gwKey] += gwData[gwKey] || 0;
+            });
+          }
+        }
+      });
+      
+      // Calculate new averages
+      const numGameweeks = gwKeys.length || 1;
+      const newAverage = newTotal / numGameweeks;
+      const playerPrice = player.price || 0;
+      const newAverageValue = playerPrice > 0 ? newAverage / playerPrice : 0;
+      
+      return {
+        ...player,
+        totalExpectedPoints: newTotal,
+        gameweekProjections: newGwProjections,
+        averagePerGameweek: newAverage,
+        averageValue: newAverageValue
+      };
+    });
+  }, [totalPointsData, excludedComponents, POINT_COMPONENTS]);
+
   // Loading state - Cache-first loading logic: show loading for cache, then live API if needed
   const isLoading = useMemo(() => {
     const isDefaultRange = startGameweek === nextGameweek && endGameweek === maxAvailableGW;
@@ -967,24 +1053,24 @@ export default function PlayerTotalPoints() {
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
-    if (!totalPointsData) return [];
-    return Array.from(new Set(totalPointsData.map(p => p.team)))
+    if (!adjustedPlayerData) return [];
+    return Array.from(new Set(adjustedPlayerData.map(p => p.team)))
       .filter(team => team.length > 3) // Remove short forms (e.g., ARS, LIV), keep full names
       .sort();
-  }, [totalPointsData]);
+  }, [adjustedPlayerData]);
 
   const positions = useMemo(() => {
-    if (!totalPointsData) return [];
-    return Array.from(new Set(totalPointsData.map(p => p.position)))
+    if (!adjustedPlayerData) return [];
+    return Array.from(new Set(adjustedPlayerData.map(p => p.position)))
       .filter(pos => pos !== 'FWD') // Remove FWD since Forward already exists
       .sort();
-  }, [totalPointsData]);
+  }, [adjustedPlayerData]);
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
-    if (!totalPointsData) return [];
+    if (!adjustedPlayerData) return [];
     
-    let filtered = totalPointsData.filter(player => {
+    let filtered = adjustedPlayerData.filter(player => {
       if (selectedPosition !== "all" && player.position !== selectedPosition) return false;
       if (selectedTeam !== "all" && player.team !== selectedTeam) return false;
       if (searchTerm && !player.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
@@ -1087,7 +1173,7 @@ export default function PlayerTotalPoints() {
     });
 
     return filtered;
-  }, [totalPointsData, selectedPosition, selectedTeam, searchTerm, selectedLoadGroup, selectedAvailability, sortField, sortDirection]);
+  }, [adjustedPlayerData, selectedPosition, selectedTeam, searchTerm, selectedLoadGroup, selectedAvailability, sortField, sortDirection]);
 
   // Calculate max points per gameweek for highlighting
   const maxPointsPerGameweek = useMemo(() => {
@@ -1362,6 +1448,61 @@ export default function PlayerTotalPoints() {
                 {excludedGameweeks.size > 0 && (
                   <p className="text-xs text-gray-500 mt-2">
                     Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
+                  </p>
+                )}
+              </div>
+              
+              {/* Point Component Toggle Section */}
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <Label className="text-xs sm:text-sm font-medium text-gray-700">
+                    Toggle Point Components (click to exclude/include):
+                  </Label>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={includeAllComponents}
+                      className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 py-1"
+                      data-testid="button-include-all-components"
+                    >
+                      Include All
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={excludeAllComponents}
+                      className="text-xs bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 py-1"
+                      data-testid="button-exclude-all-components"
+                    >
+                      Exclude All
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  {POINT_COMPONENTS.map(component => {
+                    const isExcluded = excludedComponents.has(component.key);
+                    return (
+                      <Button
+                        key={component.key}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleComponentExclusion(component.key)}
+                        className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                          isExcluded 
+                            ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' 
+                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300'
+                        }`}
+                        data-testid={`button-toggle-component-${component.key}`}
+                      >
+                        {component.label}
+                      </Button>
+                    );
+                  })}
+                </div>
+                {excludedComponents.size > 0 && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Excluded: {POINT_COMPONENTS.filter(c => excludedComponents.has(c.key)).map(c => c.label).join(', ')}
                   </p>
                 )}
               </div>
