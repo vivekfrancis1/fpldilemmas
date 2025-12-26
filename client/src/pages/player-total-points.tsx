@@ -977,16 +977,42 @@ export default function PlayerTotalPoints() {
     });
   }, [totalPointsData, excludedComponents, POINT_COMPONENTS, applyAvailability]);
 
-  // Create a map of original player data (before any adjustments) for tooltip comparison
+  // Create a map of original player data (BEFORE availability adjustments) for tooltip comparison
+  // This uses the raw data directly without applyAvailability toggle, so we always have the unadjusted baseline
   const originalPlayerDataMap = useMemo(() => {
     const map = new Map<number, PlayerTotalPointsData>();
-    if (totalPointsData) {
-      (totalPointsData as PlayerTotalPointsData[]).forEach(player => {
+    
+    // Get the raw selected data (same logic as totalPointsData but WITHOUT availability adjustments)
+    const isDefaultRange = startGameweek === nextGameweek && endGameweek === maxAvailableGW;
+    let rawData: PlayerTotalPointsData[] | null = null;
+    
+    // PRIORITY 1: Use cached data if available and user is viewing default range
+    if (isDefaultRange && cachedTotalPointsData && cachedTotalPointsData.length > 0) {
+      const samplePlayer = cachedTotalPointsData[0];
+      const hasValidCachedData = (samplePlayer.name || samplePlayer.playerName) && 
+        samplePlayer.totalExpectedPoints !== undefined;
+      if (hasValidCachedData) {
+        rawData = cachedTotalPointsData;
+      }
+    }
+    
+    // PRIORITY 2: Use live API data for custom ranges or if cache unavailable
+    if (!rawData && liveTotalPointsData && liveTotalPointsData.length > 0 && !liveError) {
+      const samplePlayer = liveTotalPointsData[0];
+      const hasValidLiveData = (samplePlayer.name || samplePlayer.playerName) && 
+        samplePlayer.totalExpectedPoints !== undefined;
+      if (hasValidLiveData) {
+        rawData = liveTotalPointsData;
+      }
+    }
+    
+    if (rawData) {
+      rawData.forEach(player => {
         map.set(player.playerId, player);
       });
     }
     return map;
-  }, [totalPointsData]);
+  }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek, nextGameweek, maxAvailableGW]);
 
   // Loading state - Cache-first loading logic: show loading for cache, then live API if needed
   const isLoading = useMemo(() => {
