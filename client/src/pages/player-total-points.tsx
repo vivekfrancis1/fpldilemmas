@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LoadingExperience } from "@/components/loading-experience";
-import { applyAvailabilityAdjustments, AFCON_PLAYERS } from "@/lib/availability-adjustments";
+import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) {

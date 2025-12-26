@@ -1,5 +1,5 @@
 // Server-side availability adjustments for player projections
-// Handles AFCON 2025, injuries, and suspensions
+// Uses only official FPL API data (chance_of_playing_next_round, status, news)
 
 export interface BootstrapElement {
   web_name: string;
@@ -14,20 +14,6 @@ export interface BootstrapEvent {
   id: number;
   deadline_time: string;
 }
-
-// AFCON 2025 Availability - Players traveling to Morocco (December 21, 2025 - January 18, 2026)
-// Names must match exactly with FPL API format (first_name + second_name with accents)
-export const AFCON_PLAYERS = new Set([
-  'Mohamed Salah', 'Omar Marmoush', 'Calvin Bassey', 'Alex Iwobi', 'Samuel Chukwueze', 
-  'Ola Aina', 'Taiwo Awoniyi', 'Ike Ugbo', 'Frank Onyeka', 'Tolu Arokodare',
-  'Iliman Ndiaye', 'Idrissa Gueye', 'Ismaïla Sarr', 'Pape Matar Sarr', 'Pathé Ciss',
-  'Amad Diallo', 'Ibrahim Sangaré', 'Willy Boly', 'Bertrand Traoré', 'Wesley Fofana',
-  'Maxwel Cornet', 'Emmanuel Agbadou', 'Simon Adingra', 'Malick Yalcouye', 'Evann Guessand',
-  'Bryan Mbeumo', 'Amadou Onana', 'Carlos Baleba', 'Noussair Mazraoui', 'Dara O\'Shea',
-  'Amine Adli', 'Nayef Aguerd', 'Rayan Ait Nouri', 'Yoane Wissa', 'Aaron Wan-Bissaka',
-  'Yves Bissouma', 'Abdoulaye Doucouré', 'Dango Ouattara', 'Issa Kaboré', 'Manuel Benson',
-  'Lyle Foster', 'Hannibal Mejbri', 'Marshall Munetsi', 'Tawanda Chirewa'
-]);
 
 // Parse return date from injury/suspension news text
 export function parseReturnDate(newsText: string): Date | null {
@@ -104,16 +90,8 @@ export function getGameweekFromDate(date: Date, events: BootstrapEvent[]): numbe
   return lastEvent ? lastEvent.id : null;
 }
 
-// Get AFCON availability percentage for a specific gameweek
-export function getAFCONAvailability(gameweek: number): number {
-  if (gameweek === 17 || gameweek === 18 || gameweek === 19) return 0.0;
-  if (gameweek === 20) return 0.25;
-  if (gameweek === 21) return 0.50;
-  if (gameweek === 22) return 0.75;
-  return 1.0;
-}
-
 // Apply availability adjustment to a single gameweek's projected points
+// Uses only official FPL API data (chance_of_playing_next_round, status, news)
 export function applyAvailabilityToGameweek(
   playerName: string,
   gameweek: number,
@@ -124,29 +102,6 @@ export function applyAvailabilityToGameweek(
   events: BootstrapEvent[],
   currentGameweek: number
 ): { adjustedPoints: number; reason?: string } {
-  const isAFCONPlayer = AFCON_PLAYERS.has(playerName);
-  
-  // Debug logging for Mbeumo
-  if (playerName === 'Bryan Mbeumo' && gameweek >= 14 && gameweek <= 22) {
-    console.log(`🔍 MBEUMO DEBUG GW${gameweek}: isAFCON=${isAFCONPlayer}, originalPoints=${projectedPoints.toFixed(2)}`);
-  }
-  
-  // AFCON adjustments apply regardless of injury status
-  if (isAFCONPlayer) {
-    const afconAvailability = getAFCONAvailability(gameweek);
-    if (afconAvailability < 1.0) {
-      // Debug logging for Mbeumo AFCON adjustment
-      if (playerName === 'Bryan Mbeumo') {
-        console.log(`🎯 MBEUMO AFCON ADJUSTMENT GW${gameweek}: ${projectedPoints.toFixed(2)} → ${(projectedPoints * afconAvailability).toFixed(2)} (${Math.round(afconAvailability * 100)}% availability)`);
-      }
-      return {
-        adjustedPoints: projectedPoints * afconAvailability,
-        reason: `AFCON ${Math.round(afconAvailability * 100)}% availability`
-      };
-    }
-  }
-  
-  // Injury/suspension adjustments
   const playerChance = chanceOfPlaying ?? 100;
   
   if (playerChance === 0) {

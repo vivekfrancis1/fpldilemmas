@@ -36,7 +36,7 @@ import { normalizeGameweekKeys, normalizeGameweekKey } from './gameweek-key-util
 import { syncProjectionService } from './sync-projection-service';
 import { FPLScoringCacheService } from './fpl-scoring-cache-service';
 import { InitializationOrchestrator } from './initialization-orchestrator';
-import { applyAvailabilityToGameweek, AFCON_PLAYERS } from './availability-adjustments';
+import { applyAvailabilityToGameweek } from './availability-adjustments';
 import { setupAuth, isAuthenticated } from './replitAuth';
 
 // Helper function for FPL API requests with retry logic
@@ -6438,66 +6438,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // In-memory storage for 2025/26 assist share data
   let savedAssistShareData: any = null;
   
-  // International tournament schedule and affected players
-  const INTERNATIONAL_TOURNAMENTS = {
-    AFCON_2025: {
-      startGameweek: 21, // Mid-January 2025
-      endGameweek: 23,   // Early February 2025
-      affectedCountries: [
-        'Algeria', 'Angola', 'Burkina Faso', 'Cameroon', 'Cape Verde', 'Comoros',
-        'DR Congo', 'Egypt', 'Equatorial Guinea', 'Gabon', 'Gambia', 'Ghana',
-        'Guinea', 'Guinea-Bissau', 'Ivory Coast', 'Mali', 'Mauritania', 'Morocco',
-        'Mozambique', 'Namibia', 'Nigeria', 'Senegal', 'Sierra Leone', 'South Africa',
-        'Tanzania', 'Tunisia', 'Uganda', 'Zambia', 'Zimbabwe'
-      ]
-    },
-    COPA_AMERICA_2024: {
-      startGameweek: 38, // End of season - no impact
-      endGameweek: 38,
-      affectedCountries: ['Argentina', 'Brazil', 'Chile', 'Colombia', 'Ecuador', 'Uruguay', 'Venezuela']
-    }
-  };
-
-  // Player nationality mapping (key players who are likely to be called up)
-  const PLAYER_NATIONALITIES = {
-    // Egyptian players
-    'Mohamed Salah': 'Egypt',
-    'Omar Marmoush': 'Egypt',
-    
-    // Senegalese players  
-    'Sadio Mané': 'Senegal',
-    'Ismaïla Sarr': 'Senegal',
-    'Cheikhou Kouyaté': 'Senegal',
-    
-    // Nigerian players
-    'Alex Iwobi': 'Nigeria',
-    'Wilfred Ndidi': 'Nigeria',
-    'Kelechi Iheanacho': 'Nigeria',
-    'Victor Osimhen': 'Nigeria',
-    
-    // Moroccan players
-    'Hakim Ziyech': 'Morocco',
-    'Achraf Hakimi': 'Morocco',
-    'Sofyan Amrabat': 'Morocco',
-    
-    // Ghanaian players
-    'Thomas Partey': 'Ghana',
-    'Mohammed Kudus': 'Ghana',
-    'Jordan Ayew': 'Ghana',
-    
-    // Ivorian players
-    'Wilfried Zaha': 'Ivory Coast',
-    'Nicolas Pépé': 'Ivory Coast',
-    'Jean-Philippe Mateta': 'Ivory Coast',
-    
-    // Algerian players
-    'Riyad Mahrez': 'Algeria',
-    'Said Benrahma': 'Algeria',
-    
-    // Cameroonian players
-    'André-Frank Zambo Anguissa': 'Cameroon',
-    'Karl Toko Ekambi': 'Cameroon'
-  };
+  // Player availability now uses only official FPL API data (chance_of_playing_next_round, status, news)
 
   // Enhanced helper function for comprehensive availability and injury analysis
   function calculateExpectedMinutes(player: any, allPlayers: any[]): number {
@@ -10295,26 +10236,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const playerStatus = (player.status || '').toLowerCase();
             const playerNews = (player.news || '').toLowerCase();
             
-            // Check for international tournament impact on immediate projections
-            const playerName = `${player.first_name || ''} ${player.second_name || ''}`.trim();
-            const playerNationality = PLAYER_NATIONALITIES[playerName];
-            const currentGameweek = 3; // Current season position
-            
-            let isAtTournament = false;
-            if (playerNationality) {
-              const afcon = INTERNATIONAL_TOURNAMENTS.AFCON_2025;
-              if (afcon.affectedCountries.includes(playerNationality) && 
-                  currentGameweek >= afcon.startGameweek && 
-                  currentGameweek <= afcon.endGameweek) {
-                isAtTournament = true;
-                console.log(`DEBUG: ${playerName} at AFCON during GW${currentGameweek} - 0 minutes projected`);
-              }
-            }
-            
-            // Apply immediate injury/status adjustments for near-term projections
-            if (isAtTournament) {
-              expectedMinutes = 0; // Players at international tournaments get 0 minutes
-            } else if (playerStatus === 's' || playerStatus === 'suspended') {
+            // Apply immediate injury/status adjustments using official FPL API data
+            if (playerStatus === 's' || playerStatus === 'suspended') {
               expectedMinutes = 0; // Suspended players get 0 minutes
             } else if (playerStatus === 'i' || playerStatus === 'injured') {
               if (playerNews.includes('ruled out') || playerNews.includes('out for')) {

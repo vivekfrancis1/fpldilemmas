@@ -49,7 +49,7 @@ Loading Experience: Enhanced loading screens implemented across all major slow-l
 
 ### Feature Specifications
 - **My Dashboard**: Comprehensive FPL overview combining My Live Rank, My Team, and My Leagues in a single tabbed interface, serving as the home page.
-- **Player Projections**: AI-powered projection model for various player statistics (minutes, goals, assists, clean sheets, bonus points, CBIT%). **AFCON 2025 Integration**: Automatic availability adjustments for 51 African players traveling to Morocco (December 21, 2025 - January 18, 2026) with graduated return percentages: GW17-19 (0%), GW20 (25%), GW21 (50%), GW22 (75%).
+- **Player Projections**: AI-powered projection model for various player statistics (minutes, goals, assists, clean sheets, bonus points, CBIT%). Uses only official FPL API availability data (chance_of_playing_next_round, status, news).
 - **Team Projections**: Advanced team-level forecasting for goals and clean sheets using 8-phase spread betting market analysis and statistical modeling.
 - **Goal/Assist Share**: Dedicated tools showing team expected goals/assists breakdown by player percentage share.
 - **Captain Selector**: Enhanced with historical captaincy performance data, 6-factor scoring algorithm, and ownership analysis.
@@ -63,7 +63,7 @@ Loading Experience: Enhanced loading screens implemented across all major slow-l
 - **Defensive Contribution Analytics**: Integration of new FPL API defensive data points and comprehensive projection model.
 - **Comprehensive FPL Scoring System**: Implemented probability-based calculations for all official FPL scoring components with hybrid methodology.
 - **Transfer Planner**: Comprehensive transfer planning tool with gameweek selector, team selection interface, chip planning, draft management (Base + A-E drafts), Team Evolution visualization, and Projected Points analysis. Draft Comparison table intelligently shown only when there are at least 2 unique (non-duplicate) drafts. Team Evolution section only shown when transfers have been made for the current draft in any gameweek. Fully implements FPL 2024/25 rule changes including 5 free transfers and GW16 AFCON Free Transfer Top-Up with complete backend parity. Free transfer calculations use history-based seeding from finished gameweeks, proper chip handling (Free Hit, Wildcard), and banking logic matching /transfer-recommendations endpoint. Lineup optimization features include single-gameweek optimization and bulk "Optimize All Gameweeks" functionality. All user actions (transfers, position swaps, buy price edits, captain/vice captain selections, and lineup optimizations) are permanently saved to the database immediately and persist across draft switches, gameweek changes, and page reloads.
-- **Tournament Availability Tracking**: AFCON 2025 player availability automatically factored into all projection calculations across 15 participating nations (Egypt, Nigeria, Senegal, Ivory Coast, Cameroon, Morocco, Algeria, DR Congo, Mali, Burkina Faso, Angola, South Africa, Tunisia, Zimbabwe, Mozambique).
+- **Availability Tracking**: Player availability uses only official FPL API data (chance_of_playing_next_round, status, news) with no custom hardcoded player lists.
 
 ## External Dependencies
 

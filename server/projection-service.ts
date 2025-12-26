@@ -6,91 +6,7 @@ interface ProjectionCache {
   data: any[];
 }
 
-// AFCON 2025 Participants - Players traveling to Morocco (December 21, 2025 - January 18, 2026)
-// Availability during tournament: GW17-19: 0%, GW20: 25%, GW21: 50%, GW22: 75%
-// Source: Premier League official list + comprehensive research (51 players from 15 nations)
-const AFCON_PLAYERS = new Set([
-  // EGYPT (2)
-  'Salah',              // Liverpool
-  'Marmoush',           // Manchester City
-  
-  // NIGERIA (10)
-  'Bassey',             // Fulham
-  'Iwobi',              // Fulham  
-  'Chukwueze',          // Fulham
-  'Aina',               // Nottingham Forest
-  'Awoniyi',            // Nottingham Forest
-  'Uche',               // Crystal Palace
-  'Onyeka',             // Brentford
-  'Arokodare',          // Wolves
-  
-  // SENEGAL (6)
-  'Ndiaye',             // Everton
-  'Gueye',              // Everton
-  'Sarr',               // Tottenham (Pape Matar)
-  'I.Sarr',             // Crystal Palace (Ismaila)
-  'Diouf',              // West Ham
-  
-  // IVORY COAST (10)
-  'Amad',               // Manchester United
-  'Sangaré',            // Nottingham Forest
-  'Boly',               // Nottingham Forest
-  'Traoré',             // Bournemouth (Hamed Junior)
-  'Fofana',             // Chelsea (David Datro)
-  'Cornet',             // West Ham
-  'Agbadou',            // Wolves
-  'Adingra',            // Brighton
-  'Yalcouye',           // Brighton
-  'Guessand',           // Aston Villa
-  
-  // CAMEROON (5)
-  'Mbeumo',             // Brentford
-  'Onana',              // Manchester United (Andre)
-  'Baleba',             // Brighton
-  
-  // MOROCCO (4)
-  'Mazraoui',           // Manchester United
-  'Riad',               // Crystal Palace
-  'Adli',               // Bournemouth (Amine)
-  'Aguerd',             // West Ham
-  
-  // ALGERIA (1)
-  'Ait Nouri',          // Manchester City
-  
-  // DR CONGO (4)
-  'Wissa',              // Brentford (NOT Newcastle)
-  'Wan-Bissaka',        // West Ham
-  
-  // MALI (2)
-  'Bissouma',           // Tottenham
-  'Doucouré',           // Crystal Palace (Cheick)
-  
-  // BURKINA FASO (3)
-  'Ouattara',           // Bournemouth (Dango)
-  'Kaboré',             // Manchester City
-  
-  // ANGOLA (1)
-  'Benson',             // Burnley
-  
-  // SOUTH AFRICA (1)
-  'Foster',             // Burnley
-  
-  // TUNISIA (1)
-  'Mejbri',             // Burnley
-  
-  // ZIMBABWE (2)
-  'Munetsi',            // Wolves
-  'Chirewa'             // Wolves
-]);
-
-// AFCON availability by gameweek (2024/25 season)
-function getAFCONAvailability(gameweek: number): number {
-  if (gameweek === 17 || gameweek === 18 || gameweek === 19) return 0.0;  // 0% - Tournament group stage
-  if (gameweek === 20) return 0.25; // 25% - Knockouts begin, some eliminated
-  if (gameweek === 21) return 0.50; // 50% - Quarter-finals
-  if (gameweek === 22) return 0.75; // 75% - Semi-finals onwards
-  return 1.0; // 100% - Normal availability
-}
+// Player availability now uses only official FPL API data (chance_of_playing_next_round, status, news)
 
 class ProjectionService {
   private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
@@ -313,23 +229,15 @@ class ProjectionService {
             const adjustedForm = Math.max(form * 0.7 + seasonPerformance * 0.3, 1.0);
             
             // Calculate average minutes per game from season data
-            const gamesPlayed = Math.max(currentGameweek - 1, 1); // Number of gameweeks that have finished
+            const gamesPlayed = Math.max(startGameweek - 1, 1); // Number of gameweeks that have finished
             const averageMinutesPerGame = minutes > 0 ? (minutes / gamesPlayed) : 45; // Default to 45 if no data
             
             // 1. MINUTES CALCULATION
             const injuryRisk = (fplPlayer.chance_of_playing_next_round || 100) / 100;
             const rotationRisk = selectedBy > 30 ? 0.95 : selectedBy > 10 ? 0.85 : 0.75; // Popular players less rotated
             
-            // AFCON 2025 AVAILABILITY ADJUSTMENT (GW 17-22)
-            // Check if player is attending AFCON and apply availability multiplier
-            const afconAvailability = AFCON_PLAYERS.has(fplPlayer.web_name) ? getAFCONAvailability(gw) : 1.0;
-            
-            let expectedMinutes = Math.min(90, adjustedForm * 15) * injuryRisk * rotationRisk * afconAvailability;
-            
-            // Log AFCON impact for affected players in affected gameweeks
-            if (afconAvailability < 1.0 && AFCON_PLAYERS.has(fplPlayer.web_name)) {
-              console.log(`AFCON: ${fplPlayer.web_name} GW${gw} availability: ${(afconAvailability * 100).toFixed(0)}%`);
-            }
+            // Player availability uses official FPL API data
+            let expectedMinutes = Math.min(90, adjustedForm * 15) * injuryRisk * rotationRisk;
             
             const minutesPoints = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
             pointsFromMinutes[gw.toString()] = minutesPoints; // Use numeric string for consistency
