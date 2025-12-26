@@ -387,7 +387,7 @@ function RangeTotalBreakdownTooltip({
               const originalComponentTotals = (player as any).originalComponentTotals as { [key: string]: number } | undefined;
               const originalValue = originalComponentTotals?.[comp.totalKey] ?? 
                 (originalPlayer ? (originalPlayer as any)[comp.totalKey] || 0 : currentValue);
-              const hasAdjustment = applyAvailability && Math.abs(currentValue - originalValue) > 0.01;
+              const hasAdjustment = applyAvailability && originalComponentTotals && Math.abs(currentValue - originalValue) > 0.001;
               
               return (
                 <div 
@@ -398,18 +398,24 @@ function RangeTotalBreakdownTooltip({
                     {comp.label}:
                   </span>
                   <div className="flex items-center gap-1.5">
-                    {hasAdjustment && !isExcluded && (
-                      <span className="text-gray-400 text-xs line-through">
-                        {originalValue.toFixed(1)}
-                      </span>
+                    {hasAdjustment && !isExcluded ? (
+                      <>
+                        <span className="text-gray-400 text-xs line-through">
+                          {originalValue.toFixed(2)}
+                        </span>
+                        <span className="text-purple-600 font-medium">
+                          {currentValue.toFixed(2)}
+                        </span>
+                      </>
+                    ) : (
+                      <ValueCell 
+                        value={isExcluded ? 0 : currentValue} 
+                        format="points" 
+                        decimals={2} 
+                        className={isExcluded ? 'text-gray-400' : comp.color}
+                        fontWeight="medium"
+                      />
                     )}
-                    <ValueCell 
-                      value={isExcluded ? 0 : currentValue} 
-                      format="points" 
-                      decimals={1} 
-                      className={isExcluded ? 'text-gray-400' : comp.color}
-                      fontWeight="medium"
-                    />
                     {isExcluded && (
                       <span className="text-xs text-red-500">✕</span>
                     )}
