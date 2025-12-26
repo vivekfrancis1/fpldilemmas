@@ -925,22 +925,43 @@ export default function PlayerTotalPoints() {
         newGwProjections[gwKey] = 0;
       });
       
-      // Sum up included components
+      // Calculate availability factors per gameweek if availability adjustments are applied
+      const availabilityFactors: { [key: string]: number } = {};
+      if (applyAvailability && (player as any).originalGameweekProjections && (player as any).availabilityAdjustments) {
+        const originalProjections = (player as any).originalGameweekProjections as { [key: string]: number };
+        const adjustments = (player as any).availabilityAdjustments as { [key: string]: { original: number; adjusted: number; reason: string } };
+        
+        gwKeys.forEach(gwKey => {
+          if (adjustments[gwKey]) {
+            // Use the adjustment ratio
+            const original = adjustments[gwKey].original;
+            availabilityFactors[gwKey] = original > 0 ? adjustments[gwKey].adjusted / original : 0;
+          } else {
+            // No adjustment for this gameweek
+            availabilityFactors[gwKey] = 1;
+          }
+        });
+      }
+      
+      // Sum up included components with availability adjustments
       POINT_COMPONENTS.forEach(component => {
         if (!excludedComponents.has(component.key)) {
-          // Add to total
-          const totalValue = (player as any)[component.totalKey] || 0;
-          newTotal += totalValue;
-          
-          // Add to each gameweek projection
+          // Add to each gameweek projection (with availability factor if applicable)
           const gwData = (player as any)[component.gwKey] as { [key: string]: number } | undefined;
           if (gwData) {
             gwKeys.forEach(gwKey => {
-              newGwProjections[gwKey] += gwData[gwKey] || 0;
+              const rawValue = gwData[gwKey] || 0;
+              const factor = applyAvailability && availabilityFactors[gwKey] !== undefined 
+                ? availabilityFactors[gwKey] 
+                : 1;
+              newGwProjections[gwKey] += rawValue * factor;
             });
           }
         }
       });
+      
+      // Sum gameweek projections for total
+      newTotal = Object.values(newGwProjections).reduce((sum, val) => sum + val, 0);
       
       // Calculate new averages
       const numGameweeks = gwKeys.length || 1;
@@ -956,7 +977,7 @@ export default function PlayerTotalPoints() {
         averageValue: newAverageValue
       };
     });
-  }, [totalPointsData, excludedComponents, POINT_COMPONENTS]);
+  }, [totalPointsData, excludedComponents, POINT_COMPONENTS, applyAvailability]);
 
   // Loading state - Cache-first loading logic: show loading for cache, then live API if needed
   const isLoading = useMemo(() => {
