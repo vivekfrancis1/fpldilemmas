@@ -95,7 +95,7 @@ import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, typ
 import PlayerProjectionsComparisonModal from "@/components/player-projections-comparison-modal";
 
 // Gameweek Point Breakdown Tooltip Component
-function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTotalPointsData, gameweek: number }) {
+function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = new Set() }: { player: PlayerTotalPointsData, gameweek: number, excludedComponents?: Set<string> }) {
   const hasBreakdownData = player.pointsFromGoals !== undefined;
   const gwKey = gameweek.toString(); // Use numeric string key format to match API data
   const gwPoints = player.gameweekProjections?.[gwKey];
@@ -181,29 +181,36 @@ function GameweekPointBreakdownTooltip({ player, gameweek }: { player: PlayerTot
           <div className="grid grid-cols-2 gap-3 text-sm">
             {(() => {
               const originalCompProjs = (player as any).originalComponentProjections as { [comp: string]: { [gw: string]: number } } | undefined;
+              // Map per-gameweek keys to exclusion keys (matching the total points tooltip)
               const componentDefs = [
-                { key: 'pointsFromGoals', label: '⚽ Goals', color: 'text-green-700' },
-                { key: 'pointsFromAssists', label: '🎯 Assists', color: 'text-blue-700' },
-                { key: 'pointsFromCleanSheets', label: '🛡️ Clean Sheets', color: 'text-yellow-700' },
-                { key: 'pointsFromDefensiveContributions', label: '⚔️ Defensive', color: 'text-orange-700' },
-                { key: 'pointsFromMinutes', label: '⏱️ Minutes', color: 'text-purple-700' },
-                { key: 'pointsFromBonus', label: '✨ Bonus', color: 'text-pink-700' },
-                { key: 'pointsFromSaves', label: '🥅 Saves', color: 'text-cyan-700' },
-                { key: 'pointsFromGoalsConceded', label: '🚪 Goals Conceded', color: 'text-red-600' },
-                { key: 'pointsFromYellowCards', label: '🟨 Yellow Cards', color: 'text-amber-600' },
-                { key: 'pointsFromRedCards', label: '🟥 Red Cards', color: 'text-red-700' },
+                { key: 'pointsFromGoals', excludeKey: 'goals', label: '⚽ Goals', color: 'text-green-700' },
+                { key: 'pointsFromAssists', excludeKey: 'assists', label: '🎯 Assists', color: 'text-blue-700' },
+                { key: 'pointsFromCleanSheets', excludeKey: 'cleanSheets', label: '🛡️ Clean Sheets', color: 'text-yellow-700' },
+                { key: 'pointsFromDefensiveContributions', excludeKey: 'defensiveContributions', label: '⚔️ Defensive', color: 'text-orange-700' },
+                { key: 'pointsFromMinutes', excludeKey: 'minutes', label: '⏱️ Minutes', color: 'text-purple-700' },
+                { key: 'pointsFromBonus', excludeKey: 'bonus', label: '✨ Bonus', color: 'text-pink-700' },
+                { key: 'pointsFromSaves', excludeKey: 'saves', label: '🥅 Saves', color: 'text-cyan-700' },
+                { key: 'pointsFromGoalsConceded', excludeKey: 'goalsConceded', label: '🚪 Goals Conceded', color: 'text-red-600' },
+                { key: 'pointsFromYellowCards', excludeKey: 'yellowCards', label: '🟨 Yellow Cards', color: 'text-amber-600' },
+                { key: 'pointsFromRedCards', excludeKey: 'redCards', label: '🟥 Red Cards', color: 'text-red-700' },
               ];
               
               return componentDefs.map(comp => {
                 const currentValue = (player as any)[comp.key]?.[gwKey] || 0;
                 const originalValue = originalCompProjs?.[comp.key]?.[gwKey] ?? currentValue;
                 const hasCompAdjustment = hasAdjustment && Math.abs(currentValue - originalValue) > 0.001;
+                const isExcluded = excludedComponents.has(comp.excludeKey);
                 
                 return (
-                  <div key={comp.key} className="flex justify-between items-center">
-                    <span className="text-gray-600">{comp.label}:</span>
+                  <div key={comp.key} className={`flex justify-between items-center ${isExcluded ? 'opacity-40' : ''}`}>
+                    <span className={`text-gray-600 ${isExcluded ? 'line-through' : ''}`}>{comp.label}:</span>
                     <div className="flex items-center gap-1.5">
-                      {hasCompAdjustment ? (
+                      {isExcluded ? (
+                        <>
+                          <span className="text-gray-400 font-medium">0.00</span>
+                          <span className="text-xs text-red-500">✕</span>
+                        </>
+                      ) : hasCompAdjustment ? (
                         <>
                           <span className="text-gray-400 text-xs line-through">
                             {originalValue.toFixed(2)}
@@ -524,7 +531,7 @@ function createPlayerTotalPointsColumns(
           
           return (
             <div className={`${isMaxForGameweek ? 'bg-gradient-to-br from-green-100 to-emerald-100 rounded-md p-1' : ''}`}>
-              <GameweekPointBreakdownTooltip player={player} gameweek={gw} />
+              <GameweekPointBreakdownTooltip player={player} gameweek={gw} excludedComponents={excludedComponents} />
               {showOpponent && opponentInfo && (
                 <div className="text-[9px] text-gray-500 mt-0.5">
                   {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
