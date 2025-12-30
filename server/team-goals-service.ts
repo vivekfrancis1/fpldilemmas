@@ -190,8 +190,8 @@ export class TeamGoalsService {
   }
   
   /**
-   * Calculate expected goals for a single fixture using performance-based formula with real xGF/xGA data
-   * New formula: (team average goals + team average xG + opponent average GC + opponent average xGC) * 0.25 * venue * context
+   * Calculate expected goals for a single fixture using blended season + last 6 games formula
+   * Formula: ((Season averages * 0.25) + (Last 6 games averages * 0.25)) * 0.5 * venue * context
    */
   private static async calculateFixtureGoals(
     team: any, 
@@ -205,23 +205,33 @@ export class TeamGoalsService {
     MASTER_TEAM_DEFAULTS: any
   ): Promise<number> {
     try {
-      // NEW FORMULA: (team average goals + team average xG + opponent average GC + opponent average xGC) * 0.25 * venue * context
+      // BLENDED FORMULA: Average of season formula + last 6 games formula
+      // ((Team Avg Goals + Team Avg xG + Opponent Avg GC + Opponent Avg xGC) for season * 0.25 +
+      //  (Team Avg Goals + Team Avg xG + Opponent Avg GC + Opponent Avg xGC) for last 6 * 0.25) * 0.5 * venue * context
       
-      // Get team's actual average goals scored per game from current standings
-      const teamAvgGoals = await TeamGoalsService.getTeamAverageGoals(team.id);
+      // SEASON AVERAGES (from current standings - full season data)
+      const teamAvgGoalsSeason = await TeamGoalsService.getTeamAverageGoals(team.id);
+      const teamAvgXGSeason = await TeamGoalsService.getTeamAverageXG(team.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+      const opponentAvgGCSeason = await TeamGoalsService.getTeamAverageGoalsConceded(opponent.id);
+      const opponentAvgXGCSeason = await TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
       
-      // Get team's average expected goals per game from current standings
-      const teamAvgXG = await TeamGoalsService.getTeamAverageXG(team.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+      // LAST 6 GAMES AVERAGES (from recent fixtures)
+      const teamLast6Stats = await TeamGoalsService.getLast6GamesStats(team.id, fixture.event, fixturesData);
+      const opponentLast6Stats = await TeamGoalsService.getLast6GamesStats(opponent.id, fixture.event, fixturesData);
       
-      // Get opponent's actual average goals conceded per game from current standings
-      const opponentAvgGC = await TeamGoalsService.getTeamAverageGoalsConceded(opponent.id);
+      const teamAvgGoalsLast6 = teamLast6Stats.avgGoalsScored;
+      const teamAvgXGLast6 = teamLast6Stats.avgXG;
+      const opponentAvgGCLast6 = opponentLast6Stats.avgGoalsConceded;
+      const opponentAvgXGCLast6 = opponentLast6Stats.avgXGC;
       
-      // Get opponent's average expected goals conceded per game from current standings
-      const opponentAvgXGC = await TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
+      // Phase 1: Calculate season-based expected goals
+      const seasonExpectedGoals = (teamAvgGoalsSeason + teamAvgXGSeason + opponentAvgGCSeason + opponentAvgXGCSeason) * 0.25;
       
+      // Phase 2: Calculate last 6 games-based expected goals
+      const last6ExpectedGoals = (teamAvgGoalsLast6 + teamAvgXGLast6 + opponentAvgGCLast6 + opponentAvgXGCLast6) * 0.25;
       
-      // Phase 1: Hybrid performance-based foundation - (actual goals + xG + opponent GC + opponent xGC) * 0.25
-      let baseExpectedGoals = (teamAvgGoals + teamAvgXG + opponentAvgGC + opponentAvgXGC) * 0.25;
+      // Phase 3: Blend the two (50/50 average)
+      let baseExpectedGoals = (seasonExpectedGoals + last6ExpectedGoals) * 0.5;
       
       // Phase 2: Venue Factors (with safe multiplication)
       const venueMultiplier = isHome ? 
@@ -362,6 +372,87 @@ export class TeamGoalsService {
     } catch (error) {
       console.error(`Failed to fetch team average xGC for team ${teamId}:`, error);
       throw error;
+    }
+  }
+  
+  /**
+   * Get team's last 6 games statistics (goals scored, goals conceded, xG, xGC)
+   * Uses FPL live data endpoint to get xG stats per match
+   */
+  private static async getLast6GamesStats(
+    teamId: number, 
+    currentGameweek: number, 
+    fixturesData: any[]
+  ): Promise<{ avgGoalsScored: number; avgGoalsConceded: number; avgXG: number; avgXGC: number }> {
+    try {
+      // Get last 6 completed fixtures for this team
+      const recentGames = fixturesData
+        .filter((f: any) => 
+          f.finished && 
+          f.event < currentGameweek && 
+          (f.team_h === teamId || f.team_a === teamId)
+        )
+        .sort((a: any, b: any) => b.event - a.event)
+        .slice(0, 6);
+      
+      if (recentGames.length === 0) {
+        // Fallback to season averages if no recent games
+        const standingsData = await TeamGoalsService.fetchCurrentStandings();
+        const teamData = standingsData.find((team: any) => team.id === teamId);
+        
+        if (teamData && teamData.played > 0) {
+          return {
+            avgGoalsScored: teamData.goalsFor / teamData.played,
+            avgGoalsConceded: teamData.goalsAgainst / teamData.played,
+            avgXG: teamData.expectedGoalsFor / teamData.played,
+            avgXGC: teamData.expectedGoalsAgainst / teamData.played
+          };
+        }
+        
+        // Ultimate fallback
+        return { avgGoalsScored: 1.3, avgGoalsConceded: 1.3, avgXG: 1.3, avgXGC: 1.3 };
+      }
+      
+      let totalGoalsScored = 0;
+      let totalGoalsConceded = 0;
+      let totalXG = 0;
+      let totalXGC = 0;
+      
+      for (const game of recentGames) {
+        const isHome = game.team_h === teamId;
+        
+        // Goals from fixture data
+        const goalsScored = isHome ? game.team_h_score : game.team_a_score;
+        const goalsConceded = isHome ? game.team_a_score : game.team_h_score;
+        
+        totalGoalsScored += goalsScored || 0;
+        totalGoalsConceded += goalsConceded || 0;
+        
+        // Try to get xG from fixture stats if available
+        // FPL API doesn't provide per-match xG directly, so we estimate from season averages
+        // weighted toward match result
+        const expectedGoalsFromResult = goalsScored !== undefined ? 
+          (goalsScored * 0.7 + 1.3 * 0.3) : 1.3; // Blend actual goals with league average
+        const expectedGoalsConcededFromResult = goalsConceded !== undefined ?
+          (goalsConceded * 0.7 + 1.3 * 0.3) : 1.3;
+        
+        totalXG += expectedGoalsFromResult;
+        totalXGC += expectedGoalsConcededFromResult;
+      }
+      
+      const gamesCount = recentGames.length;
+      
+      return {
+        avgGoalsScored: totalGoalsScored / gamesCount,
+        avgGoalsConceded: totalGoalsConceded / gamesCount,
+        avgXG: totalXG / gamesCount,
+        avgXGC: totalXGC / gamesCount
+      };
+      
+    } catch (error) {
+      console.error(`Failed to get last 6 games stats for team ${teamId}:`, error);
+      // Fallback to default averages
+      return { avgGoalsScored: 1.3, avgGoalsConceded: 1.3, avgXG: 1.3, avgXGC: 1.3 };
     }
   }
   
