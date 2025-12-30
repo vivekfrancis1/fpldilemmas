@@ -31,7 +31,7 @@ export default function PlayerGoalsScoredProjections() {
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
-  const [showOpponent, setShowOpponent] = useState(true);
+  const [showOpponent, setShowOpponent] = useState(false);
   const [initialized, setInitialized] = useState(false);
   
   const queryClient = useQueryClient();

@@ -95,7 +95,7 @@ export default function TeamCSProjections() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const [showOpponent, setShowOpponent] = useState(true);
+  const [showOpponent, setShowOpponent] = useState(false);
 
   // Create mapping from team name to FPL short_name
   const teamNameToShort = useMemo(() => {

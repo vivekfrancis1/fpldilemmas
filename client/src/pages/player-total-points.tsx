@@ -641,7 +641,7 @@ export default function PlayerTotalPoints() {
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   
   // Opponent display toggle state
-  const [showOpponent, setShowOpponent] = useState(true);
+  const [showOpponent, setShowOpponent] = useState(false);
   
   // Point component exclusion state
   const POINT_COMPONENTS = [

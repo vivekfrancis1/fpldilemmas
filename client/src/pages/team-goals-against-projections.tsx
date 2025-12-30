@@ -47,7 +47,7 @@ export default function TeamGoalsAgainstProjections() {
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
-  const [showOpponent, setShowOpponent] = useState<boolean>(true);
+  const [showOpponent, setShowOpponent] = useState<boolean>(false);
 
   // Create mapping from team name to FPL short_name
   const teamNameToShort = useMemo(() => {

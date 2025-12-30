@@ -97,7 +97,7 @@ export default function TeamGoalProjections() {
   });
 
   // State for showing opponent info
-  const [showOpponent, setShowOpponent] = useState(true);
+  const [showOpponent, setShowOpponent] = useState(false);
 
   // Create mapping from team name to FPL short_name
   const teamNameToShort = useMemo(() => {
