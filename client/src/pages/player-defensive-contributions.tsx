@@ -36,6 +36,7 @@ interface PlayerDefensiveData {
     opponent: string;
     opponentTier: string;
     fixtureMultiplier: number;
+    isHome?: boolean;
     isActual?: boolean;
     isProjected?: boolean;
   }>;
@@ -156,11 +157,14 @@ export default function PlayerDefensiveContributions() {
         
         let opponent = "TBD";
         let opponentId = 1;
+        let isHome = false;
         if (fixture && playerTeamId) {
           if (fixture.team_h === playerTeamId) {
             opponentId = fixture.team_a;
+            isHome = true;
           } else {
             opponentId = fixture.team_h;
+            isHome = false;
           }
           
           const opponentTeam = bootstrapData?.teams?.find((t: any) => t.id === opponentId);
@@ -179,6 +183,7 @@ export default function PlayerDefensiveContributions() {
           opponent,
           opponentTier,
           fixtureMultiplier: attackMultiplier,
+          isHome,
           isProjected: true,
         };
       }).sort((a, b) => a.gameweek - b.gameweek);
@@ -813,8 +818,8 @@ export default function PlayerDefensiveContributions() {
                             {gw.isActual && <span className="text-xs ml-1 text-blue-600">✓</span>}
                           </div>
                           {showOpponent && (
-                            <div className="text-xs">
-                              vs {gw.opponent}
+                            <div className={`text-xs ${gw.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                              {gw.opponent} ({gw.isHome ? 'H' : 'A'})
                             </div>
                           )}
                         </div>
