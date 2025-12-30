@@ -13982,11 +13982,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
         const allFixtures = await fixturesResponse.json();
         
-        // Filter only players with 1+ minutes for meaningful projections
-        const activePlayers = fplData.elements.filter((player: any) => (player.minutes || 0) >= 1);
+        // Filter players with minimum 450 minutes (5 full games) for meaningful BPS per 90 projections
+        const MIN_MINUTES_THRESHOLD = 450;
+        const activePlayers = fplData.elements.filter((player: any) => (player.minutes || 0) >= MIN_MINUTES_THRESHOLD);
         
-        // Extract bonus points data for all active players using simplified methodology
-        const bonusPointsProjections = await Promise.all(activePlayers.map(async (player: any) => {
+        // Pre-fetch last 6 games BPS data for all active players in batches
+        const playerBPSPer90Map = new Map<number, number>();
+        
+        // Calculate season BPS per 90 for all players first
+        activePlayers.forEach((player: any) => {
+          const seasonBPS = player.bps || 0;
+          const seasonMinutes = player.minutes || MIN_MINUTES_THRESHOLD;
+          const seasonBPSPer90 = (seasonBPS / seasonMinutes) * 90;
+          playerBPSPer90Map.set(player.id, seasonBPSPer90);
+        });
+        
+        // Fetch last 6 games data in parallel batches (limit concurrent requests)
+        const BATCH_SIZE = 50;
+        const MIN_LAST6_MINUTES = 90; // Require at least 90 minutes in last 6 games for blending
+        for (let i = 0; i < activePlayers.length; i += BATCH_SIZE) {
+          const batch = activePlayers.slice(i, i + BATCH_SIZE);
+          await Promise.all(batch.map(async (player: any) => {
+            try {
+              const response = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+              if (response.ok) {
+                const data = await response.json();
+                const recentGames = data.history
+                  .filter((gw: any) => gw.minutes > 0)
+                  .sort((a: any, b: any) => b.round - a.round)
+                  .slice(0, 6);
+                
+                if (recentGames.length > 0) {
+                  const last6BPS = recentGames.reduce((sum: number, gw: any) => sum + (gw.bps || 0), 0);
+                  const last6Minutes = recentGames.reduce((sum: number, gw: any) => sum + (gw.minutes || 0), 0);
+                  // Only use last 6 data if player has meaningful minutes in recent games
+                  if (last6Minutes >= MIN_LAST6_MINUTES) {
+                    const last6BPSPer90 = (last6BPS / last6Minutes) * 90;
+                    const seasonBPSPer90 = playerBPSPer90Map.get(player.id) || 0;
+                    // BLEND 50/50: Season BPS per 90 + Last 6 games BPS per 90
+                    const blendedBPSPer90 = (seasonBPSPer90 + last6BPSPer90) / 2;
+                    playerBPSPer90Map.set(player.id, blendedBPSPer90);
+                  }
+                  // If < 90 mins in last 6, keep season average (already set)
+                }
+              }
+            } catch (error) {
+              // Keep season average
+            }
+          }));
+        }
+        
+        // Extract bonus points projections using blended BPS per 90
+        const bonusPointsProjections = activePlayers.map((player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
           const bonusPoints: { [key: string]: number } = {};
@@ -13994,76 +14041,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalBonusPoints = 0;
           let totalPoints = 0;
           
-          const playerSeasonBPS = player.bps || 0; // Player's total BPS this season
-          const playerMinutes = player.minutes || 1;
+          // Get blended BPS per 90 for this player (already calculated above)
+          const blendedBPSPer90 = playerBPSPer90Map.get(player.id) || 0;
           
-          // SEASON AVERAGE: BPS per minute played (full season)
-          const bpsPerMinuteSeason = playerSeasonBPS / Math.max(1, playerMinutes);
+          // Convert BPS per 90 to expected bonus points per game
+          // Average BPS per 90 across all players is ~20-25, top performers get 35-45
+          // Bonus points scale: ~1.5-2.5 average, top performers get 2-3
+          // Simple linear scaling: BPS per 90 / 15 gives reasonable bonus projection
+          const expectedBonusPerGame = blendedBPSPer90 / 15;
           
-          // LAST 6 GAMES AVERAGE: BPS per minute from last 6 gameweeks  
-          let bpsPerMinuteLast6 = bpsPerMinuteSeason; // Default to season average
-          try {
-            const playerBPSHistoryResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-            if (playerBPSHistoryResponse.ok) {
-              const playerBPSHistory = await playerBPSHistoryResponse.json();
-              const recentBPSGames = playerBPSHistory.history
-                .filter((gw: any) => gw.minutes > 0)
-                .sort((a: any, b: any) => b.round - a.round)
-                .slice(0, 6);
-              
-              if (recentBPSGames.length > 0) {
-                const last6BPS = recentBPSGames.reduce((sum: number, gw: any) => sum + (gw.bps || 0), 0);
-                const last6Minutes = recentBPSGames.reduce((sum: number, gw: any) => sum + (gw.minutes || 0), 0);
-                if (last6Minutes > 0) {
-                  bpsPerMinuteLast6 = last6BPS / last6Minutes;
-                }
-              }
-            }
-          } catch (error) {
-            // Fallback to season average
-          }
-          
-          // BLEND 50/50: Average of season and last 6 games BPS per minute
-          const blendedBPSPerMinute = (bpsPerMinuteSeason + bpsPerMinuteLast6) / 2;
-          
-          // Process each FUTURE gameweek only
+          // Process each FUTURE gameweek
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            let gwBonusPoints = 0;
-            let gwPoints = 0;
-            
             // Find fixture for this team in this gameweek
             const fixture = allFixtures.find((f: any) => 
               f.event === gw && (f.team_h === player.team || f.team_a === player.team)
             );
             
-            if (fixture && playerSeasonBPS > 0) {
-              // Get both teams playing in this fixture
-              const homeTeamId = fixture.team_h;
-              const awayTeamId = fixture.team_a;
-              
-              // Calculate total BPS per minute for both teams combined (blended)
-              let totalBothTeamsBPSPerMinute = 0;
-              const bothTeamsPlayers = fplData.elements.filter((p: any) => 
-                (p.team === homeTeamId || p.team === awayTeamId) && (p.minutes || 0) > 0
-              );
-              
-              bothTeamsPlayers.forEach((p: any) => {
-                const pBPS = p.bps || 0;
-                const pMinutes = p.minutes || 1;
-                totalBothTeamsBPSPerMinute += pBPS / pMinutes;
-              });
-              
-              if (totalBothTeamsBPSPerMinute > 0) {
-                // Simple formula using blended BPS rate: (Player blended BPS/min ÷ Total BPS/min of both teams) × 6
-                gwBonusPoints = (blendedBPSPerMinute / totalBothTeamsBPSPerMinute) * 6;
-                gwPoints = gwBonusPoints; // Bonus points are direct FPL points
-              }
+            let gwBonusPoints = 0;
+            if (fixture) {
+              // Award expected bonus based on blended BPS per 90 rate
+              gwBonusPoints = expectedBonusPerGame;
             }
             
             bonusPoints[`gw${gw}`] = parseFloat(gwBonusPoints.toFixed(3));
-            pointsFromBonus[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
+            pointsFromBonus[`gw${gw}`] = parseFloat(gwBonusPoints.toFixed(3));
             totalBonusPoints += gwBonusPoints;
-            totalPoints += gwPoints;
+            totalPoints += gwBonusPoints;
           }
           
           const numGameweeks = endGameweek - startGameweek + 1;
@@ -14079,9 +14082,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalPoints: parseFloat(totalPoints.toFixed(3)),
             averagePerGameweek: parseFloat((totalBonusPoints / numGameweeks).toFixed(3))
           };
-        }));
+        });
         
-        console.log(`✅ LIVE SUCCESS: Generated simplified bonus points projections for ${bonusPointsProjections.length} players for future gameweeks only`);
+        console.log(`✅ LIVE SUCCESS: Generated blended BPS per 90 bonus projections for ${bonusPointsProjections.length} players`);
         return res.json(bonusPointsProjections);
 
       } catch (liveError) {
