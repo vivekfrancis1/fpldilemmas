@@ -86,6 +86,7 @@ export default function PlayerDefensiveContributions() {
   const [sortByDCPoints, setSortByDCPoints] = useState<boolean>(false);
   const [dcPointsSortOrder, setDCPointsSortOrder] = useState<"asc" | "desc">("desc");
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
+  const [showOpponent, setShowOpponent] = useState(true);
 
   // Dynamic gameweek range state (fetch 12 gameweeks for API, default display to 6)
   const [gameweekRange, setGameweekRange] = useState(() => {
@@ -665,6 +666,26 @@ export default function PlayerDefensiveContributions() {
               </p>
             )}
           </div>
+
+          {/* Display Options */}
+          <div className="mt-4 pt-4 border-t">
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Display Options:</label>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowOpponent(!showOpponent)}
+                className={`text-xs sm:text-sm px-2 sm:px-3 py-1 h-auto ${
+                  showOpponent 
+                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
+                }`}
+                data-testid="button-toggle-opponent"
+              >
+                {showOpponent ? "Hide Opponent" : "Show Opponent"}
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -791,9 +812,11 @@ export default function PlayerDefensiveContributions() {
                             {gw.defensiveContribution.toFixed(1)}
                             {gw.isActual && <span className="text-xs ml-1 text-blue-600">✓</span>}
                           </div>
-                          <div className="text-xs">
-                            vs {gw.opponent}
-                          </div>
+                          {showOpponent && (
+                            <div className="text-xs">
+                              vs {gw.opponent}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                     ))}
