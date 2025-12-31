@@ -214,7 +214,7 @@ export default function PlayerSaves() {
     let total = 0;
     const playerInfo = playerAvailabilityMap.get(player.playerId);
     const availabilityFactor = useAvailability && playerInfo 
-      ? (playerInfo.chance_of_playing_next_round ?? 100) / 100 
+      ? (playerInfo.chanceOfPlayingNextRound ?? 100) / 100 
       : 1;
     for (const gw of dynamicGameweekColumns) {
       total += (player.saves?.[`gw${gw}`] || 0) * availabilityFactor;
@@ -526,7 +526,7 @@ export default function PlayerSaves() {
                         const filteredTotal = getFilteredTotal(projection, applyAvailability);
                         const filteredAverage = filteredTotal / dynamicGameweekColumns.length;
                         const playerInfo = playerAvailabilityMap.get(projection.playerId);
-                        const hasAvailabilityAdjustment = applyAvailability && playerInfo && (playerInfo.chance_of_playing_next_round ?? 100) < 100;
+                        const hasAvailabilityAdjustment = applyAvailability && playerInfo && (playerInfo.chanceOfPlayingNextRound ?? 100) < 100;
                         return (
                         <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
                           <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
@@ -546,8 +546,8 @@ export default function PlayerSaves() {
                             const teamShort = teamNameToShort.get(projection.teamName) || '';
                             const opponentInfo = opponentMap.get(`${teamShort}-${gw}`);
                             const rawValue = projection.saves?.[`gw${gw}`] || 0;
-                            const availabilityFactor = hasAvailabilityAdjustment && playerInfo 
-                              ? (playerInfo.chance_of_playing_next_round ?? 100) / 100 
+                            const availabilityFactor = applyAvailability && playerInfo 
+                              ? (playerInfo.chanceOfPlayingNextRound ?? 100) / 100 
                               : 1;
                             const displayValue = rawValue * availabilityFactor;
                             return (
