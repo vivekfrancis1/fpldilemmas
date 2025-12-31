@@ -1511,11 +1511,11 @@ export default function PlayerTotalPoints() {
                     className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
                       applyAvailability 
                         ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
-                        : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'
+                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200 border border-gray-300'
                     }`}
                     data-testid="button-toggle-availability"
                   >
-                    Availability Adj.
+                    Availability Adjustment: {applyAvailability ? 'ON' : 'OFF'}
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5">
