@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, SortableHeader, type TableColumn } from "@/components/enhanced-table";
 import { LoadingExperience } from "@/components/loading-experience";
+import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 
 interface PlayerGoalProjection {
   playerId: number;
@@ -92,6 +93,9 @@ export default function PlayerGoalsScoredProjections() {
     });
     return map;
   }, [bootstrapData]);
+
+  // Create availability map for player availability badges
+  const playerAvailabilityMap = usePlayerAvailabilityMap(bootstrapData);
 
   // Get available gameweeks for dropdown (next 12 gameweeks)
   const availableGameweeks = useMemo(() => {
@@ -631,12 +635,17 @@ export default function PlayerGoalsScoredProjections() {
                     return (
                       <tr key={player.playerId} className="hover:bg-gray-50">
                         <td className="px-2 sm:px-4 py-2 sm:py-4 sticky left-0 bg-white border-r border-gray-100">
-                          <PlayerNameCell 
-                            name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}
-                            position={player.position}
-                            team={player.teamShort}
-                            compact={false}
-                          />
+                          <div className="flex items-center gap-1">
+                            <PlayerNameCell 
+                              name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}
+                              position={player.position}
+                              team={player.teamShort}
+                              compact={false}
+                            />
+                            {playerAvailabilityMap && playerAvailabilityMap.get(player.playerId) && (
+                              <PlayerAvailabilityBadge player={playerAvailabilityMap.get(player.playerId)!} />
+                            )}
+                          </div>
                         </td>
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw.toString()] || 0;

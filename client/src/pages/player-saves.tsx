@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PlayerNameCell } from "@/components/enhanced-table";
+import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 
 interface BootstrapData {
   elements: any[];
@@ -168,6 +169,9 @@ export default function PlayerSaves() {
     });
     return map;
   }, [bootstrapData]);
+
+  // Create availability map for player availability badges
+  const playerAvailabilityMap = usePlayerAvailabilityMap(bootstrapData);
 
   const teams = useMemo(() => {
     if (!savesProjections || !Array.isArray(savesProjections)) return [];
@@ -506,12 +510,17 @@ export default function PlayerSaves() {
                         return (
                         <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
                           <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
-                            <PlayerNameCell 
-                              name={(playerIdToWebName && playerIdToWebName.get(projection.playerId)) || projection.playerName}
-                              position={projection.position}
-                              team={projection.teamName}
-                              compact={true}
-                            />
+                            <div className="flex items-center gap-1">
+                              <PlayerNameCell 
+                                name={(playerIdToWebName && playerIdToWebName.get(projection.playerId)) || projection.playerName}
+                                position={projection.position}
+                                team={projection.teamName}
+                                compact={true}
+                              />
+                              {playerAvailabilityMap && playerAvailabilityMap.get(projection.playerId) && (
+                                <PlayerAvailabilityBadge player={playerAvailabilityMap.get(projection.playerId)!} />
+                              )}
+                            </div>
                           </td>
                           {dynamicGameweekColumns.map((gw) => {
                             const teamShort = teamNameToShort.get(projection.teamName) || '';

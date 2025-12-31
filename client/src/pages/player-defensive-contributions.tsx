@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Shield, Filter, Clock, Target, Search, Loader2, X } from "lucide-react";
+import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean }>;
@@ -60,6 +61,9 @@ export default function PlayerDefensiveContributions() {
     });
     return map;
   }, [bootstrapData]);
+
+  // Create availability map for player availability badges
+  const playerAvailabilityMap = usePlayerAvailabilityMap(bootstrapData);
 
   // Calculate current gameweek and upcoming gameweeks
   const currentGameweek = useMemo(() => {
@@ -794,7 +798,12 @@ export default function PlayerDefensiveContributions() {
                   <TableRow key={player.playerId}>
                     <TableCell className="font-medium sticky left-0 bg-background z-10">
                       <div className="flex flex-col">
-                        <span>{(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}</span>
+                        <div className="flex items-center gap-1">
+                          <span>{(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}</span>
+                          {playerAvailabilityMap && playerAvailabilityMap.get(player.playerId) && (
+                            <PlayerAvailabilityBadge player={playerAvailabilityMap.get(player.playerId)!} />
+                          )}
+                        </div>
                         <div className="flex items-center gap-1 mt-1">
                           <Badge variant="outline" className="text-xs">
                             {player.position.slice(0, 3).toUpperCase()}
