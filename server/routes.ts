@@ -14030,10 +14030,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalBonusPoints = 0;
           let totalPoints = 0;
           
-          // Get player's blended BPS: (seasonBPS + last6BPS) / 2
+          // Get player's season and last 6 games BPS
           const playerSeasonBPS = playerSeasonBPSMap.get(player.id) || 0;
           const playerLast6BPS = playerLast6BPSMap.get(player.id) || 0;
-          const playerBlendedBPS = (playerSeasonBPS + playerLast6BPS) / 2;
           
           // Process each FUTURE gameweek
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
@@ -14043,12 +14042,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             );
             
             let gwBonusPoints = 0;
-            if (fixture && playerBlendedBPS > 0) {
+            if (fixture && playerSeasonBPS > 0) {
               // Get both teams playing in this fixture
               const homeTeamId = fixture.team_h;
               const awayTeamId = fixture.team_a;
               
-              // Calculate blended BPS for both teams combined
+              // Calculate total BPS for both teams combined (season and last 6 separately)
               const bothTeamsPlayers = activePlayers.filter((p: any) => 
                 p.team === homeTeamId || p.team === awayTeamId
               );
@@ -14060,12 +14059,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 totalBothTeamsLast6BPS += playerLast6BPSMap.get(p.id) || 0;
               });
               
-              const totalBothTeamsBlendedBPS = (totalBothTeamsSeasonBPS + totalBothTeamsLast6BPS) / 2;
-              
-              if (totalBothTeamsBlendedBPS > 0) {
-                // Formula: ((playerSeasonBPS + playerLast6BPS) / 2) / ((totalBothTeamsSeasonBPS + totalBothTeamsLast6BPS) / 2) × 6
-                gwBonusPoints = (playerBlendedBPS / totalBothTeamsBlendedBPS) * 6;
-              }
+              // Formula: (((playerSeasonBPS/totalBothTeamsSeasonBPS) + (playerLast6GamesBPS/totalBothTeamsLast6GamesBPS)) / 2) × 6
+              const seasonRatio = totalBothTeamsSeasonBPS > 0 ? playerSeasonBPS / totalBothTeamsSeasonBPS : 0;
+              const last6Ratio = totalBothTeamsLast6BPS > 0 ? playerLast6BPS / totalBothTeamsLast6BPS : 0;
+              gwBonusPoints = ((seasonRatio + last6Ratio) / 2) * 6;
             }
             
             bonusPoints[`gw${gw}`] = parseFloat(gwBonusPoints.toFixed(3));
