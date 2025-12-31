@@ -352,8 +352,8 @@ export default function PlayerGoalsScoredProjections() {
     return 'bg-red-50 text-red-800';
   };
 
-  // Show loading only when actually needed
-  if (!initialized || !bootstrapData || isLoading || playerGoalLoading) {
+  // Show loading only when actually needed (also when data is empty/loading)
+  if (!initialized || !bootstrapData || isLoading || playerGoalLoading || !playerGoalData || playerGoalData.length === 0) {
     return (
       <LoadingExperience
         variant="analysis"

@@ -318,8 +318,8 @@ export default function PlayerSaves() {
       <ArrowUpDown className="h-4 w-4 text-blue-600" />;
   };
 
-  // Show loading state while data is loading OR while initializing gameweeks
-  if (isLoadingBootstrap || isLoadingProjections || !initialized) {
+  // Show loading state while data is loading OR while initializing gameweeks OR when data is empty
+  if (isLoadingBootstrap || isLoadingProjections || !initialized || !savesProjections || savesProjections.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
         <Card className="w-96 shadow-lg">

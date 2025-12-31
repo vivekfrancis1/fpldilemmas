@@ -491,7 +491,7 @@ export default function PlayerDefensiveContributions() {
   };
 
 
-  if (isLoading) {
+  if (isLoading || !defensiveData || players.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
         <Card className="w-96 shadow-lg">
