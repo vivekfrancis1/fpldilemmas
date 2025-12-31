@@ -9,9 +9,9 @@ export interface BootstrapData {
 }
 
 export interface PlayerAvailabilityInfo {
-  chanceOfPlayingNextRound: number | null;
-  status: string;
-  news: string | null;
+  chanceOfPlayingNextRound?: number | null | undefined;
+  status?: string;
+  news?: string | null;
 }
 
 export interface GameweekMultipliers {

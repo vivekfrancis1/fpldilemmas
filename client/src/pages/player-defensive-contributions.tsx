@@ -693,7 +693,7 @@ export default function PlayerDefensiveContributions() {
                 }`}
                 data-testid="button-toggle-availability"
               >
-                {applyAvailability ? "Availability: ON" : "Availability: OFF"}
+                {applyAvailability ? "Availability Adjustment: ON" : "Availability Adjustment: OFF"}
               </Button>
               <Button
                 variant="outline"

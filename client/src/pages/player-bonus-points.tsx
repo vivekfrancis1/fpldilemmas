@@ -358,7 +358,7 @@ export default function PlayerBonusPoints() {
                     }`}
                     data-testid="button-toggle-availability"
                   >
-                    {applyAvailability ? "Availability: ON" : "Availability: OFF"}
+                    {applyAvailability ? "Availability Adjustment: ON" : "Availability Adjustment: OFF"}
                   </Button>
                 </div>
               </div>

@@ -532,7 +532,7 @@ export default function PlayerGoalsScoredProjections() {
                   className={`text-xs sm:text-sm px-2 sm:px-3 ${applyAvailability ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'}`}
                   data-testid="button-toggle-availability"
                 >
-                  {applyAvailability ? 'Availability: ON' : 'Availability: OFF'}
+                  {applyAvailability ? 'Availability Adjustment: ON' : 'Availability Adjustment: OFF'}
                 </Button>
                 <Button
                   variant="outline"
