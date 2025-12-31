@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
+import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 
 interface PlayerAssistProjection {
   playerId: number;
@@ -626,11 +627,23 @@ export default function PlayerAssistProjections() {
                       </thead>
                       <tbody>
                         {filteredAndSortedData.map((player, index) => {
-                          const assistsTotal = getFilteredTotal(player, applyAvailability);
-                          const pointsTotal = assistsTotal * 3;
                           const playerInfo = playerAvailabilityMap?.get(player.playerId);
-                          const chanceOfPlaying = playerInfo?.chanceOfPlayingNextRound ?? 100;
-                          const hasAvailabilityAdjustment = applyAvailability && chanceOfPlaying < 100;
+                          const gwMultipliers = applyAvailability 
+                            ? getGameweekMultipliers(playerInfo, dynamicGameweekColumns, currentGameweek, bootstrapData)
+                            : {};
+                          const hasAnyAdjustment = applyAvailability && Object.values(gwMultipliers).some(m => m !== 1);
+                          
+                          let adjustedTotal = 0;
+                          let originalTotal = 0;
+                          dynamicGameweekColumns.forEach(gw => {
+                            const val = player.gameweekProjections[gw.toString()] || 0;
+                            const mult = gwMultipliers[gw] ?? 1;
+                            adjustedTotal += val * mult;
+                            originalTotal += val;
+                          });
+                          const pointsTotal = adjustedTotal * 3;
+                          const originalPointsTotal = originalTotal * 3;
+                          
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
                             <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
@@ -649,12 +662,13 @@ export default function PlayerAssistProjections() {
                             {dynamicGameweekColumns.map((gw) => {
                               const projValue = player.gameweekProjections[gw.toString()] || 0;
                               const opponentInfo = opponentMap.get(`${player.teamShort}-${gw}`);
-                              const availabilityFactor = applyAvailability ? chanceOfPlaying / 100 : 1;
-                              const displayValue = projValue * availabilityFactor;
+                              const multiplier = gwMultipliers[gw] ?? 1;
+                              const displayValue = projValue * multiplier;
+                              const hasGwAdjustment = applyAvailability && multiplier !== 1;
                               return (
                                 <td key={`assists-cell-${player.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
                                   <div className="flex flex-col items-center">
-                                    {hasAvailabilityAdjustment && projValue > 0 ? (
+                                    {hasGwAdjustment && projValue > 0 ? (
                                       <>
                                         <span className="text-purple-700 font-medium">{displayValue.toFixed(2)}</span>
                                         <span className="text-gray-400 line-through text-xs">{projValue.toFixed(2)}</span>
@@ -671,21 +685,21 @@ export default function PlayerAssistProjections() {
                                 </td>
                               );
                             })}
-                            <td className={`text-center py-3 px-1 font-semibold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
-                              {hasAvailabilityAdjustment ? (
+                            <td className={`text-center py-3 px-1 font-semibold ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                              {hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
-                                  <span className="text-lg font-bold text-purple-700">{assistsTotal.toFixed(2)}</span>
-                                  <span className="text-gray-400 line-through text-xs">{getFilteredTotal(player, false).toFixed(2)}</span>
+                                  <span className="text-lg font-bold text-purple-700">{adjustedTotal.toFixed(2)}</span>
+                                  <span className="text-gray-400 line-through text-xs">{originalTotal.toFixed(2)}</span>
                                 </div>
                               ) : (
-                                <span className="text-lg font-bold text-orange-900">{assistsTotal.toFixed(2)}</span>
+                                <span className="text-lg font-bold text-orange-900">{adjustedTotal.toFixed(2)}</span>
                               )}
                             </td>
-                            <td className={`text-center py-3 px-1 font-semibold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                              {hasAvailabilityAdjustment ? (
+                            <td className={`text-center py-3 px-1 font-semibold ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                              {hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-lg font-bold text-purple-700">{pointsTotal.toFixed(2)}</span>
-                                  <span className="text-gray-400 line-through text-xs">{(getFilteredTotal(player, false) * 3).toFixed(2)}</span>
+                                  <span className="text-gray-400 line-through text-xs">{originalPointsTotal.toFixed(2)}</span>
                                 </div>
                               ) : (
                                 <span className="text-lg font-bold text-blue-900">{pointsTotal.toFixed(2)}</span>

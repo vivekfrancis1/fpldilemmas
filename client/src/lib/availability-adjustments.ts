@@ -8,6 +8,66 @@ export interface BootstrapData {
   }>;
 }
 
+export interface PlayerAvailabilityInfo {
+  chanceOfPlayingNextRound: number | null;
+  status: string;
+  news: string | null;
+}
+
+export interface GameweekMultipliers {
+  [gameweek: number]: number;
+}
+
+export function getGameweekMultipliers(
+  playerInfo: PlayerAvailabilityInfo | undefined | null,
+  gameweeks: number[],
+  currentGameweek: number,
+  bootstrapData?: BootstrapData
+): GameweekMultipliers {
+  const multipliers: GameweekMultipliers = {};
+  
+  gameweeks.forEach(gw => {
+    multipliers[gw] = 1;
+  });
+
+  if (!playerInfo) {
+    return multipliers;
+  }
+
+  const chance = playerInfo.chanceOfPlayingNextRound ?? 100;
+  const nextGameweek = currentGameweek + 1;
+
+  if (chance === 100) {
+    return multipliers;
+  }
+
+  if (chance > 0 && chance < 100) {
+    const factor = chance / 100;
+    if (gameweeks.includes(nextGameweek)) {
+      multipliers[nextGameweek] = factor;
+    }
+  } else if (chance === 0) {
+    const returnDate = parseReturnDate(playerInfo.news || '');
+    
+    let returnGameweek: number | null = null;
+    if (returnDate && bootstrapData) {
+      returnGameweek = getGameweekFromDate(returnDate, bootstrapData);
+    }
+    
+    if (!returnGameweek) {
+      returnGameweek = currentGameweek + 3;
+    }
+
+    gameweeks.forEach(gw => {
+      if (gw < returnGameweek!) {
+        multipliers[gw] = 0;
+      }
+    });
+  }
+
+  return multipliers;
+}
+
 export interface PlayerWithProjections {
   playerName: string;
   chanceOfPlayingNextRound?: number | null;

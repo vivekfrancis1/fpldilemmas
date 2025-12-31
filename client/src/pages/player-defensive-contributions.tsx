@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Shield, Filter, Clock, Target, Search, Loader2, X } from "lucide-react";
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
+import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean }>;
@@ -810,9 +811,26 @@ export default function PlayerDefensiveContributions() {
               <TableBody>
                 {filteredPlayers.map((player) => {
                   const playerInfo = playerAvailabilityMap?.get(player.playerId);
-                  const chanceOfPlaying = playerInfo?.chanceOfPlayingNextRound ?? 100;
-                  const availabilityFactor = applyAvailability ? chanceOfPlaying / 100 : 1;
-                  const hasAvailabilityAdjustment = applyAvailability && chanceOfPlaying < 100;
+                  const gwMultipliers = applyAvailability 
+                    ? getGameweekMultipliers(playerInfo, activeGameweeks, currentGameweek, bootstrapData)
+                    : {};
+                  const hasAnyAdjustment = applyAvailability && Object.values(gwMultipliers).some(m => m !== 1);
+                  
+                  let adjustedTotalDC = 0;
+                  let originalTotalDC = 0;
+                  let adjustedTotalPoints = 0;
+                  let originalTotalPoints = 0;
+                  player.gameweekProjections
+                    .filter(gw => activeGameweeks.includes(gw.gameweek))
+                    .forEach(gw => {
+                      const mult = gwMultipliers[gw.gameweek] ?? 1;
+                      adjustedTotalDC += gw.defensiveContribution * mult;
+                      originalTotalDC += gw.defensiveContribution;
+                      adjustedTotalPoints += (gw.defensiveContribution / 3) * mult;
+                      originalTotalPoints += gw.defensiveContribution / 3;
+                    });
+                  const adjustedAvgDC = adjustedTotalDC / activeGameweeks.length;
+                  const originalAvgDC = originalTotalDC / activeGameweeks.length;
                   
                   return (
                   <TableRow key={player.playerId}>
@@ -840,11 +858,13 @@ export default function PlayerDefensiveContributions() {
                     {player.gameweekProjections
                       .filter(gw => activeGameweeks.includes(gw.gameweek))
                       .map((gw) => {
-                        const displayDC = gw.defensiveContribution * availabilityFactor;
+                        const multiplier = gwMultipliers[gw.gameweek] ?? 1;
+                        const displayDC = gw.defensiveContribution * multiplier;
+                        const hasGwAdjustment = applyAvailability && multiplier !== 1;
                         return (
                       <TableCell key={gw.gameweek} className="text-center">
                         <div className={`p-2 rounded text-sm ${getOpponentColor(gw.opponentTier)} ${gw.isActual ? 'border-2 border-blue-400' : ''}`}>
-                          {hasAvailabilityAdjustment && !gw.isActual ? (
+                          {hasGwAdjustment && !gw.isActual ? (
                             <div className="flex flex-col items-center">
                               <span className="font-bold text-purple-700">{displayDC.toFixed(1)}</span>
                               <span className="text-gray-400 line-through text-xs">{gw.defensiveContribution.toFixed(1)}</span>
@@ -864,31 +884,31 @@ export default function PlayerDefensiveContributions() {
                       </TableCell>
                         );
                     })}
-                    <TableCell className={`text-center font-bold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
-                      {hasAvailabilityAdjustment ? (
+                    <TableCell className={`text-center font-bold ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                      {hasAnyAdjustment ? (
                         <div className="flex flex-col items-center">
-                          <span className="text-lg font-bold text-purple-700">{(player.totalDC * availabilityFactor).toFixed(1)}</span>
-                          <span className="text-gray-400 line-through text-xs">{player.totalDC.toFixed(1)}</span>
+                          <span className="text-lg font-bold text-purple-700">{adjustedTotalDC.toFixed(1)}</span>
+                          <span className="text-gray-400 line-through text-xs">{originalTotalDC.toFixed(1)}</span>
                         </div>
                       ) : (
-                        <span className="text-lg font-bold text-orange-900">{player.totalDC.toFixed(1)}</span>
+                        <span className="text-lg font-bold text-orange-900">{adjustedTotalDC.toFixed(1)}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-center font-mono">
-                      {hasAvailabilityAdjustment ? (
+                      {hasAnyAdjustment ? (
                         <div className="flex flex-col items-center">
-                          <span className="text-purple-700">{(player.avgDC * availabilityFactor).toFixed(1)}</span>
-                          <span className="text-gray-400 line-through text-xs">{player.avgDC.toFixed(1)}</span>
+                          <span className="text-purple-700">{adjustedAvgDC.toFixed(1)}</span>
+                          <span className="text-gray-400 line-through text-xs">{originalAvgDC.toFixed(1)}</span>
                         </div>
                       ) : (
                         <span>{player.avgDC.toFixed(1)}</span>
                       )}
                     </TableCell>
-                    <TableCell className={`text-center font-bold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                      {hasAvailabilityAdjustment ? (
+                    <TableCell className={`text-center font-bold ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                      {hasAnyAdjustment ? (
                         <div className="flex flex-col items-center">
-                          <span className="text-lg font-bold text-purple-700">{Math.round(player.totalDCPoints * availabilityFactor)}</span>
-                          <span className="text-gray-400 line-through text-xs">{player.totalDCPoints}</span>
+                          <span className="text-lg font-bold text-purple-700">{Math.round(adjustedTotalPoints)}</span>
+                          <span className="text-gray-400 line-through text-xs">{Math.round(originalTotalPoints)}</span>
                         </div>
                       ) : (
                         <span className="text-lg font-bold text-blue-900">{player.totalDCPoints}</span>

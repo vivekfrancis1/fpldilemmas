@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, SortableHeader, type TableColumn } from "@/components/enhanced-table";
 import { LoadingExperience } from "@/components/loading-experience";
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
+import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 
 interface PlayerGoalProjection {
   playerId: number;
@@ -640,11 +641,21 @@ export default function PlayerGoalsScoredProjections() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredProjections.map((player, index) => {
                     const playerInfo = playerAvailabilityMap?.get(player.playerId);
-                    const chanceOfPlaying = playerInfo?.chanceOfPlayingNextRound ?? 100;
-                    const availabilityFactor = applyAvailability ? chanceOfPlaying / 100 : 1;
-                    const hasAvailabilityAdjustment = applyAvailability && chanceOfPlaying < 100;
-                    const selectedTotal = selectedGameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw.toString()] || 0), 0) * availabilityFactor;
-                    const totalPoints = getPointsFromGoals(selectedTotal, player.position);
+                    const gwMultipliers = applyAvailability 
+                      ? getGameweekMultipliers(playerInfo, selectedGameweeks, currentGameweek, bootstrapData)
+                      : {};
+                    const hasAnyAdjustment = applyAvailability && Object.values(gwMultipliers).some(m => m !== 1);
+                    
+                    let adjustedTotal = 0;
+                    let originalTotal = 0;
+                    selectedGameweeks.forEach(gw => {
+                      const val = player.gameweekProjections[gw.toString()] || 0;
+                      const mult = gwMultipliers[gw] ?? 1;
+                      adjustedTotal += val * mult;
+                      originalTotal += val;
+                    });
+                    const totalPoints = getPointsFromGoals(adjustedTotal, player.position);
+                    const originalTotalPoints = getPointsFromGoals(originalTotal, player.position);
                     
                     return (
                       <tr key={player.playerId} className="hover:bg-gray-50">
@@ -663,7 +674,9 @@ export default function PlayerGoalsScoredProjections() {
                         </td>
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw.toString()] || 0;
-                          const displayGoals = goals * availabilityFactor;
+                          const multiplier = gwMultipliers[gw] ?? 1;
+                          const displayGoals = goals * multiplier;
+                          const hasGwAdjustment = applyAvailability && multiplier !== 1;
                           const opponentInfo = opponentMap.get(`${player.teamShort}-${gw}`);
                           const opponent = opponentInfo?.opponent || 'TBD';
                           const isHome = opponentInfo?.isHome ?? true;
@@ -671,7 +684,7 @@ export default function PlayerGoalsScoredProjections() {
                           return (
                             <td key={gw} className="px-1 sm:px-2 py-2 sm:py-3 text-center">
                               <div className="text-sm">
-                                {hasAvailabilityAdjustment && goals > 0 ? (
+                                {hasGwAdjustment && goals > 0 ? (
                                   <div className="flex flex-col items-center">
                                     <span className="font-bold text-purple-700">{displayGoals.toFixed(2)}</span>
                                     <span className="text-gray-400 line-through text-xs">{goals.toFixed(2)}</span>
@@ -690,21 +703,21 @@ export default function PlayerGoalsScoredProjections() {
                             </td>
                           );
                         })}
-                        <td className={`px-2 sm:px-4 py-2 sm:py-4 text-center ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
-                          {hasAvailabilityAdjustment ? (
+                        <td className={`px-2 sm:px-4 py-2 sm:py-4 text-center ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                          {hasAnyAdjustment ? (
                             <div className="flex flex-col items-center">
-                              <span className="text-lg font-bold text-purple-700">{selectedTotal.toFixed(2)}</span>
-                              <span className="text-gray-400 line-through text-xs">{selectedGameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw.toString()] || 0), 0).toFixed(2)}</span>
+                              <span className="text-lg font-bold text-purple-700">{adjustedTotal.toFixed(2)}</span>
+                              <span className="text-gray-400 line-through text-xs">{originalTotal.toFixed(2)}</span>
                             </div>
                           ) : (
-                            <span className="text-lg font-bold text-orange-900">{selectedTotal.toFixed(2)}</span>
+                            <span className="text-lg font-bold text-orange-900">{adjustedTotal.toFixed(2)}</span>
                           )}
                         </td>
-                        <td className={`px-2 sm:px-4 py-2 sm:py-4 text-center ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                          {hasAvailabilityAdjustment ? (
+                        <td className={`px-2 sm:px-4 py-2 sm:py-4 text-center ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                          {hasAnyAdjustment ? (
                             <div className="flex flex-col items-center">
                               <span className="text-lg font-bold text-purple-700">{totalPoints.toFixed(1)}</span>
-                              <span className="text-gray-400 line-through text-xs">{getPointsFromGoals(selectedGameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw.toString()] || 0), 0), player.position).toFixed(1)}</span>
+                              <span className="text-gray-400 line-through text-xs">{originalTotalPoints.toFixed(1)}</span>
                             </div>
                           ) : (
                             <span className="text-lg font-bold text-blue-900">{totalPoints.toFixed(1)}</span>
