@@ -45,11 +45,21 @@ export default function PlayerStats() {
     staleTime: 60 * 60 * 1000, // 1 hour
   });
 
-  // Get current season data
+  // Get current season data (for metadata like teams, current gameweek)
   const { data: bootstrapData, isLoading: currentLoading, error: currentError } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: selectedSeason === "current",
+  });
+
+  // Determine if we need gameweek-filtered data
+  const needsGameweekFilter = selectedSeason === "current" && (startGameweek !== 1 || (endGameweek !== null && endGameweek !== 19));
+
+  // Get gameweek-filtered player stats when filters are used
+  const { data: filteredStatsData, isLoading: filteredLoading, error: filteredError } = useQuery<{players: any[], gameweekRange: {start: number, end: number}}>({
+    queryKey: [`/api/player-stats-by-gameweek?startGW=${startGameweek}&endGW=${endGameweek}`],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: selectedSeason === "current" && endGameweek !== null,
   });
 
   // Get historical season data
@@ -60,8 +70,12 @@ export default function PlayerStats() {
     retry: 1,
   });
 
-  const isLoading = selectedSeason === "current" ? currentLoading : historicalLoading;
-  const error = selectedSeason === "current" ? currentError : historicalError;
+  const isLoading = selectedSeason === "current" 
+    ? (currentLoading || (endGameweek !== null && filteredLoading)) 
+    : historicalLoading;
+  const error = selectedSeason === "current" 
+    ? (filteredError || currentError) 
+    : historicalError;
 
   // Calculate current gameweek from bootstrap data
   const currentGameweek = useMemo(() => {
@@ -306,6 +320,7 @@ export default function PlayerStats() {
             <PlayerStatsTable 
               data={selectedSeason === "current" ? bootstrapData : undefined}
               historicalData={selectedSeason !== "current" ? (historicalData || []) : undefined}
+              filteredPlayers={selectedSeason === "current" && filteredStatsData?.players ? filteredStatsData.players : undefined}
               filters={filters}
               sort={sort}
               setSort={setSort}

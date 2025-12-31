@@ -86,6 +86,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 interface PlayerStatsTableProps {
   data?: BootstrapData;
   historicalData?: any[];
+  filteredPlayers?: any[]; // Gameweek-filtered player stats
   filters: FilterState;
   sort: SortState;
   setSort: (sort: SortState) => void;
@@ -138,6 +139,7 @@ const COLUMN_SETTINGS_VERSION = 2; // Increment to reset user's column visibilit
 export default function PlayerStatsTable({ 
   data, 
   historicalData,
+  filteredPlayers,
   filters, 
   sort, 
   setSort, 
@@ -537,11 +539,14 @@ export default function PlayerStatsTable({
   };
 
   const filteredAndSortedPlayers = useMemo(() => {
-    // Use historical data if available, otherwise use current season data
+    // Use historical data if available, then filtered players, otherwise use current season data
     let players: any[] = [];
     
     if (historicalData && Array.isArray(historicalData) && historicalData.length > 0) {
       players = [...historicalData];
+    } else if (filteredPlayers && Array.isArray(filteredPlayers) && filteredPlayers.length > 0) {
+      // Use gameweek-filtered player stats when available
+      players = [...filteredPlayers];
     } else if (data && data.elements && Array.isArray(data.elements)) {
       players = [...data.elements];
       
@@ -703,7 +708,7 @@ export default function PlayerStatsTable({
     });
 
     return players;
-  }, [data, historicalData, filters, sort, venueFilter, venueStatsData]);
+  }, [data, historicalData, filteredPlayers, filters, sort, venueFilter, venueStatsData]);
 
   const paginatedPlayers = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;

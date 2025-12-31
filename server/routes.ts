@@ -20,7 +20,8 @@ import {
   cachedPlayerBonusPoints,
   cachedPlayerTotalPoints,
   teamProjections,
-  users
+  users,
+  gameweekPlayerDataTable
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
@@ -1570,6 +1571,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         error: "Failed to fetch FPL data",
         message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Player stats aggregated by gameweek range (from gameweek_player_data table)
+  app.get("/api/player-stats-by-gameweek", async (req, res) => {
+    try {
+      const startGW = parseInt(req.query.startGW as string) || 1;
+      const endGW = parseInt(req.query.endGW as string) || 38;
+      
+      // Validate gameweek range
+      if (startGW < 1 || endGW > 38 || startGW > endGW) {
+        return res.status(400).json({ error: "Invalid gameweek range" });
+      }
+
+      // Get bootstrap data for player metadata (name, team, position, price, etc.)
+      const bootstrapResponse = await internalFetch('/api/bootstrap-static');
+      const bootstrapData = await bootstrapResponse.json();
+      const playerMap = new Map<number, any>();
+      
+      bootstrapData.elements.forEach((p: any) => {
+        playerMap.set(p.id, {
+          id: p.id,
+          web_name: p.web_name,
+          first_name: p.first_name,
+          second_name: p.second_name,
+          team: p.team,
+          element_type: p.element_type,
+          now_cost: p.now_cost,
+          selected_by_percent: p.selected_by_percent,
+          form: p.form,
+          points_per_game: p.points_per_game,
+          expected_goals: p.expected_goals,
+          expected_assists: p.expected_assists,
+          expected_goal_involvements: p.expected_goal_involvements,
+          expected_goals_conceded: p.expected_goals_conceded,
+          influence: p.influence,
+          creativity: p.creativity,
+          threat: p.threat,
+          ict_index: p.ict_index,
+          chance_of_playing_next_round: p.chance_of_playing_next_round,
+          news: p.news,
+          status: p.status
+        });
+      });
+
+      // Aggregate stats from gameweek_player_data table
+      const aggregatedStats = await db
+        .select({
+          playerId: gameweekPlayerDataTable.playerId,
+          totalPoints: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.total_points}), 0)`.as('total_points'),
+          goalsScored: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.goals_scored}), 0)`.as('goals_scored'),
+          assists: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.assists}), 0)`.as('assists'),
+          cleanSheets: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.clean_sheets}), 0)`.as('clean_sheets'),
+          goalsConceded: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.goals_conceded}), 0)`.as('goals_conceded'),
+          yellowCards: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.yellow_cards}), 0)`.as('yellow_cards'),
+          redCards: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.red_cards}), 0)`.as('red_cards'),
+          saves: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.saves}), 0)`.as('saves'),
+          bonus: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.bonus}), 0)`.as('bonus'),
+          bps: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.bps}), 0)`.as('bps'),
+          minutes: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.minutes}), 0)`.as('minutes'),
+          starts: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.starts}), 0)`.as('starts'),
+          ownGoals: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.own_goals}), 0)`.as('own_goals'),
+          penaltiesSaved: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.penalties_saved}), 0)`.as('penalties_saved'),
+          penaltiesMissed: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.penalties_missed}), 0)`.as('penalties_missed'),
+          defensiveContribution: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.defensive_contribution}), 0)`.as('defensive_contribution'),
+          tackles: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.tackles}), 0)`.as('tackles'),
+          recoveries: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.recoveries}), 0)`.as('recoveries'),
+          clearancesBlocksInterceptions: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.clearances_blocks_interceptions}), 0)`.as('cbi'),
+          gamesPlayed: sql<number>`COUNT(CASE WHEN ${gameweekPlayerDataTable.minutes} > 0 THEN 1 END)`.as('games_played')
+        })
+        .from(gameweekPlayerDataTable)
+        .where(
+          and(
+            gte(gameweekPlayerDataTable.gameweek, startGW),
+            lte(gameweekPlayerDataTable.gameweek, endGW)
+          )
+        )
+        .groupBy(gameweekPlayerDataTable.playerId);
+
+      // Merge aggregated stats with player metadata
+      const result = aggregatedStats.map(stats => {
+        const player = playerMap.get(stats.playerId);
+        if (!player) return null;
+        
+        const gamesPlayed = Number(stats.gamesPlayed) || 0;
+        const minutes = Number(stats.minutes) || 0;
+        
+        return {
+          ...player,
+          total_points: Number(stats.totalPoints) || 0,
+          goals_scored: Number(stats.goalsScored) || 0,
+          assists: Number(stats.assists) || 0,
+          clean_sheets: Number(stats.cleanSheets) || 0,
+          goals_conceded: Number(stats.goalsConceded) || 0,
+          yellow_cards: Number(stats.yellowCards) || 0,
+          red_cards: Number(stats.redCards) || 0,
+          saves: Number(stats.saves) || 0,
+          bonus: Number(stats.bonus) || 0,
+          bps: Number(stats.bps) || 0,
+          minutes: minutes,
+          starts: Number(stats.starts) || 0,
+          own_goals: Number(stats.ownGoals) || 0,
+          penalties_saved: Number(stats.penaltiesSaved) || 0,
+          penalties_missed: Number(stats.penaltiesMissed) || 0,
+          defensive_contribution: Number(stats.defensiveContribution) || 0,
+          tackles: Number(stats.tackles) || 0,
+          recoveries: Number(stats.recoveries) || 0,
+          clearances_blocks_interceptions: Number(stats.clearancesBlocksInterceptions) || 0,
+          games_played: gamesPlayed,
+          points_per_game: gamesPlayed > 0 ? (Number(stats.totalPoints) / gamesPlayed).toFixed(1) : "0.0",
+          minutes_per_game: gamesPlayed > 0 ? Math.round(minutes / gamesPlayed) : 0,
+          gameweek_range: { start: startGW, end: endGW }
+        };
+      }).filter(Boolean);
+
+      res.json({
+        players: result,
+        gameweekRange: { start: startGW, end: endGW },
+        totalPlayers: result.length
+      });
+    } catch (error) {
+      console.error("Error fetching gameweek-filtered player stats:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch player stats by gameweek",
+        message: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
