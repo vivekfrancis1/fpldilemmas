@@ -229,6 +229,21 @@ export default function PlayerSaves() {
     return total;
   };
 
+  // Helper to get adjusted total for sorting
+  const getAdjustedTotalForSort = (player: SavesProjection) => {
+    const playerInfo = playerAvailabilityMap?.get(player.playerId);
+    const gwMultipliers = applyAvailability 
+      ? getGameweekMultipliers(playerInfo, dynamicGameweekColumns, currentGameweek, bootstrapData)
+      : {};
+    let total = 0;
+    dynamicGameweekColumns.forEach(gw => {
+      const val = player.saves?.[`gw${gw}`] || 0;
+      const mult = gwMultipliers[gw] ?? 1;
+      total += val * mult;
+    });
+    return total;
+  };
+
   const filteredAndSortedData = useMemo(() => {
     if (!savesProjections || !Array.isArray(savesProjections)) return [];
     
@@ -256,18 +271,22 @@ export default function PlayerSaves() {
           bValue = b.teamName;
           break;
         case 'totalSaves':
-          aValue = getFilteredTotal(a);
-          bValue = getFilteredTotal(b);
+          aValue = getAdjustedTotalForSort(a);
+          bValue = getAdjustedTotalForSort(b);
           break;
         default:
           // Handle dynamic gameweek fields (like 'gw4', 'gw5', etc.)
           if (sortField.startsWith('gw')) {
-            const gwNumber = sortField.replace('gw', '');
-            aValue = a.saves?.[`gw${gwNumber}`] || 0;
-            bValue = b.saves?.[`gw${gwNumber}`] || 0;
+            const gwNumber = parseInt(sortField.replace('gw', ''));
+            const aPlayerInfo = playerAvailabilityMap?.get(a.playerId);
+            const bPlayerInfo = playerAvailabilityMap?.get(b.playerId);
+            const aMultipliers = applyAvailability ? getGameweekMultipliers(aPlayerInfo, [gwNumber], currentGameweek, bootstrapData) : {};
+            const bMultipliers = applyAvailability ? getGameweekMultipliers(bPlayerInfo, [gwNumber], currentGameweek, bootstrapData) : {};
+            aValue = (a.saves?.[`gw${gwNumber}`] || 0) * (aMultipliers[gwNumber] ?? 1);
+            bValue = (b.saves?.[`gw${gwNumber}`] || 0) * (bMultipliers[gwNumber] ?? 1);
           } else {
-            aValue = getFilteredTotal(a);
-            bValue = getFilteredTotal(b);
+            aValue = getAdjustedTotalForSort(a);
+            bValue = getAdjustedTotalForSort(b);
           }
       }
       
@@ -279,7 +298,7 @@ export default function PlayerSaves() {
     });
 
     return filtered;
-  }, [savesProjections, searchTerm, teamFilter, sortField, sortDirection, startGameweek, endGameweek]);
+  }, [savesProjections, searchTerm, teamFilter, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {

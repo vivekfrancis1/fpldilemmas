@@ -240,12 +240,18 @@ export default function PlayerAssistProjections() {
       return true;
     });
 
-    // Calculate dynamic totals based on selected gameweek range
-    const getFilteredTotal = (player: PlayerAssistProjection) => {
+    // Calculate dynamic totals based on selected gameweek range (with availability adjustment)
+    const getFilteredTotalForSort = (player: PlayerAssistProjection) => {
+      const playerInfo = playerAvailabilityMap?.get(player.playerId);
+      const gwMultipliers = applyAvailability 
+        ? getGameweekMultipliers(playerInfo, dynamicGameweekColumns, currentGameweek, bootstrapData)
+        : {};
       let total = 0;
-      for (let gw = startGameweek || 0; gw <= (endGameweek || 0); gw++) {
-        total += player.gameweekProjections[gw.toString()] || 0;
-      }
+      dynamicGameweekColumns.forEach(gw => {
+        const val = player.gameweekProjections[gw.toString()] || 0;
+        const mult = gwMultipliers[gw] ?? 1;
+        total += val * mult;
+      });
       return total;
     };
 
@@ -271,12 +277,12 @@ export default function PlayerAssistProjections() {
           bValue = b.totalProjectedAssists;
           break;
         case 'rangeTotal':
-          aValue = getFilteredTotal(a);
-          bValue = getFilteredTotal(b);
+          aValue = getFilteredTotalForSort(a);
+          bValue = getFilteredTotalForSort(b);
           break;
         case 'rangePoints':
-          aValue = getFilteredTotal(a) * 3;
-          bValue = getFilteredTotal(b) * 3;
+          aValue = getFilteredTotalForSort(a) * 3;
+          bValue = getFilteredTotalForSort(b) * 3;
           break;
         case 'assistShare':
           aValue = a.assistShare;
@@ -287,8 +293,12 @@ export default function PlayerAssistProjections() {
           if (sortField.startsWith('gw')) {
             const gwNumber = parseInt(sortField.replace('gw', ''));
             if (!isNaN(gwNumber)) {
-              aValue = a.gameweekProjections[gwNumber.toString()] || 0;
-              bValue = b.gameweekProjections[gwNumber.toString()] || 0;
+              const aPlayerInfo = playerAvailabilityMap?.get(a.playerId);
+              const bPlayerInfo = playerAvailabilityMap?.get(b.playerId);
+              const aMultipliers = applyAvailability ? getGameweekMultipliers(aPlayerInfo, [gwNumber], currentGameweek, bootstrapData) : {};
+              const bMultipliers = applyAvailability ? getGameweekMultipliers(bPlayerInfo, [gwNumber], currentGameweek, bootstrapData) : {};
+              aValue = (a.gameweekProjections[gwNumber.toString()] || 0) * (aMultipliers[gwNumber] ?? 1);
+              bValue = (b.gameweekProjections[gwNumber.toString()] || 0) * (bMultipliers[gwNumber] ?? 1);
             } else {
               aValue = a.totalProjectedAssists;
               bValue = b.totalProjectedAssists;
@@ -307,7 +317,7 @@ export default function PlayerAssistProjections() {
     });
 
     return filtered;
-  }, [playerAssistData, searchTerm, selectedPosition, selectedTeam, startGameweek, endGameweek, sortField, sortDirection]);
+  }, [playerAssistData, searchTerm, selectedPosition, selectedTeam, startGameweek, endGameweek, sortField, sortDirection, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns]);
 
   // Calculate dynamic totals based on selected gameweek range (excluding excluded gameweeks)
   const getFilteredTotal = (player: PlayerAssistProjection, useAvailability: boolean = false) => {

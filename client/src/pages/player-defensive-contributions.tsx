@@ -295,6 +295,37 @@ export default function PlayerDefensiveContributions() {
     });
   }, [players, startGameweek, endGameweek, activeGameweeks]);
 
+  // Helper to get adjusted total for sorting with per-gameweek multipliers
+  const getAdjustedTotalDC = (player: any) => {
+    const playerInfo = playerAvailabilityMap?.get(player.playerId);
+    const gwMultipliers = applyAvailability 
+      ? getGameweekMultipliers(playerInfo, activeGameweeks, currentGameweek, bootstrapData)
+      : {};
+    let total = 0;
+    player.gameweekProjections.forEach((gw: any) => {
+      if (activeGameweeks.includes(gw.gameweek)) {
+        const mult = gwMultipliers[gw.gameweek] ?? 1;
+        total += gw.defensiveContribution * mult;
+      }
+    });
+    return total;
+  };
+
+  const getAdjustedTotalDCPoints = (player: any) => {
+    const playerInfo = playerAvailabilityMap?.get(player.playerId);
+    const gwMultipliers = applyAvailability 
+      ? getGameweekMultipliers(playerInfo, activeGameweeks, currentGameweek, bootstrapData)
+      : {};
+    let total = 0;
+    player.gameweekProjections.forEach((gw: any) => {
+      if (activeGameweeks.includes(gw.gameweek)) {
+        const mult = gwMultipliers[gw.gameweek] ?? 1;
+        total += gw.dcPoints * mult;
+      }
+    });
+    return total;
+  };
+
   // Filter and sort players
   const filteredPlayers = useMemo(() => {
     let filtered = playersWithTotals;
@@ -328,35 +359,41 @@ export default function PlayerDefensiveContributions() {
     // Sort by Total if specified
     else if (sortByTotal) {
       filtered.sort((a, b) => {
-        const aValue = a.totalDC;
-        const bValue = b.totalDC;
+        const aValue = getAdjustedTotalDC(a);
+        const bValue = getAdjustedTotalDC(b);
         return totalSortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
     }
     // Sort by Avg if specified
     else if (sortByAvg) {
       filtered.sort((a, b) => {
-        const aValue = a.avgDC;
-        const bValue = b.avgDC;
+        const activeCount = activeGameweeks.length || 1;
+        const aValue = getAdjustedTotalDC(a) / activeCount;
+        const bValue = getAdjustedTotalDC(b) / activeCount;
         return avgSortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
     }
     // Sort by DC Points if specified
     else if (sortByDCPoints) {
       filtered.sort((a, b) => {
-        const aValue = a.totalDCPoints;
-        const bValue = b.totalDCPoints;
+        const aValue = getAdjustedTotalDCPoints(a);
+        const bValue = getAdjustedTotalDCPoints(b);
         return dcPointsSortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
     }
     // Sort by gameweek column if specified
     else if (gameweekSortColumn !== null) {
       filtered.sort((a, b) => {
-        const aGameweek = a.gameweekProjections.find(gw => gw.gameweek === gameweekSortColumn);
-        const bGameweek = b.gameweekProjections.find(gw => gw.gameweek === gameweekSortColumn);
+        const aGameweek = a.gameweekProjections.find((gw: any) => gw.gameweek === gameweekSortColumn);
+        const bGameweek = b.gameweekProjections.find((gw: any) => gw.gameweek === gameweekSortColumn);
         
-        const aValue = (aGameweek?.defensiveContribution || 0);
-        const bValue = (bGameweek?.defensiveContribution || 0);
+        const aPlayerInfo = playerAvailabilityMap?.get(a.playerId);
+        const bPlayerInfo = playerAvailabilityMap?.get(b.playerId);
+        const aMultipliers = applyAvailability ? getGameweekMultipliers(aPlayerInfo, [gameweekSortColumn], currentGameweek, bootstrapData) : {};
+        const bMultipliers = applyAvailability ? getGameweekMultipliers(bPlayerInfo, [gameweekSortColumn], currentGameweek, bootstrapData) : {};
+        
+        const aValue = (aGameweek?.defensiveContribution || 0) * (aMultipliers[gameweekSortColumn] ?? 1);
+        const bValue = (bGameweek?.defensiveContribution || 0) * (bMultipliers[gameweekSortColumn] ?? 1);
         
         return gameweekSortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
@@ -364,12 +401,14 @@ export default function PlayerDefensiveContributions() {
     // Default sort by total DC
     else {
       filtered.sort((a, b) => {
-        return b.totalDC - a.totalDC; // Always sort by total DC descending
+        const aValue = getAdjustedTotalDC(a);
+        const bValue = getAdjustedTotalDC(b);
+        return bValue - aValue; // Always sort by total DC descending
       });
     }
 
     return filtered;
-  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, gameweekSortColumn, gameweekSortOrder, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, sortByAvg, avgSortOrder, sortByDCPoints, dcPointsSortOrder]);
+  }, [playersWithTotals, searchTerm, selectedPosition, selectedTeam, gameweekSortColumn, gameweekSortOrder, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, sortByAvg, avgSortOrder, sortByDCPoints, dcPointsSortOrder, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, activeGameweeks]);
 
   // Get unique values for filters
   const positions = Array.from(new Set(players.map(p => p.position).filter(Boolean)));

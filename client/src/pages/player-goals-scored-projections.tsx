@@ -178,6 +178,21 @@ export default function PlayerGoalsScoredProjections() {
     return gameweeks;
   }, [startGameweek, endGameweek, excludedGameweeks]);
 
+  // Helper to get adjusted total for a player
+  const getAdjustedTotal = (player: PlayerGoalProjection, gameweeks: number[]) => {
+    const playerInfo = playerAvailabilityMap?.get(player.playerId);
+    const gwMultipliers = applyAvailability 
+      ? getGameweekMultipliers(playerInfo, gameweeks, currentGameweek, bootstrapData)
+      : {};
+    let total = 0;
+    gameweeks.forEach(gw => {
+      const val = player.gameweekProjections[gw.toString()] || 0;
+      const mult = gwMultipliers[gw] ?? 1;
+      total += val * mult;
+    });
+    return total;
+  };
+
   // Filter and sort data
   const filteredProjections = useMemo(() => {
     if (!playerGoalData) return [];
@@ -192,24 +207,28 @@ export default function PlayerGoalsScoredProjections() {
       .sort((a, b) => {
         if (sortBy.startsWith('gw')) {
           const gwNumber = parseInt(sortBy.replace('gw', ''));
-          const aValue = a.gameweekProjections[gwNumber.toString()] || 0;
-          const bValue = b.gameweekProjections[gwNumber.toString()] || 0;
-          return bValue - aValue;
+          const aPlayerInfo = playerAvailabilityMap?.get(a.playerId);
+          const bPlayerInfo = playerAvailabilityMap?.get(b.playerId);
+          const aMultipliers = applyAvailability ? getGameweekMultipliers(aPlayerInfo, [gwNumber], currentGameweek, bootstrapData) : {};
+          const bMultipliers = applyAvailability ? getGameweekMultipliers(bPlayerInfo, [gwNumber], currentGameweek, bootstrapData) : {};
+          const aValue = (a.gameweekProjections[gwNumber.toString()] || 0) * (aMultipliers[gwNumber] ?? 1);
+          const bValue = (b.gameweekProjections[gwNumber.toString()] || 0) * (bMultipliers[gwNumber] ?? 1);
+          return sortDirection === 'desc' ? bValue - aValue : aValue - bValue;
         }
         
         const multiplier = sortDirection === 'desc' ? 1 : -1;
         
         switch (sortBy) {
           case "total": {
-            // Sort by total goals in selected gameweeks
-            const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw.toString()] || 0), 0);
-            const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw.toString()] || 0), 0);
+            // Sort by total goals in selected gameweeks (with availability adjustment)
+            const aPeriodTotal = getAdjustedTotal(a, selectedGameweeks);
+            const bPeriodTotal = getAdjustedTotal(b, selectedGameweeks);
             return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
           case "totalPoints": {
-            // Sort by total points from goals in selected gameweeks
-            const aGoalsTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw.toString()] || 0), 0);
-            const bGoalsTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw.toString()] || 0), 0);
+            // Sort by total points from goals in selected gameweeks (with availability adjustment)
+            const aGoalsTotal = getAdjustedTotal(a, selectedGameweeks);
+            const bGoalsTotal = getAdjustedTotal(b, selectedGameweeks);
             const aPointsTotal = getPointsFromGoals(aGoalsTotal, a.position);
             const bPointsTotal = getPointsFromGoals(bGoalsTotal, b.position);
             return (bPointsTotal - aPointsTotal) * multiplier;
@@ -221,13 +240,13 @@ export default function PlayerGoalsScoredProjections() {
           case "team": return a.teamName.localeCompare(b.teamName) * multiplier;
           case "position": return a.position.localeCompare(b.position) * multiplier;
           default: {
-            const aPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (a.gameweekProjections[gw.toString()] || 0), 0);
-            const bPeriodTotal = selectedGameweeks.reduce((sum, gw) => sum + (b.gameweekProjections[gw.toString()] || 0), 0);
+            const aPeriodTotal = getAdjustedTotal(a, selectedGameweeks);
+            const bPeriodTotal = getAdjustedTotal(b, selectedGameweeks);
             return (bPeriodTotal - aPeriodTotal) * multiplier;
           }
         }
       });
-  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy, sortDirection, selectedGameweeks]);
+  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy, sortDirection, selectedGameweeks, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData]);
 
   const totalGoals = useMemo(() => {
     if (!filteredProjections.length) return { 

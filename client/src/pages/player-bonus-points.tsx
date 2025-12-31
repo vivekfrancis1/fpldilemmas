@@ -138,13 +138,28 @@ export default function PlayerBonusPoints() {
   // Calculate dynamic totals based on selected gameweek range (using filtered columns)
   const getFilteredTotal = (player: BonusPointsProjection, useAvailability: boolean = false) => {
     let total = 0;
-    const playerInfo = playerAvailabilityMap.get(player.playerId);
+    const playerInfo = playerAvailabilityMap?.get(player.playerId);
     const availabilityFactor = useAvailability && playerInfo 
       ? (playerInfo.chanceOfPlayingNextRound ?? 100) / 100 
       : 1;
     for (const gw of dynamicGameweekColumns) {
       total += (player.bonusPoints?.[`gw${gw}`] || 0) * availabilityFactor;
     }
+    return total;
+  };
+
+  // Helper to get adjusted total for sorting
+  const getAdjustedTotalForSort = (player: BonusPointsProjection) => {
+    const playerInfo = playerAvailabilityMap?.get(player.playerId);
+    const gwMultipliers = applyAvailability 
+      ? getGameweekMultipliers(playerInfo, dynamicGameweekColumns, currentGameweek, bootstrapData)
+      : {};
+    let total = 0;
+    dynamicGameweekColumns.forEach(gw => {
+      const val = player.bonusPoints?.[`gw${gw}`] || 0;
+      const mult = gwMultipliers[gw] ?? 1;
+      total += val * mult;
+    });
     return total;
   };
 
@@ -176,18 +191,22 @@ export default function PlayerBonusPoints() {
           bValue = b.teamName;
           break;
         case 'totalBonusPoints':
-          aValue = getFilteredTotal(a);
-          bValue = getFilteredTotal(b);
+          aValue = getAdjustedTotalForSort(a);
+          bValue = getAdjustedTotalForSort(b);
           break;
         default:
           // Handle dynamic gameweek fields (like 'gw11', 'gw12', etc.)
           if (sortField.startsWith('gw')) {
-            const gwNumber = sortField.replace('gw', '');
-            aValue = a.bonusPoints?.[`gw${gwNumber}`] || 0;
-            bValue = b.bonusPoints?.[`gw${gwNumber}`] || 0;
+            const gwNumber = parseInt(sortField.replace('gw', ''));
+            const aPlayerInfo = playerAvailabilityMap?.get(a.playerId);
+            const bPlayerInfo = playerAvailabilityMap?.get(b.playerId);
+            const aMultipliers = applyAvailability ? getGameweekMultipliers(aPlayerInfo, [gwNumber], currentGameweek, bootstrapData) : {};
+            const bMultipliers = applyAvailability ? getGameweekMultipliers(bPlayerInfo, [gwNumber], currentGameweek, bootstrapData) : {};
+            aValue = (a.bonusPoints?.[`gw${gwNumber}`] || 0) * (aMultipliers[gwNumber] ?? 1);
+            bValue = (b.bonusPoints?.[`gw${gwNumber}`] || 0) * (bMultipliers[gwNumber] ?? 1);
           } else {
-            aValue = getFilteredTotal(a);
-            bValue = getFilteredTotal(b);
+            aValue = getAdjustedTotalForSort(a);
+            bValue = getAdjustedTotalForSort(b);
           }
       }
       
@@ -199,7 +218,7 @@ export default function PlayerBonusPoints() {
     });
 
     return filtered;
-  }, [bonusPointsProjections, searchTerm, positionFilter, teamFilter, sortField, sortDirection, dynamicGameweekColumns]);
+  }, [bonusPointsProjections, searchTerm, positionFilter, teamFilter, sortField, sortDirection, dynamicGameweekColumns, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
