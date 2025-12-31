@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, Calendar } from "lucide-react";
+import { BarChart3, Calendar, Filter } from "lucide-react";
 import { LoadingExperience } from "@/components/loading-experience";
 import StatsCards from "../components/stats-cards";
 import FiltersPanel from "../components/filters-panel";
@@ -12,6 +12,7 @@ import { BootstrapData } from "@shared/schema";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 
 export default function PlayerStats() {
   const [filters, setFilters] = useState<FilterState>({
@@ -29,6 +30,10 @@ export default function PlayerStats() {
   const [selectedSeason, setSelectedSeason] = useState<string>("current");
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Gameweek filter state
+  const [startGameweek, setStartGameweek] = useState<number>(1);
+  const [endGameweek, setEndGameweek] = useState<number | null>(null);
   
   // Comparison state
   const [compareList, setCompareList] = useState<any[]>([]);
@@ -57,6 +62,29 @@ export default function PlayerStats() {
 
   const isLoading = selectedSeason === "current" ? currentLoading : historicalLoading;
   const error = selectedSeason === "current" ? currentError : historicalError;
+
+  // Calculate current gameweek from bootstrap data
+  const currentGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return 19; // Default fallback
+    const currentEvent = bootstrapData.events.find(event => event.is_current);
+    return currentEvent?.id || 19;
+  }, [bootstrapData?.events]);
+
+  // Available gameweeks for dropdowns (1 to current gameweek)
+  const availableGameweeks = useMemo(() => {
+    const gws = [];
+    for (let i = 1; i <= currentGameweek; i++) {
+      gws.push(i);
+    }
+    return gws;
+  }, [currentGameweek]);
+
+  // Set default end gameweek to current gameweek when data loads
+  useMemo(() => {
+    if (endGameweek === null && currentGameweek) {
+      setEndGameweek(currentGameweek);
+    }
+  }, [currentGameweek, endGameweek]);
 
   // Fetch detailed player data when a player is selected
   const { data: playerDetailData, isLoading: isLoadingPlayerDetail } = useQuery<any>({
@@ -149,32 +177,101 @@ export default function PlayerStats() {
       </div>
 
       <div className="fpl-section-spacing">
-        {/* Season Selector */}
+        {/* Season & Gameweek Selector */}
         <Card className="mb-6 shadow-md border-0 bg-white">
           <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
-              <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
-              <span className="text-xs sm:text-sm font-semibold text-gray-700">Season:</span>
-              <Select value={selectedSeason} onValueChange={setSelectedSeason}>
-                <SelectTrigger className="w-full sm:w-48 bg-white text-sm" data-testid="select-season">
-                  <SelectValue placeholder="Select season" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="current">
-                    <div className="flex items-center space-x-2">
-                      <span>2025-26 (Current)</span>
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                        Live
-                      </Badge>
-                    </div>
-                  </SelectItem>
-                  {seasons?.sort((a, b) => b.localeCompare(a)).map((season) => (
-                    <SelectItem key={season} value={season}>
-                      {season}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+              {/* Season Selector */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-purple-600" />
+                  <Label className="text-xs sm:text-sm font-semibold text-gray-700">Season</Label>
+                </div>
+                <Select value={selectedSeason} onValueChange={setSelectedSeason}>
+                  <SelectTrigger className="w-full bg-white text-sm" data-testid="select-season">
+                    <SelectValue placeholder="Select season" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="current">
+                      <div className="flex items-center space-x-2">
+                        <span>2025-26 (Current)</span>
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                          Live
+                        </Badge>
+                      </div>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    {seasons?.sort((a, b) => b.localeCompare(a)).map((season) => (
+                      <SelectItem key={season} value={season}>
+                        {season}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Start Gameweek Filter - Only show for current season */}
+              {selectedSeason === "current" && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-purple-600" />
+                    <Label className="text-xs sm:text-sm font-semibold text-gray-700">From GW</Label>
+                  </div>
+                  <Select 
+                    value={startGameweek.toString()} 
+                    onValueChange={(val) => setStartGameweek(parseInt(val))}
+                  >
+                    <SelectTrigger className="w-full bg-white text-sm" data-testid="select-start-gw">
+                      <SelectValue placeholder="Start GW" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.map((gw) => (
+                        <SelectItem 
+                          key={gw} 
+                          value={gw.toString()}
+                          disabled={endGameweek !== null && gw > endGameweek}
+                        >
+                          GW{gw}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* End Gameweek Filter - Only show for current season */}
+              {selectedSeason === "current" && (
+                <div className="space-y-2">
+                  <Label className="text-xs sm:text-sm font-semibold text-gray-700">To GW</Label>
+                  <Select 
+                    value={endGameweek?.toString() || currentGameweek.toString()} 
+                    onValueChange={(val) => setEndGameweek(parseInt(val))}
+                  >
+                    <SelectTrigger className="w-full bg-white text-sm" data-testid="select-end-gw">
+                      <SelectValue placeholder="End GW" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.map((gw) => (
+                        <SelectItem 
+                          key={gw} 
+                          value={gw.toString()}
+                          disabled={gw < startGameweek}
+                        >
+                          GW{gw}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Gameweek Range Info */}
+              {selectedSeason === "current" && (
+                <div className="flex items-center justify-center">
+                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs sm:text-sm px-3 py-1">
+                    Showing GW{startGameweek} - GW{endGameweek || currentGameweek} stats
+                  </Badge>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
