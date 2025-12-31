@@ -672,9 +672,16 @@ export default function PlayerGoalsScoredProjections() {
                           return (
                             <td key={gw} className="px-1 sm:px-2 py-2 sm:py-3 text-center">
                               <div className="text-sm">
-                                <div className={`font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-gray-900'}`}>
-                                  {goals > 0 ? displayGoals.toFixed(2) : "-"}
-                                </div>
+                                {hasAvailabilityAdjustment && goals > 0 ? (
+                                  <div className="flex flex-col items-center">
+                                    <span className="font-bold text-purple-700">{displayGoals.toFixed(2)}</span>
+                                    <span className="text-gray-400 line-through text-xs">{goals.toFixed(2)}</span>
+                                  </div>
+                                ) : (
+                                  <div className="font-bold text-gray-900">
+                                    {goals > 0 ? goals.toFixed(2) : "-"}
+                                  </div>
+                                )}
                                 {showOpponent && (
                                   <div className={`text-xs ${isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                     {opponent} ({isHome ? 'H' : 'A'})
@@ -685,14 +692,24 @@ export default function PlayerGoalsScoredProjections() {
                           );
                         })}
                         <td className={`px-2 sm:px-4 py-2 sm:py-4 text-center ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
-                          <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-orange-900'}`}>
-                            {selectedTotal.toFixed(2)}
-                          </span>
+                          {hasAvailabilityAdjustment ? (
+                            <div className="flex flex-col items-center">
+                              <span className="text-lg font-bold text-purple-700">{selectedTotal.toFixed(2)}</span>
+                              <span className="text-gray-400 line-through text-xs">{selectedGameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw.toString()] || 0), 0).toFixed(2)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-lg font-bold text-orange-900">{selectedTotal.toFixed(2)}</span>
+                          )}
                         </td>
                         <td className={`px-2 sm:px-4 py-2 sm:py-4 text-center ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                          <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-blue-900'}`}>
-                            {totalPoints.toFixed(1)}
-                          </span>
+                          {hasAvailabilityAdjustment ? (
+                            <div className="flex flex-col items-center">
+                              <span className="text-lg font-bold text-purple-700">{totalPoints.toFixed(1)}</span>
+                              <span className="text-gray-400 line-through text-xs">{getPointsFromGoals(selectedGameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw.toString()] || 0), 0), player.position).toFixed(1)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-lg font-bold text-blue-900">{totalPoints.toFixed(1)}</span>
+                          )}
                         </td>
                       </tr>
                     );

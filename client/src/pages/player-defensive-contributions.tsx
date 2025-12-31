@@ -845,10 +845,17 @@ export default function PlayerDefensiveContributions() {
                         return (
                       <TableCell key={gw.gameweek} className="text-center">
                         <div className={`p-2 rounded text-sm ${getOpponentColor(gw.opponentTier)} ${gw.isActual ? 'border-2 border-blue-400' : ''}`}>
-                          <div className={`font-bold ${hasAvailabilityAdjustment && !gw.isActual ? 'text-purple-700' : ''}`}>
-                            {displayDC.toFixed(1)}
-                            {gw.isActual && <span className="text-xs ml-1 text-blue-600">✓</span>}
-                          </div>
+                          {hasAvailabilityAdjustment && !gw.isActual ? (
+                            <div className="flex flex-col items-center">
+                              <span className="font-bold text-purple-700">{displayDC.toFixed(1)}</span>
+                              <span className="text-gray-400 line-through text-xs">{gw.defensiveContribution.toFixed(1)}</span>
+                            </div>
+                          ) : (
+                            <div className="font-bold">
+                              {gw.isActual ? gw.defensiveContribution.toFixed(1) : displayDC.toFixed(1)}
+                              {gw.isActual && <span className="text-xs ml-1 text-blue-600">✓</span>}
+                            </div>
+                          )}
                           {showOpponent && (
                             <div className={`text-xs ${gw.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                               {gw.opponent} ({gw.isHome ? 'H' : 'A'})
@@ -859,19 +866,34 @@ export default function PlayerDefensiveContributions() {
                         );
                     })}
                     <TableCell className={`text-center font-bold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
-                      <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-orange-900'}`}>
-                        {(player.totalDC * availabilityFactor).toFixed(1)}
-                      </span>
+                      {hasAvailabilityAdjustment ? (
+                        <div className="flex flex-col items-center">
+                          <span className="text-lg font-bold text-purple-700">{(player.totalDC * availabilityFactor).toFixed(1)}</span>
+                          <span className="text-gray-400 line-through text-xs">{player.totalDC.toFixed(1)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-lg font-bold text-orange-900">{player.totalDC.toFixed(1)}</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-center font-mono">
-                      <span className={hasAvailabilityAdjustment ? 'text-purple-700' : ''}>
-                        {(player.avgDC * availabilityFactor).toFixed(1)}
-                      </span>
+                      {hasAvailabilityAdjustment ? (
+                        <div className="flex flex-col items-center">
+                          <span className="text-purple-700">{(player.avgDC * availabilityFactor).toFixed(1)}</span>
+                          <span className="text-gray-400 line-through text-xs">{player.avgDC.toFixed(1)}</span>
+                        </div>
+                      ) : (
+                        <span>{player.avgDC.toFixed(1)}</span>
+                      )}
                     </TableCell>
                     <TableCell className={`text-center font-bold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                      <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-blue-900'}`}>
-                        {Math.round(player.totalDCPoints * availabilityFactor)}
-                      </span>
+                      {hasAvailabilityAdjustment ? (
+                        <div className="flex flex-col items-center">
+                          <span className="text-lg font-bold text-purple-700">{Math.round(player.totalDCPoints * availabilityFactor)}</span>
+                          <span className="text-gray-400 line-through text-xs">{player.totalDCPoints}</span>
+                        </div>
+                      ) : (
+                        <span className="text-lg font-bold text-blue-900">{player.totalDCPoints}</span>
+                      )}
                     </TableCell>
                   </TableRow>
                   );

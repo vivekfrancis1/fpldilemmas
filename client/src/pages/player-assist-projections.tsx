@@ -655,9 +655,14 @@ export default function PlayerAssistProjections() {
                               return (
                                 <td key={`assists-cell-${player.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
                                   <div className="flex flex-col items-center">
-                                    <span className={hasAvailabilityAdjustment && availabilityFactor < 1 ? 'text-purple-700' : ''}>
-                                      {projValue > 0 ? displayValue.toFixed(2) : "-"}
-                                    </span>
+                                    {hasAvailabilityAdjustment && projValue > 0 ? (
+                                      <>
+                                        <span className="text-purple-700 font-medium">{displayValue.toFixed(2)}</span>
+                                        <span className="text-gray-400 line-through text-xs">{projValue.toFixed(2)}</span>
+                                      </>
+                                    ) : (
+                                      <span>{projValue > 0 ? projValue.toFixed(2) : "-"}</span>
+                                    )}
                                     {showOpponent && opponentInfo && (
                                       <span className={`text-xs ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                         {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
@@ -668,14 +673,24 @@ export default function PlayerAssistProjections() {
                               );
                             })}
                             <td className={`text-center py-3 px-1 font-semibold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
-                              <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-orange-900'}`}>
-                                {assistsTotal.toFixed(2)}
-                              </span>
+                              {hasAvailabilityAdjustment ? (
+                                <div className="flex flex-col items-center">
+                                  <span className="text-lg font-bold text-purple-700">{assistsTotal.toFixed(2)}</span>
+                                  <span className="text-gray-400 line-through text-xs">{getFilteredTotal(player, false).toFixed(2)}</span>
+                                </div>
+                              ) : (
+                                <span className="text-lg font-bold text-orange-900">{assistsTotal.toFixed(2)}</span>
+                              )}
                             </td>
                             <td className={`text-center py-3 px-1 font-semibold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                              <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-blue-900'}`}>
-                                {pointsTotal.toFixed(2)}
-                              </span>
+                              {hasAvailabilityAdjustment ? (
+                                <div className="flex flex-col items-center">
+                                  <span className="text-lg font-bold text-purple-700">{pointsTotal.toFixed(2)}</span>
+                                  <span className="text-gray-400 line-through text-xs">{(getFilteredTotal(player, false) * 3).toFixed(2)}</span>
+                                </div>
+                              ) : (
+                                <span className="text-lg font-bold text-blue-900">{pointsTotal.toFixed(2)}</span>
+                              )}
                             </td>
                           </tr>
                           );

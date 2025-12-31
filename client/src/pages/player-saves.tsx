@@ -546,17 +546,21 @@ export default function PlayerSaves() {
                             const teamShort = teamNameToShort.get(projection.teamName) || '';
                             const opponentInfo = opponentMap.get(`${teamShort}-${gw}`);
                             const rawValue = projection.saves?.[`gw${gw}`] || 0;
-                            const playerInfo = playerAvailabilityMap.get(projection.playerId);
-                            const availabilityFactor = applyAvailability && playerInfo 
+                            const availabilityFactor = hasAvailabilityAdjustment && playerInfo 
                               ? (playerInfo.chance_of_playing_next_round ?? 100) / 100 
                               : 1;
                             const displayValue = rawValue * availabilityFactor;
                             return (
                               <td key={`saves-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
                                 <div className="flex flex-col items-center">
-                                  <span className={applyAvailability && availabilityFactor < 1 ? 'text-purple-700' : ''}>
-                                    {rawValue ? displayValue.toFixed(2) : '-'}
-                                  </span>
+                                  {hasAvailabilityAdjustment && rawValue ? (
+                                    <>
+                                      <span className="text-purple-700 font-medium">{displayValue.toFixed(2)}</span>
+                                      <span className="text-gray-400 line-through text-xs">{rawValue.toFixed(2)}</span>
+                                    </>
+                                  ) : (
+                                    <span>{rawValue ? rawValue.toFixed(2) : '-'}</span>
+                                  )}
                                   {showOpponent && opponentInfo && (
                                     <span className={`text-xs mt-0.5 ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                       {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
@@ -567,14 +571,24 @@ export default function PlayerSaves() {
                             );
                           })}
                           <td className={`text-center py-3 px-1 font-semibold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                            <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-blue-900'}`}>
-                              {filteredTotal.toFixed(2)}
-                            </span>
+                            {hasAvailabilityAdjustment ? (
+                              <div className="flex flex-col items-center">
+                                <span className="text-lg font-bold text-purple-700">{filteredTotal.toFixed(2)}</span>
+                                <span className="text-gray-400 line-through text-xs">{getFilteredTotal(projection, false).toFixed(2)}</span>
+                              </div>
+                            ) : (
+                              <span className="text-lg font-bold text-blue-900">{filteredTotal.toFixed(2)}</span>
+                            )}
                           </td>
                           <td className={`text-center py-3 px-1 ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
-                            <span className={`text-sm font-medium ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-green-900'}`}>
-                              {filteredAverage.toFixed(2)}
-                            </span>
+                            {hasAvailabilityAdjustment ? (
+                              <div className="flex flex-col items-center">
+                                <span className="text-sm font-medium text-purple-700">{filteredAverage.toFixed(2)}</span>
+                                <span className="text-gray-400 line-through text-xs">{(getFilteredTotal(projection, false) / dynamicGameweekColumns.length).toFixed(2)}</span>
+                              </div>
+                            ) : (
+                              <span className="text-sm font-medium text-green-900">{filteredAverage.toFixed(2)}</span>
+                            )}
                           </td>
                         </tr>
                         );
