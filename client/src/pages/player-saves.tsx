@@ -42,7 +42,7 @@ export default function PlayerSaves() {
   const [initialized, setInitialized] = useState(false);
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
-  const [applyAvailability, setApplyAvailability] = useState(false);
+  const [applyAvailability, setApplyAvailability] = useState(true);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],

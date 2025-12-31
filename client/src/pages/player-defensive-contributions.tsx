@@ -93,7 +93,7 @@ export default function PlayerDefensiveContributions() {
   const [dcPointsSortOrder, setDCPointsSortOrder] = useState<"asc" | "desc">("desc");
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
-  const [applyAvailability, setApplyAvailability] = useState(false);
+  const [applyAvailability, setApplyAvailability] = useState(true);
 
   // Dynamic gameweek range state (fetch 12 gameweeks for API, default display to 6)
   const [gameweekRange, setGameweekRange] = useState(() => {

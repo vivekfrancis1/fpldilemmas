@@ -56,7 +56,7 @@ export default function PlayerAssistProjections() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
-  const [applyAvailability, setApplyAvailability] = useState(false);
+  const [applyAvailability, setApplyAvailability] = useState(true);
 
   // Toggle gameweek exclusion
   const toggleGameweekExclusion = (gw: number) => {

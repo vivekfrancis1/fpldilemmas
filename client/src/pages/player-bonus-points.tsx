@@ -42,7 +42,7 @@ export default function PlayerBonusPoints() {
   const [endGameweek, setEndGameweek] = useState<number>(0);
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [initialized, setInitialized] = useState(false);
-  const [applyAvailability, setApplyAvailability] = useState(false);
+  const [applyAvailability, setApplyAvailability] = useState(true);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
