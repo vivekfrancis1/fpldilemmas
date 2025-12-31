@@ -628,8 +628,9 @@ export default function PlayerAssistProjections() {
                         {filteredAndSortedData.map((player, index) => {
                           const assistsTotal = getFilteredTotal(player, applyAvailability);
                           const pointsTotal = assistsTotal * 3;
-                          const playerInfo = playerAvailabilityMap.get(player.playerId);
-                          const hasAvailabilityAdjustment = applyAvailability && playerInfo && (playerInfo.chanceOfPlayingNextRound ?? 100) < 100;
+                          const playerInfo = playerAvailabilityMap?.get(player.playerId);
+                          const chanceOfPlaying = playerInfo?.chanceOfPlayingNextRound ?? 100;
+                          const hasAvailabilityAdjustment = applyAvailability && chanceOfPlaying < 100;
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
                             <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
@@ -648,9 +649,7 @@ export default function PlayerAssistProjections() {
                             {dynamicGameweekColumns.map((gw) => {
                               const projValue = player.gameweekProjections[gw.toString()] || 0;
                               const opponentInfo = opponentMap.get(`${player.teamShort}-${gw}`);
-                              const availabilityFactor = applyAvailability && playerInfo 
-                                ? (playerInfo.chanceOfPlayingNextRound ?? 100) / 100 
-                                : 1;
+                              const availabilityFactor = applyAvailability ? chanceOfPlaying / 100 : 1;
                               const displayValue = projValue * availabilityFactor;
                               return (
                                 <td key={`assists-cell-${player.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">

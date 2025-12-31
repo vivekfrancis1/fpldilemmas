@@ -810,10 +810,9 @@ export default function PlayerDefensiveContributions() {
               <TableBody>
                 {filteredPlayers.map((player) => {
                   const playerInfo = playerAvailabilityMap?.get(player.playerId);
-                  const availabilityFactor = applyAvailability && playerInfo 
-                    ? (playerInfo.chanceOfPlayingNextRound ?? 100) / 100 
-                    : 1;
-                  const hasAvailabilityAdjustment = applyAvailability && playerInfo && (playerInfo.chanceOfPlayingNextRound ?? 100) < 100;
+                  const chanceOfPlaying = playerInfo?.chanceOfPlayingNextRound ?? 100;
+                  const availabilityFactor = applyAvailability ? chanceOfPlaying / 100 : 1;
+                  const hasAvailabilityAdjustment = applyAvailability && chanceOfPlaying < 100;
                   
                   return (
                   <TableRow key={player.playerId}>
