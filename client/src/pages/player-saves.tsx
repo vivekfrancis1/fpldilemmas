@@ -41,6 +41,7 @@ export default function PlayerSaves() {
   const [initialized, setInitialized] = useState(false);
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
+  const [applyAvailability, setApplyAvailability] = useState(false);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -209,10 +210,14 @@ export default function PlayerSaves() {
   }, [startGameweek, endGameweek, excludedGameweeks]);
 
   // Calculate dynamic totals based on selected gameweek range (using filtered columns)
-  const getFilteredTotal = (player: SavesProjection) => {
+  const getFilteredTotal = (player: SavesProjection, useAvailability: boolean = false) => {
     let total = 0;
+    const playerInfo = playerAvailabilityMap.get(player.playerId);
+    const availabilityFactor = useAvailability && playerInfo 
+      ? (playerInfo.chance_of_playing_next_round ?? 100) / 100 
+      : 1;
     for (const gw of dynamicGameweekColumns) {
-      total += player.saves?.[`gw${gw}`] || 0;
+      total += (player.saves?.[`gw${gw}`] || 0) * availabilityFactor;
     }
     return total;
   };
@@ -411,14 +416,27 @@ export default function PlayerSaves() {
                     Clear
                   </Button>
                 )}
-                <div className="ml-auto">
+                <div className="ml-auto flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setApplyAvailability(!applyAvailability)}
+                    className={`text-xs sm:text-sm px-2 sm:px-3 py-1 h-auto ${
+                      applyAvailability 
+                        ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
+                    }`}
+                    data-testid="button-toggle-availability"
+                  >
+                    {applyAvailability ? "Availability: ON" : "Availability: OFF"}
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setShowOpponent(!showOpponent)}
                     className={`text-xs sm:text-sm px-2 sm:px-3 py-1 h-auto ${
                       showOpponent 
-                        ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
+                        ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300' 
                         : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
                     }`}
                     data-testid="button-toggle-opponent"
@@ -505,8 +523,10 @@ export default function PlayerSaves() {
                     </thead>
                     <tbody>
                       {filteredAndSortedData.map((projection: SavesProjection, index) => {
-                        const filteredTotal = getFilteredTotal(projection);
+                        const filteredTotal = getFilteredTotal(projection, applyAvailability);
                         const filteredAverage = filteredTotal / dynamicGameweekColumns.length;
+                        const playerInfo = playerAvailabilityMap.get(projection.playerId);
+                        const hasAvailabilityAdjustment = applyAvailability && playerInfo && (playerInfo.chance_of_playing_next_round ?? 100) < 100;
                         return (
                         <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
                           <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
@@ -525,10 +545,18 @@ export default function PlayerSaves() {
                           {dynamicGameweekColumns.map((gw) => {
                             const teamShort = teamNameToShort.get(projection.teamName) || '';
                             const opponentInfo = opponentMap.get(`${teamShort}-${gw}`);
+                            const rawValue = projection.saves?.[`gw${gw}`] || 0;
+                            const playerInfo = playerAvailabilityMap.get(projection.playerId);
+                            const availabilityFactor = applyAvailability && playerInfo 
+                              ? (playerInfo.chance_of_playing_next_round ?? 100) / 100 
+                              : 1;
+                            const displayValue = rawValue * availabilityFactor;
                             return (
                               <td key={`saves-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
                                 <div className="flex flex-col items-center">
-                                  <span>{projection.saves?.[`gw${gw}`] ? (projection.saves[`gw${gw}`]).toFixed(2) : '-'}</span>
+                                  <span className={applyAvailability && availabilityFactor < 1 ? 'text-purple-700' : ''}>
+                                    {rawValue ? displayValue.toFixed(2) : '-'}
+                                  </span>
                                   {showOpponent && opponentInfo && (
                                     <span className={`text-xs mt-0.5 ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                       {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
@@ -538,13 +566,13 @@ export default function PlayerSaves() {
                               </td>
                             );
                           })}
-                          <td className="text-center py-3 px-1 font-semibold bg-blue-50">
-                            <span className="text-lg font-bold text-blue-900">
+                          <td className={`text-center py-3 px-1 font-semibold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                            <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-blue-900'}`}>
                               {filteredTotal.toFixed(2)}
                             </span>
                           </td>
-                          <td className="text-center py-3 px-1 bg-green-50">
-                            <span className="text-sm font-medium text-green-900">
+                          <td className={`text-center py-3 px-1 ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
+                            <span className={`text-sm font-medium ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-green-900'}`}>
                               {filteredAverage.toFixed(2)}
                             </span>
                           </td>

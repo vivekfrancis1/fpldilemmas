@@ -92,6 +92,7 @@ export default function PlayerDefensiveContributions() {
   const [dcPointsSortOrder, setDCPointsSortOrder] = useState<"asc" | "desc">("desc");
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
+  const [applyAvailability, setApplyAvailability] = useState(false);
 
   // Dynamic gameweek range state (fetch 12 gameweeks for API, default display to 6)
   const [gameweekRange, setGameweekRange] = useState(() => {
@@ -683,10 +684,23 @@ export default function PlayerDefensiveContributions() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => setApplyAvailability(!applyAvailability)}
+                className={`text-xs sm:text-sm px-2 sm:px-3 py-1 h-auto ${
+                  applyAvailability 
+                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
+                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
+                }`}
+                data-testid="button-toggle-availability"
+              >
+                {applyAvailability ? "Availability: ON" : "Availability: OFF"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setShowOpponent(!showOpponent)}
                 className={`text-xs sm:text-sm px-2 sm:px-3 py-1 h-auto ${
                   showOpponent 
-                    ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300' 
                     : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
                 }`}
                 data-testid="button-toggle-opponent"
@@ -794,7 +808,14 @@ export default function PlayerDefensiveContributions() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPlayers.map((player) => (
+                {filteredPlayers.map((player) => {
+                  const playerInfo = playerAvailabilityMap?.get(player.playerId);
+                  const availabilityFactor = applyAvailability && playerInfo 
+                    ? (playerInfo.chance_of_playing_next_round ?? 100) / 100 
+                    : 1;
+                  const hasAvailabilityAdjustment = applyAvailability && playerInfo && (playerInfo.chance_of_playing_next_round ?? 100) < 100;
+                  
+                  return (
                   <TableRow key={player.playerId}>
                     <TableCell className="font-medium sticky left-0 bg-background z-10">
                       <div className="flex flex-col">
@@ -819,11 +840,13 @@ export default function PlayerDefensiveContributions() {
                     </TableCell>
                     {player.gameweekProjections
                       .filter(gw => activeGameweeks.includes(gw.gameweek))
-                      .map((gw) => (
+                      .map((gw) => {
+                        const displayDC = gw.defensiveContribution * availabilityFactor;
+                        return (
                       <TableCell key={gw.gameweek} className="text-center">
                         <div className={`p-2 rounded text-sm ${getOpponentColor(gw.opponentTier)} ${gw.isActual ? 'border-2 border-blue-400' : ''}`}>
-                          <div className="font-bold">
-                            {gw.defensiveContribution.toFixed(1)}
+                          <div className={`font-bold ${hasAvailabilityAdjustment && !gw.isActual ? 'text-purple-700' : ''}`}>
+                            {displayDC.toFixed(1)}
                             {gw.isActual && <span className="text-xs ml-1 text-blue-600">✓</span>}
                           </div>
                           {showOpponent && (
@@ -833,22 +856,26 @@ export default function PlayerDefensiveContributions() {
                           )}
                         </div>
                       </TableCell>
-                    ))}
-                    <TableCell className="text-center font-bold bg-orange-50">
-                      <span className="text-lg font-bold text-orange-900">
-                        {player.totalDC.toFixed(1)}
+                        );
+                    })}
+                    <TableCell className={`text-center font-bold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                      <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-orange-900'}`}>
+                        {(player.totalDC * availabilityFactor).toFixed(1)}
                       </span>
                     </TableCell>
                     <TableCell className="text-center font-mono">
-                      {player.avgDC.toFixed(1)}
+                      <span className={hasAvailabilityAdjustment ? 'text-purple-700' : ''}>
+                        {(player.avgDC * availabilityFactor).toFixed(1)}
+                      </span>
                     </TableCell>
-                    <TableCell className="text-center font-bold bg-blue-50">
-                      <span className="text-lg font-bold text-blue-900">
-                        {player.totalDCPoints}
+                    <TableCell className={`text-center font-bold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                      <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-blue-900'}`}>
+                        {Math.round(player.totalDCPoints * availabilityFactor)}
                       </span>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

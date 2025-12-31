@@ -41,6 +41,7 @@ export default function PlayerBonusPoints() {
   const [endGameweek, setEndGameweek] = useState<number>(0);
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [initialized, setInitialized] = useState(false);
+  const [applyAvailability, setApplyAvailability] = useState(false);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -128,10 +129,14 @@ export default function PlayerBonusPoints() {
   }, [startGameweek, endGameweek, excludedGameweeks]);
 
   // Calculate dynamic totals based on selected gameweek range (using filtered columns)
-  const getFilteredTotal = (player: BonusPointsProjection) => {
+  const getFilteredTotal = (player: BonusPointsProjection, useAvailability: boolean = false) => {
     let total = 0;
+    const playerInfo = playerAvailabilityMap.get(player.playerId);
+    const availabilityFactor = useAvailability && playerInfo 
+      ? (playerInfo.chance_of_playing_next_round ?? 100) / 100 
+      : 1;
     for (const gw of dynamicGameweekColumns) {
-      total += player.bonusPoints?.[`gw${gw}`] || 0;
+      total += (player.bonusPoints?.[`gw${gw}`] || 0) * availabilityFactor;
     }
     return total;
   };
@@ -322,18 +327,33 @@ export default function PlayerBonusPoints() {
                 <label className="text-sm font-medium text-gray-700">
                   Toggle Gameweeks (click to exclude/include):
                 </label>
-                {excludedGameweeks.size > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={clearExclusions}
-                    className="text-xs text-gray-500 hover:text-gray-700"
-                    data-testid="button-clear-exclusions"
+                <div className="flex gap-2">
+                  {excludedGameweeks.size > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={clearExclusions}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                      data-testid="button-clear-exclusions"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Clear exclusions
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setApplyAvailability(!applyAvailability)}
+                    className={`text-xs sm:text-sm px-2 sm:px-3 py-1 h-auto ${
+                      applyAvailability 
+                        ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
+                    }`}
+                    data-testid="button-toggle-availability"
                   >
-                    <X className="h-3 w-3 mr-1" />
-                    Clear exclusions
+                    {applyAvailability ? "Availability: ON" : "Availability: OFF"}
                   </Button>
-                )}
+                </div>
               </div>
               <div className="flex flex-wrap gap-2">
                 {Array.from({ length: endGameweek - startGameweek + 1 }, (_, i) => {
@@ -422,8 +442,10 @@ export default function PlayerBonusPoints() {
                     </thead>
                     <tbody>
                       {filteredAndSortedData.map((projection: BonusPointsProjection, index) => {
-                        const filteredTotal = getFilteredTotal(projection);
+                        const filteredTotal = getFilteredTotal(projection, applyAvailability);
                         const filteredAverage = filteredTotal / dynamicGameweekColumns.length;
+                        const playerInfo = playerAvailabilityMap.get(projection.playerId);
+                        const hasAvailabilityAdjustment = applyAvailability && playerInfo && (playerInfo.chance_of_playing_next_round ?? 100) < 100;
                         return (
                         <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
                           <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
@@ -439,18 +461,27 @@ export default function PlayerBonusPoints() {
                               )}
                             </div>
                           </td>
-                          {dynamicGameweekColumns.map((gw) => (
-                            <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
-                              {projection.bonusPoints?.[`gw${gw}`] ? (projection.bonusPoints[`gw${gw}`]).toFixed(2) : '-'}
-                            </td>
-                          ))}
-                          <td className="text-center py-3 px-1 font-semibold bg-blue-50">
-                            <span className="text-lg font-bold text-blue-900">
+                          {dynamicGameweekColumns.map((gw) => {
+                            const rawValue = projection.bonusPoints?.[`gw${gw}`] || 0;
+                            const availabilityFactor = hasAvailabilityAdjustment && playerInfo 
+                              ? (playerInfo.chance_of_playing_next_round ?? 100) / 100 
+                              : 1;
+                            const displayValue = rawValue * availabilityFactor;
+                            return (
+                              <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
+                                <span className={hasAvailabilityAdjustment && availabilityFactor < 1 ? 'text-purple-700' : ''}>
+                                  {rawValue ? displayValue.toFixed(2) : '-'}
+                                </span>
+                              </td>
+                            );
+                          })}
+                          <td className={`text-center py-3 px-1 font-semibold ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                            <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-blue-900'}`}>
                               {filteredTotal.toFixed(2)}
                             </span>
                           </td>
-                          <td className="text-center py-3 px-1 bg-green-50">
-                            <span className="text-sm font-medium text-green-900">
+                          <td className={`text-center py-3 px-1 ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
+                            <span className={`text-sm font-medium ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-green-900'}`}>
                               {filteredAverage.toFixed(2)}
                             </span>
                           </td>

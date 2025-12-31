@@ -33,6 +33,7 @@ export default function PlayerGoalsScoredProjections() {
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
+  const [applyAvailability, setApplyAvailability] = useState(false);
   const [initialized, setInitialized] = useState(false);
   
   const queryClient = useQueryClient();
@@ -526,8 +527,17 @@ export default function PlayerGoalsScoredProjections() {
                 <Button
                   variant="outline"
                   size="sm"
+                  onClick={() => setApplyAvailability(!applyAvailability)}
+                  className={`text-xs sm:text-sm px-2 sm:px-3 ${applyAvailability ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'}`}
+                  data-testid="button-toggle-availability"
+                >
+                  {applyAvailability ? 'Availability: ON' : 'Availability: OFF'}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setShowOpponent(!showOpponent)}
-                  className={`text-xs sm:text-sm px-2 sm:px-3 ${showOpponent ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'}`}
+                  className={`text-xs sm:text-sm px-2 sm:px-3 ${showOpponent ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'}`}
                   data-testid="button-toggle-opponent"
                 >
                   {showOpponent ? 'Hide Opponent' : 'Show Opponent'}
@@ -629,7 +639,12 @@ export default function PlayerGoalsScoredProjections() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredProjections.map((player, index) => {
-                    const selectedTotal = selectedGameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw.toString()] || 0), 0);
+                    const playerInfo = playerAvailabilityMap?.get(player.playerId);
+                    const availabilityFactor = applyAvailability && playerInfo 
+                      ? (playerInfo.chance_of_playing_next_round ?? 100) / 100 
+                      : 1;
+                    const hasAvailabilityAdjustment = applyAvailability && playerInfo && (playerInfo.chance_of_playing_next_round ?? 100) < 100;
+                    const selectedTotal = selectedGameweeks.reduce((sum, gw) => sum + (player.gameweekProjections[gw.toString()] || 0), 0) * availabilityFactor;
                     const totalPoints = getPointsFromGoals(selectedTotal, player.position);
                     
                     return (
@@ -649,6 +664,7 @@ export default function PlayerGoalsScoredProjections() {
                         </td>
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw.toString()] || 0;
+                          const displayGoals = goals * availabilityFactor;
                           const opponentInfo = opponentMap.get(`${player.teamShort}-${gw}`);
                           const opponent = opponentInfo?.opponent || 'TBD';
                           const isHome = opponentInfo?.isHome ?? true;
@@ -656,11 +672,11 @@ export default function PlayerGoalsScoredProjections() {
                           return (
                             <td key={gw} className="px-1 sm:px-2 py-2 sm:py-3 text-center">
                               <div className="text-sm">
-                                <div className="font-bold text-gray-900">
-                                  {goals > 0 ? goals.toFixed(2) : "-"}
+                                <div className={`font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-gray-900'}`}>
+                                  {goals > 0 ? displayGoals.toFixed(2) : "-"}
                                 </div>
                                 {showOpponent && (
-                                  <div className="text-xs text-gray-500">
+                                  <div className={`text-xs ${isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                     {opponent} ({isHome ? 'H' : 'A'})
                                   </div>
                                 )}
@@ -668,13 +684,13 @@ export default function PlayerGoalsScoredProjections() {
                             </td>
                           );
                         })}
-                        <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-50">
-                          <span className="text-lg font-bold text-orange-900">
+                        <td className={`px-2 sm:px-4 py-2 sm:py-4 text-center ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                          <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-orange-900'}`}>
                             {selectedTotal.toFixed(2)}
                           </span>
                         </td>
-                        <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-blue-50">
-                          <span className="text-lg font-bold text-blue-900">
+                        <td className={`px-2 sm:px-4 py-2 sm:py-4 text-center ${hasAvailabilityAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                          <span className={`text-lg font-bold ${hasAvailabilityAdjustment ? 'text-purple-700' : 'text-blue-900'}`}>
                             {totalPoints.toFixed(1)}
                           </span>
                         </td>
