@@ -1586,11 +1586,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid gameweek range" });
       }
 
-      // Get bootstrap data for player metadata (name, team, position, price, etc.)
+      // Get bootstrap data for player metadata and cumulative stats
       const bootstrapResponse = await internalFetch('/api/bootstrap-static');
       const bootstrapData = await bootstrapResponse.json();
-      const playerMap = new Map<number, any>();
       
+      // Determine current gameweek from bootstrap
+      const currentGW = bootstrapData.events?.find((e: any) => e.is_current)?.id || 19;
+      
+      // Get max gameweek available in the database
+      const maxGWResult = await db
+        .select({ maxGW: sql<number>`MAX(${gameweekPlayerDataTable.gameweek})` })
+        .from(gameweekPlayerDataTable);
+      const maxCachedGW = maxGWResult[0]?.maxGW || 18;
+      
+      // Check if we need to derive data for gameweeks beyond cached data
+      const needsCurrentGWDerivation = endGW > maxCachedGW && endGW <= currentGW;
+      
+      // Build player map with bootstrap cumulative stats
+      const playerMap = new Map<number, any>();
       bootstrapData.elements.forEach((p: any) => {
         playerMap.set(p.id, {
           id: p.id,
@@ -1613,11 +1626,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ict_index: p.ict_index,
           chance_of_playing_next_round: p.chance_of_playing_next_round,
           news: p.news,
-          status: p.status
+          status: p.status,
+          // Cumulative season stats from bootstrap (for deriving missing GWs)
+          _cumulative: {
+            total_points: p.total_points || 0,
+            goals_scored: p.goals_scored || 0,
+            assists: p.assists || 0,
+            clean_sheets: p.clean_sheets || 0,
+            goals_conceded: p.goals_conceded || 0,
+            yellow_cards: p.yellow_cards || 0,
+            red_cards: p.red_cards || 0,
+            saves: p.saves || 0,
+            bonus: p.bonus || 0,
+            bps: p.bps || 0,
+            minutes: p.minutes || 0,
+            starts: p.starts || 0,
+            own_goals: p.own_goals || 0,
+            penalties_saved: p.penalties_saved || 0,
+            penalties_missed: p.penalties_missed || 0
+          }
         });
       });
 
-      // Aggregate stats from gameweek_player_data table
+      // Aggregate stats from gameweek_player_data table (up to maxCachedGW)
+      const effectiveEndGW = Math.min(endGW, maxCachedGW);
       const aggregatedStats = await db
         .select({
           playerId: gameweekPlayerDataTable.playerId,
@@ -1646,51 +1678,187 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(
           and(
             gte(gameweekPlayerDataTable.gameweek, startGW),
-            lte(gameweekPlayerDataTable.gameweek, endGW)
+            lte(gameweekPlayerDataTable.gameweek, effectiveEndGW)
           )
         )
         .groupBy(gameweekPlayerDataTable.playerId);
 
-      // Merge aggregated stats with player metadata
-      const result = aggregatedStats.map(stats => {
-        const player = playerMap.get(stats.playerId);
-        if (!player) return null;
+      // Also get GW1 to maxCachedGW totals for deriving current GW stats
+      let gw1ToMaxTotals: Map<number, any> = new Map();
+      if (needsCurrentGWDerivation) {
+        const totalsResult = await db
+          .select({
+            playerId: gameweekPlayerDataTable.playerId,
+            totalPoints: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.total_points}), 0)`.as('total_points'),
+            goalsScored: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.goals_scored}), 0)`.as('goals_scored'),
+            assists: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.assists}), 0)`.as('assists'),
+            cleanSheets: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.clean_sheets}), 0)`.as('clean_sheets'),
+            goalsConceded: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.goals_conceded}), 0)`.as('goals_conceded'),
+            yellowCards: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.yellow_cards}), 0)`.as('yellow_cards'),
+            redCards: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.red_cards}), 0)`.as('red_cards'),
+            saves: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.saves}), 0)`.as('saves'),
+            bonus: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.bonus}), 0)`.as('bonus'),
+            bps: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.bps}), 0)`.as('bps'),
+            minutes: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.minutes}), 0)`.as('minutes'),
+            starts: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.starts}), 0)`.as('starts'),
+            ownGoals: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.own_goals}), 0)`.as('own_goals'),
+            penaltiesSaved: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.penalties_saved}), 0)`.as('penalties_saved'),
+            penaltiesMissed: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.penalties_missed}), 0)`.as('penalties_missed'),
+            gamesPlayed: sql<number>`COUNT(CASE WHEN ${gameweekPlayerDataTable.minutes} > 0 THEN 1 END)`.as('games_played')
+          })
+          .from(gameweekPlayerDataTable)
+          .where(lte(gameweekPlayerDataTable.gameweek, maxCachedGW))
+          .groupBy(gameweekPlayerDataTable.playerId);
         
-        const gamesPlayed = Number(stats.gamesPlayed) || 0;
-        const minutes = Number(stats.minutes) || 0;
+        totalsResult.forEach(row => {
+          gw1ToMaxTotals.set(row.playerId, row);
+        });
+      }
+
+      // Create stats map from aggregated results
+      const statsMap = new Map<number, any>();
+      aggregatedStats.forEach(stats => {
+        statsMap.set(stats.playerId, stats);
+      });
+
+      // Merge aggregated stats with player metadata, deriving current GW if needed
+      const result: any[] = [];
+      
+      playerMap.forEach((player, playerId) => {
+        const stats = statsMap.get(playerId);
+        const cumulative = player._cumulative;
         
-        return {
-          ...player,
-          total_points: Number(stats.totalPoints) || 0,
-          goals_scored: Number(stats.goalsScored) || 0,
-          assists: Number(stats.assists) || 0,
-          clean_sheets: Number(stats.cleanSheets) || 0,
-          goals_conceded: Number(stats.goalsConceded) || 0,
-          yellow_cards: Number(stats.yellowCards) || 0,
-          red_cards: Number(stats.redCards) || 0,
-          saves: Number(stats.saves) || 0,
-          bonus: Number(stats.bonus) || 0,
-          bps: Number(stats.bps) || 0,
-          minutes: minutes,
-          starts: Number(stats.starts) || 0,
-          own_goals: Number(stats.ownGoals) || 0,
-          penalties_saved: Number(stats.penaltiesSaved) || 0,
-          penalties_missed: Number(stats.penaltiesMissed) || 0,
-          defensive_contribution: Number(stats.defensiveContribution) || 0,
-          tackles: Number(stats.tackles) || 0,
-          recoveries: Number(stats.recoveries) || 0,
-          clearances_blocks_interceptions: Number(stats.clearancesBlocksInterceptions) || 0,
-          games_played: gamesPlayed,
-          points_per_game: gamesPlayed > 0 ? (Number(stats.totalPoints) / gamesPlayed).toFixed(1) : "0.0",
-          minutes_per_game: gamesPlayed > 0 ? Math.round(minutes / gamesPlayed) : 0,
-          gameweek_range: { start: startGW, end: endGW }
+        let finalStats = {
+          totalPoints: 0,
+          goalsScored: 0,
+          assists: 0,
+          cleanSheets: 0,
+          goalsConceded: 0,
+          yellowCards: 0,
+          redCards: 0,
+          saves: 0,
+          bonus: 0,
+          bps: 0,
+          minutes: 0,
+          starts: 0,
+          ownGoals: 0,
+          penaltiesSaved: 0,
+          penaltiesMissed: 0,
+          gamesPlayed: 0
         };
-      }).filter(Boolean);
+
+        // Add cached gameweek stats
+        if (stats) {
+          finalStats.totalPoints += Number(stats.totalPoints) || 0;
+          finalStats.goalsScored += Number(stats.goalsScored) || 0;
+          finalStats.assists += Number(stats.assists) || 0;
+          finalStats.cleanSheets += Number(stats.cleanSheets) || 0;
+          finalStats.goalsConceded += Number(stats.goalsConceded) || 0;
+          finalStats.yellowCards += Number(stats.yellowCards) || 0;
+          finalStats.redCards += Number(stats.redCards) || 0;
+          finalStats.saves += Number(stats.saves) || 0;
+          finalStats.bonus += Number(stats.bonus) || 0;
+          finalStats.bps += Number(stats.bps) || 0;
+          finalStats.minutes += Number(stats.minutes) || 0;
+          finalStats.starts += Number(stats.starts) || 0;
+          finalStats.ownGoals += Number(stats.ownGoals) || 0;
+          finalStats.penaltiesSaved += Number(stats.penaltiesSaved) || 0;
+          finalStats.penaltiesMissed += Number(stats.penaltiesMissed) || 0;
+          finalStats.gamesPlayed += Number(stats.gamesPlayed) || 0;
+        }
+
+        // Derive current GW stats if needed (cumulative - cached totals)
+        if (needsCurrentGWDerivation && startGW <= currentGW) {
+          const cachedTotals = gw1ToMaxTotals.get(playerId);
+          
+          // Current GW stats = Bootstrap cumulative - Cached GW1-maxCachedGW totals
+          const currentGWPoints = cumulative.total_points - (cachedTotals?.totalPoints || 0);
+          const currentGWGoals = cumulative.goals_scored - (cachedTotals?.goalsScored || 0);
+          const currentGWAssists = cumulative.assists - (cachedTotals?.assists || 0);
+          const currentGWCleanSheets = cumulative.clean_sheets - (cachedTotals?.cleanSheets || 0);
+          const currentGWGoalsConceded = cumulative.goals_conceded - (cachedTotals?.goalsConceded || 0);
+          const currentGWYellowCards = cumulative.yellow_cards - (cachedTotals?.yellowCards || 0);
+          const currentGWRedCards = cumulative.red_cards - (cachedTotals?.redCards || 0);
+          const currentGWSaves = cumulative.saves - (cachedTotals?.saves || 0);
+          const currentGWBonus = cumulative.bonus - (cachedTotals?.bonus || 0);
+          const currentGWBps = cumulative.bps - (cachedTotals?.bps || 0);
+          const currentGWMinutes = cumulative.minutes - (cachedTotals?.minutes || 0);
+          const currentGWStarts = cumulative.starts - (cachedTotals?.starts || 0);
+          const currentGWOwnGoals = cumulative.own_goals - (cachedTotals?.ownGoals || 0);
+          const currentGWPenaltiesSaved = cumulative.penalties_saved - (cachedTotals?.penaltiesSaved || 0);
+          const currentGWPenaltiesMissed = cumulative.penalties_missed - (cachedTotals?.penaltiesMissed || 0);
+          
+          // Only add positive derived values (negative would indicate data inconsistency)
+          if (currentGWPoints >= 0) finalStats.totalPoints += currentGWPoints;
+          if (currentGWGoals >= 0) finalStats.goalsScored += currentGWGoals;
+          if (currentGWAssists >= 0) finalStats.assists += currentGWAssists;
+          if (currentGWCleanSheets >= 0) finalStats.cleanSheets += currentGWCleanSheets;
+          if (currentGWGoalsConceded >= 0) finalStats.goalsConceded += currentGWGoalsConceded;
+          if (currentGWYellowCards >= 0) finalStats.yellowCards += currentGWYellowCards;
+          if (currentGWRedCards >= 0) finalStats.redCards += currentGWRedCards;
+          if (currentGWSaves >= 0) finalStats.saves += currentGWSaves;
+          if (currentGWBonus >= 0) finalStats.bonus += currentGWBonus;
+          if (currentGWBps >= 0) finalStats.bps += currentGWBps;
+          if (currentGWMinutes >= 0) finalStats.minutes += currentGWMinutes;
+          if (currentGWStarts >= 0) finalStats.starts += currentGWStarts;
+          if (currentGWOwnGoals >= 0) finalStats.ownGoals += currentGWOwnGoals;
+          if (currentGWPenaltiesSaved >= 0) finalStats.penaltiesSaved += currentGWPenaltiesSaved;
+          if (currentGWPenaltiesMissed >= 0) finalStats.penaltiesMissed += currentGWPenaltiesMissed;
+          if (currentGWMinutes > 0) finalStats.gamesPlayed += 1;
+        }
+
+        // Only include players with some activity
+        if (finalStats.minutes > 0 || finalStats.totalPoints > 0) {
+          result.push({
+            id: player.id,
+            web_name: player.web_name,
+            first_name: player.first_name,
+            second_name: player.second_name,
+            team: player.team,
+            element_type: player.element_type,
+            now_cost: player.now_cost,
+            selected_by_percent: player.selected_by_percent,
+            form: player.form,
+            expected_goals: player.expected_goals,
+            expected_assists: player.expected_assists,
+            expected_goal_involvements: player.expected_goal_involvements,
+            expected_goals_conceded: player.expected_goals_conceded,
+            influence: player.influence,
+            creativity: player.creativity,
+            threat: player.threat,
+            ict_index: player.ict_index,
+            chance_of_playing_next_round: player.chance_of_playing_next_round,
+            news: player.news,
+            status: player.status,
+            total_points: finalStats.totalPoints,
+            goals_scored: finalStats.goalsScored,
+            assists: finalStats.assists,
+            clean_sheets: finalStats.cleanSheets,
+            goals_conceded: finalStats.goalsConceded,
+            yellow_cards: finalStats.yellowCards,
+            red_cards: finalStats.redCards,
+            saves: finalStats.saves,
+            bonus: finalStats.bonus,
+            bps: finalStats.bps,
+            minutes: finalStats.minutes,
+            starts: finalStats.starts,
+            own_goals: finalStats.ownGoals,
+            penalties_saved: finalStats.penaltiesSaved,
+            penalties_missed: finalStats.penaltiesMissed,
+            games_played: finalStats.gamesPlayed,
+            points_per_game: finalStats.gamesPlayed > 0 ? (finalStats.totalPoints / finalStats.gamesPlayed).toFixed(1) : "0.0",
+            minutes_per_game: finalStats.gamesPlayed > 0 ? Math.round(finalStats.minutes / finalStats.gamesPlayed) : 0,
+            gameweek_range: { start: startGW, end: endGW }
+          });
+        }
+      });
 
       res.json({
         players: result,
         gameweekRange: { start: startGW, end: endGW },
-        totalPlayers: result.length
+        totalPlayers: result.length,
+        derivedCurrentGW: needsCurrentGWDerivation,
+        maxCachedGW: maxCachedGW
       });
     } catch (error) {
       console.error("Error fetching gameweek-filtered player stats:", error);
