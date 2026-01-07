@@ -40,10 +40,21 @@ export default function ProjectionDocumentation() {
             <Alert className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
               <CheckCircle className="h-5 w-5 text-green-600" />
               <AlertDescription>
-                <strong className="text-lg">🎯 100% Real FPL Data System</strong>
+                <strong className="text-lg">🎯 Blended Season + Recent Form System</strong>
                 <p className="mt-2">
-                  All projections now use <strong>exclusively authentic data</strong> from the official Fantasy Premier League API. The hybrid formula combines live xGF/xGA from current standings with actual team performance data for unprecedented accuracy.
+                  All projections use a <strong>50/50 blend of full season data and last 6 games</strong> for optimal accuracy. This balances long-term quality with current form, ensuring projections respond to tactical changes while avoiding overreaction to short-term variance.
                 </p>
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                  <div className="bg-white/50 p-2 rounded">
+                    <strong>Team Goals:</strong> Season avg + Last 6 avg
+                  </div>
+                  <div className="bg-white/50 p-2 rounded">
+                    <strong>Player Shares:</strong> Season % + Last 6 GW %
+                  </div>
+                  <div className="bg-white/50 p-2 rounded">
+                    <strong>All Stats:</strong> Saves, DC, Bonus, Cards
+                  </div>
+                </div>
               </AlertDescription>
             </Alert>
 
@@ -128,17 +139,17 @@ export default function ProjectionDocumentation() {
                   <div className="space-y-3">
                     <h4 className="font-semibold text-gray-900 flex items-center gap-2">
                       <Calculator className="h-4 w-4 text-blue-600" />
-                      Hybrid Real Data Formula
+                      Blended Season + Last 6 Games Formula
                     </h4>
                     <div className="bg-blue-50 p-3 rounded text-sm">
                       <div className="font-mono text-xs mb-2">
-                        Goals = (TeamAvgGoals + RealTeamxGF + OpponentAvgGC + RealOpponentxGA) × 0.25 × VenueFactor
+                        Goals = Average(SeasonFormula, Last6Formula) × VenueFactor × Context
                       </div>
                       <ul className="space-y-1 text-blue-700">
+                        <li>✓ <strong>50% Full Season:</strong> Long-term performance trends</li>
+                        <li>✓ <strong>50% Last 6 Games:</strong> Recent form & momentum</li>
                         <li>✓ Live xGF/xGA from current standings (5min cache)</li>
-                        <li>✓ Actual team performance averages</li>
                         <li>✓ Updated venue factors: Home 1.12×, Away 0.84×</li>
-                        <li>✓ 15+ context multipliers (form, derbies, etc.)</li>
                       </ul>
                     </div>
                   </div>
@@ -438,25 +449,38 @@ export default function ProjectionDocumentation() {
                     <div className="bg-green-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
-                          <strong>NEW Hybrid Formula:</strong><br/>
-                          TeamGoals = (TeamAvgGoals + RealTeamxGF + OpponentAvgGC + RealOpponentxGA) × 0.25 × VenueFactor × ContextMultipliers
+                          <strong>Blended Season + Last 6 Games Formula:</strong><br/>
+                          SeasonGoals = (TeamAvgGoals + TeamxGF + OpponentAvgGC + OpponentxGA) × 0.25<br/>
+                          Last6Goals = (TeamLast6AvgGoals + TeamLast6xG + OppLast6GC + OppLast6xGC) × 0.25<br/>
+                          <strong>TeamGoals = (SeasonGoals + Last6Goals) × 0.5 × VenueFactor × Context</strong>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>Real Data Inputs:</strong>
+                            <strong>50% Full Season Data:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Team actual average goals scored per game</li>
-                              <li>Real team xGF from FPL current standings</li>
-                              <li>Opponent actual average goals conceded</li>
-                              <li>Real opponent xGA from FPL current standings</li>
-                              <li>Venue (H/A) → VenueFactor (1.12/0.84) - Updated</li>
+                              <li>Team average goals scored per game (full season)</li>
+                              <li>Team xGF from current standings</li>
+                              <li>Opponent average goals conceded (full season)</li>
+                              <li>Opponent xGA from current standings</li>
+                            </ul>
+                            <strong className="mt-2 block">50% Last 6 Games Data:</strong>
+                            <ul className="list-disc ml-5 mt-1">
+                              <li>Team average goals from last 6 fixtures</li>
+                              <li>Team xG from last 6 fixtures</li>
+                              <li>Opponent goals conceded last 6 fixtures</li>
+                              <li>Opponent xGC from last 6 fixtures</li>
                             </ul>
                           </div>
                           <div>
-                            <strong>Output:</strong>
+                            <strong>Why 50/50 Blend:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Authentic expected goals based on real performance</li>
-                              <li>No artificial market bounds (0.6-3.0 removed)</li>
+                              <li>Season data captures underlying quality</li>
+                              <li>Last 6 games captures current form</li>
+                              <li>Balances stability with responsiveness</li>
+                              <li>Reduces impact of outlier games</li>
+                            </ul>
+                            <strong className="mt-2 block">Output:</strong>
+                            <ul className="list-disc ml-5 mt-1">
                               <li>Used for: Player goal projections</li>
                               <li>Used for: Team assists calculation</li>
                               <li>Used for: Match predictions</li>
@@ -584,17 +608,17 @@ export default function ProjectionDocumentation() {
                     <div className="bg-orange-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
-                          <strong>NEW Formula:</strong><br/>
-                          PlayerGoals = HybridTeamGoals × PlayerGoalShare × MinutesWeight<br/>
-                          PlayerGoalShare = min(HistoricalShare × FormFactor, POSITION_CAPS)
+                          <strong>Blended Goal Share Formula:</strong><br/>
+                          AveragedGoalShare = (FullSeasonGoalShare + Last6GWGoalShare) / 2<br/>
+                          <strong>PlayerGoals = BlendedTeamGoals × AveragedGoalShare × MinutesWeight</strong>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>Real Data Inputs:</strong>
+                            <strong>50/50 Blended Share:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Hybrid team goals (from Step 2 - real FPL data)</li>
-                              <li>Historical goal share % from actual performance</li>
-                              <li>Expected minutes per game</li>
+                              <li>50% Full Season goal share %</li>
+                              <li>50% Last 6 gameweeks goal share %</li>
+                              <li>Captures both quality and current form</li>
                               <li>Position caps (GK:2%, DEF:25%, MID:35%, FWD:35%)</li>
                             </ul>
                           </div>
@@ -620,26 +644,27 @@ export default function ProjectionDocumentation() {
                     <div className="bg-indigo-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
-                          <strong>NEW Formula:</strong><br/>
-                          PlayerAssists = HybridTeamAssists × PlayerAssistShare × MinutesWeight<br/>
-                          PlayerAssistShare = min(HistoricalShare × CreativityFactor, POSITION_CAPS)
+                          <strong>Blended Assist Share Formula:</strong><br/>
+                          AveragedAssistShare = (FullSeasonAssistShare + Last6GWAssistShare) / 2<br/>
+                          <strong>PlayerAssists = BlendedTeamAssists × AveragedAssistShare × MinutesWeight</strong>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>Real Data Inputs:</strong>
+                            <strong>50/50 Blended Share:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Hybrid team assists (from Step 4 - derived from real goal data)</li>
-                              <li>Historical assist share % from actual performance</li>
-                              <li>Expected minutes per game</li>
+                              <li>50% Full Season assist share %</li>
+                              <li>50% Last 6 gameweeks assist share %</li>
+                              <li>Captures both quality and current form</li>
                               <li>Position caps (GK:2%, DEF:25%, MID:35%, FWD:25%)</li>
                             </ul>
                           </div>
                           <div>
-                            <strong>Key Factors:</strong>
+                            <strong>Why Blended Shares:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Minutes weighting prevents backup inflation</li>
-                              <li>Lower FWD assist cap (25% vs 35%)</li>
-                              <li>Creativity role assessment</li>
+                              <li>Season share = consistent involvement</li>
+                              <li>Last 6 GW share = recent role changes</li>
+                              <li>Responds to tactical shifts</li>
+                              <li>Prevents over-reliance on streaks</li>
                             </ul>
                           </div>
                         </div>
