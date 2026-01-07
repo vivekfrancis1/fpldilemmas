@@ -155,7 +155,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Documentation",
       items: [
-        { path: "/projection-docs", label: "Projection Documentation", icon: Book, description: "Comprehensive guide to all projection tools and methodologies", popular: false }
+        { path: "/projection-documentation", label: "Projection Documentation", icon: Book, description: "Comprehensive guide to all projection tools and methodologies", popular: false }
       ]
     }
   ];
