@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LoadingExperience } from "@/components/loading-experience";
 import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
@@ -1391,6 +1392,18 @@ export default function PlayerTotalPoints() {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Avail. Adj.</Label>
+              <div className="flex items-center gap-2 h-10">
+                <Switch
+                  checked={applyAvailability}
+                  onCheckedChange={setApplyAvailability}
+                  data-testid="switch-availability-adjustment"
+                />
+                <span className="text-xs text-gray-500">{applyAvailability ? 'ON' : 'OFF'}</span>
+              </div>
+            </div>
+
             <div className="space-y-2 sm:col-span-2 lg:col-span-1">
               <Label htmlFor="search" className="text-sm font-medium text-gray-700 flex items-center gap-2">
                 <Search className="h-4 w-4 text-gray-500" />
@@ -1475,7 +1488,7 @@ export default function PlayerTotalPoints() {
               <div className="mt-4 pt-4 border-t">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <Label className="text-xs sm:text-sm font-medium text-gray-700">
-                    Toggle Positions (click to include/exclude):
+                    Positions:
                   </Label>
                   <div className="flex gap-2">
                     <Button 
@@ -1485,7 +1498,7 @@ export default function PlayerTotalPoints() {
                       className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 py-1"
                       data-testid="button-include-all-positions"
                     >
-                      Include All
+                      All
                     </Button>
                     <Button 
                       variant="outline" 
@@ -1494,43 +1507,39 @@ export default function PlayerTotalPoints() {
                       className="text-xs bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 py-1"
                       data-testid="button-exclude-all-positions"
                     >
-                      Exclude All
+                      None
                     </Button>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {positions.map(position => {
                     const isSelected = selectedPositions.size === 0 || selectedPositions.has(position);
+                    const shortForm = position === 'Goalkeeper' ? 'GKP' : position === 'Defender' ? 'DEF' : position === 'Midfielder' ? 'MID' : position === 'Forward' ? 'FWD' : position;
                     return (
                       <Button
                         key={position}
                         variant="outline"
                         size="sm"
                         onClick={() => togglePositionSelection(position)}
-                        className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                        className={`text-xs px-2 py-1 ${
                           isSelected 
                             ? 'bg-teal-100 text-teal-700 hover:bg-teal-200 border border-teal-300' 
                             : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'
                         }`}
                         data-testid={`button-toggle-position-${position}`}
                       >
-                        {position}
+                        {shortForm}
                       </Button>
                     );
                   })}
                 </div>
-                {selectedPositions.size > 0 && !selectedPositions.has('_none_') && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Selected: {positions.filter(p => selectedPositions.has(p)).join(', ')}
-                  </p>
-                )}
               </div>
               
               {/* Team Toggle Section */}
               <div className="mt-4 pt-4 border-t">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <Label className="text-xs sm:text-sm font-medium text-gray-700">
-                    Toggle Teams (click to include/exclude):
+                    Teams:
                   </Label>
                   <div className="flex gap-2">
                     <Button 
@@ -1540,7 +1549,7 @@ export default function PlayerTotalPoints() {
                       className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 py-1"
                       data-testid="button-include-all-teams"
                     >
-                      Include All
+                      All
                     </Button>
                     <Button 
                       variant="outline" 
@@ -1549,36 +1558,32 @@ export default function PlayerTotalPoints() {
                       className="text-xs bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 py-1"
                       data-testid="button-exclude-all-teams"
                     >
-                      Exclude All
+                      None
                     </Button>
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {teams.map(team => {
                     const isSelected = selectedTeams.size === 0 || selectedTeams.has(team);
+                    const shortName = teamNameToShortName.get(team) || team;
                     return (
                       <Button
                         key={team}
                         variant="outline"
                         size="sm"
                         onClick={() => toggleTeamSelection(team)}
-                        className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                        className={`text-xs px-2 py-1 ${
                           isSelected 
                             ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300' 
                             : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'
                         }`}
                         data-testid={`button-toggle-team-${team}`}
                       >
-                        {team}
+                        {shortName}
                       </Button>
                     );
                   })}
                 </div>
-                {selectedTeams.size > 0 && !selectedTeams.has('_none_') && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Selected: {teams.filter(t => selectedTeams.has(t)).join(', ')}
-                  </p>
-                )}
               </div>
               
               {/* Point Component Toggle Section */}
@@ -1609,22 +1614,6 @@ export default function PlayerTotalPoints() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {/* Availability Adjustments Toggle */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setApplyAvailability(!applyAvailability)}
-                    className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
-                      applyAvailability 
-                        ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
-                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200 border border-gray-300'
-                    }`}
-                    data-testid="button-toggle-availability"
-                  >
-                    Availability Adjustment: {applyAvailability ? 'ON' : 'OFF'}
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1.5">
                   {POINT_COMPONENTS.map(component => {
                     const isExcluded = excludedComponents.has(component.key);
                     return (
