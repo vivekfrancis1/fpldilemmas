@@ -166,7 +166,7 @@ export default function ProjectionDocumentation() {
                       <ul className="space-y-1 text-green-700">
                         <li>✓ Raw share calculation (no position caps)</li>
                         <li>✓ Direct percentage of team output</li>
-                        <li>✓ Penalty taker adjustments applied</li>
+                        <li>✓ No artificial adjustments applied</li>
                         <li>✓ Team totals always balance with players</li>
                       </ul>
                     </div>
@@ -610,7 +610,7 @@ export default function ProjectionDocumentation() {
                         <div className="bg-white p-3 rounded border font-mono text-sm">
                           <strong>Blended Goal Share Formula:</strong><br/>
                           AveragedGoalShare = (FullSeasonGoalShare + Last6GWGoalShare) / 2<br/>
-                          <strong>PlayerGoals = BlendedTeamGoals × AveragedGoalShare + PenaltyAdjustment</strong>
+                          <strong>PlayerGoals = BlendedTeamGoals × AveragedGoalShare</strong>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
@@ -619,15 +619,15 @@ export default function ProjectionDocumentation() {
                               <li>50% Full Season goal share %</li>
                               <li>50% Last 6 gameweeks goal share %</li>
                               <li>Captures both quality and current form</li>
-                              <li>No position caps - raw contribution %</li>
+                              <li>No position caps - pure raw share %</li>
                             </ul>
                           </div>
                           <div>
-                            <strong>Penalty Adjustments:</strong>
+                            <strong>Raw Share Benefits:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Primary takers: +0.08 to +0.15 goals</li>
-                              <li>Secondary takers: +0.04 to +0.08 goals</li>
-                              <li>Applied after base calculation</li>
+                              <li>Pure performance-based calculation</li>
+                              <li>No artificial adjustments or modifiers</li>
+                              <li>Historical data speaks for itself</li>
                             </ul>
                           </div>
                         </div>
@@ -783,8 +783,8 @@ export default function ProjectionDocumentation() {
                         <div className="bg-white p-3 rounded border">
                           <strong>Real Data Balance System:</strong>
                           <div className="font-mono text-sm mt-2 space-y-1">
-                            <div>1. Calculate raw share for all players</div>
-                            <div>2. Apply penalty taker adjustments to goal share</div>
+                            <div>1. Calculate raw share for all players (goals + xG)</div>
+                            <div>2. Calculate player share as % of team total</div>
                             <div>3. Normalize shares to ensure team total = 100%</div>
                             <div>4. Verify: Sum(FinalPlayerTotals) ≈ HybridTeamTotal (±0.5)</div>
                           </div>
@@ -1113,16 +1113,11 @@ export default function ProjectionDocumentation() {
                   </p>
                   <div className="bg-green-50 p-3 rounded text-sm">
                     <strong>Formula:</strong><br/>
-                    <code className="text-xs">PlayerGoals = HybridTeamGoals × (PlayerGoalShare / 100) × (ExpectedMinutes / 90)</code><br/>
-                    <code className="text-xs">+ PenaltyAdjustment + FreekickAdjustment</code>
+                    <code className="text-xs">PlayerGoals = HybridTeamGoals × (PlayerGoalShare / 100)</code><br/>
+                    <code className="text-xs">GoalShare = (PlayerGoals + PlayerXG) / TeamTotal × 100</code>
                   </div>
                   <div className="space-y-1 text-sm">
-                    <div><strong>Position Caps:</strong> GK: 2%, DEF: 10%, MID: 30%, FWD: 40%</div>
-                    <div><strong>Penalty Adjustments:</strong></div>
-                    <ul className="list-disc ml-5 text-xs">
-                      <li>Primary: +0.6 to +0.8 goals per GW</li>
-                      <li>Secondary: +0.3 to +0.5 goals per GW</li>
-                    </ul>
+                    <div><strong>Raw Share Calculation:</strong> No position caps, no adjustments - pure historical contribution</div>
                     <div><strong>Points Calculation:</strong></div>
                     <ul className="list-disc ml-5 text-xs">
                       <li>GK/DEF: Goals × 6 points</li>
@@ -1155,13 +1150,8 @@ export default function ProjectionDocumentation() {
                     <code className="text-xs">TeamAssists = TeamGoals × 0.72</code>
                   </div>
                   <div className="space-y-1 text-sm">
-                    <div><strong>Position Caps:</strong> GK: 2%, DEF: 15%, MID: 40%, FWD: 25%</div>
-                    <div><strong>Set Piece Bonuses:</strong></div>
-                    <ul className="list-disc ml-5 text-xs">
-                      <li>Primary corner/freekick: +0.8 assists</li>
-                      <li>Secondary corner/freekick: +0.5 assists</li>
-                      <li>Direct freekick specialist: +0.2 assists</li>
-                    </ul>
+                    <div><strong>Raw Share Calculation:</strong> No position caps, no adjustments - pure historical contribution</div>
+                    <div><strong>Assist Ratio:</strong> TeamAssists = TeamGoals × 0.72 (historical average)</div>
                     <div><strong>Points:</strong> Each assist = 3 points</div>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
@@ -1693,16 +1683,16 @@ export default function ProjectionDocumentation() {
                   <div className="bg-orange-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-orange-900 mb-2">Player Goal Share Formula</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm mb-3">
-                      PlayerGoals = TeamGoals × (HistoricalShare × FormFactor) + PenaltyAdjustment
+                      PlayerGoals = TeamGoals × (HistoricalShare × FormFactor)
                     </div>
                     <p className="text-sm text-orange-800">
-                      Each player's goal projection is their raw share of the team's total expected goals, with penalty taker bonuses added for designated set piece takers.
+                      Each player's goal projection is their raw share of the team's total expected goals based purely on historical performance data.
                     </p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-blue-50 p-3 rounded">
-                      <h4 className="font-semibold text-blue-900 mb-2">Penalty Taker Adjustments</h4>
+                      <h4 className="font-semibold text-blue-900 mb-2">Raw Share Methodology</h4>
                       <ul className="text-sm text-blue-700 space-y-2">
                         <li className="flex justify-between">
                           <span>• Goalkeeper:</span>
@@ -1728,12 +1718,12 @@ export default function ProjectionDocumentation() {
                     <div className="bg-green-50 p-3 rounded">
                       <h4 className="font-semibold text-green-900 mb-2">Share Calculation Process</h4>
                       <ul className="text-sm text-green-700 space-y-1">
-                        <li>1. Calculate historical goal share %</li>
-                        <li>2. Apply current form multiplier</li>
-                        <li>3. Add penalty taker bonus</li>
-                        <li>4. Calculate raw share percentage</li>
-                        <li>5. Normalize to 100% team total</li>
-                        <li>6. Weight by expected minutes</li>
+                        <li>1. Calculate goals scored + expected goals</li>
+                        <li>2. Sum totals for all team players</li>
+                        <li>3. Calculate player share as % of team</li>
+                        <li>4. Normalize to 100% team total</li>
+                        <li>5. Apply to projected team goals</li>
+                        <li>6. No artificial adjustments applied</li>
                       </ul>
                     </div>
                   </div>
@@ -1755,7 +1745,7 @@ export default function ProjectionDocumentation() {
                     <div><strong>API:</strong> /api/goal-share</div>
                     <div><strong>Module:</strong> server/routes.ts</div>
                     <div><strong>Function:</strong> buildGoalShareResponse()</div>
-                    <div><strong>Input:</strong> Team goals + player historical share + penalty order</div>
+                    <div><strong>Input:</strong> Team goals + player goals + player xG</div>
                   </div>
                 </CardContent>
               </Card>
@@ -2150,7 +2140,7 @@ export default function ProjectionDocumentation() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-gray-700">
-                  Goal and assist shares are calculated using raw percentages without position caps. Penalty taker adjustments are added for designated set piece takers via <code>buildGoalShareResponse()</code> in routes.ts.
+                  Goal and assist shares are calculated using pure raw percentages without position caps or any artificial adjustments. Share = (PlayerGoals + PlayerXG) / TeamTotal × 100.
                 </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2201,7 +2191,7 @@ export default function ProjectionDocumentation() {
                 <div className="bg-yellow-50 p-3 rounded text-sm">
                   <strong className="text-yellow-900">Implementation Note:</strong>
                   <p className="text-yellow-800 mt-1">
-                    Raw share calculation uses actual performance data without artificial caps. Penalty taker adjustments (+1.5-3.0 for primary, +0.8-2.0 for secondary) are added to goal projections for designated penalty takers.
+                    Raw share calculation uses actual performance data (goals + xG) without any artificial caps, adjustments, or modifiers. Pure percentage based on historical contribution.
                   </p>
                 </div>
               </CardContent>
@@ -2430,7 +2420,7 @@ export default function ProjectionDocumentation() {
                         <ul className="text-sm list-disc ml-5 space-y-1">
                           <li>Players showing unrealistic goal projections (over 50 goals/season)</li>
                           <li>Team totals not balancing (sum ≠ expected team total)</li>
-                          <li>Penalty taker adjustments not being applied correctly</li>
+                          <li>Share percentages not summing to 100% for team</li>
                         </ul>
                       </div>
                       <div>
