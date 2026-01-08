@@ -13340,7 +13340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Defensive Contributions API called - using formula: Current DC/game × DCC of opponent/80 where DCC is from /current-standings per game");
+        console.log("DEBUG: Player Defensive Contributions API called - using formula: % chance of hitting threshold × threshold × (Opponent DCC/80) × (Avg Minutes/90)");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -13442,9 +13442,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          // Fetch player's gameweek history to count actual matches played and calculate average minutes
+          // Determine threshold based on position (10 for DEF, 12 for MID/FWD)
+          const threshold = player.element_type === 2 ? 10 : 12;
+          
+          // Fetch player's gameweek history to count actual matches played, threshold hits, and average minutes
           let playerMatchesPlayed = 1; // Default to 1 to avoid division by zero
           let avgMinutesPerGame = 90; // Default to full match
+          let timesHitThreshold = 0; // Count of games where player hit the DC threshold
+          let dcPerGame = seasonDefensiveContribution; // Fallback
+          
           try {
             const playerHistoryResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
             if (playerHistoryResponse.ok) {
@@ -13458,18 +13464,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
               if (gamesWithMinutes.length > 0) {
                 const totalMinutes = gamesWithMinutes.reduce((sum: number, gw: any) => sum + gw.minutes, 0);
                 avgMinutesPerGame = totalMinutes / gamesWithMinutes.length;
+                
+                // Count how many times player hit the threshold
+                gamesWithMinutes.forEach((gw: any) => {
+                  let gwDC = gw.defensive_contribution || 0;
+                  if (!gwDC) {
+                    // Calculate from component stats if not available
+                    const cbi = gw.clearances_blocks_interceptions || 0;
+                    const tackles = gw.tackles || 0;
+                    const recoveries = gw.recoveries || 0;
+                    if (player.element_type === 2) {
+                      gwDC = cbi + tackles;
+                    } else {
+                      gwDC = cbi + tackles + recoveries;
+                    }
+                  }
+                  if (gwDC >= threshold) {
+                    timesHitThreshold++;
+                  }
+                });
               }
+              
+              // Calculate DC per game for reference
+              dcPerGame = seasonDefensiveContribution / playerMatchesPlayed;
             } else {
               // Fallback to team games if API fails
               playerMatchesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1);
+              dcPerGame = seasonDefensiveContribution / playerMatchesPlayed;
             }
           } catch (error) {
             // Fallback to team games if fetch fails
             playerMatchesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1);
+            dcPerGame = seasonDefensiveContribution / playerMatchesPlayed;
           }
           
-          // Calculate DC per match for this player based on their actual matches played (season average only)
-          const dcPerGame = seasonDefensiveContribution / playerMatchesPlayed;
+          // Calculate % chance of hitting threshold
+          const chanceOfHittingThreshold = timesHitThreshold / playerMatchesPlayed;
           
           // Calculate minutes multiplier (avg minutes / 90)
           const minutesMultiplier = avgMinutesPerGame / 90;
@@ -13489,8 +13519,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Get opponent's DCC per game from current standings
             const opponentDCC = teamDCCPerGame.get(opponentId) || 0;
             
-            // Apply formula: Expected DC = Current DC/game × (DCC of opponent/80) × (Avg Minutes/90)
-            const projectedDC = dcPerGame * (opponentDCC / 80) * minutesMultiplier;
+            // Apply formula: Projected DC = % chance of hitting threshold × threshold × (Opponent DCC / 80) × (Avg Minutes / 90)
+            const projectedDC = chanceOfHittingThreshold * threshold * (opponentDCC / 80) * minutesMultiplier;
             
             // Round to 1 decimal place for threshold comparison to avoid floating-point precision issues
             const normalizedDC = parseFloat(projectedDC.toFixed(1));
@@ -13528,7 +13558,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalDefensiveContributions: parseFloat(totalDC.toFixed(1)),
             totalPoints: totalPoints,
             averagePerGameweek: parseFloat((totalDC / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(1)),
-            dcPerGame: parseFloat(dcPerGame.toFixed(2)), // DC per match played (including substitute appearances)
+            dcPerGame: parseFloat(dcPerGame.toFixed(2)), // DC per match played (for reference)
+            chanceOfHittingThreshold: parseFloat((chanceOfHittingThreshold * 100).toFixed(1)), // % chance as percentage
+            timesHitThreshold: timesHitThreshold, // Number of times player hit threshold
+            threshold: threshold, // Threshold value (10 for DEF, 12 for MID/FWD)
             playerMatchesPlayed: playerMatchesPlayed, // Actual matches played by this player
             avgMinutesPerGame: parseFloat(avgMinutesPerGame.toFixed(1)), // Average minutes per game
             minutesMultiplier: parseFloat(minutesMultiplier.toFixed(2)), // Minutes multiplier (avg/90)
