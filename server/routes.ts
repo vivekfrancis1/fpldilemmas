@@ -9423,13 +9423,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const team = teams.find((t: any) => t.id === player.team);
           const position = positions.find((p: any) => p.id === player.element_type);
           
-          // Base minutes calculation on current minutes and team's actual games played
+          // Base minutes calculation on current minutes and player appearances
           const totalMinutes = player.minutes || 0;
+          const playerStarts = player.starts || 0;
           
-          // Use team's actual games played (much simpler and more consistent)
-          const teamGamesPlayed = Math.max(currentGameweek, 1); // Games completed/started by the team
+          // Calculate player appearances (games where they played any minutes)
+          // Estimate: use starts as base, add sub appearances if minutes exceed what starts would give
+          // Formula: max(starts, ceil(minutes/60)) - assumes avg 60 mins per appearance including subs
+          const estimatedAppearances = Math.max(playerStarts, Math.ceil(totalMinutes / 60));
+          const playerAppearances = Math.max(1, estimatedAppearances); // Minimum 1 appearance if they have minutes
           
-          const currentMinutesPerGame = Math.min(90, totalMinutes / teamGamesPlayed); // Cap at 90 minutes per game
+          const currentMinutesPerGame = Math.min(90, totalMinutes / playerAppearances); // Cap at 90 minutes per game
           
           
           // Simplified expected minutes: use current average with no complex calculations
@@ -9449,7 +9453,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             currentMinutesPerGame: Math.round(currentMinutesPerGame * 10) / 10,
             expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
             pointsFromMinutes: pointsFromMinutes,
-            benchAppearances: Math.max(0, teamGamesPlayed - (player.starts || 0))
+            playerAppearances: playerAppearances,
+            benchAppearances: Math.max(0, playerAppearances - playerStarts)
           };
         })
         .filter((player: any) => player.currentMinutes >= 1) // Include only players who have played at least 1 minute
