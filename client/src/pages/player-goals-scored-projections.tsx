@@ -196,6 +196,17 @@ export default function PlayerGoalsScoredProjections() {
     return gameweeks;
   }, [startGameweek, endGameweek, excludedGameweeks]);
 
+  // Helper to normalize position strings for filtering
+  const normalizePosition = (pos: string): string => {
+    if (!pos) return '';
+    const upper = pos.toUpperCase();
+    if (upper === 'DEF' || upper.startsWith('DEFEND')) return 'Defender';
+    if (upper === 'MID' || upper.startsWith('MIDFIEL')) return 'Midfielder';
+    if (upper === 'FWD' || upper.startsWith('FORWARD')) return 'Forward';
+    if (upper === 'GKP' || upper.startsWith('GOALK')) return 'Goalkeeper';
+    return pos;
+  };
+
   // Helper to get adjusted total for a player
   const getAdjustedTotal = (player: PlayerGoalProjection, gameweeks: number[]) => {
     const playerInfo = playerAvailabilityMap?.get(player.playerId);
@@ -217,7 +228,12 @@ export default function PlayerGoalsScoredProjections() {
 
     return playerGoalData
       .filter(player => {
-        if (selectedPositions.size > 0 && !selectedPositions.has(player.position)) return false;
+        // Position filter - normalize both sides for comparison
+        if (selectedPositions.size > 0) {
+          const normalizedPos = normalizePosition(player.position);
+          const matches = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
+          if (!matches) return false;
+        }
         if (selectedTeams.size > 0 && !selectedTeams.has(player.teamShort)) return false;
         if (searchQuery && player.playerName && !player.playerName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
         return true;

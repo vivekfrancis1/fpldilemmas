@@ -1115,12 +1115,28 @@ export default function PlayerTotalPoints() {
       .sort();
   }, [adjustedPlayerData]);
 
+  // Helper to normalize position strings for filtering
+  const normalizePosition = (pos: string): string => {
+    if (!pos) return '';
+    const upper = pos.toUpperCase();
+    if (upper === 'DEF' || upper.startsWith('DEFEND')) return 'Defender';
+    if (upper === 'MID' || upper.startsWith('MIDFIEL')) return 'Midfielder';
+    if (upper === 'FWD' || upper.startsWith('FORWARD')) return 'Forward';
+    if (upper === 'GKP' || upper.startsWith('GOALK')) return 'Goalkeeper';
+    return pos;
+  };
+
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
     if (!adjustedPlayerData) return [];
     
     let filtered = adjustedPlayerData.filter(player => {
-      if (selectedPositions.size > 0 && !selectedPositions.has(player.position)) return false;
+      // Position filter - normalize both sides for comparison
+      if (selectedPositions.size > 0) {
+        const normalizedPos = normalizePosition(player.position);
+        const matches = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
+        if (!matches) return false;
+      }
       if (selectedTeams.size > 0 && !selectedTeams.has(player.team)) return false;
       if (searchTerm && !player.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
           !player.team.toLowerCase().includes(searchTerm.toLowerCase())) return false;

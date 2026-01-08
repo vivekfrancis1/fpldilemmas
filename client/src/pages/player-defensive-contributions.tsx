@@ -326,6 +326,17 @@ export default function PlayerDefensiveContributions() {
     return total;
   };
 
+  // Helper to normalize position strings for filtering
+  const normalizePosition = (pos: string): string => {
+    if (!pos) return '';
+    const upper = pos.toUpperCase();
+    if (upper === 'DEF' || upper.startsWith('DEFEND')) return 'Defender';
+    if (upper === 'MID' || upper.startsWith('MIDFIEL')) return 'Midfielder';
+    if (upper === 'FWD' || upper.startsWith('FORWARD')) return 'Forward';
+    if (upper === 'GKP' || upper.startsWith('GOALK')) return 'Goalkeeper';
+    return pos;
+  };
+
   // Filter and sort players
   const filteredPlayers = useMemo(() => {
     let filtered = playersWithTotals;
@@ -338,9 +349,12 @@ export default function PlayerDefensiveContributions() {
       );
     }
 
-    // Position filter
+    // Position filter - normalize both sides for comparison
     if (selectedPositions.size > 0 && !selectedPositions.has('_none_')) {
-      filtered = filtered.filter(p => selectedPositions.has(p.position));
+      filtered = filtered.filter(p => {
+        const normalizedPos = normalizePosition(p.position);
+        return Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
+      });
     } else if (selectedPositions.has('_none_')) {
       filtered = [];
     }
