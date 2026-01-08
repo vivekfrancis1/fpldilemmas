@@ -29,9 +29,8 @@ interface CustomFDR {
 }
 
 export default function Fixtures() {
-  const [gameweekRange, setGameweekRange] = useState(() => {
-    return { start: 6, end: 11 };
-  });
+  // Dynamic gameweek range based on current gameweek
+  const [gameweekRange, setGameweekRange] = useState<{ start: number; end: number } | null>(null);
   const [sortBy, setSortBy] = useState<'team' | 'fdr-avg' | string>('fdr-avg');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [customFDROpen, setCustomFDROpen] = useState(false);
@@ -97,6 +96,22 @@ export default function Fixtures() {
     staleTime: 5 * 60 * 1000,
     enabled: fdrMode === 'form',
   });
+
+  // Initialize gameweek range when bootstrap data loads
+  useEffect(() => {
+    if (bootstrapData?.events && !gameweekRange) {
+      const range = computeNextRange(bootstrapData.events);
+      // Default to 6 gameweeks for fixture analyzer
+      const endGw = Math.min(range.start + 5, 38);
+      setGameweekRange({ start: range.start, end: endGw });
+    }
+  }, [bootstrapData?.events, gameweekRange]);
+
+  // Clear excluded gameweeks when gameweek range changes
+  const handleGameweekRangeChange = (start: number, end: number) => {
+    setGameweekRange({ start, end });
+    setExcludedGameweeks(new Set()); // Clear exclusions when range changes
+  };
 
   // Calculate default FDR values from official FPL API ratings
   // Note: "home" = facing this team when YOU are at home (they are away)
@@ -222,7 +237,7 @@ export default function Fixtures() {
 
   // Build fixture matrix with average FDR calculation
   const { fixtureMatrix, teamAverageFDR } = useMemo(() => {
-    if (!fixturesData || !bootstrapData?.events) return { 
+    if (!fixturesData || !bootstrapData?.events || !gameweekRange) return { 
       fixtureMatrix: {}, 
       teamAverageFDR: {} 
     };
@@ -310,6 +325,7 @@ export default function Fixtures() {
 
   // All gameweeks in range (for toggle display)
   const allGameweeksInRange = useMemo(() => {
+    if (!gameweekRange) return [];
     const gws = [];
     for (let i = gameweekRange.start; i <= gameweekRange.end; i++) {
       gws.push(i);
@@ -434,8 +450,8 @@ export default function Fixtures() {
                 <div className="flex items-center gap-2">
                   <label className="text-xs sm:text-sm font-medium text-gray-700">Gameweeks:</label>
                   <select 
-                    value={gameweekRange.start} 
-                    onChange={(e) => setGameweekRange(prev => ({ ...prev, start: parseInt(e.target.value) }))}
+                    value={gameweekRange?.start || ''} 
+                    onChange={(e) => handleGameweekRangeChange(parseInt(e.target.value), gameweekRange?.end || 38)}
                     className="px-3 py-1 border border-gray-300 rounded text-sm"
                     data-testid="select-start-gameweek"
                   >
@@ -445,12 +461,12 @@ export default function Fixtures() {
                   </select>
                   <span className="text-gray-500">to</span>
                   <select 
-                    value={gameweekRange.end} 
-                    onChange={(e) => setGameweekRange(prev => ({ ...prev, end: parseInt(e.target.value) }))}
+                    value={gameweekRange?.end || ''} 
+                    onChange={(e) => handleGameweekRangeChange(gameweekRange?.start || 1, parseInt(e.target.value))}
                     className="px-3 py-1 border border-gray-300 rounded text-sm"
                     data-testid="select-end-gameweek"
                   >
-                    {availableGameweeks.filter(gw => gw >= gameweekRange.start).map(gw => (
+                    {availableGameweeks.filter(gw => gw >= (gameweekRange?.start || 1)).map(gw => (
                       <option key={gw} value={gw}>GW{gw}</option>
                     ))}
                   </select>
