@@ -1227,10 +1227,23 @@ export default function ProjectionDocumentation() {
                     FPL 2025/26 defensive metrics: Tackles, Recoveries, CBI with threshold-based scoring.
                   </p>
                   <div className="bg-red-50 p-3 rounded text-sm">
-                    <strong>Formulas:</strong><br/>
+                    <strong>DC Calculation (Season):</strong><br/>
                     <code className="text-xs">DEF: DC = CBI + Tackles</code><br/>
                     <code className="text-xs">MID/FWD: DC = CBI + Tackles + Recoveries</code><br/>
-                    <code className="text-xs">Points = (DC ≥ Threshold) ? 2 : 0</code>
+                    <code className="text-xs">DC/game = Season DC ÷ Games with minutes</code>
+                  </div>
+                  <div className="bg-red-100 p-3 rounded text-sm mt-2">
+                    <strong>Projected DC Formula:</strong><br/>
+                    <code className="text-xs">Projected DC = ((Current DC/game + Threshold) / 2) × (Opponent DCC / 80) × (Avg Minutes / 90)</code><br/>
+                    <div className="text-xs mt-1 text-red-700">
+                      • Threshold: 10 for DEF, 12 for MID/FWD<br/>
+                      • Opponent DCC: Defensive Contributions Conceded per game<br/>
+                      • Baseline DCC: 80 (league average reference)
+                    </div>
+                  </div>
+                  <div className="bg-gray-100 p-3 rounded text-sm mt-2">
+                    <strong>DC Points:</strong><br/>
+                    <code className="text-xs">Points = (Projected DC ≥ Threshold) ? 2 : 0</code>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div><strong>Thresholds:</strong></div>
