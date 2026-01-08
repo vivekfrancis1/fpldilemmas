@@ -9469,8 +9469,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Expected minutes per game (from actual history)
               const expectedMinutesPerGame = Math.min(90, avgMinutesPerGame);
               
-              // Calculate points from minutes as (expected minutes / 90) * 2
-              const pointsFromMinutes = Math.round(((expectedMinutesPerGame / 90) * 2) * 100) / 100;
+              // Calculate points from minutes using probability-based formula
+              // Formula: (2 × % chance of 60+ mins) + (1 × % chance of 0-60 mins)
+              const pointsFromMinutes = Math.round(((pct60Plus / 100) * 2 + (pctBelow60 / 100) * 1) * 100) / 100;
               
               return {
                 playerId: player.id,
