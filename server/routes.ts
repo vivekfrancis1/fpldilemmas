@@ -9397,9 +9397,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Player Minutes Projections endpoint - API-first with cache fallback
+  // Now fetches actual game-by-game history for accurate 60-minute threshold calculations
   app.get("/api/player-minutes-projections", async (req, res) => {
     try {
-      console.log("🚀 API-FIRST: Attempting live calculation for player minutes projections");
+      console.log("🚀 API-FIRST: Attempting live calculation for player minutes projections with 60-min threshold");
 
       // TRY LIVE CALCULATION FIRST
       try {
@@ -9418,49 +9419,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
         console.log(`DEBUG: Current gameweek detected as: ${currentGameweek}`);
         
-        // Calculate player minutes projections
-        const playerMinutesProjections = players.map((player: any) => {
-          const team = teams.find((t: any) => t.id === player.team);
-          const position = positions.find((p: any) => p.id === player.element_type);
-          
-          // Base minutes calculation on current minutes and player appearances
-          const totalMinutes = player.minutes || 0;
-          const playerStarts = player.starts || 0;
-          
-          // Calculate player appearances (games where they played any minutes)
-          // Estimate: use starts as base, add sub appearances if minutes exceed what starts would give
-          // Formula: max(starts, ceil(minutes/60)) - assumes avg 60 mins per appearance including subs
-          const estimatedAppearances = Math.max(playerStarts, Math.ceil(totalMinutes / 60));
-          const playerAppearances = Math.max(1, estimatedAppearances); // Minimum 1 appearance if they have minutes
-          
-          const currentMinutesPerGame = Math.min(90, totalMinutes / playerAppearances); // Cap at 90 minutes per game
-          
-          
-          // Simplified expected minutes: use current average with no complex calculations
-          const expectedMinutesPerGame = currentMinutesPerGame;
-          
-
-          
-          // Calculate points from minutes as (expected minutes / 90) * 2
-          const pointsFromMinutes = Math.round(((expectedMinutesPerGame / 90) * 2) * 100) / 100; // Round to 2 decimal places
-          
-          return {
-            playerId: player.id,
-            playerName: player.web_name,
-            teamShort: team?.short_name || 'UNK',
-            position: position?.singular_name || 'Unknown',
-            currentMinutes: totalMinutes,
-            currentMinutesPerGame: Math.round(currentMinutesPerGame * 10) / 10,
-            expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
-            pointsFromMinutes: pointsFromMinutes,
-            playerAppearances: playerAppearances,
-            benchAppearances: Math.max(0, playerAppearances - playerStarts)
-          };
-        })
-        .filter((player: any) => player.currentMinutes >= 1) // Include only players who have played at least 1 minute
-        .sort((a: any, b: any) => b.pointsFromMinutes - a.pointsFromMinutes); // Sort by points from minutes descending
+        // Filter players with minutes for detailed processing
+        const playersWithMinutes = players.filter((p: any) => (p.minutes || 0) >= 1);
+        console.log(`DEBUG: Processing ${playersWithMinutes.length} players with minutes for 60-min threshold calculation`);
         
-        console.log(`✅ LIVE SUCCESS: Generated minutes projections for ${playerMinutesProjections.length} players`);
+        // Fetch player history in batches to get actual game-by-game minutes
+        const BATCH_SIZE = 50;
+        const playerMinutesProjections: any[] = [];
+        
+        for (let i = 0; i < playersWithMinutes.length; i += BATCH_SIZE) {
+          const batch = playersWithMinutes.slice(i, i + BATCH_SIZE);
+          
+          const batchResults = await Promise.all(
+            batch.map(async (player: any) => {
+              const team = teams.find((t: any) => t.id === player.team);
+              const position = positions.find((p: any) => p.id === player.element_type);
+              const totalMinutes = player.minutes || 0;
+              const playerStarts = player.starts || 0;
+              
+              // Default values (fallback if history fetch fails)
+              let appearances = Math.max(1, playerStarts);
+              let gamesHit60Plus = playerStarts; // Assume all starts hit 60+ as fallback
+              let gamesBelow60 = 0;
+              let avgMinutesPerGame = Math.min(90, totalMinutes / Math.max(1, appearances));
+              
+              try {
+                // Fetch actual game-by-game history
+                const historyResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+                if (historyResponse.ok) {
+                  const historyData = await historyResponse.json();
+                  const gamesWithMinutes = historyData.history.filter((gw: any) => gw.minutes > 0);
+                  
+                  if (gamesWithMinutes.length > 0) {
+                    appearances = gamesWithMinutes.length;
+                    gamesHit60Plus = gamesWithMinutes.filter((gw: any) => gw.minutes >= 60).length;
+                    gamesBelow60 = appearances - gamesHit60Plus;
+                    const totalHistoryMinutes = gamesWithMinutes.reduce((sum: number, gw: any) => sum + gw.minutes, 0);
+                    avgMinutesPerGame = totalHistoryMinutes / appearances;
+                  }
+                }
+              } catch (historyError) {
+                // Use fallback values if history fetch fails
+              }
+              
+              // Calculate percentages
+              const pct60Plus = Math.round((gamesHit60Plus / appearances) * 100 * 10) / 10; // % chance of 60+ mins
+              const pctBelow60 = Math.round((gamesBelow60 / appearances) * 100 * 10) / 10; // % chance below 60 mins
+              
+              // Expected minutes per game (from actual history)
+              const expectedMinutesPerGame = Math.min(90, avgMinutesPerGame);
+              
+              // Calculate points from minutes as (expected minutes / 90) * 2
+              const pointsFromMinutes = Math.round(((expectedMinutesPerGame / 90) * 2) * 100) / 100;
+              
+              return {
+                playerId: player.id,
+                playerName: player.web_name,
+                teamShort: team?.short_name || 'UNK',
+                position: position?.singular_name || 'Unknown',
+                currentMinutes: totalMinutes,
+                currentMinutesPerGame: Math.round(avgMinutesPerGame * 10) / 10,
+                expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
+                pointsFromMinutes: pointsFromMinutes,
+                playerAppearances: appearances,
+                gamesHit60Plus: gamesHit60Plus,
+                gamesBelow60: gamesBelow60,
+                pct60Plus: pct60Plus,
+                pctBelow60: pctBelow60,
+                benchAppearances: Math.max(0, appearances - playerStarts)
+              };
+            })
+          );
+          
+          playerMinutesProjections.push(...batchResults);
+        }
+        
+        // Sort by points from minutes descending
+        playerMinutesProjections.sort((a: any, b: any) => b.pointsFromMinutes - a.pointsFromMinutes);
+        
+        console.log(`✅ LIVE SUCCESS: Generated minutes projections with 60-min threshold for ${playerMinutesProjections.length} players`);
         return res.json(playerMinutesProjections);
 
       } catch (liveError) {
@@ -9540,25 +9577,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teamCSProjection = teamCSData.find((tcs: any) => tcs.id === team.id);
         if (!teamCSProjection) continue;
 
-        // Simplified clean sheet points calculation for future gameweeks only
+        // Clean sheet points calculation using 60-minute threshold probability
         const gameweekProjections: { [key: string]: number } = {};
         let totalExpectedPoints = 0;
 
-        // Simplified minutes factor: expected minutes / 90
-        const expectedMinutes = playerMinutes.expectedMinutesPerGame;
-        const minutesFactor = Math.min(1, expectedMinutes / 90); // Cap at 100%
+        // Use actual 60+ minute probability from player history
+        const pct60Plus = playerMinutes.pct60Plus || 0; // % chance of hitting 60+ minutes
+        const pctBelow60 = playerMinutes.pctBelow60 || 0; // % chance below 60 minutes
+        const appearances = playerMinutes.playerAppearances || 1;
 
         // Position-based clean sheet points: Defenders/GK = 4, Midfielders = 1
         const cleanSheetPoints = (position.singular_name === 'Midfielder') ? 1 : 4;
 
-        // Simple projection calculation for all gameweeks
+        // Projection calculation using 60-minute threshold probability
+        // Formula: (Team CS %) × (% chance of 60+ mins) × (Position Points)
+        // Only players who hit 60+ minutes get full clean sheet points in FPL
         for (let gw = startGameweek; gw <= endGameweek; gw++) {
           const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
           
           let cleanSheetPointsForGW = 0;
           if (teamCleanSheetPercent !== undefined) {
-            // Simple formula: (Team CS %) × (Minutes Factor) × (Position Points)
-            cleanSheetPointsForGW = (teamCleanSheetPercent / 100) * minutesFactor * cleanSheetPoints;
+            // Formula: (Team CS %) × (% chance of 60+ mins / 100) × (Position Points)
+            cleanSheetPointsForGW = (teamCleanSheetPercent / 100) * (pct60Plus / 100) * cleanSheetPoints;
           }
           
           gameweekProjections[gw.toString()] = Math.round(cleanSheetPointsForGW * 100) / 100;
@@ -9578,6 +9618,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: position.singular_name,
           price: player.now_cost / 10,
           ownership: parseFloat(player.selected_by_percent),
+          appearances: appearances,
+          pct60Plus: pct60Plus,
+          pctBelow60: pctBelow60,
           gameweekProjections,
           pointsFromCleanSheets,
           totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
