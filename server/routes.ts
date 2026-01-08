@@ -8482,46 +8482,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const adjustedShare = baseShare * performanceMultiplier;
       
-      // Apply position-based caps to goal share percentage
-      const getPositionGoalShareCap = (position: string, playerId?: number): number => {
-        // Special caps for elite players
-        if (playerId === 430) return 40; // Haaland - 40% cap for forwards
-        if (playerId === 381) return 30; // Salah - 30% cap for midfielders
-        
-        switch (position?.toLowerCase()) {
-          case 'goalkeeper': return 2; // Max 2% share for GKs
-          case 'defender': return 10; // Max 10% share for defenders
-          case 'midfielder': return 25; // Max 25% share for midfielders
-          case 'forward': return 30; // Max 30% share for forwards
-          default: return 25;
-        }
-      };
-      
-      // OPTION 6: Position-First Caps - static lookup by element_type with special cases
-      let positionGoalShareCap;
-      if (player.id === 430) positionGoalShareCap = 40.0; // Haaland
-      else if (player.id === 381) positionGoalShareCap = 30.0; // Salah
-      else {
-        const STATIC_CAPS = { 1: 2.0, 2: 10.0, 3: 25.0, 4: 30.0 };
-        positionGoalShareCap = STATIC_CAPS[player.element_type] || 25.0;
-      }
-      const cappedAdjustedShare = Math.min(adjustedShare, positionGoalShareCap);
-      
-      if (cappedAdjustedShare !== adjustedShare) {
-        console.log(`DEBUG: Capped ${player.first_name} ${player.second_name} goal share: ${adjustedShare.toFixed(1)}% → ${cappedAdjustedShare.toFixed(1)}% (${positionName} cap: ${positionGoalShareCap}%)`);
-      }
-      
+      // NO position caps - pure raw share calculation
       playerShares.push({
         id: player.id,
         name: `${player.first_name} ${player.second_name}`,
         position: position?.singular_name_short || '',
-        rawShare: cappedAdjustedShare
+        rawShare: adjustedShare
       });
       
-      totalShare += cappedAdjustedShare;
+      totalShare += adjustedShare;
     });
 
-    // Normalize to 100% and add projected goals calculation
+    // Pure percentage calculation - NO normalization to 100%
     return playerShares.map(player => {
       const goalShare = Math.round((player.rawShare / totalShare) * 1000) / 10; // One decimal place
       return {
@@ -8701,18 +8673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       totalContribution += contribution;
     });
 
-    // PERFECT TEAM BALANCE: Ensure sum of player assists = team assists
-    const getPositionAssistShareCap = (position: string): number => {
-      switch (position?.toLowerCase()) {
-        case 'goalkeeper': return 2; // Max 2% share for GKs
-        case 'defender': return 15; // USER UPDATED: 15% max for defenders
-        case 'midfielder': return 40; // USER UPDATED: 40% max for midfielders
-        case 'forward': return 25; // USER SPECIFIED: 25% max for forwards
-        default: return 25;
-      }
-    };
-
-    // Calculate shares with PROPER position caps and normalization
+    // NO position caps, NO normalization - pure raw share calculation
     Object.keys(playerContributions).forEach(playerIdStr => {
       const playerId = parseInt(playerIdStr);
       const playerData = playerContributions[playerId];
@@ -8726,59 +8687,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: playerId,
           name: playerData.name,
           position: playerData.position,
-          assistShare: rawShare // Store raw share initially
+          assistShare: Math.round(rawShare * 10) / 10 // Round to 1 decimal place
         });
       }
     });
-
-    // IMPROVED CAP-THEN-RENORMALIZE FLOW: Apply caps first, then redistribute properly
-    let totalExcess = 0;
-    const cappedShares = playerShares.map(player => {
-      const positionCap = getPositionAssistShareCap(player.position);
-      const cappedShare = Math.min(player.assistShare, positionCap);
-      const excess = player.assistShare - cappedShare;
-      
-      if (excess > 0) {
-        totalExcess += excess;
-        console.log(`📊 POSITION CAPPING - ${player.name} (${player.position}): ${player.assistShare.toFixed(1)}% → ${cappedShare.toFixed(1)}% (cap: ${positionCap}%)`);
-      }
-      
-      return {
-        ...player,
-        assistShare: cappedShare
-      };
-    });
-    
-    // Redistribute excess proportionally among non-capped players (but don't exceed caps)
-    if (totalExcess > 0) {
-      const eligiblePlayers = cappedShares.filter(player => {
-        const positionCap = getPositionAssistShareCap(player.position);
-        return player.assistShare < positionCap;
-      });
-      
-      if (eligiblePlayers.length > 0) {
-        const totalEligibleShare = eligiblePlayers.reduce((sum, player) => sum + player.assistShare, 0);
-        
-        eligiblePlayers.forEach(player => {
-          const positionCap = getPositionAssistShareCap(player.position);
-          const redistributionPortion = totalEligibleShare > 0 ? (player.assistShare / totalEligibleShare) * totalExcess : 0;
-          const newShare = Math.min(player.assistShare + redistributionPortion, positionCap);
-          player.assistShare = newShare;
-        });
-      }
-    }
-    
-    // Final normalization to ensure total = 100% (but preserve caps)
-    const finalTotal = cappedShares.reduce((sum, player) => sum + player.assistShare, 0);
-    if (finalTotal > 0) {
-      cappedShares.forEach(player => {
-        player.assistShare = Math.round((player.assistShare / finalTotal) * 100 * 10) / 10;
-      });
-    }
-    
-    // Replace original array with capped and normalized shares
-    playerShares.length = 0;
-    playerShares.push(...cappedShares);
 
     return playerShares.sort((a, b) => b.assistShare - a.assistShare);
   }
@@ -10322,22 +10234,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         }).filter(p => p !== null); // Remove transferred players
         
-        // Normalize to ensure team total is realistic
+        // NO normalization - use raw adjusted values
         const totalAdjustedGoals = adjustedPlayers.reduce((sum, p) => sum + p.projectedGoals, 0);
         const targetTeamGoals = team2024.expectedGoals * 0.95; // Slight conservative adjustment
         
-        const normalizedPlayers = adjustedPlayers.map(player => {
-          const normalizedGoals = totalAdjustedGoals > 0 ? 
-            (player.projectedGoals / totalAdjustedGoals) * targetTeamGoals : 0;
-          const normalizedShare = targetTeamGoals > 0 ? 
-            (normalizedGoals / targetTeamGoals) * 100 : 0;
-          
-          return {
-            ...player,
-            goalShare: Math.round(normalizedShare * 10) / 10,
-            projectedGoals: Math.round(normalizedGoals * 10) / 10
-          };
-        }).sort((a, b) => b.goalShare - a.goalShare);
+        // Sort by goal share without normalizing
+        const sortedPlayers = adjustedPlayers.sort((a, b) => b.goalShare - a.goalShare);
         
         adjustedResults.push({
           gameweek: 0,
@@ -10345,7 +10247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamName: currentTeam.name,
           teamShort: currentTeam.short_name,
           expectedGoals: Math.round(targetTeamGoals * 10) / 10,
-          players: normalizedPlayers
+          players: sortedPlayers
         });
         
         console.log(`DEBUG: Team ${currentTeam.name} - Adjusted from ${team2024.expectedGoals} to ${targetTeamGoals.toFixed(1)} goals`);
