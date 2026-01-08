@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LoadingExperience } from "@/components/loading-experience";
 import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
 
@@ -658,6 +659,14 @@ export default function PlayerTotalPoints() {
   ] as const;
   
   const [excludedComponents, setExcludedComponents] = useState<Set<string>>(new Set());
+  
+  // Filter section collapse state - collapsed on mobile by default
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768; // Open by default on desktop (md breakpoint)
+    }
+    return false;
+  });
   
   // Toggle point component exclusion
   const toggleComponentExclusion = (componentKey: string) => {
@@ -1340,13 +1349,28 @@ export default function PlayerTotalPoints() {
           </div>
 
           {/* Filters and Controls */}
-          <div className="fpl-card mb-6">
-            <div className="fpl-card-header">
-              <div className="flex items-center gap-2">
-                <Filter className="h-5 w-5 text-indigo-600" />
-                <h2 className="fpl-card-title">Filters & Controls</h2>
+          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="fpl-card mb-6">
+            <CollapsibleTrigger asChild>
+              <div className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-5 w-5 text-indigo-600" />
+                    <h2 className="fpl-card-title">Filters & Controls</h2>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 md:hidden">
+                      {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
+                    </span>
+                    {isFiltersOpen ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
             <div className="fpl-card-content">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
             <div className="space-y-2">
@@ -1657,7 +1681,8 @@ export default function PlayerTotalPoints() {
                 )}
               </div>
             </div>
-          </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Data Tabs */}
           {isLoading ? (
