@@ -44,12 +44,8 @@ export default function PlayerBonusPoints() {
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [initialized, setInitialized] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768;
-    }
-    return false;
-  });
+  // Filter section collapse state - collapsed by default on all devices
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],

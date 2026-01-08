@@ -51,12 +51,8 @@ export default function ProjectedGoalsCS() {
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768;
-    }
-    return false;
-  });
+  // Filter section collapse state - collapsed by default on all devices
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Get available gameweeks for dropdown options (next 12 gameweeks available)
   const availableGameweeks = useMemo(() => {

@@ -41,12 +41,8 @@ export default function TeamCSProjections() {
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("average");
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768;
-    }
-    return false;
-  });
+  // Filter section collapse state - collapsed by default on all devices
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const activeGameweeks = useMemo(() => {
     const startGW = parseInt(startGameweek);

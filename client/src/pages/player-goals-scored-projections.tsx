@@ -55,12 +55,8 @@ export default function PlayerGoalsScoredProjections() {
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
   const [initialized, setInitialized] = useState(false);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768;
-    }
-    return false;
-  });
+  // Filter section collapse state - collapsed by default on all devices
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   
   const queryClient = useQueryClient();
 

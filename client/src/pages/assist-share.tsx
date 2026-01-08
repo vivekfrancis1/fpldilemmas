@@ -32,12 +32,8 @@ export default function AssistShare() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [selectedFilter, setSelectedFilter] = useState<FilterOption>("full");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768;
-    }
-    return false;
-  });
+  // Filter section collapse state - collapsed by default on all devices
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],

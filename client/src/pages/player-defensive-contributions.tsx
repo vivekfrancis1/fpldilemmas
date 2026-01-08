@@ -93,13 +93,8 @@ export default function PlayerDefensiveContributions() {
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
   
-  // Filter section collapse state - collapsed on mobile by default
-  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768; // Open by default on desktop (md breakpoint)
-    }
-    return false;
-  });
+  // Filter section collapse state - collapsed by default on all devices
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Dynamic gameweek range state (fetch 12 gameweeks for API, default display to 6)
   const [gameweekRange, setGameweekRange] = useState(() => {
