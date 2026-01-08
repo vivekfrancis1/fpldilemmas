@@ -13380,7 +13380,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("DEBUG: Using current season FPL data with proper DC calculation...");
       
       // Filter to players who have played (have minutes and defensive stats from current season)
+      // Exclude goalkeepers (element_type === 1) as DC points don't apply to them
       const playersWithDefensiveData = fplData.elements.filter((player: any) => 
+        player.element_type !== 1 && // Exclude goalkeepers
         player.minutes > 0 && (
           player.clearances_blocks_interceptions > 0 || 
           player.tackles > 0 || 
@@ -13433,12 +13435,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const tackles = player.tackles || 0;
             const recoveries = player.recoveries || 0;
             
-            if (player.element_type === 2) { // Defenders
+            if (player.element_type === 2) { // Defenders: DC = CBI + Tackles
               seasonDefensiveContribution = cbi + tackles;
-            } else if (player.element_type === 3 || player.element_type === 4) { // Midfielders and Forwards
+            } else { // Midfielders and Forwards: DC = CBI + Tackles + Recoveries
               seasonDefensiveContribution = cbi + tackles + recoveries;
-            } else { // Goalkeepers
-              seasonDefensiveContribution = cbi + tackles;
             }
           }
           
