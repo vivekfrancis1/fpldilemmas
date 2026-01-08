@@ -13574,18 +13574,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Round to 1 decimal place for threshold comparison to avoid floating-point precision issues
             const normalizedDC = parseFloat(projectedDC.toFixed(1));
             
-            // Calculate points (2 points if DC >= threshold based on position)
-            let points = 0;
-            if (player.element_type === 2 && normalizedDC >= 10) { // Defenders: 10+ DC = 2 points
-              points = 2;
-            } else if ((player.element_type === 3 || player.element_type === 4) && normalizedDC >= 12) { // Mid/Fwd: 12+ DC = 2 points
-              points = 2;
-            }
+            // Calculate points using probability-based formula: % chance of hitting threshold × (Opponent DCC / 80) × 2
+            // chanceOfHittingThreshold is already a decimal (e.g., 0.222 for 22.2%)
+            let points = chanceOfHittingThreshold * (opponentDCC / 80) * 2;
             // Goalkeepers don't get points from defensive contributions
+            if (player.element_type === 1) {
+              points = 0;
+            }
             
             gameweekProjections[`gw${gw}`] = {
               dc: parseFloat(projectedDC.toFixed(1)),
-              points: points
+              points: parseFloat(points.toFixed(2))
             };
             totalDC += projectedDC;
             totalPoints += points;
