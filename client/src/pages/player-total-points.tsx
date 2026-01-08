@@ -186,7 +186,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
                 { key: 'pointsFromGoals', excludeKey: 'goals', label: '⚽ Goals', color: 'text-green-700' },
                 { key: 'pointsFromAssists', excludeKey: 'assists', label: '🎯 Assists', color: 'text-blue-700' },
                 { key: 'pointsFromCleanSheets', excludeKey: 'cleanSheets', label: '🛡️ Clean Sheets', color: 'text-yellow-700' },
-                { key: 'pointsFromDefensiveContributions', excludeKey: 'defensiveContributions', label: '⚔️ Defensive', color: 'text-orange-700' },
+                { key: 'pointsFromDefensiveContributions', excludeKey: 'defensiveContributions', label: '⚔️ Defensive Contributions', color: 'text-orange-700' },
                 { key: 'pointsFromMinutes', excludeKey: 'minutes', label: '⏱️ Minutes', color: 'text-purple-700' },
                 { key: 'pointsFromBonus', excludeKey: 'bonus', label: '✨ Bonus', color: 'text-pink-700' },
                 { key: 'pointsFromSaves', excludeKey: 'saves', label: '🥅 Saves', color: 'text-cyan-700' },
@@ -287,7 +287,7 @@ function RangeTotalBreakdownTooltip({
     { key: 'goals', label: '⚽ Goals', totalKey: 'totalPointsFromGoals', color: 'text-green-700' },
     { key: 'assists', label: '🎯 Assists', totalKey: 'totalPointsFromAssists', color: 'text-blue-700' },
     { key: 'cleanSheets', label: '🛡️ Clean Sheets', totalKey: 'totalPointsFromCleanSheets', color: 'text-yellow-700' },
-    { key: 'defensive', label: '⚔️ Defensive', totalKey: 'totalPointsFromDefensiveContributions', color: 'text-orange-700' },
+    { key: 'defensive', label: '⚔️ Defensive Contributions', totalKey: 'totalPointsFromDefensiveContributions', color: 'text-orange-700' },
     { key: 'minutes', label: '⏱️ Minutes', totalKey: 'totalPointsFromMinutes', color: 'text-purple-700' },
     { key: 'bonus', label: '✨ Bonus', totalKey: 'totalPointsFromBonus', color: 'text-pink-700' },
     { key: 'saves', label: '🥅 Saves', totalKey: 'totalPointsFromSaves', color: 'text-cyan-700' },
@@ -648,7 +648,7 @@ export default function PlayerTotalPoints() {
     { key: 'goals', label: 'Goals', totalKey: 'totalPointsFromGoals', gwKey: 'pointsFromGoals' },
     { key: 'assists', label: 'Assists', totalKey: 'totalPointsFromAssists', gwKey: 'pointsFromAssists' },
     { key: 'cleanSheets', label: 'Clean Sheets', totalKey: 'totalPointsFromCleanSheets', gwKey: 'pointsFromCleanSheets' },
-    { key: 'defensiveContributions', label: 'Defensive', totalKey: 'totalPointsFromDefensiveContributions', gwKey: 'pointsFromDefensiveContributions' },
+    { key: 'defensiveContributions', label: 'Defensive Contributions', totalKey: 'totalPointsFromDefensiveContributions', gwKey: 'pointsFromDefensiveContributions' },
     { key: 'minutes', label: 'Minutes', totalKey: 'totalPointsFromMinutes', gwKey: 'pointsFromMinutes' },
     { key: 'bonus', label: 'Bonus', totalKey: 'totalPointsFromBonus', gwKey: 'pointsFromBonus' },
     { key: 'saves', label: 'Saves', totalKey: 'totalPointsFromSaves', gwKey: 'pointsFromSaves' },
@@ -657,7 +657,7 @@ export default function PlayerTotalPoints() {
     { key: 'redCards', label: 'Red Cards', totalKey: 'totalPointsFromRedCards', gwKey: 'pointsFromRedCards' },
   ] as const;
   
-  const [excludedComponents, setExcludedComponents] = useState<Set<string>>(new Set());
+  const [excludedComponents, setExcludedComponents] = useState<Set<string>>(new Set(['defensiveContributions']));
   
   // Toggle point component exclusion
   const toggleComponentExclusion = (componentKey: string) => {
