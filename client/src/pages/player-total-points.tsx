@@ -657,7 +657,7 @@ export default function PlayerTotalPoints() {
     { key: 'redCards', label: 'Red Cards', totalKey: 'totalPointsFromRedCards', gwKey: 'pointsFromRedCards' },
   ] as const;
   
-  const [excludedComponents, setExcludedComponents] = useState<Set<string>>(new Set(['defensiveContributions']));
+  const [excludedComponents, setExcludedComponents] = useState<Set<string>>(new Set());
   
   // Toggle point component exclusion
   const toggleComponentExclusion = (componentKey: string) => {
