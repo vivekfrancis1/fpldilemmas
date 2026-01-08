@@ -290,12 +290,13 @@ export default function Fixtures() {
       }
     });
 
-    // Calculate average FDR for each team
+    // Calculate average FDR for each team (only for non-excluded gameweeks)
     bootstrapData.teams.forEach(team => {
-      const teamFixtures = Object.values(matrix[team.id] || {});
-      if (teamFixtures.length > 0) {
-        const totalDifficulty = teamFixtures.reduce((sum, fixture) => sum + fixture.difficulty, 0);
-        avgFDR[team.id] = parseFloat((totalDifficulty / teamFixtures.length).toFixed(2));
+      const teamFixturesEntries = Object.entries(matrix[team.id] || {});
+      const filteredFixtures = teamFixturesEntries.filter(([gw]) => !excludedGameweeks.has(parseInt(gw)));
+      if (filteredFixtures.length > 0) {
+        const totalDifficulty = filteredFixtures.reduce((sum, [, fixture]) => sum + fixture.difficulty, 0);
+        avgFDR[team.id] = parseFloat((totalDifficulty / filteredFixtures.length).toFixed(2));
       } else {
         avgFDR[team.id] = 0;
       }
@@ -305,7 +306,7 @@ export default function Fixtures() {
       fixtureMatrix: matrix, 
       teamAverageFDR: avgFDR
     };
-  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR]);
+  }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, excludedGameweeks]);
 
   // All gameweeks in range (for toggle display)
   const allGameweeksInRange = useMemo(() => {
