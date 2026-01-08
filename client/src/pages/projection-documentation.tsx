@@ -157,17 +157,17 @@ export default function ProjectionDocumentation() {
                   <div className="space-y-3">
                     <h4 className="font-semibold text-gray-900 flex items-center gap-2">
                       <Shield className="h-4 w-4 text-green-600" />
-                      Mathematical Balance System
+                      Pure Raw Share System
                     </h4>
                     <div className="bg-green-50 p-3 rounded text-sm">
                       <div className="font-mono text-xs mb-2">
-                        99.975% Accuracy (0.29 goals discrepancy)
+                        GoalShare = (PlayerGoals + PlayerXG) / TeamTotal × 100
                       </div>
                       <ul className="space-y-1 text-green-700">
-                        <li>✓ Raw share calculation (no position caps)</li>
+                        <li>✓ Pure raw percentage calculation</li>
                         <li>✓ Direct percentage of team output</li>
                         <li>✓ No artificial adjustments applied</li>
-                        <li>✓ Team totals always balance with players</li>
+                        <li>✓ No position caps or limits</li>
                       </ul>
                     </div>
                   </div>
@@ -175,14 +175,14 @@ export default function ProjectionDocumentation() {
                   <div className="space-y-3">
                     <h4 className="font-semibold text-gray-900 flex items-center gap-2">
                       <Target className="h-4 w-4 text-purple-600" />
-                      Set Piece Adjustments
+                      Data-Driven Projections
                     </h4>
                     <div className="bg-purple-50 p-3 rounded text-sm">
                       <ul className="space-y-1 text-purple-700">
-                        <li>✓ Penalty takers: +0.6 to +0.8 goals/GW</li>
-                        <li>✓ Corner takers: +0.8 to +1.2 assists/GW</li>
-                        <li>✓ Scales with historical performance</li>
-                        <li>✓ Data from bootstrap penalties_order field</li>
+                        <li>✓ Based on actual FPL historical data</li>
+                        <li>✓ 50/50 blend of season + last 6 games</li>
+                        <li>✓ Scales with real performance metrics</li>
+                        <li>✓ Updated from live FPL API data</li>
                       </ul>
                     </div>
                   </div>
@@ -293,11 +293,11 @@ export default function ProjectionDocumentation() {
                         </li>
                         <li className="flex items-start gap-2">
                           <span className="text-green-500 mt-0.5">▪</span>
-                          <span><strong>Raw Share Calculation:</strong> No position caps - actual contribution percentages used directly</span>
+                          <span><strong>Pure Raw Share Calculation:</strong> Simple percentage of team output, no adjustments applied</span>
                         </li>
                         <li className="flex items-start gap-2">
                           <span className="text-green-500 mt-0.5">▪</span>
-                          <span><strong>Mathematical Balance:</strong> Improved from 104+ goals discrepancy to 0.29 goals (99.975% accuracy)</span>
+                          <span><strong>Simplified System:</strong> Removed complexity for more transparent projections</span>
                         </li>
                       </ul>
                     </div>
@@ -772,30 +772,29 @@ export default function ProjectionDocumentation() {
                     </div>
                   </div>
 
-                  {/* Mathematical Balance Verification */}
+                  {/* Pure Raw Share System */}
                   <div className="border-2 border-amber-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-4">
                       <div className="w-8 h-8 bg-amber-500 text-white rounded-full flex items-center justify-center font-bold">✓</div>
-                      <h3 className="text-lg font-semibold">Mathematical Balance Verification</h3>
+                      <h3 className="text-lg font-semibold">Pure Raw Share Calculation</h3>
                     </div>
                     <div className="bg-amber-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border">
-                          <strong>Real Data Balance System:</strong>
+                          <strong>Simple Share Formula:</strong>
                           <div className="font-mono text-sm mt-2 space-y-1">
-                            <div>1. Calculate raw share for all players (goals + xG)</div>
+                            <div>1. Calculate raw contribution for all players (goals + xG)</div>
                             <div>2. Calculate player share as % of team total</div>
-                            <div>3. Normalize shares to ensure team total = 100%</div>
-                            <div>4. Verify: Sum(FinalPlayerTotals) ≈ HybridTeamTotal (±0.5)</div>
+                            <div>3. GoalShare = (PlayerGoals + PlayerXG) / TeamTotal × 100</div>
                           </div>
                         </div>
                         <div className="text-sm">
-                          <strong>Quality Assurance (Enhanced with Real Data):</strong>
+                          <strong>System Characteristics:</strong>
                           <ul className="list-disc ml-5 mt-2">
-                            <li>Hybrid team totals must balance with individual player sums</li>
-                            <li>Raw share percentages used (no position caps)</li>
-                            <li>No synthetic base xG values - all projections from real FPL performance</li>
-                            <li>Mathematical accuracy: 99.975% with authentic data foundation</li>
+                            <li>Pure percentage calculation - no artificial adjustments</li>
+                            <li>No position caps or limits applied</li>
+                            <li>All projections from real FPL performance data</li>
+                            <li>50/50 blend of season + last 6 games for accuracy</li>
                           </ul>
                         </div>
                       </div>
@@ -873,96 +872,78 @@ export default function ProjectionDocumentation() {
                 </CardContent>
               </Card>
 
-              {/* Algorithm 2: Raw Share & Penalty Adjustment */}
+              {/* Algorithm 2: Pure Raw Share Calculation */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Settings className="h-5 w-5 text-orange-600" />
-                    2. Raw Share & Penalty Adjustment Algorithm
+                    2. Pure Raw Share Calculation
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-orange-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-orange-900 mb-3">Implementation (server/projection-adjustments.ts)</h4>
+                    <h4 className="font-semibold text-orange-900 mb-3">Implementation (server/routes.ts)</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm space-y-2">
-                      <div className="text-blue-600">function</div> <div>enforcePositionCaps(teamPlayerShares, type):</div>
-                      <div className="ml-4">// Step 1: Apply position caps</div>
-                      <div className="ml-4">totalExcess = 0</div>
-                      <div className="ml-4"><span className="text-blue-600">for each</span> player <span className="text-blue-600">in</span> teamPlayerShares:</div>
-                      <div className="ml-8">positionCap = getPositionCap(player.position, type)</div>
-                      <div className="ml-8">cappedShare = min(player.share, positionCap)</div>
-                      <div className="ml-8">excess = player.share - cappedShare</div>
-                      <div className="ml-8">totalExcess += excess</div>
+                      <div className="text-blue-600">function</div> <div>calculateRawShare(player, teamTotal):</div>
+                      <div className="ml-4">// Pure raw share - no adjustments</div>
+                      <div className="ml-4">playerContribution = player.goals + player.xG</div>
                       <div className="ml-4"></div>
-                      <div className="ml-4">// Step 2: Redistribute excess proportionally</div>
-                      <div className="ml-4"><span className="text-blue-600">if</span> totalExcess &gt; 0:</div>
-                      <div className="ml-8">totalCappedShare = sum(all cappedShares)</div>
-                      <div className="ml-8">redistributionFactor = totalExcess / totalCappedShare</div>
-                      <div className="ml-8"><span className="text-blue-600">for each</span> player <span className="text-blue-600">not at cap</span>:</div>
-                      <div className="ml-12">player.share = min(player.share × (1 + redistributionFactor), positionCap)</div>
+                      <div className="ml-4">// Calculate raw percentage</div>
+                      <div className="ml-4">rawShare = (playerContribution / teamTotal) × 100</div>
                       <div className="ml-4"></div>
-                      <div className="ml-4">// Step 3: Normalize to 100%</div>
-                      <div className="ml-4">totalShare = sum(all player shares)</div>
-                      <div className="ml-4"><span className="text-blue-600">for each</span> player:</div>
-                      <div className="ml-8">player.share = (player.share / totalShare) × 100</div>
+                      <div className="ml-4">// Round to 1 decimal place</div>
+                      <div className="ml-4">finalShare = Math.round(rawShare × 10) / 10</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4"><span className="text-green-600">return</span> finalShare</div>
                     </div>
                   </div>
-                  <div className="bg-yellow-50 p-3 rounded text-sm">
-                    <strong className="text-yellow-900">Position Caps Reference:</strong>
+                  <div className="bg-green-50 p-3 rounded text-sm">
+                    <strong className="text-green-900">Key Principles:</strong>
                     <div className="grid grid-cols-2 gap-2 mt-2">
-                      <div className="text-yellow-800">
-                        <strong>Goals:</strong> GK 2%, DEF 10%, MID 25%, FWD 30%
+                      <div className="text-green-800">
+                        <strong>No Position Caps:</strong> Pure raw contribution percentages
                       </div>
-                      <div className="text-yellow-800">
-                        <strong>Assists:</strong> GK 2%, DEF 15%, MID 30%, FWD 25%
+                      <div className="text-green-800">
+                        <strong>No Adjustments:</strong> Direct percentage of team output
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Algorithm 3: Set Piece Adjustments */}
+              {/* Algorithm 3: Blended Data Formula */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-purple-600" />
-                    3. Set Piece Adjustments Algorithm
+                    3. Blended Season + Last 6 Games Formula
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-purple-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-purple-900 mb-3">Penalty Taker Adjustment (Goals)</h4>
+                    <h4 className="font-semibold text-purple-900 mb-3">50/50 Blend Implementation</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm space-y-2">
-                      <div className="text-blue-600">function</div> <div>getPenaltyTakerAdjustment(playerId, bootstrapData):</div>
-                      <div className="ml-4">player = bootstrapData.elements.find(p =&gt; p.id === playerId)</div>
-                      <div className="ml-4">penaltyOrder = player.penalties_order</div>
+                      <div className="text-blue-600">function</div> <div>calculateBlendedProjection(playerId, type):</div>
+                      <div className="ml-4">// Get full season share</div>
+                      <div className="ml-4">seasonShare = getSeasonShare(playerId, type)</div>
                       <div className="ml-4"></div>
-                      <div className="ml-4"><span className="text-blue-600">if</span> penaltyOrder === 1:  // Primary</div>
-                      <div className="ml-8">adjustment = 0.6 + (player.goals_scored × 0.03)</div>
-                      <div className="ml-8">adjustment = min(0.8, adjustment)  // Cap at 0.8</div>
-                      <div className="ml-4"><span className="text-blue-600">else if</span> penaltyOrder === 2:  // Secondary</div>
-                      <div className="ml-8">adjustment = 0.3 + (player.goals_scored × 0.025)</div>
-                      <div className="ml-8">adjustment = min(0.5, adjustment)  // Cap at 0.5</div>
+                      <div className="ml-4">// Get last 6 games share</div>
+                      <div className="ml-4">last6Share = getLast6GamesShare(playerId, type)</div>
                       <div className="ml-4"></div>
-                      <div className="ml-4"><span className="text-green-600">return</span> adjustment</div>
+                      <div className="ml-4">// Blend 50/50</div>
+                      <div className="ml-4">blendedShare = (seasonShare + last6Share) / 2</div>
+                      <div className="ml-4"></div>
+                      <div className="ml-4"><span className="text-green-600">return</span> blendedShare</div>
                     </div>
                   </div>
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-blue-900 mb-3">Corner Taker Adjustment (Assists)</h4>
-                    <div className="bg-white p-3 rounded border font-mono text-sm space-y-2">
-                      <div className="text-blue-600">function</div> <div>getCornerFreekickAdjustment(playerId, bootstrapData):</div>
-                      <div className="ml-4">player = bootstrapData.elements.find(p =&gt; p.id === playerId)</div>
-                      <div className="ml-4">cornerOrder = player.corners_and_indirect_freekicks_order</div>
-                      <div className="ml-4"></div>
-                      <div className="ml-4"><span className="text-blue-600">if</span> cornerOrder === 1:  // Primary</div>
-                      <div className="ml-8">adjustment = 0.8 + (player.assists × 0.04)</div>
-                      <div className="ml-8">adjustment = min(1.2, adjustment)  // Cap at 1.2</div>
-                      <div className="ml-4"><span className="text-blue-600">else if</span> cornerOrder === 2:  // Secondary</div>
-                      <div className="ml-8">adjustment = 0.5 + (player.assists × 0.03)</div>
-                      <div className="ml-8">adjustment = min(0.8, adjustment)  // Cap at 0.8</div>
-                      <div className="ml-4"></div>
-                      <div className="ml-4"><span className="text-green-600">return</span> adjustment</div>
-                    </div>
+                    <h4 className="font-semibold text-blue-900 mb-3">Benefits of Blended Approach</h4>
+                    <ul className="list-disc ml-5 text-blue-800 space-y-1">
+                      <li>Season data provides stability and long-term quality assessment</li>
+                      <li>Last 6 games captures recent form and tactical changes</li>
+                      <li>Avoids overreaction to short-term variance</li>
+                      <li>Responds appropriately to genuine performance shifts</li>
+                    </ul>
                   </div>
                 </CardContent>
               </Card>
@@ -1006,43 +987,39 @@ export default function ProjectionDocumentation() {
                 </CardContent>
               </Card>
 
-              {/* Algorithm 5: Mathematical Balance */}
+              {/* Algorithm 5: Data Blending */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Calculator className="h-5 w-5 text-amber-600" />
-                    5. Mathematical Balance Verification
+                    5. Data Source Blending
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-amber-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-amber-900 mb-3">Three-Phase Balance System</h4>
+                    <h4 className="font-semibold text-amber-900 mb-3">Multi-Source Data Integration</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm space-y-2">
-                      <div className="text-blue-600">function</div> <div>ensureMathematicalBalance(teamGoals, playerProjections):</div>
-                      <div className="ml-4">// Phase 1: Apply position caps</div>
-                      <div className="ml-4">cappedProjections = enforcePositionCaps(playerProjections)</div>
-                      <div className="ml-4">sumCapped = sum(cappedProjections)</div>
-                      <div className="ml-4">excess = teamGoals - sumCapped</div>
+                      <div className="text-blue-600">function</div> <div>integrateDataSources(playerId, gameweek):</div>
+                      <div className="ml-4">// Source 1: Season-long performance</div>
+                      <div className="ml-4">seasonData = getSeasonStats(playerId)</div>
                       <div className="ml-4"></div>
-                      <div className="ml-4">// Phase 2: Redistribute excess</div>
-                      <div className="ml-4"><span className="text-blue-600">if</span> excess &gt; 0:</div>
-                      <div className="ml-8">redistributedProjections = redistributeProportionally(cappedProjections, excess)</div>
+                      <div className="ml-4">// Source 2: Recent form (last 6 games)</div>
+                      <div className="ml-4">recentData = getLast6GamesStats(playerId)</div>
                       <div className="ml-4"></div>
-                      <div className="ml-4">// Phase 3: Final normalization</div>
-                      <div className="ml-4">totalSum = sum(redistributedProjections)</div>
-                      <div className="ml-4">normalizedProjections = redistributedProjections.map(p =&gt; (p / totalSum) × teamGoals)</div>
+                      <div className="ml-4">// 50/50 blend for balanced projection</div>
+                      <div className="ml-4">blendedStats = {}</div>
+                      <div className="ml-4">blendedStats.goals = (seasonData.goals + recentData.goals) / 2</div>
+                      <div className="ml-4">blendedStats.assists = (seasonData.assists + recentData.assists) / 2</div>
+                      <div className="ml-4">blendedStats.xG = (seasonData.xG + recentData.xG) / 2</div>
                       <div className="ml-4"></div>
-                      <div className="ml-4">// Verify balance</div>
-                      <div className="ml-4">finalSum = sum(normalizedProjections)</div>
-                      <div className="ml-4">discrepancy = abs(finalSum - teamGoals)</div>
-                      <div className="ml-4"><span className="text-blue-600">assert</span> discrepancy &lt; 0.5  // Should be ≈0.29 goals</div>
+                      <div className="ml-4"><span className="text-green-600">return</span> blendedStats</div>
                     </div>
                   </div>
                   <div className="bg-green-50 p-3 rounded text-sm">
-                    <strong className="text-green-900">Balance Achievement:</strong>
+                    <strong className="text-green-900">Benefits:</strong>
                     <div className="mt-2 text-green-800">
-                      Original system: 104+ goals discrepancy<br/>
-                      Current system: 0.29 goals discrepancy (99.975% accuracy)
+                      Season data provides stability and long-term quality<br/>
+                      Last 6 games captures recent form and tactical changes
                     </div>
                   </div>
                 </CardContent>
@@ -1546,39 +1523,39 @@ export default function ProjectionDocumentation() {
                         <li>1. Calculate team goals (hybrid formula)</li>
                         <li>2. Multiply by 0.72 for assist total</li>
                         <li>3. Distribute to players by assist share %</li>
-                        <li>4. Apply position caps (see below)</li>
-                        <li>5. Add set piece bonuses (corners/FKs)</li>
+                        <li>4. Pure raw percentage used directly</li>
+                        <li>5. No artificial adjustments applied</li>
                       </ul>
                     </div>
                     <div className="bg-purple-50 p-3 rounded">
-                      <h4 className="font-semibold text-purple-900 mb-2">Assist Share Position Caps</h4>
+                      <h4 className="font-semibold text-purple-900 mb-2">Pure Raw Share System</h4>
                       <ul className="text-sm text-purple-700 space-y-1">
-                        <li>• Goalkeeper: Max 2% share</li>
-                        <li>• Defender: Max 15% share</li>
-                        <li>• Midfielder: Max 30% share</li>
-                        <li>• Forward: Max 25% share (lower than goals)</li>
+                        <li>• No position caps applied</li>
+                        <li>• Direct percentage of team output</li>
+                        <li>• Based on actual historical data</li>
+                        <li>• 50/50 season + last 6 games blend</li>
                       </ul>
                     </div>
                   </div>
 
                   <div className="bg-orange-50 p-3 rounded">
-                    <h4 className="font-semibold text-orange-900 mb-2">Set Piece Assist Bonuses</h4>
+                    <h4 className="font-semibold text-orange-900 mb-2">Data Sources</h4>
                     <p className="text-sm text-orange-800 mb-2">
-                      Additional assists added for corner and indirect freekick takers:
+                      Assist share calculated from real FPL performance data:
                     </p>
                     <ul className="text-sm text-orange-700 space-y-1">
-                      <li>• Primary corner taker: +0.8 to +1.2 assists</li>
-                      <li>• Secondary corner taker: +0.5 to +0.8 assists</li>
-                      <li>• Tertiary corner taker: +0.3 to +0.5 assists</li>
-                      <li>• Bonus scales with actual assists recorded</li>
+                      <li>• Player actual assists this season</li>
+                      <li>• Player expected assists (xA)</li>
+                      <li>• Team total assists and xA</li>
+                      <li>• Blended season + recent form data</li>
                     </ul>
                   </div>
 
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono space-y-1">
                     <div><strong>API:</strong> /api/team-assist-projections</div>
-                    <div><strong>Module:</strong> server/projection-adjustments.ts</div>
+                    <div><strong>Module:</strong> server/routes.ts</div>
                     <div><strong>Input:</strong> Team goal projections × 0.72</div>
-                    <div><strong>Adjustments:</strong> Position caps + set piece bonuses</div>
+                    <div><strong>Method:</strong> Pure raw share calculation</div>
                   </div>
                 </CardContent>
               </Card>
@@ -1692,28 +1669,16 @@ export default function ProjectionDocumentation() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-blue-50 p-3 rounded">
-                      <h4 className="font-semibold text-blue-900 mb-2">Raw Share Methodology</h4>
-                      <ul className="text-sm text-blue-700 space-y-2">
-                        <li className="flex justify-between">
-                          <span>• Goalkeeper:</span>
-                          <strong>Max 2%</strong>
-                        </li>
-                        <li className="flex justify-between">
-                          <span>• Defender:</span>
-                          <strong>Max 10%</strong>
-                        </li>
-                        <li className="flex justify-between">
-                          <span>• Midfielder:</span>
-                          <strong>Max 25%</strong>
-                        </li>
-                        <li className="flex justify-between">
-                          <span>• Forward:</span>
-                          <strong>Max 30%</strong>
-                        </li>
+                      <h4 className="font-semibold text-blue-900 mb-2">Pure Raw Share Formula</h4>
+                      <div className="bg-white p-2 rounded border mb-2 font-mono text-xs">
+                        GoalShare = (PlayerGoals + PlayerXG) / TeamTotal × 100
+                      </div>
+                      <ul className="text-sm text-blue-700 space-y-1">
+                        <li>• No position caps applied</li>
+                        <li>• Direct percentage calculation</li>
+                        <li>• No artificial adjustments</li>
+                        <li>• Pure historical contribution</li>
                       </ul>
-                      <p className="text-xs text-blue-600 mt-2">
-                        *Elite exceptions: Haaland 40%, Salah 30%
-                      </p>
                     </div>
                     <div className="bg-green-50 p-3 rounded">
                       <h4 className="font-semibold text-green-900 mb-2">Share Calculation Process</h4>
@@ -1721,7 +1686,7 @@ export default function ProjectionDocumentation() {
                         <li>1. Calculate goals scored + expected goals</li>
                         <li>2. Sum totals for all team players</li>
                         <li>3. Calculate player share as % of team</li>
-                        <li>4. Normalize to 100% team total</li>
+                        <li>4. Apply 50/50 season + last 6 blend</li>
                         <li>5. Apply to projected team goals</li>
                         <li>6. No artificial adjustments applied</li>
                       </ul>
@@ -1729,15 +1694,15 @@ export default function ProjectionDocumentation() {
                   </div>
 
                   <div className="bg-purple-50 p-3 rounded">
-                    <h4 className="font-semibold text-purple-900 mb-2">Penalty Taker Adjustments</h4>
+                    <h4 className="font-semibold text-purple-900 mb-2">Data Sources</h4>
                     <p className="text-sm text-purple-800 mb-2">
-                      Additional goals added for penalty takers (not included in base xG):
+                      Goal share calculated from real FPL performance data:
                     </p>
                     <ul className="text-sm text-purple-700 space-y-1">
-                      <li>• Primary penalty taker: +0.6 to +0.8 goals (based on conversion rate)</li>
-                      <li>• Secondary penalty taker: +0.3 to +0.5 goals</li>
-                      <li>• Adjustment scales with goals scored history</li>
-                      <li>• Applied after base goal share calculation</li>
+                      <li>• Player actual goals scored this season</li>
+                      <li>• Player expected goals (xG) from FPL API</li>
+                      <li>• Team total goals and xG combined</li>
+                      <li>• Blended season + recent form data</li>
                     </ul>
                   </div>
 
@@ -2247,66 +2212,58 @@ export default function ProjectionDocumentation() {
               </CardContent>
             </Card>
 
-            {/* Set Piece Adjustments */}
+            {/* Data Blending Configuration */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5 text-cyan-600" />
-                  Set Piece Adjustments
+                  Data Blending Configuration
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-gray-700">
-                  Bonus goals/assists for penalty takers and set piece specialists, applied after base projection calculations.
+                  All projections use a 50/50 blend of season-long data and last 6 games for balanced, responsive predictions.
                 </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-cyan-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-cyan-900 mb-3">Penalty Takers (Goals)</h4>
+                    <h4 className="font-semibold text-cyan-900 mb-3">Season Data (50%)</h4>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-2 rounded flex justify-between">
-                        <span>Primary taker</span>
-                        <span className="font-bold text-cyan-700">+0.6 to +0.8</span>
+                        <span>Purpose</span>
+                        <span className="font-bold text-cyan-700">Long-term quality</span>
                       </div>
                       <div className="bg-white p-2 rounded flex justify-between">
-                        <span>Secondary taker</span>
-                        <span className="font-bold text-cyan-700">+0.3 to +0.5</span>
+                        <span>Benefit</span>
+                        <span className="font-bold text-cyan-700">Stability</span>
                       </div>
                       <p className="text-xs text-cyan-600 mt-2">
-                        Scales with player's goals scored history
+                        Prevents overreaction to short-term variance
                       </p>
-                      <div className="bg-white p-2 rounded text-xs font-mono mt-2">
-                        adjustment = 0.6 + (goals × 0.03)<br/>
-                        capped at 0.8 per gameweek
-                      </div>
                     </div>
                   </div>
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-blue-900 mb-3">Corner/FK Takers (Assists)</h4>
+                    <h4 className="font-semibold text-blue-900 mb-3">Last 6 Games (50%)</h4>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-2 rounded flex justify-between">
-                        <span>Primary taker</span>
-                        <span className="font-bold text-blue-700">+0.8 to +1.2</span>
+                        <span>Purpose</span>
+                        <span className="font-bold text-blue-700">Recent form</span>
                       </div>
                       <div className="bg-white p-2 rounded flex justify-between">
-                        <span>Secondary taker</span>
-                        <span className="font-bold text-blue-700">+0.5 to +0.8</span>
+                        <span>Benefit</span>
+                        <span className="font-bold text-blue-700">Responsiveness</span>
                       </div>
                       <p className="text-xs text-blue-600 mt-2">
-                        Scales with player's assists history
+                        Captures tactical changes and momentum shifts
                       </p>
-                      <div className="bg-white p-2 rounded text-xs font-mono mt-2">
-                        adjustment = 0.8 + (assists × 0.04)<br/>
-                        capped at 1.2 per gameweek
-                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="bg-yellow-50 p-3 rounded text-sm">
-                  <strong className="text-yellow-900">Data Source:</strong>
+                  <strong className="text-yellow-900">Applied To:</strong>
                   <p className="text-yellow-800 mt-1">
-                    Set piece taker order comes from bootstrap-static API: <code>penalties_order</code> and <code>corners_and_indirect_freekicks_order</code> fields
+                    Goals, assists, clean sheets, saves, defensive contributions, bonus points, and all player projections
                   </p>
                 </div>
               </CardContent>
