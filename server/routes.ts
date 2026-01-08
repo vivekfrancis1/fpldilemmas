@@ -13576,7 +13576,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Calculate points using probability-based formula: % chance of hitting threshold × (Opponent DCC / 80) × 2
             // chanceOfHittingThreshold is already a decimal (e.g., 0.222 for 22.2%)
-            let points = chanceOfHittingThreshold * (opponentDCC / 80) * 2;
+            // Cap at maximum 2 points (FPL maximum for DC in a single gameweek)
+            let points = Math.min(chanceOfHittingThreshold * (opponentDCC / 80) * 2, 2);
             // Goalkeepers don't get points from defensive contributions
             if (player.element_type === 1) {
               points = 0;
