@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LoadingExperience } from "@/components/loading-experience";
 import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
 
@@ -62,16 +62,16 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
   const StatusIcon = statusIcon;
 
   return (
-    <Tooltip delayDuration={100}>
-      <TooltipTrigger asChild>
-        <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold cursor-help transition-colors hover:opacity-80 ${statusBg} ${statusBorder} border shadow-sm`}>
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold cursor-pointer transition-colors hover:opacity-80 ${statusBg} ${statusBorder} border shadow-sm`}>
           <StatusIcon className={`h-3 w-3 ${statusColor}`} />
           <span className={statusColor}>
             {chanceOfPlaying}%
           </span>
-        </div>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <StatusIcon className={`h-4 w-4 ${statusColor}`} />
@@ -86,8 +86,8 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
             </div>
           )}
         </div>
-      </TooltipContent>
-    </Tooltip>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -124,9 +124,9 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
   }
 
   return (
-    <Tooltip delayDuration={100}>
-      <TooltipTrigger asChild>
-        <button className="cursor-help hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 relative">
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 relative">
           {hasAdjustment && (
             <span className="absolute -top-1 -right-1 text-xs bg-orange-500 text-white rounded-full w-3 h-3 flex items-center justify-center" title="Availability adjusted">
               !
@@ -140,8 +140,8 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
             fontWeight="medium"
           />
         </button>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
+      </PopoverTrigger>
+      <PopoverContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
         <div className="space-y-2">
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
             GW{gameweek} Points Breakdown
@@ -247,8 +247,8 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
             </div>
           </div>
         </div>
-      </TooltipContent>
-    </Tooltip>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -302,9 +302,9 @@ function RangeTotalBreakdownTooltip({
     Object.keys((player as any).availabilityAdjustments).length > 0;
 
   return (
-    <Tooltip delayDuration={100}>
-      <TooltipTrigger asChild>
-        <button className="cursor-help hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
           <ValueCell 
             value={player.totalExpectedPoints || 0} 
             format="points" 
@@ -313,8 +313,8 @@ function RangeTotalBreakdownTooltip({
             fontWeight="bold"
           />
         </button>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="max-w-md p-4 bg-white shadow-xl border border-gray-200 z-50">
+      </PopoverTrigger>
+      <PopoverContent side="top" className="max-w-md p-4 bg-white shadow-xl border border-gray-200 z-50">
         <div className="space-y-2">
           <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
             {player.name} - {gameweekCount}GW Total Breakdown
@@ -398,8 +398,8 @@ function RangeTotalBreakdownTooltip({
             )}
           </div>
         </div>
-      </TooltipContent>
-    </Tooltip>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -1313,7 +1313,6 @@ export default function PlayerTotalPoints() {
       )}
       
       <div className="fpl-container fpl-content-area fpl-section-spacing">
-        <TooltipProvider delayDuration={100} skipDelayDuration={0}>
           {/* Page Header */}
           <div className="fpl-page-header">
             <div className="fpl-page-header-content">
@@ -1734,7 +1733,6 @@ export default function PlayerTotalPoints() {
               </div>
             </div>
           )}
-        </TooltipProvider>
 
         {/* Comparison Modal */}
         <PlayerProjectionsComparisonModal
