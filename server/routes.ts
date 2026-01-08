@@ -13340,7 +13340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        console.log("DEBUG: Player Defensive Contributions API called - using formula: % chance of hitting threshold × threshold × (Opponent DCC/80) × (Avg Minutes/90)");
+        console.log("DEBUG: Player Defensive Contributions API called - using formula: % chance of hitting threshold × Current DC/game × (Opponent DCC/80) × (Avg Minutes/90)");
       
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
@@ -13519,8 +13519,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Get opponent's DCC per game from current standings
             const opponentDCC = teamDCCPerGame.get(opponentId) || 0;
             
-            // Apply formula: Projected DC = % chance of hitting threshold × threshold × (Opponent DCC / 80) × (Avg Minutes / 90)
-            const projectedDC = chanceOfHittingThreshold * threshold * (opponentDCC / 80) * minutesMultiplier;
+            // Apply formula: Projected DC = % chance of hitting threshold × Current DC/game × (Opponent DCC / 80) × (Avg Minutes / 90)
+            const projectedDC = chanceOfHittingThreshold * dcPerGame * (opponentDCC / 80) * minutesMultiplier;
             
             // Round to 1 decimal place for threshold comparison to avoid floating-point precision issues
             const normalizedDC = parseFloat(projectedDC.toFixed(1));
