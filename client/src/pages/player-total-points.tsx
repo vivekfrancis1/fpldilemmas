@@ -625,8 +625,8 @@ export default function PlayerTotalPoints() {
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedPosition, setSelectedPosition] = useState<string>("all");
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
+  const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLoadGroup, setSelectedLoadGroup] = useState<string>("Top 50");
   const [selectedAvailability, setSelectedAvailability] = useState<string>("all");
@@ -667,6 +667,32 @@ export default function PlayerTotalPoints() {
         newSet.delete(componentKey);
       } else {
         newSet.add(componentKey);
+      }
+      return newSet;
+    });
+  };
+  
+  // Toggle position selection
+  const togglePositionSelection = (position: string) => {
+    setSelectedPositions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(position)) {
+        newSet.delete(position);
+      } else {
+        newSet.add(position);
+      }
+      return newSet;
+    });
+  };
+  
+  // Toggle team selection
+  const toggleTeamSelection = (team: string) => {
+    setSelectedTeams(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(team)) {
+        newSet.delete(team);
+      } else {
+        newSet.add(team);
       }
       return newSet;
     });
@@ -1094,8 +1120,8 @@ export default function PlayerTotalPoints() {
     if (!adjustedPlayerData) return [];
     
     let filtered = adjustedPlayerData.filter(player => {
-      if (selectedPosition !== "all" && player.position !== selectedPosition) return false;
-      if (selectedTeam !== "all" && player.team !== selectedTeam) return false;
+      if (selectedPositions.size > 0 && !selectedPositions.has(player.position)) return false;
+      if (selectedTeams.size > 0 && !selectedTeams.has(player.team)) return false;
       if (searchTerm && !player.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
           !player.team.toLowerCase().includes(searchTerm.toLowerCase())) return false;
       
@@ -1196,7 +1222,7 @@ export default function PlayerTotalPoints() {
     });
 
     return filtered;
-  }, [adjustedPlayerData, selectedPosition, selectedTeam, searchTerm, selectedLoadGroup, selectedAvailability, sortField, sortDirection]);
+  }, [adjustedPlayerData, selectedPositions, selectedTeams, searchTerm, selectedLoadGroup, selectedAvailability, sortField, sortDirection]);
 
   // Calculate max points per gameweek for highlighting
   const maxPointsPerGameweek = useMemo(() => {
@@ -1337,36 +1363,6 @@ export default function PlayerTotalPoints() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="position-filter" className="text-sm font-medium text-gray-700">Position</Label>
-              <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem key="position-all" value="all">All</SelectItem>
-                  {positions.map(position => (
-                    <SelectItem key={`position-${position}`} value={position}>{position}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="team-filter" className="text-sm font-medium text-gray-700">Team</Label>
-              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem key="team-all" value="all">All Teams</SelectItem>
-                  {teams.map(team => (
-                    <SelectItem key={`team-${team}`} value={team}>{team}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="availability-filter" className="text-sm font-medium text-gray-700">Availability</Label>
               <Select value={selectedAvailability} onValueChange={setSelectedAvailability}>
                 <SelectTrigger>
@@ -1471,6 +1467,116 @@ export default function PlayerTotalPoints() {
                 {excludedGameweeks.size > 0 && (
                   <p className="text-xs text-gray-500 mt-2">
                     Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
+                  </p>
+                )}
+              </div>
+              
+              {/* Position Toggle Section */}
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <Label className="text-xs sm:text-sm font-medium text-gray-700">
+                    Toggle Positions (click to include/exclude):
+                  </Label>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setSelectedPositions(new Set())}
+                      className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 py-1"
+                      data-testid="button-include-all-positions"
+                    >
+                      Include All
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setSelectedPositions(new Set(['_none_']))}
+                      className="text-xs bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 py-1"
+                      data-testid="button-exclude-all-positions"
+                    >
+                      Exclude All
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  {positions.map(position => {
+                    const isSelected = selectedPositions.size === 0 || selectedPositions.has(position);
+                    return (
+                      <Button
+                        key={position}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => togglePositionSelection(position)}
+                        className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                          isSelected 
+                            ? 'bg-teal-100 text-teal-700 hover:bg-teal-200 border border-teal-300' 
+                            : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'
+                        }`}
+                        data-testid={`button-toggle-position-${position}`}
+                      >
+                        {position}
+                      </Button>
+                    );
+                  })}
+                </div>
+                {selectedPositions.size > 0 && !selectedPositions.has('_none_') && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Selected: {positions.filter(p => selectedPositions.has(p)).join(', ')}
+                  </p>
+                )}
+              </div>
+              
+              {/* Team Toggle Section */}
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <Label className="text-xs sm:text-sm font-medium text-gray-700">
+                    Toggle Teams (click to include/exclude):
+                  </Label>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setSelectedTeams(new Set())}
+                      className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 py-1"
+                      data-testid="button-include-all-teams"
+                    >
+                      Include All
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setSelectedTeams(new Set(['_none_']))}
+                      className="text-xs bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 py-1"
+                      data-testid="button-exclude-all-teams"
+                    >
+                      Exclude All
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  {teams.map(team => {
+                    const isSelected = selectedTeams.size === 0 || selectedTeams.has(team);
+                    return (
+                      <Button
+                        key={team}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleTeamSelection(team)}
+                        className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                          isSelected 
+                            ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300' 
+                            : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'
+                        }`}
+                        data-testid={`button-toggle-team-${team}`}
+                      >
+                        {team}
+                      </Button>
+                    );
+                  })}
+                </div>
+                {selectedTeams.size > 0 && !selectedTeams.has('_none_') && (
+                  <p className="text-xs text-gray-500 mt-2">
+                    Selected: {teams.filter(t => selectedTeams.has(t)).join(', ')}
                   </p>
                 )}
               </div>
