@@ -969,8 +969,8 @@ export default function ProjectionDocumentation() {
                       <div className="ml-4"></div>
                       <div className="ml-4">// Calculate player clean sheet points</div>
                       <div className="ml-4">positionPoints = getPositionCSPoints(player.position)</div>
-                      <div className="ml-4">minutes60PlusProb = player.expectedMinutes &gt;= 60 ? 1.0 : 0.0</div>
-                      <div className="ml-4">playerCSPoints = (cleanSheetProbability / 100) × minutes60PlusProb × positionPoints</div>
+                      <div className="ml-4">pct60Plus = player.gamesHit60Plus / player.appearances × 100</div>
+                      <div className="ml-4">playerCSPoints = (cleanSheetProbability / 100) × (pct60Plus / 100) × positionPoints</div>
                       <div className="ml-4"></div>
                       <div className="ml-4"><span className="text-green-600">return</span> playerCSPoints</div>
                     </div>
@@ -1148,30 +1148,34 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Expected minutes per game based on actual performance and team rotation patterns.
+                    Expected minutes per game based on actual game-by-game history with 60-minute threshold probability.
                   </p>
                   <div className="bg-purple-50 p-3 rounded text-sm">
-                    <strong>Formula:</strong><br/>
-                    <code className="text-xs">ExpectedMinutes = (CurrentMinutes / GamesPlayed)</code><br/>
-                    <code className="text-xs">MinutesPoints = (ExpectedMinutes / 90) × 2</code>
+                    <strong>Formulas:</strong><br/>
+                    <code className="text-xs">ExpectedMinutes = CurrentMinutes / PlayerAppearances</code><br/>
+                    <code className="text-xs">pct60Plus = (Games with 60+ mins / Appearances) × 100</code><br/>
+                    <code className="text-xs">pctBelow60 = (Games with 1-59 mins / Appearances) × 100</code>
+                  </div>
+                  <div className="bg-purple-100 p-3 rounded text-sm mt-2">
+                    <strong>Minutes Points Formula:</strong><br/>
+                    <code className="text-xs">MinutesPoints = (2 × pct60Plus/100) + (1 × pctBelow60/100)</code>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div><strong>Calculation:</strong></div>
                     <ul className="list-disc ml-5 text-xs">
-                      <li>Uses actual minutes played this season</li>
-                      <li>Divided by team games played (not appearances)</li>
-                      <li>Capped at 90 minutes per game maximum</li>
+                      <li>Fetches actual game-by-game history for each player</li>
+                      <li>Counts appearances (games with any minutes)</li>
+                      <li>Calculates % of games hitting 60+ minutes threshold</li>
                     </ul>
                     <div><strong>FPL Points Rules:</strong></div>
                     <ul className="list-disc ml-5 text-xs">
-                      <li>0-59 minutes: 0 points</li>
-                      <li>60-89 minutes: 1 point</li>
-                      <li>90+ minutes: 2 points</li>
+                      <li>1-59 minutes: 1 point</li>
+                      <li>60+ minutes: 2 points</li>
                     </ul>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                     <div>API: /api/player-minutes-projections</div>
-                    <div>Data: FPL bootstrap actual minutes</div>
+                    <div>Data: FPL element-summary game history</div>
                   </div>
                 </CardContent>
               </Card>
@@ -1189,9 +1193,16 @@ export default function ProjectionDocumentation() {
                     Clean sheet probability using exponential decay based on expected goals conceded.
                   </p>
                   <div className="bg-teal-50 p-3 rounded text-sm">
-                    <strong>Formula:</strong><br/>
-                    <code className="text-xs">CS% = 100 × e^(-1.1 × GoalsConceded)</code><br/>
-                    <code className="text-xs">CSPoints = CS% × Minutes60+% × PositionPoints</code>
+                    <strong>Team CS Formula:</strong><br/>
+                    <code className="text-xs">CS% = 100 × e^(-1.1 × GoalsConceded)</code>
+                  </div>
+                  <div className="bg-teal-100 p-3 rounded text-sm mt-2">
+                    <strong>Player CS Points Formula:</strong><br/>
+                    <code className="text-xs">CSPoints = (Team CS%) × (% chance of 60+ mins) × PositionPoints</code><br/>
+                    <div className="text-xs mt-1 text-teal-700">
+                      • pct60Plus: Actual % of games where player reached 60+ mins<br/>
+                      • Requires 60+ minutes for clean sheet points in FPL
+                    </div>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div><strong>Goals Conceded Calculation:</strong></div>
