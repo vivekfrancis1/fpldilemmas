@@ -13468,48 +13468,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             playerMatchesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1);
           }
           
-          // SEASON AVERAGE: Calculate DC per match for this player based on their actual matches played
-          const dcPerGameSeason = seasonDefensiveContribution / playerMatchesPlayed;
-          
-          // LAST 6 GAMES AVERAGE: Calculate DC from last 6 gameweeks
-          let dcPerGameLast6 = dcPerGameSeason; // Default to season average
-          try {
-            const playerDCHistoryResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-            if (playerDCHistoryResponse.ok) {
-              const playerDCHistory = await playerDCHistoryResponse.json();
-              const recentDCGames = playerDCHistory.history
-                .filter((gw: any) => gw.minutes > 0)
-                .sort((a: any, b: any) => b.round - a.round)
-                .slice(0, 6);
-              
-              if (recentDCGames.length > 0) {
-                // Calculate DC from last 6 games using same formula as season DC
-                let last6DC = 0;
-                recentDCGames.forEach((gw: any) => {
-                  const gwDC = gw.defensive_contribution || 0;
-                  if (gwDC > 0) {
-                    last6DC += gwDC;
-                  } else {
-                    // Calculate from component stats
-                    const cbi = gw.clearances_blocks_interceptions || 0;
-                    const tackles = gw.tackles || 0;
-                    const recoveries = gw.recoveries || 0;
-                    if (player.element_type === 2) {
-                      last6DC += cbi + tackles;
-                    } else {
-                      last6DC += cbi + tackles + recoveries;
-                    }
-                  }
-                });
-                dcPerGameLast6 = last6DC / recentDCGames.length;
-              }
-            }
-          } catch (error) {
-            // Fallback to season average
-          }
-          
-          // BLEND 50/50: Average of season and last 6 games
-          const dcPerGame = (dcPerGameSeason + dcPerGameLast6) / 2;
+          // Calculate DC per match for this player based on their actual matches played (season average only)
+          const dcPerGame = seasonDefensiveContribution / playerMatchesPlayed;
           
           // Calculate minutes multiplier (avg minutes / 90)
           const minutesMultiplier = avgMinutesPerGame / 90;
