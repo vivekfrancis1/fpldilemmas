@@ -1394,13 +1394,14 @@ export default function PlayerTotalPoints() {
 
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Avail. Adj.</Label>
-              <div className="flex items-center gap-2 h-10">
+              <div className={`flex items-center gap-2 h-10 px-3 rounded-md border ${applyAvailability ? 'bg-purple-50 border-purple-300' : 'bg-gray-50 border-gray-300'}`}>
                 <Switch
                   checked={applyAvailability}
                   onCheckedChange={setApplyAvailability}
                   data-testid="switch-availability-adjustment"
+                  className={applyAvailability ? 'data-[state=checked]:bg-purple-600' : ''}
                 />
-                <span className="text-xs text-gray-500">{applyAvailability ? 'ON' : 'OFF'}</span>
+                <span className={`text-sm font-medium ${applyAvailability ? 'text-purple-700' : 'text-gray-500'}`}>{applyAvailability ? 'ON' : 'OFF'}</span>
               </div>
             </div>
 
