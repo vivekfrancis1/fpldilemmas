@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Loader2, X } from "lucide-react";
+import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, SortableHeader, type TableColumn } from "@/components/enhanced-table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LoadingExperience } from "@/components/loading-experience";
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
@@ -54,6 +55,12 @@ export default function PlayerGoalsScoredProjections() {
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
   const [initialized, setInitialized] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return false;
+  });
   
   const queryClient = useQueryClient();
 
@@ -480,8 +487,30 @@ export default function PlayerGoalsScoredProjections() {
       <div className="fpl-section-spacing">
 
         {/* Controls */}
-        <Card className="mb-4 md:mb-6">
-          <CardContent className="p-3 sm:p-4 lg:p-6">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-4 md:mb-6">
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-5 w-5 text-orange-600" />
+                    <CardTitle className="text-base sm:text-lg">Filters & Controls</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 md:hidden">
+                      {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
+                    </span>
+                    {isFiltersOpen ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+          <CardContent className="p-3 sm:p-4 lg:p-6 pt-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">From GW</label>
@@ -635,7 +664,9 @@ export default function PlayerGoalsScoredProjections() {
               </div>
             </div>
           </CardContent>
-        </Card>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
 
         {/* Main Content */}

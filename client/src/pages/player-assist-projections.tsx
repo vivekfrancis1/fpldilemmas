@@ -4,13 +4,14 @@ import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDro
 import { BootstrapData } from "@shared/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBatchAssistsProjections } from "@/hooks/use-batch-projections";
-import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown, RefreshCw, Loader2, X } from "lucide-react";
+import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
 
@@ -57,6 +58,12 @@ export default function PlayerAssistProjections() {
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return false;
+  });
 
   // Toggle gameweek exclusion
   const toggleGameweekExclusion = (gw: number) => {
@@ -469,8 +476,30 @@ export default function PlayerAssistProjections() {
       <div className="fpl-section-spacing">
 
         {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="p-4 sm:p-6">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4">
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-5 w-5 text-purple-600" />
+                    <CardTitle className="text-base sm:text-lg">Filters & Controls</CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 md:hidden">
+                      {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
+                    </span>
+                    {isFiltersOpen ? (
+                      <ChevronUp className="h-5 w-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-500" />
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">From GW</label>
@@ -646,7 +675,9 @@ export default function PlayerAssistProjections() {
               </div>
             </div>
           </CardContent>
-        </Card>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
         {/* Loading State */}
         {(isLoading || !initialized) && (

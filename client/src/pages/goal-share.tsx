@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Target, Users, TrendingUp, Calendar, Trophy, Filter, RefreshCw } from "lucide-react";
+import { Target, Users, TrendingUp, Calendar, Trophy, Filter, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface SeasonGoalShareData {
   gameweek: number; // 0 for season-long data, or specific gameweek for range data
@@ -29,6 +30,12 @@ export default function GoalShare() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [gameweekFilter, setGameweekFilter] = useState<string>("full");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return false;
+  });
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -139,44 +146,62 @@ export default function GoalShare() {
           </div>
 
           {/* Controls */}
-          <Card className="mb-6">
-            <CardContent className="p-6">
-              <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5 text-blue-600" />
-                  <label className="text-sm font-medium text-gray-700">Period:</label>
-                  <Select value={gameweekFilter} onValueChange={setGameweekFilter}>
-                    <SelectTrigger className="w-48" data-testid="select-period-filter">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="last6">Last 6 Gameweeks</SelectItem>
-                      <SelectItem value="last8">Last 8 Gameweeks</SelectItem>
-                      <SelectItem value="last12">Last 12 Gameweeks</SelectItem>
-                      <SelectItem value="full">Full Season</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Filter className="h-5 w-5 text-blue-600" />
-                  <label className="text-sm font-medium text-gray-700">Team:</label>
-                  <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                    <SelectTrigger className="w-48" data-testid="select-team-filter">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Teams</SelectItem>
-                      {bootstrapData?.teams?.map(team => (
-                        <SelectItem key={team.id} value={team.id.toString()}>
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+            <Card className="mb-6">
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3">
+                  <CardTitle className="flex items-center justify-between text-base">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      <span>Filters & Options</span>
+                      <span className="text-xs text-gray-500 font-normal md:hidden">
+                        (Tap to {isFiltersOpen ? 'collapse' : 'expand'})
+                      </span>
+                    </div>
+                    {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </CardTitle>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 pb-6">
+                  <div className="flex flex-wrap gap-4 items-center">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5 text-blue-600" />
+                      <label className="text-sm font-medium text-gray-700">Period:</label>
+                      <Select value={gameweekFilter} onValueChange={setGameweekFilter}>
+                        <SelectTrigger className="w-48" data-testid="select-period-filter">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="last6">Last 6 Gameweeks</SelectItem>
+                          <SelectItem value="last8">Last 8 Gameweeks</SelectItem>
+                          <SelectItem value="last12">Last 12 Gameweeks</SelectItem>
+                          <SelectItem value="full">Full Season</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-5 w-5 text-blue-600" />
+                      <label className="text-sm font-medium text-gray-700">Team:</label>
+                      <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                        <SelectTrigger className="w-48" data-testid="select-team-filter">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Teams</SelectItem>
+                          {bootstrapData?.teams?.map(team => (
+                            <SelectItem key={team.id} value={team.id.toString()}>
+                              {team.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
 
           {/* Loading State */}
           {(isLoading || goalShareLoading) && (

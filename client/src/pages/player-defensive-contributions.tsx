@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -90,6 +92,14 @@ export default function PlayerDefensiveContributions() {
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
+  
+  // Filter section collapse state - collapsed on mobile by default
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768; // Open by default on desktop (md breakpoint)
+    }
+    return false;
+  });
 
   // Dynamic gameweek range state (fetch 12 gameweeks for API, default display to 6)
   const [gameweekRange, setGameweekRange] = useState(() => {
@@ -575,14 +585,30 @@ export default function PlayerDefensiveContributions() {
         </div>
 
       {/* Filters and Controls */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters & Controls
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6">
+      <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors">
+              <div className="flex items-center justify-between w-full">
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  Filters & Controls
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 md:hidden">
+                    {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
+                  </span>
+                  {isFiltersOpen ? (
+                    <ChevronUp className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+          <CardContent className="p-4 sm:p-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">From GW</label>
@@ -752,7 +778,9 @@ export default function PlayerDefensiveContributions() {
             </div>
           </div>
         </CardContent>
-      </Card>
+        </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Main Content */}
       <Card>

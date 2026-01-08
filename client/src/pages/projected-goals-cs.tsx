@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Target, TrendingUp, Filter, Calendar, Trophy, Clock, Loader2 } from "lucide-react";
+import { Target, TrendingUp, Filter, Calendar, Trophy, Clock, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface MatchProjection {
   id: number;
@@ -50,6 +51,12 @@ export default function ProjectedGoalsCS() {
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return false;
+  });
 
   // Get available gameweeks for dropdown options (next 12 gameweeks available)
   const availableGameweeks = useMemo(() => {
@@ -319,64 +326,82 @@ export default function ProjectedGoalsCS() {
       <div className="fpl-section-spacing">
 
           {/* Controls - Compact */}
-          <Card className="mb-3 shadow-sm border-0">
-            <CardContent className="p-2">
-              <div className="flex flex-wrap gap-3 items-center">
+          <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+            <Card className="mb-3 shadow-sm border-0">
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-2">
+                  <CardTitle className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4" />
+                      <span>Filters & Options</span>
+                      <span className="text-xs text-gray-500 font-normal md:hidden">
+                        (Tap to {isFiltersOpen ? 'collapse' : 'expand'})
+                      </span>
+                    </div>
+                    {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </CardTitle>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 pb-2">
+                  <div className="flex flex-wrap gap-3 items-center">
 
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-blue-600" />
-                  <label className="text-xs font-semibold text-gray-700">From:</label>
-                  <Select value={startGameweek} onValueChange={setStartGameweek}>
-                    <SelectTrigger className="w-20 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableGameweeks.map(gameweek => (
-                        <SelectItem key={gameweek} value={gameweek.toString()}>
-                          GW{gameweek}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      <label className="text-xs font-semibold text-gray-700">From:</label>
+                      <Select value={startGameweek} onValueChange={setStartGameweek}>
+                        <SelectTrigger className="w-20 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableGameweeks.map(gameweek => (
+                            <SelectItem key={gameweek} value={gameweek.toString()}>
+                              GW{gameweek}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-blue-600" />
-                  <label className="text-xs font-semibold text-gray-700">To:</label>
-                  <Select value={endGameweek} onValueChange={setEndGameweek}>
-                    <SelectTrigger className="w-20 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableGameweeks.map(gameweek => (
-                        <SelectItem key={gameweek} value={gameweek.toString()}>
-                          GW{gameweek}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-blue-600" />
+                      <label className="text-xs font-semibold text-gray-700">To:</label>
+                      <Select value={endGameweek} onValueChange={setEndGameweek}>
+                        <SelectTrigger className="w-20 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableGameweeks.map(gameweek => (
+                            <SelectItem key={gameweek} value={gameweek.toString()}>
+                              GW{gameweek}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-blue-600" />
-                  <label className="text-xs font-semibold text-gray-700">Team:</label>
-                  <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                    <SelectTrigger className="w-28 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Teams</SelectItem>
-                      {bootstrapData?.teams?.map(team => (
-                        <SelectItem key={team.id} value={team.short_name}>
-                          {team.short_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-blue-600" />
+                      <label className="text-xs font-semibold text-gray-700">Team:</label>
+                      <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                        <SelectTrigger className="w-28 h-8 border-2 border-gray-200 hover:border-blue-400 transition-colors text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Teams</SelectItem>
+                          {bootstrapData?.teams?.map(team => (
+                            <SelectItem key={team.id} value={team.short_name}>
+                              {team.short_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
 
           {/* Projections Table - Compact */}
           <Card className="overflow-hidden shadow-md border-0">

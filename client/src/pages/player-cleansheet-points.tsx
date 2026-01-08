@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import ProtectedRoute from "@/components/protected-route";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { computeNextRange } from "@shared/gameweek-utils";
 
 interface PlayerCleanSheetData {
@@ -31,6 +32,12 @@ export default function PlayerCleanSheetPoints() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return false;
+  });
 
   // Fetch bootstrap data to get events for dynamic gameweek calculation
   const { data: bootstrapData } = useQuery({
@@ -189,7 +196,28 @@ export default function PlayerCleanSheetPoints() {
       <div className="fpl-section-spacing">
 
         {/* Filters and Controls */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 mb-8 p-6">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-8">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200">
+            <CollapsibleTrigger asChild>
+              <div className="cursor-pointer hover:bg-gray-50 transition-colors py-4 px-6 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-5 w-5 text-green-600" />
+                  <h3 className="text-base sm:text-lg font-semibold">Filters & Controls</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 md:hidden">
+                    {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
+                  </span>
+                  {isFiltersOpen ? (
+                    <ChevronUp className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-500" />
+                  )}
+                </div>
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-6 pb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             {/* Gameweek Range */}
             <div className="space-y-2">
@@ -275,7 +303,10 @@ export default function PlayerCleanSheetPoints() {
               </div>
             </div>
           </div>
-        </div>
+              </div>
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
 
         {/* Main Table */}
         <Card className="overflow-hidden shadow-xl">

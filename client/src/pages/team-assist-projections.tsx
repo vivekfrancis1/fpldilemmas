@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Users, TrendingUp, Filter, BarChart3, Trophy, Zap, Loader2 } from "lucide-react";
+import { Users, TrendingUp, Filter, BarChart3, Trophy, Zap, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface TeamAssistProjection {
   id: number;
@@ -43,6 +44,12 @@ export default function TeamAssistProjections() {
   const [endGameweek, setEndGameweek] = useState<string>("11");
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
+  const [isFiltersOpen, setIsFiltersOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return false;
+  });
 
   // Update state when defaults change
   useMemo(() => {
@@ -164,75 +171,87 @@ export default function TeamAssistProjections() {
       <div className="fpl-section-spacing">
 
         {/* Controls */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Filter className="h-5 w-5" />
-              Filter & Display Options
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+          <Card className="mb-6">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="cursor-pointer hover:bg-gray-50 transition-colors py-3">
+                <CardTitle className="flex items-center justify-between text-base">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4" />
+                    <span>Filters & Options</span>
+                    <span className="text-xs text-gray-500 font-normal md:hidden">
+                      (Tap to {isFiltersOpen ? 'collapse' : 'expand'})
+                    </span>
+                  </div>
+                  {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </CardTitle>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0 pb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  From GW
-                </label>
-                <Select value={startGameweek} onValueChange={setStartGameweek}>
-                  <SelectTrigger data-testid="select-start-gameweek">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableGameweeks.map((gw) => (
-                      <SelectItem key={gw} value={gw.toString()}>
-                        {gw}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      From GW
+                    </label>
+                    <Select value={startGameweek} onValueChange={setStartGameweek}>
+                      <SelectTrigger data-testid="select-start-gameweek">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableGameweeks.map((gw) => (
+                          <SelectItem key={gw} value={gw.toString()}>
+                            {gw}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  To GW
-                </label>
-                <Select value={endGameweek} onValueChange={setEndGameweek}>
-                  <SelectTrigger data-testid="select-end-gameweek">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableGameweeks.map((gw) => (
-                      <SelectItem key={gw} value={gw.toString()}>
-                        {gw}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      To GW
+                    </label>
+                    <Select value={endGameweek} onValueChange={setEndGameweek}>
+                      <SelectTrigger data-testid="select-end-gameweek">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableGameweeks.map((gw) => (
+                          <SelectItem key={gw} value={gw.toString()}>
+                            {gw}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Team
-                </label>
-                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                  <SelectTrigger data-testid="select-team">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Teams</SelectItem>
-                    {bootstrapData?.teams && bootstrapData.teams
-                      .sort((a: any, b: any) => a.name.localeCompare(b.name))
-                      .map((team: any) => (
-                        <SelectItem key={team.id} value={team.short_name}>
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Team
+                    </label>
+                    <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                      <SelectTrigger data-testid="select-team">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Teams</SelectItem>
+                        {bootstrapData?.teams && bootstrapData.teams
+                          .sort((a: any, b: any) => a.name.localeCompare(b.name))
+                          .map((team: any) => (
+                            <SelectItem key={team.id} value={team.short_name}>
+                              {team.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
         {/* Team Assist Projections Table */}
         <Card className="overflow-hidden">
