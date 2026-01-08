@@ -1417,7 +1417,7 @@ export default function PlayerTotalPoints() {
                       variant="outline"
                       size="sm"
                       onClick={() => setShowOpponent(!showOpponent)}
-                      className={`flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                      className={`flex items-center gap-1.5 text-xs px-2 py-1 ${
                         showOpponent 
                           ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
                           : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
@@ -1432,7 +1432,7 @@ export default function PlayerTotalPoints() {
                       variant="outline"
                       size="sm"
                       onClick={() => setApplyAvailability(!applyAvailability)}
-                      className={`flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                      className={`flex items-center gap-1.5 text-xs px-2 py-1 ${
                         applyAvailability 
                           ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
                           : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
@@ -1466,7 +1466,7 @@ export default function PlayerTotalPoints() {
                         variant="outline"
                         size="sm"
                         onClick={() => toggleGameweekExclusion(gw)}
-                        className={`min-w-[50px] sm:min-w-[60px] text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                        className={`min-w-[50px] sm:min-w-[60px] text-xs px-2 py-1 ${
                           isExcluded 
                             ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' 
                             : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'
@@ -1522,7 +1522,7 @@ export default function PlayerTotalPoints() {
                         variant="outline"
                         size="sm"
                         onClick={() => togglePositionSelection(position)}
-                        className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                        className={`text-xs px-2 py-1 ${
                           isSelected 
                             ? 'bg-teal-100 text-teal-700 hover:bg-teal-200 border border-teal-300' 
                             : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'
@@ -1573,7 +1573,7 @@ export default function PlayerTotalPoints() {
                         variant="outline"
                         size="sm"
                         onClick={() => toggleTeamSelection(team)}
-                        className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                        className={`text-xs px-2 py-1 ${
                           isSelected 
                             ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300' 
                             : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'
@@ -1623,7 +1623,7 @@ export default function PlayerTotalPoints() {
                         variant="outline"
                         size="sm"
                         onClick={() => toggleComponentExclusion(component.key)}
-                        className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                        className={`text-xs px-2 py-1 ${
                           isExcluded 
                             ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' 
                             : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300'
