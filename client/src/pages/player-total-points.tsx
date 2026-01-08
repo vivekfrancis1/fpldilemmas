@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { LoadingExperience } from "@/components/loading-experience";
 import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
@@ -1392,19 +1391,6 @@ export default function PlayerTotalPoints() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700">Avail. Adj.</Label>
-              <div className={`flex items-center gap-2 h-10 px-2 sm:px-3 rounded-md border ${applyAvailability ? 'bg-purple-50 border-purple-300' : 'bg-gray-50 border-gray-300'}`}>
-                <Switch
-                  checked={applyAvailability}
-                  onCheckedChange={setApplyAvailability}
-                  data-testid="switch-availability-adjustment"
-                  className={applyAvailability ? 'data-[state=checked]:bg-purple-600' : ''}
-                />
-                <span className={`text-xs sm:text-sm font-medium ${applyAvailability ? 'text-purple-700' : 'text-gray-500'}`}>{applyAvailability ? 'ON' : 'OFF'}</span>
-              </div>
-            </div>
-
             <div className="space-y-2 sm:col-span-2 lg:col-span-1">
               <Label htmlFor="search" className="text-sm font-medium text-gray-700 flex items-center gap-2">
                 <Search className="h-4 w-4 text-gray-500" />
@@ -1441,6 +1427,20 @@ export default function PlayerTotalPoints() {
                       <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                       <span className="hidden sm:inline">{showOpponent ? 'Hide Opponent' : 'Show Opponent'}</span>
                       <span className="sm:hidden">{showOpponent ? 'Hide' : 'Show'}</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setApplyAvailability(!applyAvailability)}
+                      className={`flex items-center gap-1.5 text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
+                        applyAvailability 
+                          ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
+                      }`}
+                      data-testid="button-toggle-availability"
+                    >
+                      <span className="hidden sm:inline">{applyAvailability ? 'Avail. Adj: ON' : 'Avail. Adj: OFF'}</span>
+                      <span className="sm:hidden">{applyAvailability ? 'Adj: ON' : 'Adj: OFF'}</span>
                     </Button>
                     {excludedGameweeks.size > 0 && (
                       <Button 
@@ -1598,7 +1598,7 @@ export default function PlayerTotalPoints() {
                       variant="outline" 
                       size="sm" 
                       onClick={includeAllComponents}
-                      className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 py-1"
+                      className="text-xs sm:text-sm bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 sm:px-3 py-1.5"
                       data-testid="button-include-all-components"
                     >
                       Include All
@@ -1607,7 +1607,7 @@ export default function PlayerTotalPoints() {
                       variant="outline" 
                       size="sm" 
                       onClick={excludeAllComponents}
-                      className="text-xs bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 py-1"
+                      className="text-xs sm:text-sm bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 sm:px-3 py-1.5"
                       data-testid="button-exclude-all-components"
                     >
                       Exclude All
