@@ -54,7 +54,7 @@ export const DEFAULT_ASSIST_SHARE_CAPS: PositionCaps = {
 
 /**
  * Dynamic penalty taker adjustment based on FPL metrics
- * Increased penalty advantage for stronger impact
+ * SIGNIFICANTLY INCREASED for major penalty advantage in goal share
  */
 export function getPenaltyTakerAdjustment(playerId: number, bootstrapData?: any): number {
   if (!bootstrapData?.elements) return 0;
@@ -66,15 +66,15 @@ export function getPenaltyTakerAdjustment(playerId: number, bootstrapData?: any)
   
   let adjustment = 0;
   if (penaltyOrder === 1) {
-    // Primary penalty taker - INCREASED for stronger penalty advantage
-    adjustment = 0.6 + (player.goals_scored || 0) * 0.03; // Base + goals bonus
+    // Primary penalty taker - MAJOR boost (1.5+ base, scales with goals)
+    adjustment = 1.5 + (player.goals_scored || 0) * 0.08; // High base + substantial goals bonus
   } else if (penaltyOrder === 2) {
-    // Secondary penalty taker - INCREASED for stronger penalty advantage
-    adjustment = 0.3 + (player.goals_scored || 0) * 0.025;
+    // Secondary penalty taker - Moderate boost
+    adjustment = 0.8 + (player.goals_scored || 0) * 0.05;
   }
   
-  // Cap the adjustment - INCREASED ceiling
-  adjustment = Math.min(0.8, Math.max(0, adjustment));
+  // Cap the adjustment - HIGHER ceiling for significant impact
+  adjustment = Math.min(3.0, Math.max(0, adjustment));
   
   return adjustment;
 }

@@ -7024,6 +7024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Helper function to build goal share response for full season
+  // NO position caps, NO minutes weight, WITH penalty taker adjustment
   function buildGoalShareResponse(bootstrapData: any, teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } }) {
     const finalResponse: any[] = [];
     
@@ -7036,13 +7037,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamPlayers: any[] = [];
       const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
       
+      // First pass: calculate raw totals with penalty adjustments
+      let teamTotalWithPenalty = 0;
+      const playerTotalsWithPenalty: { [playerId: number]: number } = {};
+      
       teamPlayersList.forEach((player: any) => {
         const goalsScored = parseInt(player.goals_scored || 0);
         const expectedGoals = parseFloat(player.expected_goals || 0);
-        const playerTotal = goalsScored + expectedGoals;
+        let playerTotal = goalsScored + expectedGoals;
         
-        if (playerTotal > 0) {
-          const goalShare = (playerTotal / teamData.total) * 100;
+        // Add penalty taker adjustment (INCREASED)
+        const penaltyOrder = player.penalties_order || 99;
+        if (penaltyOrder === 1) {
+          // Primary penalty taker: +1.5 base + 0.08 per goal
+          playerTotal += Math.min(3.0, 1.5 + goalsScored * 0.08);
+        } else if (penaltyOrder === 2) {
+          // Secondary penalty taker: +0.8 base + 0.05 per goal
+          playerTotal += Math.min(2.0, 0.8 + goalsScored * 0.05);
+        }
+        
+        playerTotalsWithPenalty[player.id] = playerTotal;
+        teamTotalWithPenalty += playerTotal;
+      });
+      
+      // Second pass: calculate shares based on adjusted totals
+      teamPlayersList.forEach((player: any) => {
+        const playerTotal = playerTotalsWithPenalty[player.id] || 0;
+        
+        if (playerTotal > 0 && teamTotalWithPenalty > 0) {
+          // Raw goal share - NO position caps, NO minutes weight
+          const goalShare = (playerTotal / teamTotalWithPenalty) * 100;
           const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
           
           teamPlayers.push({
@@ -7062,7 +7086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamId: teamId,
           teamName: teamData.name,
           teamShort: teamData.short_name,
-          expectedGoals: Math.round(teamData.total * 100) / 100,
+          expectedGoals: Math.round(teamTotalWithPenalty * 100) / 100,
           players: teamPlayers
         });
       }
@@ -7073,6 +7097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
   
   // Helper function to build goal share response for filtered gameweeks
+  // NO position caps, NO minutes weight, WITH penalty taker adjustment
   function buildGoalShareResponseFiltered(
     bootstrapData: any, 
     teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } },
@@ -7089,14 +7114,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamPlayers: any[] = [];
       const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
       
+      // First pass: calculate raw totals with penalty adjustments
+      let teamTotalWithPenalty = 0;
+      const playerTotalsWithPenalty: { [playerId: number]: number } = {};
+      
       teamPlayersList.forEach((player: any) => {
         const stats = playerStats[player.id];
         if (!stats) return;
         
-        const playerTotal = stats.goals + stats.xg;
+        const goalsScored = stats.goals;
+        let playerTotal = stats.goals + stats.xg;
         
-        if (playerTotal > 0) {
-          const goalShare = (playerTotal / teamData.total) * 100;
+        // Add penalty taker adjustment (INCREASED)
+        const penaltyOrder = player.penalties_order || 99;
+        if (penaltyOrder === 1) {
+          // Primary penalty taker: +1.5 base + 0.08 per goal
+          playerTotal += Math.min(3.0, 1.5 + goalsScored * 0.08);
+        } else if (penaltyOrder === 2) {
+          // Secondary penalty taker: +0.8 base + 0.05 per goal
+          playerTotal += Math.min(2.0, 0.8 + goalsScored * 0.05);
+        }
+        
+        playerTotalsWithPenalty[player.id] = playerTotal;
+        teamTotalWithPenalty += playerTotal;
+      });
+      
+      // Second pass: calculate shares based on adjusted totals
+      teamPlayersList.forEach((player: any) => {
+        const playerTotal = playerTotalsWithPenalty[player.id] || 0;
+        
+        if (playerTotal > 0 && teamTotalWithPenalty > 0) {
+          // Raw goal share - NO position caps, NO minutes weight
+          const goalShare = (playerTotal / teamTotalWithPenalty) * 100;
           const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
           
           teamPlayers.push({
@@ -7116,7 +7165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamId: teamId,
           teamName: teamData.name,
           teamShort: teamData.short_name,
-          expectedGoals: Math.round(teamData.total * 100) / 100,
+          expectedGoals: Math.round(teamTotalWithPenalty * 100) / 100,
           players: teamPlayers
         });
       }
