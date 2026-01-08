@@ -648,7 +648,7 @@ export default function PlayerTotalPoints() {
     { key: 'goals', label: 'Goals', totalKey: 'totalPointsFromGoals', gwKey: 'pointsFromGoals' },
     { key: 'assists', label: 'Assists', totalKey: 'totalPointsFromAssists', gwKey: 'pointsFromAssists' },
     { key: 'cleanSheets', label: 'Clean Sheets', totalKey: 'totalPointsFromCleanSheets', gwKey: 'pointsFromCleanSheets' },
-    { key: 'defensiveContributions', label: 'Defensive Contributions', totalKey: 'totalPointsFromDefensiveContributions', gwKey: 'pointsFromDefensiveContributions' },
+    { key: 'defensiveContributions', label: 'Def Con', totalKey: 'totalPointsFromDefensiveContributions', gwKey: 'pointsFromDefensiveContributions' },
     { key: 'minutes', label: 'Minutes', totalKey: 'totalPointsFromMinutes', gwKey: 'pointsFromMinutes' },
     { key: 'bonus', label: 'Bonus', totalKey: 'totalPointsFromBonus', gwKey: 'pointsFromBonus' },
     { key: 'saves', label: 'Saves', totalKey: 'totalPointsFromSaves', gwKey: 'pointsFromSaves' },
@@ -1601,7 +1601,7 @@ export default function PlayerTotalPoints() {
                       className="text-xs sm:text-sm bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 sm:px-3 py-1.5"
                       data-testid="button-include-all-components"
                     >
-                      Include All
+                      All
                     </Button>
                     <Button 
                       variant="outline" 
@@ -1610,7 +1610,7 @@ export default function PlayerTotalPoints() {
                       className="text-xs sm:text-sm bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 sm:px-3 py-1.5"
                       data-testid="button-exclude-all-components"
                     >
-                      Exclude All
+                      None
                     </Button>
                   </div>
                 </div>
