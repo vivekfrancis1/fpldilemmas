@@ -25,9 +25,27 @@ interface PlayerGoalProjection {
 }
 
 export default function PlayerGoalsScoredProjections() {
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
-  const [selectedPosition, setSelectedPosition] = useState<string>("all");
+  const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
+  const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState<string>("");
+  
+  const togglePositionSelection = (position: string) => {
+    setSelectedPositions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(position)) newSet.delete(position);
+      else newSet.add(position);
+      return newSet;
+    });
+  };
+
+  const toggleTeamSelection = (team: string) => {
+    setSelectedTeams(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(team)) newSet.delete(team);
+      else newSet.add(team);
+      return newSet;
+    });
+  };
   const [sortBy, setSortBy] = useState<string>("total");
   const [sortDirection, setSortDirection] = useState<'desc' | 'asc'>('desc');
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
@@ -199,8 +217,8 @@ export default function PlayerGoalsScoredProjections() {
 
     return playerGoalData
       .filter(player => {
-        if (selectedTeam !== "all" && player.teamShort !== selectedTeam) return false;
-        if (selectedPosition !== "all" && player.position !== selectedPosition) return false;
+        if (selectedPositions.size > 0 && !selectedPositions.has(player.position)) return false;
+        if (selectedTeams.size > 0 && !selectedTeams.has(player.teamShort)) return false;
         if (searchQuery && player.playerName && !player.playerName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
         return true;
       })
@@ -246,7 +264,7 @@ export default function PlayerGoalsScoredProjections() {
           }
         }
       });
-  }, [playerGoalData, selectedTeam, selectedPosition, searchQuery, sortBy, sortDirection, selectedGameweeks, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData]);
+  }, [playerGoalData, selectedTeams, selectedPositions, searchQuery, sortBy, sortDirection, selectedGameweeks, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData]);
 
   const totalGoals = useMemo(() => {
     if (!filteredProjections.length) return { 
@@ -477,41 +495,7 @@ export default function PlayerGoalsScoredProjections() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Position</label>
-                <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {positions.map(pos => (
-                      <SelectItem key={pos.id} value={pos.name}>
-                        {pos.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Team</label>
-                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Teams</SelectItem>
-                    {teams.map(team => (
-                      <SelectItem key={team.id} value={team.short}>
-                        {team.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+              <div className="space-y-2 sm:col-span-2 lg:col-span-2 xl:col-span-4">
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <Search className="h-4 w-4 text-gray-500" />
                   Search
@@ -586,6 +570,53 @@ export default function PlayerGoalsScoredProjections() {
                   Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
                 </p>
               )}
+            </div>
+
+            {/* Position Toggle Section */}
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Positions:</label>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set())}
+                    className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 border-green-300">All</Button>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set(['_none_']))}
+                    className="text-xs px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 border-red-300">None</Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {positions.map(pos => {
+                  const isSelected = selectedPositions.size === 0 || selectedPositions.has(pos.name);
+                  const shortForm = pos.name === 'Goalkeeper' ? 'GKP' : pos.name === 'Defender' ? 'DEF' : pos.name === 'Midfielder' ? 'MID' : pos.name === 'Forward' ? 'FWD' : pos.name;
+                  return (
+                    <Button key={pos.id} variant="outline" size="sm" onClick={() => togglePositionSelection(pos.name)}
+                      className={`text-xs px-2 py-1 ${isSelected ? 'bg-teal-100 text-teal-700 hover:bg-teal-200 border border-teal-300' : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'}`}
+                      data-testid={`button-toggle-position-${pos.name}`}>{shortForm}</Button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Team Toggle Section */}
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Teams:</label>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setSelectedTeams(new Set())}
+                    className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 border-green-300">All</Button>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedTeams(new Set(['_none_']))}
+                    className="text-xs px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 border-red-300">None</Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {teams.map(team => {
+                  const isSelected = selectedTeams.size === 0 || selectedTeams.has(team.short);
+                  return (
+                    <Button key={team.id} variant="outline" size="sm" onClick={() => toggleTeamSelection(team.short)}
+                      className={`text-xs px-2 py-1 ${isSelected ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300' : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'}`}
+                      data-testid={`button-toggle-team-${team.short}`}>{team.short}</Button>
+                  );
+                })}
+              </div>
             </div>
           </CardContent>
         </Card>

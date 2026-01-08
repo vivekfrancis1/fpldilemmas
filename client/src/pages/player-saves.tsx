@@ -34,7 +34,7 @@ type SortDirection = 'asc' | 'desc';
 
 export default function PlayerSaves() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [teamFilter, setTeamFilter] = useState("all");
+  const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>("totalSaves");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [startGameweek, setStartGameweek] = useState<number>(0);
@@ -187,6 +187,16 @@ export default function PlayerSaves() {
     return uniqueTeams.sort();
   }, [savesProjections]);
 
+  // Toggle team selection
+  const toggleTeamSelection = (team: string) => {
+    setSelectedTeams(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(team)) newSet.delete(team);
+      else newSet.add(team);
+      return newSet;
+    });
+  };
+
   // Toggle gameweek exclusion
   const toggleGameweekExclusion = (gw: number) => {
     setExcludedGameweeks(prev => {
@@ -252,9 +262,9 @@ export default function PlayerSaves() {
         projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesTeam = teamFilter === "all" || projection.teamName === teamFilter;
+      if (selectedTeams.size > 0 && !selectedTeams.has(projection.teamName)) return false;
       
-      return matchesSearch && matchesTeam;
+      return matchesSearch;
     });
 
     // Sort data
@@ -298,7 +308,7 @@ export default function PlayerSaves() {
     });
 
     return filtered;
-  }, [savesProjections, searchTerm, teamFilter, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns]);
+  }, [savesProjections, searchTerm, selectedTeams, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -382,23 +392,6 @@ export default function PlayerSaves() {
                   <SelectContent>
                     {availableGameweeks.filter(gw => gw >= startGameweek).map(gw => (
                       <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Team</label>
-                <Select value={teamFilter} onValueChange={setTeamFilter}>
-                  <SelectTrigger className="w-full" data-testid="select-team">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Teams</SelectItem>
-                    {teams.map((team, index) => (
-                      <SelectItem key={`team-${team}-${index}`} value={team}>
-                        {team}
-                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -498,6 +491,30 @@ export default function PlayerSaves() {
                   Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
                 </p>
               )}
+            </div>
+
+            {/* Team Toggle Section */}
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Teams:</label>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setSelectedTeams(new Set())}
+                    className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 border-green-300">All</Button>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedTeams(new Set(['_none_']))}
+                    className="text-xs px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 border-red-300">None</Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {teams.map(team => {
+                  const isSelected = selectedTeams.size === 0 || selectedTeams.has(team);
+                  const shortName = teamNameToShort?.get(team) || team;
+                  return (
+                    <Button key={team} variant="outline" size="sm" onClick={() => toggleTeamSelection(team)}
+                      className={`text-xs px-2 py-1 ${isSelected ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300' : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'}`}
+                      data-testid={`button-toggle-team-${team}`}>{shortName}</Button>
+                  );
+                })}
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -34,8 +34,8 @@ type SortDirection = 'asc' | 'desc';
 
 export default function PlayerBonusPoints() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [positionFilter, setPositionFilter] = useState("all");
-  const [teamFilter, setTeamFilter] = useState("all");
+  const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
+  const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>("totalBonusPoints");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [startGameweek, setStartGameweek] = useState<number>(0);
@@ -106,6 +106,26 @@ export default function PlayerBonusPoints() {
 
   const positions = ["GKP", "DEF", "MID", "FWD"];
 
+  // Toggle position selection
+  const togglePositionSelection = (position: string) => {
+    setSelectedPositions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(position)) newSet.delete(position);
+      else newSet.add(position);
+      return newSet;
+    });
+  };
+
+  // Toggle team selection
+  const toggleTeamSelection = (team: string) => {
+    setSelectedTeams(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(team)) newSet.delete(team);
+      else newSet.add(team);
+      return newSet;
+    });
+  };
+
   // Toggle gameweek exclusion
   const toggleGameweekExclusion = (gw: number) => {
     setExcludedGameweeks(prev => {
@@ -171,10 +191,10 @@ export default function PlayerBonusPoints() {
         projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesPosition = positionFilter === "all" || projection.position === positionFilter;
-      const matchesTeam = teamFilter === "all" || projection.teamName === teamFilter;
+      if (selectedPositions.size > 0 && !selectedPositions.has(projection.position)) return false;
+      if (selectedTeams.size > 0 && !selectedTeams.has(projection.teamName)) return false;
       
-      return matchesSearch && matchesPosition && matchesTeam;
+      return matchesSearch;
     });
 
     // Sort data
@@ -218,7 +238,7 @@ export default function PlayerBonusPoints() {
     });
 
     return filtered;
-  }, [bonusPointsProjections, searchTerm, positionFilter, teamFilter, sortField, sortDirection, dynamicGameweekColumns, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData]);
+  }, [bonusPointsProjections, searchTerm, selectedPositions, selectedTeams, sortField, sortDirection, dynamicGameweekColumns, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -299,40 +319,6 @@ export default function PlayerBonusPoints() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Position</label>
-                <Select value={positionFilter} onValueChange={setPositionFilter}>
-                  <SelectTrigger className="w-full" data-testid="select-position">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Positions</SelectItem>
-                    {positions.map((position, index) => (
-                      <SelectItem key={`position-${position}-${index}`} value={position}>
-                        {position}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Team</label>
-                <Select value={teamFilter} onValueChange={setTeamFilter}>
-                  <SelectTrigger className="w-full" data-testid="select-team">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Teams</SelectItem>
-                    {teams.map((team, index) => (
-                      <SelectItem key={`team-${team}-${index}`} value={team}>
-                        {team}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                   <Search className="h-4 w-4 text-gray-500" />
                   Search
@@ -404,6 +390,52 @@ export default function PlayerBonusPoints() {
                   Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
                 </p>
               )}
+            </div>
+
+            {/* Position Toggle Section */}
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Positions:</label>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set())}
+                    className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 border-green-300">All</Button>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set(['_none_']))}
+                    className="text-xs px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 border-red-300">None</Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+                  const isSelected = selectedPositions.size === 0 || selectedPositions.has(pos);
+                  return (
+                    <Button key={pos} variant="outline" size="sm" onClick={() => togglePositionSelection(pos)}
+                      className={`text-xs px-2 py-1 ${isSelected ? 'bg-teal-100 text-teal-700 hover:bg-teal-200 border border-teal-300' : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'}`}
+                      data-testid={`button-toggle-position-${pos}`}>{pos}</Button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Team Toggle Section */}
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <label className="text-xs sm:text-sm font-medium text-gray-700">Teams:</label>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setSelectedTeams(new Set())}
+                    className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 border-green-300">All</Button>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedTeams(new Set(['_none_']))}
+                    className="text-xs px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 border-red-300">None</Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                {teams.map(team => {
+                  const isSelected = selectedTeams.size === 0 || selectedTeams.has(team);
+                  return (
+                    <Button key={team} variant="outline" size="sm" onClick={() => toggleTeamSelection(team)}
+                      className={`text-xs px-2 py-1 ${isSelected ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300' : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'}`}
+                      data-testid={`button-toggle-team-${team}`}>{team}</Button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="flex items-center gap-2 text-sm text-gray-600 mt-4">
