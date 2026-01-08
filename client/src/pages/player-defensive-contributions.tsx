@@ -87,10 +87,6 @@ export default function PlayerDefensiveContributions() {
   const [currentDCSortOrder, setCurrentDCSortOrder] = useState<"asc" | "desc">("desc");
   const [sortByTotal, setSortByTotal] = useState<boolean>(false);
   const [totalSortOrder, setTotalSortOrder] = useState<"asc" | "desc">("desc");
-  const [sortByAvg, setSortByAvg] = useState<boolean>(false);
-  const [avgSortOrder, setAvgSortOrder] = useState<"asc" | "desc">("desc");
-  const [sortByDCPoints, setSortByDCPoints] = useState<boolean>(false);
-  const [dcPointsSortOrder, setDCPointsSortOrder] = useState<"asc" | "desc">("desc");
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
@@ -382,23 +378,6 @@ export default function PlayerDefensiveContributions() {
         return totalSortOrder === "desc" ? bValue - aValue : aValue - bValue;
       });
     }
-    // Sort by Avg if specified
-    else if (sortByAvg) {
-      filtered.sort((a, b) => {
-        const activeCount = activeGameweeks.length || 1;
-        const aValue = getAdjustedTotalDC(a) / activeCount;
-        const bValue = getAdjustedTotalDC(b) / activeCount;
-        return avgSortOrder === "desc" ? bValue - aValue : aValue - bValue;
-      });
-    }
-    // Sort by DC Points if specified
-    else if (sortByDCPoints) {
-      filtered.sort((a, b) => {
-        const aValue = getAdjustedTotalDCPoints(a);
-        const bValue = getAdjustedTotalDCPoints(b);
-        return dcPointsSortOrder === "desc" ? bValue - aValue : aValue - bValue;
-      });
-    }
     // Sort by gameweek column if specified
     else if (gameweekSortColumn !== null) {
       filtered.sort((a, b) => {
@@ -426,7 +405,7 @@ export default function PlayerDefensiveContributions() {
     }
 
     return filtered;
-  }, [playersWithTotals, searchTerm, selectedPositions, selectedTeams, gameweekSortColumn, gameweekSortOrder, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, sortByAvg, avgSortOrder, sortByDCPoints, dcPointsSortOrder, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, activeGameweeks]);
+  }, [playersWithTotals, searchTerm, selectedPositions, selectedTeams, gameweekSortColumn, gameweekSortOrder, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, activeGameweeks]);
 
   // Get unique values for filters
   const positions = Array.from(new Set(players.map(p => p.position).filter(Boolean)));
@@ -455,8 +434,6 @@ export default function PlayerDefensiveContributions() {
   const handleGameweekSort = (gameweek: number) => {
     setSortByCurrentDC(false);
     setSortByTotal(false);
-    setSortByAvg(false);
-    setSortByDCPoints(false);
     if (gameweekSortColumn === gameweek) {
       setGameweekSortOrder(gameweekSortOrder === "desc" ? "asc" : "desc");
     } else {
@@ -468,8 +445,6 @@ export default function PlayerDefensiveContributions() {
   const handleCurrentDCSort = () => {
     setGameweekSortColumn(null);
     setSortByTotal(false);
-    setSortByAvg(false);
-    setSortByDCPoints(false);
     if (sortByCurrentDC) {
       setCurrentDCSortOrder(currentDCSortOrder === "desc" ? "asc" : "desc");
     } else {
@@ -481,39 +456,11 @@ export default function PlayerDefensiveContributions() {
   const handleTotalSort = () => {
     setGameweekSortColumn(null);
     setSortByCurrentDC(false);
-    setSortByAvg(false);
-    setSortByDCPoints(false);
     if (sortByTotal) {
       setTotalSortOrder(totalSortOrder === "desc" ? "asc" : "desc");
     } else {
       setSortByTotal(true);
       setTotalSortOrder("desc");
-    }
-  };
-
-  const handleAvgSort = () => {
-    setGameweekSortColumn(null);
-    setSortByCurrentDC(false);
-    setSortByTotal(false);
-    setSortByDCPoints(false);
-    if (sortByAvg) {
-      setAvgSortOrder(avgSortOrder === "desc" ? "asc" : "desc");
-    } else {
-      setSortByAvg(true);
-      setAvgSortOrder("desc");
-    }
-  };
-
-  const handleDCPointsSort = () => {
-    setGameweekSortColumn(null);
-    setSortByCurrentDC(false);
-    setSortByTotal(false);
-    setSortByAvg(false);
-    if (sortByDCPoints) {
-      setDCPointsSortOrder(dcPointsSortOrder === "desc" ? "asc" : "desc");
-    } else {
-      setSortByDCPoints(true);
-      setDCPointsSortOrder("desc");
     }
   };
 
@@ -874,32 +821,6 @@ export default function PlayerDefensiveContributions() {
                       )}
                     </div>
                   </TableHead>
-                  <TableHead 
-                    className="text-center min-w-[80px] cursor-pointer hover:bg-muted/50"
-                    onClick={handleAvgSort}
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      Avg
-                      {sortByAvg && (
-                        <span className="text-xs">
-                          {avgSortOrder === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="text-center min-w-[80px] font-bold cursor-pointer hover:bg-muted/50 bg-blue-50"
-                    onClick={handleDCPointsSort}
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      {activeGameweeks.length}GW DC Pts
-                      {sortByDCPoints && (
-                        <span className="text-xs">
-                          {dcPointsSortOrder === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -912,19 +833,13 @@ export default function PlayerDefensiveContributions() {
                   
                   let adjustedTotalDC = 0;
                   let originalTotalDC = 0;
-                  let adjustedTotalPoints = 0;
-                  let originalTotalPoints = 0;
                   player.gameweekProjections
                     .filter(gw => activeGameweeks.includes(gw.gameweek))
                     .forEach(gw => {
                       const mult = gwMultipliers[gw.gameweek] ?? 1;
                       adjustedTotalDC += gw.defensiveContribution * mult;
                       originalTotalDC += gw.defensiveContribution;
-                      adjustedTotalPoints += (gw.defensiveContribution / 3) * mult;
-                      originalTotalPoints += gw.defensiveContribution / 3;
                     });
-                  const adjustedAvgDC = adjustedTotalDC / activeGameweeks.length;
-                  const originalAvgDC = originalTotalDC / activeGameweeks.length;
                   
                   return (
                   <TableRow key={player.playerId}>
@@ -986,26 +901,6 @@ export default function PlayerDefensiveContributions() {
                         </div>
                       ) : (
                         <span className="text-lg font-bold text-orange-900">{adjustedTotalDC.toFixed(1)}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center font-mono">
-                      {hasAnyAdjustment ? (
-                        <div className="flex flex-col items-center">
-                          <span className="text-purple-700">{adjustedAvgDC.toFixed(1)}</span>
-                          <span className="text-gray-400 line-through text-xs">{originalAvgDC.toFixed(1)}</span>
-                        </div>
-                      ) : (
-                        <span>{player.avgDC.toFixed(1)}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className={`text-center font-bold ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                      {hasAnyAdjustment ? (
-                        <div className="flex flex-col items-center">
-                          <span className="text-lg font-bold text-purple-700">{Math.round(adjustedTotalPoints)}</span>
-                          <span className="text-gray-400 line-through text-xs">{Math.round(originalTotalPoints)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-lg font-bold text-blue-900">{player.totalDCPoints}</span>
                       )}
                     </TableCell>
                   </TableRow>
