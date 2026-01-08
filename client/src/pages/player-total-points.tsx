@@ -1496,7 +1496,7 @@ export default function PlayerTotalPoints() {
                       variant="outline" 
                       size="sm" 
                       onClick={() => setSelectedPositions(new Set())}
-                      className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 py-1"
+                      className="text-xs sm:text-sm bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 sm:px-3 py-1.5"
                       data-testid="button-include-all-positions"
                     >
                       All
@@ -1505,7 +1505,7 @@ export default function PlayerTotalPoints() {
                       variant="outline" 
                       size="sm" 
                       onClick={() => setSelectedPositions(new Set(['_none_']))}
-                      className="text-xs bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 py-1"
+                      className="text-xs sm:text-sm bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 sm:px-3 py-1.5"
                       data-testid="button-exclude-all-positions"
                     >
                       None
@@ -1522,7 +1522,7 @@ export default function PlayerTotalPoints() {
                         variant="outline"
                         size="sm"
                         onClick={() => togglePositionSelection(position)}
-                        className={`text-xs px-2 py-1 ${
+                        className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
                           isSelected 
                             ? 'bg-teal-100 text-teal-700 hover:bg-teal-200 border border-teal-300' 
                             : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'
@@ -1547,7 +1547,7 @@ export default function PlayerTotalPoints() {
                       variant="outline" 
                       size="sm" 
                       onClick={() => setSelectedTeams(new Set())}
-                      className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 py-1"
+                      className="text-xs sm:text-sm bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 sm:px-3 py-1.5"
                       data-testid="button-include-all-teams"
                     >
                       All
@@ -1556,7 +1556,7 @@ export default function PlayerTotalPoints() {
                       variant="outline" 
                       size="sm" 
                       onClick={() => setSelectedTeams(new Set(['_none_']))}
-                      className="text-xs bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 py-1"
+                      className="text-xs sm:text-sm bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 sm:px-3 py-1.5"
                       data-testid="button-exclude-all-teams"
                     >
                       None
@@ -1573,7 +1573,7 @@ export default function PlayerTotalPoints() {
                         variant="outline"
                         size="sm"
                         onClick={() => toggleTeamSelection(team)}
-                        className={`text-xs px-2 py-1 ${
+                        className={`text-xs sm:text-sm px-2 sm:px-3 py-1.5 ${
                           isSelected 
                             ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300' 
                             : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'
