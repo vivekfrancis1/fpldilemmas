@@ -7,7 +7,7 @@ FPL Dilemmas is an analytics application for Fantasy Premier League (FPL) manage
 Preferred communication style: Simple, everyday language.
 **Development Protocol**: Always ask permission before making any changes to logic, calculations, or functionality. No unauthorized modifications are permitted.
 Site tagline: "FPL made smarter with predictive analytics." displayed in header.
-Navigation priority: Goals and Clean Sheets as default landing page (home route '/'), with side navigation for all tools.
+Navigation priority: Player Total Points as default landing page (home route '/'), with side navigation for all tools.
 Manager ID Auto-Load: All 6 FPL Manager tools (My Dashboard, My Live Rank, My Leagues, Team Optimizer, Transfer Planner, My Team Projected Points) automatically load and fetch data from the last searched Manager ID saved in localStorage on component mount. The Manager ID input field is pre-filled and data fetching is triggered automatically when a cached ID exists, providing seamless user experience without requiring manual button clicks. All tools share a unified search section design with consistent Card styling (border-0 bg-white/80 backdrop-blur-sm), gradient purple-to-indigo buttons, and responsive layout matching My Dashboard.
 Projection Tools Limit: Both team-level and player-level projection tools now generate 12 gameweeks of data with dropdown filters showing 12 weeks but defaulting to 6 gameweeks view for consistent user experience. All tools show only future gameweeks excluding current/finished gameweeks. Player projection pages (goals, assists, goals scored, bonus points, saves, total points) use shared gameweek utilities with proper validation and loading states.
 Most popular tools: Player Statistics, My Live Rank, and Fixture Analyzer.
@@ -22,7 +22,7 @@ Loading Experience: Enhanced loading screens implemented across all major slow-l
 
 ### Frontend Architecture
 - **Framework**: React with TypeScript, using Vite.
-- **Routing**: Wouter for client-side routing; Goals and Clean Sheets is the default route.
+- **Routing**: Wouter for client-side routing; Player Total Points is the default route.
 - **State Management**: TanStack Query for server state.
 - **UI Library**: shadcn/ui components built on Radix UI primitives.
 - **Styling**: Tailwind CSS with a custom FPL-themed design system.
