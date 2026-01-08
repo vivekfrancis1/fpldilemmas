@@ -8120,6 +8120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Assist share with filter: ${filter}, GW range: ${startGW}-${endGW}`);
       
       // Helper to build response
+      // NO position caps, NO minutes weight - raw assist share calculation
       const buildAssistShareResponse = (bootstrapData: any, teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } }, playerStats?: { [playerId: number]: { assists: number, xa: number } }) => {
         const finalResponse: any[] = [];
         
@@ -8147,6 +8148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
             
             if (playerTotal > 0) {
+              // Raw assist share - NO position caps, NO minutes weight
               const assistShare = (playerTotal / teamData.total) * 100;
               const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
               
