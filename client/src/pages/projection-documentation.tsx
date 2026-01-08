@@ -715,27 +715,27 @@ export default function ProjectionDocumentation() {
                     <div className="bg-rose-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
-                          <strong>Formulas:</strong><br/>
+                          <strong>DC Calculation:</strong><br/>
                           DEF: DC = CBI + Tackles<br/>
-                          MID/FWD: DC = CBI + Tackles + Recoveries<br/>
-                          Points = (DC ≥ threshold) ? 2 : 0
+                          MID/FWD: DC = CBI + Tackles + Recoveries<br/><br/>
+                          <strong>DC Points Formula (Probability-Based):</strong><br/>
+                          DCPoints = MIN( (% Chance of Hitting Threshold) × (Opponent DCC / 80) × 2, 2 )
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
                             <strong>Inputs:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>Projected tackles per game</li>
-                              <li>Projected recoveries per game</li>
-                              <li>Projected CBI per game</li>
-                              <li>Player position</li>
+                              <li>% Chance of Hitting Threshold (historical)</li>
+                              <li>Opponent DCC per game</li>
+                              <li>Player position (for threshold)</li>
                             </ul>
                           </div>
                           <div>
-                            <strong>Thresholds:</strong>
+                            <strong>Thresholds (for % calculation):</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>DEF: DC ≥ 10 → 2 points</li>
-                              <li>MID/FWD: DC ≥ 12 → 2 points</li>
-                              <li>Below threshold → 0 points</li>
+                              <li>DEF: 10+ DC required</li>
+                              <li>MID/FWD: 12+ DC required</li>
+                              <li>Max points capped at 2</li>
                             </ul>
                           </div>
                         </div>
@@ -1253,16 +1253,21 @@ export default function ProjectionDocumentation() {
                     </div>
                   </div>
                   <div className="bg-gray-100 p-3 rounded text-sm mt-2">
-                    <strong>DC Points:</strong><br/>
-                    <code className="text-xs">Points = (Projected DC ≥ Threshold) ? 2 : 0</code>
+                    <strong>DC Points (Probability-Based):</strong><br/>
+                    <code className="text-xs">DCPoints = MIN( (% Chance of Hitting Threshold) × (Opponent DCC / 80) × 2, 2 )</code><br/>
+                    <div className="text-xs mt-1 text-gray-700">
+                      • % Chance: Historical rate of hitting threshold (games hit / total games)<br/>
+                      • Opponent DCC: Opponent's Defensive Contributions Conceded per game<br/>
+                      • Maximum: Capped at 2 points per gameweek
+                    </div>
                   </div>
                   <div className="space-y-1 text-sm">
-                    <div><strong>Thresholds:</strong></div>
+                    <div><strong>Thresholds (for % calculation):</strong></div>
                     <ul className="list-disc ml-5 text-xs">
-                      <li>Defenders: DC ≥ 10 → 2 points</li>
-                      <li>Midfielders: DC ≥ 12 → 2 points</li>
-                      <li>Forwards: DC ≥ 12 → 2 points</li>
-                      <li>Goalkeepers: Uses defender formula</li>
+                      <li>Defenders: 10+ DC threshold</li>
+                      <li>Midfielders: 12+ DC threshold</li>
+                      <li>Forwards: 12+ DC threshold</li>
+                      <li>Goalkeepers: 0 points (DC not applicable)</li>
                     </ul>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
