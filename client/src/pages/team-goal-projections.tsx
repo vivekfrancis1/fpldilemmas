@@ -447,30 +447,29 @@ export default function TeamGoalProjections() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b">
                     <tr key="header-row">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
-                        #
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
                         Team
                       </th>
                       {activeGameweeks.map(gwNumber => (
                         <th 
                           key={gwNumber} 
-                          className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                          className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[40px] md:min-w-[50px]"
                           onClick={() => setSortBy(`gw${gwNumber}`)}
                         >
-                          <div className="flex items-center justify-center gap-1">
-                            GW{gwNumber}
+                          <div className="flex items-center justify-center gap-0.5">
+                            <span className="md:hidden">{gwNumber}</span>
+                            <span className="hidden md:inline">GW{gwNumber}</span>
                             {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
                           </div>
                         </th>
                       ))}
                       <th 
-                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors"
+                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors min-w-[50px] md:min-w-[70px]"
                         onClick={() => setSortBy('total')}
                       >
-                        <div className="flex items-center justify-center gap-1">
-                          Period Total
+                        <div className="flex items-center justify-center gap-0.5">
+                          <span className="md:hidden">Tot</span>
+                          <span className="hidden md:inline">Total</span>
                           {sortBy === 'total' && <TrendingUp className="h-3 w-3" />}
                         </div>
                       </th>
@@ -479,30 +478,27 @@ export default function TeamGoalProjections() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredProjections.map((team, index) => (
                       <tr key={team.id} className="hover:bg-gray-50" data-testid={`team-projection-row-${team.id}`}>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-gray-500 sticky left-0 bg-white">
-                          {index + 1}
-                        </td>
-                        
-                        <td className="px-4 py-4 sticky left-12 bg-white">
-                          <div className="flex items-center">
+                        <td className="px-1 md:px-3 py-2 md:py-4 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400 w-4">{index + 1}</span>
                             <div>
-                              <div className="text-sm font-medium text-gray-900">{team.team}</div>
-                              <div className="text-xs text-gray-500">{team.teamShort}</div>
+                              <div className="text-xs md:text-sm font-medium text-gray-900 md:hidden">{team.teamShort}</div>
+                              <div className="text-xs md:text-sm font-medium text-gray-900 hidden md:block">{team.team}</div>
+                              <div className="text-[10px] text-gray-500 hidden md:block">{team.teamShort}</div>
                             </div>
                           </div>
                         </td>
                         
                         {activeGameweeks.map(gwNumber => {
                           const goals = team.gameweekProjections[gwNumber];
-                          // Use team name to get correct FPL short_name for opponent lookup
                           const fplShortName = teamNameToShort.get(team.team) || team.teamShort;
                           const opponentInfo = opponentMap.get(`${fplShortName}-${gwNumber}`);
                           return (
-                            <td key={`${team.id}-gw${gwNumber}`} className={`px-4 py-4 text-center text-sm font-medium ${getGoalsColor(goals || 0)}`}>
+                            <td key={`${team.id}-gw${gwNumber}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsColor(goals || 0)}`}>
                               <div className="flex flex-col items-center">
                                 <span>{goals !== undefined ? goals.toFixed(2) : "-"}</span>
                                 {showOpponent && opponentInfo && (
-                                  <span className="text-xs text-gray-500 mt-0.5">
+                                  <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
                                     {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
                                   </span>
                                 )}
@@ -511,8 +507,8 @@ export default function TeamGoalProjections() {
                           );
                         })}
                         
-                        <td className="px-4 py-4 text-center bg-orange-50">
-                          <span className="text-lg font-bold text-orange-900">
+                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 min-w-[50px] md:min-w-[70px]">
+                          <span className="text-sm md:text-lg font-bold text-orange-900">
                             {activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0).toFixed(2)}
                           </span>
                         </td>
@@ -522,15 +518,12 @@ export default function TeamGoalProjections() {
                     
                     {/* Total Row */}
                     <tr className="bg-gray-100 border-t-2 border-gray-300 font-semibold">
-                      <td className="px-4 py-4 text-center text-sm font-bold text-gray-700 sticky left-0 bg-gray-100">
-                        -
-                      </td>
-                      
-                      <td className="px-4 py-4 sticky left-12 bg-gray-100">
-                        <div className="flex items-center">
+                      <td className="px-1 md:px-3 py-2 md:py-4 sticky left-0 bg-gray-100 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-gray-400 w-4">-</span>
                           <div>
-                            <div className="text-sm font-bold text-gray-900">TOTAL</div>
-                            <div className="text-xs text-gray-600">All Teams</div>
+                            <div className="text-xs md:text-sm font-bold text-gray-900">TOTAL</div>
+                            <div className="text-[10px] text-gray-600 hidden md:block">All Teams</div>
                           </div>
                         </div>
                       </td>
@@ -538,14 +531,14 @@ export default function TeamGoalProjections() {
                       {activeGameweeks.map(gwNumber => {
                         const gwTotal = totalGoals.gameweekTotals[gwNumber] || 0;
                         return (
-                          <td key={`total-gw${gwNumber}`} className="px-4 py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
+                          <td key={`total-gw${gwNumber}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 min-w-[40px] md:min-w-[50px]">
                             {gwTotal.toFixed(2)}
                           </td>
                         );
                       })}
                       
-                      <td className="px-4 py-4 text-center bg-orange-100">
-                        <span className="text-lg font-bold text-orange-900">
+                      <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-100 min-w-[50px] md:min-w-[70px]">
+                        <span className="text-sm md:text-lg font-bold text-orange-900">
                           {totalGoals.overallTotal.toFixed(2)}
                         </span>
                       </td>

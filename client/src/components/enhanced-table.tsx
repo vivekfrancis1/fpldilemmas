@@ -175,15 +175,21 @@ export function EnhancedTable<T = any>({
             stickyHeader && "sticky top-0 z-10 backdrop-blur-sm bg-gray-50/90"
           )}>
             <tr>
-              {columns.map((column) => (
+              {columns.map((column, colIndex) => {
+                // First column (Player) needs highest z-index for sticky behavior
+                const isFirstColumn = colIndex === 0;
+                const stickyZIndex = isFirstColumn ? 'z-30' : '';
+                
+                return (
                 <th
                   key={column.key}
                   className={cn(
                     "font-semibold text-gray-700 border-b border-gray-200",
-                    compact ? "px-3 py-2" : "px-4 py-3",
+                    compact ? "px-2 py-1.5 text-xs" : "px-4 py-3",
                     getAlignment(column.align),
                     column.className,
-                    column.width && `w-${column.width}`
+                    column.width && `w-${column.width}`,
+                    isFirstColumn && column.className?.includes('sticky') && stickyZIndex
                   )}
                 >
                   {column.sortable && onSort ? (
@@ -193,19 +199,19 @@ export function EnhancedTable<T = any>({
                       onClick={() => handleSort(column.key)}
                       className={cn(
                         "h-auto p-0 font-semibold text-gray-700 hover:text-indigo-600 hover:bg-transparent",
-                        "flex items-center gap-1 transition-colors"
+                        "flex items-center gap-1 transition-colors text-xs md:text-sm"
                       )}
                     >
-                      {column.header}
+                      <span className="whitespace-nowrap">{column.header}</span>
                       {getSortIcon(column.key)}
                     </Button>
                   ) : (
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 whitespace-nowrap text-xs md:text-sm">
                       {column.header}
                     </span>
                   )}
                 </th>
-              ))}
+              )})}
             </tr>
           </thead>
           <tbody>
@@ -228,20 +234,25 @@ export function EnhancedTable<T = any>({
                     index === data.length - 1 && "border-b-0" // Remove border from last row
                   )}
                 >
-                  {columns.map((column) => {
+                  {columns.map((column, colIndex) => {
                     const value = item[column.key as keyof T];
                     const renderedValue = column.render 
                       ? column.render(value, item, index)
                       : value;
+                    
+                    // First column needs higher z-index for sticky behavior
+                    const isFirstColumn = colIndex === 0;
+                    const stickyZIndex = isFirstColumn && column.className?.includes('sticky') ? 'z-20' : '';
 
                     return (
                       <td
                         key={column.key}
                         className={cn(
                           "text-sm text-gray-900",
-                          compact ? "px-3 py-2" : "px-4 py-3",
+                          compact ? "px-2 py-1.5" : "px-4 py-3",
                           getAlignment(column.align),
-                          column.className
+                          column.className,
+                          stickyZIndex
                         )}
                       >
                         {renderedValue as React.ReactNode}

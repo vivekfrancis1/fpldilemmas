@@ -803,16 +803,16 @@ export default function PlayerDefensiveContributions() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="sticky left-0 bg-background z-10 min-w-[150px]">
+                  <TableHead className="sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px] px-1 md:px-3 text-xs md:text-sm">
                     Player
                   </TableHead>
 
                   <TableHead 
-                    className="hidden md:table-cell sticky left-[150px] bg-background z-10 min-w-[80px] cursor-pointer hover:bg-muted/50 px-1 py-2"
+                    className="hidden md:table-cell min-w-[60px] cursor-pointer hover:bg-muted/50 px-1 md:px-2 text-xs"
                     onClick={handleCurrentDCSort}
                   >
                     <div className="flex items-center justify-center gap-1">
-                      Current DC/game
+                      DC/g
                       {sortByCurrentDC && (
                         <span className="text-xs">
                           {currentDCSortOrder === "desc" ? "↓" : "↑"}
@@ -823,11 +823,11 @@ export default function PlayerDefensiveContributions() {
                   {activeGameweeks.map(gw => (
                     <TableHead 
                       key={gw} 
-                      className="text-center min-w-[100px] cursor-pointer hover:bg-muted/50"
+                      className="text-center min-w-[40px] md:min-w-[50px] cursor-pointer hover:bg-muted/50 px-1 text-xs md:text-sm"
                       onClick={() => handleGameweekSort(gw)}
                     >
                       <div className="flex items-center justify-center gap-1">
-                        GW{gw}
+                        {gw}
                         {gameweekSortColumn === gw && (
                           <span className="text-xs">
                             {gameweekSortOrder === "desc" ? "↓" : "↑"}
@@ -837,11 +837,11 @@ export default function PlayerDefensiveContributions() {
                     </TableHead>
                   ))}
                   <TableHead 
-                    className="text-center min-w-[80px] font-bold cursor-pointer hover:bg-muted/50 bg-orange-50"
+                    className="text-center min-w-[50px] md:min-w-[70px] font-bold cursor-pointer hover:bg-muted/50 bg-orange-50 px-1 text-xs md:text-sm"
                     onClick={handleTotalSort}
                   >
                     <div className="flex items-center justify-center gap-1">
-                      {activeGameweeks.length} GW DC
+                      Total
                       {sortByTotal && (
                         <span className="text-xs">
                           {totalSortOrder === "desc" ? "↓" : "↑"}
@@ -871,25 +871,25 @@ export default function PlayerDefensiveContributions() {
                   
                   return (
                   <TableRow key={player.playerId}>
-                    <TableCell className="font-medium sticky left-0 bg-background z-10">
+                    <TableCell className="font-medium sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 px-1 md:px-3 min-w-[100px] md:min-w-[150px]">
                       <div className="flex flex-col">
-                        <div className="flex items-center gap-1">
-                          <span>{(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}</span>
+                        <div className="flex items-center gap-0.5 flex-wrap">
+                          <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[80px] md:max-w-none">{(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}</span>
                           {playerAvailabilityMap && playerAvailabilityMap.get(player.playerId) && (
                             <PlayerAvailabilityBadge player={playerAvailabilityMap.get(player.playerId)!} />
                           )}
                         </div>
-                        <div className="flex items-center gap-1 mt-1">
-                          <Badge variant="outline" className="text-xs">
+                        <div className="flex items-center gap-0.5 mt-0.5">
+                          <Badge variant="outline" className="text-[10px] md:text-xs px-1">
                             {player.position.slice(0, 3).toUpperCase()}
                           </Badge>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className="text-[10px] md:text-xs px-1">
                             {player.teamName.slice(0, 3).toUpperCase()}
                           </Badge>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell font-mono sticky left-[150px] bg-background z-10 px-1 py-2">
+                    <TableCell className="hidden md:table-cell font-mono px-1 py-2 text-xs">
                       {player.currentSeasonStats.dcPer90.toFixed(1)}
                     </TableCell>
                     {player.gameweekProjections
@@ -899,8 +899,8 @@ export default function PlayerDefensiveContributions() {
                         const displayDC = gw.defensiveContribution * multiplier;
                         const hasGwAdjustment = applyAvailability && multiplier !== 1;
                         return (
-                      <TableCell key={gw.gameweek} className="text-center">
-                        <div className={`p-2 rounded text-sm ${getOpponentColor(gw.opponentTier)} ${gw.isActual ? 'border-2 border-blue-400' : ''}`}>
+                      <TableCell key={gw.gameweek} className="text-center min-w-[40px] md:min-w-[50px] px-1">
+                        <div className={`p-1 md:p-2 rounded text-xs md:text-sm ${getOpponentColor(gw.opponentTier)} ${gw.isActual ? 'border-2 border-blue-400' : ''}`}>
                           {hasGwAdjustment && !gw.isActual ? (
                             <div className="flex flex-col items-center">
                               <span className="font-bold text-purple-700">{displayDC.toFixed(1)}</span>

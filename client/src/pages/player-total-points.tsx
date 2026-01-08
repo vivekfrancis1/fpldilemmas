@@ -469,18 +469,20 @@ function createPlayerTotalPointsColumns(
       key: 'name',
       header: 'Player',
       sortable: true,
-      className: 'sticky left-0 bg-white z-10 min-w-[80px] md:min-w-[160px]',
+      className: 'sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] min-w-[100px] md:min-w-[160px]',
       render: (_, player) => (
-        <div className="min-w-[80px] md:min-w-[160px]">
+        <div className="min-w-[100px] md:min-w-[160px]">
           <div className="flex items-center gap-0.5 flex-wrap">
-            <PlayerNameCell name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name} />
+            <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[80px] md:max-w-none">
+              {(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name}
+            </span>
             <PlayerAvailabilityBadge player={player} />
           </div>
           <div className="flex items-center gap-0.5 mt-0.5 mb-0.5">
             <PositionBadge position={player.position} compact={true} />
             <TeamBadge team={(teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamName || player.team} compact={true} />
           </div>
-          <div className="text-[10px] md:text-xs text-gray-500 space-x-0.5 md:space-x-1">
+          <div className="text-[9px] md:text-xs text-gray-500 space-x-0.5">
             <span className="font-medium">£{(typeof player.price === 'number') ? player.price.toFixed(1) : '0.0'}</span>
             <span className="text-gray-400">•</span>
             <span>{(typeof player.ownership === 'number') ? player.ownership.toFixed(1) : '0.0'}%</span>
@@ -518,10 +520,10 @@ function createPlayerTotalPointsColumns(
       
       return {
         key: `gw${gw}`,
-        header: `GW${gw}`,
+        header: `${gw}`,
         sortable: true,
         align: 'center' as const,
-        className: 'min-w-[48px] bg-blue-50/30',
+        className: 'min-w-[40px] md:min-w-[48px] bg-blue-50/30 px-1',
         render: (_: any, player: PlayerTotalPointsData) => {
           const playerPoints = player.gameweekProjections?.[numericGwKey] || 0;
           const isMaxForGameweek = playerPoints > 0 && playerPoints === maxPointsForGw;
@@ -545,10 +547,10 @@ function createPlayerTotalPointsColumns(
     }),
     {
       key: 'totalExpectedPoints',
-      header: `${gameweekRange.length}GW Total`,
+      header: `Total`,
       sortable: true,
       align: 'center',
-      className: 'min-w-[90px] md:min-w-[100px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300',
+      className: 'min-w-[60px] md:min-w-[80px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300 px-1',
       render: (_, player) => (
         <RangeTotalBreakdownTooltip 
           player={player} 
@@ -561,10 +563,10 @@ function createPlayerTotalPointsColumns(
     },
     {
       key: 'averagePerGameweek',
-      header: 'Avg/GW',
+      header: 'Avg',
       sortable: true,
       align: 'center',
-      className: 'min-w-[90px] bg-gradient-to-r from-orange-50 to-amber-50 border-l border-gray-300',
+      className: 'min-w-[50px] md:min-w-[70px] bg-gradient-to-r from-orange-50 to-amber-50 border-l border-gray-300 px-1',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
@@ -576,31 +578,31 @@ function createPlayerTotalPointsColumns(
     },
     {
       key: 'averageValue',
-      header: 'Avg Value',
+      header: 'Val',
       sortable: true,
       align: 'center',
-      className: 'min-w-[90px] bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300',
+      className: 'hidden md:table-cell min-w-[60px] bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300 px-1',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
           format="number" 
           decimals={2}
-          className="font-bold text-purple-800 text-sm"
+          className="font-bold text-purple-800 text-xs md:text-sm"
         />
       )
     },
     {
       key: 'avgMinutesPerGameweek',
-      header: 'Avg Mins',
+      header: 'Mins',
       sortable: true,
       align: 'center',
-      className: 'min-w-[80px] bg-gradient-to-r from-blue-50 to-sky-50 border-l border-gray-300',
+      className: 'hidden md:table-cell min-w-[50px] bg-gradient-to-r from-blue-50 to-sky-50 border-l border-gray-300 px-1',
       render: (value) => (
         <ValueCell 
           value={value || 0} 
           format="number" 
           decimals={0}
-          className="font-bold text-blue-800 text-sm"
+          className="font-bold text-blue-800 text-xs md:text-sm"
         />
       )
     }

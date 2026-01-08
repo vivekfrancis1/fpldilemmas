@@ -511,7 +511,7 @@ export default function PlayerBonusPoints() {
                   <table className="w-full">
                     <thead className="bg-blue-50 border-b-2 border-blue-100 sticky top-0 z-10">
                       <tr>
-                        <th className="text-left py-3 px-2 sm:px-4 font-semibold text-gray-700 sticky left-0 bg-blue-50 border-r border-blue-100 min-w-[140px] sm:min-w-[180px]">
+                        <th className="text-left py-2 px-1 md:px-3 font-semibold text-gray-700 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px] text-xs md:text-sm">
                           <button
                             onClick={() => handleSort('name')}
                             className="flex items-center gap-1 hover:text-blue-600 transition-colors"
@@ -521,17 +521,17 @@ export default function PlayerBonusPoints() {
                           </button>
                         </th>
                         {dynamicGameweekColumns.map((gw) => (
-                          <th key={`gw${gw}`} className="text-center py-3 px-2 text-sm font-semibold text-gray-700 min-w-[60px]">
+                          <th key={`gw${gw}`} className="text-center py-2 px-1 text-xs md:text-sm font-semibold text-gray-700 min-w-[40px] md:min-w-[50px]">
                             <button
                               onClick={() => handleSort(`gw${gw}`)}
                               className="flex items-center justify-center gap-1 hover:text-blue-600 transition-colors w-full"
                             >
-                              GW{gw}
+                              {gw}
                               <ArrowUpDown className="h-3 w-3" />
                             </button>
                           </th>
                         ))}
-                        <th className="text-center py-3 px-1 text-sm font-bold bg-blue-100 border-l border-blue-200">
+                        <th className="text-center py-2 px-1 text-xs md:text-sm font-bold bg-blue-100 border-l border-blue-200 min-w-[50px] md:min-w-[70px]">
                           <button
                             onClick={() => handleSort('totalBonusPoints')}
                             className="flex items-center justify-center gap-1 hover:text-blue-700 transition-colors w-full"
@@ -540,8 +540,8 @@ export default function PlayerBonusPoints() {
                             <ArrowUpDown className="h-3 w-3" />
                           </button>
                         </th>
-                        <th className="text-center py-3 px-1 text-sm font-semibold bg-green-50 border-l border-green-200">
-                          Avg/GW
+                        <th className="text-center py-2 px-1 text-xs md:text-sm font-semibold bg-green-50 border-l border-green-200 min-w-[40px] md:min-w-[60px] hidden md:table-cell">
+                          Avg
                         </th>
                       </tr>
                     </thead>
@@ -566,8 +566,8 @@ export default function PlayerBonusPoints() {
                         
                         return (
                         <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
-                            <div className="flex items-center gap-1">
+                          <td className="py-2 px-1 md:px-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px]">
+                            <div className="flex items-center gap-0.5 flex-wrap">
                               <PlayerNameCell 
                                 name={(playerIdToWebName && playerIdToWebName.get(projection.playerId)) || projection.playerName}
                                 position={projection.position}
@@ -585,7 +585,7 @@ export default function PlayerBonusPoints() {
                             const displayValue = rawValue * multiplier;
                             const hasGwAdjustment = applyAvailability && multiplier !== 1;
                             return (
-                              <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
+                              <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 px-1 text-xs md:text-sm min-w-[40px] md:min-w-[50px]">
                                 {hasGwAdjustment && rawValue ? (
                                   <div className="flex flex-col items-center">
                                     <span className="text-purple-700 font-medium">{displayValue.toFixed(2)}</span>
@@ -597,17 +597,17 @@ export default function PlayerBonusPoints() {
                               </td>
                             );
                           })}
-                          <td className={`text-center py-3 px-1 font-semibold ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                          <td className={`text-center py-2 px-1 font-semibold min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
-                                <span className="text-lg font-bold text-purple-700">{adjustedTotal.toFixed(2)}</span>
-                                <span className="text-gray-400 line-through text-xs">{originalTotal.toFixed(2)}</span>
+                                <span className="text-sm md:text-lg font-bold text-purple-700">{adjustedTotal.toFixed(2)}</span>
+                                <span className="text-gray-400 line-through text-[10px] md:text-xs">{originalTotal.toFixed(2)}</span>
                               </div>
                             ) : (
-                              <span className="text-lg font-bold text-blue-900">{adjustedTotal.toFixed(2)}</span>
+                              <span className="text-sm md:text-lg font-bold text-blue-900">{adjustedTotal.toFixed(2)}</span>
                             )}
                           </td>
-                          <td className={`text-center py-3 px-1 ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
+                          <td className={`text-center py-2 px-1 min-w-[40px] md:min-w-[60px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
                                 <span className="text-sm font-medium text-purple-700">{adjustedAverage.toFixed(2)}</span>

@@ -573,25 +573,25 @@ export default function PlayerSaves() {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 min-w-[140px] sm:min-w-[180px] border-r border-gray-100">
-                          <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
+                        <th className="px-1 md:px-3 py-2 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px]">
+                          <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 text-xs md:text-sm">
                             Player {getSortIcon('name')}
                           </Button>
                         </th>
                         {dynamicGameweekColumns.map((gw) => (
-                          <th key={`saves-header-gw${gw}`} className="px-2 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[60px]">
-                            <Button variant="ghost" size="sm" onClick={() => handleSort(`gw${gw}`)} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700">
-                              GW{gw} {getSortIcon(`gw${gw}`)}
+                          <th key={`saves-header-gw${gw}`} className="px-1 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider min-w-[40px] md:min-w-[50px]">
+                            <Button variant="ghost" size="sm" onClick={() => handleSort(`gw${gw}`)} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 text-xs md:text-sm">
+                              {gw} {getSortIcon(`gw${gw}`)}
                             </Button>
                           </th>
                         ))}
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-blue-50">
-                          <Button variant="ghost" size="sm" onClick={() => handleSort('totalSaves')} className="h-auto p-0 font-medium text-gray-500 hover:bg-blue-100 hover:text-gray-700">
-                            Total Saves {getSortIcon('totalSaves')}
+                        <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-blue-50 min-w-[50px] md:min-w-[70px]">
+                          <Button variant="ghost" size="sm" onClick={() => handleSort('totalSaves')} className="h-auto p-0 font-medium text-gray-500 hover:bg-blue-100 hover:text-gray-700 text-xs md:text-sm">
+                            Total {getSortIcon('totalSaves')}
                           </Button>
                         </th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-green-50">
-                          Avg/GW
+                        <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-green-50 min-w-[40px] md:min-w-[60px] hidden md:table-cell">
+                          Avg
                         </th>
                       </tr>
                     </thead>
@@ -616,8 +616,8 @@ export default function PlayerSaves() {
                         
                         return (
                         <tr key={projection.playerId} className={`border-b border-gray-100 hover:bg-blue-50/50 ${index < 10 ? 'bg-blue-50/30' : ''}`}>
-                          <td className="py-2 sm:py-3 px-2 sm:px-4 sticky left-0 bg-white border-r border-gray-100">
-                            <div className="flex items-center gap-1">
+                          <td className="py-2 px-1 md:px-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px]">
+                            <div className="flex items-center gap-0.5 flex-wrap">
                               <PlayerNameCell 
                                 name={(playerIdToWebName && playerIdToWebName.get(projection.playerId)) || projection.playerName}
                                 position={projection.position}
@@ -637,7 +637,7 @@ export default function PlayerSaves() {
                             const displayValue = rawValue * multiplier;
                             const hasGwAdjustment = applyAvailability && multiplier !== 1;
                             return (
-                              <td key={`saves-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 sm:py-3 px-2 text-sm">
+                              <td key={`saves-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 px-1 text-xs md:text-sm min-w-[40px] md:min-w-[50px]">
                                 <div className="flex flex-col items-center">
                                   {hasGwAdjustment && rawValue ? (
                                     <>
@@ -656,17 +656,17 @@ export default function PlayerSaves() {
                               </td>
                             );
                           })}
-                          <td className={`text-center py-3 px-1 font-semibold ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                          <td className={`text-center py-2 px-1 font-semibold min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
-                                <span className="text-lg font-bold text-purple-700">{adjustedTotal.toFixed(2)}</span>
-                                <span className="text-gray-400 line-through text-xs">{originalTotal.toFixed(2)}</span>
+                                <span className="text-sm md:text-lg font-bold text-purple-700">{adjustedTotal.toFixed(2)}</span>
+                                <span className="text-gray-400 line-through text-[10px] md:text-xs">{originalTotal.toFixed(2)}</span>
                               </div>
                             ) : (
-                              <span className="text-lg font-bold text-blue-900">{adjustedTotal.toFixed(2)}</span>
+                              <span className="text-sm md:text-lg font-bold text-blue-900">{adjustedTotal.toFixed(2)}</span>
                             )}
                           </td>
-                          <td className={`text-center py-3 px-1 ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
+                          <td className={`text-center py-2 px-1 min-w-[40px] md:min-w-[60px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
                                 <span className="text-sm font-medium text-purple-700">{adjustedAverage.toFixed(2)}</span>

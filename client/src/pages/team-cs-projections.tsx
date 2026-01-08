@@ -378,30 +378,28 @@ export default function TeamCSProjections() {
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50">
-                        #
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-12 bg-gray-50">
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
                         Team
                       </th>
                       {activeGameweeks.map(gwNumber => (
                         <th 
                           key={gwNumber} 
-                          className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+                          className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[40px] md:min-w-[50px]"
                           onClick={() => setSortBy(`gw${gwNumber}`)}
                         >
-                          <div className="flex items-center justify-center gap-1">
-                            GW{gwNumber}
+                          <div className="flex items-center justify-center gap-0.5">
+                            <span className="md:hidden">{gwNumber}</span>
+                            <span className="hidden md:inline">GW{gwNumber}</span>
                             {sortBy === `gw${gwNumber}` && <TrendingUp className="h-3 w-3" />}
                           </div>
                         </th>
                       ))}
 
                       <th 
-                        className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors"
+                        className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors min-w-[50px] md:min-w-[70px]"
                         onClick={() => setSortBy('average')}
                       >
-                        <div className="flex items-center justify-center gap-1">
+                        <div className="flex items-center justify-center gap-0.5">
                           Avg
                           {sortBy === 'average' && <TrendingUp className="h-3 w-3" />}
                         </div>
@@ -411,42 +409,38 @@ export default function TeamCSProjections() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filteredProjections.map((team, index) => (
                       <tr key={team.id} className="hover:bg-gray-50" data-testid={`team-cs-projection-row-${team.id}`}>
-                        <td className="px-4 py-4 text-center text-sm font-medium text-gray-500 sticky left-0 bg-white">
-                          {index + 1}
-                        </td>
-                        
-                        <td className="px-4 py-4 sticky left-12 bg-white">
-                          <div className="flex items-center">
+                        <td className="px-1 md:px-3 py-2 md:py-4 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-400 w-4">{index + 1}</span>
                             <div>
-                              <div className="text-sm font-medium text-gray-900">{team.team}</div>
-                              <div className="text-xs text-gray-500">{team.teamShort}</div>
+                              <div className="text-xs md:text-sm font-medium text-gray-900 md:hidden">{team.teamShort}</div>
+                              <div className="text-xs md:text-sm font-medium text-gray-900 hidden md:block">{team.team}</div>
+                              <div className="text-[10px] text-gray-500 hidden md:block">{team.teamShort}</div>
                             </div>
                           </div>
                         </td>
                         
                         {activeGameweeks.map(gwNumber => {
                           const csPercentage = team.gameweekProjections[gwNumber] || 0;
-                          // Use team name to get correct FPL short_name for opponent lookup
                           const fplShortName = teamNameToShort.get(team.team) || teamNameToShort.get(team.teamName) || team.teamShort;
                           const opponentInfo = opponentMap.get(`${fplShortName}-${gwNumber}`);
                           return (
-                            <td key={`${team.id}-gw${gwNumber}`} className={`px-4 py-4 text-center text-sm font-medium ${getCSColor(csPercentage)}`}>
+                            <td key={`${team.id}-gw${gwNumber}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getCSColor(csPercentage)}`}>
                               <div>
                                 {csPercentage > 0 ? `${csPercentage}%` : "-"}
                               </div>
                               {showOpponent && opponentInfo && (
-                                <div className="text-xs text-gray-500 mt-1">
+                                <div className="text-[10px] md:text-xs text-gray-500 mt-0.5">
                                   {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
                                 </div>
                               )}
                             </td>
                           );
                         })}
-                        
 
                         
-                        <td className="px-4 py-4 text-center bg-blue-50">
-                          <span className="text-lg font-bold text-blue-900">
+                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 min-w-[50px] md:min-w-[70px]">
+                          <span className="text-sm md:text-lg font-bold text-blue-900">
                             {(() => {
                               const periodValues = activeGameweeks.map(gw => team.gameweekProjections[gw] || 0);
                               const periodAvg = periodValues.length > 0 ? periodValues.reduce((sum, val) => sum + val, 0) / periodValues.length : 0;

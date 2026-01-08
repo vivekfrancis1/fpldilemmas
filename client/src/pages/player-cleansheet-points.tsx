@@ -321,30 +321,30 @@ export default function PlayerCleanSheetPoints() {
                 <table className="w-full">
                   <thead className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
                     <tr>
-                      <th className="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors"
+                      <th className="px-1 md:px-4 py-2 md:py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors sticky left-0 bg-blue-600 border-r border-blue-500 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.2)] z-20 min-w-[100px] md:min-w-[150px] text-xs md:text-sm"
                           onClick={() => handleSort('playerName')}>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           Player {getSortIcon('playerName')}
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors"
+                      <th className="px-1 md:px-4 py-2 md:py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors hidden md:table-cell text-xs md:text-sm"
                           onClick={() => handleSort('position')}>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           Pos {getSortIcon('position')}
                         </div>
                       </th>
-                      <th className="px-4 py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors"
+                      <th className="px-1 md:px-4 py-2 md:py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors hidden md:table-cell text-xs md:text-sm"
                           onClick={() => handleSort('team')}>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           Team {getSortIcon('team')}
                         </div>
                       </th>
                       {gameweekRange.map(gw => (
-                        <th key={gw} className="px-4 py-3 text-center font-semibold">GW{gw}</th>
+                        <th key={gw} className="px-1 py-2 md:py-3 text-center font-semibold min-w-[40px] md:min-w-[50px] text-xs md:text-sm">{gw}</th>
                       ))}
-                      <th className="px-4 py-3 text-center font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors border-l border-blue-500"
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-center font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors border-l border-blue-500 min-w-[50px] md:min-w-[70px] text-xs md:text-sm"
                           onClick={() => handleSort('totalExpectedPoints')}>
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1">
                           Total {getSortIcon('totalExpectedPoints')}
                         </div>
                       </th>
@@ -353,14 +353,17 @@ export default function PlayerCleanSheetPoints() {
                   <tbody className="divide-y divide-gray-200">
                     {filteredAndSortedData.map((player, index) => (
                       <tr key={player.playerId} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
-                        <td className="px-4 py-3">
-                          <div className="font-semibold text-gray-900">{player.playerName}</div>
-                          <div className="text-sm text-gray-500">£{player.price}m • {player.ownership}%</div>
+                        <td className="px-1 md:px-4 py-2 md:py-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px]">
+                          <div className="font-semibold text-gray-900 text-xs md:text-sm truncate max-w-[90px] md:max-w-none">{player.playerName}</div>
+                          <div className="text-[10px] md:text-sm text-gray-500">
+                            <span className="md:hidden">{player.position.slice(0,3)} • {player.team}</span>
+                            <span className="hidden md:inline">£{player.price}m • {player.ownership}%</span>
+                          </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-1 md:px-4 py-2 md:py-3 hidden md:table-cell">
                           <Badge 
                             variant="outline"
-                            className={`font-medium ${
+                            className={`font-medium text-xs ${
                               player.position === 'Goalkeeper' ? 'border-yellow-400 text-yellow-700 bg-yellow-50' :
                               player.position === 'Defender' ? 'border-green-400 text-green-700 bg-green-50' :
                               player.position === 'Midfielder' ? 'border-blue-400 text-blue-700 bg-blue-50' :
@@ -370,10 +373,10 @@ export default function PlayerCleanSheetPoints() {
                             {player.position.slice(0, 3)}
                           </Badge>
                         </td>
-                        <td className="px-4 py-3 font-medium text-gray-900">{player.team}</td>
+                        <td className="px-1 md:px-4 py-2 md:py-3 font-medium text-gray-900 text-xs md:text-sm hidden md:table-cell">{player.team}</td>
                         {gameweekRange.map(gw => (
-                          <td key={gw} className="px-4 py-3 text-center">
-                            <span className={`inline-block px-2 py-1 rounded-md text-sm font-semibold ${
+                          <td key={gw} className="px-1 py-2 md:py-3 text-center min-w-[40px] md:min-w-[50px]">
+                            <span className={`inline-block px-1 md:px-2 py-0.5 md:py-1 rounded-md text-xs md:text-sm font-semibold ${
                               (player.gameweekProjections[gw.toString()] || 0) >= 1.5 ? 'bg-green-100 text-green-800' :
                               (player.gameweekProjections[gw.toString()] || 0) >= 0.5 ? 'bg-yellow-100 text-yellow-800' :
                               'bg-gray-100 text-gray-600'
@@ -382,8 +385,8 @@ export default function PlayerCleanSheetPoints() {
                             </span>
                           </td>
                         ))}
-                        <td className="px-4 py-3 text-center">
-                          <span className="inline-block px-3 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold">
+                        <td className="px-1 md:px-3 py-2 md:py-3 text-center min-w-[50px] md:min-w-[70px]">
+                          <span className="inline-block px-1.5 md:px-3 py-1 md:py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-xs md:text-sm">
                             {player.totalExpectedPoints.toFixed(2)}
                           </span>
                         </td>
