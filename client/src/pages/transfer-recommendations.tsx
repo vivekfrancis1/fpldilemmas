@@ -217,27 +217,48 @@ export default function TransferRecommendations() {
     return Object.keys(adjustedRecommendations.gameweeks).sort((a, b) => parseInt(a) - parseInt(b));
   };
 
-  // Cascading state calculator - computes cumulative squad and bank for each gameweek
+  // Cascading state calculator - computes cumulative squad, bank, and free transfers for each gameweek
   // based on all applied transfers from previous gameweeks
   const cascadedState = useMemo(() => {
     const gameweeks = getSortedGameweeks();
-    const result: { [gw: string]: { squadIds: number[]; bank: number; cumulativeTransfers: any[] } } = {};
+    const result: { [gw: string]: { 
+      squadIds: number[]; 
+      bank: number; 
+      freeTransfersAvailable: number;
+      freeTransfersRemaining: number;
+      cumulativeTransfers: any[] 
+    } } = {};
     
     // Start with original squad
     const originalSquadIds = teamData?.picks?.map((p: any) => p.element) || [];
     const initialBank = adjustedRecommendations?.bank || 0;
+    const MAX_FREE_TRANSFERS = 5; // FPL 2024/25 rule: max 5 FT can be banked
     
     let cumulativeSquadIds = [...originalSquadIds];
     let cumulativeBank = initialBank;
     let allPreviousTransfers: any[] = [];
+    let previousGWRemainingFT = 0; // FT remaining after previous GW (to roll over)
     
-    gameweeks.forEach((gw) => {
+    gameweeks.forEach((gw, index) => {
       // Get the bank before this gameweek from backend (accounts for price changes, etc.)
       const gwBankBefore = adjustedRecommendations?.gameweeks?.[gw]?.bankBefore || cumulativeBank;
+      const backendFT = adjustedRecommendations?.gameweeks?.[gw]?.freeTransfersAvailable || 1;
       
-      // For GW22 (first GW), use backend bank; for later GWs, use our cumulative calculation
-      const isFirstGW = gameweeks.indexOf(gw) === 0;
+      // For first GW, use backend values; for later GWs, calculate based on previous GW
+      const isFirstGW = index === 0;
       const startingBank = isFirstGW ? gwBankBefore : cumulativeBank;
+      
+      // Calculate free transfers for this GW
+      // First GW: use backend value
+      // Later GWs: min(previous remaining + 1, MAX_FREE_TRANSFERS)
+      let freeTransfersAvailable: number;
+      if (isFirstGW) {
+        freeTransfersAvailable = backendFT;
+      } else {
+        // Roll over unused FT from previous GW (max 1 can roll over per GW, capped at MAX)
+        const rolledOver = Math.min(previousGWRemainingFT, MAX_FREE_TRANSFERS - 1);
+        freeTransfersAvailable = Math.min(rolledOver + 1, MAX_FREE_TRANSFERS);
+      }
       
       // Apply transfers from previous gameweeks to get starting squad for this GW
       let currentSquadIds = [...cumulativeSquadIds];
@@ -253,9 +274,14 @@ export default function TransferRecommendations() {
         }
       });
       
+      // Calculate remaining free transfers after this GW's transfers
+      const freeTransfersRemaining = Math.max(0, freeTransfersAvailable - gwTransfers.length);
+      
       result[gw] = {
         squadIds: [...currentSquadIds],
         bank: currentBank,
+        freeTransfersAvailable,
+        freeTransfersRemaining,
         cumulativeTransfers: [...allPreviousTransfers, ...gwTransfers]
       };
       
@@ -263,6 +289,7 @@ export default function TransferRecommendations() {
       cumulativeSquadIds = [...currentSquadIds];
       cumulativeBank = currentBank;
       allPreviousTransfers = [...allPreviousTransfers, ...gwTransfers];
+      previousGWRemainingFT = freeTransfersRemaining;
     });
     
     return result;
@@ -377,17 +404,22 @@ export default function TransferRecommendations() {
     return runningBank;
   };
 
-  // Calculate free transfers remaining after applied transfers
+  // Get cascaded free transfers available for a gameweek (accounts for previous GW transfers)
+  const getCascadedFreeTransfersAvailable = (gw: string): number => {
+    return cascadedState[gw]?.freeTransfersAvailable || 
+           adjustedRecommendations?.gameweeks?.[gw]?.freeTransfersAvailable || 1;
+  };
+
+  // Calculate free transfers remaining after applied transfers for this gameweek
   const getFreeTransfersRemaining = (gw: string): number => {
-    const applied = appliedTransfers[gw] || [];
-    const totalFT = adjustedRecommendations?.gameweeks?.[gw]?.freeTransfersAvailable || 1;
-    return Math.max(0, totalFT - applied.length);
+    return cascadedState[gw]?.freeTransfersRemaining ?? 
+           Math.max(0, getCascadedFreeTransfersAvailable(gw) - (appliedTransfers[gw]?.length || 0));
   };
 
   // Calculate hits taken (transfers beyond free transfers)
   const getHitsTaken = (gw: string): number => {
     const applied = appliedTransfers[gw] || [];
-    const totalFT = adjustedRecommendations?.gameweeks?.[gw]?.freeTransfersAvailable || 1;
+    const totalFT = getCascadedFreeTransfersAvailable(gw);
     return Math.max(0, applied.length - totalFT) * 4;
   };
 
@@ -864,8 +896,8 @@ export default function TransferRecommendations() {
                               <div className="text-xs text-gray-500">Cash in Bank</div>
                               <div className="text-sm font-bold text-green-700" data-testid={`cash-in-bank-gw${gw}`}>
                                 £{(getRunningBankForGW(gw) / 10).toFixed(1)}m
-                                {getAppliedTransfersForGW(gw).length > 0 && (
-                                  <span className="text-xs text-gray-500 ml-1">(was £{(finances.cashBefore / 10).toFixed(1)}m)</span>
+                                {(getAppliedTransfersForGW(gw).length > 0 || getCumulativeBankForGW(gw) !== finances.cashBefore) && (
+                                  <span className="text-xs text-gray-500 ml-1">(started £{(getCumulativeBankForGW(gw) / 10).toFixed(1)}m)</span>
                                 )}
                               </div>
                             </div>
@@ -876,8 +908,8 @@ export default function TransferRecommendations() {
                               <div className="text-xs text-gray-500">Free Transfers</div>
                               <div className="text-sm font-bold text-green-700" data-testid={`free-transfers-gw${gw}`}>
                                 {getFreeTransfersRemaining(gw)}
-                                {getAppliedTransfersForGW(gw).length > 0 && (
-                                  <span className="text-xs text-gray-500 ml-1">(of {finances.ftsAvailable})</span>
+                                {(getAppliedTransfersForGW(gw).length > 0 || getCascadedFreeTransfersAvailable(gw) !== finances.ftsAvailable) && (
+                                  <span className="text-xs text-gray-500 ml-1">(of {getCascadedFreeTransfersAvailable(gw)})</span>
                                 )}
                               </div>
                             </div>
