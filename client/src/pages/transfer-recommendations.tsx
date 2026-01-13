@@ -211,7 +211,85 @@ export default function TransferRecommendations() {
     });
   };
 
-  // Get applied transfers for current gameweek
+  // Get sorted list of gameweeks with applied transfers
+  const getSortedGameweeks = (): string[] => {
+    if (!adjustedRecommendations?.gameweeks) return [];
+    return Object.keys(adjustedRecommendations.gameweeks).sort((a, b) => parseInt(a) - parseInt(b));
+  };
+
+  // Cascading state calculator - computes cumulative squad and bank for each gameweek
+  // based on all applied transfers from previous gameweeks
+  const cascadedState = useMemo(() => {
+    const gameweeks = getSortedGameweeks();
+    const result: { [gw: string]: { squadIds: number[]; bank: number; cumulativeTransfers: any[] } } = {};
+    
+    // Start with original squad
+    const originalSquadIds = teamData?.picks?.map((p: any) => p.element) || [];
+    const initialBank = adjustedRecommendations?.bank || 0;
+    
+    let cumulativeSquadIds = [...originalSquadIds];
+    let cumulativeBank = initialBank;
+    let allPreviousTransfers: any[] = [];
+    
+    gameweeks.forEach((gw) => {
+      // Get the bank before this gameweek from backend (accounts for price changes, etc.)
+      const gwBankBefore = adjustedRecommendations?.gameweeks?.[gw]?.bankBefore || cumulativeBank;
+      
+      // For GW22 (first GW), use backend bank; for later GWs, use our cumulative calculation
+      const isFirstGW = gameweeks.indexOf(gw) === 0;
+      const startingBank = isFirstGW ? gwBankBefore : cumulativeBank;
+      
+      // Apply transfers from previous gameweeks to get starting squad for this GW
+      let currentSquadIds = [...cumulativeSquadIds];
+      let currentBank = startingBank;
+      
+      // Apply this gameweek's transfers
+      const gwTransfers = appliedTransfers[gw] || [];
+      gwTransfers.forEach(transfer => {
+        const outIndex = currentSquadIds.indexOf(transfer.playerOut.id);
+        if (outIndex !== -1) {
+          currentSquadIds[outIndex] = transfer.playerIn.id;
+          currentBank = currentBank - transfer.playerIn.nowCost + transfer.playerOut.sellingPrice;
+        }
+      });
+      
+      result[gw] = {
+        squadIds: [...currentSquadIds],
+        bank: currentBank,
+        cumulativeTransfers: [...allPreviousTransfers, ...gwTransfers]
+      };
+      
+      // Update cumulative state for next gameweek
+      cumulativeSquadIds = [...currentSquadIds];
+      cumulativeBank = currentBank;
+      allPreviousTransfers = [...allPreviousTransfers, ...gwTransfers];
+    });
+    
+    return result;
+  }, [adjustedRecommendations, teamData, appliedTransfers]);
+
+  // Get cumulative squad IDs for a gameweek (includes all transfers from previous GWs)
+  const getCumulativeSquadForGW = (gw: string): number[] => {
+    return cascadedState[gw]?.squadIds || teamData?.picks?.map((p: any) => p.element) || [];
+  };
+
+  // Get cumulative bank for a gameweek (after all transfers from previous GWs)
+  const getCumulativeBankForGW = (gw: string): number => {
+    // For the starting bank of a GW, we need to look at the end state of the previous GW
+    const gameweeks = getSortedGameweeks();
+    const gwIndex = gameweeks.indexOf(gw);
+    
+    if (gwIndex === 0) {
+      // First gameweek - use backend's bankBefore
+      return adjustedRecommendations?.gameweeks?.[gw]?.bankBefore || adjustedRecommendations?.bank || 0;
+    }
+    
+    // For later gameweeks, use the bank at end of previous GW
+    const previousGW = gameweeks[gwIndex - 1];
+    return cascadedState[previousGW]?.bank || adjustedRecommendations?.bank || 0;
+  };
+
+  // Get applied transfers for current gameweek only (not cascaded)
   const getAppliedTransfersForGW = (gw: string): any[] => {
     return appliedTransfers[gw] || [];
   };
@@ -249,32 +327,49 @@ export default function TransferRecommendations() {
     }));
   };
 
-  // Check if a transfer is already applied (player out already used)
+  // Check if a transfer is already applied (player out already used in this GW)
   const isTransferApplied = (gw: string, transfer: any): boolean => {
     const applied = appliedTransfers[gw] || [];
     return applied.some(t => t.playerOut.id === transfer.playerOut.id);
   };
 
-  // Check if player in is already in squad (either original or through another transfer)
+  // Check if player is already in the cascaded squad for a gameweek
+  // This includes players from original squad + all transfers from previous GWs + current GW transfers
   const isPlayerInSquad = (gw: string, playerId: number): boolean => {
+    // Get starting squad for this GW (after previous GW transfers)
+    const gameweeks = getSortedGameweeks();
+    const gwIndex = gameweeks.indexOf(gw);
+    
+    let startingSquadIds: number[];
+    if (gwIndex === 0 || gwIndex === -1) {
+      // First gameweek or not found - use original squad
+      startingSquadIds = teamData?.picks?.map((p: any) => p.element) || [];
+    } else {
+      // Use the squad at end of previous gameweek
+      const previousGW = gameweeks[gwIndex - 1];
+      startingSquadIds = cascadedState[previousGW]?.squadIds || teamData?.picks?.map((p: any) => p.element) || [];
+    }
+    
+    // Apply this gameweek's transfers to get current state
     const applied = appliedTransfers[gw] || [];
-    const originalSquadIds = teamData?.picks?.map((p: any) => p.element) || [];
     const playersOut = applied.map(t => t.playerOut.id);
     const playersIn = applied.map(t => t.playerIn.id);
     
-    // Player is in squad if: in original squad and not transferred out, OR transferred in
-    const inOriginalAndNotOut = originalSquadIds.includes(playerId) && !playersOut.includes(playerId);
+    // Player is in squad if: in starting squad and not transferred out, OR transferred in this GW
+    const inStartingAndNotOut = startingSquadIds.includes(playerId) && !playersOut.includes(playerId);
     const transferredIn = playersIn.includes(playerId);
     
-    return inOriginalAndNotOut || transferredIn;
+    return inStartingAndNotOut || transferredIn;
   };
 
-  // Calculate running bank after applied transfers
+  // Calculate running bank after applied transfers for this gameweek
+  // Takes into account cascaded bank from previous gameweeks
   const getRunningBankForGW = (gw: string): number => {
     const applied = appliedTransfers[gw] || [];
-    const initialBank = adjustedRecommendations?.gameweeks?.[gw]?.bankBefore || adjustedRecommendations?.bank || 0;
+    // Use cascaded bank (from previous GWs) as starting point
+    const startingBank = getCumulativeBankForGW(gw);
     
-    let runningBank = initialBank;
+    let runningBank = startingBank;
     applied.forEach(transfer => {
       runningBank = runningBank - transfer.playerIn.nowCost + transfer.playerOut.sellingPrice;
     });
@@ -297,56 +392,72 @@ export default function TransferRecommendations() {
   };
 
   // Filter out already applied transfers from recommendations
+  // Also filters out recommendations for players not in the cascaded squad
   const filterAppliedFromRecommendations = (recommendations: any[], gw: string): any[] => {
     if (!recommendations) return [];
     const applied = appliedTransfers[gw] || [];
     const appliedOutIds = new Set(applied.map(t => t.playerOut.id));
-    const appliedInIds = new Set(applied.map(t => t.playerIn.id));
+    
+    // Get the starting squad for this GW (after previous GW transfers)
+    const gameweeks = getSortedGameweeks();
+    const gwIndex = gameweeks.indexOf(gw);
+    let startingSquadIds: number[];
+    if (gwIndex === 0 || gwIndex === -1) {
+      startingSquadIds = teamData?.picks?.map((p: any) => p.element) || [];
+    } else {
+      const previousGW = gameweeks[gwIndex - 1];
+      startingSquadIds = cascadedState[previousGW]?.squadIds || teamData?.picks?.map((p: any) => p.element) || [];
+    }
     
     return recommendations.filter((rec: any) => {
       if (rec.type === 'roll') return true;
-      // Filter out if player out is already transferred out
+      // Filter out if player out is already transferred out this GW
       if (appliedOutIds.has(rec.playerOut.id)) return false;
-      // Filter out if player in is already in squad
+      // Filter out if player out is not in the starting squad for this GW
+      if (!startingSquadIds.includes(rec.playerOut.id)) return false;
+      // Filter out if player in is already in squad (cascaded check)
       if (isPlayerInSquad(gw, rec.playerIn.id)) return false;
       return true;
     });
   };
 
-  // Apply user-selected transfers to current team
+  // Apply cascaded transfers to current team (reflects all transfers from previous GWs + current GW)
   const applyRecommendedTransfers = useMemo(() => {
     if (!selectedGameweek || !teamData?.picks) {
       return null;
     }
 
-    // Clone current picks
-    let updatedPicks = teamData.picks.map((pick: any) => ({ ...pick }));
+    // Get the cascaded squad IDs for this gameweek
+    const cascadedSquadIds = getCumulativeSquadForGW(selectedGameweek);
+    
+    // Apply this gameweek's transfers on top
+    const currentGWTransfers = appliedTransfers[selectedGameweek] || [];
+    let finalSquadIds = [...cascadedSquadIds];
+    
+    // Note: cascadedState already includes current GW transfers in squadIds
+    // So we can directly use the cascaded state
+    const finalState = cascadedState[selectedGameweek];
+    if (finalState) {
+      finalSquadIds = finalState.squadIds;
+    }
 
-    // Apply each user-applied transfer
-    const userAppliedTransfers = appliedTransfers[selectedGameweek] || [];
-    userAppliedTransfers.forEach((rec: any) => {
-      const outIndex = updatedPicks.findIndex((p: any) => p.element === rec.playerOut.id);
-      if (outIndex !== -1) {
-        updatedPicks[outIndex] = {
-          ...updatedPicks[outIndex],
-          element: rec.playerIn.id,
-        };
-      }
-    });
+    // Map back to picks format, preserving original pick structure where possible
+    return teamData.picks.map((pick: any, index: number) => ({
+      ...pick,
+      element: finalSquadIds[index] || pick.element,
+    }));
+  }, [selectedGameweek, teamData, appliedTransfers, cascadedState]);
 
-    return updatedPicks;
-  }, [selectedGameweek, teamData, appliedTransfers]);
-
-  // Track transferred-in players for highlighting
+  // Track transferred-in players for highlighting (all players brought in up to and including this GW)
   const transferredInPlayers = useMemo(() => {
     if (!selectedGameweek) {
       return new Set<number>();
     }
 
-    // Use user-applied transfers for highlighting
-    const userAppliedTransfers = appliedTransfers[selectedGameweek] || [];
-    return new Set(userAppliedTransfers.map((rec: any) => rec.playerIn.id));
-  }, [selectedGameweek, appliedTransfers]);
+    // Get all cumulative transfers up to and including this gameweek
+    const cumulativeTransfers = cascadedState[selectedGameweek]?.cumulativeTransfers || [];
+    return new Set(cumulativeTransfers.map((rec: any) => rec.playerIn.id));
+  }, [selectedGameweek, cascadedState]);
 
   // Optimize lineup to maximize points
   const optimizedTeam = useMemo((): {
