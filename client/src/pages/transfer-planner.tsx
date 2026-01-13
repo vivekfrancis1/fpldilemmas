@@ -2132,39 +2132,57 @@ export default function TransferPlanner() {
     setEditSellPriceValue("");
   };
 
+  // Calculate bank after transfers for a specific gameweek (helper for cascading)
+  const calculateBankAfterTransfersForGW = (gameweek: number, startingBank: number): number => {
+    // Get completed transfers for this gameweek from savedDrafts
+    const gwTransfers = gameweekTransfers[gameweek]?.completed || [];
+    
+    // Calculate money gained from selling players
+    let moneyFromSales = 0;
+    gwTransfers.forEach(transfer => {
+      moneyFromSales += transfer.sellingPrice || 0;
+    });
+    
+    // Calculate money spent on buying players
+    let moneySpent = 0;
+    gwTransfers.forEach(transfer => {
+      moneySpent += transfer.buyingPrice || 0;
+    });
+    
+    return startingBank + moneyFromSales - moneySpent;
+  };
+
   // Calculate initial bank for the selected gameweek (before any transfers in that GW)
+  // This cascades the bank from previous gameweeks properly
   const calculateInitialBank = (): number => {
-    if (!teamData?.transfers?.bank || !teamData?.picks || !selectedGameweek) return 0;
+    // Use nullish coalescing to properly handle bank value of 0
+    const apiBank = teamData?.transfers?.bank;
+    if (apiBank === undefined || apiBank === null || !teamData?.picks || !selectedGameweek) return 0;
     
     const nextGWs = getNextGameweeks();
     const firstGW = nextGWs[0]?.id;
     
     // For the first gameweek in the planning horizon, use the actual team bank
     if (selectedGameweek === firstGW) {
-      return teamData.transfers.bank / 10; // Convert from API format
+      return apiBank / 10; // Convert from API format
     }
     
-    // For subsequent gameweeks, calculate based on squad value changes from previous gameweeks
-    const previousGW = selectedGameweek - 1;
-    const originalBank = teamData.transfers.bank / 10;
+    // For subsequent gameweeks, cascade the bank from previous gameweeks
+    // Start with the API bank for the first planning gameweek
+    let runningBank = apiBank / 10;
     
-    // Get original squad value
-    const originalSquadValue = teamData.picks.reduce((sum, pick) => {
-      return sum + (pick.purchase_price || 0) / 10;
-    }, 0);
+    // Iterate through each gameweek from firstGW to selectedGameweek-1
+    // and apply each gameweek's transfers to calculate the cascading bank
+    for (let gw = firstGW; gw < selectedGameweek; gw++) {
+      runningBank = calculateBankAfterTransfersForGW(gw, runningBank);
+    }
     
-    // Get the baseline lineup at the end of previous gameweek
-    const previousGWBaseline = getBaselineLineup(previousGW);
+    console.log(`🏦 CASCADING BANK DEBUG - GW${selectedGameweek}:`);
+    console.log(`  API bank: ${apiBank} (£${(apiBank / 10).toFixed(1)}m)`);
+    console.log(`  First GW: ${firstGW}, Selected GW: ${selectedGameweek}`);
+    console.log(`  Cascaded initial bank: £${runningBank.toFixed(1)}m`);
     
-    // Calculate squad value at end of previous gameweek
-    const previousGWSquadValue = previousGWBaseline.reduce((sum, pick) => {
-      return sum + (pick.purchase_price || 0) / 10;
-    }, 0);
-    
-    // Initial bank for current GW = Original bank + (Original squad value - Previous GW squad value)
-    const initialBank = originalBank + originalSquadValue - previousGWSquadValue;
-    
-    return Math.max(0, initialBank);
+    return runningBank;
   };
 
   // Calculate bank after transfers for the selected gameweek
