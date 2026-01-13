@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle, Users, Target } from "lucide-react";
+import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle, Users, Target, Filter } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
@@ -27,6 +28,7 @@ export default function TransferRecommendations() {
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<string | null>(null);
   const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
+  const [positionFilter, setPositionFilter] = useState<string>("all");
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -184,6 +186,30 @@ export default function TransferRecommendations() {
     return bootstrapData?.elements?.find((p: any) => p.id === playerId);
   };
 
+  // Helper to get position abbreviation from element_type
+  const getPositionFromElementType = (elementType: number): string => {
+    switch (elementType) {
+      case 1: return 'GKP';
+      case 2: return 'DEF';
+      case 3: return 'MID';
+      case 4: return 'FWD';
+      default: return '';
+    }
+  };
+
+  // Filter recommendations by position (based on player being transferred IN)
+  const filterRecommendationsByPosition = (recommendations: any[]): any[] => {
+    if (positionFilter === 'all' || !recommendations) return recommendations;
+    
+    return recommendations.filter((rec: any) => {
+      if (rec.type === 'roll') return true;
+      const playerIn = getPlayerById(rec.playerIn?.id);
+      if (!playerIn) return false;
+      const position = getPositionFromElementType(playerIn.element_type);
+      return position === positionFilter;
+    });
+  };
+
   // Apply primary recommended transfers to current team (or return current team if rolling)
   const applyRecommendedTransfers = useMemo(() => {
     if (!selectedGameweek || !adjustedRecommendations?.gameweeks?.[selectedGameweek] || !teamData?.picks) {
@@ -319,12 +345,18 @@ export default function TransferRecommendations() {
 
     if (!bestLineup.length || !bestFormation) return null;
 
+    // Store formation values (type assertion needed after forEach callback assignment)
+    const finalFormation = bestFormation as { def: number; mid: number; fwd: number; name: string };
+    const formationDef = finalFormation.def;
+    const formationMid = finalFormation.mid;
+    const formationFwd = finalFormation.fwd;
+
     // Reorganize starting 11: GKP, DEF, MID, FWD (in formation order)
     const starting11 = [
       squadByPosition.GKP[0], // Goalkeeper
-      ...squadByPosition.DEF.slice(0, bestFormation.def), // Defenders
-      ...squadByPosition.MID.slice(0, bestFormation.mid), // Midfielders
-      ...squadByPosition.FWD.slice(0, bestFormation.fwd)  // Forwards
+      ...squadByPosition.DEF.slice(0, formationDef), // Defenders
+      ...squadByPosition.MID.slice(0, formationMid), // Midfielders
+      ...squadByPosition.FWD.slice(0, formationFwd)  // Forwards
     ];
 
     // Assign positions (1-11 for starting)
@@ -565,6 +597,33 @@ export default function TransferRecommendations() {
               <CardDescription className="text-xs sm:text-sm">
                 Maximize your projected points for remaining gameweeks
               </CardDescription>
+              {/* Position Filter Toggle */}
+              <div className="flex items-center gap-2 pt-3">
+                <Filter className="h-4 w-4 text-gray-500" />
+                <span className="text-xs text-gray-600">Position:</span>
+                <ToggleGroup 
+                  type="single" 
+                  value={positionFilter} 
+                  onValueChange={(value) => value && setPositionFilter(value)}
+                  className="flex flex-wrap gap-1"
+                >
+                  <ToggleGroupItem value="all" size="sm" className="text-xs px-2 py-1 h-7 data-[state=on]:bg-orange-100 data-[state=on]:text-orange-900">
+                    All
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="GKP" size="sm" className="text-xs px-2 py-1 h-7 data-[state=on]:bg-orange-100 data-[state=on]:text-orange-900">
+                    GKP
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="DEF" size="sm" className="text-xs px-2 py-1 h-7 data-[state=on]:bg-orange-100 data-[state=on]:text-orange-900">
+                    DEF
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="MID" size="sm" className="text-xs px-2 py-1 h-7 data-[state=on]:bg-orange-100 data-[state=on]:text-orange-900">
+                    MID
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="FWD" size="sm" className="text-xs px-2 py-1 h-7 data-[state=on]:bg-orange-100 data-[state=on]:text-orange-900">
+                    FWD
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue={Object.keys(adjustedRecommendations.gameweeks)[0]} className="w-full" onValueChange={setSelectedGameweek}>
@@ -624,8 +683,18 @@ export default function TransferRecommendations() {
                             {/* Primary Transfer Recommendations (based on free transfers available) */}
                             {(() => {
                               const freeTransfers = gwData.freeTransfersAvailable || 1;
-                              const primaryTransfers = gwData.recommendations.slice(0, freeTransfers);
-                              const otherTransfers = gwData.recommendations.slice(freeTransfers, freeTransfers + 5);
+                              const filteredRecommendations = filterRecommendationsByPosition(gwData.recommendations);
+                              const primaryTransfers = filteredRecommendations.slice(0, freeTransfers);
+                              const otherTransfers = filteredRecommendations.slice(freeTransfers, freeTransfers + 5);
+                              
+                              // Show message if filter returns no results
+                              if (filteredRecommendations.length === 0 && positionFilter !== 'all') {
+                                return (
+                                  <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-lg">
+                                    No {positionFilter} transfer recommendations for this gameweek
+                                  </div>
+                                );
+                              }
                               
                               return (
                                 <>
