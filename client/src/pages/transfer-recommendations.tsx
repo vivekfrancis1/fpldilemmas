@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle, Users, Target, Filter } from "lucide-react";
+import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle, Users, Target, Filter, Plus, X, Check } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingExperience } from "@/components/loading-experience";
@@ -29,6 +29,7 @@ export default function TransferRecommendations() {
   const [selectedGameweek, setSelectedGameweek] = useState<string | null>(null);
   const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
   const [positionFilter, setPositionFilter] = useState<string[]>([]);
+  const [appliedTransfers, setAppliedTransfers] = useState<{ [gw: string]: any[] }>({});
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -210,26 +211,103 @@ export default function TransferRecommendations() {
     });
   };
 
-  // Apply primary recommended transfers to current team (or return current team if rolling)
+  // Get applied transfers for current gameweek
+  const getAppliedTransfersForGW = (gw: string): any[] => {
+    return appliedTransfers[gw] || [];
+  };
+
+  // Apply a transfer (add to applied transfers list)
+  const applyTransfer = (gw: string, transfer: any) => {
+    setAppliedTransfers(prev => ({
+      ...prev,
+      [gw]: [...(prev[gw] || []), transfer]
+    }));
+  };
+
+  // Remove an applied transfer
+  const removeAppliedTransfer = (gw: string, transferIndex: number) => {
+    setAppliedTransfers(prev => ({
+      ...prev,
+      [gw]: (prev[gw] || []).filter((_, idx) => idx !== transferIndex)
+    }));
+  };
+
+  // Check if a transfer is already applied (player out already used)
+  const isTransferApplied = (gw: string, transfer: any): boolean => {
+    const applied = appliedTransfers[gw] || [];
+    return applied.some(t => t.playerOut.id === transfer.playerOut.id);
+  };
+
+  // Check if player in is already in squad (either original or through another transfer)
+  const isPlayerInSquad = (gw: string, playerId: number): boolean => {
+    const applied = appliedTransfers[gw] || [];
+    const originalSquadIds = teamData?.picks?.map((p: any) => p.element) || [];
+    const playersOut = applied.map(t => t.playerOut.id);
+    const playersIn = applied.map(t => t.playerIn.id);
+    
+    // Player is in squad if: in original squad and not transferred out, OR transferred in
+    const inOriginalAndNotOut = originalSquadIds.includes(playerId) && !playersOut.includes(playerId);
+    const transferredIn = playersIn.includes(playerId);
+    
+    return inOriginalAndNotOut || transferredIn;
+  };
+
+  // Calculate running bank after applied transfers
+  const getRunningBankForGW = (gw: string): number => {
+    const applied = appliedTransfers[gw] || [];
+    const initialBank = adjustedRecommendations?.gameweeks?.[gw]?.bankBefore || adjustedRecommendations?.bank || 0;
+    
+    let runningBank = initialBank;
+    applied.forEach(transfer => {
+      runningBank = runningBank - transfer.playerIn.nowCost + transfer.playerOut.sellingPrice;
+    });
+    
+    return runningBank;
+  };
+
+  // Calculate free transfers remaining after applied transfers
+  const getFreeTransfersRemaining = (gw: string): number => {
+    const applied = appliedTransfers[gw] || [];
+    const totalFT = adjustedRecommendations?.gameweeks?.[gw]?.freeTransfersAvailable || 1;
+    return Math.max(0, totalFT - applied.length);
+  };
+
+  // Calculate hits taken (transfers beyond free transfers)
+  const getHitsTaken = (gw: string): number => {
+    const applied = appliedTransfers[gw] || [];
+    const totalFT = adjustedRecommendations?.gameweeks?.[gw]?.freeTransfersAvailable || 1;
+    return Math.max(0, applied.length - totalFT) * 4;
+  };
+
+  // Filter out already applied transfers from recommendations
+  const filterAppliedFromRecommendations = (recommendations: any[], gw: string): any[] => {
+    if (!recommendations) return [];
+    const applied = appliedTransfers[gw] || [];
+    const appliedOutIds = new Set(applied.map(t => t.playerOut.id));
+    const appliedInIds = new Set(applied.map(t => t.playerIn.id));
+    
+    return recommendations.filter((rec: any) => {
+      if (rec.type === 'roll') return true;
+      // Filter out if player out is already transferred out
+      if (appliedOutIds.has(rec.playerOut.id)) return false;
+      // Filter out if player in is already in squad
+      if (isPlayerInSquad(gw, rec.playerIn.id)) return false;
+      return true;
+    });
+  };
+
+  // Apply user-selected transfers to current team
   const applyRecommendedTransfers = useMemo(() => {
-    if (!selectedGameweek || !adjustedRecommendations?.gameweeks?.[selectedGameweek] || !teamData?.picks) {
+    if (!selectedGameweek || !teamData?.picks) {
       return null;
     }
-
-    const gwData = adjustedRecommendations.gameweeks[selectedGameweek];
-    const freeTransfers = gwData.freeTransfersAvailable || 1;
-    const primaryTransfers = gwData.recommendations?.slice(0, freeTransfers) || [];
 
     // Clone current picks
     let updatedPicks = teamData.picks.map((pick: any) => ({ ...pick }));
 
-    // If roll recommendation, just return current team without changes
-    if (primaryTransfers.length > 0 && primaryTransfers[0]?.type === 'roll') {
-      return updatedPicks;
-    }
-
-    // Apply each primary transfer
-    primaryTransfers.forEach((rec: any) => {
+    // Apply each user-applied transfer
+    const userAppliedTransfers = appliedTransfers[selectedGameweek] || [];
+    userAppliedTransfers.forEach((rec: any) => {
       const outIndex = updatedPicks.findIndex((p: any) => p.element === rec.playerOut.id);
       if (outIndex !== -1) {
         updatedPicks[outIndex] = {
@@ -240,22 +318,18 @@ export default function TransferRecommendations() {
     });
 
     return updatedPicks;
-  }, [selectedGameweek, adjustedRecommendations, teamData, bootstrapData]);
+  }, [selectedGameweek, teamData, appliedTransfers]);
 
   // Track transferred-in players for highlighting
   const transferredInPlayers = useMemo(() => {
-    if (!selectedGameweek || !adjustedRecommendations?.gameweeks?.[selectedGameweek]) {
+    if (!selectedGameweek) {
       return new Set<number>();
     }
 
-    const gwData = adjustedRecommendations.gameweeks[selectedGameweek];
-    const freeTransfers = gwData.freeTransfersAvailable || 1;
-    const primaryTransfers = gwData.recommendations?.slice(0, freeTransfers) || [];
-
-    // Filter out recommendations without playerIn (e.g., roll recommendations)
-    const validTransfers = primaryTransfers.filter((rec: any) => rec.playerIn?.id);
-    return new Set(validTransfers.map((rec: any) => rec.playerIn.id));
-  }, [selectedGameweek, adjustedRecommendations]);
+    // Use user-applied transfers for highlighting
+    const userAppliedTransfers = appliedTransfers[selectedGameweek] || [];
+    return new Set(userAppliedTransfers.map((rec: any) => rec.playerIn.id));
+  }, [selectedGameweek, appliedTransfers]);
 
   // Optimize lineup to maximize points
   const optimizedTeam = useMemo((): {
@@ -660,16 +734,35 @@ export default function TransferRecommendations() {
                             <DollarSign className="h-4 w-4 text-green-600" />
                             <div>
                               <div className="text-xs text-gray-500">Cash in Bank</div>
-                              <div className="text-sm font-bold text-green-700" data-testid={`cash-in-bank-gw${gw}`}>£{(finances.cashBefore / 10).toFixed(1)}m</div>
+                              <div className="text-sm font-bold text-green-700" data-testid={`cash-in-bank-gw${gw}`}>
+                                £{(getRunningBankForGW(gw) / 10).toFixed(1)}m
+                                {getAppliedTransfersForGW(gw).length > 0 && (
+                                  <span className="text-xs text-gray-500 ml-1">(was £{(finances.cashBefore / 10).toFixed(1)}m)</span>
+                                )}
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 border-l border-green-300 pl-3">
                             <ArrowRightLeft className="h-4 w-4 text-green-600" />
                             <div>
                               <div className="text-xs text-gray-500">Free Transfers</div>
-                              <div className="text-sm font-bold text-green-700" data-testid={`free-transfers-gw${gw}`}>{finances.ftsAvailable}</div>
+                              <div className="text-sm font-bold text-green-700" data-testid={`free-transfers-gw${gw}`}>
+                                {getFreeTransfersRemaining(gw)}
+                                {getAppliedTransfersForGW(gw).length > 0 && (
+                                  <span className="text-xs text-gray-500 ml-1">(of {finances.ftsAvailable})</span>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          {getHitsTaken(gw) > 0 && (
+                            <div className="flex items-center gap-2 border-l border-red-300 pl-3">
+                              <AlertCircle className="h-4 w-4 text-red-600" />
+                              <div>
+                                <div className="text-xs text-gray-500">Hit Points</div>
+                                <div className="text-sm font-bold text-red-600">-{getHitsTaken(gw)}</div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -685,61 +778,133 @@ export default function TransferRecommendations() {
                           </div>
                         ) : (
                           <>
-                            {/* Primary Transfer Recommendations (based on free transfers available) */}
+                            {/* Applied Transfers Section */}
+                            {getAppliedTransfersForGW(gw).length > 0 && (
+                              <div className="mb-4">
+                                <h3 className="text-base font-semibold text-green-700 mb-2 flex items-center gap-2">
+                                  <Check className="h-4 w-4" />
+                                  Applied Transfers ({getAppliedTransfersForGW(gw).length})
+                                </h3>
+                                <div className="space-y-2">
+                                  {getAppliedTransfersForGW(gw).map((rec: any, index: number) => (
+                                    <div
+                                      key={`applied-${rec.playerOut.id}-${rec.playerIn.id}`}
+                                      className="p-2 sm:p-3 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 rounded-lg shadow-sm"
+                                    >
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className="flex items-center gap-3 flex-wrap flex-1">
+                                          <div className="flex items-center gap-1.5">
+                                            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">OUT</Badge>
+                                            <span className="text-sm font-medium">{rec.playerOut.webName}</span>
+                                          </div>
+                                          <ArrowRightLeft className="h-4 w-4 text-gray-400" />
+                                          <div className="flex items-center gap-1.5">
+                                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">IN</Badge>
+                                            <span className="text-sm font-medium">{rec.playerIn.webName}</span>
+                                          </div>
+                                          <span className="text-xs text-green-600 font-semibold">+{rec.pointsGain.toFixed(1)} pts</span>
+                                        </div>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => removeAppliedTransfer(gw, index)}
+                                          className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        >
+                                          <X className="h-4 w-4" />
+                                          <span className="hidden sm:inline ml-1">Remove</span>
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Transfer Recommendations */}
                             {(() => {
                               const freeTransfers = gwData.freeTransfersAvailable || 1;
-                              const filteredRecommendations = filterRecommendationsByPosition(gwData.recommendations);
-                              const primaryTransfers = filteredRecommendations.slice(0, freeTransfers);
-                              const otherTransfers = filteredRecommendations.slice(freeTransfers, freeTransfers + 5);
+                              const positionFiltered = filterRecommendationsByPosition(gwData.recommendations);
+                              const availableRecommendations = filterAppliedFromRecommendations(positionFiltered, gw);
+                              const runningBank = getRunningBankForGW(gw);
+                              
+                              // Filter by affordability based on running bank
+                              const affordableRecommendations = availableRecommendations.filter((rec: any) => {
+                                if (rec.type === 'roll') return true;
+                                const netCost = rec.playerIn.nowCost - rec.playerOut.sellingPrice;
+                                return netCost <= runningBank;
+                              });
                               
                               // Show message if filter returns no results
-                              if (filteredRecommendations.length === 0 && positionFilter.length > 0) {
+                              if (availableRecommendations.length === 0 && positionFilter.length > 0 && getAppliedTransfersForGW(gw).length === 0) {
                                 return (
                                   <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-lg">
                                     No {positionFilter.join('/')} transfer recommendations for this gameweek
                                   </div>
                                 );
                               }
+
+                              if (affordableRecommendations.length === 0 && getAppliedTransfersForGW(gw).length > 0) {
+                                return (
+                                  <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-lg">
+                                    No more affordable transfer recommendations available
+                                  </div>
+                                );
+                              }
                               
                               return (
                                 <>
-                                  {primaryTransfers.length > 0 && (
+                                  {affordableRecommendations.length > 0 && (
                                 <div>
                                   <h3 className="text-base font-semibold text-gray-700 mb-2">
-                                    Primary Transfer Recommendation{primaryTransfers.length > 1 ? 's' : ''}
+                                    Transfer Recommendations
                                   </h3>
                                   <div className="space-y-2">
-                                    {primaryTransfers.map((rec: any, index: number) => (
+                                    {affordableRecommendations.slice(0, 10).map((rec: any, index: number) => {
+                                      const netCost = rec.playerIn.nowCost - rec.playerOut.sellingPrice;
+                                      const itbAfterThisTransfer = runningBank - netCost;
+                                      
+                                      return (
                                       <div
                                         key={`${rec.playerOut.id}-${rec.playerIn.id}`}
-                                        className="p-2 sm:p-3 bg-gradient-to-r from-orange-50 to-white border-2 border-orange-300 rounded-lg shadow-sm space-y-2"
+                                        className="p-2 sm:p-3 bg-gradient-to-r from-orange-50 to-white border border-orange-200 rounded-lg shadow-sm space-y-2 hover:border-orange-300 transition-colors"
                                         data-testid={`transfer-recommendation-gw${gw}-${index}`}
                                       >
-                                        <div className="space-y-1">
-                                          <div className="flex items-start gap-2">
-                                            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0">
-                                              OUT
-                                            </Badge>
-                                            <div className="flex items-center gap-1.5 flex-wrap">
-                                              <TrendingDown className="h-3.5 w-3.5 text-red-500 shrink-0" />
-                                              <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-out-name-gw${gw}-${index}`}>{rec.playerOut.webName}</span>
-                                              <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-out-points-gw${gw}-${index}`}>
-                                                ({rec.playerOut.projectedPoints.toFixed(1)} pts)
-                                              </span>
+                                        <div className="flex items-start justify-between gap-2">
+                                          <div className="space-y-1 flex-1">
+                                            <div className="flex items-start gap-2">
+                                              <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0">
+                                                OUT
+                                              </Badge>
+                                              <div className="flex items-center gap-1.5 flex-wrap">
+                                                <TrendingDown className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                                                <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-out-name-gw${gw}-${index}`}>{rec.playerOut.webName}</span>
+                                                <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-out-points-gw${gw}-${index}`}>
+                                                  ({rec.playerOut.projectedPoints.toFixed(1)} pts)
+                                                </span>
+                                              </div>
+                                            </div>
+                                            <div className="flex items-start gap-2">
+                                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 shrink-0">
+                                                IN
+                                              </Badge>
+                                              <div className="flex items-center gap-1.5 flex-wrap">
+                                                <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                                                <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-in-name-gw${gw}-${index}`}>{rec.playerIn.webName}</span>
+                                                <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-in-points-gw${gw}-${index}`}>
+                                                  ({rec.playerIn.projectedPoints.toFixed(1)} pts)
+                                                </span>
+                                              </div>
                                             </div>
                                           </div>
-                                          <div className="flex items-start gap-2">
-                                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 shrink-0">
-                                              IN
-                                            </Badge>
-                                            <div className="flex items-center gap-1.5 flex-wrap">
-                                              <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                                              <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-in-name-gw${gw}-${index}`}>{rec.playerIn.webName}</span>
-                                              <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-in-points-gw${gw}-${index}`}>
-                                                ({rec.playerIn.projectedPoints.toFixed(1)} pts)
-                                              </span>
-                                            </div>
-                                          </div>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => applyTransfer(gw, rec)}
+                                            className="h-8 px-3 bg-green-50 border-green-300 text-green-700 hover:bg-green-100 hover:border-green-400 shrink-0"
+                                          >
+                                            <Plus className="h-3.5 w-3.5 mr-1" />
+                                            Apply
+                                          </Button>
                                         </div>
                                         <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 pt-1.5 border-t border-orange-200">
                                           <div className="text-center">
@@ -756,85 +921,14 @@ export default function TransferRecommendations() {
                                           </div>
                                           <div className="text-center">
                                             <div className="text-xs text-gray-500">Cost</div>
-                                            <div className={`text-xs sm:text-sm font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${index}`}>
-                                              {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
+                                            <div className={`text-xs sm:text-sm font-semibold ${netCost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${index}`}>
+                                              {netCost >= 0 ? '+' : ''}{(netCost / 10).toFixed(1)}m
                                             </div>
                                           </div>
                                           <div className="text-center">
                                             <div className="text-xs text-gray-500">ITB After</div>
                                             <div className="text-xs sm:text-sm font-medium text-gray-700" data-testid={`budget-after-gw${gw}-${index}`}>
-                                              £{(rec.budgetAfter / 10).toFixed(1)}m
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Other Transfer Recommendations */}
-                              {otherTransfers.length > 0 && (
-                                <div>
-                                  <h3 className="text-base font-semibold text-gray-700 mb-2">Other Transfer Recommendations</h3>
-                                  <div className="space-y-2">
-                                    {otherTransfers.map((rec: any, index: number) => {
-                                      const offsetIndex = freeTransfers + index;
-                                      return (
-                                      <div
-                                        key={`${rec.playerOut.id}-${rec.playerIn.id}`}
-                                        className="p-2 sm:p-3 bg-white border border-orange-100 rounded-lg hover:border-orange-300 transition-colors space-y-2"
-                                        data-testid={`transfer-recommendation-gw${gw}-${offsetIndex}`}
-                                      >
-                                        <div className="space-y-1">
-                                          <div className="flex items-start gap-2">
-                                            <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0">
-                                              OUT
-                                            </Badge>
-                                            <div className="flex items-center gap-1.5 flex-wrap">
-                                              <TrendingDown className="h-3.5 w-3.5 text-red-500 shrink-0" />
-                                              <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-out-name-gw${gw}-${offsetIndex}`}>{rec.playerOut.webName}</span>
-                                              <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-out-points-gw${gw}-${offsetIndex}`}>
-                                                ({rec.playerOut.projectedPoints.toFixed(1)} pts)
-                                              </span>
-                                            </div>
-                                          </div>
-                                          <div className="flex items-start gap-2">
-                                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 shrink-0">
-                                              IN
-                                            </Badge>
-                                            <div className="flex items-center gap-1.5 flex-wrap">
-                                              <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                                              <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-in-name-gw${gw}-${offsetIndex}`}>{rec.playerIn.webName}</span>
-                                              <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-in-points-gw${gw}-${offsetIndex}`}>
-                                                ({rec.playerIn.projectedPoints.toFixed(1)} pts)
-                                              </span>
-                                            </div>
-                                          </div>
-                                        </div>
-                                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 pt-1.5 border-t border-gray-200">
-                                          <div className="text-center">
-                                            <div className="text-xs text-gray-500">This GW</div>
-                                            <div className="text-sm font-bold text-green-600" data-testid={`points-gain-single-gw${gw}-${offsetIndex}`}>+{(rec.singleGWPointsGain || 0).toFixed(1)}</div>
-                                          </div>
-                                          <div className="text-center">
-                                            <div className="text-xs text-gray-500">Next 4 GWs</div>
-                                            <div className="text-sm font-bold text-green-600" data-testid={`points-gain-4gw-${gw}-${offsetIndex}`}>+{(rec.fourGWPointsGain || 0).toFixed(1)}</div>
-                                          </div>
-                                          <div className="text-center">
-                                            <div className="text-xs text-gray-500">Till GW{rec.endGW || 33}</div>
-                                            <div className="text-sm font-bold text-green-600" data-testid={`points-gain-gw${gw}-${offsetIndex}`}>+{rec.pointsGain.toFixed(1)}</div>
-                                          </div>
-                                          <div className="text-center">
-                                            <div className="text-xs text-gray-500">Cost</div>
-                                            <div className={`text-xs sm:text-sm font-semibold ${rec.cost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${offsetIndex}`}>
-                                              {rec.cost >= 0 ? '+' : ''}{(rec.cost / 10).toFixed(1)}m
-                                            </div>
-                                          </div>
-                                          <div className="text-center">
-                                            <div className="text-xs text-gray-500">ITB After</div>
-                                            <div className="text-xs sm:text-sm font-medium text-gray-700" data-testid={`budget-after-gw${gw}-${offsetIndex}`}>
-                                              £{(rec.budgetAfter / 10).toFixed(1)}m
+                                              £{(itbAfterThisTransfer / 10).toFixed(1)}m
                                             </div>
                                           </div>
                                         </div>
@@ -844,6 +938,7 @@ export default function TransferRecommendations() {
                                   </div>
                                 </div>
                               )}
+
                             </>
                           );
                         })()}
