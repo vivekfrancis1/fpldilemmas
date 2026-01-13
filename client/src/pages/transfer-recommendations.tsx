@@ -28,7 +28,7 @@ export default function TransferRecommendations() {
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<string | null>(null);
   const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
-  const [positionFilter, setPositionFilter] = useState<string>("all");
+  const [positionFilter, setPositionFilter] = useState<string[]>([]);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -199,14 +199,14 @@ export default function TransferRecommendations() {
 
   // Filter recommendations by position (based on player being transferred IN)
   const filterRecommendationsByPosition = (recommendations: any[]): any[] => {
-    if (positionFilter === 'all' || !recommendations) return recommendations;
+    if (positionFilter.length === 0 || !recommendations) return recommendations;
     
     return recommendations.filter((rec: any) => {
       if (rec.type === 'roll') return true;
       const playerIn = getPlayerById(rec.playerIn?.id);
       if (!playerIn) return false;
       const position = getPositionFromElementType(playerIn.element_type);
-      return position === positionFilter;
+      return positionFilter.includes(position);
     });
   };
 
@@ -602,14 +602,11 @@ export default function TransferRecommendations() {
                 <Filter className="h-4 w-4 text-gray-500" />
                 <span className="text-xs text-gray-600">Position:</span>
                 <ToggleGroup 
-                  type="single" 
+                  type="multiple" 
                   value={positionFilter} 
-                  onValueChange={(value) => value && setPositionFilter(value)}
+                  onValueChange={setPositionFilter}
                   className="flex flex-wrap gap-1"
                 >
-                  <ToggleGroupItem value="all" size="sm" className="text-xs px-2 py-1 h-7 data-[state=on]:bg-orange-100 data-[state=on]:text-orange-900">
-                    All
-                  </ToggleGroupItem>
                   <ToggleGroupItem value="GKP" size="sm" className="text-xs px-2 py-1 h-7 data-[state=on]:bg-orange-100 data-[state=on]:text-orange-900">
                     GKP
                   </ToggleGroupItem>
@@ -623,6 +620,14 @@ export default function TransferRecommendations() {
                     FWD
                   </ToggleGroupItem>
                 </ToggleGroup>
+                {positionFilter.length > 0 && (
+                  <button 
+                    onClick={() => setPositionFilter([])} 
+                    className="text-xs text-gray-500 hover:text-gray-700 underline"
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -688,10 +693,10 @@ export default function TransferRecommendations() {
                               const otherTransfers = filteredRecommendations.slice(freeTransfers, freeTransfers + 5);
                               
                               // Show message if filter returns no results
-                              if (filteredRecommendations.length === 0 && positionFilter !== 'all') {
+                              if (filteredRecommendations.length === 0 && positionFilter.length > 0) {
                                 return (
                                   <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-lg">
-                                    No {positionFilter} transfer recommendations for this gameweek
+                                    No {positionFilter.join('/')} transfer recommendations for this gameweek
                                   </div>
                                 );
                               }
