@@ -216,8 +216,25 @@ export default function TransferRecommendations() {
     return appliedTransfers[gw] || [];
   };
 
-  // Apply a transfer (add to applied transfers list)
+  // Apply a transfer (add to applied transfers list) with validation
   const applyTransfer = (gw: string, transfer: any) => {
+    // Validate: Check if transfer is already applied
+    if (isTransferApplied(gw, transfer)) {
+      return; // Already applied, do nothing
+    }
+    
+    // Validate: Check if player in is already in squad
+    if (isPlayerInSquad(gw, transfer.playerIn.id)) {
+      return; // Player already in squad, do nothing
+    }
+    
+    // Validate: Check affordability - net cost must not exceed running bank
+    const runningBank = getRunningBankForGW(gw);
+    const netCost = transfer.playerIn.nowCost - transfer.playerOut.sellingPrice;
+    if (netCost > runningBank) {
+      return; // Cannot afford transfer, do nothing
+    }
+    
     setAppliedTransfers(prev => ({
       ...prev,
       [gw]: [...(prev[gw] || []), transfer]
