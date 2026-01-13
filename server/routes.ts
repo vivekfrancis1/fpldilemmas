@@ -3657,6 +3657,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     projectedPoints: playerInPoints
                   },
                   pointsGain: pointsGain,
+                  singleGWPointsGain: singleGWPointsGain,
+                  fourGWPointsGain: fourGWPointsGain,
+                  endGW: planningEnd,
                   cost: transferCost,
                   budgetAfter: budget - playerIn.now_cost,
                   position: bootstrapData.element_types.find((t: any) => t.id === playerOut.elementType)?.singular_name || 'Unknown',

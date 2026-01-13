@@ -741,10 +741,18 @@ export default function TransferRecommendations() {
                                             </div>
                                           </div>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-2 pt-1.5 border-t border-orange-200">
+                                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 pt-1.5 border-t border-orange-200">
                                           <div className="text-center">
-                                            <div className="text-xs text-gray-500">Points Gain</div>
-                                            <div className="text-sm sm:text-base font-bold text-green-600" data-testid={`points-gain-gw${gw}-${index}`}>+{rec.pointsGain.toFixed(1)}</div>
+                                            <div className="text-xs text-gray-500">This GW</div>
+                                            <div className="text-sm font-bold text-green-600" data-testid={`points-gain-single-gw${gw}-${index}`}>+{(rec.singleGWPointsGain || 0).toFixed(1)}</div>
+                                          </div>
+                                          <div className="text-center">
+                                            <div className="text-xs text-gray-500">Next 4 GWs</div>
+                                            <div className="text-sm font-bold text-green-600" data-testid={`points-gain-4gw-${gw}-${index}`}>+{(rec.fourGWPointsGain || 0).toFixed(1)}</div>
+                                          </div>
+                                          <div className="text-center">
+                                            <div className="text-xs text-gray-500">Till GW{rec.endGW || 33}</div>
+                                            <div className="text-sm font-bold text-green-600" data-testid={`points-gain-gw${gw}-${index}`}>+{rec.pointsGain.toFixed(1)}</div>
                                           </div>
                                           <div className="text-center">
                                             <div className="text-xs text-gray-500">Cost</div>
@@ -804,10 +812,18 @@ export default function TransferRecommendations() {
                                             </div>
                                           </div>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-2 pt-1.5 border-t border-gray-200">
+                                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 pt-1.5 border-t border-gray-200">
                                           <div className="text-center">
-                                            <div className="text-xs text-gray-500">Points Gain</div>
-                                            <div className="text-sm sm:text-base font-bold text-green-600" data-testid={`points-gain-gw${gw}-${offsetIndex}`}>+{rec.pointsGain.toFixed(1)}</div>
+                                            <div className="text-xs text-gray-500">This GW</div>
+                                            <div className="text-sm font-bold text-green-600" data-testid={`points-gain-single-gw${gw}-${offsetIndex}`}>+{(rec.singleGWPointsGain || 0).toFixed(1)}</div>
+                                          </div>
+                                          <div className="text-center">
+                                            <div className="text-xs text-gray-500">Next 4 GWs</div>
+                                            <div className="text-sm font-bold text-green-600" data-testid={`points-gain-4gw-${gw}-${offsetIndex}`}>+{(rec.fourGWPointsGain || 0).toFixed(1)}</div>
+                                          </div>
+                                          <div className="text-center">
+                                            <div className="text-xs text-gray-500">Till GW{rec.endGW || 33}</div>
+                                            <div className="text-sm font-bold text-green-600" data-testid={`points-gain-gw${gw}-${offsetIndex}`}>+{rec.pointsGain.toFixed(1)}</div>
                                           </div>
                                           <div className="text-center">
                                             <div className="text-xs text-gray-500">Cost</div>
