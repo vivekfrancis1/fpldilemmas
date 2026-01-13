@@ -308,12 +308,14 @@ export default function TransferRecommendations() {
     
     if (gwIndex === 0) {
       // First gameweek - use backend's bankBefore
-      return adjustedRecommendations?.gameweeks?.[gw]?.bankBefore || adjustedRecommendations?.bank || 0;
+      return adjustedRecommendations?.gameweeks?.[gw]?.bankBefore ?? adjustedRecommendations?.bank ?? 0;
     }
     
     // For later gameweeks, use the bank at end of previous GW
+    // Use nullish coalescing (??) to properly handle bank value of 0
     const previousGW = gameweeks[gwIndex - 1];
-    return cascadedState[previousGW]?.bank || adjustedRecommendations?.bank || 0;
+    const previousBank = cascadedState[previousGW]?.bank;
+    return previousBank !== undefined ? previousBank : (adjustedRecommendations?.bank ?? 0);
   };
 
   // Get applied transfers for current gameweek only (not cascaded)
