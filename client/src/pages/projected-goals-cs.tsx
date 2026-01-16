@@ -534,7 +534,20 @@ export default function ProjectedGoalsCS() {
                                   {/* Home Team - Compact */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                      {(() => {
+                                        const teamData = bootstrapData?.teams?.find((t: any) => t.id === match1.homeTeam.id);
+                                        const teamCode = teamData?.code;
+                                        return teamCode ? (
+                                          <img 
+                                            src={teamCode === 14 
+                                              ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                              : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
+                                            alt={`${match1.homeTeam.shortName} badge`}
+                                            className="w-5 h-5 object-contain"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                          />
+                                        ) : <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>;
+                                      })()}
                                       <span className="font-bold text-sm text-gray-800">
                                         {match1.homeTeam.shortName}
                                       </span>
@@ -567,7 +580,20 @@ export default function ProjectedGoalsCS() {
                                   {/* Away Team - Compact */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-50 to-sky-50">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                      {(() => {
+                                        const teamData = bootstrapData?.teams?.find((t: any) => t.id === match1.awayTeam.id);
+                                        const teamCode = teamData?.code;
+                                        return teamCode ? (
+                                          <img 
+                                            src={teamCode === 14 
+                                              ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                              : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
+                                            alt={`${match1.awayTeam.shortName} badge`}
+                                            className="w-5 h-5 object-contain"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                          />
+                                        ) : <div className="w-2 h-2 bg-blue-500 rounded-full"></div>;
+                                      })()}
                                       <span className="font-bold text-sm text-gray-800">
                                         {match1.awayTeam.shortName}
                                       </span>
@@ -620,7 +646,20 @@ export default function ProjectedGoalsCS() {
                                   {/* Home Team - Compact */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-emerald-50 to-green-50">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+                                      {(() => {
+                                        const teamData = bootstrapData?.teams?.find((t: any) => t.id === match2.homeTeam.id);
+                                        const teamCode = teamData?.code;
+                                        return teamCode ? (
+                                          <img 
+                                            src={teamCode === 14 
+                                              ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                              : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
+                                            alt={`${match2.homeTeam.shortName} badge`}
+                                            className="w-5 h-5 object-contain"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                          />
+                                        ) : <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>;
+                                      })()}
                                       <span className="font-bold text-sm text-gray-800">
                                         {match2.homeTeam.shortName}
                                       </span>
@@ -653,7 +692,20 @@ export default function ProjectedGoalsCS() {
                                   {/* Away Team - Compact */}
                                   <div className="flex items-center justify-between px-3 py-2 bg-gradient-to-r from-blue-50 to-sky-50">
                                     <div className="flex items-center gap-2">
-                                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                      {(() => {
+                                        const teamData = bootstrapData?.teams?.find((t: any) => t.id === match2.awayTeam.id);
+                                        const teamCode = teamData?.code;
+                                        return teamCode ? (
+                                          <img 
+                                            src={teamCode === 14 
+                                              ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                              : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
+                                            alt={`${match2.awayTeam.shortName} badge`}
+                                            className="w-5 h-5 object-contain"
+                                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                          />
+                                        ) : <div className="w-2 h-2 bg-blue-500 rounded-full"></div>;
+                                      })()}
                                       <span className="font-bold text-sm text-gray-800">
                                         {match2.awayTeam.shortName}
                                       </span>

@@ -237,7 +237,21 @@ export default function ProjectedStandings() {
                         </td>
                         
                         <td className="px-4 py-4">
-                          <div className="flex items-center">
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const teamData = bootstrapData?.teams?.find((t: any) => t.short_name === team.shortName || t.name === team.name);
+                              const teamCode = teamData?.code;
+                              return teamCode ? (
+                                <img 
+                                  src={teamCode === 14 
+                                    ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                    : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
+                                  alt={`${team.name} badge`}
+                                  className="w-6 h-6 object-contain"
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              ) : null;
+                            })()}
                             <div>
                               <div className="text-sm font-medium text-gray-900">{team.name}</div>
                               <div className="text-xs text-gray-500">{team.shortName}</div>

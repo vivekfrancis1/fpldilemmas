@@ -477,6 +477,20 @@ export default function TeamGoalsAgainstProjections() {
                         <td className="px-1 md:px-3 py-2 md:py-4 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
                           <div className="flex items-center gap-1">
                             <span className="text-xs text-gray-400 w-4">{index + 1}</span>
+                            {(() => {
+                              const teamData = bootstrapData?.teams?.find((t: any) => t.short_name === team.teamShort || t.name === team.team);
+                              const teamCode = teamData?.code;
+                              return teamCode ? (
+                                <img 
+                                  src={teamCode === 14 
+                                    ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                    : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
+                                  alt={`${team.team} badge`}
+                                  className="w-5 h-5 object-contain"
+                                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                />
+                              ) : null;
+                            })()}
                             <div>
                               <div className="text-xs md:text-sm font-medium text-gray-900 md:hidden">{team.teamShort}</div>
                               <div className="text-xs md:text-sm font-medium text-gray-900 hidden md:block">{team.team}</div>
