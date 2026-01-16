@@ -815,6 +815,12 @@ export default function Fixtures() {
                         <tr key={team.id} className="border-b hover:bg-gray-50">
                           <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
                             <div className="flex items-center gap-2">
+                              <img 
+                                src={`https://resources.premierleague.com/premierleague/badges/t${team.code}.png`}
+                                alt={`${team.name} badge`}
+                                className="w-5 h-5 object-contain"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
                               <span className="font-semibold">{team.short_name}</span>
                             </div>
                           </td>
