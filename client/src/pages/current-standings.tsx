@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trophy, TrendingUp, Target, Users, RefreshCw, ChevronUp, ChevronDown, Info } from "lucide-react";
+import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,10 @@ export default function CurrentStandings() {
       // Return raw data, AGR and AGAR will be calculated based on statsView
       return data;
     },
+  });
+
+  const { data: bootstrapData } = useQuery<BootstrapData>({
+    queryKey: ["/api/bootstrap-static"],
   });
 
   const handleRefresh = async () => {
@@ -530,7 +535,21 @@ export default function CurrentStandings() {
                       </td>
                       
                       <td className="px-2 sm:px-4 py-4 sticky left-12 sm:left-16 bg-white hover:bg-gray-50 border-r min-w-[80px]">
-                        <div className="flex items-center">
+                        <div className="flex items-center gap-2">
+                          {(() => {
+                            const teamData = bootstrapData?.teams?.find((t: any) => t.short_name === team.shortName || t.id === team.id);
+                            const teamCode = teamData?.code;
+                            return teamCode ? (
+                              <img 
+                                src={teamCode === 14 
+                                  ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                  : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
+                                alt={`${team.name} badge`}
+                                className="w-5 h-5 object-contain"
+                                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                              />
+                            ) : null;
+                          })()}
                           <div className="text-sm font-medium text-gray-900" data-testid={`team-name-${team.shortName}`}>
                             {team.shortName}
                           </div>

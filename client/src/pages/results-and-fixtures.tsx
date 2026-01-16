@@ -549,7 +549,16 @@ export default function ResultsAndFixtures() {
                           <div className="flex flex-col space-y-2 md:hidden">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-2 flex-1 min-w-0">
-                                <Home className="h-3 w-3 text-blue-500 shrink-0" />
+                                {fixture.homeTeam?.code ? (
+                                  <img 
+                                    src={fixture.homeTeam.code === 14 
+                                      ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                      : `https://resources.premierleague.com/premierleague/badges/t${fixture.homeTeam.code}.png`}
+                                    alt={`${fixture.homeTeam.short_name} badge`}
+                                    className="w-4 h-4 object-contain shrink-0"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                ) : <Home className="h-3 w-3 text-blue-500 shrink-0" />}
                                 <span className="font-medium text-gray-900 text-sm truncate">
                                   {fixture.homeTeam?.short_name || "TBD"}
                                 </span>
@@ -563,7 +572,16 @@ export default function ResultsAndFixtures() {
                             
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-2 flex-1 min-w-0">
-                                <Plane className="h-3 w-3 text-gray-500 shrink-0" />
+                                {fixture.awayTeam?.code ? (
+                                  <img 
+                                    src={fixture.awayTeam.code === 14 
+                                      ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                      : `https://resources.premierleague.com/premierleague/badges/t${fixture.awayTeam.code}.png`}
+                                    alt={`${fixture.awayTeam.short_name} badge`}
+                                    className="w-4 h-4 object-contain shrink-0"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                ) : <Plane className="h-3 w-3 text-gray-500 shrink-0" />}
                                 <span className="font-medium text-gray-900 text-sm truncate">
                                   {fixture.awayTeam?.short_name || "TBD"}
                                 </span>
@@ -601,7 +619,16 @@ export default function ResultsAndFixtures() {
                                     {fixture.homeTeam?.short_name || "TBD"}
                                   </span>
                                 </div>
-                                <Home className="h-3 w-3 text-blue-500" />
+                                {fixture.homeTeam?.code ? (
+                                  <img 
+                                    src={fixture.homeTeam.code === 14 
+                                      ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                      : `https://resources.premierleague.com/premierleague/badges/t${fixture.homeTeam.code}.png`}
+                                    alt={`${fixture.homeTeam.short_name} badge`}
+                                    className="w-5 h-5 object-contain"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                ) : <Home className="h-3 w-3 text-blue-500" />}
                               </div>
 
                               {/* Score or Time */}
@@ -619,7 +646,16 @@ export default function ResultsAndFixtures() {
 
                               {/* Away Team */}
                               <div className="flex items-center space-x-2 min-w-[120px]">
-                                <Plane className="h-3 w-3 text-gray-500" />
+                                {fixture.awayTeam?.code ? (
+                                  <img 
+                                    src={fixture.awayTeam.code === 14 
+                                      ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                      : `https://resources.premierleague.com/premierleague/badges/t${fixture.awayTeam.code}.png`}
+                                    alt={`${fixture.awayTeam.short_name} badge`}
+                                    className="w-5 h-5 object-contain"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                ) : <Plane className="h-3 w-3 text-gray-500" />}
                                 <div className="flex-1">
                                   <span className="font-medium text-gray-900">
                                     {fixture.awayTeam?.short_name || "TBD"}
