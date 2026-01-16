@@ -816,7 +816,9 @@ export default function Fixtures() {
                           <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
                             <div className="flex items-center gap-2">
                               <img 
-                                src={`https://resources.premierleague.com/premierleague/badges/t${team.code}.png`}
+                                src={team.code === 14 
+                                  ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                  : `https://resources.premierleague.com/premierleague/badges/t${team.code}.png`}
                                 alt={`${team.name} badge`}
                                 className="w-5 h-5 object-contain"
                                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
