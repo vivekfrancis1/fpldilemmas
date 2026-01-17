@@ -753,6 +753,24 @@ export default function MyDashboard() {
     return new Set(freeHitGameweeks);
   };
 
+  // Helper to get gameweeks where Free Hit OR Wildcard was used (exclude from transfer count)
+  const getChipGameweeks = (): Set<number> => {
+    if (!historyData?.chips) return new Set();
+    
+    const chipGameweeks = historyData.chips
+      .filter(c => c.name === 'freehit' || c.name === 'wildcard')
+      .map(c => c.event);
+    
+    return new Set(chipGameweeks);
+  };
+
+  // Calculate total transfers excluding Free Hit and Wildcard gameweeks
+  const getTotalTransferCount = (): number => {
+    if (!transfersData) return 0;
+    const chipGWs = getChipGameweeks();
+    return transfersData.filter(transfer => !chipGWs.has(transfer.event)).length;
+  };
+
   // Helper to compute pending GW14 transfers after Free Hit reverts
   // Compare pre-chip team (GW12) with next team (GW14) to find actual transfers
   const getPendingTransfers = (): Transfer[] => {
@@ -2671,9 +2689,17 @@ export default function MyDashboard() {
                           <ArrowLeftRight className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
                         </div>
                         Transfer History
+                        {getTotalTransferCount() > 0 && (
+                          <Badge className="bg-orange-500 text-white text-sm ml-2">
+                            {getTotalTransferCount()} total
+                          </Badge>
+                        )}
                       </CardTitle>
                       <CardDescription className="text-orange-700 text-sm sm:text-base mt-2">
                         All transfers made this season with player prices and gameweek details
+                        {getTotalTransferCount() > 0 && (
+                          <span className="block text-xs mt-1">(excludes Free Hit and Wildcard gameweek transfers)</span>
+                        )}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
