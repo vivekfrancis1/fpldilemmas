@@ -6262,30 +6262,30 @@ export default function TransferPlanner() {
                                 >
                                   <div className="flex items-center gap-1 flex-1 min-w-0">
                                     <div className="flex-1 min-w-0">
-                                      <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
-                                        <span className="truncate">{player.web_name}</span>
+                                      <div className="text-xs md:text-sm font-semibold flex items-center gap-1 md:gap-2 flex-wrap">
+                                        <span className="truncate text-gray-900">{player.web_name}</span>
                                         {pick.is_captain && (
-                                          <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-1 py-0.5 rounded">C</span>
+                                          <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] md:text-xs px-1 md:px-2 py-0.5">C</Badge>
                                         )}
                                         {pick.is_vice_captain && (
-                                          <span className="text-[10px] font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">VC</span>
+                                          <Badge variant="outline" className="border-blue-300 text-blue-700 text-[10px] md:text-xs px-1 md:px-2 py-0.5">VC</Badge>
                                         )}
                                         {isPlayerTransferredIn(pick) && (
-                                          <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
+                                          <Badge className="bg-green-500 hover:bg-green-600 text-white text-[10px] md:text-xs px-1 md:px-2 py-0.5">NEW</Badge>
                                         )}
                                       </div>
-                                      <div className="text-[10px] text-muted-foreground truncate">
+                                      <div className="text-[10px] md:text-xs text-gray-700 truncate mt-0.5">
                                         {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
                                         {(() => {
                                           const fixture = getPlayerFixture(pick.element, selectedGameweek);
                                           if (fixture) {
-                                            return <> • vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</>;
+                                            return <> • <span className="text-purple-600 font-medium">vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</span></>;
                                           }
                                           return null;
                                         })()}
                                       </div>
-                                      <div className="text-[10px] text-muted-foreground">
-                                        Sell: £{getSellingPrice(pick).toFixed(1)}m
+                                      <div className="text-[10px] md:text-xs font-semibold text-green-600">
+                                        £{getSellingPrice(pick).toFixed(1)}m
                                       </div>
                                     </div>
                                   </div>
@@ -6384,24 +6384,24 @@ export default function TransferPlanner() {
                               {index + 1}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
-                                <span className="truncate">{player.web_name}</span>
+                              <div className="text-xs md:text-sm font-semibold flex items-center gap-1 md:gap-2 flex-wrap">
+                                <span className="truncate text-gray-900">{player.web_name}</span>
                                 {isPlayerTransferredIn(pick) && (
-                                  <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
+                                  <Badge className="bg-green-500 hover:bg-green-600 text-white text-[10px] md:text-xs px-1 md:px-2 py-0.5">NEW</Badge>
                                 )}
                               </div>
-                              <div className="text-[10px] text-muted-foreground truncate">
+                              <div className="text-[10px] md:text-xs text-gray-700 truncate mt-0.5">
                                 {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
                                 {(() => {
                                   const fixture = getPlayerFixture(pick.element, selectedGameweek);
                                   if (fixture) {
-                                    return <> • vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</>;
+                                    return <> • <span className="text-purple-600 font-medium">vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</span></>;
                                   }
                                   return null;
                                 })()}
                               </div>
-                              <div className="text-[10px] text-muted-foreground">
-                                Sell: £{getSellingPrice(pick).toFixed(1)}m
+                              <div className="text-[10px] md:text-xs font-semibold text-green-600">
+                                £{getSellingPrice(pick).toFixed(1)}m
                               </div>
                             </div>
                           </div>
@@ -6546,19 +6546,19 @@ export default function TransferPlanner() {
                                 >
                                 <div className="flex items-center gap-1 flex-1 min-w-0">
                                   <div className="flex-1 min-w-0">
-                                    <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
-                                      <span className="truncate">{player.web_name}</span>
+                                    <div className="text-xs md:text-sm font-semibold flex items-center gap-1 md:gap-2 flex-wrap">
+                                      <span className="truncate text-gray-900">{player.web_name}</span>
                                       {pick.is_captain && (
-                                        <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 dark:bg-yellow-900 px-1 py-0.5 rounded">C</span>
+                                        <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-[10px] md:text-xs px-1 md:px-2 py-0.5">C</Badge>
                                       )}
                                       {pick.is_vice_captain && (
-                                        <span className="text-[10px] font-bold text-blue-600 bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">VC</span>
+                                        <Badge variant="outline" className="border-blue-300 text-blue-700 text-[10px] md:text-xs px-1 md:px-2 py-0.5">VC</Badge>
                                       )}
                                       {isPlayerTransferredIn(pick) && (
-                                        <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
+                                        <Badge className="bg-green-500 hover:bg-green-600 text-white text-[10px] md:text-xs px-1 md:px-2 py-0.5">NEW</Badge>
                                       )}
                                     </div>
-                                    <div className="text-[10px] text-muted-foreground truncate">
+                                    <div className="text-[10px] md:text-xs text-gray-700 truncate mt-0.5">
                                       {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
                                     </div>
                                   </div>
@@ -6641,17 +6641,17 @@ export default function TransferPlanner() {
                               data-testid={`bench-player-mobile-${pick.element}`}
                             >
                             <div className="flex items-center gap-1 flex-1 min-w-0">
-                              <span className="text-[10px] font-bold text-gray-600 bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">
+                              <div className="w-6 h-6 md:w-8 md:h-8 bg-gray-200 rounded-full flex items-center justify-center text-[10px] md:text-xs font-medium text-gray-600 flex-shrink-0">
                                 {index + 1}
-                              </span>
+                              </div>
                               <div className="flex-1 min-w-0">
-                                <div className="text-xs font-medium flex items-center gap-1 flex-wrap">
-                                  <span className="truncate">{player.web_name}</span>
+                                <div className="text-xs md:text-sm font-semibold flex items-center gap-1 md:gap-2 flex-wrap">
+                                  <span className="truncate text-gray-900">{player.web_name}</span>
                                   {isPlayerTransferredIn(pick) && (
-                                    <span className="text-[10px] font-bold text-green-600 bg-green-100 dark:bg-green-900 px-1 py-0.5 rounded">NEW</span>
+                                    <Badge className="bg-green-500 hover:bg-green-600 text-white text-[10px] md:text-xs px-1 md:px-2 py-0.5">NEW</Badge>
                                   )}
                                 </div>
-                                <div className="text-[10px] text-muted-foreground truncate">
+                                <div className="text-[10px] md:text-xs text-gray-700 truncate mt-0.5">
                                   {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
                                 </div>
                               </div>
