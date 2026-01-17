@@ -328,6 +328,17 @@ export default function MyDashboard() {
     queryKey: ["/api/bootstrap-static"],
   });
 
+  // Check FPL connection status
+  const { data: fplStatus } = useQuery<{
+    connected: boolean;
+    fplManagerId?: number;
+    fplEmail?: string;
+    needsReauth?: boolean;
+  }>({
+    queryKey: ["/api/fpl/status"],
+    retry: false,
+  });
+
   const { data: managerData, isLoading: isLoadingManager, error: managerError } = useQuery<ManagerData>({
     queryKey: ["/api/manager", searchedId],
     enabled: !!searchedId,
@@ -1955,28 +1966,94 @@ export default function MyDashboard() {
 
             {/* Next Gameweek Team Tab */}
             <TabsContent value="nextteam" className="space-y-6 mt-3 sm:mt-4">
-              {isLoadingNextTeam && (
+              {isLoadingNextTeam && fplStatus?.connected && (
                 <div className="text-center py-8">
                   <div className="text-lg">Loading GW {getNextGameweekDashboard()} team data...</div>
                 </div>
               )}
               
-              {!isLoadingNextTeam && !nextTeamData && (
+              {/* Show GW 21 team when FPL is NOT connected */}
+              {!fplStatus?.connected && teamData && (
                 <>
-                  {/* Notification for non-logged-in users */}
-                  {!user && searchedId && (
-                    <Alert className="mb-4 border-blue-200 bg-blue-50">
-                      <AlertDescription className="text-sm text-blue-800">
-                        <div className="flex items-start gap-2">
-                          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                          <div>
-                            Login to FPL Dilemmas, and connect your official FPL account to fetch your latest team for GW {getNextGameweekDashboard()}.
-                          </div>
+                  {/* Alert to connect FPL account */}
+                  <Alert className="mb-4 border-blue-200 bg-blue-50">
+                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-sm text-blue-800">
+                      <div className="flex flex-col gap-2">
+                        <div>
+                          <strong>Showing GW {getCurrentGameweekDashboard()} final team.</strong> Connect your FPL account to see your latest GW {getNextGameweekDashboard()} team with any pending transfers.
                         </div>
-                      </AlertDescription>
-                    </Alert>
-                  )}
+                        <div className="mt-1">
+                          <FplConnectDialog />
+                        </div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
                   
+                  <Card className="border-0 bg-gradient-to-br from-amber-50 to-orange-50 shadow-lg">
+                    <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
+                      <CardTitle className="text-lg sm:text-xl text-amber-900">
+                        GW {getCurrentGameweekDashboard()} Final Team
+                      </CardTitle>
+                      <CardDescription className="text-amber-700 mt-1">
+                        Your confirmed team from the completed gameweek.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6">
+                      <ListView
+                        startingPlayers={teamData.picks.filter(p => p.position <= 11).map(pick => {
+                          const player = getPlayerById(pick.element);
+                          const playerTeam = bootstrapData?.teams.find(t => t.id === player?.team);
+                          return {
+                            element: pick.element,
+                            element_type: player?.element_type || 1,
+                            position: pick.position,
+                            is_captain: pick.is_captain,
+                            is_vice_captain: pick.is_vice_captain,
+                            web_name: player?.web_name,
+                            team_short_name: playerTeam?.short_name,
+                            now_cost: player?.now_cost,
+                            event_points: player?.event_points,
+                            form: player?.form,
+                            selected_by_percent: player?.selected_by_percent,
+                          };
+                        })}
+                        benchPlayers={teamData.picks.filter(p => p.position > 11).map(pick => {
+                          const player = getPlayerById(pick.element);
+                          const playerTeam = bootstrapData?.teams.find(t => t.id === player?.team);
+                          return {
+                            element: pick.element,
+                            element_type: player?.element_type || 1,
+                            position: pick.position,
+                            is_captain: pick.is_captain,
+                            is_vice_captain: pick.is_vice_captain,
+                            web_name: player?.web_name,
+                            team_short_name: playerTeam?.short_name,
+                            now_cost: player?.now_cost,
+                            event_points: player?.event_points,
+                            form: player?.form,
+                            selected_by_percent: player?.selected_by_percent,
+                          };
+                        })}
+                        title="Starting XI"
+                        subtitle={`Your team for Gameweek ${getCurrentGameweekDashboard()}`}
+                        benchTitle="Bench"
+                        benchSubtitle="Substitute players"
+                        formatPrice={formatPrice}
+                        getPositionName={getPositionName}
+                        displayMode="points"
+                        showForm={true}
+                        showOwnership={true}
+                        showPrice={true}
+                      />
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+              
+              {/* Show error or loading state when FPL IS connected but no data */}
+              {fplStatus?.connected && !isLoadingNextTeam && !nextTeamData && (
+                <>
                   {user && (
                     <Card className="border-0 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-lg">
                       <CardContent className="p-6 sm:p-8 text-center">
@@ -2033,7 +2110,8 @@ export default function MyDashboard() {
                 </>
               )}
               
-              {nextTeamData && teamData && (
+              {/* Show GW 22 team when FPL IS connected and data is available */}
+              {fplStatus?.connected && nextTeamData && teamData && (
                 <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg">
                   <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
                     <CardTitle className="text-lg sm:text-xl text-green-900">
