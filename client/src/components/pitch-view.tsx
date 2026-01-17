@@ -1,9 +1,6 @@
-// Shared pitch view component for FPL team visualization
-import { Star } from "lucide-react";
+// Shared pitch view component for FPL team visualization with real jersey images
+import { useState } from "react";
 import {
-  getTeamJerseyColor,
-  getTextColor,
-  getDifficultyColor,
   sortPlayersByPosition,
   filterPlayersByType,
 } from "@/lib/pitch-utils";
@@ -21,6 +18,7 @@ export interface PitchPlayer {
   team_name?: string;
   team_short_name?: string;
   team_id?: number;
+  team_code?: number; // Required for jersey images
   event_points?: number;
   live_minutes?: number;
   in_dreamteam?: boolean;
@@ -28,6 +26,8 @@ export interface PitchPlayer {
   fixture_finished?: boolean;
   fixture_opponent?: string;
   fixture_is_home?: boolean;
+  custom_badge_text?: string; // For custom display (e.g., projected points)
+  custom_badge_color?: string; // Badge background color
 }
 
 export interface PitchFixture {
@@ -37,41 +37,147 @@ export interface PitchFixture {
   difficulty: number;
 }
 
+export type DisplayMode = "points" | "team" | "opponent" | "projected";
+
 export interface PitchViewProps {
   players: PitchPlayer[];
   benchPlayers?: PitchPlayer[];
   getNextFixtures?: (teamId: number, count: number) => PitchFixture[];
   showFixtures?: boolean;
+  displayMode?: DisplayMode;
+  showTeamName?: boolean;
+  showOpponent?: boolean;
+  isBench?: boolean;
+}
+
+// Get jersey image URL from FPL API
+function getJerseyImageUrl(teamCode: number, isGoalkeeper: boolean = false): string {
+  const suffix = isGoalkeeper ? '_1' : '';
+  return `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${teamCode}${suffix}-110.webp`;
 }
 
 // Helper function to get display text for points/fixture
 function getPointsDisplay(player: PitchPlayer): string {
-  // If match hasn't started, show opponent info
+  if (player.custom_badge_text !== undefined) {
+    return player.custom_badge_text;
+  }
   if (!player.fixture_started && player.fixture_opponent) {
     return `${player.fixture_opponent} (${player.fixture_is_home ? 'H' : 'A'})`;
   }
-  // If match finished with 0 points, check if player actually played
   if (player.fixture_finished && (player.event_points || 0) === 0) {
-    // If player has minutes > 0, they played but scored 0 points - show "0"
-    // If player has 0 minutes or undefined, they didn't play - show "-"
     if (player.live_minutes && player.live_minutes > 0) {
       return '0';
     }
     return '-';
   }
-  // Otherwise show points (with captain multiplier)
   const points = (player.event_points || 0) * (player.is_captain ? 2 : player.multiplier || 1);
   return points.toString();
 }
 
-export function PitchView({ players, benchPlayers = [], getNextFixtures, showFixtures = true }: PitchViewProps) {
+// Get badge color based on content or custom color
+function getBadgeColor(player: PitchPlayer, isBench: boolean): string {
+  if (player.custom_badge_color) {
+    return player.custom_badge_color;
+  }
+  if (!player.fixture_started && player.fixture_opponent) {
+    return isBench ? 'bg-gray-500' : 'bg-purple-600';
+  }
+  return isBench ? 'bg-gray-500' : 'bg-green-600';
+}
+
+// Single player card component for consistency
+function PlayerCard({ 
+  player, 
+  isGoalkeeper = false,
+  isBench = false,
+  showTeamName = false,
+  showOpponent = false,
+}: { 
+  player: PitchPlayer;
+  isGoalkeeper?: boolean;
+  isBench?: boolean;
+  showTeamName?: boolean;
+  showOpponent?: boolean;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const teamCode = player.team_code || 0;
+  
+  return (
+    <div className={`flex flex-col items-center ${isBench ? 'w-[19.5%]' : 'w-[19%]'} ${isBench ? 'opacity-90' : ''}`}>
+      <div className="relative flex flex-col items-center">
+        {/* Jersey Image */}
+        <div className="relative">
+          <img 
+            src={imgError ? getJerseyImageUrl(teamCode, false) : getJerseyImageUrl(teamCode, isGoalkeeper)}
+            alt={`${player.team_short_name || 'Team'} jersey`}
+            className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+            onError={() => {
+              if (!imgError) setImgError(true);
+            }}
+          />
+          {/* Captain Badge */}
+          {player.is_captain && (
+            <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
+              <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
+            </div>
+          )}
+          {/* Vice Captain Badge */}
+          {player.is_vice_captain && !player.is_captain && (
+            <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-sm">
+              <span className="text-[8px] sm:text-[10px] font-bold text-blue-800">V</span>
+            </div>
+          )}
+          {/* Dream Team Star */}
+          {player.in_dreamteam && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+              <span className="text-[8px] text-white">★</span>
+            </div>
+          )}
+        </div>
+        
+        {/* Team Name (optional) */}
+        {showTeamName && (
+          <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+              {player.team_short_name || 'UNK'}
+            </div>
+          </div>
+        )}
+        
+        {/* Player Name */}
+        <div className={`${showTeamName ? '' : 'mt-0.5'} px-1 py-0.5 bg-white/90 rounded text-center max-w-full`}>
+          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+            {player.web_name || player.player_name || 'Unknown'}
+          </div>
+        </div>
+        
+        {/* Points/Opponent Badge */}
+        <div className={`px-2 py-0.5 ${getBadgeColor(player, isBench)} rounded text-center`}>
+          <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white">
+            {showOpponent && player.fixture_opponent 
+              ? `${player.fixture_opponent} (${player.fixture_is_home ? 'H' : 'A'})`
+              : getPointsDisplay(player)
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function PitchView({ 
+  players, 
+  benchPlayers = [], 
+  showTeamName = false,
+  showOpponent = false,
+}: PitchViewProps) {
   const sortedPlayers = sortPlayersByPosition(players);
   const sortedBench = sortPlayersByPosition(benchPlayers);
   
   return (
     <div className="space-y-0 sm:space-y-4 h-full">
       {/* Pitch */}
-      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-none sm:rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden h-full flex flex-col justify-center">
+      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-3 sm:p-4 md:p-6 overflow-hidden h-full flex flex-col justify-center">
         {/* Pitch Lines and Graphics */}
         <div className="absolute inset-0 opacity-30 pointer-events-none">
           <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
@@ -100,44 +206,21 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
           <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
         </div>
 
-        <div className="relative space-y-10 sm:space-y-6 md:space-y-8 lg:space-y-10">
+        <div className="relative space-y-4 sm:space-y-6 md:space-y-8">
           {/* Goalkeepers */}
           {(() => {
             const gks = filterPlayersByType(sortedPlayers, 1);
-            
             return gks.length > 0 && (
-              <div className="flex justify-center gap-1 sm:gap-0.5">
-                {gks.map(player => {
-                  const jerseyColor = getTeamJerseyColor(player.team_id || 0);
-                  const textColor = getTextColor(jerseyColor);
-                  
-                  return (
-                    <div key={player.element} className="flex flex-col items-center w-[22%] sm:w-[18%]" data-testid={`pitch-player-${player.element}`}>
-                      <div className="relative w-full">
-                        <svg viewBox="0 0 403 302" className="w-full drop-shadow-md sm:drop-shadow-lg md:drop-shadow-xl">
-                          <defs><clipPath id={`jersey-clip-gk-${player.element}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
-                          <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-clip-gk-${player.element})`} />
-                          <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                          <path d="M 130 14 L 144 26 L 158 36 L 173 42 Q 187 42 202 42 L 216 42 Q 230 42 245 36 L 259 26 L 274 14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                          {player.is_captain && (<g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>)}
-                          {player.is_vice_captain && (<g><rect x="96" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="115" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>)}
-                          {player.in_dreamteam && (<g><circle cx="307" cy="72" r="17" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 307 63 L 309 69 L 315 69 L 310 73 L 312 79 L 307 75 L 302 79 L 304 73 L 299 69 L 305 69 Z" fill="white" /></g>)}
-                          <text x="202" y="112" className="text-[42px] sm:text-[34px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.team_short_name || 'UNK'}</text>
-                          <text x="202" y="165" className="text-[44px] sm:text-[36px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name || player.player_name || 'Unknown'}</text>
-                          <text x="202" y="218" className="text-[49px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPointsDisplay(player)}</text>
-                          {showFixtures && getNextFixtures && player.team_id && player.fixture_started !== false && (() => {
-                            const fixtures = getNextFixtures(player.team_id, 1);
-                            if (fixtures.length > 0) {
-                              const fixture = fixtures[0];
-                              return <text x="202" y="268" className="text-[39px] sm:text-[32px]" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>;
-                            }
-                            return null;
-                          })()}
-                        </svg>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="flex justify-center gap-0.5">
+                {gks.map(player => (
+                  <PlayerCard 
+                    key={player.element} 
+                    player={player} 
+                    isGoalkeeper={true}
+                    showTeamName={showTeamName}
+                    showOpponent={showOpponent}
+                  />
+                ))}
               </div>
             );
           })()}
@@ -145,42 +228,18 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
           {/* Defenders */}
           {(() => {
             const defs = filterPlayersByType(sortedPlayers, 2);
-            
             return defs.length > 0 && (
               <>
                 <div className="w-full border-t border-dotted border-white/30"></div>
-                <div className="flex justify-center gap-1 sm:gap-0.5">
-                  {defs.map(player => {
-                    const jerseyColor = getTeamJerseyColor(player.team_id || 0);
-                    const textColor = getTextColor(jerseyColor);
-                    
-                    return (
-                      <div key={player.element} className="flex flex-col items-center w-[22%] sm:w-[18%]" data-testid={`pitch-player-${player.element}`}>
-                      <div className="relative w-full">
-                        <svg viewBox="0 0 403 302" className="w-full drop-shadow-md sm:drop-shadow-lg md:drop-shadow-xl">
-                          <defs><clipPath id={`jersey-clip-def-${player.element}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
-                          <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-clip-def-${player.element})`} />
-                          <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                          <path d="M 130 14 L 144 26 L 158 36 L 173 42 Q 187 42 202 42 L 216 42 Q 230 42 245 36 L 259 26 L 274 14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                          {player.is_captain && (<g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>)}
-                          {player.is_vice_captain && (<g><rect x="96" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="115" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>)}
-                          {player.in_dreamteam && (<g><circle cx="307" cy="72" r="17" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 307 63 L 309 69 L 315 69 L 310 73 L 312 79 L 307 75 L 302 79 L 304 73 L 299 69 L 305 69 Z" fill="white" /></g>)}
-                          <text x="202" y="112" className="text-[42px] sm:text-[34px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.team_short_name || 'UNK'}</text>
-                          <text x="202" y="165" className="text-[44px] sm:text-[36px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name || player.player_name || 'Unknown'}</text>
-                          <text x="202" y="218" className="text-[49px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPointsDisplay(player)}</text>
-                          {showFixtures && getNextFixtures && player.team_id && player.fixture_started !== false && (() => {
-                            const fixtures = getNextFixtures(player.team_id, 1);
-                            if (fixtures.length > 0) {
-                              const fixture = fixtures[0];
-                              return <text x="202" y="268" className="text-[39px] sm:text-[32px]" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>;
-                            }
-                            return null;
-                          })()}
-                        </svg>
-                      </div>
-                    </div>
-                  );
-                })}
+                <div className="flex justify-center gap-0.5">
+                  {defs.map(player => (
+                    <PlayerCard 
+                      key={player.element} 
+                      player={player}
+                      showTeamName={showTeamName}
+                      showOpponent={showOpponent}
+                    />
+                  ))}
                 </div>
               </>
             );
@@ -189,42 +248,18 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
           {/* Midfielders */}
           {(() => {
             const mids = filterPlayersByType(sortedPlayers, 3);
-            
             return mids.length > 0 && (
               <>
                 <div className="w-full border-t border-dotted border-white/30"></div>
-                <div className="flex justify-center gap-1 sm:gap-0.5">
-                  {mids.map(player => {
-                    const jerseyColor = getTeamJerseyColor(player.team_id || 0);
-                    const textColor = getTextColor(jerseyColor);
-                    
-                    return (
-                      <div key={player.element} className="flex flex-col items-center w-[22%] sm:w-[18%]" data-testid={`pitch-player-${player.element}`}>
-                      <div className="relative w-full">
-                        <svg viewBox="0 0 403 302" className="w-full drop-shadow-md sm:drop-shadow-lg md:drop-shadow-xl">
-                          <defs><clipPath id={`jersey-clip-mid-${player.element}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
-                          <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-clip-mid-${player.element})`} />
-                          <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                          <path d="M 130 14 L 144 26 L 158 36 L 173 42 Q 187 42 202 42 L 216 42 Q 230 42 245 36 L 259 26 L 274 14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                          {player.is_captain && (<g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>)}
-                          {player.is_vice_captain && (<g><rect x="96" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="115" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>)}
-                          {player.in_dreamteam && (<g><circle cx="307" cy="72" r="17" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 307 63 L 309 69 L 315 69 L 310 73 L 312 79 L 307 75 L 302 79 L 304 73 L 299 69 L 305 69 Z" fill="white" /></g>)}
-                          <text x="202" y="112" className="text-[42px] sm:text-[34px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.team_short_name || 'UNK'}</text>
-                          <text x="202" y="165" className="text-[44px] sm:text-[36px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name || player.player_name || 'Unknown'}</text>
-                          <text x="202" y="218" className="text-[49px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPointsDisplay(player)}</text>
-                          {showFixtures && getNextFixtures && player.team_id && player.fixture_started !== false && (() => {
-                            const fixtures = getNextFixtures(player.team_id, 1);
-                            if (fixtures.length > 0) {
-                              const fixture = fixtures[0];
-                              return <text x="202" y="268" className="text-[39px] sm:text-[32px]" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>;
-                            }
-                            return null;
-                          })()}
-                        </svg>
-                      </div>
-                    </div>
-                  );
-                })}
+                <div className="flex justify-center gap-0.5">
+                  {mids.map(player => (
+                    <PlayerCard 
+                      key={player.element} 
+                      player={player}
+                      showTeamName={showTeamName}
+                      showOpponent={showOpponent}
+                    />
+                  ))}
                 </div>
               </>
             );
@@ -233,81 +268,40 @@ export function PitchView({ players, benchPlayers = [], getNextFixtures, showFix
           {/* Forwards */}
           {(() => {
             const fwds = filterPlayersByType(sortedPlayers, 4);
-            
             return fwds.length > 0 && (
               <>
                 <div className="w-full border-t border-dotted border-white/30"></div>
-                <div className="flex justify-center gap-1 sm:gap-0.5">
-                  {fwds.map(player => {
-                    const jerseyColor = getTeamJerseyColor(player.team_id || 0);
-                    const textColor = getTextColor(jerseyColor);
-                    
-                    return (
-                      <div key={player.element} className="flex flex-col items-center w-[22%] sm:w-[18%]" data-testid={`pitch-player-${player.element}`}>
-                      <div className="relative w-full">
-                        <svg viewBox="0 0 403 302" className="w-full drop-shadow-md sm:drop-shadow-lg md:drop-shadow-xl">
-                          <defs><clipPath id={`jersey-clip-fwd-${player.element}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
-                          <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-clip-fwd-${player.element})`} />
-                          <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                          <path d="M 130 14 L 144 26 L 158 36 L 173 42 Q 187 42 202 42 L 216 42 Q 230 42 245 36 L 259 26 L 274 14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                          {player.is_captain && (<g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>)}
-                          {player.is_vice_captain && (<g><rect x="96" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="115" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>)}
-                          {player.in_dreamteam && (<g><circle cx="307" cy="72" r="17" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 307 63 L 309 69 L 315 69 L 310 73 L 312 79 L 307 75 L 302 79 L 304 73 L 299 69 L 305 69 Z" fill="white" /></g>)}
-                          <text x="202" y="112" className="text-[42px] sm:text-[34px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.team_short_name || 'UNK'}</text>
-                          <text x="202" y="165" className="text-[44px] sm:text-[36px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name || player.player_name || 'Unknown'}</text>
-                          <text x="202" y="218" className="text-[49px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPointsDisplay(player)}</text>
-                          {showFixtures && getNextFixtures && player.team_id && player.fixture_started !== false && (() => {
-                            const fixtures = getNextFixtures(player.team_id, 1);
-                            if (fixtures.length > 0) {
-                              const fixture = fixtures[0];
-                              return <text x="202" y="268" className="text-[39px] sm:text-[32px]" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>;
-                            }
-                            return null;
-                          })()}
-                        </svg>
-                      </div>
-                    </div>
-                  );
-                })}
+                <div className="flex justify-center gap-0.5">
+                  {fwds.map(player => (
+                    <PlayerCard 
+                      key={player.element} 
+                      player={player}
+                      showTeamName={showTeamName}
+                      showOpponent={showOpponent}
+                    />
+                  ))}
                 </div>
               </>
             );
           })()}
 
-          {/* Bench Section - Inside Pitch */}
+          {/* Bench Section */}
           {sortedBench.length > 0 && (
-            <div className="mt-6 sm:mt-8 md:mt-10 pt-4 sm:pt-6 border-t-2 border-white/30">
-              <h3 className="text-base sm:text-sm font-semibold text-white mb-3 sm:mb-4 text-center tracking-wider">BENCH</h3>
-              <div className="flex justify-center gap-1 sm:gap-0.5">
-                {sortedBench.map(player => {
-                  const jerseyColor = getTeamJerseyColor(player.team_id || 0);
-                  const textColor = getTextColor(jerseyColor);
-                  
-                  return (
-                    <div key={player.element} className="flex flex-col items-center w-[22%] sm:w-[18%] opacity-90" data-testid={`bench-player-${player.element}`}>
-                      <div className="relative w-full">
-                        <svg viewBox="0 0 403 302" className="w-full drop-shadow-md sm:drop-shadow-lg">
-                          <defs><clipPath id={`jersey-clip-bench-${player.element}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
-                          <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-clip-bench-${player.element})`} />
-                          <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                          <path d="M 130 14 L 144 26 L 158 36 L 173 42 Q 187 42 202 42 L 216 42 Q 230 42 245 36 L 259 26 L 274 14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                          {player.in_dreamteam && (<g><circle cx="307" cy="72" r="17" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 307 63 L 309 69 L 315 69 L 310 73 L 312 79 L 307 75 L 302 79 L 304 73 L 299 69 L 305 69 Z" fill="white" /></g>)}
-                          <text x="202" y="112" className="text-[43px] sm:text-[34px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.team_short_name || 'UNK'}</text>
-                          <text x="202" y="165" className="text-[47px] sm:text-[36px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name || player.player_name || 'Unknown'}</text>
-                          <text x="202" y="218" className="text-[52px] sm:text-[40px]" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPointsDisplay(player)}</text>
-                          {showFixtures && getNextFixtures && player.team_id && player.fixture_started !== false && (() => {
-                            const fixtures = getNextFixtures(player.team_id, 1);
-                            if (fixtures.length > 0) {
-                              const fixture = fixtures[0];
-                              return <text x="202" y="268" className="text-[41px] sm:text-[32px]" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>;
-                            }
-                            return null;
-                          })()}
-                        </svg>
-                      </div>
-                    </div>
-                  );
-                })}
+            <div className="relative mt-4 sm:mt-6 md:mt-8 pt-4 border-t-2 border-white/30">
+              <div className="text-center mb-2">
+                <span className="text-white font-bold text-xs sm:text-sm">BENCH</span>
+              </div>
+              <div className="flex justify-center gap-0.5">
+                {sortedBench.map(player => (
+                  <PlayerCard 
+                    key={player.element} 
+                    player={player}
+                    isGoalkeeper={player.element_type === 1}
+                    isBench={true}
+                    showTeamName={showTeamName}
+                    showOpponent={showOpponent}
+                  />
+                ))}
               </div>
             </div>
           )}
