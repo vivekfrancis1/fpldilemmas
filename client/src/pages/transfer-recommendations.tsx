@@ -241,8 +241,8 @@ export default function TransferRecommendations() {
     
     gameweeks.forEach((gw, index) => {
       // Get the bank before this gameweek from backend (accounts for price changes, etc.)
-      const gwBankBefore = adjustedRecommendations?.gameweeks?.[gw]?.bankBefore || cumulativeBank;
-      const backendFT = adjustedRecommendations?.gameweeks?.[gw]?.freeTransfersAvailable || 1;
+      const gwBankBefore = adjustedRecommendations?.gameweeks?.[gw]?.bankBefore ?? cumulativeBank;
+      const backendFT = adjustedRecommendations?.gameweeks?.[gw]?.freeTransfersAvailable ?? 1;
       
       // For first GW, use backend values; for later GWs, calculate based on previous GW
       const isFirstGW = index === 0;
