@@ -6740,7 +6740,7 @@ export default function TransferPlanner() {
                       if (positionPlayers.length === 0) return null;
                       
                       return (
-                        <div key={posType} className={`flex justify-center flex-wrap ${positionPlayers.length >= 5 ? 'gap-0 sm:gap-2' : 'gap-2 sm:gap-4'}`}>
+                        <div key={posType} className={`flex justify-center flex-wrap ${positionPlayers.length >= 5 ? 'gap-0.5 sm:gap-1 md:gap-2' : 'gap-1 sm:gap-2 md:gap-4'}`}>
                           {positionPlayers.map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
@@ -6783,7 +6783,7 @@ export default function TransferPlanner() {
                             }
                             
                             return (
-                              <div key={pick.element} className={`flex flex-col items-center w-[18vw] sm:w-32 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-player-${player.id}`}>
+                              <div key={pick.element} className={`flex flex-col items-center w-[17vw] min-w-[52px] sm:w-24 md:w-32 lg:w-36 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-player-${player.id}`}>
                                 <div className="relative w-full">
                                   {/* Action Buttons Popup */}
                                   {selectedPlayer === pick.element && (
@@ -6797,7 +6797,7 @@ export default function TransferPlanner() {
                                       
                                       {/* Centered Popup */}
                                       <div 
-                                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-300 dark:border-gray-600 overflow-hidden w-[320px]"
+                                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-300 dark:border-gray-600 overflow-hidden w-[min(90vw,320px)]"
                                         onClick={(e) => e.stopPropagation()}
                                         data-testid={`pitch-actions-${pick.element}`}
                                       >
@@ -6955,7 +6955,7 @@ export default function TransferPlanner() {
                     {/* Bench */}
                     <div className="mt-4 sm:mt-8 pt-2 sm:pt-4 border-t border-white/30">
                       <h4 className="text-xs font-semibold text-white mb-2 sm:mb-3 text-center">Bench</h4>
-                      <div className="flex justify-center gap-0 sm:gap-1 md:gap-1.5">
+                      <div className="flex justify-center gap-0.5 sm:gap-1 md:gap-2">
                     {(() => {
                       const benchPlayers = manualLineup.slice(11, 15);
                       const gkBench = benchPlayers.find(pick => {
