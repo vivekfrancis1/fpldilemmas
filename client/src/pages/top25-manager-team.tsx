@@ -373,6 +373,7 @@ export default function Top25ManagerTeam() {
       team_name: pick.team_name,
       team_short_name: teamData?.short_name,
       team_id: playerData?.team,
+      team_code: teamData?.code,
       event_points: pick.event_points,
       in_dreamteam: playerData?.in_dreamteam || false,
     };
@@ -395,6 +396,7 @@ export default function Top25ManagerTeam() {
       team_name: pick.team_name,
       team_short_name: teamData?.short_name,
       team_id: playerData?.team,
+      team_code: teamData?.code,
       event_points: pick.event_points,
       in_dreamteam: playerData?.in_dreamteam || false,
     };

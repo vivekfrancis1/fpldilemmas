@@ -458,6 +458,7 @@ export default function Top50ManagerTeam() {
       team_name: pick.team_name,
       team_short_name: teamDataForPlayer?.short_name,
       team_id: playerData?.team,
+      team_code: teamDataForPlayer?.code,
       event_points: pick.event_points,
       in_dreamteam: playerData?.in_dreamteam || false,
     };
@@ -480,6 +481,7 @@ export default function Top50ManagerTeam() {
       team_name: pick.team_name,
       team_short_name: teamDataForPlayer?.short_name,
       team_id: playerData?.team,
+      team_code: teamDataForPlayer?.code,
       event_points: pick.event_points,
       in_dreamteam: playerData?.in_dreamteam || false,
     };

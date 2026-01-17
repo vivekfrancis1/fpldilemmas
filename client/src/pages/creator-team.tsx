@@ -387,6 +387,7 @@ export default function CreatorTeam() {
       team_name: teamDataForPlayer?.name || 'Unknown Team',
       team_short_name: teamDataForPlayer?.short_name,
       team_id: playerData?.team,
+      team_code: teamDataForPlayer?.code,
       event_points: playerData?.event_points || 0,
       in_dreamteam: playerData?.in_dreamteam || false,
     };
@@ -409,6 +410,7 @@ export default function CreatorTeam() {
       team_name: teamDataForPlayer?.name || 'Unknown Team',
       team_short_name: teamDataForPlayer?.short_name,
       team_id: playerData?.team,
+      team_code: teamDataForPlayer?.code,
       event_points: playerData?.event_points || 0,
       in_dreamteam: playerData?.in_dreamteam || false,
     };
