@@ -551,6 +551,18 @@ export default function MyDashboard() {
     return jerseyColors[teamId] || '#9CA3AF';
   };
 
+  // Get jersey image URL from FPL API based on team code and player position
+  // FPL API provides team.code for jersey images (different from team.id)
+  const getJerseyImageUrl = (teamCode: number, isGoalkeeper: boolean = false): string => {
+    const suffix = isGoalkeeper ? '_1' : '';
+    return `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${teamCode}${suffix}-110.webp`;
+  };
+
+  // Get team code for jersey images (FPL API uses 'code' field, not 'id')
+  const getTeamCode = (team: any): number => {
+    return team?.code || team?.id || 1;
+  };
+
   const getTextColor = (backgroundColor: string): string => {
     // Convert hex to RGB
     const hex = backgroundColor.replace('#', '');
@@ -1576,77 +1588,52 @@ export default function MyDashboard() {
                                 const player = getPlayerById(pick.element);
                                 if (!player) return null;
                                 const playerTeam = getPlayerTeam(player);
-                                
-                                const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
-                                const textColor = getTextColor(jerseyColor);
+                                const isGoalkeeper = player.element_type === 1;
                                 
                                 return (
                                   <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
-                                    <div className="relative w-full">
-                                      {/* Jersey-Shaped Card */}
-                                      <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
-                                        <defs>
-                                          <clipPath id={`jersey-clip-${player.id}`}>
-                                            <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" />
-                                          </clipPath>
-                                        </defs>
-                                        
-                                        {/* Jersey background */}
-                                        <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-${player.id})`} />
-                                        
-                                        {/* Jersey outline with narrower shoulders aligned to upper body */}
-                                        <path 
-                                          d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" 
-                                          fill="none" 
-                                          stroke="rgba(0,0,0,0.15)" 
-                                          strokeWidth="1.5"
+                                    <div className="relative flex flex-col items-center">
+                                      {/* Jersey Image */}
+                                      <div className="relative">
+                                        <img 
+                                          src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                          alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                          className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                          onError={(e) => {
+                                            (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                          }}
                                         />
-                                        
-                                        {/* V-neck collar detail */}
-                                        <path 
-                                          d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" 
-                                          fill="none" 
-                                          stroke="rgba(255,255,255,0.3)" 
-                                          strokeWidth="1.5"
-                                        />
-                                        
-                                        {/* Captain/Vice Captain Badge */}
+                                        {/* Captain Badge */}
                                         {pick.is_captain && (
-                                          <g>
-                                            <circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" />
-                                            <text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text>
-                                          </g>
+                                          <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">C</span>
+                                          </div>
                                         )}
+                                        {/* Vice Captain Badge */}
                                         {pick.is_vice_captain && (
-                                          <g>
-                                            <circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" />
-                                            <text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text>
-                                          </g>
+                                          <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-gray-200 rounded-full flex items-center justify-center border-2 border-yellow-400 shadow-sm">
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">V</span>
+                                          </div>
                                         )}
-                                        
-                                        {/* Dream Team Star Badge */}
+                                        {/* Dream Team Star */}
                                         {player.in_dreamteam && (
-                                          <g>
-                                            <circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" />
-                                            <path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" />
-                                          </g>
+                                          <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <Star className="w-2 h-2 sm:w-3 sm:h-3 text-white fill-white" />
+                                          </div>
                                         )}
-                                        
-                                        {/* Team Name */}
-                                        <text x="140" y="70" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>
-                                          {playerTeam?.short_name || 'UNK'}
-                                        </text>
-                                        
-                                        {/* Player Name */}
-                                        <text x="140" y="118" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                      </div>
+                                      {/* Player Name */}
+                                      <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
                                           {player.web_name}
-                                        </text>
-                                        
-                                        {/* Points */}
-                                        <text x="140" y="165" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>
+                                        </div>
+                                      </div>
+                                      {/* Points */}
+                                      <div className="px-2 py-0.5 bg-green-600 rounded text-center">
+                                        <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
-                                        </text>
-                                      </svg>
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
                                 );
@@ -1670,24 +1657,41 @@ export default function MyDashboard() {
                                 if (!player) return null;
                                 const playerTeam = getPlayerTeam(player);
                                 
-                                const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
-                                const textColor = getTextColor(jerseyColor);
-                                
                                 return (
                                   <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
-                                    <div className="relative w-full">
-                                      <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
-                                        <defs><clipPath id={`jersey-clip-def-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
-                                        <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-def-${player.id})`} />
-                                        <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                        <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                        {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
-                                        {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
-                                        {player.in_dreamteam && (<g><circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" /></g>)}
-                                        <text x="140" y="70" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                        <text x="140" y="118" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                        <text x="140" y="165" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
-                                      </svg>
+                                    <div className="relative flex flex-col items-center">
+                                      <div className="relative">
+                                        <img 
+                                          src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
+                                          alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                          className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                        />
+                                        {pick.is_captain && (
+                                          <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">C</span>
+                                          </div>
+                                        )}
+                                        {pick.is_vice_captain && (
+                                          <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-gray-200 rounded-full flex items-center justify-center border-2 border-yellow-400 shadow-sm">
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">V</span>
+                                          </div>
+                                        )}
+                                        {player.in_dreamteam && (
+                                          <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <Star className="w-2 h-2 sm:w-3 sm:h-3 text-white fill-white" />
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+                                          {player.web_name}
+                                        </div>
+                                      </div>
+                                      <div className="px-2 py-0.5 bg-green-600 rounded text-center">
+                                        <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                          {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
                                 );
@@ -1711,24 +1715,41 @@ export default function MyDashboard() {
                                 if (!player) return null;
                                 const playerTeam = getPlayerTeam(player);
                                 
-                                const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
-                                const textColor = getTextColor(jerseyColor);
-                                
                                 return (
                                   <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
-                                    <div className="relative w-full">
-                                      <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
-                                        <defs><clipPath id={`jersey-clip-mid-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
-                                        <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-mid-${player.id})`} />
-                                        <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                        <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                        {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
-                                        {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
-                                        {player.in_dreamteam && (<g><circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" /></g>)}
-                                        <text x="140" y="70" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                        <text x="140" y="118" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                        <text x="140" y="165" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
-                                      </svg>
+                                    <div className="relative flex flex-col items-center">
+                                      <div className="relative">
+                                        <img 
+                                          src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
+                                          alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                          className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                        />
+                                        {pick.is_captain && (
+                                          <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">C</span>
+                                          </div>
+                                        )}
+                                        {pick.is_vice_captain && (
+                                          <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-gray-200 rounded-full flex items-center justify-center border-2 border-yellow-400 shadow-sm">
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">V</span>
+                                          </div>
+                                        )}
+                                        {player.in_dreamteam && (
+                                          <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <Star className="w-2 h-2 sm:w-3 sm:h-3 text-white fill-white" />
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+                                          {player.web_name}
+                                        </div>
+                                      </div>
+                                      <div className="px-2 py-0.5 bg-green-600 rounded text-center">
+                                        <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                          {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
                                 );
@@ -1752,24 +1773,41 @@ export default function MyDashboard() {
                                 if (!player) return null;
                                 const playerTeam = getPlayerTeam(player);
                                 
-                                const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
-                                const textColor = getTextColor(jerseyColor);
-                                
                                 return (
                                   <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
-                                    <div className="relative w-full">
-                                      <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
-                                        <defs><clipPath id={`jersey-clip-fwd-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
-                                        <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-fwd-${player.id})`} />
-                                        <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                        <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                        {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
-                                        {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
-                                        {player.in_dreamteam && (<g><circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" /></g>)}
-                                        <text x="140" y="70" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                        <text x="140" y="118" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                        <text x="140" y="165" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}</text>
-                                      </svg>
+                                    <div className="relative flex flex-col items-center">
+                                      <div className="relative">
+                                        <img 
+                                          src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
+                                          alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                          className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                        />
+                                        {pick.is_captain && (
+                                          <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">C</span>
+                                          </div>
+                                        )}
+                                        {pick.is_vice_captain && (
+                                          <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-gray-200 rounded-full flex items-center justify-center border-2 border-yellow-400 shadow-sm">
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">V</span>
+                                          </div>
+                                        )}
+                                        {player.in_dreamteam && (
+                                          <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <Star className="w-2 h-2 sm:w-3 sm:h-3 text-white fill-white" />
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+                                          {player.web_name}
+                                        </div>
+                                      </div>
+                                      <div className="px-2 py-0.5 bg-green-600 rounded text-center">
+                                        <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                          {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
                                 );
@@ -1787,23 +1825,36 @@ export default function MyDashboard() {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
                             const playerTeam = getPlayerTeam(player);
-                            
-                            const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
-                            const textColor = getTextColor(jerseyColor);
+                            const isGoalkeeper = player.element_type === 1;
                             
                             return (
                               <div key={pick.element} className="flex flex-col items-center w-[19.5%] opacity-90" data-testid={`pitch-bench-${player.id}`}>
-                                <div className="relative w-full">
-                                  <svg viewBox="0 0 280 190" className="w-full drop-shadow-lg">
-                                    <defs><clipPath id={`jersey-clip-bench-${player.id}`}><path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" /></clipPath></defs>
-                                    <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#jersey-clip-bench-${player.id})`} />
-                                    <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                    <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                    {player.in_dreamteam && (<g><circle cx="205" cy="48" r="12" fill="#A855F7" stroke="white" strokeWidth="2.5" /><path d="M 205 39 L 207 45 L 213 45 L 208 49 L 210 55 L 205 51 L 200 55 L 202 49 L 197 45 L 203 45 Z" fill="white" /></g>)}
-                                    <text x="140" y="70" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                    <text x="140" y="118" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                    <text x="140" y="165" fontSize="27" fontWeight="bold" textAnchor="middle" fill={textColor}>{getPlayerDisplayPoints(player, playerTeam?.id || 0, false)}</text>
-                                  </svg>
+                                <div className="relative flex flex-col items-center">
+                                  <div className="relative">
+                                    <img 
+                                      src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                      alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                      className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                      }}
+                                    />
+                                    {player.in_dreamteam && (
+                                      <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                        <Star className="w-2 h-2 sm:w-3 sm:h-3 text-white fill-white" />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                    <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+                                      {player.web_name}
+                                    </div>
+                                  </div>
+                                  <div className="px-2 py-0.5 bg-gray-500 rounded text-center">
+                                    <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                      {getPlayerDisplayPoints(player, playerTeam?.id || 0, false)}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             );
