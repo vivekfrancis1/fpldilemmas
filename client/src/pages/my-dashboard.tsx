@@ -1617,13 +1617,13 @@ export default function MyDashboard() {
                                         {/* Captain Badge */}
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
-                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">C</span>
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
                                           </div>
                                         )}
                                         {/* Vice Captain Badge */}
                                         {pick.is_vice_captain && (
-                                          <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-gray-200 rounded-full flex items-center justify-center border-2 border-yellow-400 shadow-sm">
-                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">V</span>
+                                          <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
                                           </div>
                                         )}
                                         {/* Dream Team Star */}
@@ -1641,7 +1641,7 @@ export default function MyDashboard() {
                                       </div>
                                       {/* Points */}
                                       <div className="px-2 py-0.5 bg-green-600 rounded text-center">
-                                        <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white">
+                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white">
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </div>
                                       </div>
@@ -1679,12 +1679,12 @@ export default function MyDashboard() {
                                         />
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
-                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">C</span>
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
                                           </div>
                                         )}
                                         {pick.is_vice_captain && (
-                                          <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-gray-200 rounded-full flex items-center justify-center border-2 border-yellow-400 shadow-sm">
-                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">V</span>
+                                          <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
                                           </div>
                                         )}
                                         {player.in_dreamteam && (
@@ -1699,7 +1699,7 @@ export default function MyDashboard() {
                                         </div>
                                       </div>
                                       <div className="px-2 py-0.5 bg-green-600 rounded text-center">
-                                        <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white">
+                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white">
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </div>
                                       </div>
@@ -1737,12 +1737,12 @@ export default function MyDashboard() {
                                         />
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
-                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">C</span>
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
                                           </div>
                                         )}
                                         {pick.is_vice_captain && (
-                                          <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-gray-200 rounded-full flex items-center justify-center border-2 border-yellow-400 shadow-sm">
-                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">V</span>
+                                          <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
                                           </div>
                                         )}
                                         {player.in_dreamteam && (
@@ -1757,7 +1757,7 @@ export default function MyDashboard() {
                                         </div>
                                       </div>
                                       <div className="px-2 py-0.5 bg-green-600 rounded text-center">
-                                        <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white">
+                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white">
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </div>
                                       </div>
@@ -1795,12 +1795,12 @@ export default function MyDashboard() {
                                         />
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
-                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">C</span>
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
                                           </div>
                                         )}
                                         {pick.is_vice_captain && (
-                                          <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-gray-200 rounded-full flex items-center justify-center border-2 border-yellow-400 shadow-sm">
-                                            <span className="text-[8px] sm:text-[10px] font-bold text-black">V</span>
+                                          <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
                                           </div>
                                         )}
                                         {player.in_dreamteam && (
@@ -1815,7 +1815,7 @@ export default function MyDashboard() {
                                         </div>
                                       </div>
                                       <div className="px-2 py-0.5 bg-green-600 rounded text-center">
-                                        <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white">
+                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white">
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </div>
                                       </div>
@@ -2416,13 +2416,13 @@ export default function MyDashboard() {
                                             {/* Captain Badge */}
                                             {pick.is_captain && (
                                               <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
-                                                <span className="text-[8px] sm:text-[10px] font-bold text-black">C</span>
+                                                <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
                                               </div>
                                             )}
                                             {/* Vice Captain Badge */}
                                             {pick.is_vice_captain && (
-                                              <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-gray-200 rounded-full flex items-center justify-center border-2 border-yellow-400 shadow-sm">
-                                                <span className="text-[8px] sm:text-[10px] font-bold text-black">V</span>
+                                              <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                                <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
                                               </div>
                                             )}
                                           </div>
