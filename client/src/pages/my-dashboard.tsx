@@ -301,9 +301,6 @@ export default function MyDashboard() {
     return "list";
   });
   
-  // Pitch display mode - "points" shows name/points, "team" shows team/name/opponent
-  const [pitchDisplayMode, setPitchDisplayMode] = useState<"points" | "team">("points");
-  
   // Live standings state - tracks which league's live standings panel is open
   const [selectedLiveLeague, setSelectedLiveLeague] = useState<number | null>(null);
 
@@ -839,6 +836,27 @@ export default function MyDashboard() {
       opponent: opponent?.short_name || 'TBD',
       isHome,
       fixture
+    };
+  };
+
+  const getNextGameweekFixture = (teamId: number) => {
+    if (!fixturesData || !Array.isArray(fixturesData)) return null;
+    
+    const nextGW = getNextGameweekDashboard();
+    
+    const fixture = fixturesData.find((f: any) => 
+      (f.team_h === teamId || f.team_a === teamId) && f.event === nextGW
+    );
+    
+    if (!fixture) return null;
+    
+    const isHome = fixture.team_h === teamId;
+    const opponentId = isHome ? fixture.team_a : fixture.team_h;
+    const opponent = getTeamById(opponentId);
+    
+    return {
+      opponent: opponent?.short_name || 'TBD',
+      isHome
     };
   };
 
@@ -2374,7 +2392,7 @@ export default function MyDashboard() {
                           </div>
 
                           <div className="relative space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-10">
-                            {/* GKP */}
+                            {/* Starting XI by position */}
                             {[1, 2, 3, 4].map(positionType => {
                               const positionPlayers = nextTeamData.picks
                                 .filter(pick => pick.position <= 11)
@@ -2389,43 +2407,53 @@ export default function MyDashboard() {
                                     const player = getPlayerById(pick.element);
                                     if (!player) return null;
                                     const playerTeam = getPlayerTeam(player);
-                                    const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
-                                    const textColor = getTextColor(jerseyColor);
+                                    const isGoalkeeper = player.element_type === 1;
+                                    const fixtureInfo = getNextGameweekFixture(playerTeam?.id || 0);
 
                                     return (
                                       <div key={pick.element} className="flex flex-col items-center w-[19.5%]">
-                                        <div className="relative w-full">
-                                          <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
-                                            <defs>
-                                              <clipPath id={`next-jersey-clip-${positionType}-${player.id}`}>
-                                                <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" />
-                                              </clipPath>
-                                            </defs>
-                                            <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#next-jersey-clip-${positionType}-${player.id})`} />
-                                            <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                            <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                            {pick.is_captain && (<g><circle cx="75" cy="48" r="12" fill="#FCD34D" stroke="white" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">C</text></g>)}
-                                            {pick.is_vice_captain && (<g><circle cx="75" cy="48" r="12" fill="#E5E7EB" stroke="#FCD34D" strokeWidth="2.5" /><text x="75" y="54" fontSize="14" fontWeight="bold" textAnchor="middle" fill="black">V</text></g>)}
-                                            <text x="140" y="80" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                            <text x="140" y="115" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                            {(() => {
-                                              const nextGW = getNextGameweekDashboard();
-                                              if (!fixturesData || !Array.isArray(fixturesData)) {
-                                                return <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>BGW</text>;
-                                              }
-                                              const fixture = fixturesData.find((f: any) => 
-                                                (f.team_h === (playerTeam?.id || 0) || f.team_a === (playerTeam?.id || 0)) && f.event === nextGW
-                                              );
-                                              if (!fixture) {
-                                                return <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>BGW</text>;
-                                              }
-                                              const isHome = fixture.team_h === (playerTeam?.id || 0);
-                                              const opponentId = isHome ? fixture.team_a : fixture.team_h;
-                                              const opponent = getTeamById(opponentId);
-                                              const opponentText = `${(opponent?.short_name || 'TBD').substring(0, 3)} (${isHome ? 'H' : 'A'})`;
-                                              return <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{opponentText}</text>;
-                                            })()}
-                                          </svg>
+                                        <div className="relative flex flex-col items-center">
+                                          {/* Jersey Image */}
+                                          <div className="relative">
+                                            <img 
+                                              src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                              alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                              className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                              onError={(e) => {
+                                                (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                              }}
+                                            />
+                                            {/* Captain Badge */}
+                                            {pick.is_captain && (
+                                              <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                                <span className="text-[8px] sm:text-[10px] font-bold text-black">C</span>
+                                              </div>
+                                            )}
+                                            {/* Vice Captain Badge */}
+                                            {pick.is_vice_captain && (
+                                              <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-gray-200 rounded-full flex items-center justify-center border-2 border-yellow-400 shadow-sm">
+                                                <span className="text-[8px] sm:text-[10px] font-bold text-black">V</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                          {/* Team Name */}
+                                          <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+                                              {playerTeam?.short_name || 'UNK'}
+                                            </div>
+                                          </div>
+                                          {/* Player Name */}
+                                          <div className="px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+                                              {player.web_name}
+                                            </div>
+                                          </div>
+                                          {/* Opponent (H/A) */}
+                                          <div className="px-2 py-0.5 bg-purple-600 rounded text-center">
+                                            <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                              {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
+                                            </div>
+                                          </div>
                                         </div>
                                       </div>
                                     );
@@ -2436,9 +2464,9 @@ export default function MyDashboard() {
                           </div>
 
                           {/* Bench - Inside pitch area */}
-                          <div className="relative mt-4 sm:mt-6 md:mt-8">
+                          <div className="relative mt-4 sm:mt-6 md:mt-8 pt-4 border-t-2 border-white/30">
                             <div className="text-center mb-2">
-                              <span className="text-white font-bold text-xs sm:text-sm bg-black/20 px-3 py-1 rounded-full">BENCH</span>
+                              <span className="text-white font-bold text-xs sm:text-sm">BENCH</span>
                             </div>
                             <div className="flex justify-center gap-0.5">
                               {nextTeamData.picks
@@ -2448,41 +2476,41 @@ export default function MyDashboard() {
                                   const player = getPlayerById(pick.element);
                                   if (!player) return null;
                                   const playerTeam = getPlayerTeam(player);
-                                  const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
-                                  const textColor = getTextColor(jerseyColor);
+                                  const isGoalkeeper = player.element_type === 1;
+                                  const fixtureInfo = getNextGameweekFixture(playerTeam?.id || 0);
 
                                   return (
-                                    <div key={pick.element} className="flex flex-col items-center w-[19.5%]">
-                                      <div className="relative w-full">
-                                        <svg viewBox="0 0 280 190" className="w-full drop-shadow-xl">
-                                          <defs>
-                                            <clipPath id={`next-bench-jersey-clip-${player.id}`}>
-                                              <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" />
-                                            </clipPath>
-                                          </defs>
-                                          <rect width="280" height="190" fill={jerseyColor} clipPath={`url(#next-bench-jersey-clip-${player.id})`} />
-                                          <path d="M 58 30 L 32 30 L 32 80 L 45 85 L 58 85 L 58 30 L 90 10 Q 95 10 100 16 L 110 25 L 120 30 Q 130 30 140 30 L 150 30 Q 160 30 170 25 L 180 16 Q 185 10 190 10 L 222 30 L 222 85 L 235 85 L 248 80 L 248 30 L 222 30 L 222 185 L 58 185 L 58 30 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                          <path d="M 90 10 L 100 18 L 110 25 L 120 29 Q 130 29 140 29 L 150 29 Q 160 29 170 25 L 180 18 L 190 10" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                          <text x="140" y="80" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                          <text x="140" y="115" fontSize="20" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                          {(() => {
-                                            const nextGW = getNextGameweekDashboard();
-                                            if (!fixturesData || !Array.isArray(fixturesData)) {
-                                              return <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>BGW</text>;
-                                            }
-                                            const fixture = fixturesData.find((f: any) => 
-                                              (f.team_h === (playerTeam?.id || 0) || f.team_a === (playerTeam?.id || 0)) && f.event === nextGW
-                                            );
-                                            if (!fixture) {
-                                              return <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>BGW</text>;
-                                            }
-                                            const isHome = fixture.team_h === (playerTeam?.id || 0);
-                                            const opponentId = isHome ? fixture.team_a : fixture.team_h;
-                                            const opponent = getTeamById(opponentId);
-                                            const opponentText = `${(opponent?.short_name || 'TBD').substring(0, 3)} (${isHome ? 'H' : 'A'})`;
-                                            return <text x="140" y="150" fontSize="22" fontWeight="bold" textAnchor="middle" fill={textColor}>{opponentText}</text>;
-                                          })()}
-                                        </svg>
+                                    <div key={pick.element} className="flex flex-col items-center w-[19.5%] opacity-90">
+                                      <div className="relative flex flex-col items-center">
+                                        {/* Jersey Image */}
+                                        <div className="relative">
+                                          <img 
+                                            src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                            alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                            className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                            onError={(e) => {
+                                              (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                            }}
+                                          />
+                                        </div>
+                                        {/* Team Name */}
+                                        <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+                                            {playerTeam?.short_name || 'UNK'}
+                                          </div>
+                                        </div>
+                                        {/* Player Name */}
+                                        <div className="px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+                                            {player.web_name}
+                                          </div>
+                                        </div>
+                                        {/* Opponent (H/A) */}
+                                        <div className="px-2 py-0.5 bg-gray-500 rounded text-center">
+                                          <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                            {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
                                   );
