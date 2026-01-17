@@ -1619,7 +1619,7 @@ export default function MyDashboard() {
                                         <img 
                                           src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
                                           alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                          className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
                                           onError={(e) => {
                                             (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                           }}
@@ -1651,7 +1651,7 @@ export default function MyDashboard() {
                                       </div>
                                       {/* Points */}
                                       <div className="px-2 py-0.5 bg-green-600 rounded text-center">
-                                        <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                        <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white">
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </div>
                                       </div>
@@ -1685,7 +1685,7 @@ export default function MyDashboard() {
                                         <img 
                                           src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
                                           alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                          className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
                                         />
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
@@ -1709,7 +1709,7 @@ export default function MyDashboard() {
                                         </div>
                                       </div>
                                       <div className="px-2 py-0.5 bg-green-600 rounded text-center">
-                                        <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                        <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white">
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </div>
                                       </div>
@@ -1743,7 +1743,7 @@ export default function MyDashboard() {
                                         <img 
                                           src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
                                           alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                          className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
                                         />
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
@@ -1767,7 +1767,7 @@ export default function MyDashboard() {
                                         </div>
                                       </div>
                                       <div className="px-2 py-0.5 bg-green-600 rounded text-center">
-                                        <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                        <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white">
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </div>
                                       </div>
@@ -1801,7 +1801,7 @@ export default function MyDashboard() {
                                         <img 
                                           src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
                                           alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                          className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
                                         />
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
@@ -1825,7 +1825,7 @@ export default function MyDashboard() {
                                         </div>
                                       </div>
                                       <div className="px-2 py-0.5 bg-green-600 rounded text-center">
-                                        <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                        <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white">
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                         </div>
                                       </div>
@@ -1855,7 +1855,7 @@ export default function MyDashboard() {
                                     <img 
                                       src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
                                       alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                      className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                      className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
                                       onError={(e) => {
                                         (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                       }}
@@ -1872,7 +1872,7 @@ export default function MyDashboard() {
                                     </div>
                                   </div>
                                   <div className="px-2 py-0.5 bg-gray-500 rounded text-center">
-                                    <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                    <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white">
                                       {getPlayerDisplayPoints(player, playerTeam?.id || 0, false)}
                                     </div>
                                   </div>
@@ -2418,7 +2418,7 @@ export default function MyDashboard() {
                                             <img 
                                               src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
                                               alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                              className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                              className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
                                               onError={(e) => {
                                                 (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                               }}
@@ -2450,7 +2450,7 @@ export default function MyDashboard() {
                                           </div>
                                           {/* Opponent (H/A) */}
                                           <div className="px-2 py-0.5 bg-purple-600 rounded text-center">
-                                            <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                            <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white">
                                               {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
                                             </div>
                                           </div>
@@ -2487,7 +2487,7 @@ export default function MyDashboard() {
                                           <img 
                                             src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
                                             alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                            className="w-10 h-12 sm:w-12 sm:h-14 md:w-14 md:h-16 object-contain drop-shadow-lg"
+                                            className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
                                             onError={(e) => {
                                               (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                             }}
@@ -2507,7 +2507,7 @@ export default function MyDashboard() {
                                         </div>
                                         {/* Opponent (H/A) */}
                                         <div className="px-2 py-0.5 bg-gray-500 rounded text-center">
-                                          <div className="text-[10px] sm:text-xs md:text-sm font-bold text-white">
+                                          <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white">
                                             {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
                                           </div>
                                         </div>
