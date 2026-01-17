@@ -5175,6 +5175,15 @@ export default function TransferPlanner() {
     return brightness > 128 ? '#000000' : '#FFFFFF';
   };
 
+  const getJerseyImageUrl = (teamCode: number, isGoalkeeper: boolean = false): string => {
+    const suffix = isGoalkeeper ? '_1' : '';
+    return `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${teamCode}${suffix}-110.webp`;
+  };
+
+  const getTeamCode = (team: any): number => {
+    return team?.code || 0;
+  };
+
   const PlayerActionPopup = ({ pick, player, actualIndex, isBench = false }: { pick: TeamPick, player: any, actualIndex: number, isBench?: boolean }) => {
     return (
       <>

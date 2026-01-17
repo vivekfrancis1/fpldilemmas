@@ -85,6 +85,9 @@ function getBadgeColor(player: PitchPlayer, isBench: boolean): string {
   return isBench ? 'bg-gray-500' : 'bg-green-600';
 }
 
+// Default jersey placeholder (fallback when no team_code or image fails)
+const FALLBACK_JERSEY_URL = "https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_0-110.webp";
+
 // Single player card component for consistency
 function PlayerCard({ 
   player, 
@@ -99,8 +102,18 @@ function PlayerCard({
   showTeamName?: boolean;
   showOpponent?: boolean;
 }) {
-  const [imgError, setImgError] = useState(false);
+  const [imgError, setImgError] = useState(0); // 0: initial, 1: first error (try non-GK), 2: all failed (use fallback)
   const teamCode = player.team_code || 0;
+  
+  const getImageSrc = (): string => {
+    if (imgError === 2 || teamCode === 0) {
+      return FALLBACK_JERSEY_URL;
+    }
+    if (imgError === 1) {
+      return getJerseyImageUrl(teamCode, false); // Try non-GK version
+    }
+    return getJerseyImageUrl(teamCode, isGoalkeeper);
+  };
   
   return (
     <div className={`flex flex-col items-center ${isBench ? 'w-[19.5%]' : 'w-[19%]'} ${isBench ? 'opacity-90' : ''}`}>
@@ -108,11 +121,11 @@ function PlayerCard({
         {/* Jersey Image */}
         <div className="relative">
           <img 
-            src={imgError ? getJerseyImageUrl(teamCode, false) : getJerseyImageUrl(teamCode, isGoalkeeper)}
+            src={getImageSrc()}
             alt={`${player.team_short_name || 'Team'} jersey`}
             className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
             onError={() => {
-              if (!imgError) setImgError(true);
+              if (imgError < 2) setImgError(imgError + 1);
             }}
           />
           {/* Captain Badge */}
