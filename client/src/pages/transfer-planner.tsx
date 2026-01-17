@@ -6883,42 +6883,61 @@ export default function TransferPlanner() {
                                     </>
                                   )}
                                   
-                                  {/* Jersey Card */}
-                                  <svg 
-                                    viewBox="0 0 403 302" 
-                                    className={`w-full drop-shadow-xl cursor-pointer transition-all ${selectedPlayer === pick.element ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg' : ''}`}
+                                  {/* Jersey Card with Real Image */}
+                                  <div 
+                                    className={`flex flex-col items-center cursor-pointer transition-all ${selectedPlayer === pick.element ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg' : ''}`}
                                     onClick={() => setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element)}
                                     data-testid={`pitch-jersey-${pick.element}`}
                                   >
-                                    <defs><clipPath id={`jersey-manual-${player.id}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
-                                    <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-manual-${player.id})`} />
-                                    <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                                    <path d="M 130 14 L 144 26 L 158 36 L 173 42 Q 187 42 202 42 L 216 42 Q 230 42 245 36 L 259 26 L 274 14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                                    {isPlayerTransferredIn(pick) && (<g><circle cx="295" cy="70" r="17" fill="#22C55E" stroke="white" strokeWidth="2.5" /><text x="295" y="78" fontSize="16" fontWeight="bold" textAnchor="middle" fill="white">+</text></g>)}
-                                    {pick.is_captain ? (
-                                      <g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>
-                                    ) : null}
-                                    {pick.is_vice_captain ? (
-                                      <g><rect x="96" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="115" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>
-                                    ) : null}
-                                    {player.in_dreamteam && (
-                                      <g>
-                                        <circle cx="307" cy="72" r="18" fill="rgb(234 179 8)" stroke="white" strokeWidth="2.5" />
-                                        <path d="M 307 59 L 310 68 L 320 68 L 312 74 L 315 83 L 307 77 L 299 83 L 302 74 L 294 68 L 304 68 Z" fill="white" />
-                                      </g>
-                                    )}
-                                    <text x="202" y="112" fontSize="clamp(28px, 5.5vw, 32px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                                    <text x="202" y="158" fontSize="clamp(32px, 6vw, 34px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                                    <text x="202" y="218" fontSize="clamp(42px, 7.2vw, 42px)" fontWeight="bold" textAnchor="middle" fill={textColor}>
-                                      {pick.is_captain && projectedPoints !== null ? (projectedPoints * 2).toFixed(1) : projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
-                                      {pick.is_captain && projectedPoints !== null && (
-                                        <tspan fontSize="clamp(26px, 4.4vw, 26px)" dx="5">({projectedPoints.toFixed(1)})</tspan>
+                                    <div className="relative">
+                                      <img 
+                                        src={getJerseyImageUrl(getTeamCode(playerTeam), player.element_type === 1)}
+                                        alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                        className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                        onError={(e) => {
+                                          (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                        }}
+                                      />
+                                      {isPlayerTransferredIn(pick) && (
+                                        <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                          <span className="text-[10px] font-bold text-white">+</span>
+                                        </div>
                                       )}
-                                    </text>
+                                      {pick.is_captain && (
+                                        <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-300 rounded-full flex items-center justify-center border border-yellow-600 shadow-sm">
+                                          <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
+                                        </div>
+                                      )}
+                                      {pick.is_vice_captain && !pick.is_captain && (
+                                        <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-blue-600 shadow-sm">
+                                          <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
+                                        </div>
+                                      )}
+                                      {player.in_dreamteam && (
+                                        <div className="absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                          <span className="text-[8px] text-white">★</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                      <div className="text-[7px] sm:text-[9px] font-semibold text-gray-600 truncate">{playerTeam?.short_name || 'UNK'}</div>
+                                    </div>
+                                    <div className="px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                      <div className="text-[8px] sm:text-[10px] font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">{player.web_name}</div>
+                                    </div>
+                                    <div className="px-2 py-0.5 bg-purple-600 rounded text-center">
+                                      <div className="text-[8px] sm:text-[10px] font-bold text-white">
+                                        {pick.is_captain && projectedPoints !== null 
+                                          ? `${(projectedPoints * 2).toFixed(1)} (${projectedPoints.toFixed(1)})` 
+                                          : projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
+                                      </div>
+                                    </div>
                                     {fixture && (
-                                      <text x="202" y="270" fontSize="clamp(26px, 5vw, 30px)" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                      <div className="px-1 py-0.5 bg-gray-700 rounded text-center mt-0.5">
+                                        <div className="text-[6px] sm:text-[8px] font-medium text-white">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                      </div>
                                     )}
-                                  </svg>
+                                  </div>
                                   {/* Availability Badge for Pitch View */}
                                   <div className="flex justify-center mt-1">
                                     <TooltipProvider>
@@ -7087,35 +7106,52 @@ export default function TransferPlanner() {
                               </>
                             )}
                             
-                            <svg 
-                              viewBox="0 0 403 302" 
-                              className={`w-full drop-shadow-lg cursor-pointer transition-all ${selectedPlayer === pick.element ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg' : ''}`}
+                            {/* Bench Jersey Card with Real Image */}
+                            <div 
+                              className={`flex flex-col items-center cursor-pointer transition-all ${selectedPlayer === pick.element ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg' : ''}`}
                               onClick={() => setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element)}
                               data-testid={`pitch-bench-jersey-${pick.element}`}
                             >
-                              <defs><clipPath id={`jersey-bench-manual-${player.id}`}><path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" /></clipPath></defs>
-                              <rect width="403" height="302" fill={jerseyColor} clipPath={`url(#jersey-bench-manual-${player.id})`} />
-                              <path d="M 84 43 L 46 43 L 46 115 L 65 122 L 84 122 L 84 43 L 130 14 Q 137 14 144 23 L 158 36 L 173 43 Q 187 43 202 43 L 216 43 Q 230 43 245 36 L 259 23 Q 266 14 274 14 L 319 43 L 319 122 L 338 122 L 358 115 L 358 43 L 319 43 L 319 295 L 84 295 L 84 43 Z" fill="none" stroke="rgba(0,0,0,0.15)" strokeWidth="1.5" />
-                              <path d="M 130 14 L 144 26 L 158 36 L 173 42 Q 187 42 202 42 L 216 42 Q 230 42 245 36 L 259 26 L 274 14" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
-                              {pick.is_captain ? (
-                                <g><rect x="96" y="55" width="34" height="34" fill="rgb(254 240 138)" stroke="rgb(161 98 7)" strokeWidth="2" rx="4" /><text x="113" y="80" fontSize="22" fontWeight="bold" textAnchor="middle" fill="rgb(161 98 7)">C</text></g>
-                              ) : null}
-                              {pick.is_vice_captain ? (
-                                <g><rect x="96" y="55" width="38" height="34" fill="rgb(191 219 254)" stroke="rgb(29 78 216)" strokeWidth="2" rx="4" /><text x="115" y="80" fontSize="19" fontWeight="bold" textAnchor="middle" fill="rgb(29 78 216)">VC</text></g>
-                              ) : null}
-                              {player.in_dreamteam && (
-                                <g>
-                                  <circle cx="307" cy="72" r="18" fill="rgb(234 179 8)" stroke="white" strokeWidth="2.5" />
-                                  <path d="M 307 59 L 310 68 L 320 68 L 312 74 L 315 83 L 307 77 L 299 83 L 302 74 L 294 68 L 304 68 Z" fill="white" />
-                                </g>
-                              )}
-                              <text x="202" y="112" fontSize="clamp(28px, 5.5vw, 32px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{playerTeam?.short_name || 'UNK'}</text>
-                              <text x="202" y="165" fontSize="clamp(32px, 6vw, 34px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{player.web_name}</text>
-                              <text x="202" y="210" fontSize="clamp(42px, 7.2vw, 42px)" fontWeight="bold" textAnchor="middle" fill={textColor}>{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</text>
+                              <div className="relative">
+                                <img 
+                                  src={getJerseyImageUrl(getTeamCode(playerTeam), player.element_type === 1)}
+                                  alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                  className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                  }}
+                                />
+                                {pick.is_captain && (
+                                  <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-300 rounded-full flex items-center justify-center border border-yellow-600 shadow-sm">
+                                    <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
+                                  </div>
+                                )}
+                                {pick.is_vice_captain && !pick.is_captain && (
+                                  <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-blue-600 shadow-sm">
+                                    <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
+                                  </div>
+                                )}
+                                {player.in_dreamteam && (
+                                  <div className="absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                    <span className="text-[8px] text-white">★</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                <div className="text-[7px] sm:text-[9px] font-semibold text-gray-600 truncate">{playerTeam?.short_name || 'UNK'}</div>
+                              </div>
+                              <div className="px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                <div className="text-[8px] sm:text-[10px] font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">{player.web_name}</div>
+                              </div>
+                              <div className="px-2 py-0.5 bg-gray-500 rounded text-center">
+                                <div className="text-[8px] sm:text-[10px] font-bold text-white">{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</div>
+                              </div>
                               {fixture && (
-                                <text x="202" y="268" fontSize="clamp(26px, 5vw, 30px)" fontWeight="bold" textAnchor="middle" fill={textColor}>vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</text>
+                                <div className="px-1 py-0.5 bg-gray-700 rounded text-center mt-0.5">
+                                  <div className="text-[6px] sm:text-[8px] font-medium text-white">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                </div>
                               )}
-                            </svg>
+                            </div>
                             {/* Availability Badge for Bench Players */}
                             <div className="flex justify-center mt-1">
                               <TooltipProvider>
