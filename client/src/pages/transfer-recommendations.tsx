@@ -909,10 +909,8 @@ export default function TransferRecommendations() {
                             <div>
                               <div className="text-xs text-gray-500">Free Transfers</div>
                               <div className="text-sm font-bold text-green-700" data-testid={`free-transfers-gw${gw}`}>
-                                {getFreeTransfersRemaining(gw)}
-                                {(getAppliedTransfersForGW(gw).length > 0 || getCascadedFreeTransfersAvailable(gw) !== finances.ftsAvailable) && (
-                                  <span className="text-xs text-gray-500 ml-1">(of {getCascadedFreeTransfersAvailable(gw)})</span>
-                                )}
+                                {getFreeTransfersRemaining(gw)} remaining
+                                <span className="text-xs text-gray-500 ml-1">({getCascadedFreeTransfersAvailable(gw)} available)</span>
                               </div>
                             </div>
                           </div>
