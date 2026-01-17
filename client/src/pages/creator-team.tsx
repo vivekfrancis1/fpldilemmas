@@ -40,6 +40,7 @@ import {
   List
 } from "lucide-react";
 import { PitchView, type PitchPlayer } from "@/components/pitch-view";
+import { ListView, type ListPlayer } from "@/components/list-view";
 import { getPositionFromElementType } from "@/lib/pitch-utils";
 
 type TeamPick = {
@@ -651,147 +652,34 @@ export default function CreatorTeam() {
                 
                 {/* List View - Team Formation Display */}
                 {teamView === "list" && (
-                <div className="grid gap-6 lg:grid-cols-5">
-                  {/* Starting XI */}
-                  <div className="lg:col-span-3">
-                    <Card className="bg-white shadow-lg border border-gray-200">
-                      <CardHeader className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-t-lg">
-                        <CardTitle className="flex items-center gap-2">
-                          <Users className="h-5 w-5" />
-                          Starting XI
-                        </CardTitle>
-                        <CardDescription className="text-emerald-50">
-                          Current team formation
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="p-0">
-                        <div className="space-y-0">
-                          {startingEleven.map((player, idx) => (
-                            <div
-                              key={`starting-${idx}`}
-                              className={`flex items-center justify-between p-4 border-l-4 hover:bg-gray-50 transition-colors ${
-                                player.is_captain 
-                                  ? 'bg-amber-50 border-amber-400' 
-                                  : player.is_vice_captain 
-                                  ? 'bg-blue-50 border-blue-400' 
-                                  : 'border-gray-200 hover:border-gray-300'
-                              }`}
-                            >
-                              <div className="flex items-center gap-3 flex-1">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-semibold text-gray-900">{player.player_name}</span>
-                                    {player.is_captain && (
-                                      <Badge className="bg-amber-500 hover:bg-amber-600 text-white text-xs px-2 py-1">C</Badge>
-                                    )}
-                                    {player.is_vice_captain && (
-                                      <Badge variant="outline" className="border-blue-300 text-blue-700 text-xs px-2 py-1">VC</Badge>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-sm font-medium text-gray-700">{player.team_name}</span>
-                                    <Badge className={`text-xs ${getPositionColor(player.position)}`}>
-                                      {getPositionIcon(player.position)}
-                                      <span className="ml-1">{getPositionShortName(player.position)}</span>
-                                    </Badge>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right space-y-1">
-                                {(() => {
-                                  const playerData = getPlayerData(player.element);
-                                  return playerData ? (
-                                    <>
-                                      <p className="font-semibold text-green-600">{formatPrice(playerData.now_cost)}</p>
-                                      {player.is_captain ? (
-                                        <div className="space-y-1">
-                                          <p className="text-sm font-semibold text-amber-600">
-                                            {getPlayerDisplayPoints(playerData, playerData.team, true)}
-                                          </p>
-                                          <p className="text-xs text-gray-500">
-                                            {!isNaN(Number(getPlayerDisplayPoints(playerData, playerData.team, false))) && `(${getPlayerDisplayPoints(playerData, playerData.team, false)}×2 captain)`}
-                                          </p>
-                                        </div>
-                                      ) : (
-                                        <p className="text-sm text-gray-600">{getPlayerDisplayPoints(playerData, playerData.team, false)}</p>
-                                      )}
-                                      {player.multiplier > 1 && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {player.multiplier}x
-                                        </Badge>
-                                      )}
-                                    </>
-                                  ) : (
-                                    <>
-                                      {player.multiplier > 1 && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {player.multiplier}x
-                                        </Badge>
-                                      )}
-                                    </>
-                                  );
-                                })()}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Substitutes */}
-                  {substitutes.length > 0 && (
-                    <div className="lg:col-span-2">
-                      <Card className="bg-white shadow-lg border border-gray-200">
-                        <CardHeader className="bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-t-lg">
-                          <CardTitle className="flex items-center gap-2">
-                            <Users className="h-5 w-5" />
-                            Bench
-                          </CardTitle>
-                          <CardDescription className="text-gray-100">
-                            Substitute players
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                          <div className="space-y-0">
-                            {substitutes.map((player, idx) => (
-                              <div
-                                key={`sub-${idx}`}
-                                className="flex items-center justify-between p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
-                              >
-                                <div className="flex items-center gap-3 flex-1">
-                                  <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center text-xs font-medium text-gray-600">
-                                    {idx + 1}
-                                  </div>
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2">
-                                      <span className="font-semibold text-gray-800">{player.player_name}</span>
-                                      <Badge variant="outline" className="text-xs px-2 py-1">{getPositionShortName(player.position)}</Badge>
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <span className="text-sm font-medium text-gray-700">{player.team_name}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="text-right space-y-1">
-                                  {(() => {
-                                    const playerData = getPlayerData(player.element);
-                                    return playerData ? (
-                                      <>
-                                        <p className="font-semibold text-green-600">{formatPrice(playerData.now_cost)}</p>
-                                        <p className="text-sm text-gray-600">{getPlayerDisplayPoints(playerData, playerData.team, false)}</p>
-                                      </>
-                                    ) : null;
-                                  })()}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-                </div>
+                  <ListView
+                    startingPlayers={pitchPlayers.map(p => ({
+                      ...p,
+                      now_cost: getPlayerData(p.element)?.now_cost,
+                      form: getPlayerData(p.element)?.form,
+                      selected_by_percent: getPlayerData(p.element)?.selected_by_percent,
+                    }))}
+                    benchPlayers={benchPlayers.map(p => ({
+                      ...p,
+                      now_cost: getPlayerData(p.element)?.now_cost,
+                      form: getPlayerData(p.element)?.form,
+                      selected_by_percent: getPlayerData(p.element)?.selected_by_percent,
+                    }))}
+                    title="Starting XI"
+                    subtitle="Current team formation"
+                    benchTitle="Bench"
+                    benchSubtitle="Substitute players"
+                    formatPrice={formatPrice}
+                    getPositionName={(type) => getPositionFromElementType(type)}
+                    getPlayerDisplay={(player) => {
+                      const playerData = getPlayerData(player.element);
+                      if (!playerData) return "0 pts";
+                      return getPlayerDisplayPoints(playerData, playerData.team, player.is_captain);
+                    }}
+                    showForm={true}
+                    showOwnership={true}
+                    showPrice={true}
+                  />
                 )}
               </div>
 
