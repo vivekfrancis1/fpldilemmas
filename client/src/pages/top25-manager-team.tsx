@@ -213,13 +213,8 @@ function getRankChangeDisplay(rankChange: number) {
 
 export default function Top25ManagerTeam() {
   const { rank } = useParams<{ rank: string }>();
-  // Default to pitch view on desktop (>=768px), list view on mobile
-  const [teamView, setTeamView] = useState<"list" | "pitch">(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768 ? "pitch" : "list";
-    }
-    return "list";
-  });
+  // Always default to pitch view
+  const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
   
   // Find manager info from our static data
   const managerInfo = TOP_25_MANAGERS.find(m => m.rank === parseInt(rank || '0'));
@@ -693,8 +688,8 @@ export default function Top25ManagerTeam() {
               <div>
                 <h2 className="text-xl font-semibold mb-4">Team Squad</h2>
                 
-                {/* View Toggle - Hidden on mobile */}
-                <div className="hidden md:flex justify-center gap-2 mb-6">
+                {/* View Toggle */}
+                <div className="flex justify-center gap-2 mb-4 sm:mb-6">
                   <Button
                     variant={teamView === "pitch" ? "default" : "outline"}
                     onClick={() => setTeamView("pitch")}

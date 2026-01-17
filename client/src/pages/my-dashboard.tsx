@@ -287,19 +287,9 @@ export default function MyDashboard() {
   const { user } = useAuth();
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
-  // Default to pitch view on desktop (>=768px), list view on mobile
-  const [teamView, setTeamView] = useState<"list" | "pitch">(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768 ? "pitch" : "list";
-    }
-    return "list";
-  });
-  const [nextTeamView, setNextTeamView] = useState<"list" | "pitch">(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768 ? "pitch" : "list";
-    }
-    return "list";
-  });
+  // Always default to pitch view
+  const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
+  const [nextTeamView, setNextTeamView] = useState<"pitch" | "list">("pitch");
   
   // Live standings state - tracks which league's live standings panel is open
   const [selectedLiveLeague, setSelectedLiveLeague] = useState<number | null>(null);
@@ -1514,8 +1504,8 @@ export default function MyDashboard() {
                     </Card>
                   </div>
 
-                  {/* View Toggle - Hidden on mobile */}
-                  <div className="hidden md:flex justify-center gap-2">
+                  {/* View Toggle */}
+                  <div className="flex justify-center gap-2">
                     <Button
                       variant={teamView === "pitch" ? "default" : "outline"}
                       onClick={() => setTeamView("pitch")}
@@ -1536,7 +1526,7 @@ export default function MyDashboard() {
                     </Button>
                   </div>
 
-                  {/* Pitch View - Hidden on mobile */}
+                  {/* Pitch View */}
                   {teamView === "pitch" && (
                     <div className="space-y-4">
                       {/* Pitch */}
@@ -2338,8 +2328,8 @@ export default function MyDashboard() {
                       );
                     })()}
 
-                    {/* View Toggle - Hidden on mobile */}
-                    <div className="hidden md:flex justify-center gap-2 mb-2">
+                    {/* View Toggle */}
+                    <div className="flex justify-center gap-2 mb-2">
                       <Button
                         variant={nextTeamView === "pitch" ? "default" : "outline"}
                         onClick={() => setNextTeamView("pitch")}
@@ -2360,9 +2350,9 @@ export default function MyDashboard() {
                       </Button>
                     </div>
 
-                    {/* Pitch View - Hidden on mobile */}
+                    {/* Pitch View */}
                     {nextTeamView === "pitch" && (
-                      <div className="space-y-4 hidden md:block mt-6">
+                      <div className="space-y-4 mt-6">
                         {/* Pitch with players */}
                         <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
                           {/* Pitch Lines */}

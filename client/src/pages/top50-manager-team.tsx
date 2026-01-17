@@ -217,13 +217,8 @@ export default function Top50ManagerTeam() {
     retry: 2,
   });
 
-  // Team view state (pitch or list) - Default to pitch on desktop, list on mobile
-  const [teamView, setTeamView] = useState<"pitch" | "list">(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768 ? "pitch" : "list";
-    }
-    return "list";
-  });
+  // Always default to pitch view
+  const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
 
   // Get bootstrap data to determine completed gameweeks
   const { data: bootstrapData } = useQuery<any>({
@@ -679,8 +674,8 @@ export default function Top50ManagerTeam() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold">Team Squad</h2>
                   
-                  {/* View Toggle - Hidden on mobile */}
-                  <div className="hidden md:flex gap-2">
+                  {/* View Toggle */}
+                  <div className="flex gap-2">
                     <Button
                       variant={teamView === "pitch" ? "default" : "outline"}
                       size="sm"

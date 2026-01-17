@@ -869,13 +869,8 @@ export default function TransferPlanner() {
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<number | null>(null);
-  // Default to pitch view on desktop (>=768px), list view on mobile
-  const [teamView, setTeamView] = useState<"list" | "pitch">(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768 ? "pitch" : "list";
-    }
-    return "list";
-  });
+  // Always default to pitch view
+  const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
   const [manualLineup, setManualLineup] = useState<TeamPick[]>([]);
   const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
   
@@ -6029,8 +6024,8 @@ export default function TransferPlanner() {
             <div className="flex flex-col gap-3 mb-4">
               {/* All buttons in one row */}
               <div className="flex flex-wrap justify-center items-center gap-2">
-                {/* View Toggle - Hidden on mobile */}
-                <div className="hidden md:flex gap-2">
+                {/* View Toggle */}
+                <div className="flex gap-2">
                   <Button
                     variant={teamView === "pitch" ? "default" : "outline"}
                     onClick={() => setTeamView("pitch")}
