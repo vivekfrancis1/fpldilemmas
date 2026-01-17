@@ -640,16 +640,18 @@ export default function CreatorTeam() {
                 
                 {/* Pitch View */}
                 {teamView === "pitch" && (
-                  <Card className="bg-white shadow-lg border border-gray-200 overflow-hidden">
-                    <CardContent className="p-4 sm:p-6">
-                      <PitchView 
-                        players={pitchPlayers}
-                        benchPlayers={benchPlayers}
-                        getNextFixtures={getNextFixtures}
-                        showFixtures={true}
-                      />
-                    </CardContent>
-                  </Card>
+                  <div className="-mx-2 sm:mx-0">
+                    <Card className="bg-white shadow-none sm:shadow-lg border-0 sm:border border-gray-200 overflow-hidden">
+                      <CardContent className="p-2 sm:p-6">
+                        <PitchView 
+                          players={pitchPlayers}
+                          benchPlayers={benchPlayers}
+                          getNextFixtures={getNextFixtures}
+                          showFixtures={true}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
                 )}
                 
                 {/* List View - Team Formation Display */}

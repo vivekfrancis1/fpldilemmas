@@ -719,15 +719,13 @@ export default function Top25ManagerTeam() {
                 {teamView === "pitch" && (
                   <div className="-mx-2 sm:mx-0">
                     <Card className="bg-white shadow-none sm:shadow-lg border-0 sm:border border-gray-200 overflow-hidden">
-                      <CardContent className="p-0 sm:p-6">
-                        <div className="h-[calc(100vh-6rem)] sm:h-auto">
-                          <PitchView 
-                            players={pitchPlayers}
-                            benchPlayers={benchPlayers}
-                            getNextFixtures={getNextFixtures}
-                            showFixtures={true}
-                          />
-                        </div>
+                      <CardContent className="p-2 sm:p-6">
+                        <PitchView 
+                          players={pitchPlayers}
+                          benchPlayers={benchPlayers}
+                          getNextFixtures={getNextFixtures}
+                          showFixtures={true}
+                        />
                       </CardContent>
                     </Card>
                   </div>

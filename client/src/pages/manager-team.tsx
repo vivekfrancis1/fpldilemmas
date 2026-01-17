@@ -785,12 +785,18 @@ export default function ManagerTeam() {
 
                 {/* Pitch View */}
                 {teamView === "pitch" && (
-                  <PitchView 
-                    players={pitchPlayers}
-                    benchPlayers={benchPlayers}
-                    getNextFixtures={getNextFixtures}
-                    showFixtures={false}
-                  />
+                  <div className="-mx-2 sm:mx-0">
+                    <Card className="bg-white shadow-none sm:shadow-lg border-0 sm:border border-gray-200 overflow-hidden">
+                      <CardContent className="p-2 sm:p-6">
+                        <PitchView 
+                          players={pitchPlayers}
+                          benchPlayers={benchPlayers}
+                          getNextFixtures={getNextFixtures}
+                          showFixtures={false}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
                 )}
 
                 {/* List View */}
