@@ -301,6 +301,9 @@ export default function MyDashboard() {
     return "list";
   });
   
+  // Pitch display mode - "points" shows name/points, "team" shows team/name/opponent
+  const [pitchDisplayMode, setPitchDisplayMode] = useState<"points" | "team">("points");
+  
   // Live standings state - tracks which league's live standings panel is open
   const [selectedLiveLeague, setSelectedLiveLeague] = useState<number | null>(null);
 
