@@ -881,59 +881,96 @@ export default function TeamOptimizer() {
     return recommendations;
   };
 
+  // Get position badge styling
+  const getPositionBadge = (elementType: number) => {
+    const positionMap: { [key: number]: { label: string; color: string } } = {
+      1: { label: 'GKP', color: 'bg-yellow-500 text-white' },
+      2: { label: 'DEF', color: 'bg-green-500 text-white' },
+      3: { label: 'MID', color: 'bg-blue-500 text-white' },
+      4: { label: 'FWD', color: 'bg-red-500 text-white' },
+    };
+    return positionMap[elementType] || { label: '?', color: 'bg-gray-500 text-white' };
+  };
+
   // Render player row
-  const renderPlayerRow = (pick: any, gw: any) => {
+  const renderPlayerRow = (pick: any, gw: any, index: number, isBench: boolean = false) => {
     const player = getPlayerById(pick.element);
     if (!player) return null;
 
     const points = pick.projectedPoints || 0;
     const fixtureInfo = getPlayerFixtureInfo(player.id, gw.id);
+    const position = getPositionBadge(player.element_type);
+    const isEvenRow = index % 2 === 0;
 
     return (
-      <TableRow key={`${player.id}-${gw.id}`} className={!pick.benchPosition ? "bg-green-50/50 dark:bg-green-950/10" : "opacity-60"}>
-        <TableCell className="sticky left-0 z-10 bg-white dark:bg-background text-[10px] sm:text-xs min-w-[120px] sm:min-w-[140px] md:min-w-[180px]">
-          <div className="flex items-center justify-between gap-1">
+      <TableRow 
+        key={`${player.id}-${gw.id}`} 
+        className={`
+          ${isBench 
+            ? 'bg-gray-50/80 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400' 
+            : isEvenRow 
+              ? 'bg-white dark:bg-background' 
+              : 'bg-gray-50/50 dark:bg-gray-900/30'
+          }
+          hover:bg-purple-50/50 dark:hover:bg-purple-900/20 transition-colors
+        `}
+      >
+        <TableCell className="sticky left-0 z-10 py-2.5 sm:py-3">
+          <div className={`flex items-center gap-2 sm:gap-3 ${isBench ? 'bg-gray-50/80 dark:bg-gray-800/50' : isEvenRow ? 'bg-white dark:bg-background' : 'bg-gray-50/50 dark:bg-gray-900/30'}`}>
+            <Badge className={`${position.color} text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 min-w-[32px] sm:min-w-[38px] text-center`}>
+              {position.label}
+            </Badge>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                {player.web_name}
-              </div>
-              <div className="text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-1 flex-wrap">
-                <span className="truncate">
-                  {bootstrapData?.teams.find(t => t.id === player.team)?.short_name || ''}
+              <div className="flex items-center gap-1.5">
+                <span className={`font-semibold text-xs sm:text-sm truncate ${isBench ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
+                  {player.web_name}
                 </span>
-                {fixtureInfo && (
-                  <Badge variant="outline" className="text-[8px] sm:text-[9px] px-0.5 sm:px-1 py-0 border-gray-300 dark:border-gray-600 whitespace-nowrap">
-                    vs {fixtureInfo.opponent} ({fixtureInfo.isHome ? 'H' : 'A'})
+                {pick.isCaptain && (
+                  <Badge className="bg-gradient-to-r from-yellow-400 to-amber-500 text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 font-bold shadow-sm">
+                    C
+                  </Badge>
+                )}
+                {pick.isViceCaptain && (
+                  <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 border-yellow-400 text-yellow-600 dark:text-yellow-400 font-bold">
+                    V
                   </Badge>
                 )}
               </div>
-            </div>
-            <div className="flex items-center gap-0.5 flex-shrink-0">
-              {pick.isCaptain && (
-                <Badge className="bg-yellow-500 text-white text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0.5 h-3.5 sm:h-4 flex items-center gap-0.5">
-                  <Crown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
-                  <span className="hidden sm:inline">C</span>
-                </Badge>
-              )}
-              {pick.isViceCaptain && (
-                <Badge variant="outline" className="text-[9px] sm:text-[10px] px-0.5 sm:px-1 py-0.5 h-3.5 sm:h-4 border-yellow-500 text-yellow-600 dark:text-yellow-400 flex items-center gap-0.5">
-                  <Crown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
-                  <span className="hidden sm:inline">V</span>
-                </Badge>
-              )}
-              <div className="hidden sm:block">
-                <PlayerAvailabilityBadge player={player} />
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={`text-[10px] sm:text-xs ${isBench ? 'text-gray-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                  {bootstrapData?.teams.find(t => t.id === player.team)?.short_name || ''}
+                </span>
+                {fixtureInfo && (
+                  <span className={`text-[10px] sm:text-xs ${fixtureInfo.isHome ? 'text-green-600 dark:text-green-400' : 'text-blue-600 dark:text-blue-400'}`}>
+                    {fixtureInfo.isHome ? '(H)' : '(A)'} {fixtureInfo.opponent}
+                  </span>
+                )}
+                <div className="hidden sm:block">
+                  <PlayerAvailabilityBadge player={player} />
+                </div>
               </div>
             </div>
           </div>
         </TableCell>
-        <TableCell className="hidden lg:table-cell text-center font-medium text-gray-900 dark:text-gray-100 text-xs">
-          £{(player.now_cost / 10).toFixed(1)}m
-        </TableCell>
-        <TableCell className="text-center">
-          <span className="font-bold text-purple-600 dark:text-purple-400 text-xs sm:text-sm">
-            {points.toFixed(1)}
+        <TableCell className="hidden lg:table-cell text-center py-2.5 sm:py-3">
+          <span className={`font-medium text-xs sm:text-sm ${isBench ? 'text-gray-400' : 'text-gray-700 dark:text-gray-300'}`}>
+            £{(player.now_cost / 10).toFixed(1)}m
           </span>
+        </TableCell>
+        <TableCell className="text-center py-2.5 sm:py-3">
+          <div className={`inline-flex items-center justify-center min-w-[40px] sm:min-w-[50px] px-2 py-1 rounded-md ${
+            isBench 
+              ? 'bg-gray-100 dark:bg-gray-700' 
+              : 'bg-purple-100 dark:bg-purple-900/50'
+          }`}>
+            <span className={`font-bold text-sm sm:text-base ${
+              isBench 
+                ? 'text-gray-500 dark:text-gray-400' 
+                : 'text-purple-700 dark:text-purple-300'
+            }`}>
+              {points.toFixed(1)}
+            </span>
+          </div>
         </TableCell>
       </TableRow>
     );
@@ -1225,36 +1262,46 @@ export default function TeamOptimizer() {
 
         {/* Optimized Lineup Table */}
         {selectedGameweek && optimizedLineups.get(selectedGameweek) && (
-          <Card>
-            <CardHeader className="pb-3 sm:pb-4">
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="pb-3 sm:pb-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-t-lg">
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg">
-                  <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-                  <span className="truncate">GW{selectedGameweek} Optimized Lineup</span>
+                <CardTitle className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base md:text-lg font-bold">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <span>GW{selectedGameweek} Optimized Lineup</span>
                 </CardTitle>
                 {(() => {
                   const gwLineup = optimizedLineups.get(selectedGameweek);
                   if (gwLineup?.starting11) {
                     const formation = calculateFormation(gwLineup.starting11);
+                    const totalPoints = gwLineup.starting11.reduce((sum: number, p: any) => sum + (p.projectedPoints || 0), 0);
                     return (
-                      <Badge variant="secondary" className="text-[10px] sm:text-xs md:text-sm px-1.5 sm:px-2 py-0.5 sm:py-1">
-                        {formation}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-white/20 text-white border-white/30 text-[10px] sm:text-xs px-2 py-0.5">
+                          {formation}
+                        </Badge>
+                        <Badge className="bg-white text-purple-700 font-bold text-[10px] sm:text-xs px-2 py-0.5">
+                          {totalPoints.toFixed(1)} pts
+                        </Badge>
+                      </div>
                     );
                   }
                   return null;
                 })()}
               </div>
             </CardHeader>
-            <CardContent className="px-0 sm:px-6">
-              <div className="overflow-x-auto -mx-2 sm:mx-0">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="sticky left-0 z-10 bg-white dark:bg-background text-[10px] sm:text-xs min-w-[120px] sm:min-w-[140px] md:min-w-[180px]">Player</TableHead>
-                      <TableHead className="hidden lg:table-cell text-center text-[10px] sm:text-xs">Price</TableHead>
-                      <TableHead className="text-center text-[10px] sm:text-xs">
-                        GW{selectedGameweek}
+                    <TableRow className="bg-gray-100 dark:bg-gray-800 border-b-2 border-purple-200 dark:border-purple-800">
+                      <TableHead className="sticky left-0 z-10 bg-gray-100 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 min-w-[180px] sm:min-w-[220px] py-3">
+                        Player
+                      </TableHead>
+                      <TableHead className="hidden lg:table-cell text-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 py-3">
+                        Price
+                      </TableHead>
+                      <TableHead className="text-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 py-3 min-w-[70px]">
+                        Pts
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1267,15 +1314,18 @@ export default function TeamOptimizer() {
 
                       return (
                         <>
-                          {starting.map(pick => renderPlayerRow(pick, gw))}
+                          {starting.map((pick, idx) => renderPlayerRow(pick, gw, idx, false))}
                           {bench.length > 0 && (
-                            <TableRow className="bg-gray-100 dark:bg-gray-800">
-                              <TableCell colSpan={3} className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 py-1.5 sm:py-2">
-                                Bench
+                            <TableRow className="border-t-2 border-gray-300 dark:border-gray-600">
+                              <TableCell colSpan={3} className="bg-gray-200 dark:bg-gray-700 py-2">
+                                <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                                  Bench
+                                </div>
                               </TableCell>
                             </TableRow>
                           )}
-                          {bench.map(pick => renderPlayerRow(pick, gw))}
+                          {bench.map((pick, idx) => renderPlayerRow(pick, gw, idx, true))}
                         </>
                       );
                     })()}
