@@ -707,23 +707,17 @@ export default function TeamOptimizer() {
     };
     
     const hasSecondHalfChipAvailable = (chipName: string) => {
-      const firstHalfUsed = countFirstHalfChipUses(chipName);
       const secondHalfUsed = countSecondHalfChipUses(chipName);
-      const totalMax = chipMaxUses[chipName] || 1;
       
       // If second-half chip already used, not available
       if (secondHalfUsed > 0) return false;
       
-      // If we've already used the allotted chips, none available
-      if (firstHalfUsed + secondHalfUsed >= totalMax) return false;
+      // In FPL 2024/25, each chip can be used twice:
+      // - First use must be in GW1-19 (first-half)
+      // - Second use is available from GW20+ (second-half)
+      // The second-half chip is always available if not yet used, regardless of first-half usage
       
-      // If we've used the first-half chip and it's expired, check if we still have one for second-half
-      if (firstHalfChipsExpired && firstHalfUsed > 0) {
-        // First-half chip was used and expired, so we don't have a second-half chip
-        return false;
-      }
-      
-      // Show recommendations for planning purposes (even if not unlocked yet)
+      // Show recommendations for second-half chips (GW20+)
       return true;
     };
 
