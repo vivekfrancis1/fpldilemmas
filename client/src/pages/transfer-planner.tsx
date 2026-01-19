@@ -5396,50 +5396,6 @@ export default function TransferPlanner() {
         );
       })()}
 
-      {/* Gameweek Selection Section - Always visible */}
-      {searchedId && teamData && selectedGameweek && (
-        <Collapsible open={isGameweekSelectionOpen} onOpenChange={setIsGameweekSelectionOpen}>
-          <Card className="bg-background shadow-sm border">
-            <CollapsibleTrigger asChild>
-              <CardHeader className="py-3 px-3 sm:px-6 cursor-pointer hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-purple-600" />
-                    <span className="text-base sm:text-lg font-semibold">Select Gameweek</span>
-                    <Badge variant="secondary" className="text-xs sm:text-sm px-2 py-0.5">GW {selectedGameweek}</Badge>
-                  </div>
-                  {isGameweekSelectionOpen ? (
-                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="pt-0 pb-4 px-3 sm:px-6">
-                <div className="flex gap-2 flex-wrap items-center">
-                  {nextGameweeks.map(gw => (
-                    <Button
-                      key={gw.id}
-                      variant={selectedGameweek === gw.id ? "default" : "outline"}
-                      className="h-8 sm:h-9 text-sm sm:text-base font-semibold min-w-[2.5rem] px-2 sm:px-3"
-                      onClick={() => {
-                        setSelectedPlayer(null);
-                        setSelectedGameweek(gw.id);
-                      }}
-                      data-testid={`gw-button-${gw.id}`}
-                    >
-                      {gw.id}
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
-
       {/* Draft Selection Section - Collapsed by default */}
       {searchedId && teamData && selectedGameweek && (
         <Collapsible open={isDraftSelectionOpen} onOpenChange={setIsDraftSelectionOpen}>
@@ -5588,7 +5544,7 @@ export default function TransferPlanner() {
         </Collapsible>
       )}
 
-      {/* Chips Planning */}
+      {/* Chip Selection */}
       {searchedId && teamData && selectedGameweek && (
         <Collapsible open={isChipsPlanningOpen} onOpenChange={setIsChipsPlanningOpen}>
           <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background">
@@ -5596,7 +5552,7 @@ export default function TransferPlanner() {
               <div className="flex items-start justify-between gap-2">
                 <CardTitle className="flex items-center gap-2 text-base md:text-lg" data-testid="text-chips-planning-title">
                   <Sparkles className="h-4 w-4 md:h-5 md:w-5 text-amber-600" />
-                  <span>Chips Planning</span>
+                  <span>Chip Selection</span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -5691,7 +5647,7 @@ export default function TransferPlanner() {
               })}
             </div>
 
-            {/* Chip Planning for Upcoming Gameweeks */}
+            {/* Chip Selection for Upcoming Gameweeks */}
             <div className="border-t pt-3">
               <h4 className="text-xs md:text-sm font-semibold mb-2">Plan Chips for Upcoming Gameweeks</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -6003,6 +5959,50 @@ export default function TransferPlanner() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Gameweek Selection Section */}
+      {searchedId && teamData && selectedGameweek && (
+        <Collapsible open={isGameweekSelectionOpen} onOpenChange={setIsGameweekSelectionOpen}>
+          <Card className="bg-background shadow-sm border">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="py-3 px-3 sm:px-6 cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-purple-600" />
+                    <span className="text-base sm:text-lg font-semibold">Select Gameweek</span>
+                    <Badge variant="secondary" className="text-xs sm:text-sm px-2 py-0.5">GW {selectedGameweek}</Badge>
+                  </div>
+                  {isGameweekSelectionOpen ? (
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0 pb-4 px-3 sm:px-6">
+                <div className="flex gap-2 flex-wrap items-center">
+                  {nextGameweeks.map(gw => (
+                    <Button
+                      key={gw.id}
+                      variant={selectedGameweek === gw.id ? "default" : "outline"}
+                      className="h-8 sm:h-9 text-sm sm:text-base font-semibold min-w-[2.5rem] px-2 sm:px-3"
+                      onClick={() => {
+                        setSelectedPlayer(null);
+                        setSelectedGameweek(gw.id);
+                      }}
+                      data-testid={`gw-button-${gw.id}`}
+                    >
+                      {gw.id}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* Team Selection Section */}
