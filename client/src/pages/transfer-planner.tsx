@@ -5623,8 +5623,6 @@ export default function TransferPlanner() {
                   ) : (
                     <p><strong>Chips Used:</strong> None yet</p>
                   )}
-                  <p><strong>⚠️ Deadline:</strong> Bench Boost 1 and Free Hit 1 must be used before GW 19</p>
-                  <p><strong>Coming Soon:</strong> Second set of chips available from GW 20 onwards</p>
                 </div>
               </AlertDescription>
             </Alert>
