@@ -1449,9 +1449,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
 
-  // Bootstrap data cache (5 minutes)
+  // Bootstrap data cache (30 minutes - data doesn't change often)
   let bootstrapCache: { data: any; timestamp: number } | null = null;
-  const BOOTSTRAP_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const BOOTSTRAP_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+  let bootstrapInFlight: Promise<any> | null = null;
+
+  // Fixtures cache (30 minutes)
+  let fixturesCache: { data: any; timestamp: number } | null = null;
+  const FIXTURES_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+  let fixturesInFlight: Promise<any> | null = null;
 
   // Team calculation cache (10 minutes) - Option 5 implementation
   let teamCalculationCache = new Map<string, { data: any; timestamp: number }>();
@@ -1504,19 +1510,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return teamGoals;
   }
 
-  // Fixtures proxy endpoint
+  // Fixtures proxy endpoint with caching and in-flight de-duplication
   app.get("/api/fixtures", async (req, res) => {
     try {
-      const response = await fetch("https://fantasy.premierleague.com/api/fixtures/");
-      const data = await response.json();
+      const now = Date.now();
+      
+      // Check cache first
+      if (fixturesCache && (now - fixturesCache.timestamp) < FIXTURES_CACHE_DURATION) {
+        console.log("DEBUG: Serving fixtures from cache");
+        return res.json(fixturesCache.data);
+      }
+
+      // In-flight de-duplication
+      if (fixturesInFlight) {
+        console.log("DEBUG: Waiting for in-flight fixtures request");
+        const data = await fixturesInFlight;
+        return res.json(data);
+      }
+
+      // Start new fetch
+      fixturesInFlight = (async () => {
+        const response = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+        const data = await response.json();
+        fixturesCache = { data, timestamp: Date.now() };
+        console.log("DEBUG: Cached fresh fixtures data");
+        return data;
+      })();
+
+      const data = await fixturesInFlight;
+      fixturesInFlight = null;
       res.json(data);
     } catch (error) {
+      fixturesInFlight = null;
       console.error("Error fetching fixtures:", error);
       res.status(500).json({ error: "Failed to fetch fixtures" });
     }
   });
 
-  // Player data routes
+  // Player data routes with caching and in-flight de-duplication
   app.get("/api/bootstrap-static", async (req, res) => {
     try {
       // Check cache first
@@ -1526,47 +1557,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(bootstrapCache.data);
       }
 
-      const response = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
-      if (!response.ok) {
-        console.error(`FPL API responded with status: ${response.status}`);
-        return res.status(500).json({ error: "Failed to fetch bootstrap data" });
+      // In-flight de-duplication
+      if (bootstrapInFlight) {
+        console.log("DEBUG: Waiting for in-flight bootstrap-static request");
+        const data = await bootstrapInFlight;
+        return res.json(data);
       }
-      const data = await response.json();
-      
-      // Use hardcoded teams data for consistency and performance
-      const { PREMIER_LEAGUE_TEAMS } = await import("@shared/schema");
-      
-      // Add necessary FPL strength data to hardcoded teams
-      const teamsWithStrength = PREMIER_LEAGUE_TEAMS.map(team => ({
-        ...team,
-        draw: 0,
-        form: null,
-        loss: 0,
-        played: 0,
-        points: 0,
-        position: team.id,
-        strength: team.id <= 7 ? 4 : team.id <= 14 ? 3 : 2, // Simple strength assignment
-        team_division: null,
-        unavailable: false,
-        win: 0,
-        strength_overall_home: 1100 + (team.id * 5),
-        strength_overall_away: 1100 + (team.id * 5),
-        strength_attack_home: 1100 + (team.id * 5),
-        strength_attack_away: 1100 + (team.id * 5),
-        strength_defence_home: 1100 + (team.id * 5),
-        strength_defence_away: 1100 + (team.id * 5),
-        pulse_id: team.id
-      }));
-      
-      // Replace teams data with hardcoded version
-      data.teams = teamsWithStrength;
-      
-      // Cache the processed data
-      bootstrapCache = { data, timestamp: now };
-      console.log("DEBUG: Cached fresh bootstrap-static data");
-      
+
+      // Start new fetch
+      bootstrapInFlight = (async () => {
+        const response = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
+        if (!response.ok) {
+          throw new Error(`FPL API responded with status: ${response.status}`);
+        }
+        const data = await response.json();
+        
+        // Use hardcoded teams data for consistency and performance
+        const { PREMIER_LEAGUE_TEAMS } = await import("@shared/schema");
+        
+        // Add necessary FPL strength data to hardcoded teams
+        const teamsWithStrength = PREMIER_LEAGUE_TEAMS.map(team => ({
+          ...team,
+          draw: 0,
+          form: null,
+          loss: 0,
+          played: 0,
+          points: 0,
+          position: team.id,
+          strength: team.id <= 7 ? 4 : team.id <= 14 ? 3 : 2,
+          team_division: null,
+          unavailable: false,
+          win: 0,
+          strength_overall_home: 1100 + (team.id * 5),
+          strength_overall_away: 1100 + (team.id * 5),
+          strength_attack_home: 1100 + (team.id * 5),
+          strength_attack_away: 1100 + (team.id * 5),
+          strength_defence_home: 1100 + (team.id * 5),
+          strength_defence_away: 1100 + (team.id * 5),
+          pulse_id: team.id
+        }));
+        
+        // Replace teams data with hardcoded version
+        data.teams = teamsWithStrength;
+        
+        // Cache the processed data
+        bootstrapCache = { data, timestamp: Date.now() };
+        console.log("DEBUG: Cached fresh bootstrap-static data");
+        
+        return data;
+      })();
+
+      const data = await bootstrapInFlight;
+      bootstrapInFlight = null;
       res.json(data);
     } catch (error) {
+      bootstrapInFlight = null;
       console.error("Error fetching FPL data:", error);
       res.status(500).json({
         error: "Failed to fetch FPL data",
@@ -6400,48 +6445,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Team Goal Projections endpoint  
+  // Team Goal Projections endpoint with caching
   app.get("/api/team-goal-projections", 
     requireReadiness(['bootstrap-data'], 'team-goal-projections'),
     async (req, res) => {
-    // FORCE disable all caching to ensure admin changes reflect immediately
-    res.set('Cache-Control', 'no-cache, no-store, must-revalidate, private, max-age=0');
-    res.set('Pragma', 'no-cache');
-    res.set('Expires', '0');
-    res.set('Last-Modified', new Date().toUTCString());
-    res.set('ETag', `"${Date.now()}"`);
     try {
       console.log(`DEBUG: Team Goal Projections API called - generating next 12 gameweeks`);
       
-      // Use hardcoded teams for better performance, only fetch what we need from API
-      const { PREMIER_LEAGUE_TEAMS } = await import("@shared/schema");
-      
-      const [bootstrapResponse, fixturesResponse] = await Promise.all([
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("https://fantasy.premierleague.com/api/fixtures/")
-      ]);
-      
-      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API");
+      // Use internal cached bootstrap endpoint
+      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
       }
-      
       const bootstrapData = await bootstrapResponse.json();
-      const fixturesData = await fixturesResponse.json();
-      
-      // Use hardcoded teams instead of API teams
-      const teams = PREMIER_LEAGUE_TEAMS;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-      
-      // Use centralized team service
-      const teamService = await createTeamService();
-      const bettingData = teamService.getBettingData();
       
       // Process next 12 gameweeks
       const startGameweek = currentGameweek + 1;
       const endGameweek = Math.min(currentGameweek + 12, 38);
       console.log(`DEBUG: Processing next 12 gameweeks (GW${startGameweek}-${endGameweek}) for team goal projections, current GW: ${currentGameweek}`);
       
-      // Use centralized TeamGoalsService instead of duplicated calculation logic
+      // Use centralized TeamGoalsService with built-in caching and in-flight de-duplication
       const { TeamGoalsService } = await import('./team-goals-service');
       const teamProjections = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
       
@@ -6457,8 +6481,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log(`DEBUG: Team Assist Projections API called - generating next 12 gameweeks`);
       
-      // Get current gameweek from bootstrap data
-      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      // Get current gameweek from internal cached bootstrap endpoint
+      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
@@ -6500,19 +6524,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Team Clean Sheet Projections endpoint
+  // Team Clean Sheet Projections endpoint with caching
   app.get("/api/team-cs-projections", async (req, res) => {
     try {
       console.log(`DEBUG: Team CS Projections API called - generating next 12 gameweeks`);
       
+      // Use internal cached endpoints for better performance
       const [bootstrapResponse, fixturesResponse, goalsAgainstResponse] = await Promise.all([
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("https://fantasy.premierleague.com/api/fixtures/"),
+        fetch("http://localhost:5000/api/bootstrap-static"),
+        fetch("http://localhost:5000/api/fixtures"),
         fetch(`http://localhost:5000/api/team-goals-against-projections`)
       ]);
       
       if (!bootstrapResponse.ok || !fixturesResponse.ok || !goalsAgainstResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API");
+        throw new Error("Failed to fetch data from internal API");
       }
       
       const bootstrapData = await bootstrapResponse.json();
@@ -7558,8 +7583,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Ensure we have bootstrap data - CRITICAL FIX for null errors
       if (!savedGoalShareData || !savedGoalShareData.bootstrapData) {
-        // Fetch fresh bootstrap data if not available
-        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        // Fetch fresh bootstrap data if not available (using cached endpoint)
+        const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
         if (!bootstrapResponse.ok) {
           throw new Error("Failed to fetch bootstrap data");
         }
@@ -7581,10 +7606,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         goalShareData = savedGoalShareData.response;
         console.log(`DEBUG: Using saved data from savedGoalShareData`);
       } else {
-        // EMERGENCY: Fetch fresh data directly
+        // EMERGENCY: Fetch fresh data directly (using cached endpoints)
         console.log(`DEBUG: EMERGENCY - fetching fresh data directly due to null savedGoalShareData`);
         const [freshBootstrapResponse, freshGoalShareResponse] = await Promise.all([
-          fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+          fetch("http://localhost:5000/api/bootstrap-static"),
           fetch("http://localhost:5000/api/goal-share-season")
         ]);
         
@@ -7971,11 +7996,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("DEBUG: Player Assist Projections API called - using pure projections for next 6 gameweeks only");
       
-      // Fetch assist share season data, team assist projections, and bootstrap data
+      // Fetch assist share season data, team assist projections, and bootstrap data (using cached endpoints)
       const [assistShareResponse, teamAssistResponse, bootstrapResponse] = await Promise.all([
         fetch("http://localhost:5000/api/assist-share-season"),
         fetch("http://localhost:5000/api/team-assist-projections"),
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
+        fetch("http://localhost:5000/api/bootstrap-static")
       ]);
       
       if (!assistShareResponse.ok || !teamAssistResponse.ok || !bootstrapResponse.ok) {
@@ -7996,15 +8021,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (const teamData of assistShareData) {
         if (teamData.players && teamData.players.length > 0) {
-          // Find corresponding team assist projections by teamId
-          const teamProjections = teamAssistProjections.find((team: any) => team.id === teamData.teamId);
+          // Find corresponding team assist projections by teamId (team projections use .teamId not .id)
+          const teamProjections = teamAssistProjections.find((team: any) => team.teamId === teamData.teamId);
           
           if (!teamProjections) {
-            console.warn(`DEBUG: No team projections found for teamId ${teamData.teamId}. Available team IDs: ${teamAssistProjections.map((t: any) => t.id).join(', ')}`);
+            console.warn(`DEBUG: No team projections found for teamId ${teamData.teamId}. Available team IDs: ${teamAssistProjections.map((t: any) => t.teamId).join(', ')}`);
             continue;
           }
-          
-          console.log(`DEBUG: Successfully matched teamId ${teamData.teamId} with team projections for ${teamProjections.teamShort}`);
           
           for (const playerData of teamData.players) {
             if (playerData && playerData.assistShare && playerData.assistShare > 0) {
@@ -8067,8 +8090,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const filter = req.query.filter as string || 'full'; // 'full', 'last6', 'last8', 'last12'
       
-      // Fetch bootstrap data
-      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      // Fetch bootstrap data (using cached endpoint)
+      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch FPL bootstrap data");
       }

@@ -19,13 +19,16 @@ interface TeamGoalsServiceCache {
   timestamp: number;
 }
 
-// Cache for team goal calculations (10 minutes)
+// Cache for team goal calculations (30 minutes)
 let teamGoalsCache: TeamGoalsServiceCache | null = null;
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
-// Cache for current standings data (5 minutes)
+// In-flight request de-duplication
+let teamGoalsInFlight: Map<string, Promise<TeamGoalProjection[]>> = new Map();
+
+// Cache for current standings data (30 minutes)
 let currentStandingsCache: { data: any[], timestamp: number } | null = null;
-const STANDINGS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const STANDINGS_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
 export class TeamGoalsService {
   /**
@@ -60,6 +63,28 @@ export class TeamGoalsService {
       return teamGoalsCache.data;
     }
     
+    // In-flight de-duplication - if same calculation is already running, wait for it
+    if (teamGoalsInFlight.has(cacheKey)) {
+      console.log(`⏳ Waiting for in-flight team goals calculation for range ${cacheKey}`);
+      return teamGoalsInFlight.get(cacheKey)!;
+    }
+    
+    // Start the calculation and store the promise
+    const calculationPromise = TeamGoalsService.calculateTeamGoals(startGameweek, endGameweek, cacheKey);
+    teamGoalsInFlight.set(cacheKey, calculationPromise);
+    
+    try {
+      const result = await calculationPromise;
+      return result;
+    } finally {
+      teamGoalsInFlight.delete(cacheKey);
+    }
+  }
+
+  /**
+   * Internal calculation method for team goal projections
+   */
+  private static async calculateTeamGoals(startGameweek: number | undefined, endGameweek: number | undefined, cacheKey: string): Promise<TeamGoalProjection[]> {
     console.log(`🔄 Calculating team goals for range ${cacheKey}`);
     
     // Import required dependencies
@@ -70,14 +95,14 @@ export class TeamGoalsService {
     const adminGoalSettings = getAdminGoalSettings();
     const createTeamService = getCreateTeamService();
     
-    // Fetch required data
+    // Fetch required data using internal cached endpoints for better performance
     const [bootstrapResponse, fixturesResponse] = await Promise.all([
-      fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-      fetch("https://fantasy.premierleague.com/api/fixtures/")
+      fetch("http://localhost:5000/api/bootstrap-static"),
+      fetch("http://localhost:5000/api/fixtures")
     ]);
     
     if (!bootstrapResponse.ok || !fixturesResponse.ok) {
-      throw new Error("Failed to fetch data from FPL API");
+      throw new Error("Failed to fetch data from internal API");
     }
     
     const bootstrapData = await bootstrapResponse.json();
