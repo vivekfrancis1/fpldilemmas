@@ -53,8 +53,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "My FPL",
       items: [
         { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview" },
-        { path: "/projected-points", label: "Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false },
-        { path: "/team-optimizer", label: "Team & Chip Optimisation", icon: Zap, description: "Auto-optimize lineup and chip recommendations", popular: false },
+        { path: "/projected-points", label: "My Team Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false },
+        { path: "/team-optimizer", label: "Lineup & Chip Recommendations", icon: Zap, description: "Auto-optimize lineup and chip recommendations", popular: false },
         { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false },
         { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, mobileHidden: false }
       ]
@@ -62,12 +62,12 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Player Projections", 
       items: [
+        { path: "/player-total-points", label: "Total Projected Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: true },
         { path: "/player-goals-scored-projections", label: "Goals", icon: Trophy, description: "Individual player goal projections", popular: false },
         { path: "/player-assist-projections", label: "Assists", icon: Zap, description: "Individual player assist projections", popular: false },
         { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
         { path: "/player-saves", label: "Saves", icon: Shield, description: "Goalkeeper saves and penalty save projections", popular: false },
         { path: "/player-bonus-points", label: "Bonus Points", icon: Star, description: "Bonus point projections", popular: false },
-        { path: "/player-total-points", label: "Total Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: true },
         { path: "/best-freehit-team", label: "Best Freehit Team", icon: Users, description: "Optimal 15-player squad for maximum points with captain selection", popular: false },
         { path: "/best-wildcard-team", label: "Best Wildcard Team", icon: Star, description: "Optimal 15-player squad considering total points across next 6 gameweeks", popular: false }
         // { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
@@ -79,11 +79,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "Team Projections", 
       items: [
         { path: "/fixtures", label: "Fixture Analyzer", icon: Calendar, description: "Fixture difficulty analysis", popular: false },
+        { path: "/projected-goals-cs", label: "Match Predictions", icon: Target, description: "Projected goals & clean sheets", popular: true },
         { path: "/team-goal-projections", label: "Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-goals-against-projections", label: "Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
         { path: "/team-cs-projections", label: "Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false },
-        { path: "/projected-goals-cs", label: "Match Predictions", icon: Target, description: "Projected goals & clean sheets", popular: true },
-        { path: "/projected-standings", label: "Standings", icon: Trophy, description: "Final league table projection", popular: false }
+        { path: "/projected-standings", label: "Predicted Standings", icon: Trophy, description: "Final league table projection", popular: false }
       ]
     },
     {
