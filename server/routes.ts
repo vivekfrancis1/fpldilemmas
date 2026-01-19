@@ -1125,6 +1125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get authenticated transfers including upcoming gameweek (for Free Hit/Wildcard)
+  // Falls back to public endpoint if FPL session is expired
   app.get("/api/fpl/my-transfers", isAuthenticated, async (req: any, res) => {
     try {
       const userId = (req.user as any).id;
@@ -1136,15 +1137,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fplCookiesExpiry: users.fplCookiesExpiry
       }).from(users).where(eq(users.id, userId));
 
+      // Helper function to fall back to public transfers endpoint
+      const fetchPublicTransfers = async (managerId: number) => {
+        console.log(`DEBUG my-transfers: Falling back to public endpoint for manager ${managerId}`);
+        const publicResponse = await internalFetch(`api/manager/${managerId}/transfers`);
+        if (publicResponse.ok) {
+          const data = await publicResponse.json();
+          console.log(`DEBUG my-transfers: Public fallback returned ${data.length} transfers`);
+          return res.json(data);
+        }
+        throw new Error('Public endpoint also failed');
+      };
+
       if (!user || !user.fplManagerId || !user.fplSessionCookies) {
         console.log('DEBUG my-transfers: FPL account not connected');
+        // Fall back to public endpoint if we have managerId
+        if (user?.fplManagerId) {
+          return await fetchPublicTransfers(user.fplManagerId);
+        }
         return res.status(401).json({ error: 'FPL account not connected' });
       }
 
-      // Check if token is expired
+      // Check if token is expired - fall back to public endpoint
       if (user.fplCookiesExpiry && new Date(user.fplCookiesExpiry) < new Date()) {
-        console.log('DEBUG my-transfers: FPL session expired');
-        return res.status(401).json({ error: 'FPL session expired, please reconnect' });
+        console.log('DEBUG my-transfers: FPL session expired, using public fallback');
+        return await fetchPublicTransfers(user.fplManagerId);
       }
 
       // Extract Bearer token robustly from different formats
@@ -1196,8 +1213,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!transfersResponse.ok) {
-        console.log(`DEBUG my-transfers: FPL API returned ${transfersResponse.status}`);
-        return res.status(401).json({ error: 'Failed to fetch FPL transfers, session may be expired' });
+        console.log(`DEBUG my-transfers: FPL API returned ${transfersResponse.status}, falling back to public endpoint`);
+        return await fetchPublicTransfers(user.fplManagerId);
       }
 
       const transfersData = await transfersResponse.json();
