@@ -152,40 +152,33 @@ export default function LiveRank() {
           </div>
         </div>
 
-        {/* Manager Search Section */}
-        <Card className="mb-6 sm:mb-8 border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardContent className="p-4 sm:p-6">
-            <div className="max-w-2xl mx-auto">
-              <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
-                Manager ID or Browser URL
-              </label>
-              <div className="flex flex-col gap-3">
-                <Input
-                  id="manager-id"
-                  type="text"
-                  placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
-                  value={managerId}
-                  onChange={(e) => {
-                    const extractedId = extractManagerId(e.target.value);
-                    setManagerId(extractedId);
-                  }}
-                  onKeyPress={handleKeyPress}
-                  className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
-                  data-testid="input-manager-id"
-                  disabled={isLoading}
-                />
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
-                  <Button 
-                    onClick={handleSearch} 
-                    disabled={!managerId.trim() || isLoading}
-                    className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200"
-                    data-testid="button-search-manager"
-                  >
-                    <Search className="h-4 w-4 mr-2" />
-                    {isLoading ? "Searching..." : "Search Manager"}
-                  </Button>
-                </div>
-              </div>
+        {/* Manager Search Section - Compact */}
+        <Card className="mb-3 sm:mb-4 border-0 bg-white/80 backdrop-blur-sm shadow-md">
+          <CardContent className="p-2 sm:p-3">
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+              <Input
+                id="manager-id"
+                type="text"
+                placeholder="Enter Manager ID or FPL URL"
+                value={managerId}
+                onChange={(e) => {
+                  const extractedId = extractManagerId(e.target.value);
+                  setManagerId(extractedId);
+                }}
+                onKeyPress={handleKeyPress}
+                className="flex-1 h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                data-testid="input-manager-id"
+                disabled={isLoading}
+              />
+              <Button 
+                onClick={handleSearch} 
+                disabled={!managerId.trim() || isLoading}
+                className="h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
+                data-testid="button-search-manager"
+              >
+                <Search className="h-4 w-4 mr-1" />
+                {isLoading ? "..." : "Search"}
+              </Button>
             </div>
           </CardContent>
         </Card>

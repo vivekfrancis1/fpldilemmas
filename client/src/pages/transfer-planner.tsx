@@ -5309,51 +5309,46 @@ export default function TransferPlanner() {
       )}
       
       <div className="container mx-auto px-3 sm:px-4 py-2 md:p-4 lg:p-6 space-y-3 md:space-y-4">
-      {/* Header */}
-      <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
-        <div className="p-2 md:p-3 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
-          <Target className="h-5 w-5 md:h-8 md:w-8 text-white" />
+      {/* Header - Compact */}
+      <div className="flex items-center gap-2 mb-1">
+        <div className="p-1.5 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
+          <Target className="h-4 w-4 md:h-5 md:w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold">Transfer Planner</h1>
-          <p className="text-xs md:text-sm text-muted-foreground">Plan transfers & optimise your lineup</p>
+          <h1 className="text-lg md:text-xl font-bold">Transfer Planner</h1>
+          <p className="text-xs text-muted-foreground hidden sm:block">Plan transfers & optimise your lineup</p>
         </div>
       </div>
 
-      {/* Manager Search Section */}
-      <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-        <CardContent className="p-4 sm:p-6">
-          <div className="max-w-2xl mx-auto">
-            <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
-              Manager ID
-            </label>
-            <div className="flex flex-col gap-3">
-              <Input
-                id="manager-id"
-                type="text"
-                placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
-                value={managerId}
-                onChange={(e) => {
-                  const extractedId = extractManagerId(e.target.value);
-                  setManagerId(extractedId);
-                }}
-                onKeyPress={handleKeyPress}
-                className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
-                data-testid="input-manager-id"
-                disabled={isLoadingTeam}
-              />
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
-                <Button 
-                  onClick={handleSearch} 
-                  disabled={!managerId.trim() || isLoadingTeam}
-                  className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200"
-                  data-testid="button-search-manager"
-                >
-                  <Search className="h-4 w-4 mr-2" />
-                  {isLoadingTeam ? "Loading..." : "Load Team"}
-                </Button>
-                <FplConnectDialog />
-              </div>
+      {/* Manager Search Section - Compact */}
+      <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-md">
+        <CardContent className="p-2 sm:p-3">
+          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+            <Input
+              id="manager-id"
+              type="text"
+              placeholder="Enter Manager ID or FPL URL"
+              value={managerId}
+              onChange={(e) => {
+                const extractedId = extractManagerId(e.target.value);
+                setManagerId(extractedId);
+              }}
+              onKeyPress={handleKeyPress}
+              className="flex-1 h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+              data-testid="input-manager-id"
+              disabled={isLoadingTeam}
+            />
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleSearch} 
+                disabled={!managerId.trim() || isLoadingTeam}
+                className="flex-1 sm:flex-none h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
+                data-testid="button-search-manager"
+              >
+                <Search className="h-4 w-4 mr-1" />
+                {isLoadingTeam ? "..." : "Load"}
+              </Button>
+              <FplConnectDialog />
             </div>
           </div>
         </CardContent>

@@ -339,10 +339,10 @@ html {
   color: var(--fpl-text-muted);
 }
 
-/* Unified Page Headers */
+/* Unified Page Headers - Compact for My FPL tools */
 .fpl-page-header {
   background: linear-gradient(135deg, var(--fpl-primary-start) 0%, var(--fpl-primary-middle) 50%, var(--fpl-primary-end) 100%);
-  @apply text-white rounded-2xl p-6 sm:p-8 lg:p-10 mb-8 relative overflow-hidden;
+  @apply text-white rounded-xl p-3 sm:p-4 lg:p-5 mb-3 sm:mb-4 relative overflow-hidden;
   box-shadow: var(--fpl-shadow-lg);
 }
 
@@ -363,15 +363,15 @@ html {
 }
 
 .fpl-page-title {
-  @apply flex items-center gap-3 mb-3;
+  @apply flex items-center gap-2 mb-1;
 }
 
 .fpl-page-title h1 {
-  @apply text-2xl sm:text-3xl lg:text-4xl font-bold;
+  @apply text-lg sm:text-xl lg:text-2xl font-bold;
 }
 
 .fpl-page-subtitle {
-  @apply text-sm sm:text-base lg:text-lg opacity-90 max-w-2xl leading-relaxed;
+  @apply text-xs sm:text-sm opacity-90 max-w-2xl leading-relaxed hidden sm:block;
 }
 
 .fpl-page-tagline {

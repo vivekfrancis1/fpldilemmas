@@ -698,49 +698,44 @@ export default function TransferRecommendations() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-100 rounded-full mb-4">
-            <ArrowRightLeft className="h-8 w-8 text-orange-600" />
+        {/* Header - Compact */}
+        <div className="text-center py-2">
+          <div className="inline-flex items-center justify-center w-10 h-10 bg-orange-100 rounded-full mb-2">
+            <ArrowRightLeft className="h-5 w-5 text-orange-600" />
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Transfer Recommendations</h1>
-          <p className="text-lg text-gray-600">Maximize your projected points for remaining gameweeks</p>
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Transfer Recommendations</h1>
+          <p className="text-xs text-gray-600 hidden sm:block">Maximize your projected points for remaining gameweeks</p>
         </div>
 
-        {/* Manager Search Section */}
-        <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardContent className="p-4 sm:p-6">
-            <div className="max-w-2xl mx-auto">
-              <label htmlFor="manager-id" className="block text-sm font-medium text-gray-700 mb-2">
-                Manager ID
-              </label>
-              <div className="flex flex-col gap-3">
-                <Input
-                  id="manager-id"
-                  type="text"
-                  placeholder="Paste browser URL or Manager ID (e.g., https://fantasy.premierleague.com/entry/123456)"
-                  value={managerId}
-                  onChange={(e) => {
-                    const extractedId = extractManagerId(e.target.value);
-                    setManagerId(extractedId);
-                  }}
-                  onKeyDown={(e) => e.key === "Enter" && !isLoadingRecommendations && handleSearch()}
-                  className="w-full border-gray-300 focus:border-purple-500 focus:ring-purple-500 transition-colors"
-                  data-testid="input-manager-id"
-                  disabled={isLoadingRecommendations}
-                />
-                <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
-                  <Button 
-                    onClick={handleSearch} 
-                    disabled={!managerId.trim() || isLoadingRecommendations}
-                    className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-6 py-2 shadow-lg hover:shadow-xl transition-all duration-200"
-                    data-testid="button-search-manager"
-                  >
-                    <Search className="h-4 w-4 mr-2" />
-                    {isLoadingRecommendations ? "Analyzing..." : "Search Manager"}
-                  </Button>
-                  <FplConnectDialog />
-                </div>
+        {/* Manager Search Section - Compact */}
+        <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-md">
+          <CardContent className="p-2 sm:p-3">
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+              <Input
+                id="manager-id"
+                type="text"
+                placeholder="Enter Manager ID or FPL URL"
+                value={managerId}
+                onChange={(e) => {
+                  const extractedId = extractManagerId(e.target.value);
+                  setManagerId(extractedId);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && !isLoadingRecommendations && handleSearch()}
+                className="flex-1 h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                data-testid="input-manager-id"
+                disabled={isLoadingRecommendations}
+              />
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleSearch} 
+                  disabled={!managerId.trim() || isLoadingRecommendations}
+                  className="flex-1 sm:flex-none h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
+                  data-testid="button-search-manager"
+                >
+                  <Search className="h-4 w-4 mr-1" />
+                  {isLoadingRecommendations ? "..." : "Search"}
+                </Button>
+                <FplConnectDialog />
               </div>
             </div>
           </CardContent>
