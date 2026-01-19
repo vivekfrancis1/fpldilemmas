@@ -370,6 +370,10 @@ html {
   @apply text-lg sm:text-xl lg:text-2xl font-bold;
 }
 
+.fpl-page-title svg {
+  @apply h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 flex-shrink-0;
+}
+
 .fpl-page-subtitle {
   @apply text-xs sm:text-sm opacity-90 max-w-2xl leading-relaxed hidden sm:block;
 }

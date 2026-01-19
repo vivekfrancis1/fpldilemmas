@@ -1071,18 +1071,16 @@ export default function BestWildcardTeam() {
         </div>
       )}
 
-      {/* Header - Mobile Optimized */}
-      <div className="bg-gradient-to-r from-green-600 to-blue-600 rounded-lg p-4 md:p-6 text-white">
-        <div className="flex items-center gap-2 md:gap-3 mb-2">
-          <Trophy className="h-5 w-5 md:h-6 md:w-6" />
-          <h1 className="text-xl md:text-2xl font-bold">Best Wildcard Team</h1>
-        </div>
-        <p className="text-green-100 text-sm md:text-base">
-          Optimize your wildcard team to maximise total points across the upcoming gameweeks
-        </p>
-        <div className="flex items-center gap-2 mt-2">
-          <Calendar className="h-3 w-3 md:h-4 md:w-4" />
-          <span className="text-xs md:text-sm">{gameweekRange} • {snapshots.length} players analyzed</span>
+      {/* Header - Compact */}
+      <div className="fpl-page-header">
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Trophy className="h-5 w-5 sm:h-6 sm:w-6" />
+            <h1>Best Wildcard Team</h1>
+          </div>
+          <p className="fpl-page-subtitle">
+            Optimize your wildcard team across {gameweekRange} • {snapshots.length} players analyzed
+          </p>
         </div>
       </div>
 

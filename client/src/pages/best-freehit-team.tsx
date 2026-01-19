@@ -1120,18 +1120,16 @@ export default function BestFreehitTeam() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header - Compact */}
       <div className="fpl-page-header">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary/10 rounded-lg">
-            <Users className="h-6 w-6 text-primary" />
+        <div className="fpl-page-header-content">
+          <div className="fpl-page-title">
+            <Users className="h-5 w-5 sm:h-6 sm:w-6" />
+            <h1>Best Freehit Team</h1>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">Best Freehit Team</h1>
-            <p className="text-muted-foreground">
-              Optimal 15-player squad for maximum points with captain selection
-            </p>
-          </div>
+          <p className="fpl-page-subtitle">
+            Optimal 15-player squad for maximum points with captain selection
+          </p>
         </div>
       </div>
 
