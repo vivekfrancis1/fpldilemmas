@@ -1217,7 +1217,15 @@ export default function MyDashboard() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
-                    <div className="space-y-2 sm:space-y-3">
+                    {/* Table Header */}
+                    <div className="hidden sm:grid sm:grid-cols-[1fr_100px_80px_80px_60px] gap-2 text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 px-2">
+                      <div>League</div>
+                      <div className="text-center">Managers</div>
+                      <div className="text-center">Rank</div>
+                      <div className="text-center">Change</div>
+                      <div className="text-center">Live</div>
+                    </div>
+                    <div className="space-y-1">
                       {leaguesData.classic
                         .filter(league => {
                           // Show only: Overall League (id=314), Country leagues (India), and classic leagues
@@ -1240,33 +1248,53 @@ export default function MyDashboard() {
                           const isShowingLive = selectedLiveLeague === league.id;
                           
                           return (
-                            <div key={league.id} className="space-y-2">
+                            <div key={league.id} className="space-y-1">
+                              {/* Desktop: Single row with 5 columns */}
                               <div 
-                                className="mobile-league-item"
+                                className="hidden sm:grid sm:grid-cols-[1fr_100px_80px_80px_60px] gap-2 items-center py-2 px-2 rounded-lg hover:bg-white/50 cursor-pointer transition-colors"
                                 data-testid={`league-item-${league.id}`}
+                                onClick={() => {
+                                  setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
+                                }}
                               >
-                                <div 
-                                  className="mobile-league-info cursor-pointer flex-1"
-                                  onClick={() => {
-                                    setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
-                                  }}
-                                >
-                                  <div className="min-w-0 flex-1">
-                                    <div className="font-semibold text-gray-800 truncate" title={league.name}>
-                                      {league.name}
-                                    </div>
-                                    <div className="text-sm text-gray-600">
-                                      {league.rank_count?.toLocaleString()} managers
-                                    </div>
-                                  </div>
+                                <div className="font-semibold text-gray-800 truncate" title={league.name}>
+                                  {league.name}
                                 </div>
-                                <div className="flex items-center gap-2">
-                                  {/* Live Points Button for private leagues */}
-                                  {isPrivateLeague && (
+                                <div className="text-center text-sm text-gray-600">
+                                  {league.rank_count?.toLocaleString()}
+                                </div>
+                                <div className="text-center font-bold text-gray-800">
+                                  #{league.entry_rank.toLocaleString()}
+                                </div>
+                                <div className="flex justify-center">
+                                  {league.entry_last_rank && league.entry_last_rank !== league.entry_rank ? (
+                                    <div className={`inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                                      league.entry_last_rank > league.entry_rank 
+                                        ? 'text-green-700 bg-green-50' 
+                                        : 'text-red-700 bg-red-50'
+                                    }`}>
+                                      {league.entry_last_rank > league.entry_rank ? (
+                                        <>
+                                          <TrendingUp className="h-3 w-3" />
+                                          <span>{(league.entry_last_rank - league.entry_rank).toLocaleString()}</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <TrendingDown className="h-3 w-3" />
+                                          <span>{(league.entry_rank - league.entry_last_rank).toLocaleString()}</span>
+                                        </>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-gray-400">-</span>
+                                  )}
+                                </div>
+                                <div className="flex justify-center">
+                                  {isPrivateLeague ? (
                                     <Button
                                       variant={isShowingLive ? "default" : "outline"}
                                       size="sm"
-                                      className={`h-7 px-2 text-xs ${isShowingLive ? 'bg-green-600 hover:bg-green-700' : 'border-green-200 text-green-700 hover:bg-green-50'}`}
+                                      className={`h-6 px-2 text-xs ${isShowingLive ? 'bg-green-600 hover:bg-green-700' : 'border-green-200 text-green-700 hover:bg-green-50'}`}
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         if (isShowingLive) {
@@ -1277,24 +1305,36 @@ export default function MyDashboard() {
                                       }}
                                       data-testid={`live-points-btn-${league.id}`}
                                     >
-                                      <Activity className="h-3 w-3 mr-1" />
-                                      Live
+                                      <Activity className="h-3 w-3" />
                                     </Button>
+                                  ) : (
+                                    <span className="text-xs text-gray-400">-</span>
                                   )}
-                                  <div 
-                                    className="text-right cursor-pointer"
-                                    onClick={() => {
-                                      setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
-                                    }}
-                                  >
-                                    <div className="text-lg font-bold text-gray-800">
-                                      #{league.entry_rank.toLocaleString()}
-                                    </div>
+                                </div>
+                              </div>
+                              
+                              {/* Mobile: Compact row layout */}
+                              <div 
+                                className="sm:hidden flex items-center justify-between py-2 px-2 rounded-lg hover:bg-white/50 cursor-pointer"
+                                data-testid={`league-item-mobile-${league.id}`}
+                                onClick={() => {
+                                  setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
+                                }}
+                              >
+                                <div className="flex-1 min-w-0 mr-2">
+                                  <div className="font-semibold text-gray-800 text-sm truncate" title={league.name}>
+                                    {league.name}
+                                  </div>
+                                  <div className="text-xs text-gray-500">{league.rank_count?.toLocaleString()} managers</div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="text-right">
+                                    <div className="font-bold text-gray-800">#{league.entry_rank.toLocaleString()}</div>
                                     {league.entry_last_rank && league.entry_last_rank !== league.entry_rank && (
-                                      <div className={`inline-flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded-full ${
+                                      <div className={`inline-flex items-center gap-0.5 text-xs font-medium ${
                                         league.entry_last_rank > league.entry_rank 
-                                          ? 'text-green-700 bg-green-50' 
-                                          : 'text-red-700 bg-red-50'
+                                          ? 'text-green-700' 
+                                          : 'text-red-700'
                                       }`}>
                                         {league.entry_last_rank > league.entry_rank ? (
                                           <>
@@ -1310,6 +1350,24 @@ export default function MyDashboard() {
                                       </div>
                                     )}
                                   </div>
+                                  {isPrivateLeague && (
+                                    <Button
+                                      variant={isShowingLive ? "default" : "outline"}
+                                      size="sm"
+                                      className={`h-7 px-2 text-xs ${isShowingLive ? 'bg-green-600 hover:bg-green-700' : 'border-green-200 text-green-700 hover:bg-green-50'}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (isShowingLive) {
+                                          setSelectedLiveLeague(null);
+                                        } else {
+                                          setSelectedLiveLeague(league.id);
+                                        }
+                                      }}
+                                      data-testid={`live-points-btn-mobile-${league.id}`}
+                                    >
+                                      <Activity className="h-3 w-3" />
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                               
