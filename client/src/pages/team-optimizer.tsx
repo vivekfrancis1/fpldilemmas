@@ -1183,7 +1183,7 @@ export default function TeamOptimizer() {
         {/* Summary Card - Total Points */}
         <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white">
           <CardHeader className="pb-3 sm:pb-4">
-            <CardTitle className="text-white text-sm sm:text-base md:text-lg">Next 12 Gameweeks Total Points</CardTitle>
+            <CardTitle className="text-white text-sm sm:text-base md:text-lg">Projected Points - Next 12 Gameweeks</CardTitle>
           </CardHeader>
           <CardContent className="pb-4 sm:pb-6">
             {isOptimizing || optimizedLineups.size === 0 ? (
@@ -1213,7 +1213,7 @@ export default function TeamOptimizer() {
             <CardHeader className="pb-3 sm:pb-4">
               <CardTitle className="flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base md:text-lg">
                 <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-                <span className="truncate">Points by Gameweek</span>
+                <span className="truncate">Projected Points by Gameweek</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
