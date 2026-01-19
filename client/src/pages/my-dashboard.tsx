@@ -2169,37 +2169,47 @@ export default function MyDashboard() {
                                   </div>
                                 );
                               })}
-                            </div>
-                          </div>
 
-                          {/* Bench */}
-                          <div className="bg-gray-100 rounded-lg p-3 sm:p-4">
-                            <div className="text-xs sm:text-sm font-semibold text-gray-600 mb-2 text-center">Bench</div>
-                            <div className="flex justify-center gap-2 sm:gap-4">
-                              {teamData.picks.filter(pick => pick.position > 11).map(pick => {
-                                const player = getPlayerById(pick.element);
-                                if (!player) return null;
-                                const playerTeam = getPlayerTeam(player);
-                                const isGoalkeeper = player.element_type === 1;
+                              {/* Bench Display - Inside Pitch */}
+                              <div className="mt-6 pt-6 border-t-2 border-white/30">
+                                <h3 className="text-white font-bold text-center mb-4">BENCH</h3>
+                                <div className="flex justify-center gap-0.5">
+                                  {teamData.picks.filter(pick => pick.position > 11).map(pick => {
+                                    const player = getPlayerById(pick.element);
+                                    if (!player) return null;
+                                    const playerTeam = getPlayerTeam(player);
+                                    const isGoalkeeper = player.element_type === 1;
+                                    const fixtureInfo = getNextGameweekFixture(playerTeam?.id || 0);
 
-                                return (
-                                  <div key={pick.element} className="flex flex-col items-center">
-                                    <img 
-                                      src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                      alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                      className="w-10 h-12 sm:w-12 sm:h-14 object-contain drop-shadow opacity-75"
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                      }}
-                                    />
-                                    <div className="mt-0.5 px-1 py-0.5 bg-gray-200 rounded text-center">
-                                      <div className="text-[8px] sm:text-[10px] font-medium text-gray-600 truncate max-w-[50px] sm:max-w-[70px]">
-                                        {player.web_name}
+                                    return (
+                                      <div key={pick.element} className="flex flex-col items-center w-[19.5%] opacity-90">
+                                        <div className="relative flex flex-col items-center">
+                                          <div className="relative">
+                                            <img 
+                                              src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                              alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                              className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                              onError={(e) => {
+                                                (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                              }}
+                                            />
+                                          </div>
+                                          <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+                                              {player.web_name}
+                                            </div>
+                                          </div>
+                                          <div className="px-2 py-0.5 bg-gray-500 rounded text-center">
+                                            <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white">
+                                              {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
+                                            </div>
+                                          </div>
+                                        </div>
                                       </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
+                                    );
+                                  })}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
