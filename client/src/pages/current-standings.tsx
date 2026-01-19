@@ -297,17 +297,6 @@ export default function CurrentStandings() {
           <p className="fpl-page-subtitle">
             Enhanced Premier League table with detailed statistics from completed matches and official results
           </p>
-          <div className="mt-6">
-            <Button 
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-              data-testid="button-refresh-current-standings"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh Table'}
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -376,13 +365,28 @@ export default function CurrentStandings() {
         {/* Enhanced Current Standings Table */}
         <Card className="overflow-hidden shadow-lg border-0">
           <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-            <CardTitle className="flex items-center gap-3 text-xl">
-              <Trophy className="h-6 w-6" />
-              Enhanced Premier League Table
-              <Badge className="bg-white/20 text-white border-white/30 ml-auto">
-                Detailed Statistics
-              </Badge>
-            </CardTitle>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <Trophy className="h-6 w-6" />
+                Enhanced Premier League Table
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  variant="outline"
+                  size="sm"
+                  className="bg-white/10 hover:bg-white/20 border-white/30 text-white"
+                  data-testid="button-refresh-current-standings"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                  {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                </Button>
+                <Badge className="bg-white/20 text-white border-white/30">
+                  Detailed Statistics
+                </Badge>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">

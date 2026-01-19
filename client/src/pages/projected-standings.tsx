@@ -108,17 +108,6 @@ export default function ProjectedStandings() {
           <p className="fpl-page-subtitle">
             Premier League table based on actual results and projected outcomes for next 6 gameweeks
           </p>
-          <div className="mt-6">
-            <Button 
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-              data-testid="button-refresh-standings"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-              {isRefreshing ? 'Refreshing...' : 'Refresh Standings'}
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -175,13 +164,28 @@ export default function ProjectedStandings() {
           {/* Standings Table */}
           <Card className="overflow-hidden shadow-lg border-0">
             <CardHeader className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Trophy className="h-6 w-6" />
-                Projected Table
-                <Badge className="bg-white/20 text-white border-white/30 ml-auto">
-                  {totalGameweeks} gameweeks
-                </Badge>
-              </CardTitle>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <CardTitle className="flex items-center gap-3 text-xl">
+                  <Trophy className="h-6 w-6" />
+                  Projected Table
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    variant="outline"
+                    size="sm"
+                    className="bg-white/10 hover:bg-white/20 border-white/30 text-white"
+                    data-testid="button-refresh-standings"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                  </Button>
+                  <Badge className="bg-white/20 text-white border-white/30">
+                    {totalGameweeks} gameweeks
+                  </Badge>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
