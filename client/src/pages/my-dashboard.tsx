@@ -3241,7 +3241,80 @@ export default function MyDashboard() {
               <TabsContent value="performance" className="space-y-6 mt-6 sm:mt-8">
                 {historyData && (
                   <>
-                    {/* Gameweek History */}
+                    {/* Season History - Now on top */}
+                    <Card className="border-0 bg-gradient-to-br from-indigo-50 to-blue-50 shadow-lg">
+                      <CardHeader className="p-4 sm:p-6">
+                        <CardTitle className="flex items-center gap-2 text-indigo-800 text-lg sm:text-xl">
+                          <div className="p-2 bg-indigo-100 rounded-lg">
+                            <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
+                          </div>
+                          Season History
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 sm:p-6">
+                        <div className="space-y-3">
+                          {/* Current Season */}
+                          {managerData && (
+                            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-100 to-blue-100 rounded-xl border-2 border-indigo-300 shadow-sm">
+                              <div className="flex items-center gap-2">
+                                <div className="text-lg font-semibold text-gray-800">2024/25</div>
+                                <Badge className="bg-indigo-600 text-white text-xs">Current</Badge>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                  <div className="text-xl font-bold text-indigo-700">{getTotalPoints().toLocaleString()} pts</div>
+                                  <div className="text-sm text-gray-600">
+                                    Rank: {formatRank(managerData.summary_overall_rank)}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {/* Past Seasons */}
+                          {historyData?.past && historyData.past.slice().reverse().map((season, index, reversedArray) => {
+                            // Calculate rank change from previous season
+                            // Since array is reversed (newest first), previous season is at index + 1
+                            const prevSeason = reversedArray[index + 1];
+                            const currentRank = season.rank || 0;
+                            const prevRank = prevSeason?.rank || 0;
+                            
+                            // Rank change: positive means rank improved (went from higher number to lower)
+                            const rankChange = prevSeason ? prevRank - currentRank : 0;
+                            
+                            return (
+                              <div key={index} className="flex items-center justify-between p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200">
+                                <div className="text-lg font-semibold text-gray-800">{season.season_name}</div>
+                                <div className="flex items-center gap-4">
+                                  <div className="text-right">
+                                    <div className="text-xl font-bold text-indigo-700">{season.total_points.toLocaleString()} pts</div>
+                                    <div className="text-sm text-gray-600">
+                                      Rank: {formatRank(season.rank)}
+                                    </div>
+                                    {prevSeason && rankChange !== 0 && (
+                                      <div className={`flex items-center justify-end gap-1 mt-1 font-medium ${rankChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {rankChange > 0 ? (
+                                          <>
+                                            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
+                                            <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4" />
+                                            <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
+                                          </>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Gameweek History - Now below Season History */}
                     {historyData?.current && historyData.current.length > 0 && (
                       <Card className="border-0 bg-gradient-to-br from-emerald-50 to-green-50 shadow-lg">
                         <CardHeader className="p-4 sm:p-6">
@@ -3312,63 +3385,6 @@ export default function MyDashboard() {
                                         )}
                                       </div>
                                     )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Season History */}
-                    {historyData?.past && historyData.past.length > 0 && (
-                      <Card className="border-0 bg-gradient-to-br from-indigo-50 to-blue-50 shadow-lg">
-                        <CardHeader className="p-4 sm:p-6">
-                          <CardTitle className="flex items-center gap-2 text-indigo-800 text-lg sm:text-xl">
-                            <div className="p-2 bg-indigo-100 rounded-lg">
-                              <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-600" />
-                            </div>
-                            Season History
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="p-4 sm:p-6">
-                          <div className="space-y-3">
-                            {historyData.past.slice().reverse().map((season, index, reversedArray) => {
-                              // Calculate rank change from previous season
-                              // Since array is reversed (newest first), previous season is at index + 1
-                              const prevSeason = reversedArray[index + 1];
-                              const currentRank = season.rank || 0;
-                              const prevRank = prevSeason?.rank || 0;
-                              
-                              // Rank change: positive means rank improved (went from higher number to lower)
-                              const rankChange = prevSeason ? prevRank - currentRank : 0;
-                              
-                              return (
-                                <div key={index} className="flex items-center justify-between p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200">
-                                  <div className="text-lg font-semibold text-gray-800">{season.season_name}</div>
-                                  <div className="flex items-center gap-4">
-                                    <div className="text-right">
-                                      <div className="text-xl font-bold text-indigo-700">{season.total_points.toLocaleString()} pts</div>
-                                      <div className="text-sm text-gray-600">
-                                        Rank: {formatRank(season.rank)}
-                                      </div>
-                                      {prevSeason && rankChange !== 0 && (
-                                        <div className={`flex items-center justify-end gap-1 mt-1 font-medium ${rankChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                          {rankChange > 0 ? (
-                                            <>
-                                              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                                              <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4" />
-                                              <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
-                                            </>
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
                                   </div>
                                 </div>
                               );
