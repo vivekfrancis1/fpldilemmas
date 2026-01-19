@@ -9416,10 +9416,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         if (processHome) {
           homeTeam.expectedGoalsAgainst += awayXGF;
+          homeTeam.defensiveContributions += homeDC; // DC earned by home team
           homeTeam.defensiveContributionsConceded += awayDC; // DC earned by away team against home team
         }
         if (processAway) {
           awayTeam.expectedGoalsAgainst += homeXGF;
+          awayTeam.defensiveContributions += awayDC; // DC earned by away team
           awayTeam.defensiveContributionsConceded += homeDC; // DC earned by home team against away team
         }
       }
