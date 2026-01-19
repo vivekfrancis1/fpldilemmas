@@ -9312,8 +9312,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameweekTeamXGF.set(team.id, 0);
       });
       
-      Object.entries(liveData.elements).forEach(([playerId, playerData]: [string, any]) => {
-        const teamId = playerToTeamMap.get(parseInt(playerId));
+      // liveData.elements is an array, iterate properly using player's id field
+      const elementsArray = Array.isArray(liveData.elements) ? liveData.elements : Object.values(liveData.elements);
+      elementsArray.forEach((playerData: any) => {
+        const playerId = playerData.id;
+        const teamId = playerToTeamMap.get(playerId);
         if (!teamId) return;
         
         const stats = playerData.stats || {};
@@ -9391,9 +9394,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (gameweekXGData) {
         let homeXGF = 0, awayXGF = 0;
         let homeDC = 0, awayDC = 0; // Defensive contributions earned by each team
-        Object.entries(gameweekXGData.elements || {}).forEach(([playerId, playerData]: [string, any]) => {
-          const teamId = playerToTeamMap.get(parseInt(playerId));
-          const playerPosition = playerPositionMap.get(parseInt(playerId));
+        // gameweekXGData.elements is an array, iterate properly using player's id field
+        const gwElements = Array.isArray(gameweekXGData.elements) ? gameweekXGData.elements : Object.values(gameweekXGData.elements || {});
+        gwElements.forEach((playerData: any) => {
+          const playerId = playerData.id;
+          const teamId = playerToTeamMap.get(playerId);
+          const playerPosition = playerPositionMap.get(playerId);
           const stats = playerData.stats || {};
           const xg = parseFloat(stats.expected_goals || stats.xg || 0);
           if (teamId === homeTeamId) homeXGF += xg;
