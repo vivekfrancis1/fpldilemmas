@@ -5401,29 +5401,29 @@ export default function TransferPlanner() {
         <Collapsible open={isGameweekSelectionOpen} onOpenChange={setIsGameweekSelectionOpen}>
           <Card className="bg-background shadow-sm border">
             <CollapsibleTrigger asChild>
-              <CardHeader className="py-2 px-3 cursor-pointer hover:bg-muted/50 transition-colors">
+              <CardHeader className="py-3 px-3 sm:px-6 cursor-pointer hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-purple-600" />
-                    <span className="text-sm font-semibold">Gameweek</span>
-                    <Badge variant="secondary" className="text-xs px-1.5 py-0">GW {selectedGameweek}</Badge>
+                    <Calendar className="h-5 w-5 text-purple-600" />
+                    <span className="text-base sm:text-lg font-semibold">Select Gameweek</span>
+                    <Badge variant="secondary" className="text-xs sm:text-sm px-2 py-0.5">GW {selectedGameweek}</Badge>
                   </div>
                   {isGameweekSelectionOpen ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
                   )}
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <CardContent className="pt-0 pb-3 px-3">
-                <div className="flex gap-1.5 flex-wrap items-center">
+              <CardContent className="pt-0 pb-4 px-3 sm:px-6">
+                <div className="flex gap-2 flex-wrap items-center">
                   {nextGameweeks.map(gw => (
                     <Button
                       key={gw.id}
                       variant={selectedGameweek === gw.id ? "default" : "outline"}
-                      className="h-7 text-xs font-semibold min-w-[2rem] px-2"
+                      className="h-8 sm:h-9 text-sm sm:text-base font-semibold min-w-[2.5rem] px-2 sm:px-3"
                       onClick={() => {
                         setSelectedPlayer(null);
                         setSelectedGameweek(gw.id);
@@ -5445,33 +5445,33 @@ export default function TransferPlanner() {
         <Collapsible open={isDraftSelectionOpen} onOpenChange={setIsDraftSelectionOpen}>
           <Card className="bg-background shadow-sm border">
             <CollapsibleTrigger asChild>
-              <CardHeader className="py-2 px-3 cursor-pointer hover:bg-muted/50 transition-colors">
+              <CardHeader className="py-3 px-3 sm:px-6 cursor-pointer hover:bg-muted/50 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <List className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-semibold">Draft</span>
-                    <Badge variant={activeDraft === "Base" ? "secondary" : "default"} className="text-xs px-1.5 py-0">
+                    <List className="h-5 w-5 text-blue-600" />
+                    <span className="text-base sm:text-lg font-semibold">Select Draft</span>
+                    <Badge variant={activeDraft === "Base" ? "secondary" : "default"} className="text-xs sm:text-sm px-2 py-0.5">
                       {activeDraft === "Base" ? "Base" : `Draft ${activeDraft}`}
                     </Badge>
                     {isSaving && activeDraft !== "Base" && (
-                      <span className="text-xs text-blue-600 animate-pulse">Saving...</span>
+                      <span className="text-xs sm:text-sm text-blue-600 animate-pulse">Saving...</span>
                     )}
                     {!isSaving && lastSavedAt && activeDraft !== "Base" && (
-                      <span className="text-xs text-green-600">✓</span>
+                      <span className="text-xs sm:text-sm text-green-600">✓</span>
                     )}
                   </div>
                   {isDraftSelectionOpen ? (
-                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
                   ) : (
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
                   )}
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <CardContent className="pt-0 pb-3 px-3 space-y-2">
+              <CardContent className="pt-0 pb-4 px-3 sm:px-6 space-y-3">
                 {/* Draft Buttons */}
-                <div className="flex gap-1.5 flex-wrap items-center">
+                <div className="flex gap-2 flex-wrap items-center">
                   {savedDrafts.map((draft: any) => {
                     const draftChips = getDraftChips(draft.draftLetter);
                     const chipCount = Object.keys(draftChips).filter(gw => draftChips[parseInt(gw)] !== null).length;
@@ -5483,12 +5483,12 @@ export default function TransferPlanner() {
                             <Button
                               onClick={() => switchToDraft(draft.draftLetter)}
                               variant={activeDraft === draft.draftLetter ? "default" : "outline"}
-                              className="relative h-7 text-xs px-2"
+                              className="relative h-8 sm:h-9 text-sm sm:text-base px-3"
                               data-testid={`button-switch-draft-${draft.draftLetter}`}
                             >
                               {draft.draftLetter}
                               {chipCount > 0 && (
-                                <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-amber-500 text-white text-[8px] flex items-center justify-center font-bold">
+                                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-amber-500 text-white text-[9px] flex items-center justify-center font-bold">
                                   {chipCount}
                                 </span>
                               )}
@@ -5526,10 +5526,10 @@ export default function TransferPlanner() {
                     <Button
                       onClick={createNewDraft}
                       variant="outline"
-                      className="h-7 gap-1 border-dashed text-xs px-2"
+                      className="h-8 sm:h-9 gap-1 border-dashed text-sm sm:text-base px-3"
                       data-testid="button-new-draft"
                     >
-                      <Plus className="h-3 w-3" />
+                      <Plus className="h-4 w-4" />
                       New
                     </Button>
                   )}
@@ -5537,46 +5537,46 @@ export default function TransferPlanner() {
 
                 {/* Action Buttons */}
                 {activeDraft !== "Base" && (
-                  <div className="flex gap-1.5 flex-wrap items-center pt-1 border-t">
+                  <div className="flex gap-2 flex-wrap items-center pt-2 border-t">
                     <Button
                       onClick={() => saveCurrentDraft()}
                       variant="default"
                       disabled={!hasUnsavedChanges}
-                      className="h-6 text-xs px-2"
+                      className="h-8 text-sm px-3"
                       data-testid="button-save-draft"
                     >
-                      <Save className="h-3 w-3 mr-1" />
-                      Save
+                      <Save className="h-3.5 w-3.5 mr-1" />
+                      Save {hasUnsavedChanges && "●"}
                     </Button>
                     
                     <Button
                       onClick={duplicateCurrentDraft}
                       variant="outline"
-                      className="h-6 text-xs px-2"
+                      className="h-8 text-sm px-3"
                       data-testid="button-duplicate-draft"
                     >
-                      <Copy className="h-3 w-3 mr-1" />
+                      <Copy className="h-3.5 w-3.5 mr-1" />
                       Duplicate
                     </Button>
                     
                     <Button
                       onClick={resetDraftAToBase}
                       variant="outline"
-                      className="h-6 text-xs px-2 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                      className="h-8 text-sm px-3 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
                       data-testid={`button-reset-draft-${activeDraft.toLowerCase()}`}
                     >
-                      <RotateCcw className="h-3 w-3 mr-1" />
-                      Reset
+                      <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                      Reset to Base
                     </Button>
                     
                     {activeDraft !== "A" && (
                       <Button
                         onClick={deleteCurrentDraft}
                         variant="outline"
-                        className="h-6 text-xs px-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                        className="h-8 text-sm px-3 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
                         data-testid="button-delete-draft"
                       >
-                        <Trash2 className="h-3 w-3 mr-1" />
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
                         Delete
                       </Button>
                     )}
