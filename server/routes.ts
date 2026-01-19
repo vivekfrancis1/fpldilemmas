@@ -2926,11 +2926,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ managerId: null });
   });
 
-  // Manager data cache (2 minutes)
+  // Enhanced manager data cache with in-flight de-duplication (2 minutes TTL)
   const managerCache = new Map<string, { data: any; timestamp: number }>();
+  const managerHistoryCache = new Map<string, { data: any; timestamp: number }>();
+  const managerLeaguesCache = new Map<string, { data: any; timestamp: number }>();
+  const managerInFlight = new Map<string, Promise<any>>();
+  const managerHistoryInFlight = new Map<string, Promise<any>>();
+  const managerLeaguesInFlight = new Map<string, Promise<any>>();
   const MANAGER_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
-  // Get manager data
+  // Get manager data with in-flight de-duplication
   app.get("/api/manager/:managerId", async (req, res) => {
     try {
       const { managerId } = req.params;
@@ -2947,22 +2952,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(cached.data);
       }
       
-      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          return res.status(404).json({ message: "Manager not found" });
-        }
-        throw new Error(`FPL API responded with status: ${response.status}`);
+      // Check for in-flight request (de-duplication)
+      const cacheKey = `manager-${managerId}`;
+      const inFlight = managerInFlight.get(cacheKey);
+      if (inFlight) {
+        console.log(`DEBUG: Waiting for in-flight request for manager ${managerId}`);
+        const data = await inFlight;
+        return res.json(data);
       }
       
-      const data = await response.json();
+      // Create new request with in-flight tracking
+      const fetchPromise = (async () => {
+        const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw { status: 404, message: "Manager not found" };
+          }
+          throw new Error(`FPL API responded with status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Cache the data
+        managerCache.set(managerId, { data, timestamp: Date.now() });
+        console.log(`DEBUG: Cached manager ${managerId} data`);
+        
+        return data;
+      })();
       
-      // Cache the data
-      managerCache.set(managerId, { data, timestamp: now });
-      console.log(`DEBUG: Cached manager ${managerId} data`);
+      managerInFlight.set(cacheKey, fetchPromise);
       
-      res.json(data);
+      try {
+        const data = await fetchPromise;
+        res.json(data);
+      } catch (error: any) {
+        if (error?.status === 404) {
+          return res.status(404).json({ message: error.message });
+        }
+        throw error;
+      } finally {
+        managerInFlight.delete(cacheKey);
+      }
     } catch (error) {
       console.error(`Error fetching manager data for ID ${req.params.managerId}:`, error);
       res.status(500).json({
@@ -2972,7 +3003,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get manager history
+  // Get manager history with caching and in-flight de-duplication
   app.get("/api/manager/:managerId/history", async (req, res) => {
     try {
       const { managerId } = req.params;
@@ -2981,17 +3012,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid manager ID" });
       }
       
-      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`);
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          return res.status(404).json({ message: "Manager history not found" });
-        }
-        throw new Error(`FPL API responded with status: ${response.status}`);
+      // Check cache first
+      const now = Date.now();
+      const cached = managerHistoryCache.get(managerId);
+      if (cached && (now - cached.timestamp) < MANAGER_CACHE_DURATION) {
+        console.log(`DEBUG: Serving manager ${managerId} history from cache`);
+        return res.json(cached.data);
       }
       
-      const data = await response.json();
-      res.json(data);
+      // Check for in-flight request (de-duplication)
+      const cacheKey = `manager-history-${managerId}`;
+      const inFlight = managerHistoryInFlight.get(cacheKey);
+      if (inFlight) {
+        console.log(`DEBUG: Waiting for in-flight request for manager ${managerId} history`);
+        const data = await inFlight;
+        return res.json(data);
+      }
+      
+      // Create new request with in-flight tracking
+      const fetchPromise = (async () => {
+        const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw { status: 404, message: "Manager history not found" };
+          }
+          throw new Error(`FPL API responded with status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Cache the data
+        managerHistoryCache.set(managerId, { data, timestamp: Date.now() });
+        console.log(`DEBUG: Cached manager ${managerId} history`);
+        
+        return data;
+      })();
+      
+      managerHistoryInFlight.set(cacheKey, fetchPromise);
+      
+      try {
+        const data = await fetchPromise;
+        res.json(data);
+      } catch (error: any) {
+        if (error?.status === 404) {
+          return res.status(404).json({ message: error.message });
+        }
+        throw error;
+      } finally {
+        managerHistoryInFlight.delete(cacheKey);
+      }
     } catch (error) {
       console.error(`Error fetching manager history for ID ${req.params.managerId}:`, error);
       res.status(500).json({
@@ -3016,7 +3086,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let bootstrapData: any = null;
       
       if (!currentGameweek) {
-        const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
+        // Use internal cached endpoint for better performance
+        const bootstrapResponse = await internalFetch("api/bootstrap-static");
         if (bootstrapResponse.ok) {
           bootstrapData = await bootstrapResponse.json();
           // Get the current gameweek (the one that is live or most recent)
@@ -3994,7 +4065,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get manager leagues
+  // Get manager leagues with caching and in-flight de-duplication
   app.get("/api/manager/:managerId/leagues", async (req, res) => {
     try {
       const { managerId } = req.params;
@@ -4003,26 +4074,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid manager ID" });
       }
       
-      // Get manager data which includes leagues
-      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
-      
-      if (!response.ok) {
-        if (response.status === 404) {
-          return res.status(404).json({ message: "Manager not found" });
-        }
-        throw new Error(`FPL API responded with status: ${response.status}`);
+      // Check cache first
+      const now = Date.now();
+      const cached = managerLeaguesCache.get(managerId);
+      if (cached && (now - cached.timestamp) < MANAGER_CACHE_DURATION) {
+        console.log(`DEBUG: Serving manager ${managerId} leagues from cache`);
+        return res.json(cached.data);
       }
       
-      const data = await response.json();
+      // Check for in-flight request (de-duplication)
+      const cacheKey = `manager-leagues-${managerId}`;
+      const inFlight = managerLeaguesInFlight.get(cacheKey);
+      if (inFlight) {
+        console.log(`DEBUG: Waiting for in-flight request for manager ${managerId} leagues`);
+        const data = await inFlight;
+        return res.json(data);
+      }
       
-      // Extract leagues from manager data
-      const leagues = {
-        classic: data.leagues?.classic || [],
-        h2h: data.leagues?.h2h || [],
-        cup: data.leagues?.cup || []
-      };
+      // Create new request with in-flight tracking
+      const fetchPromise = (async () => {
+        // Get manager data which includes leagues
+        const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw { status: 404, message: "Manager not found" };
+          }
+          throw new Error(`FPL API responded with status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Extract leagues from manager data
+        const leagues = {
+          classic: data.leagues?.classic || [],
+          h2h: data.leagues?.h2h || [],
+          cup: data.leagues?.cup || []
+        };
+        
+        // Cache the data
+        managerLeaguesCache.set(managerId, { data: leagues, timestamp: Date.now() });
+        console.log(`DEBUG: Cached manager ${managerId} leagues`);
+        
+        return leagues;
+      })();
       
-      res.json(leagues);
+      managerLeaguesInFlight.set(cacheKey, fetchPromise);
+      
+      try {
+        const data = await fetchPromise;
+        res.json(data);
+      } catch (error: any) {
+        if (error?.status === 404) {
+          return res.status(404).json({ message: error.message });
+        }
+        throw error;
+      } finally {
+        managerLeaguesInFlight.delete(cacheKey);
+      }
     } catch (error) {
       console.error(`Error fetching manager leagues for ID ${req.params.managerId}:`, error);
       res.status(500).json({
@@ -13060,17 +13169,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const startGameweek = parseInt(req.query.startGameweek as string) || 4;
         const endGameweek = parseInt(req.query.endGameweek as string) || 9;
       
-      // Get FPL bootstrap data for current gameweek info and players
-      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      // Get FPL bootstrap data and fixtures from cached endpoints for better performance
+      const [fplResponse, fixturesResponse] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
+      ]);
       const fplData = await fplResponse.json();
+      const fixturesData = await fixturesResponse.json();
       const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
       const nextGameweek = currentGameweek + 1; // Start from next gameweek
       
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
-      
-      // Get fixtures data for opponent identification
-      const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
-      const fixturesData = await fixturesResponse.json();
       
       // Calculate AGR (Adjusted Goal Rate) = 0.5 × (GF + XGF) per game for each team
       const teamGoalsFor = new Map<number, number>();
@@ -13311,20 +13420,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const startGameweek = parseInt(req.query.startGameweek as string) || 4;
       const endGameweek = parseInt(req.query.endGameweek as string) || 9;
       
-      // Get FPL bootstrap data for current gameweek info and teams
-      const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      // Get FPL bootstrap data, fixtures, and standings from cached internal endpoints for better performance
+      const [fplResponse, fixturesResponse, standingsResponse] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures"),
+        internalFetch("api/current-standings?venue=all")
+      ]);
       const fplData = await fplResponse.json();
+      const fixturesData = await fixturesResponse.json();
       const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
       const nextGameweek = currentGameweek + 1; // Start from next gameweek
       
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
-      
-      // Get fixtures data for opponent identification
-      const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
-      const fixturesData = await fixturesResponse.json();
-      
-      // Fetch current standings to get DCC per game for each team
-      const standingsResponse = await internalFetch("api/current-standings?venue=all");
       const standingsData = await standingsResponse.json();
       
       // Create a map of team ID to DCC per game
@@ -13564,20 +13671,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const startGameweek = parseInt(req.query.startGameweek as string) || 4;
         const endGameweek = parseInt(req.query.endGameweek as string) || 9;
         
-        // Get FPL bootstrap data for current gameweek info and players
-        const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        // Get FPL bootstrap data from cached endpoint and team projections in parallel
+        const [fplResponse, teamProjectionsResponse, playerMinutesResponse] = await Promise.all([
+          internalFetch("api/bootstrap-static"),
+          internalFetch("api/team-goals-against-projections"),
+          internalFetch("api/player-minutes-projections")
+        ]);
         const fplData = await fplResponse.json();
         const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
         const nextGameweek = currentGameweek + 1; // Start from next gameweek
         
-        // Get team goals AGAINST (conceded) projections and player minutes
-        const [teamProjectionsResponse, playerMinutesResponse] = await Promise.all([
-          fetch(`http://localhost:5000/api/team-goals-against-projections`),
-          fetch("http://localhost:5000/api/player-minutes-projections")
+        // Get team goals AGAINST (conceded) projections and player minutes data
+        const [teamProjections, playerMinutesData] = await Promise.all([
+          teamProjectionsResponse.json(),
+          playerMinutesResponse.json()
         ]);
-        
-        const teamProjections = await teamProjectionsResponse.json();
-        const playerMinutesData = await playerMinutesResponse.json();
         
         // Filter to only GKP and DEF (affected by goals conceded)
         const affectedPlayers = fplData.elements.filter((player: any) => 
@@ -13672,8 +13780,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         console.log("DEBUG: Player Yellow Cards Projections API called - using pure projections for future gameweeks only");
         
-        // Get FPL bootstrap data for current gameweek info and players
-        const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        // Get FPL bootstrap data from cached endpoint for better performance
+        const fplResponse = await internalFetch("api/bootstrap-static");
         const fplData = await fplResponse.json();
         const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
         
@@ -13758,8 +13866,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         console.log("DEBUG: Player Red Cards Projections API called - using pure projections for future gameweeks only");
         
-        // Get FPL bootstrap data for current gameweek info and players
-        const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        // Get FPL bootstrap data from cached endpoint for better performance
+        const fplResponse = await internalFetch("api/bootstrap-static");
         const fplData = await fplResponse.json();
         const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
         
