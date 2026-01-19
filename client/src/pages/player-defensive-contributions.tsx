@@ -68,21 +68,24 @@ export default function PlayerDefensiveContributions() {
   // Create availability map for player availability badges
   const playerAvailabilityMap = usePlayerAvailabilityMap(bootstrapData);
 
-  // Calculate current gameweek and upcoming gameweeks
+  // Calculate current gameweek and upcoming gameweeks from bootstrap data
   const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 3; // Default fallback
+    if (!bootstrapData?.events) return null; // Return null until data loads
     const currentEvent = bootstrapData.events.find(e => e.is_current);
-    return currentEvent ? currentEvent.id : 3;
+    if (currentEvent) return currentEvent.id;
+    // Fallback: find first unfinished event
+    const nextEvent = bootstrapData.events.find(e => !e.finished);
+    return nextEvent ? nextEvent.id : 38;
   }, [bootstrapData]);
 
-  const nextGameweek = currentGameweek + 1;
+  const nextGameweek = currentGameweek ? Math.min(currentGameweek + 1, 38) : null;
 
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [startGameweek, setStartGameweek] = useState<number>(0); // Will be set to current + 1
-  const [endGameweek, setEndGameweek] = useState<number>(0); // Will be set to current + 6
+  const [startGameweek, setStartGameweek] = useState<number>(0);
+  const [endGameweek, setEndGameweek] = useState<number>(0);
   const [gameweekSortColumn, setGameweekSortColumn] = useState<number | null>(null);
   const [gameweekSortOrder, setGameweekSortOrder] = useState<"asc" | "desc">("desc");
   const [sortByCurrentDC, setSortByCurrentDC] = useState<boolean>(false);
@@ -96,26 +99,28 @@ export default function PlayerDefensiveContributions() {
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
-  // Dynamic gameweek range state (fetch 12 gameweeks for API, default display to 6)
-  const [gameweekRange, setGameweekRange] = useState(() => {
-    const start = nextGameweek;
-    const end = Math.min(nextGameweek + 11, 38); // Fetch 12 gameweeks for dropdown
-    return { start, end };
-  });
+  // Dynamic gameweek range state - only set once bootstrap data is loaded
+  const [gameweekRange, setGameweekRange] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
   
-  // Update range when current gameweek changes
+  // Update range when bootstrap data loads and currentGameweek becomes available
   useEffect(() => {
-    const start = nextGameweek;
-    const end = Math.min(nextGameweek + 11, 38); // Fetch 12 gameweeks for dropdown
-    setGameweekRange({ start, end });
+    if (nextGameweek && nextGameweek > 0) {
+      const start = nextGameweek;
+      const end = Math.min(nextGameweek + 11, 38);
+      setGameweekRange({ start, end });
+      // Also set display range
+      setStartGameweek(start);
+      setEndGameweek(Math.min(start + 5, 38));
+    }
   }, [nextGameweek]);
 
   // Fetch defensive contribution projections using new formula-based endpoint with current season data
-  // Fetches 12 gameweeks to populate dropdown, but display defaults to 6
+  // Only fetch when gameweekRange is valid (after bootstrap data loads)
   const { data: defensiveData, isLoading } = useQuery({
     queryKey: ["player-defensive-contributions-current-season", gameweekRange.start, gameweekRange.end],
     queryFn: () => fetch(`/api/player-defensive-contributions-projections?startGameweek=${gameweekRange.start}&endGameweek=${gameweekRange.end}`).then(res => res.json()),
     staleTime: 1 * 60 * 1000, // 1 minute to see changes faster
+    enabled: gameweekRange.start > 0 && gameweekRange.end > 0, // Only fetch when range is valid
   });
 
   // Fetch fixtures for opponent data
@@ -221,13 +226,7 @@ export default function PlayerDefensiveContributions() {
   // Get all gameweeks from the API data (already filtered to future gameweeks, up to 12 available)
   const allGameweeks = players.length > 0 && players[0].gameweekProjections.length > 0 
     ? players[0].gameweekProjections.map(gw => gw.gameweek)
-    : Array.from({ length: 12 }, (_, i) => gameweekRange.start + i).filter(gw => gw <= 38);
-  
-  // Set default gameweek range to 6 gameweeks (even though API fetches 12)
-  useEffect(() => {
-    setStartGameweek(gameweekRange.start);
-    setEndGameweek(Math.min(gameweekRange.start + 5, 38)); // Default to 6 gameweeks
-  }, [gameweekRange]);
+    : gameweekRange.start > 0 ? Array.from({ length: 12 }, (_, i) => gameweekRange.start + i).filter(gw => gw <= 38) : [];
   
   // Filter gameweeks based on selected range
   const gameweeks = useMemo(() => {
