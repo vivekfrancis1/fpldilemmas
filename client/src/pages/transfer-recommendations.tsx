@@ -1017,15 +1017,26 @@ export default function TransferRecommendations() {
                                     {affordableRecommendations.slice(0, 10).map((rec: any, index: number) => {
                                       const netCost = rec.playerIn.nowCost - rec.playerOut.sellingPrice;
                                       const itbAfterThisTransfer = runningBank - netCost;
+                                      const freeTransfersAvailable = getCascadedFreeTransfersAvailable(gw);
+                                      const isTopRecommendation = index < freeTransfersAvailable;
                                       
                                       return (
                                       <div
                                         key={`${rec.playerOut.id}-${rec.playerIn.id}`}
-                                        className="p-2 sm:p-3 bg-gradient-to-r from-orange-50 to-white border border-orange-200 rounded-lg shadow-sm space-y-2 hover:border-orange-300 transition-colors"
+                                        className={`p-2 sm:p-3 rounded-lg shadow-sm space-y-2 transition-colors ${
+                                          isTopRecommendation 
+                                            ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 hover:border-green-500' 
+                                            : 'bg-gradient-to-r from-orange-50 to-white border border-orange-200 hover:border-orange-300'
+                                        }`}
                                         data-testid={`transfer-recommendation-gw${gw}-${index}`}
                                       >
                                         <div className="flex items-start justify-between gap-2">
                                           <div className="space-y-1 flex-1">
+                                            {isTopRecommendation && (
+                                              <Badge className="text-[10px] bg-green-600 text-white mb-1">
+                                                FREE TRANSFER
+                                              </Badge>
+                                            )}
                                             <div className="flex items-start gap-2">
                                               <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0">
                                                 OUT
@@ -1061,7 +1072,7 @@ export default function TransferRecommendations() {
                                             Apply
                                           </Button>
                                         </div>
-                                        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 pt-1.5 border-t border-orange-200">
+                                        <div className={`grid grid-cols-3 sm:grid-cols-5 gap-2 pt-1.5 border-t ${isTopRecommendation ? 'border-green-300' : 'border-orange-200'}`}>
                                           <div className="text-center">
                                             <div className="text-xs text-gray-500">This GW</div>
                                             <div className="text-sm font-bold text-green-600" data-testid={`points-gain-single-gw${gw}-${index}`}>+{(rec.singleGWPointsGain || 0).toFixed(1)}</div>
