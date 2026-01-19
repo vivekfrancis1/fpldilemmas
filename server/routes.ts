@@ -9386,19 +9386,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (homeScore === 0) awayTeam.cleanSheets++;
       }
       
-      // xGA calculation
+      // xGA and DCC calculation
       const gameweekXGData = liveDataMap.get(fixture.event);
       if (gameweekXGData) {
         let homeXGF = 0, awayXGF = 0;
+        let homeDC = 0, awayDC = 0; // Defensive contributions earned by each team
         Object.entries(gameweekXGData.elements || {}).forEach(([playerId, playerData]: [string, any]) => {
           const teamId = playerToTeamMap.get(parseInt(playerId));
+          const playerPosition = playerPositionMap.get(parseInt(playerId));
           const stats = playerData.stats || {};
           const xg = parseFloat(stats.expected_goals || stats.xg || 0);
           if (teamId === homeTeamId) homeXGF += xg;
           else if (teamId === awayTeamId) awayXGF += xg;
+          
+          // Calculate DC for this player (exclude GKPs - element_type 1)
+          if (playerPosition && playerPosition !== 1) {
+            let playerDC = 0;
+            const cbi = parseInt(stats.clearances_blocks_interceptions || 0);
+            const tackles = parseInt(stats.tackles || 0);
+            const recoveries = parseInt(stats.recoveries || 0);
+            if (playerPosition === 2) { // Defender: DC = CBI + Tackles
+              playerDC = cbi + tackles;
+            } else { // Mid/Fwd: DC = CBI + Tackles + Recoveries
+              playerDC = cbi + tackles + recoveries;
+            }
+            if (teamId === homeTeamId) homeDC += playerDC;
+            else if (teamId === awayTeamId) awayDC += playerDC;
+          }
         });
-        if (processHome) homeTeam.expectedGoalsAgainst += awayXGF;
-        if (processAway) awayTeam.expectedGoalsAgainst += homeXGF;
+        if (processHome) {
+          homeTeam.expectedGoalsAgainst += awayXGF;
+          homeTeam.defensiveContributionsConceded += awayDC; // DC earned by away team against home team
+        }
+        if (processAway) {
+          awayTeam.expectedGoalsAgainst += homeXGF;
+          awayTeam.defensiveContributionsConceded += homeDC; // DC earned by home team against away team
+        }
       }
       
       // Points calculation
