@@ -9326,15 +9326,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         gameweekTeamXGF.set(teamId, (gameweekTeamXGF.get(teamId) || 0) + playerXGF);
         
-        if (gameweek === Math.max(...Array.from(completedGameweeks))) {
-          const team = teamStandings.get(teamId);
-          if (!team) return;
-          
+        // Accumulate stats across ALL gameweeks (not just the latest)
+        const team = teamStandings.get(teamId);
+        if (team) {
           if (stats.yellow_cards) team.yellowCards += stats.yellow_cards;
           if (stats.red_cards) team.redCards += stats.red_cards;
           if (stats.saves) team.saves += stats.saves;
           if (stats.own_goals) team.ownGoals += stats.own_goals;
           if (stats.penalties_saved) team.penaltiesSaved += stats.penalties_saved;
+          if (stats.penalties_missed) team.penaltiesMissed += stats.penalties_missed;
           
           if (stats.tackles) team.tackles += stats.tackles;
           
