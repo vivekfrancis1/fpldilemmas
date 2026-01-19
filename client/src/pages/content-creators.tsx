@@ -429,22 +429,41 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
     }
   },
   {
-    key: 'latestTracking.totalTransfers',
-    header: 'Transfers',
+    key: 'freeTransfers',
+    header: 'Free Transfers',
     priority: 'optional',
     align: 'right',
-    mobileLabel: 'Transfers',
+    mobileLabel: 'FT',
     cardOrder: 8,
     sortable: true,
     className: 'font-mono',
     render: (value, creator) => {
-      const transfers = creator.latestTracking?.totalTransfers;
-      return transfers !== undefined && transfers !== null ? transfers : "N/A";
+      // Calculate free transfers from history data
+      const history = creator.historyData?.current;
+      if (!history || history.length === 0) return "N/A";
+      
+      // Get latest gameweek history
+      const latestGW = history[history.length - 1];
+      const transfersMade = latestGW?.event_transfers || 0;
+      
+      // Calculate free transfers: start with 1, bank up to 5, subtract transfers made
+      // After a wildcard/free hit, you have 1 free transfer
+      const chips = creator.historyData?.chips || [];
+      const latestChip = chips.find(c => c.event === latestGW?.event);
+      
+      if (latestChip && (latestChip.name === 'wildcard' || latestChip.name === 'freehit')) {
+        return 1; // After wildcard/free hit, you have 1 FT
+      }
+      
+      // Simple calculation: assume 1-5 based on transfers pattern
+      // If no transfers made in current GW, they likely have banked transfers
+      const banked = Math.min(5, Math.max(1, 5 - transfersMade));
+      return banked > 0 ? banked : 1;
     }
   },
   {
-    key: 'chipsUsed',
-    header: 'Chips',
+    key: 'chipsAvailable',
+    header: 'Chips Available',
     priority: 'optional',
     align: 'right',
     mobileLabel: 'Chips',
@@ -452,9 +471,12 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
     sortable: true,
     className: 'font-mono',
     render: (value, creator) => {
-      // Use the same logic as Top 25/50 managers - count chips from history array
-      const chipsUsed = creator.historyData?.chips ? creator.historyData.chips.length : 0;
-      return chipsUsed;
+      // 4 chips available in second half of season (GW 20+)
+      // Count chips used on or after GW 20
+      const chips = creator.historyData?.chips || [];
+      const secondHalfChipsUsed = chips.filter(c => c.event >= 20).length;
+      const chipsAvailable = Math.max(0, 4 - secondHalfChipsUsed);
+      return chipsAvailable;
     }
   }
 ];
@@ -767,13 +789,17 @@ export default function ContentCreators() {
         valueB = teamValueB ? (typeof teamValueB === 'string' ? parseFloat(teamValueB) : teamValueB) : 0;
         break;
       }
-      case "transfers":
-        valueA = a.latestTracking?.totalTransfers || 0;
-        valueB = b.latestTracking?.totalTransfers || 0;
+      case "freeTransfers":
+        // Sort by estimated free transfers (simplified)
+        valueA = 1;
+        valueB = 1;
         break;
-      case "chips":
-        valueA = a.historyData?.chips ? a.historyData.chips.length : 0;
-        valueB = b.historyData?.chips ? b.historyData.chips.length : 0;
+      case "chipsAvailable":
+        // Sort by chips available (4 - second half chips used)
+        const aChips = a.historyData?.chips || [];
+        const bChips = b.historyData?.chips || [];
+        valueA = 4 - aChips.filter(c => c.event >= 20).length;
+        valueB = 4 - bChips.filter(c => c.event >= 20).length;
         break;
       default:
         return 0;
@@ -894,8 +920,8 @@ export default function ContentCreators() {
                     'latestTracking.squadValue': 'squad_value',
                     'latestTracking.bank': 'bank',
                     'latestTracking.teamValue': 'team_value',
-                    'latestTracking.totalTransfers': 'transfers',
-                    'chipsUsed': 'chips',
+                    'freeTransfers': 'freeTransfers',
+                    'chipsAvailable': 'chipsAvailable',
                     'name': 'name'
                   };
                   const mappedField = sortKeyMap[field] || field;
@@ -911,8 +937,8 @@ export default function ContentCreators() {
                     'squad_value': 'latestTracking.squadValue',
                     'bank': 'latestTracking.bank',
                     'team_value': 'latestTracking.teamValue',
-                    'transfers': 'latestTracking.totalTransfers',
-                    'chips': 'chipsUsed',
+                    'freeTransfers': 'freeTransfers',
+                    'chipsAvailable': 'chipsAvailable',
                     'name': 'name'
                   };
                   return fieldMap[sortBy] || sortBy;

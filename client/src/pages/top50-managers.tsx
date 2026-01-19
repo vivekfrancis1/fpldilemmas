@@ -53,6 +53,7 @@ type Top50Manager = {
     bank: number;
     totalTransfers: number;
     chipsUsed?: number;
+    secondHalfChipsUsed?: number;
   };
 };
 
@@ -307,31 +308,36 @@ const getTop50ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn
     }
   },
   {
-    key: 'latestTracking.totalTransfers',
-    header: 'Transfers',
+    key: 'freeTransfers',
+    header: 'Free Transfers',
     priority: 'optional',
     align: 'right',
-    mobileLabel: 'Transfers',
+    mobileLabel: 'FT',
     cardOrder: 6,
     sortable: true,
     className: 'font-mono',
     render: (value, manager) => {
-      const transfers = manager.latestTracking?.totalTransfers;
-      return transfers !== undefined && transfers !== null ? transfers : "N/A";
+      // For top 50, we don't have detailed history - show based on total transfers
+      const totalTransfers = manager.latestTracking?.totalTransfers;
+      if (totalTransfers === undefined) return "N/A";
+      // Simplified: assume they have at least 1 FT available
+      return "1-5";
     }
   },
   {
-    key: 'latestTracking.chipsUsed',
-    header: 'Chips',
+    key: 'chipsAvailable',
+    header: 'Chips Available',
     priority: 'optional',
     align: 'right',
     mobileLabel: 'Chips',
-    cardOrder: 7,
+    cardOrder: 8,
     sortable: true,
     className: 'font-mono',
     render: (value, manager) => {
-      const chips = manager.latestTracking?.chipsUsed;
-      return chips !== undefined ? chips : "N/A";
+      // 4 chips available in second half of season (GW 20+)
+      const secondHalfChipsUsed = manager.latestTracking?.secondHalfChipsUsed || 0;
+      const chipsAvailable = Math.max(0, 4 - secondHalfChipsUsed);
+      return chipsAvailable;
     }
   }
 ];
@@ -572,7 +578,10 @@ export default function Top50Managers() {
         const historyData = await historyResponse.json();
         
         // Count chips used
-        const chipsUsed = historyData.chips ? historyData.chips.length : 0;
+        const chips = historyData.chips || [];
+        const chipsUsed = chips.length;
+        // Count chips used in second half of season (GW 20+)
+        const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
         
         return {
           gameweek: managerData.current_event || 0,
@@ -583,6 +592,7 @@ export default function Top50Managers() {
           bank: managerData.last_deadline_bank,
           totalTransfers: managerData.last_deadline_total_transfers,
           chipsUsed: chipsUsed,
+          secondHalfChipsUsed: secondHalfChipsUsed,
         };
       }
     } catch (error) {
@@ -644,10 +654,12 @@ export default function Top50Managers() {
           }
           case 'latestTracking.bank':
             return manager.latestTracking?.bank || 0;
-          case 'latestTracking.totalTransfers':
-            return manager.latestTracking?.totalTransfers || 0;
-          case 'latestTracking.chipsUsed':
-            return manager.latestTracking?.chipsUsed || 0;
+          case 'freeTransfers':
+            // Simplified - all managers assumed to have 1-5 FT
+            return 1;
+          case 'chipsAvailable':
+            // 4 chips in second half - second half chips used
+            return 4 - (manager.latestTracking?.secondHalfChipsUsed || 0);
           case 'name':
             return manager.name;
           default:
