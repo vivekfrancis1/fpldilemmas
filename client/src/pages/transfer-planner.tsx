@@ -942,7 +942,8 @@ export default function TransferPlanner() {
   // Collapsible sections state - default to collapsed
   const [isChipsPlanningOpen, setIsChipsPlanningOpen] = useState(false);
   const [isDraftSelectionOpen, setIsDraftSelectionOpen] = useState(false);
-  const [isGameweekSelectionOpen, setIsGameweekSelectionOpen] = useState(true);
+  const [isGameweekSelectionOpen, setIsGameweekSelectionOpen] = useState(false);
+  const [isTeamSummaryOpen, setIsTeamSummaryOpen] = useState(false);
   const [isTeamEvolutionOpen, setIsTeamEvolutionOpen] = useState(false);
   const [isDraftComparisonOpen, setIsDraftComparisonOpen] = useState(false);
   
@@ -5405,7 +5406,7 @@ export default function TransferPlanner() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <List className="h-5 w-5 text-blue-600" />
-                    <span className="text-base sm:text-lg font-semibold">Select Draft</span>
+                    <span className="text-base sm:text-lg font-semibold">Draft Selection</span>
                     <Badge variant={activeDraft === "Base" ? "secondary" : "default"} className="text-xs sm:text-sm px-2 py-0.5">
                       {activeDraft === "Base" ? "Base" : `Draft ${activeDraft}`}
                     </Badge>
@@ -5549,10 +5550,10 @@ export default function TransferPlanner() {
         <Collapsible open={isChipsPlanningOpen} onOpenChange={setIsChipsPlanningOpen}>
           <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background">
             <CardHeader className="px-3 sm:px-6 pb-2 md:pb-4">
-              <div className="flex items-start justify-between gap-2">
-                <CardTitle className="flex items-center gap-2 text-base md:text-lg" data-testid="text-chips-planning-title">
-                  <Sparkles className="h-4 w-4 md:h-5 md:w-5 text-amber-600" />
-                  <span>Chip Selection</span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2" data-testid="text-chips-planning-title">
+                  <Sparkles className="h-5 w-5 text-amber-600" />
+                  <span className="text-base sm:text-lg font-semibold">Chip Selection</span>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -5575,7 +5576,7 @@ export default function TransferPlanner() {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                </CardTitle>
+                </div>
                 <CollapsibleTrigger asChild>
                   <Button
                     type="button"
@@ -5745,46 +5746,58 @@ export default function TransferPlanner() {
 
       {/* Team Summary Stats */}
       {searchedId && teamData && selectedGameweek && (
-        <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
-          <CardHeader className="px-3 sm:px-6">
-            <CardTitle className="flex items-center justify-between flex-wrap gap-2 sm:gap-3 text-base sm:text-lg">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-green-600" />
-                {activeDraft === "Base" ? "Team Summary - Base Draft" : `Team Summary - Draft ${activeDraft}`}
-              </div>
-              <div className="flex gap-1 md:gap-2 flex-wrap">
+        <Collapsible open={isTeamSummaryOpen} onOpenChange={setIsTeamSummaryOpen}>
+          <Card className="border-green-200 bg-gradient-to-br from-green-50 to-white dark:from-green-950/20 dark:to-background">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="py-3 px-3 sm:px-6 cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    <span className="text-base sm:text-lg font-semibold">Team Summary</span>
+                    <Badge variant={activeDraft === "Base" ? "secondary" : "default"} className="text-xs sm:text-sm px-2 py-0.5">
+                      {activeDraft === "Base" ? "Base" : `Draft ${activeDraft}`}
+                    </Badge>
+                  </div>
+                  {isTeamSummaryOpen ? (
+                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="px-3 sm:px-6 pt-0">
                 {/* Transfer undo buttons */}
-                {(completedTransfers.length > 0 || transferredOutPlayers.length > 0) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleResetTransfers}
-                    className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20 h-7 px-2 md:h-9 md:px-3"
-                    data-testid="button-reset-gw-transfers"
-                  >
-                    <RotateCcw className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                    <span className="hidden sm:inline">Undo This GW Transfers</span>
-                  </Button>
-                )}
-                {Object.keys(gameweekTransfers).some(gw => 
-                  gameweekTransfers[parseInt(gw)]?.completed?.length > 0 || 
-                  gameweekTransfers[parseInt(gw)]?.transferredOut?.length > 0
-                ) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleResetAllTransfers}
-                    className="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20 h-7 px-2 md:h-9 md:px-3"
-                    data-testid="button-reset-all-transfers"
-                  >
-                    <X className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
-                    <span className="hidden sm:inline">Undo All GW Transfers</span>
-                  </Button>
-                )}
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="px-3 sm:px-6">
+                <div className="flex gap-1 md:gap-2 flex-wrap mb-4">
+                  {(completedTransfers.length > 0 || transferredOutPlayers.length > 0) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResetTransfers}
+                      className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950/20 h-7 px-2 md:h-9 md:px-3"
+                      data-testid="button-reset-gw-transfers"
+                    >
+                      <RotateCcw className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                      <span className="hidden sm:inline">Undo This GW Transfers</span>
+                    </Button>
+                  )}
+                  {Object.keys(gameweekTransfers).some(gw => 
+                    gameweekTransfers[parseInt(gw)]?.completed?.length > 0 || 
+                    gameweekTransfers[parseInt(gw)]?.transferredOut?.length > 0
+                  ) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResetAllTransfers}
+                      className="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20 h-7 px-2 md:h-9 md:px-3"
+                      data-testid="button-reset-all-transfers"
+                    >
+                      <X className="h-3 w-3 md:h-4 md:w-4 md:mr-2" />
+                      <span className="hidden sm:inline">Undo All GW Transfers</span>
+                    </Button>
+                  )}
+                </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 sm:gap-4">
               {/* Formation */}
               <div className="p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border">
@@ -5957,8 +5970,10 @@ export default function TransferPlanner() {
                 })()}
               </div>
             </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* Gameweek Selection Section */}
@@ -5970,7 +5985,7 @@ export default function TransferPlanner() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-5 w-5 text-purple-600" />
-                    <span className="text-base sm:text-lg font-semibold">Select Gameweek</span>
+                    <span className="text-base sm:text-lg font-semibold">Gameweek Selection</span>
                     <Badge variant="secondary" className="text-xs sm:text-sm px-2 py-0.5">GW {selectedGameweek}</Badge>
                   </div>
                   {isGameweekSelectionOpen ? (
@@ -6008,13 +6023,15 @@ export default function TransferPlanner() {
       {/* Team Selection Section */}
       {searchedId && teamData && selectedGameweek && (
         <Card ref={teamLineupRef} className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
-          <CardHeader className="px-3 sm:px-6">
-            <CardTitle className="flex items-center justify-between flex-wrap gap-2 text-base sm:text-lg">
+          <CardHeader className="py-3 px-3 sm:px-6">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <Users className="h-5 w-5 text-blue-600" />
-                {activeDraft === "Base" 
-                  ? `Team Selection - Base Draft - Gameweek ${selectedGameweek}` 
-                  : `Team Selection - Draft ${activeDraft} - Gameweek ${selectedGameweek}`}
+                <span className="text-base sm:text-lg font-semibold">Team Selection</span>
+                <Badge variant={activeDraft === "Base" ? "secondary" : "default"} className="text-xs sm:text-sm px-2 py-0.5">
+                  {activeDraft === "Base" ? "Base" : `Draft ${activeDraft}`}
+                </Badge>
+                <Badge variant="secondary" className="text-xs sm:text-sm px-2 py-0.5">GW {selectedGameweek}</Badge>
               </div>
               {(() => {
                 const currentChip = plannedChips[selectedGameweek];
@@ -6043,7 +6060,7 @@ export default function TransferPlanner() {
                 }
                 return null;
               })()}
-            </CardTitle>
+            </div>
           </CardHeader>
           <CardContent className="px-3 sm:px-6">
             <div className="text-xs sm:text-sm text-muted-foreground mb-2 italic">
