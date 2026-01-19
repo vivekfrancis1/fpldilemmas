@@ -1083,7 +1083,7 @@ export default function TransferRecommendations() {
                                           <div className="text-center">
                                             <div className="text-xs text-gray-500">Cost</div>
                                             <div className={`text-xs sm:text-sm font-semibold ${netCost >= 0 ? 'text-red-600' : 'text-green-600'}`} data-testid={`cost-gw${gw}-${index}`}>
-                                              {(Math.abs(netCost) / 10).toFixed(1)}m
+                                              {netCost < 0 ? '- ' : ''}{(Math.abs(netCost) / 10).toFixed(1)}m
                                             </div>
                                           </div>
                                           <div className="text-center">
