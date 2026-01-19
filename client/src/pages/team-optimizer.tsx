@@ -1037,7 +1037,7 @@ export default function TeamOptimizer() {
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               {isSessionExpired 
-                ? `FPL session expired. Please reconnect to sync your latest GW ${upcomingGW} team.`
+                ? `FPL session expired. Please reconnect to sync your latest team.`
                 : `Unable to load team data for manager ID: ${searchedId}. Please check the ID and try again.`
               }
             </AlertDescription>
