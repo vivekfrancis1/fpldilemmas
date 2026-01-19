@@ -1329,19 +1329,6 @@ export default function PlayerTotalPoints() {
               <p className="fpl-page-subtitle">
                 Complete FPL points projection combining all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points
               </p>
-              <div className="fpl-page-actions">
-                <Button
-                  onClick={handleRefreshData}
-                  disabled={isRefreshing}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border-white/30 text-white disabled:opacity-50"
-                  data-testid="button-refresh-data"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
-                </Button>
-              </div>
             </div>
           </div>
 
@@ -1694,7 +1681,7 @@ export default function PlayerTotalPoints() {
           ) : (
             <div className="fpl-card">
               <div className="fpl-card-header">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-indigo-600" />
                     <h2 className="fpl-card-title">Player Points Projections: GW{startGameweek}-GW{endGameweek}</h2>
@@ -1704,9 +1691,22 @@ export default function PlayerTotalPoints() {
                       </Badge>
                     )}
                   </div>
-                  <Badge className="bg-indigo-100 text-indigo-700">
-                    {filteredAndSortedData.length} players
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handleRefreshData}
+                      disabled={isRefreshing}
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                      data-testid="button-refresh-data"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                      {isRefreshing ? 'Refreshing...' : 'Refresh Data'}
+                    </Button>
+                    <Badge className="bg-indigo-100 text-indigo-700">
+                      {filteredAndSortedData.length} players
+                    </Badge>
+                  </div>
                 </div>
               </div>
               <div className="fpl-card-content p-0">

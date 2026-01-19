@@ -465,18 +465,6 @@ export default function PlayerGoalsScoredProjections() {
           <p className="fpl-page-subtitle">
             Projected Goals for each player across all upcoming fixtures
           </p>
-          <div className="mt-4">
-            <Button
-              onClick={handleRefreshData}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border-white/30 text-white"
-              data-testid="button-refresh-data"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh Data
-            </Button>
-          </div>
         </div>
       </div>
 
@@ -669,15 +657,27 @@ export default function PlayerGoalsScoredProjections() {
         <div className="w-full">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Target className="h-5 w-5" />
-                  Player Goal Projections: GW{startGameweek}-GW{endGameweek}
-                  {excludedGameweeks.size > 0 && (
-                    <Badge variant="secondary" className="ml-1 text-xs">
-                      {excludedGameweeks.size} excluded
-                    </Badge>
-                  )}
-                </CardTitle>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Player Goal Projections: GW{startGameweek}-GW{endGameweek}
+                    {excludedGameweeks.size > 0 && (
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {excludedGameweeks.size} excluded
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <Button
+                    onClick={handleRefreshData}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                    data-testid="button-refresh-data"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh Data
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto -mx-4 sm:mx-0">
