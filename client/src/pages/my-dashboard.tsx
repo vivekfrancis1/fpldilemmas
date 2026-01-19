@@ -2582,6 +2582,59 @@ export default function MyDashboard() {
 
               {/* Transfers Tab */}
               <TabsContent value="transfers" className="space-y-6 mt-6 sm:mt-8">
+                {/* Free Transfers Summary Card */}
+                {teamData?.transfers && (
+                  <Card className="border-0 bg-gradient-to-br from-emerald-50 to-teal-50 shadow-lg">
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-3 bg-emerald-100 rounded-xl">
+                            <ArrowLeftRight className="h-6 w-6 text-emerald-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg sm:text-xl font-bold text-emerald-800">
+                              Free Transfers Available
+                            </h3>
+                            <p className="text-sm text-emerald-600">
+                              For Gameweek {getNextGameweekDashboard()}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 sm:gap-6">
+                          <div className="text-center">
+                            <div className="text-3xl sm:text-4xl font-bold text-emerald-700">
+                              {Math.max(0, (teamData.transfers.limit || 1) - (teamData.transfers.made || 0))}
+                            </div>
+                            <div className="text-xs sm:text-sm text-emerald-600 font-medium">
+                              Available
+                            </div>
+                          </div>
+                          {teamData.transfers.made > 0 && (
+                            <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
+                              <div className="text-2xl sm:text-3xl font-bold text-orange-600">
+                                {teamData.transfers.made}
+                              </div>
+                              <div className="text-xs sm:text-sm text-orange-600 font-medium">
+                                Made
+                              </div>
+                            </div>
+                          )}
+                          {teamData.transfers.cost > 0 && (
+                            <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
+                              <div className="text-2xl sm:text-3xl font-bold text-red-600">
+                                -{teamData.transfers.cost}
+                              </div>
+                              <div className="text-xs sm:text-sm text-red-600 font-medium">
+                                Point Hit
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Upcoming Transfers Section (Free Hit / Wildcard) */}
                 {isOwnTeam && getUpcomingTransfers().length > 0 && (
                   <Card className="border-0 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg">
