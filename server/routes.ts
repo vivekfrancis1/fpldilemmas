@@ -8996,9 +8996,240 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced Current Standings cache (30 minutes - completed match data doesn't change often)
+  // Enhanced Current Standings cache (60 minutes - completed match data doesn't change often)
   const currentStandingsCache = new Map<string, { data: any; timestamp: number }>();
-  const CURRENT_STANDINGS_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+  const CURRENT_STANDINGS_CACHE_DURATION = 60 * 60 * 1000; // 60 minutes
+  
+  // In-flight request de-duplication to prevent thundering herd
+  const currentStandingsInFlight = new Map<string, Promise<any>>();
+
+  // Function to compute standings (extracted for cache warming)
+  async function computeCurrentStandings(venue: string): Promise<any> {
+    // Fetch fixtures and bootstrap data
+    const [fixturesResponse, bootstrapResponse] = await Promise.all([
+      fetchWithRetry("https://fantasy.premierleague.com/api/fixtures/"),
+      fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/")
+    ]);
+    
+    if (!fixturesResponse.ok || !bootstrapResponse.ok) {
+      throw new Error("Failed to fetch data from FPL API");
+    }
+    
+    const fixturesData = await fixturesResponse.json();
+    const bootstrapData = await bootstrapResponse.json();
+    
+    // Filter for only completed fixtures
+    const completedFixtures = fixturesData.filter((fixture: any) => 
+      fixture.finished === true && 
+      fixture.team_h_score !== null && 
+      fixture.team_a_score !== null
+    );
+    
+    console.log(`DEBUG: Found ${completedFixtures.length} completed fixtures for enhanced standings`);
+    
+    // Get all completed gameweeks for live data fetching
+    const completedGameweeks = new Set<number>();
+    completedFixtures.forEach((fixture: any) => {
+      if (fixture.event) {
+        completedGameweeks.add(fixture.event);
+      }
+    });
+    
+    console.log(`DEBUG: Fetching live data for ${completedGameweeks.size} completed gameweeks`);
+    
+    // Fetch live data for each completed gameweek to calculate per-gameweek Expected Goals
+    console.log(`DEBUG: Fetching live data for ${completedGameweeks.size} completed gameweeks for per-gameweek xG calculation`);
+    
+    const liveDataPromises = Array.from(completedGameweeks).map(async (gameweek) => {
+      try {
+        const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
+        if (liveResponse.ok) {
+          const liveData = await liveResponse.json();
+          return { gameweek, data: liveData };
+        }
+      } catch (error) {
+        console.warn(`Failed to fetch live data for gameweek ${gameweek}:`, error);
+      }
+      return null;
+    });
+    
+    const liveDataResults = await Promise.all(liveDataPromises);
+    const liveDataMap = new Map<number, any>();
+    liveDataResults.forEach((result) => {
+      if (result) {
+        liveDataMap.set(result.gameweek, result.data);
+      }
+    });
+    
+    // Initialize enhanced team standings
+    const teamStandings = new Map();
+    bootstrapData.teams.forEach((team: any) => {
+      teamStandings.set(team.id, {
+        id: team.id,
+        name: team.name,
+        shortName: team.short_name,
+        played: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+        goalsFor: 0,
+        goalsAgainst: 0,
+        goalDifference: 0,
+        points: 0,
+        // Enhanced statistics
+        cleanSheets: 0,
+        yellowCards: 0,
+        redCards: 0,
+        saves: 0,
+        ownGoals: 0,
+        penaltiesSaved: 0,
+        penaltiesMissed: 0,
+        expectedGoalsFor: 0,
+        expectedGoalsAgainst: 0,
+        tackles: 0,
+        defensiveActions: 0,
+        defensiveContributions: 0,
+        defensiveContributionsConceded: 0
+      });
+    });
+    
+    // Create a map of player ID to team ID and position for easier lookups
+    const playerToTeamMap = new Map<number, number>();
+    const playerPositionMap = new Map<number, number>();
+    bootstrapData.elements.forEach((player: any) => {
+      playerToTeamMap.set(player.id, player.team);
+      playerPositionMap.set(player.id, player.element_type);
+    });
+    
+    // Process live data per gameweek to calculate per-gameweek Expected Goals and sum them up
+    for (const [gameweek, liveData] of Array.from(liveDataMap)) {
+      if (!liveData || !liveData.elements) continue;
+      
+      // Calculate per-gameweek xGF for each team
+      const gameweekTeamXGF = new Map<number, number>();
+      
+      bootstrapData.teams.forEach((team: any) => {
+        gameweekTeamXGF.set(team.id, 0);
+      });
+      
+      Object.entries(liveData.elements).forEach(([playerId, playerData]: [string, any]) => {
+        const teamId = playerToTeamMap.get(parseInt(playerId));
+        if (!teamId) return;
+        
+        const stats = playerData.stats || {};
+        
+        let playerXGF = 0;
+        if (stats.expected_goals) {
+          playerXGF = parseFloat(stats.expected_goals) || 0;
+        } else if (stats.xg) {
+          playerXGF = parseFloat(stats.xg) || 0;
+        }
+        gameweekTeamXGF.set(teamId, (gameweekTeamXGF.get(teamId) || 0) + playerXGF);
+        
+        if (gameweek === Math.max(...Array.from(completedGameweeks))) {
+          const team = teamStandings.get(teamId);
+          if (!team) return;
+          
+          if (stats.yellow_cards) team.yellowCards += stats.yellow_cards;
+          if (stats.red_cards) team.redCards += stats.red_cards;
+          if (stats.saves) team.saves += stats.saves;
+          if (stats.own_goals) team.ownGoals += stats.own_goals;
+          if (stats.penalties_saved) team.penaltiesSaved += stats.penalties_saved;
+          
+          if (stats.tackles) team.tackles += stats.tackles;
+          
+          let playerDefensiveActions = 0;
+          if (stats.tackles) playerDefensiveActions += stats.tackles;
+          if (stats.blocks) playerDefensiveActions += stats.blocks;
+          if (stats.interceptions) playerDefensiveActions += stats.interceptions;
+          if (stats.clearances) playerDefensiveActions += stats.clearances;
+          if (stats.recoveries) playerDefensiveActions += stats.recoveries;
+          if (playerDefensiveActions > 0) team.defensiveActions += playerDefensiveActions;
+        }
+      });
+      
+      // Store per-gameweek xGF totals
+      gameweekTeamXGF.forEach((xgf, teamId) => {
+        const team = teamStandings.get(teamId);
+        if (team) {
+          team.expectedGoalsFor += xgf;
+        }
+      });
+    }
+    
+    // Process fixtures for match results and xGA
+    completedFixtures.forEach((fixture: any) => {
+      const homeTeamId = fixture.team_h;
+      const awayTeamId = fixture.team_a;
+      const homeScore = fixture.team_h_score;
+      const awayScore = fixture.team_a_score;
+      
+      const homeTeam = teamStandings.get(homeTeamId);
+      const awayTeam = teamStandings.get(awayTeamId);
+      
+      if (!homeTeam || !awayTeam) return;
+      
+      const processHome = venue === 'all' || venue === 'home';
+      const processAway = venue === 'all' || venue === 'away';
+      
+      if (processHome) {
+        homeTeam.played++;
+        homeTeam.goalsFor += homeScore;
+        homeTeam.goalsAgainst += awayScore;
+        if (awayScore === 0) homeTeam.cleanSheets++;
+      }
+      
+      if (processAway) {
+        awayTeam.played++;
+        awayTeam.goalsFor += awayScore;
+        awayTeam.goalsAgainst += homeScore;
+        if (homeScore === 0) awayTeam.cleanSheets++;
+      }
+      
+      // xGA calculation
+      const gameweekXGData = liveDataMap.get(fixture.event);
+      if (gameweekXGData) {
+        let homeXGF = 0, awayXGF = 0;
+        Object.entries(gameweekXGData.elements || {}).forEach(([playerId, playerData]: [string, any]) => {
+          const teamId = playerToTeamMap.get(parseInt(playerId));
+          const stats = playerData.stats || {};
+          const xg = parseFloat(stats.expected_goals || stats.xg || 0);
+          if (teamId === homeTeamId) homeXGF += xg;
+          else if (teamId === awayTeamId) awayXGF += xg;
+        });
+        if (processHome) homeTeam.expectedGoalsAgainst += awayXGF;
+        if (processAway) awayTeam.expectedGoalsAgainst += homeXGF;
+      }
+      
+      // Points calculation
+      if (homeScore > awayScore) {
+        if (processHome) { homeTeam.wins++; homeTeam.points += 3; }
+        if (processAway) { awayTeam.losses++; }
+      } else if (awayScore > homeScore) {
+        if (processHome) { homeTeam.losses++; }
+        if (processAway) { awayTeam.wins++; awayTeam.points += 3; }
+      } else {
+        if (processHome) { homeTeam.draws++; homeTeam.points += 1; }
+        if (processAway) { awayTeam.draws++; awayTeam.points += 1; }
+      }
+    });
+    
+    // Calculate final standings
+    const standings = Array.from(teamStandings.values()).map((team: any) => ({
+      ...team,
+      goalDifference: team.goalsFor - team.goalsAgainst,
+      adjustedGoalRate: team.played > 0 ? (0.5 * (team.goalsFor + team.expectedGoalsFor)) / team.played : 0,
+      adjustedGoalsAgainstRate: team.played > 0 ? (0.5 * (team.goalsAgainst + team.expectedGoalsAgainst)) / team.played : 0
+    }));
+    
+    standings.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
+      return b.goalsFor - a.goalsFor;
+    });
+    
+    return standings.map((team, index) => ({ ...team, position: index + 1 }));
+  }
 
   // Current Standings endpoint - calculates actual Premier League table with detailed statistics from completed matches only
   app.get("/api/current-standings", 
@@ -9011,394 +9242,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid venue parameter. Must be 'all', 'home', or 'away'" });
       }
       
-      console.log(`DEBUG: Enhanced Current Standings API called - calculating detailed table from completed matches (venue: ${venue})`);
+      const cacheKey = `detailed_standings_${venue}`;
+      const now = Date.now();
       
       // Check cache first (with venue-specific cache key)
-      const now = Date.now();
-      const cacheKey = `detailed_standings_${venue}`;
       const cached = currentStandingsCache.get(cacheKey);
       if (cached && (now - cached.timestamp) < CURRENT_STANDINGS_CACHE_DURATION) {
         console.log(`DEBUG: Serving detailed current standings from cache (venue: ${venue})`);
         return res.json(cached.data);
       }
       
-      // Fetch fixtures and bootstrap data
-      const [fixturesResponse, bootstrapResponse] = await Promise.all([
-        fetchWithRetry("https://fantasy.premierleague.com/api/fixtures/"),
-        fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/")
-      ]);
-      
-      if (!fixturesResponse.ok || !bootstrapResponse.ok) {
-        throw new Error("Failed to fetch data from FPL API");
-      }
-      
-      const fixturesData = await fixturesResponse.json();
-      const bootstrapData = await bootstrapResponse.json();
-      
-      // Filter for only completed fixtures
-      const completedFixtures = fixturesData.filter((fixture: any) => 
-        fixture.finished === true && 
-        fixture.team_h_score !== null && 
-        fixture.team_a_score !== null
-      );
-      
-      console.log(`DEBUG: Found ${completedFixtures.length} completed fixtures for enhanced standings`);
-      
-      // Get all completed gameweeks for live data fetching
-      const completedGameweeks = new Set<number>();
-      completedFixtures.forEach((fixture: any) => {
-        if (fixture.event) {
-          completedGameweeks.add(fixture.event);
-        }
-      });
-      
-      console.log(`DEBUG: Fetching live data for ${completedGameweeks.size} completed gameweeks`);
-      
-      // Fetch live data for each completed gameweek to calculate per-gameweek Expected Goals
-      console.log(`DEBUG: Fetching live data for ${completedGameweeks.size} completed gameweeks for per-gameweek xG calculation`);
-      
-      const liveDataPromises = Array.from(completedGameweeks).map(async (gameweek) => {
+      // Check if there's already an in-flight request for this venue
+      const inFlight = currentStandingsInFlight.get(cacheKey);
+      if (inFlight) {
+        console.log(`DEBUG: Waiting for in-flight standings calculation (venue: ${venue})`);
         try {
-          const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
-          if (liveResponse.ok) {
-            const liveData = await liveResponse.json();
-            return { gameweek, data: liveData };
-          }
+          const result = await inFlight;
+          return res.json(result);
         } catch (error) {
-          console.warn(`Failed to fetch live data for gameweek ${gameweek}:`, error);
+          // In-flight request failed, we'll try to compute ourselves
         }
-        return null;
-      });
-      
-      const liveDataResults = await Promise.all(liveDataPromises);
-      const liveDataMap = new Map<number, any>();
-      liveDataResults.forEach((result) => {
-        if (result) {
-          liveDataMap.set(result.gameweek, result.data);
-        }
-      });
-      
-      // Initialize enhanced team standings
-      const teamStandings = new Map();
-      bootstrapData.teams.forEach((team: any) => {
-        teamStandings.set(team.id, {
-          id: team.id,
-          name: team.name,
-          shortName: team.short_name,
-          played: 0,
-          wins: 0,
-          draws: 0,
-          losses: 0,
-          goalsFor: 0,
-          goalsAgainst: 0,
-          goalDifference: 0,
-          points: 0,
-          // Enhanced statistics
-          cleanSheets: 0,
-          yellowCards: 0,
-          redCards: 0,
-          saves: 0,
-          ownGoals: 0,
-          penaltiesSaved: 0,
-          penaltiesMissed: 0,
-          expectedGoalsFor: 0,
-          expectedGoalsAgainst: 0,
-          tackles: 0,
-          defensiveActions: 0,
-          defensiveContributions: 0,
-          defensiveContributionsConceded: 0
-        });
-      });
-      
-      // Create a map of player ID to team ID and position for easier lookups
-      const playerToTeamMap = new Map<number, number>();
-      const playerPositionMap = new Map<number, number>();
-      bootstrapData.elements.forEach((player: any) => {
-        playerToTeamMap.set(player.id, player.team);
-        playerPositionMap.set(player.id, player.element_type); // 1=GK, 2=DEF, 3=MID, 4=FWD
-      });
-      
-      // Process live data per gameweek to calculate per-gameweek Expected Goals and sum them up
-      for (const [gameweek, liveData] of Array.from(liveDataMap)) {
-        if (!liveData || !liveData.elements) continue;
-        
-        // Calculate per-gameweek xGF for each team (XGA will be derived from fixtures)
-        const gameweekTeamXGF = new Map<number, number>();
-        
-        // Initialize gameweek totals for all teams
-        bootstrapData.teams.forEach((team: any) => {
-          gameweekTeamXGF.set(team.id, 0);
-        });
-        
-        Object.entries(liveData.elements).forEach(([playerId, playerData]: [string, any]) => {
-          const teamId = playerToTeamMap.get(parseInt(playerId));
-          if (!teamId) return;
-          
-          const stats = playerData.stats || {};
-          
-          // Sum xGF for all players in the team for this gameweek
-          let playerXGF = 0;
-          if (stats.expected_goals) {
-            playerXGF = parseFloat(stats.expected_goals) || 0;
-          } else if (stats.xg) {
-            playerXGF = parseFloat(stats.xg) || 0;
-          }
-          gameweekTeamXGF.set(teamId, (gameweekTeamXGF.get(teamId) || 0) + playerXGF);
-          
-          // Aggregate other stats from all players (only do this once, not per gameweek)
-          if (gameweek === Math.max(...Array.from(completedGameweeks))) {
-            const team = teamStandings.get(teamId);
-            if (!team) return;
-            
-            if (stats.yellow_cards) team.yellowCards += stats.yellow_cards;
-            if (stats.red_cards) team.redCards += stats.red_cards;
-            if (stats.saves) team.saves += stats.saves;
-            if (stats.own_goals) team.ownGoals += stats.own_goals;
-            if (stats.penalties_saved) team.penaltiesSaved += stats.penalties_saved;
-            
-            // Extract tackles and calculate defensive actions
-            if (stats.tackles) team.tackles += stats.tackles;
-            
-            let playerDefensiveActions = 0;
-            if (stats.tackles) playerDefensiveActions += stats.tackles;
-            if (stats.blocks) playerDefensiveActions += stats.blocks;
-            if (stats.interceptions) playerDefensiveActions += stats.interceptions;
-            if (stats.clearances) playerDefensiveActions += stats.clearances;
-            if (stats.recoveries) playerDefensiveActions += stats.recoveries;
-            if (playerDefensiveActions > 0) team.defensiveActions += playerDefensiveActions;
-          }
-        });
-        
-        // Add this gameweek's xGF to season totals
-        for (const [teamId, xgf] of Array.from(gameweekTeamXGF)) {
-          const team = teamStandings.get(teamId);
-          if (team) {
-            team.expectedGoalsFor += xgf;
-          }
-        }
-        
-        // Calculate XGA from fixtures for this gameweek to ensure conservation (total XGF = total XGA)
-        const gameweekFixtures = completedFixtures.filter((fixture: any) => fixture.event === gameweek);
-        gameweekFixtures.forEach((fixture: any) => {
-          const homeTeamId = fixture.team_h;
-          const awayTeamId = fixture.team_a;
-          const homeTeam = teamStandings.get(homeTeamId);
-          const awayTeam = teamStandings.get(awayTeamId);
-          
-          if (homeTeam && awayTeam) {
-            const homeXGF = gameweekTeamXGF.get(homeTeamId) || 0;
-            const awayXGF = gameweekTeamXGF.get(awayTeamId) || 0;
-            
-            // Each team's XGA equals their opponent's XGF in this fixture
-            // Distribute the gameweek XGF proportionally among fixtures for the team
-            const homeTeamFixtures = gameweekFixtures.filter((f: any) => f.team_h === homeTeamId || f.team_a === homeTeamId).length;
-            const awayTeamFixtures = gameweekFixtures.filter((f: any) => f.team_h === awayTeamId || f.team_a === awayTeamId).length;
-            
-            homeTeam.expectedGoalsAgainst += awayXGF / awayTeamFixtures;
-            awayTeam.expectedGoalsAgainst += homeXGF / homeTeamFixtures;
-          }
-        })
       }
       
-      // Aggregate defensive contributions from all players for each team
-      bootstrapData.elements.forEach((player: any) => {
-        const team = teamStandings.get(player.team);
-        if (!team) return;
-        
-        const cbi = player.clearances_blocks_interceptions || 0;
-        const tackles = player.tackles || 0;
-        const recoveries = player.recoveries || 0;
-        const defensiveContribution = calculateDefensiveContribution(player.element_type, cbi, tackles, recoveries);
-        
-        team.defensiveContributions += defensiveContribution;
-      });
+      console.log(`DEBUG: Computing current standings (venue: ${venue})`);
       
-      // Calculate defensive contributions conceded per match using live data
-      for (const [gameweek, liveData] of Array.from(liveDataMap)) {
-        if (!liveData || !liveData.elements) continue;
+      // Create and store the in-flight promise
+      const computePromise = computeCurrentStandings(venue);
+      currentStandingsInFlight.set(cacheKey, computePromise);
+      
+      try {
+        const enhancedStandings = await computePromise;
         
-        // Get fixtures for this gameweek
-        const gameweekFixtures = completedFixtures.filter((f: any) => f.event === gameweek);
-        
-        // For each fixture in this gameweek, calculate DC for each team
-        gameweekFixtures.forEach((fixture: any) => {
-          const homeTeamId = fixture.team_h;
-          const awayTeamId = fixture.team_a;
-          
-          let homeTeamDC = 0;
-          let awayTeamDC = 0;
-          
-          // Calculate DC for each team based on players who played
-          liveData.elements.forEach((playerLive: any) => {
-            const playerId = playerLive.id;
-            const teamId = playerToTeamMap.get(playerId);
-            const position = playerPositionMap.get(playerId);
-            
-            if (!teamId || !position || playerLive.stats.minutes === 0) return;
-            
-            // Only count players from the two teams in this fixture
-            if (teamId !== homeTeamId && teamId !== awayTeamId) return;
-            
-            const cbi = playerLive.stats.clearances_blocks_interceptions || 0;
-            const tackles = playerLive.stats.tackles || 0;
-            const recoveries = playerLive.stats.recoveries || 0;
-            const dc = calculateDefensiveContribution(position, cbi, tackles, recoveries);
-            
-            if (teamId === homeTeamId) {
-              homeTeamDC += dc;
-            } else if (teamId === awayTeamId) {
-              awayTeamDC += dc;
-            }
-          });
-          
-          // Assign defensive contributions conceded
-          const homeTeam = teamStandings.get(homeTeamId);
-          const awayTeam = teamStandings.get(awayTeamId);
-          
-          if (homeTeam && awayTeam) {
-            const processHome = venue === 'all' || venue === 'home';
-            const processAway = venue === 'all' || venue === 'away';
-            
-            if (processHome) {
-              homeTeam.defensiveContributionsConceded += awayTeamDC;
-            }
-            if (processAway) {
-              awayTeam.defensiveContributionsConceded += homeTeamDC;
-            }
-          }
+        // Cache the result
+        currentStandingsCache.set(cacheKey, {
+          data: enhancedStandings,
+          timestamp: Date.now()
         });
+        
+        console.log(`DEBUG: Enhanced current standings calculated for ${enhancedStandings.length} teams`);
+        res.json(enhancedStandings);
+      } finally {
+        // Always remove in-flight promise when done
+        currentStandingsInFlight.delete(cacheKey);
       }
-      
-      // Process completed fixtures with enhanced statistics
-      completedFixtures.forEach((fixture: any) => {
-        const homeTeam = teamStandings.get(fixture.team_h);
-        const awayTeam = teamStandings.get(fixture.team_a);
-        
-        if (!homeTeam || !awayTeam) return;
-        
-        // Use actual match results
-        const homeGoals = fixture.team_h_score;
-        const awayGoals = fixture.team_a_score;
-        
-        // Update basic stats based on venue filter
-        const processHome = venue === 'all' || venue === 'home';
-        const processAway = venue === 'all' || venue === 'away';
-        
-        if (processHome) {
-          homeTeam.played++;
-          homeTeam.goalsFor += homeGoals;
-          homeTeam.goalsAgainst += awayGoals;
-          if (awayGoals === 0) homeTeam.cleanSheets++;
-        }
-        
-        if (processAway) {
-          awayTeam.played++;
-          awayTeam.goalsFor += awayGoals;
-          awayTeam.goalsAgainst += homeGoals;
-          if (homeGoals === 0) awayTeam.cleanSheets++;
-        }
-        
-        // Extract additional stats from fixture-level data if available (filter by venue)
-        if (fixture.stats && Array.isArray(fixture.stats)) {
-          fixture.stats.forEach((stat: any) => {
-            switch (stat.identifier) {
-              case 'yellow_cards':
-                if (stat.h && processHome) homeTeam.yellowCards += stat.h.length;
-                if (stat.a && processAway) awayTeam.yellowCards += stat.a.length;
-                break;
-              case 'red_cards':
-                if (stat.h && processHome) homeTeam.redCards += stat.h.length;
-                if (stat.a && processAway) awayTeam.redCards += stat.a.length;
-                break;
-              case 'saves':
-                if (stat.h && processHome) stat.h.forEach((save: any) => homeTeam.saves += save.value || 0);
-                if (stat.a && processAway) stat.a.forEach((save: any) => awayTeam.saves += save.value || 0);
-                break;
-              case 'own_goals':
-                if (stat.h && processHome) homeTeam.ownGoals += stat.h.length;
-                if (stat.a && processAway) awayTeam.ownGoals += stat.a.length;
-                break;
-              case 'penalties_saved':
-                if (stat.h && processHome) homeTeam.penaltiesSaved += stat.h.length;
-                if (stat.a && processAway) awayTeam.penaltiesSaved += stat.a.length;
-                break;
-              case 'penalties_missed':
-                if (stat.h && processHome) homeTeam.penaltiesMissed += stat.h.length;
-                if (stat.a && processAway) awayTeam.penaltiesMissed += stat.a.length;
-                break;
-            }
-          });
-        }
-        
-        
-        // Determine match result and update points (filter by venue)
-        if (homeGoals > awayGoals) {
-          if (processHome) {
-            homeTeam.wins++;
-            homeTeam.points += 3;
-          }
-          if (processAway) {
-            awayTeam.losses++;
-          }
-        } else if (awayGoals > homeGoals) {
-          if (processAway) {
-            awayTeam.wins++;
-            awayTeam.points += 3;
-          }
-          if (processHome) {
-            homeTeam.losses++;
-          }
-        } else {
-          if (processHome) {
-            homeTeam.draws++;
-            homeTeam.points += 1;
-          }
-          if (processAway) {
-            awayTeam.draws++;
-            awayTeam.points += 1;
-          }
-        }
-      });
-      
-      // Calculate goal difference, AGR, and AGAR for final enhanced standings
-      const standings = Array.from(teamStandings.values()).map((team: any) => ({
-        ...team,
-        goalDifference: team.goalsFor - team.goalsAgainst,
-        // Calculate Adjusted Goal Rate (AGR) and Adjusted Goals Against Rate (AGAR)
-        adjustedGoalRate: team.played > 0 ? (0.5 * (team.goalsFor + team.expectedGoalsFor)) / team.played : 0,
-        adjustedGoalsAgainstRate: team.played > 0 ? (0.5 * (team.goalsAgainst + team.expectedGoalsAgainst)) / team.played : 0
-      }));
-      
-      
-      // Sort by standard Premier League rules
-      standings.sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        if (b.goalDifference !== a.goalDifference) return b.goalDifference - a.goalDifference;
-        return b.goalsFor - a.goalsFor;
-      });
-      
-      // Add position
-      const enhancedStandings = standings.map((team, index) => ({
-        ...team,
-        position: index + 1
-      }));
-      
-      // Cache the result (with venue-specific key)
-      currentStandingsCache.set(cacheKey, {
-        data: enhancedStandings,
-        timestamp: now
-      });
-      
-      console.log(`DEBUG: Enhanced current standings calculated for ${enhancedStandings.length} teams based on ${completedFixtures.length} completed matches with detailed statistics (venue: ${venue})`);
-      
-      res.json(enhancedStandings);
     } catch (error) {
       console.error('Error generating enhanced current standings:', error);
       res.status(500).json({ error: 'Failed to generate enhanced current standings' });
     }
   });
-
-
   // Player Minutes Projections endpoint - API-first with cache fallback
   // Now fetches actual game-by-game history for accurate 60-minute threshold calculations
   app.get("/api/player-minutes-projections", async (req, res) => {
