@@ -2930,9 +2930,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const managerCache = new Map<string, { data: any; timestamp: number }>();
   const managerHistoryCache = new Map<string, { data: any; timestamp: number }>();
   const managerLeaguesCache = new Map<string, { data: any; timestamp: number }>();
+  const managerTransfersCache = new Map<string, { data: any; timestamp: number }>();
   const managerInFlight = new Map<string, Promise<any>>();
   const managerHistoryInFlight = new Map<string, Promise<any>>();
   const managerLeaguesInFlight = new Map<string, Promise<any>>();
+  const managerTransfersInFlight = new Map<string, Promise<any>>();
   const MANAGER_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
 
   // Get manager data with in-flight de-duplication
@@ -4141,7 +4143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get manager transfers
+  // Get manager transfers with caching and in-flight de-duplication
   app.get("/api/manager/:managerId/transfers", async (req, res) => {
     try {
       const { managerId } = req.params;
@@ -4149,41 +4151,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!managerId || isNaN(Number(managerId))) {
         return res.status(400).json({ message: "Invalid manager ID" });
       }
-      
-      // Fetch transfers and history in parallel
-      const [transfersResponse, historyResponse] = await Promise.all([
-        fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`),
-        fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`)
-      ]);
-      
-      if (!transfersResponse.ok) {
-        if (transfersResponse.status === 404) {
-          return res.status(404).json({ message: "Manager transfers not found" });
-        }
-        throw new Error(`FPL API responded with status: ${transfersResponse.status}`);
+
+      // Check cache first
+      const now = Date.now();
+      const cached = managerTransfersCache.get(managerId);
+      if (cached && (now - cached.timestamp) < MANAGER_CACHE_DURATION) {
+        console.log(`DEBUG: Serving manager ${managerId} transfers from cache`);
+        return res.json(cached.data);
       }
       
-      const transfersData = await transfersResponse.json();
+      // Check for in-flight request (de-duplication)
+      const cacheKey = `transfers-${managerId}`;
+      const inFlight = managerTransfersInFlight.get(cacheKey);
+      if (inFlight) {
+        console.log(`DEBUG: Waiting for in-flight request for manager ${managerId} transfers`);
+        const data = await inFlight;
+        return res.json(data);
+      }
       
-      // Get Free Hit gameweeks to filter out
-      let freeHitGameweeks: number[] = [];
-      if (historyResponse.ok) {
-        const historyData = await historyResponse.json();
-        freeHitGameweeks = (historyData.chips || [])
-          .filter((chip: any) => chip.name === 'freehit')
-          .map((chip: any) => chip.event);
+      // Create new request with in-flight tracking
+      const fetchPromise = (async () => {
+        // Fetch transfers and history in parallel
+        const [transfersResponse, historyResponse] = await Promise.all([
+          fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`),
+          fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`)
+        ]);
         
-        if (freeHitGameweeks.length > 0) {
-          console.log(`DEBUG: Filtering out Free Hit transfers from GWs: ${freeHitGameweeks.join(', ')}`);
+        if (!transfersResponse.ok) {
+          if (transfersResponse.status === 404) {
+            throw { status: 404, message: "Manager transfers not found" };
+          }
+          throw new Error(`FPL API responded with status: ${transfersResponse.status}`);
         }
+        
+        const transfersData = await transfersResponse.json();
+        
+        // Get Free Hit gameweeks to filter out
+        let freeHitGameweeks: number[] = [];
+        if (historyResponse.ok) {
+          const historyData = await historyResponse.json();
+          freeHitGameweeks = (historyData.chips || [])
+            .filter((chip: any) => chip.name === 'freehit')
+            .map((chip: any) => chip.event);
+          
+          if (freeHitGameweeks.length > 0) {
+            console.log(`DEBUG: Filtering out Free Hit transfers from GWs: ${freeHitGameweeks.join(', ')}`);
+          }
+        }
+        
+        // Filter out transfers made during Free Hit gameweeks
+        const filteredTransfers = transfersData.filter((transfer: any) => 
+          !freeHitGameweeks.includes(transfer.event)
+        );
+        
+        // Cache the data
+        managerTransfersCache.set(managerId, { data: filteredTransfers, timestamp: Date.now() });
+        console.log(`DEBUG: Cached manager ${managerId} transfers data`);
+        
+        return filteredTransfers;
+      })();
+      
+      managerTransfersInFlight.set(cacheKey, fetchPromise);
+      
+      try {
+        const data = await fetchPromise;
+        res.json(data);
+      } catch (error: any) {
+        if (error?.status === 404) {
+          return res.status(404).json({ message: error.message });
+        }
+        throw error;
+      } finally {
+        managerTransfersInFlight.delete(cacheKey);
       }
-      
-      // Filter out transfers made during Free Hit gameweeks
-      const filteredTransfers = transfersData.filter((transfer: any) => 
-        !freeHitGameweeks.includes(transfer.event)
-      );
-      
-      res.json(filteredTransfers);
     } catch (error) {
       console.error(`Error fetching manager transfers for ID ${req.params.managerId}:`, error);
       res.status(500).json({
