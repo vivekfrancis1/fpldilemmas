@@ -2043,6 +2043,28 @@ export default function MyDashboard() {
                     </AlertDescription>
                   </Alert>
                   
+                  {/* View Toggle */}
+                  <div className="flex justify-center gap-2 mb-4">
+                    <Button
+                      variant={nextTeamView === "pitch" ? "default" : "outline"}
+                      onClick={() => setNextTeamView("pitch")}
+                      className="flex items-center gap-2"
+                      data-testid="button-nextteam-pitch-view-disconnected"
+                    >
+                      <Target className="h-4 w-4" />
+                      Pitch View
+                    </Button>
+                    <Button
+                      variant={nextTeamView === "list" ? "default" : "outline"}
+                      onClick={() => setNextTeamView("list")}
+                      className="flex items-center gap-2"
+                      data-testid="button-nextteam-list-view-disconnected"
+                    >
+                      <Users className="h-4 w-4" />
+                      List View
+                    </Button>
+                  </div>
+
                   <Card className="border-0 bg-gradient-to-br from-amber-50 to-orange-50 shadow-lg">
                     <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
                       <CardTitle className="text-lg sm:text-xl text-amber-900">
@@ -2053,6 +2075,138 @@ export default function MyDashboard() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
+                      {/* Pitch View */}
+                      {nextTeamView === "pitch" && (
+                        <div className="space-y-4">
+                          <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
+                            {/* Pitch Lines */}
+                            <div className="absolute inset-0 opacity-30 pointer-events-none">
+                              <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
+                              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
+                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
+                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full"></div>
+                              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-t-0 border-white"></div>
+                              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-t-0 border-white"></div>
+                              <div className="absolute top-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
+                              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
+                                <div className="absolute left-0 top-0 w-1 h-4 bg-white"></div>
+                                <div className="absolute right-0 top-0 w-1 h-4 bg-white"></div>
+                              </div>
+                              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-b-0 border-white"></div>
+                              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-b-0 border-white"></div>
+                              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
+                              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
+                                <div className="absolute left-0 bottom-0 w-1 h-4 bg-white"></div>
+                                <div className="absolute right-0 bottom-0 w-1 h-4 bg-white"></div>
+                              </div>
+                              <div className="absolute top-0 left-0 w-4 h-4 border-2 border-t-0 border-l-0 border-white rounded-br-full"></div>
+                              <div className="absolute top-0 right-0 w-4 h-4 border-2 border-t-0 border-r-0 border-white rounded-bl-full"></div>
+                              <div className="absolute bottom-0 left-0 w-4 h-4 border-2 border-b-0 border-l-0 border-white rounded-tr-full"></div>
+                              <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
+                            </div>
+
+                            <div className="relative space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-10">
+                              {/* Starting XI by position */}
+                              {[1, 2, 3, 4].map(positionType => {
+                                const positionPlayers = teamData.picks
+                                  .filter(pick => pick.position <= 11)
+                                  .filter(pick => {
+                                    const player = getPlayerById(pick.element);
+                                    return player?.element_type === positionType;
+                                  });
+
+                                return positionPlayers.length > 0 && (
+                                  <div key={positionType} className="flex justify-center gap-0.5">
+                                    {positionPlayers.map(pick => {
+                                      const player = getPlayerById(pick.element);
+                                      if (!player) return null;
+                                      const playerTeam = getPlayerTeam(player);
+                                      const isGoalkeeper = player.element_type === 1;
+                                      const fixtureInfo = getNextGameweekFixture(playerTeam?.id || 0);
+
+                                      return (
+                                        <div key={pick.element} className="flex flex-col items-center w-[19.5%]">
+                                          <div className="relative flex flex-col items-center">
+                                            <div className="relative">
+                                              <img 
+                                                src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                                alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                                className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                                onError={(e) => {
+                                                  (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                                }}
+                                              />
+                                              {pick.is_captain && (
+                                                <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                                  <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
+                                                </div>
+                                              )}
+                                              {pick.is_vice_captain && (
+                                                <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                                  <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                            <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                              <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+                                                {playerTeam?.short_name || 'UNK'}
+                                              </div>
+                                            </div>
+                                            <div className="px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
+                                              <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
+                                                {player.web_name}
+                                              </div>
+                                            </div>
+                                            <div className="px-2 py-0.5 bg-purple-600 rounded text-center">
+                                              <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white">
+                                                {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Bench */}
+                          <div className="bg-gray-100 rounded-lg p-3 sm:p-4">
+                            <div className="text-xs sm:text-sm font-semibold text-gray-600 mb-2 text-center">Bench</div>
+                            <div className="flex justify-center gap-2 sm:gap-4">
+                              {teamData.picks.filter(pick => pick.position > 11).map(pick => {
+                                const player = getPlayerById(pick.element);
+                                if (!player) return null;
+                                const playerTeam = getPlayerTeam(player);
+                                const isGoalkeeper = player.element_type === 1;
+
+                                return (
+                                  <div key={pick.element} className="flex flex-col items-center">
+                                    <img 
+                                      src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                      alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                      className="w-10 h-12 sm:w-12 sm:h-14 object-contain drop-shadow opacity-75"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                      }}
+                                    />
+                                    <div className="mt-0.5 px-1 py-0.5 bg-gray-200 rounded text-center">
+                                      <div className="text-[8px] sm:text-[10px] font-medium text-gray-600 truncate max-w-[50px] sm:max-w-[70px]">
+                                        {player.web_name}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* List View */}
+                      {nextTeamView === "list" && (
                       <ListView
                         startingPlayers={teamData.picks.filter(p => p.position <= 11).map(pick => {
                           const player = getPlayerById(pick.element);
@@ -2099,6 +2253,7 @@ export default function MyDashboard() {
                         showOwnership={true}
                         showPrice={true}
                       />
+                      )}
                     </CardContent>
                   </Card>
                 </>
