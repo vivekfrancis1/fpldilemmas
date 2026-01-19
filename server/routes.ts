@@ -2935,7 +2935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const managerHistoryInFlight = new Map<string, Promise<any>>();
   const managerLeaguesInFlight = new Map<string, Promise<any>>();
   const managerTransfersInFlight = new Map<string, Promise<any>>();
-  const MANAGER_CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+  const MANAGER_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes (matches projection cache TTL)
 
   // Get manager data with in-flight de-duplication
   app.get("/api/manager/:managerId", async (req, res) => {
