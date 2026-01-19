@@ -4171,11 +4171,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create new request with in-flight tracking
       const fetchPromise = (async () => {
-        // Fetch transfers and history in parallel
-        const [transfersResponse, historyResponse] = await Promise.all([
-          fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`),
-          fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`)
-        ]);
+        // Fetch only transfers from FPL API - reuse cached history if available
+        const transfersResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`);
         
         if (!transfersResponse.ok) {
           if (transfersResponse.status === 404) {
@@ -4186,17 +4183,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const transfersData = await transfersResponse.json();
         
-        // Get Free Hit gameweeks to filter out
+        // Get Free Hit gameweeks to filter out - reuse cached history if available
         let freeHitGameweeks: number[] = [];
-        if (historyResponse.ok) {
-          const historyData = await historyResponse.json();
-          freeHitGameweeks = (historyData.chips || [])
+        const cachedHistory = managerHistoryCache.get(managerId);
+        
+        if (cachedHistory && (Date.now() - cachedHistory.timestamp) < MANAGER_CACHE_DURATION) {
+          // Use cached history data
+          console.log(`DEBUG: Reusing cached history for manager ${managerId} Free Hit filtering`);
+          freeHitGameweeks = (cachedHistory.data.chips || [])
             .filter((chip: any) => chip.name === 'freehit')
             .map((chip: any) => chip.event);
-          
-          if (freeHitGameweeks.length > 0) {
-            console.log(`DEBUG: Filtering out Free Hit transfers from GWs: ${freeHitGameweeks.join(', ')}`);
+        } else {
+          // Fetch history only if not cached
+          const historyResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`);
+          if (historyResponse.ok) {
+            const historyData = await historyResponse.json();
+            // Cache the history data for future use
+            managerHistoryCache.set(managerId, { data: historyData, timestamp: Date.now() });
+            freeHitGameweeks = (historyData.chips || [])
+              .filter((chip: any) => chip.name === 'freehit')
+              .map((chip: any) => chip.event);
           }
+        }
+        
+        if (freeHitGameweeks.length > 0) {
+          console.log(`DEBUG: Filtering out Free Hit transfers from GWs: ${freeHitGameweeks.join(', ')}`);
         }
         
         // Filter out transfers made during Free Hit gameweeks
