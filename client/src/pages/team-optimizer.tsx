@@ -1431,11 +1431,7 @@ export default function TeamOptimizer() {
                         )}
                       </div>
                       <div className="flex gap-2 flex-wrap">
-                        {chip.usedInGW ? (
-                          <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 italic">
-                            No recommendations available - chip already used
-                          </div>
-                        ) : (
+                        {chip.usedInGW ? null : (
                           <>
                             {chip.option1 && (
                               <div className={`flex-1 min-w-[100px] px-2 py-1 rounded text-[10px] sm:text-xs ${
