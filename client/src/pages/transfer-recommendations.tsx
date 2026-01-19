@@ -1017,8 +1017,8 @@ export default function TransferRecommendations() {
                                     {affordableRecommendations.slice(0, 10).map((rec: any, index: number) => {
                                       const netCost = rec.playerIn.nowCost - rec.playerOut.sellingPrice;
                                       const itbAfterThisTransfer = runningBank - netCost;
-                                      const freeTransfersAvailable = getCascadedFreeTransfersAvailable(gw);
-                                      const isTopRecommendation = index < freeTransfersAvailable;
+                                      const freeTransfersRemaining = getFreeTransfersRemaining(gw);
+                                      const isTopRecommendation = index < freeTransfersRemaining;
                                       
                                       return (
                                       <div
@@ -1032,11 +1032,6 @@ export default function TransferRecommendations() {
                                       >
                                         <div className="flex items-start justify-between gap-2">
                                           <div className="space-y-1 flex-1">
-                                            {isTopRecommendation && (
-                                              <Badge className="text-[10px] bg-green-600 text-white mb-1">
-                                                FREE TRANSFER
-                                              </Badge>
-                                            )}
                                             <div className="flex items-start gap-2">
                                               <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200 shrink-0">
                                                 OUT
