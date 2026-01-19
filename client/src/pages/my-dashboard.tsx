@@ -3267,7 +3267,7 @@ export default function MyDashboard() {
                           {managerData && (
                             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-100 to-blue-100 rounded-xl border-2 border-indigo-300 shadow-sm">
                               <div className="flex items-center gap-2">
-                                <div className="text-lg font-semibold text-gray-800">2024/25</div>
+                                <div className="text-lg font-semibold text-gray-800">2025/26</div>
                                 <Badge className="bg-indigo-600 text-white text-xs">Current</Badge>
                               </div>
                               <div className="flex items-center gap-4">
