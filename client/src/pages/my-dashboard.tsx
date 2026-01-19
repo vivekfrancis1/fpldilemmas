@@ -1218,14 +1218,14 @@ export default function MyDashboard() {
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
                     {/* Table Header */}
-                    <div className="hidden sm:grid sm:grid-cols-[1fr_100px_80px_80px_60px] gap-2 text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 px-2">
+                    <div className="hidden sm:grid sm:grid-cols-[1fr_110px_100px_90px_90px] gap-4 text-xs font-medium text-gray-500 uppercase tracking-wide mb-2 px-3 border-b pb-2">
                       <div>League</div>
                       <div className="text-center">Managers</div>
                       <div className="text-center">Rank</div>
                       <div className="text-center">Change</div>
-                      <div className="text-center">Live</div>
+                      <div className="text-center">Live Table</div>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {leaguesData.classic
                         .filter(league => {
                           // Show only: Overall League (id=314), Country leagues (India), and classic leagues
@@ -1251,7 +1251,7 @@ export default function MyDashboard() {
                             <div key={league.id} className="space-y-1">
                               {/* Desktop: Single row with 5 columns */}
                               <div 
-                                className="hidden sm:grid sm:grid-cols-[1fr_100px_80px_80px_60px] gap-2 items-center py-2 px-2 rounded-lg hover:bg-white/50 cursor-pointer transition-colors"
+                                className="hidden sm:grid sm:grid-cols-[1fr_110px_100px_90px_90px] gap-4 items-center py-3 px-3 rounded-lg bg-white/60 border border-transparent hover:border-indigo-200 hover:bg-white hover:shadow-md cursor-pointer transition-all duration-200"
                                 data-testid={`league-item-${league.id}`}
                                 onClick={() => {
                                   setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
@@ -1315,7 +1315,7 @@ export default function MyDashboard() {
                               
                               {/* Mobile: Compact row layout */}
                               <div 
-                                className="sm:hidden flex items-center justify-between py-2 px-2 rounded-lg hover:bg-white/50 cursor-pointer"
+                                className="sm:hidden flex items-center justify-between py-3 px-3 rounded-lg bg-white/60 border border-transparent hover:border-indigo-200 hover:bg-white hover:shadow-md cursor-pointer transition-all duration-200"
                                 data-testid={`league-item-mobile-${league.id}`}
                                 onClick={() => {
                                   setLocation(`/league-analysis/${league.id}/${encodeURIComponent(league.name)}/${searchedId}`);
