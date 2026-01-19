@@ -375,7 +375,7 @@ html {
 }
 
 .fpl-page-subtitle {
-  @apply text-xs sm:text-sm opacity-90 max-w-2xl leading-relaxed hidden sm:block;
+  @apply text-xs sm:text-sm opacity-90 leading-tight hidden sm:block whitespace-nowrap overflow-hidden text-ellipsis max-w-full;
 }
 
 .fpl-page-tagline {
