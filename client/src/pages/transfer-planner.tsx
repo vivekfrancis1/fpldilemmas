@@ -941,6 +941,8 @@ export default function TransferPlanner() {
   
   // Collapsible sections state - default to collapsed
   const [isChipsPlanningOpen, setIsChipsPlanningOpen] = useState(false);
+  const [isDraftSelectionOpen, setIsDraftSelectionOpen] = useState(false);
+  const [isGameweekSelectionOpen, setIsGameweekSelectionOpen] = useState(true);
   const [isTeamEvolutionOpen, setIsTeamEvolutionOpen] = useState(false);
   const [isDraftComparisonOpen, setIsDraftComparisonOpen] = useState(false);
   
@@ -5394,163 +5396,196 @@ export default function TransferPlanner() {
         );
       })()}
 
-      {/* Combined Selection Section */}
+      {/* Gameweek Selection Section - Always visible */}
       {searchedId && teamData && selectedGameweek && (
-        <Card className="bg-background shadow-md">
-          <CardContent className="pt-4 sm:pt-6 pb-3 sm:pb-4 space-y-3 sm:space-y-4">
-            {/* Draft Subsection */}
-            <div>
-              <div className="flex items-center gap-2 sm:gap-4 flex-wrap mb-2">
-                <div className="text-sm sm:text-base font-semibold min-w-[100px] sm:min-w-[120px]">
-                  Select Draft
-                  {isSaving && activeDraft !== "Base" && (
-                    <span className="ml-2 text-base text-blue-600 font-semibold animate-pulse">● Saving...</span>
-                  )}
-                  {!isSaving && lastSavedAt && activeDraft !== "Base" && (
-                    <span className="ml-2 text-base text-green-600 font-semibold">✓ Saved</span>
+        <Collapsible open={isGameweekSelectionOpen} onOpenChange={setIsGameweekSelectionOpen}>
+          <Card className="bg-background shadow-sm border">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="py-2 px-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-purple-600" />
+                    <span className="text-sm font-semibold">Gameweek</span>
+                    <Badge variant="secondary" className="text-xs px-1.5 py-0">GW {selectedGameweek}</Badge>
+                  </div>
+                  {isGameweekSelectionOpen ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   )}
                 </div>
-                <div className="flex gap-2 flex-wrap items-center">
-              {/* Saved Drafts */}
-              {savedDrafts.map((draft: any) => {
-                const draftChips = getDraftChips(draft.draftLetter);
-                const chipCount = Object.keys(draftChips).filter(gw => draftChips[parseInt(gw)] !== null).length;
-                
-                return (
-                  <TooltipProvider key={draft.draftLetter}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          onClick={() => switchToDraft(draft.draftLetter)}
-                          variant={activeDraft === draft.draftLetter ? "default" : "outline"}
-                          className="relative h-9 text-base px-3"
-                          data-testid={`button-switch-draft-${draft.draftLetter}`}
-                        >
-                          {draft.draftLetter}
-                          {chipCount > 0 && (
-                            <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-amber-500 text-white text-[9px] flex items-center justify-center font-bold">
-                              {chipCount}
-                            </span>
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-md whitespace-pre-line text-left">
-                        <div className="font-semibold mb-1">Draft {draft.draftLetter}</div>
-                        <div className="text-sm mb-2">{getDraftTooltipContent(draft)}</div>
-                        {chipCount > 0 && (
-                          <div className="border-t pt-2 mt-2">
-                            <div className="font-semibold text-xs mb-1">Planned Chips:</div>
-                            <div className="space-y-1">
-                              {Object.entries(draftChips)
-                                .filter(([_, chipType]) => chipType !== null)
-                                .sort(([gwA], [gwB]) => parseInt(gwA) - parseInt(gwB))
-                                .map(([gameweek, chipType]) => (
-                                  <div key={gameweek} className="text-xs flex items-center gap-1">
-                                    <span className={`font-semibold ${getChipIconColor(chipType as ChipType)}`}>
-                                      GW{gameweek}:
-                                    </span>
-                                    <span>{getChipDisplayNameWithNumber(chipType as ChipType)}</span>
-                                  </div>
-                                ))}
-                            </div>
-                          </div>
-                        )}
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                );
-              })}
-
-                {/* New Draft Button */}
-                {savedDrafts.length < 5 && (
-                  <Button
-                    onClick={createNewDraft}
-                    variant="outline"
-                    className="h-9 gap-1 border-dashed text-base px-3"
-                    data-testid="button-new-draft"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New
-                  </Button>
-                )}
-                </div>
-              </div>
-
-              {/* Action Buttons - Below selectors */}
-              {activeDraft !== "Base" && (
-                <div className="flex gap-2 flex-wrap pl-0 sm:pl-[140px] items-center">
-                  <Button
-                    onClick={() => saveCurrentDraft()}
-                    variant="default"
-                    disabled={!hasUnsavedChanges}
-                    className="h-8 text-sm px-3"
-                    data-testid="button-save-draft"
-                  >
-                    <Save className="h-3.5 w-3.5 mr-1" />
-                    Save {hasUnsavedChanges && "●"}
-                  </Button>
-                  
-                  <Button
-                    onClick={duplicateCurrentDraft}
-                    variant="outline"
-                    className="h-8 text-sm px-3"
-                    data-testid="button-duplicate-draft"
-                  >
-                    <Copy className="h-3.5 w-3.5 mr-1" />
-                    Duplicate
-                  </Button>
-                  
-                  <Button
-                    onClick={resetDraftAToBase}
-                    variant="outline"
-                    className="h-8 text-sm px-3 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
-                    data-testid={`button-reset-draft-${activeDraft.toLowerCase()}`}
-                  >
-                    <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                    Reset to Base
-                  </Button>
-                  
-                  {activeDraft !== "A" && (
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0 pb-3 px-3">
+                <div className="flex gap-1.5 flex-wrap items-center">
+                  {nextGameweeks.map(gw => (
                     <Button
-                      onClick={deleteCurrentDraft}
-                      variant="outline"
-                      className="h-8 text-sm px-3 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
-                      data-testid="button-delete-draft"
+                      key={gw.id}
+                      variant={selectedGameweek === gw.id ? "default" : "outline"}
+                      className="h-7 text-xs font-semibold min-w-[2rem] px-2"
+                      onClick={() => {
+                        setSelectedPlayer(null);
+                        setSelectedGameweek(gw.id);
+                      }}
+                      data-testid={`gw-button-${gw.id}`}
                     >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" />
-                      Delete
+                      {gw.id}
+                    </Button>
+                  ))}
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
+
+      {/* Draft Selection Section - Collapsed by default */}
+      {searchedId && teamData && selectedGameweek && (
+        <Collapsible open={isDraftSelectionOpen} onOpenChange={setIsDraftSelectionOpen}>
+          <Card className="bg-background shadow-sm border">
+            <CollapsibleTrigger asChild>
+              <CardHeader className="py-2 px-3 cursor-pointer hover:bg-muted/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <List className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-semibold">Draft</span>
+                    <Badge variant={activeDraft === "Base" ? "secondary" : "default"} className="text-xs px-1.5 py-0">
+                      {activeDraft === "Base" ? "Base" : `Draft ${activeDraft}`}
+                    </Badge>
+                    {isSaving && activeDraft !== "Base" && (
+                      <span className="text-xs text-blue-600 animate-pulse">Saving...</span>
+                    )}
+                    {!isSaving && lastSavedAt && activeDraft !== "Base" && (
+                      <span className="text-xs text-green-600">✓</span>
+                    )}
+                  </div>
+                  {isDraftSelectionOpen ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0 pb-3 px-3 space-y-2">
+                {/* Draft Buttons */}
+                <div className="flex gap-1.5 flex-wrap items-center">
+                  {savedDrafts.map((draft: any) => {
+                    const draftChips = getDraftChips(draft.draftLetter);
+                    const chipCount = Object.keys(draftChips).filter(gw => draftChips[parseInt(gw)] !== null).length;
+                    
+                    return (
+                      <TooltipProvider key={draft.draftLetter}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              onClick={() => switchToDraft(draft.draftLetter)}
+                              variant={activeDraft === draft.draftLetter ? "default" : "outline"}
+                              className="relative h-7 text-xs px-2"
+                              data-testid={`button-switch-draft-${draft.draftLetter}`}
+                            >
+                              {draft.draftLetter}
+                              {chipCount > 0 && (
+                                <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full bg-amber-500 text-white text-[8px] flex items-center justify-center font-bold">
+                                  {chipCount}
+                                </span>
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-md whitespace-pre-line text-left">
+                            <div className="font-semibold mb-1">Draft {draft.draftLetter}</div>
+                            <div className="text-sm mb-2">{getDraftTooltipContent(draft)}</div>
+                            {chipCount > 0 && (
+                              <div className="border-t pt-2 mt-2">
+                                <div className="font-semibold text-xs mb-1">Planned Chips:</div>
+                                <div className="space-y-1">
+                                  {Object.entries(draftChips)
+                                    .filter(([_, chipType]) => chipType !== null)
+                                    .sort(([gwA], [gwB]) => parseInt(gwA) - parseInt(gwB))
+                                    .map(([gameweek, chipType]) => (
+                                      <div key={gameweek} className="text-xs flex items-center gap-1">
+                                        <span className={`font-semibold ${getChipIconColor(chipType as ChipType)}`}>
+                                          GW{gameweek}:
+                                        </span>
+                                        <span>{getChipDisplayNameWithNumber(chipType as ChipType)}</span>
+                                      </div>
+                                    ))}
+                                </div>
+                              </div>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  })}
+
+                  {/* New Draft Button */}
+                  {savedDrafts.length < 5 && (
+                    <Button
+                      onClick={createNewDraft}
+                      variant="outline"
+                      className="h-7 gap-1 border-dashed text-xs px-2"
+                      data-testid="button-new-draft"
+                    >
+                      <Plus className="h-3 w-3" />
+                      New
                     </Button>
                   )}
                 </div>
-              )}
 
-            </div>
-
-            {/* Divider */}
-            <div className="border-t" />
-
-            {/* Gameweek Subsection */}
-            <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-              <div className="text-sm sm:text-base font-semibold min-w-[100px] sm:min-w-[120px]">Select Gameweek</div>
-              <div className="flex gap-1.5 sm:gap-2 flex-wrap items-center">
-                {nextGameweeks.map(gw => (
-                  <Button
-                    key={gw.id}
-                    variant={selectedGameweek === gw.id ? "default" : "outline"}
-                    className="h-8 sm:h-9 text-sm sm:text-base font-semibold min-w-[2.5rem] md:min-w-[3rem] px-2 sm:px-3"
-                    onClick={() => {
-                      setSelectedPlayer(null);
-                      setSelectedGameweek(gw.id);
-                    }}
-                    data-testid={`gw-button-${gw.id}`}
-                  >
-                    {gw.id}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                {/* Action Buttons */}
+                {activeDraft !== "Base" && (
+                  <div className="flex gap-1.5 flex-wrap items-center pt-1 border-t">
+                    <Button
+                      onClick={() => saveCurrentDraft()}
+                      variant="default"
+                      disabled={!hasUnsavedChanges}
+                      className="h-6 text-xs px-2"
+                      data-testid="button-save-draft"
+                    >
+                      <Save className="h-3 w-3 mr-1" />
+                      Save
+                    </Button>
+                    
+                    <Button
+                      onClick={duplicateCurrentDraft}
+                      variant="outline"
+                      className="h-6 text-xs px-2"
+                      data-testid="button-duplicate-draft"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Duplicate
+                    </Button>
+                    
+                    <Button
+                      onClick={resetDraftAToBase}
+                      variant="outline"
+                      className="h-6 text-xs px-2 text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                      data-testid={`button-reset-draft-${activeDraft.toLowerCase()}`}
+                    >
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      Reset
+                    </Button>
+                    
+                    {activeDraft !== "A" && (
+                      <Button
+                        onClick={deleteCurrentDraft}
+                        variant="outline"
+                        className="h-6 text-xs px-2 text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-950/20"
+                        data-testid="button-delete-draft"
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        Delete
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       )}
 
       {/* Chips Planning */}
