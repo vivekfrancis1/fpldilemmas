@@ -40,16 +40,16 @@ export default function ProjectionDocumentation() {
             <Alert className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
               <CheckCircle className="h-5 w-5 text-green-600" />
               <AlertDescription>
-                <strong className="text-lg">🎯 Blended Season + Recent Form System</strong>
+                <strong className="text-lg">🎯 Weighted Season + Recent Form System</strong>
                 <p className="mt-2">
-                  All projections use a <strong>50/50 blend of full season data and last 6 games</strong> for optimal accuracy. This balances long-term quality with current form, ensuring projections respond to tactical changes while avoiding overreaction to short-term variance.
+                  All projections use a <strong>dynamic weighted average of full season data and last 6 games</strong> for optimal accuracy. For GW 23, this is a 22:6 ratio (season:last6). As the season progresses, season data gets more weight (e.g., GW 24 uses 23:6). This gives appropriate importance to the larger sample size of season data while still factoring in recent form.
                 </p>
                 <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
                   <div className="bg-white/50 p-2 rounded">
-                    <strong>Team Goals:</strong> Season avg + Last 6 avg
+                    <strong>Team Goals:</strong> Season × (GW-1) + Last6 × 6
                   </div>
                   <div className="bg-white/50 p-2 rounded">
-                    <strong>Player Shares:</strong> Season % + Last 6 GW %
+                    <strong>Player Shares:</strong> Weighted Season + Last6
                   </div>
                   <div className="bg-white/50 p-2 rounded">
                     <strong>All Stats:</strong> Saves, DC, Bonus, Cards
@@ -139,15 +139,15 @@ export default function ProjectionDocumentation() {
                   <div className="space-y-3">
                     <h4 className="font-semibold text-gray-900 flex items-center gap-2">
                       <Calculator className="h-4 w-4 text-blue-600" />
-                      Blended Season + Last 6 Games Formula
+                      Weighted Season + Last 6 Games Formula
                     </h4>
                     <div className="bg-blue-50 p-3 rounded text-sm">
                       <div className="font-mono text-xs mb-2">
-                        Goals = Average(SeasonFormula, Last6Formula) × VenueFactor × Context
+                        Goals = (Season × seasonWeight + Last6 × 6) / totalWeight × Venue × Context
                       </div>
                       <ul className="space-y-1 text-blue-700">
-                        <li>✓ <strong>50% Full Season:</strong> Long-term performance trends</li>
-                        <li>✓ <strong>50% Last 6 Games:</strong> Recent form & momentum</li>
+                        <li>✓ <strong>Season Weight:</strong> (GW - 1) completed gameweeks</li>
+                        <li>✓ <strong>Last 6 Weight:</strong> Fixed at 6</li>
                         <li>✓ Live xGF/xGA from current standings (5min cache)</li>
                         <li>✓ Updated venue factors: Home 1.12×, Away 0.84×</li>
                       </ul>
@@ -180,7 +180,7 @@ export default function ProjectionDocumentation() {
                     <div className="bg-purple-50 p-3 rounded text-sm">
                       <ul className="space-y-1 text-purple-700">
                         <li>✓ Based on actual FPL historical data</li>
-                        <li>✓ 50/50 blend of season + last 6 games</li>
+                        <li>✓ Weighted blend: season × (GW-1) + last6 × 6</li>
                         <li>✓ Scales with real performance metrics</li>
                         <li>✓ Updated from live FPL API data</li>
                       </ul>
@@ -456,14 +456,14 @@ export default function ProjectionDocumentation() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>50% Full Season Data:</strong>
+                            <strong>Season Data (weighted by completed GWs):</strong>
                             <ul className="list-disc ml-5 mt-1">
                               <li>Team average goals scored per game (full season)</li>
                               <li>Team xGF from current standings</li>
                               <li>Opponent average goals conceded (full season)</li>
                               <li>Opponent xGA from current standings</li>
                             </ul>
-                            <strong className="mt-2 block">50% Last 6 Games Data:</strong>
+                            <strong className="mt-2 block">Last 6 Games Data (fixed weight of 6):</strong>
                             <ul className="list-disc ml-5 mt-1">
                               <li>Team average goals from last 6 fixtures</li>
                               <li>Team xG from last 6 fixtures</li>
@@ -472,7 +472,7 @@ export default function ProjectionDocumentation() {
                             </ul>
                           </div>
                           <div>
-                            <strong>Why 50/50 Blend:</strong>
+                            <strong>Why Weighted Blend:</strong>
                             <ul className="list-disc ml-5 mt-1">
                               <li>Season data captures underlying quality</li>
                               <li>Last 6 games captures current form</li>
@@ -609,15 +609,15 @@ export default function ProjectionDocumentation() {
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
                           <strong>Blended Goal Share Formula:</strong><br/>
-                          AveragedGoalShare = (FullSeasonGoalShare + Last6GWGoalShare) / 2<br/>
+                          WeightedGoalShare = (FullSeasonGoalShare × seasonWeight + Last6GWGoalShare × 6) / totalWeight<br/>
                           <strong>PlayerGoals = BlendedTeamGoals × AveragedGoalShare</strong>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>50/50 Blended Share:</strong>
+                            <strong>Weighted Blended Share:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>50% Full Season goal share %</li>
-                              <li>50% Last 6 gameweeks goal share %</li>
+                              <li>Season goal share % × (GW-1)</li>
+                              <li>Last 6 gameweeks goal share % × 6</li>
                               <li>Captures both quality and current form</li>
                               <li>No position caps - pure raw share %</li>
                             </ul>
@@ -645,15 +645,15 @@ export default function ProjectionDocumentation() {
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
                           <strong>Blended Assist Share Formula:</strong><br/>
-                          AveragedAssistShare = (FullSeasonAssistShare + Last6GWAssistShare) / 2<br/>
+                          WeightedAssistShare = (FullSeasonAssistShare × seasonWeight + Last6GWAssistShare × 6) / totalWeight<br/>
                           <strong>PlayerAssists = BlendedTeamAssists × AveragedAssistShare</strong>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>50/50 Blended Share:</strong>
+                            <strong>Weighted Blended Share:</strong>
                             <ul className="list-disc ml-5 mt-1">
-                              <li>50% Full Season assist share %</li>
-                              <li>50% Last 6 gameweeks assist share %</li>
+                              <li>Season assist share % × (GW-1)</li>
+                              <li>Last 6 gameweeks assist share % × 6</li>
                               <li>Captures both quality and current form</li>
                               <li>No position caps - raw contribution %</li>
                             </ul>
@@ -794,7 +794,7 @@ export default function ProjectionDocumentation() {
                             <li>Pure percentage calculation - no artificial adjustments</li>
                             <li>No position caps or limits applied</li>
                             <li>All projections from real FPL performance data</li>
-                            <li>50/50 blend of season + last 6 games for accuracy</li>
+                            <li>Weighted blend: season × (GW-1) + last6 × 6</li>
                           </ul>
                         </div>
                       </div>
@@ -921,7 +921,7 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="bg-purple-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-purple-900 mb-3">50/50 Blend Implementation</h4>
+                    <h4 className="font-semibold text-purple-900 mb-3">Weighted Blend Implementation</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm space-y-2">
                       <div className="text-blue-600">function</div> <div>calculateBlendedProjection(playerId, type):</div>
                       <div className="ml-4">// Get full season share</div>
@@ -930,8 +930,8 @@ export default function ProjectionDocumentation() {
                       <div className="ml-4">// Get last 6 games share</div>
                       <div className="ml-4">last6Share = getLast6GamesShare(playerId, type)</div>
                       <div className="ml-4"></div>
-                      <div className="ml-4">// Blend 50/50</div>
-                      <div className="ml-4">blendedShare = (seasonShare + last6Share) / 2</div>
+                      <div className="ml-4">// Weighted blend: season × (GW-1) + last6 × 6</div>
+                      <div className="ml-4">blendedShare = (seasonShare * (gw-1) + last6Share * 6) / ((gw-1) + 6)</div>
                       <div className="ml-4"></div>
                       <div className="ml-4"><span className="text-green-600">return</span> blendedShare</div>
                     </div>
@@ -1006,11 +1006,11 @@ export default function ProjectionDocumentation() {
                       <div className="ml-4">// Source 2: Recent form (last 6 games)</div>
                       <div className="ml-4">recentData = getLast6GamesStats(playerId)</div>
                       <div className="ml-4"></div>
-                      <div className="ml-4">// 50/50 blend for balanced projection</div>
-                      <div className="ml-4">blendedStats = {}</div>
-                      <div className="ml-4">blendedStats.goals = (seasonData.goals + recentData.goals) / 2</div>
-                      <div className="ml-4">blendedStats.assists = (seasonData.assists + recentData.assists) / 2</div>
-                      <div className="ml-4">blendedStats.xG = (seasonData.xG + recentData.xG) / 2</div>
+                      <div className="ml-4">// Weighted blend for balanced projection</div>
+                      <div className="ml-4">seasonWeight = currentGW - 1</div>
+                      <div className="ml-4">last6Weight = 6</div>
+                      <div className="ml-4">totalWeight = seasonWeight + last6Weight</div>
+                      <div className="ml-4">blendedStats.goals = (season.goals * seasonWeight + recent.goals * last6Weight) / totalWeight</div>
                       <div className="ml-4"></div>
                       <div className="ml-4"><span className="text-green-600">return</span> blendedStats</div>
                     </div>
@@ -1562,7 +1562,7 @@ export default function ProjectionDocumentation() {
                         <li>• No position caps applied</li>
                         <li>• Direct percentage of team output</li>
                         <li>• Based on actual historical data</li>
-                        <li>• 50/50 season + last 6 games blend</li>
+                        <li>• Weighted season + last 6 games blend</li>
                       </ul>
                     </div>
                   </div>
@@ -1715,7 +1715,7 @@ export default function ProjectionDocumentation() {
                         <li>1. Calculate goals scored + expected goals</li>
                         <li>2. Sum totals for all team players</li>
                         <li>3. Calculate player share as % of team</li>
-                        <li>4. Apply 50/50 season + last 6 blend</li>
+                        <li>4. Apply weighted season + last 6 blend</li>
                         <li>5. Apply to projected team goals</li>
                         <li>6. No artificial adjustments applied</li>
                       </ul>
@@ -2251,12 +2251,12 @@ export default function ProjectionDocumentation() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-gray-700">
-                  All projections use a 50/50 blend of season-long data and last 6 games for balanced, responsive predictions.
+                  All projections use a weighted blend of season-long data (GW-1 weight) and last 6 games (weight of 6) for balanced, responsive predictions.
                 </p>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-cyan-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-cyan-900 mb-3">Season Data (50%)</h4>
+                    <h4 className="font-semibold text-cyan-900 mb-3">Season Data (weight = GW-1)</h4>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-2 rounded flex justify-between">
                         <span>Purpose</span>
@@ -2272,7 +2272,7 @@ export default function ProjectionDocumentation() {
                     </div>
                   </div>
                   <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-blue-900 mb-3">Last 6 Games (50%)</h4>
+                    <h4 className="font-semibold text-blue-900 mb-3">Last 6 Games (weight = 6)</h4>
                     <div className="space-y-2 text-sm">
                       <div className="bg-white p-2 rounded flex justify-between">
                         <span>Purpose</span>
