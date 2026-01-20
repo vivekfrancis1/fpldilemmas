@@ -149,7 +149,7 @@ export default function ProjectionDocumentation() {
                         <li>✓ <strong>Season Weight:</strong> (GW - 1) completed gameweeks</li>
                         <li>✓ <strong>Last 6 Weight:</strong> Fixed at 6</li>
                         <li>✓ Live xGF/xGA from current standings (5min cache)</li>
-                        <li>✓ Updated venue factors: Home 1.12×, Away 0.88×</li>
+                        <li>✓ Updated venue factors: Home 1.16×, Away 0.84×</li>
                       </ul>
                     </div>
                   </div>
@@ -289,7 +289,7 @@ export default function ProjectionDocumentation() {
                         </li>
                         <li className="flex items-start gap-2">
                           <span className="text-green-500 mt-0.5">▪</span>
-                          <span><strong>Updated Venue Factors:</strong> Home advantage reduced from 1.16× to 1.12× for better accuracy</span>
+                          <span><strong>Updated Venue Factors:</strong> Home advantage 1.16×, Away disadvantage 0.84×</span>
                         </li>
                         <li className="flex items-start gap-2">
                           <span className="text-green-500 mt-0.5">▪</span>
@@ -322,7 +322,7 @@ export default function ProjectionDocumentation() {
                         </li>
                         <li className="flex items-start gap-2">
                           <span className="text-red-500 mt-0.5">▪</span>
-                          <span><strong>Old Home Advantage (1.16×):</strong> Reduced to 1.12× based on 2024/25 season calibration</span>
+                          <span><strong>Home Advantage (1.16×):</strong> Standard 16% boost for home fixtures</span>
                         </li>
                         <li className="flex items-start gap-2">
                           <span className="text-red-500 mt-0.5">▪</span>
@@ -840,7 +840,7 @@ export default function ProjectionDocumentation() {
                       <div className="ml-4">baseGoals = (teamAvgGoals + teamAvgXG + opponentAvgGC + opponentAvgXGA) × 0.25</div>
                       <div className="ml-4"></div>
                       <div className="ml-4">// Phase 3: Apply venue factor</div>
-                      <div className="ml-4">venueFactor = isHome ? 1.12 : 0.88</div>
+                      <div className="ml-4">venueFactor = isHome ? 1.16 : 0.84</div>
                       <div className="ml-4">goalsWithVenue = baseGoals × venueFactor</div>
                       <div className="ml-4"></div>
                       <div className="ml-4">// Phase 4: Context multipliers</div>
@@ -1491,7 +1491,7 @@ export default function ProjectionDocumentation() {
                     <div className="bg-purple-50 p-3 rounded">
                       <h4 className="font-semibold text-purple-900 mb-2">Venue & Context Factors</h4>
                       <ul className="text-sm text-purple-700 space-y-1">
-                        <li>• Home advantage: 1.12× (reduced from 1.16)</li>
+                        <li>• Home advantage: 1.16×</li>
                         <li>• Away factor: 0.84×</li>
                         <li>• Team form (last 5 games): ±6%</li>
                         <li>• Derby matches: 0.87× (defensive)</li>
@@ -1609,7 +1609,7 @@ export default function ProjectionDocumentation() {
                       (Using hybrid real data formula with venue inverted)
                     </div>
                     <p className="text-sm text-red-800">
-                      Goals conceded is simply the opponent's expected goals scored, calculated using the same hybrid formula but from the defensive perspective. Venue factors are inverted (home team defends better at 1.12×, worse away at 0.84×).
+                      Goals conceded is simply the opponent's expected goals scored, calculated using the same hybrid formula but from the defensive perspective. Venue factors are inverted (home team defends better at 1.16×, worse away at 0.84×).
                     </p>
                   </div>
 
@@ -2096,28 +2096,28 @@ export default function ProjectionDocumentation() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-blue-900 mb-3">Home Advantage</h4>
-                    <div className="text-3xl font-bold text-blue-700">1.12×</div>
+                    <div className="text-3xl font-bold text-blue-700">1.16×</div>
                     <p className="text-sm text-blue-600 mt-2">
-                      12% boost to expected goals at home
+                      16% boost to expected goals at home
                     </p>
                     <div className="bg-white p-2 rounded mt-3 text-sm font-mono">
-                      const HOME_FACTOR = 1.12
+                      const HOME_FACTOR = 1.16
                     </div>
                     <p className="text-xs text-blue-500 mt-2">
-                      Previously: 1.16× (reduced for accuracy)
+                      Standard Premier League home advantage
                     </p>
                   </div>
                   <div className="bg-orange-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-orange-900 mb-3">Away Penalty</h4>
-                    <div className="text-3xl font-bold text-orange-700">0.88×</div>
+                    <div className="text-3xl font-bold text-orange-700">0.84×</div>
                     <p className="text-sm text-orange-600 mt-2">
-                      12% reduction to expected goals away
+                      16% reduction to expected goals away
                     </p>
                     <div className="bg-white p-2 rounded mt-3 text-sm font-mono">
-                      const AWAY_FACTOR = 0.88
+                      const AWAY_FACTOR = 0.84
                     </div>
                     <p className="text-xs text-orange-500 mt-2">
-                      Balanced with home advantage (1.12 × 0.88 ≈ 1.0)
+                      Mirrors home advantage (inverse relationship)
                     </p>
                   </div>
                 </div>
