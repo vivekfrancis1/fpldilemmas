@@ -149,7 +149,7 @@ export default function ProjectionDocumentation() {
                         <li>✓ <strong>Season Weight:</strong> (GW - 1) completed gameweeks</li>
                         <li>✓ <strong>Last 6 Weight:</strong> Fixed at 6</li>
                         <li>✓ Live xGF/xGA from current standings (5min cache)</li>
-                        <li>✓ Updated venue factors: Home 1.12×, Away 0.84×</li>
+                        <li>✓ Updated venue factors: Home 1.12×, Away 0.88×</li>
                       </ul>
                     </div>
                   </div>
@@ -840,7 +840,7 @@ export default function ProjectionDocumentation() {
                       <div className="ml-4">baseGoals = (teamAvgGoals + teamAvgXG + opponentAvgGC + opponentAvgXGA) × 0.25</div>
                       <div className="ml-4"></div>
                       <div className="ml-4">// Phase 3: Apply venue factor</div>
-                      <div className="ml-4">venueFactor = isHome ? 1.12 : 0.84</div>
+                      <div className="ml-4">venueFactor = isHome ? 1.12 : 0.88</div>
                       <div className="ml-4">goalsWithVenue = baseGoals × venueFactor</div>
                       <div className="ml-4"></div>
                       <div className="ml-4">// Phase 4: Context multipliers</div>
@@ -2109,15 +2109,15 @@ export default function ProjectionDocumentation() {
                   </div>
                   <div className="bg-orange-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-orange-900 mb-3">Away Penalty</h4>
-                    <div className="text-3xl font-bold text-orange-700">0.84×</div>
+                    <div className="text-3xl font-bold text-orange-700">0.88×</div>
                     <p className="text-sm text-orange-600 mt-2">
-                      16% reduction to expected goals away
+                      12% reduction to expected goals away
                     </p>
                     <div className="bg-white p-2 rounded mt-3 text-sm font-mono">
-                      const AWAY_FACTOR = 0.84
+                      const AWAY_FACTOR = 0.88
                     </div>
                     <p className="text-xs text-orange-500 mt-2">
-                      Mirrors home advantage (1.12 ÷ 1.12 = 0.84)
+                      Balanced with home advantage (1.12 × 0.88 ≈ 1.0)
                     </p>
                   </div>
                 </div>
