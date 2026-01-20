@@ -103,6 +103,7 @@ type FPLCreatorTracking = {
   gameweekPoints: number;
   gameweekRank?: number;
   teamValue: number | string;
+  bank?: number | string;
   totalTransfers: number;
   recordedAt: string;
   wildcardUsed?: boolean;

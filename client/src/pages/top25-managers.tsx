@@ -167,7 +167,7 @@ const getTop25ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn
               <Badge variant={getRankBadgeVariant(rank)} className="font-mono">
                 #{rank.toLocaleString()}
               </Badge>
-              {getRankChangeDisplay(manager.rankChange)}
+              {getRankChangeDisplay(manager.rankChange ?? undefined)}
             </div>
           </div>
         );
@@ -371,9 +371,9 @@ export default function Top25Managers() {
 
   // Update managers with rank change data when top50Data is available
   useEffect(() => {
-    if (top50Data) {
+    if (top50Data && Array.isArray(top50Data)) {
       const updatedManagers = managersWithData.map(manager => {
-        const top50Manager = top50Data.find((m: any) => m.managerId === manager.managerId);
+        const top50Manager = (top50Data as any[]).find((m: any) => m.managerId === manager.managerId);
         return {
           ...manager,
           rankChange: top50Manager?.rankChange || null
