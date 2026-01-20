@@ -492,9 +492,51 @@ export default function ContentCreators() {
   const [sortBy, setSortBy] = useState<string>("rank");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
+  // Cached Content Creators data response type
+  interface CachedCreatorsResponse {
+    creators: Array<{
+      id: number;
+      name: string;
+      managerId: number;
+      description?: string;
+      twitterHandle?: string;
+      youtubeUrl?: string;
+      managerData?: {
+        current_event: number;
+        summary_overall_rank: number;
+        summary_overall_points: number;
+        summary_event_points: number;
+        last_deadline_value: number;
+        last_deadline_bank: number;
+        last_deadline_total_transfers: number;
+      };
+      historyData?: {
+        current: Array<{ event: number; event_transfers: number; event_transfers_cost: number }>;
+        chips: Array<{ event: number; name: string }>;
+      };
+      success: boolean;
+    }>;
+    metadata: {
+      totalCreators: number;
+      successfulFetches: number;
+      fetchedAt: string;
+      cacheExpiresAt: string;
+    };
+    fromCache: boolean;
+  }
+
+  // Fetch cached Content Creators data (30-minute cache)
+  const { data: cachedCreatorsData, isLoading: isLoadingCached, refetch: refetchCached, isFetching: isCreatorDataRefreshing } = useQuery<CachedCreatorsResponse>({
+    queryKey: ['/api/cached/content-creators-data'],
+    staleTime: 25 * 60 * 1000, // Consider stale after 25 minutes (cache is 30 min)
+    gcTime: 35 * 60 * 1000, // Keep in memory for 35 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Also fetch original creators for database info (name, social links etc)
   const { data: creators, isLoading } = useQuery<FPLCreator[]>({
     queryKey: ["/api/content-creators"],
-    refetchInterval: 60000, // Auto-refresh every 60 seconds
+    staleTime: 5 * 60 * 1000,
   });
 
   // Fetch bootstrap data
@@ -711,36 +753,50 @@ export default function ContentCreators() {
   // State to store enriched creators with history data
   const [creatorsWithHistory, setCreatorsWithHistory] = useState<FPLCreator[]>([]);
 
-  // Fetch history data for all creators
+  // Transform cached data to match enriched creators
   useEffect(() => {
-    const fetchHistoryData = async () => {
-      if (!creators || creators.length === 0) return;
-
-      const enrichedCreators = await Promise.all(
-        creators.map(async (creator) => {
-          try {
-            const historyResponse = await fetch(`/api/manager/${creator.managerId}/history`);
-            if (historyResponse.ok) {
-              const historyData = await historyResponse.json();
-              return {
-                ...creator,
-                historyData: {
-                  current: historyData.current || [],
-                  chips: historyData.chips || [],
-                }
-              };
-            }
-          } catch (error) {
-            console.error(`Failed to fetch history for creator ${creator.name}:`, error);
-          }
-          return creator;
-        })
-      );
+    if (cachedCreatorsData?.creators && creators) {
+      const enrichedCreators = creators.map(creator => {
+        const cachedCreator = cachedCreatorsData.creators.find(c => c.managerId === creator.managerId);
+        if (cachedCreator) {
+          const chips = cachedCreator.historyData?.chips || [];
+          const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
+          
+          return {
+            ...creator,
+            latestTracking: cachedCreator.managerData && creator.latestTracking ? {
+              ...creator.latestTracking,
+              overallRank: cachedCreator.managerData.summary_overall_rank,
+              overallPoints: cachedCreator.managerData.summary_overall_points,
+              gameweekPoints: cachedCreator.managerData.summary_event_points,
+              teamValue: cachedCreator.managerData.last_deadline_value / 10,
+              bank: cachedCreator.managerData.last_deadline_bank / 10,
+              totalTransfers: cachedCreator.managerData.last_deadline_total_transfers,
+            } as FPLCreatorTracking : creator.latestTracking,
+            historyData: cachedCreator.historyData ? {
+              current: cachedCreator.historyData.current || [],
+              chips: cachedCreator.historyData.chips || [],
+            } : undefined,
+          };
+        }
+        return creator;
+      });
       setCreatorsWithHistory(enrichedCreators);
-    };
+    } else if (creators) {
+      // Fallback: use original creators if no cached data
+      setCreatorsWithHistory(creators);
+    }
+  }, [cachedCreatorsData, creators]);
 
-    fetchHistoryData();
-  }, [creators]);
+  // Force refresh function for Content Creators
+  const forceRefreshCreatorsCache = async () => {
+    try {
+      await fetch('/api/cached/content-creators-data/refresh', { method: 'POST' });
+      refetchCached();
+    } catch (error) {
+      console.error('Failed to force refresh:', error);
+    }
+  };
 
   // Refresh FPL data mutation
   const refreshDataMutation = useMutation({

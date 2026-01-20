@@ -192,6 +192,11 @@ export const totalPointsCache = new EnhancedCache(1000, 30 * 60 * 1000); // 1000
 // Recommended Transfers Cache - Short TTL for fresh recommendations
 const recommendedTransfersCache = new EnhancedCache(100, 3 * 60 * 1000); // 100 entries, 3min TTL
 
+// Manager Data Caches - 30 minute TTL for Top 25, Top 50, and Content Creators
+const top25ManagersCache = new EnhancedCache(1, 30 * 60 * 1000); // Single entry, 30min TTL
+const top50ManagersCache = new EnhancedCache(1, 30 * 60 * 1000); // Single entry, 30min TTL
+const contentCreatorsCache = new EnhancedCache(1, 30 * 60 * 1000); // Single entry, 30min TTL
+
 // ========== INITIALIZATION ORCHESTRATOR FOR DEPENDENCY MANAGEMENT ==========
 
 // Global orchestrator instance for checking system readiness
@@ -4444,6 +4449,216 @@ export async function registerRoutes(app: Express): Promise<Server> {
     { rank: 24, name: "William Johansson", managerId: 3676 },
     { rank: 25, name: "Louis Reddington", managerId: 121680 },
   ];
+
+  // ========== CACHED MANAGER DATA ENDPOINTS (30-minute cache) ==========
+  
+  // Helper function to fetch manager data with history
+  async function fetchManagerDataWithHistory(managerId: number) {
+    try {
+      const [managerResponse, historyResponse] = await Promise.all([
+        fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`),
+        fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/history/`)
+      ]);
+      
+      if (managerResponse?.ok && historyResponse?.ok) {
+        const managerData = await managerResponse.json();
+        const historyData = await historyResponse.json();
+        
+        return {
+          managerId,
+          managerData,
+          historyData,
+          success: true
+        };
+      }
+      return { managerId, success: false, error: 'Failed to fetch data' };
+    } catch (error) {
+      console.error(`Failed to fetch data for manager ${managerId}:`, error);
+      return { managerId, success: false, error: String(error) };
+    }
+  }
+
+  // Cached Top 25 Managers Data Endpoint
+  app.get("/api/cached/top25-managers-data", async (req, res) => {
+    const cacheKey = 'top25-managers-data';
+    
+    // Check cache first
+    if (top25ManagersCache.has(cacheKey)) {
+      const cached = top25ManagersCache.get(cacheKey);
+      console.log("🔄 Serving Top 25 managers data from cache");
+      return res.json({ ...cached, fromCache: true });
+    }
+    
+    try {
+      console.log("🚀 Fetching fresh Top 25 managers data (will cache for 30 mins)...");
+      
+      // Fetch all manager data in parallel
+      const managerPromises = TOP_25_MANAGERS.map(manager => 
+        fetchManagerDataWithHistory(manager.managerId).then(data => ({
+          ...manager,
+          ...data
+        }))
+      );
+      
+      const managersWithData = await Promise.all(managerPromises);
+      
+      const responseData = {
+        managers: managersWithData,
+        metadata: {
+          totalManagers: TOP_25_MANAGERS.length,
+          successfulFetches: managersWithData.filter(m => m.success).length,
+          fetchedAt: new Date().toISOString(),
+          cacheExpiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+        }
+      };
+      
+      // Cache the result
+      top25ManagersCache.set(cacheKey, responseData);
+      console.log(`✅ Top 25 managers data cached: ${responseData.metadata.successfulFetches}/${TOP_25_MANAGERS.length} successful`);
+      
+      res.json({ ...responseData, fromCache: false });
+    } catch (error) {
+      console.error("❌ Error fetching Top 25 managers data:", error);
+      res.status(500).json({ error: "Failed to fetch Top 25 managers data" });
+    }
+  });
+
+  // Cached Top 50 Managers Data Endpoint (uses overall league)
+  app.get("/api/cached/top50-managers-data", async (req, res) => {
+    const cacheKey = 'top50-managers-data';
+    
+    // Check cache first
+    if (top50ManagersCache.has(cacheKey)) {
+      const cached = top50ManagersCache.get(cacheKey);
+      console.log("🔄 Serving Top 50 managers data from cache");
+      return res.json({ ...cached, fromCache: true });
+    }
+    
+    try {
+      console.log("🚀 Fetching fresh Top 50 managers data (will cache for 30 mins)...");
+      
+      // Get top 50 from overall league
+      const leagueResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/leagues-classic/314/standings/?page_standings=1");
+      if (!leagueResponse?.ok) {
+        throw new Error("Failed to fetch overall league standings");
+      }
+      
+      const leagueData = await leagueResponse.json();
+      const top50Standings = leagueData.standings.results.slice(0, 50);
+      
+      // Fetch detailed data for each manager
+      const managerPromises = top50Standings.map((standing: any, index: number) => 
+        fetchManagerDataWithHistory(standing.entry).then(data => ({
+          rank: index + 1,
+          name: standing.player_name,
+          managerId: standing.entry,
+          entryName: standing.entry_name,
+          total: standing.total,
+          ...data
+        }))
+      );
+      
+      const managersWithData = await Promise.all(managerPromises);
+      
+      const responseData = {
+        managers: managersWithData,
+        metadata: {
+          totalManagers: 50,
+          successfulFetches: managersWithData.filter(m => m.success).length,
+          fetchedAt: new Date().toISOString(),
+          cacheExpiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+        }
+      };
+      
+      // Cache the result
+      top50ManagersCache.set(cacheKey, responseData);
+      console.log(`✅ Top 50 managers data cached: ${responseData.metadata.successfulFetches}/50 successful`);
+      
+      res.json({ ...responseData, fromCache: false });
+    } catch (error) {
+      console.error("❌ Error fetching Top 50 managers data:", error);
+      res.status(500).json({ error: "Failed to fetch Top 50 managers data" });
+    }
+  });
+
+  // Cached Content Creators Data Endpoint
+  app.get("/api/cached/content-creators-data", async (req, res) => {
+    const cacheKey = 'content-creators-data';
+    
+    // Check cache first
+    if (contentCreatorsCache.has(cacheKey)) {
+      const cached = contentCreatorsCache.get(cacheKey);
+      console.log("🔄 Serving Content Creators data from cache");
+      return res.json({ ...cached, fromCache: true });
+    }
+    
+    try {
+      console.log("🚀 Fetching fresh Content Creators data (will cache for 30 mins)...");
+      
+      // Get all content creators from database
+      const creators = await storage.getAllContentCreators();
+      
+      if (!creators || creators.length === 0) {
+        return res.json({ 
+          creators: [], 
+          metadata: { 
+            totalCreators: 0, 
+            successfulFetches: 0,
+            fetchedAt: new Date().toISOString() 
+          },
+          fromCache: false 
+        });
+      }
+      
+      // Fetch detailed data for each creator
+      const creatorPromises = creators.map(creator => 
+        fetchManagerDataWithHistory(creator.managerId).then(data => ({
+          ...creator,
+          ...data
+        }))
+      );
+      
+      const creatorsWithData = await Promise.all(creatorPromises);
+      
+      const responseData = {
+        creators: creatorsWithData,
+        metadata: {
+          totalCreators: creators.length,
+          successfulFetches: creatorsWithData.filter(c => c.success).length,
+          fetchedAt: new Date().toISOString(),
+          cacheExpiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+        }
+      };
+      
+      // Cache the result
+      contentCreatorsCache.set(cacheKey, responseData);
+      console.log(`✅ Content Creators data cached: ${responseData.metadata.successfulFetches}/${creators.length} successful`);
+      
+      res.json({ ...responseData, fromCache: false });
+    } catch (error) {
+      console.error("❌ Error fetching Content Creators data:", error);
+      res.status(500).json({ error: "Failed to fetch Content Creators data" });
+    }
+  });
+
+  // Force refresh endpoints for admin use
+  app.post("/api/cached/top25-managers-data/refresh", async (req, res) => {
+    top25ManagersCache.clear();
+    console.log("🔄 Top 25 managers cache cleared - next request will fetch fresh data");
+    res.json({ success: true, message: "Top 25 managers cache cleared" });
+  });
+  
+  app.post("/api/cached/top50-managers-data/refresh", async (req, res) => {
+    top50ManagersCache.clear();
+    console.log("🔄 Top 50 managers cache cleared - next request will fetch fresh data");
+    res.json({ success: true, message: "Top 50 managers cache cleared" });
+  });
+  
+  app.post("/api/cached/content-creators-data/refresh", async (req, res) => {
+    contentCreatorsCache.clear();
+    console.log("🔄 Content Creators cache cleared - next request will fetch fresh data");
+    res.json({ success: true, message: "Content Creators cache cleared" });
+  });
 
   // Server-side cache for team analysis (2-minute cache)
   let top25TeamsCache: { 

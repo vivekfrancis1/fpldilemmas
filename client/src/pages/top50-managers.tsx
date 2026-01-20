@@ -359,18 +359,95 @@ const getTop50ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn
   }
 ];
 
+// Cached API response type
+interface CachedTop50Response {
+  managers: Array<{
+    rank: number;
+    name: string;
+    managerId: number;
+    entryName?: string;
+    total?: number;
+    managerData?: {
+      current_event: number;
+      summary_overall_rank: number;
+      summary_overall_points: number;
+      summary_event_points: number;
+      last_deadline_value: number;
+      last_deadline_bank: number;
+      last_deadline_total_transfers: number;
+    };
+    historyData?: {
+      current: Array<{ event: number; event_transfers: number; event_transfers_cost: number }>;
+      chips: Array<{ event: number; name: string }>;
+    };
+    success: boolean;
+  }>;
+  metadata: {
+    totalManagers: number;
+    successfulFetches: number;
+    fetchedAt: string;
+    cacheExpiresAt: string;
+  };
+  fromCache: boolean;
+}
+
 export default function Top50Managers() {
   const [managersWithData, setManagersWithData] = useState<Top50Manager[]>([]);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [sortField, setSortField] = useState<string>('latestTracking.overallRank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [, navigate] = useLocation();
 
-  // Fetch top 50 managers data from API
-  const { data: top50Data } = useQuery<Top50Manager[]>({
-    queryKey: ['/api/top50-managers'],
+  // Fetch cached Top 50 managers data (30-minute cache)
+  const { data: cachedData, isLoading: isLoadingCached, refetch: refetchCached, isFetching: isRefreshing } = useQuery<CachedTop50Response>({
+    queryKey: ['/api/cached/top50-managers-data'],
+    staleTime: 25 * 60 * 1000, // Consider stale after 25 minutes (cache is 30 min)
+    gcTime: 35 * 60 * 1000, // Keep in memory for 35 minutes
+    refetchOnWindowFocus: false,
     retry: 2,
   });
+
+  // Transform cached data to match component state
+  useEffect(() => {
+    if (cachedData?.managers) {
+      const transformedManagers = cachedData.managers.map(m => {
+        const chips = m.historyData?.chips || [];
+        const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
+        
+        return {
+          rank: m.rank,
+          name: m.name,
+          managerId: m.managerId,
+          rankChange: null,
+          latestTracking: m.managerData ? {
+            gameweek: m.managerData.current_event || 0,
+            overallRank: m.managerData.summary_overall_rank,
+            overallPoints: m.managerData.summary_overall_points,
+            gameweekPoints: m.managerData.summary_event_points,
+            teamValue: m.managerData.last_deadline_value,
+            bank: m.managerData.last_deadline_bank,
+            totalTransfers: m.managerData.last_deadline_total_transfers,
+            chipsUsed: chips.length,
+            secondHalfChipsUsed: secondHalfChipsUsed,
+          } : undefined,
+          historyData: m.historyData ? {
+            current: m.historyData.current || [],
+            chips: m.historyData.chips || [],
+          } : undefined,
+        };
+      });
+      setManagersWithData(transformedManagers);
+    }
+  }, [cachedData]);
+
+  // Force refresh function (clears cache and refetches)
+  const forceRefresh = async () => {
+    try {
+      await fetch('/api/cached/top50-managers-data/refresh', { method: 'POST' });
+      refetchCached();
+    } catch (error) {
+      console.error('Failed to force refresh:', error);
+    }
+  };
 
   // Fetch bootstrap data
   const { data: bootstrapData, isLoading: bootstrapLoading } = useQuery<BootstrapData>({
@@ -581,73 +658,6 @@ export default function Top50Managers() {
     refetchTeams();
   };
 
-  // Fetch latest tracking data for all managers
-  const fetchManagerData = async (managerId: number) => {
-    try {
-      // Fetch basic manager data
-      const [managerResponse, historyResponse] = await Promise.all([
-        fetch(`/api/manager/${managerId}`),
-        fetch(`/api/manager/${managerId}/history`)
-      ]);
-      
-      if (managerResponse.ok && historyResponse.ok) {
-        const managerData = await managerResponse.json();
-        const historyData = await historyResponse.json();
-        
-        // Count chips used
-        const chips = historyData.chips || [];
-        const chipsUsed = chips.length;
-        // Count chips used in second half of season (GW 20+)
-        const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
-        
-        return {
-          latestTracking: {
-            gameweek: managerData.current_event || 0,
-            overallRank: managerData.summary_overall_rank,
-            overallPoints: managerData.summary_overall_points,
-            gameweekPoints: managerData.summary_event_points,
-            teamValue: managerData.last_deadline_value,
-            bank: managerData.last_deadline_bank,
-            totalTransfers: managerData.last_deadline_total_transfers,
-            chipsUsed: chipsUsed,
-            secondHalfChipsUsed: secondHalfChipsUsed,
-          },
-          historyData: {
-            current: historyData.current || [],
-            chips: historyData.chips || [],
-          }
-        };
-      }
-    } catch (error) {
-      console.error(`Failed to fetch data for manager ${managerId}:`, error);
-    }
-    return null;
-  };
-
-  const refreshAllData = async () => {
-    if (!top50Data) return;
-    setIsRefreshing(true);
-    const updatedManagers = await Promise.all(
-      top50Data.map(async (manager) => {
-        const data = await fetchManagerData(manager.managerId);
-        return {
-          ...manager,
-          latestTracking: data?.latestTracking || undefined,
-          historyData: data?.historyData || undefined,
-        };
-      })
-    );
-    setManagersWithData(updatedManagers);
-    setIsRefreshing(false);
-  };
-
-  useEffect(() => {
-    if (top50Data) {
-      setManagersWithData(top50Data);
-      refreshAllData();
-    }
-  }, [top50Data]);
-
   // Sorting logic
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -746,7 +756,7 @@ export default function Top50Managers() {
         <div className="fpl-controls">
           <div className="fpl-controls-right">
             <Button
-              onClick={refreshAllData}
+              onClick={forceRefresh}
               disabled={isRefreshing}
               variant="outline"
               className="hover:bg-blue-50"
