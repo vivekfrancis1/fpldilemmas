@@ -563,7 +563,7 @@ export default function Top25Managers() {
                 >
                   FPL Research
                 </a>{' '}
-                as on September 10, 2025
+                as on January 20, 2026
               </p>
             </div>
           </TabsContent>
