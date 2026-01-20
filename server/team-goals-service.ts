@@ -215,8 +215,9 @@ export class TeamGoalsService {
   }
   
   /**
-   * Calculate expected goals for a single fixture using blended season + last 6 games formula
-   * Formula: ((Season averages * 0.25) + (Last 6 games averages * 0.25)) * 0.5 * venue * context
+   * Calculate expected goals for a single fixture using weighted season + last 6 games formula
+   * Formula: Weighted blend where season gets weight = (GW - 1), last 6 gets weight = 6
+   * For GW 23: weight is 22:6. For GW 24: weight is 23:6, etc.
    */
   private static async calculateFixtureGoals(
     team: any, 
@@ -230,9 +231,9 @@ export class TeamGoalsService {
     MASTER_TEAM_DEFAULTS: any
   ): Promise<number> {
     try {
-      // BLENDED FORMULA: Average of season formula + last 6 games formula
-      // ((Team Avg Goals + Team Avg xG + Opponent Avg GC + Opponent Avg xGC) for season * 0.25 +
-      //  (Team Avg Goals + Team Avg xG + Opponent Avg GC + Opponent Avg xGC) for last 6 * 0.25) * 0.5 * venue * context
+      // WEIGHTED BLEND: Season and last 6 games with dynamic weights based on completed gameweeks
+      // For GW 23: season weight = 22, last 6 weight = 6 (ratio 22:6)
+      // Formula: (season_value * seasonWeight + last6_value * last6Weight) / totalWeight * venue * context
       
       // SEASON AVERAGES (from current standings - full season data)
       const teamAvgGoalsSeason = await TeamGoalsService.getTeamAverageGoals(team.id);

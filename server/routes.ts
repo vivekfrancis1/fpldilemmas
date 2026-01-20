@@ -13451,8 +13451,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Fallback to season average
           }
           
-          // BLEND 50/50: Average of season and last 6 games
-          const savesPerTeamGame = (savesPerTeamGameSeason + savesPerTeamGameLast6) / 2;
+          // WEIGHTED BLEND: Season gets weight based on completed GWs, last 6 gets weight of 6
+          const completedGameweeks = currentGameweek - 1;
+          const seasonWeight = completedGameweeks;
+          const last6Weight = 6;
+          const totalWeight = seasonWeight + last6Weight;
+          const savesPerTeamGame = (savesPerTeamGameSeason * seasonWeight + savesPerTeamGameLast6 * last6Weight) / totalWeight;
           
           // Process each FUTURE gameweek only with new formula
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
@@ -14472,10 +14476,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 totalBothTeamsLast6BPS += playerLast6BPSMap.get(p.id) || 0;
               });
               
-              // Formula: (((playerSeasonBPS/totalBothTeamsSeasonBPS) + (playerLast6GamesBPS/totalBothTeamsLast6GamesBPS)) / 2) × 6
+              // Weighted Formula: season gets weight based on completed GWs (gw-1), last 6 gets weight of 6
+              const completedGameweeks = gw - 1;
+              const seasonWeight = completedGameweeks;
+              const last6Weight = 6;
+              const totalWeight = seasonWeight + last6Weight;
               const seasonRatio = totalBothTeamsSeasonBPS > 0 ? playerSeasonBPS / totalBothTeamsSeasonBPS : 0;
               const last6Ratio = totalBothTeamsLast6BPS > 0 ? playerLast6BPS / totalBothTeamsLast6BPS : 0;
-              gwBonusPoints = ((seasonRatio + last6Ratio) / 2) * 6;
+              gwBonusPoints = ((seasonRatio * seasonWeight + last6Ratio * last6Weight) / totalWeight) * 6;
             }
             
             bonusPoints[`gw${gw}`] = parseFloat(gwBonusPoints.toFixed(3));
