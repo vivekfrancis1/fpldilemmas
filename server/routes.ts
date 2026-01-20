@@ -7629,17 +7629,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // TRY LIVE API CALCULATION FIRST
       try {
-        // Fetch both full season and last 6 GW goal share data, plus team projections
-        const [goalShareFullResponse, goalShareLast6Response, teamProjectionsResponse] = await Promise.all([
+        // Fetch both full season and last 6 GW goal share data, plus team projections and bootstrap for gameweek
+        const [goalShareFullResponse, goalShareLast6Response, teamProjectionsResponse, bootstrapResponse] = await Promise.all([
           internalFetch('api/goal-share-season?filter=full'),
           internalFetch('api/goal-share-season?filter=last6'),
-          internalFetch('api/team-goal-projections')
+          internalFetch('api/team-goal-projections'),
+          internalFetch('api/bootstrap-static')
         ]);
         
-        if (goalShareFullResponse.ok && goalShareLast6Response.ok && teamProjectionsResponse.ok) {
+        if (goalShareFullResponse.ok && goalShareLast6Response.ok && teamProjectionsResponse.ok && bootstrapResponse.ok) {
           const goalShareFullData = await goalShareFullResponse.json();
           const goalShareLast6Data = await goalShareLast6Response.json();
           const teamProjectionsData = await teamProjectionsResponse.json();
+          const bootstrapData = await bootstrapResponse.json();
+          
+          // Get current gameweek for weighted average calculation
+          const currentEvent = bootstrapData.events?.find((e: any) => e.is_current);
+          const currentGameweek = currentEvent?.id || 23;
+          const completedGameweeks = currentGameweek - 1;
+          const seasonWeight = completedGameweeks;
+          const last6Weight = 6;
+          const totalWeight = seasonWeight + last6Weight;
           
           // Create lookup map for team projections by teamId
           const teamProjectionsMap: { [teamId: number]: any } = {};
@@ -7657,7 +7667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
           
-          // Calculate player projections using formula: average goal share × team projections per gameweek
+          // Calculate player projections using formula: weighted average goal share × team projections per gameweek
           const playerProjections: any[] = [];
           
           goalShareFullData.forEach((team: any) => {
@@ -7668,8 +7678,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const fullSeasonGoalShare = player.goalShare || 0;
                 const last6GoalShare = last6GoalShareMap[player.playerId] || 0;
                 
-                // Average of full season and last 6 GW goal shares
-                const averageGoalShare = (fullSeasonGoalShare + last6GoalShare) / 2;
+                // Weighted average: season gets weight based on completed GWs, last 6 gets weight of 6
+                const averageGoalShare = (fullSeasonGoalShare * seasonWeight + last6GoalShare * last6Weight) / totalWeight;
                 
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 
@@ -8064,17 +8074,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // TRY LIVE API CALCULATION FIRST
       try {
-        // Fetch both full season and last 6 GW assist share data, plus team projections
-        const [assistShareFullResponse, assistShareLast6Response, teamProjectionsResponse] = await Promise.all([
+        // Fetch both full season and last 6 GW assist share data, plus team projections and bootstrap for gameweek
+        const [assistShareFullResponse, assistShareLast6Response, teamProjectionsResponse, bootstrapResponse] = await Promise.all([
           internalFetch('api/assist-share-season?filter=full'),
           internalFetch('api/assist-share-season?filter=last6'),
-          internalFetch('api/team-assist-projections')
+          internalFetch('api/team-assist-projections'),
+          internalFetch('api/bootstrap-static')
         ]);
         
-        if (assistShareFullResponse.ok && assistShareLast6Response.ok && teamProjectionsResponse.ok) {
+        if (assistShareFullResponse.ok && assistShareLast6Response.ok && teamProjectionsResponse.ok && bootstrapResponse.ok) {
           const assistShareFullData = await assistShareFullResponse.json();
           const assistShareLast6Data = await assistShareLast6Response.json();
           const teamProjectionsData = await teamProjectionsResponse.json();
+          const bootstrapData = await bootstrapResponse.json();
+          
+          // Get current gameweek for weighted average calculation
+          const currentEvent = bootstrapData.events?.find((e: any) => e.is_current);
+          const currentGameweek = currentEvent?.id || 23;
+          const completedGameweeks = currentGameweek - 1;
+          const seasonWeight = completedGameweeks;
+          const last6Weight = 6;
+          const totalWeight = seasonWeight + last6Weight;
           
           // Create lookup map for team projections by teamId
           const teamProjectionsMap: { [teamId: number]: any } = {};
@@ -8092,7 +8112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           });
           
-          // Calculate player projections using formula: average assist share × team projections per gameweek
+          // Calculate player projections using formula: weighted average assist share × team projections per gameweek
           const playerProjections: any[] = [];
           
           assistShareFullData.forEach((team: any) => {
@@ -8103,8 +8123,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const fullSeasonAssistShare = player.assistShare || 0;
                 const last6AssistShare = last6AssistShareMap[player.playerId] || 0;
                 
-                // Average of full season and last 6 GW assist shares
-                const averageAssistShare = (fullSeasonAssistShare + last6AssistShare) / 2;
+                // Weighted average: season gets weight based on completed GWs, last 6 gets weight of 6
+                const averageAssistShare = (fullSeasonAssistShare * seasonWeight + last6AssistShare * last6Weight) / totalWeight;
                 
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 
