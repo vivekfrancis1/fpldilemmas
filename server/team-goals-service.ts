@@ -255,8 +255,15 @@ export class TeamGoalsService {
       // Phase 2: Calculate last 6 games-based expected goals
       const last6ExpectedGoals = (teamAvgGoalsLast6 + teamAvgXGLast6 + opponentAvgGCLast6 + opponentAvgXGCLast6) * 0.25;
       
-      // Phase 3: Blend the two (50/50 average)
-      let baseExpectedGoals = (seasonExpectedGoals + last6ExpectedGoals) * 0.5;
+      // Phase 3: Weighted blend based on gameweek
+      // For GW 23: season weight = 22 (completed GWs), last 6 weight = 6
+      // This gives more weight to season data as the season progresses
+      const completedGameweeks = fixture.event - 1;
+      const seasonWeight = completedGameweeks;
+      const last6Weight = 6;
+      const totalWeight = seasonWeight + last6Weight;
+      
+      let baseExpectedGoals = (seasonExpectedGoals * seasonWeight + last6ExpectedGoals * last6Weight) / totalWeight;
       
       // Phase 2: Venue Factors (with safe multiplication)
       const venueMultiplier = isHome ? 
