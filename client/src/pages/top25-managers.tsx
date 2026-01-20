@@ -32,12 +32,28 @@ import {
 } from "lucide-react";
 import Top25TeamAnalysis from "./top25-team-analysis";
 import { LoadingExperience } from "@/components/loading-experience";
+import { calculateFreeTransfers } from "@/lib/free-transfers";
+
+interface GWHistory {
+  event: number;
+  event_transfers: number;
+  event_transfers_cost: number;
+}
+
+interface ChipUsage {
+  event: number;
+  name: string;
+}
 
 type Top25Manager = {
   rank: number;
   name: string;
   managerId: number;
   rankChange?: number | null;
+  historyData?: {
+    current: GWHistory[];
+    chips: ChipUsage[];
+  };
   latestTracking?: {
     gameweek: number;
     overallRank: number;
@@ -222,7 +238,7 @@ const getTop25ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn
   },
   {
     key: 'freeTransfers',
-    header: 'Free Transfers',
+    header: 'FT (GW23)',
     priority: 'optional',
     align: 'right',
     mobileLabel: 'FT',
@@ -230,11 +246,12 @@ const getTop25ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn
     sortable: true,
     className: 'font-mono',
     render: (value, manager) => {
-      // For top 25, we don't have detailed history - show based on total transfers
-      const totalTransfers = manager.latestTracking?.totalTransfers;
-      if (totalTransfers === undefined) return "N/A";
-      // Simplified: assume they have at least 1 FT available
-      return "1-5";
+      const history = manager.historyData?.current;
+      const chips = manager.historyData?.chips;
+      if (!history || history.length === 0) return "N/A";
+      
+      const freeTransfers = calculateFreeTransfers(history, chips, 23);
+      return freeTransfers;
     }
   },
   {
@@ -309,15 +326,21 @@ export default function Top25Managers() {
         const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
         
         return {
-          gameweek: managerData.current_event || 0,
-          overallRank: managerData.summary_overall_rank,
-          overallPoints: managerData.summary_overall_points,
-          gameweekPoints: managerData.summary_event_points,
-          teamValue: managerData.last_deadline_value,
-          bank: managerData.last_deadline_bank,
-          totalTransfers: managerData.last_deadline_total_transfers,
-          chipsUsed: chipsUsed,
-          secondHalfChipsUsed: secondHalfChipsUsed,
+          latestTracking: {
+            gameweek: managerData.current_event || 0,
+            overallRank: managerData.summary_overall_rank,
+            overallPoints: managerData.summary_overall_points,
+            gameweekPoints: managerData.summary_event_points,
+            teamValue: managerData.last_deadline_value,
+            bank: managerData.last_deadline_bank,
+            totalTransfers: managerData.last_deadline_total_transfers,
+            chipsUsed: chipsUsed,
+            secondHalfChipsUsed: secondHalfChipsUsed,
+          },
+          historyData: {
+            current: historyData.current || [],
+            chips: historyData.chips || [],
+          }
         };
       }
     } catch (error) {
@@ -330,10 +353,11 @@ export default function Top25Managers() {
     setIsRefreshing(true);
     const updatedManagers = await Promise.all(
       TOP_25_MANAGERS.map(async (manager) => {
-        const latestTracking = await fetchManagerData(manager.managerId);
+        const data = await fetchManagerData(manager.managerId);
         return {
           ...manager,
-          latestTracking: latestTracking || undefined,
+          latestTracking: data?.latestTracking || undefined,
+          historyData: data?.historyData || undefined,
         };
       })
     );
@@ -392,8 +416,10 @@ export default function Top25Managers() {
           case 'latestTracking.bank':
             return manager.latestTracking?.bank || 0;
           case 'freeTransfers':
-            // Simplified - all managers assumed to have 1-5 FT
-            return 1;
+            const history = manager.historyData?.current;
+            const chips = manager.historyData?.chips;
+            if (!history || history.length === 0) return 0;
+            return calculateFreeTransfers(history, chips, 23);
           case 'chipsAvailable':
             // 4 chips in second half - second half chips used
             return 4 - (manager.latestTracking?.secondHalfChipsUsed || 0);

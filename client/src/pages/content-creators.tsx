@@ -60,6 +60,18 @@ import {
   PieChart,
 } from "lucide-react";
 import { SiInstagram, SiTiktok, SiX, SiYoutube } from "react-icons/si";
+import { calculateFreeTransfers } from "@/lib/free-transfers";
+
+interface GWHistory {
+  event: number;
+  event_transfers: number;
+  event_transfers_cost: number;
+}
+
+interface ChipUsage {
+  event: number;
+  name: string;
+}
 
 type FPLCreator = {
   id: number;
@@ -76,6 +88,10 @@ type FPLCreator = {
   lastUpdated: string;
   rankChange?: number;
   latestTracking?: FPLCreatorTracking;
+  historyData?: {
+    current: GWHistory[];
+    chips: ChipUsage[];
+  };
 };
 
 type FPLCreatorTracking = {
@@ -430,7 +446,7 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
   },
   {
     key: 'freeTransfers',
-    header: 'Free Transfers',
+    header: 'FT (GW23)',
     priority: 'optional',
     align: 'right',
     mobileLabel: 'FT',
@@ -438,27 +454,12 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
     sortable: true,
     className: 'font-mono',
     render: (value, creator) => {
-      // Calculate free transfers from history data
       const history = creator.historyData?.current;
+      const chips = creator.historyData?.chips;
       if (!history || history.length === 0) return "N/A";
       
-      // Get latest gameweek history
-      const latestGW = history[history.length - 1];
-      const transfersMade = latestGW?.event_transfers || 0;
-      
-      // Calculate free transfers: start with 1, bank up to 5, subtract transfers made
-      // After a wildcard/free hit, you have 1 free transfer
-      const chips = creator.historyData?.chips || [];
-      const latestChip = chips.find(c => c.event === latestGW?.event);
-      
-      if (latestChip && (latestChip.name === 'wildcard' || latestChip.name === 'freehit')) {
-        return 1; // After wildcard/free hit, you have 1 FT
-      }
-      
-      // Simple calculation: assume 1-5 based on transfers pattern
-      // If no transfers made in current GW, they likely have banked transfers
-      const banked = Math.min(5, Math.max(1, 5 - transfersMade));
-      return banked > 0 ? banked : 1;
+      const freeTransfers = calculateFreeTransfers(history, chips, 23);
+      return freeTransfers;
     }
   },
   {
@@ -706,6 +707,40 @@ export default function ContentCreators() {
     refetchTeams();
   };
 
+  // State to store enriched creators with history data
+  const [creatorsWithHistory, setCreatorsWithHistory] = useState<FPLCreator[]>([]);
+
+  // Fetch history data for all creators
+  useEffect(() => {
+    const fetchHistoryData = async () => {
+      if (!creators || creators.length === 0) return;
+
+      const enrichedCreators = await Promise.all(
+        creators.map(async (creator) => {
+          try {
+            const historyResponse = await fetch(`/api/manager/${creator.managerId}/history`);
+            if (historyResponse.ok) {
+              const historyData = await historyResponse.json();
+              return {
+                ...creator,
+                historyData: {
+                  current: historyData.current || [],
+                  chips: historyData.chips || [],
+                }
+              };
+            }
+          } catch (error) {
+            console.error(`Failed to fetch history for creator ${creator.name}:`, error);
+          }
+          return creator;
+        })
+      );
+      setCreatorsWithHistory(enrichedCreators);
+    };
+
+    fetchHistoryData();
+  }, [creators]);
+
   // Refresh FPL data mutation
   const refreshDataMutation = useMutation({
     mutationFn: async () => {
@@ -736,8 +771,8 @@ export default function ContentCreators() {
     },
   });
 
-  // Sort creators
-  const sortedCreators = [...((creators || []) as FPLCreator[])].sort((a, b) => {
+  // Sort creators - use enriched creators with history data when available
+  const sortedCreators = [...(creatorsWithHistory.length > 0 ? creatorsWithHistory : (creators || []) as FPLCreator[])].sort((a, b) => {
     let valueA, valueB;
     
     switch (sortBy) {
@@ -790,9 +825,10 @@ export default function ContentCreators() {
         break;
       }
       case "freeTransfers":
-        // Sort by estimated free transfers (simplified)
-        valueA = 1;
-        valueB = 1;
+        const historyA = a.historyData?.current;
+        const historyB = b.historyData?.current;
+        valueA = historyA && historyA.length > 0 ? calculateFreeTransfers(historyA, a.historyData?.chips, 23) : 0;
+        valueB = historyB && historyB.length > 0 ? calculateFreeTransfers(historyB, b.historyData?.chips, 23) : 0;
         break;
       case "chipsAvailable":
         // Sort by chips available (4 - second half chips used)
