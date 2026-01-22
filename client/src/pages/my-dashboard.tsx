@@ -2893,8 +2893,8 @@ export default function MyDashboard() {
 
               {/* Transfers Tab */}
               <TabsContent value="transfers" className="space-y-6 mt-6 sm:mt-8">
-                {/* Free Transfers Summary Card */}
-                {teamData?.transfers && (
+                {/* Free Transfers Summary Card - Use nextTeamData for pending transfer info */}
+                {nextTeamData?.transfers && (
                   <Card className="border-0 bg-gradient-to-br from-emerald-50 to-teal-50 shadow-lg">
                     <CardContent className="p-4 sm:p-6">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -2904,42 +2904,52 @@ export default function MyDashboard() {
                           </div>
                           <div>
                             <h3 className="text-lg sm:text-xl font-bold text-emerald-800">
-                              Free Transfers Available
+                              GW{getNextGameweekDashboard()} Transfer Summary
                             </h3>
                             <p className="text-sm text-emerald-600">
-                              For Gameweek {getNextGameweekDashboard()}
+                              Pending transfers for next gameweek
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 sm:gap-6">
+                        <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+                          {/* Free Transfers at Start */}
                           <div className="text-center">
-                            <div className="text-3xl sm:text-4xl font-bold text-emerald-700">
-                              {Math.max(0, (teamData.transfers.limit || 1) - (teamData.transfers.made || 0))}
+                            <div className="text-2xl sm:text-3xl font-bold text-blue-700">
+                              {nextTeamData.transfers.limit || 1}
                             </div>
-                            <div className="text-xs sm:text-sm text-emerald-600 font-medium">
-                              Available
+                            <div className="text-xs sm:text-sm text-blue-600 font-medium">
+                              Free at Start
                             </div>
                           </div>
-                          {teamData.transfers.made > 0 && (
-                            <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
-                              <div className="text-2xl sm:text-3xl font-bold text-orange-600">
-                                {teamData.transfers.made}
-                              </div>
-                              <div className="text-xs sm:text-sm text-orange-600 font-medium">
-                                Made
-                              </div>
+                          {/* Transfers Made */}
+                          <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
+                            <div className="text-2xl sm:text-3xl font-bold text-orange-600">
+                              {nextTeamData.transfers.made || 0}
                             </div>
-                          )}
-                          {teamData.transfers.cost > 0 && (
+                            <div className="text-xs sm:text-sm text-orange-600 font-medium">
+                              Made
+                            </div>
+                          </div>
+                          {/* Point Hit - only show if cost > 0 */}
+                          {(nextTeamData.transfers.cost || 0) > 0 && (
                             <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
                               <div className="text-2xl sm:text-3xl font-bold text-red-600">
-                                -{teamData.transfers.cost}
+                                -{nextTeamData.transfers.cost}
                               </div>
                               <div className="text-xs sm:text-sm text-red-600 font-medium">
                                 Point Hit
                               </div>
                             </div>
                           )}
+                          {/* Remaining Free Transfers */}
+                          <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
+                            <div className="text-2xl sm:text-3xl font-bold text-emerald-700">
+                              {Math.max(0, (nextTeamData.transfers.limit || 1) - (nextTeamData.transfers.made || 0))}
+                            </div>
+                            <div className="text-xs sm:text-sm text-emerald-600 font-medium">
+                              Remaining
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
