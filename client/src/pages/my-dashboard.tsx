@@ -782,13 +782,13 @@ export default function MyDashboard() {
     return transfersData.filter(transfer => !chipGWs.has(transfer.event)).length;
   };
 
-  // Helper to compute pending GW14 transfers after Free Hit reverts
-  // Compare pre-chip team (GW12) with next team (GW14) to find actual transfers
+  // Helper to compute pending transfers for next gameweek
+  // Compare current team with next team to find actual transfers made
   const getPendingTransfers = (): Transfer[] => {
     const nextGw = getNextGameweekDashboard();
     
-    // If no pre-chip data, or nextTeamData.transfers.made is 0, no pending transfers
-    if (!preChipTeamData?.picks || !nextTeamData?.picks || !bootstrapData) {
+    // Need nextTeamData and bootstrapData
+    if (!nextTeamData?.picks || !bootstrapData) {
       return [];
     }
     
@@ -798,14 +798,20 @@ export default function MyDashboard() {
       return [];
     }
     
-    const preChipPlayerIds = new Set(preChipTeamData.picks.map(p => p.element));
+    // Use preChipTeamData if available (post-Free Hit scenario), otherwise use teamData
+    const baseTeam = preChipTeamData?.picks || teamData?.picks;
+    if (!baseTeam) {
+      return [];
+    }
+    
+    const basePlayerIds = new Set(baseTeam.map(p => p.element));
     const nextPlayerIds = new Set(nextTeamData.picks.map(p => p.element));
     
-    // Players transferred OUT (in pre-chip team but not in next team)
-    const playersOut = preChipTeamData.picks.filter(p => !nextPlayerIds.has(p.element));
+    // Players transferred OUT (in base team but not in next team)
+    const playersOut = baseTeam.filter(p => !nextPlayerIds.has(p.element));
     
-    // Players transferred IN (in next team but not in pre-chip team)
-    const playersIn = nextTeamData.picks.filter(p => !preChipPlayerIds.has(p.element));
+    // Players transferred IN (in next team but not in base team)
+    const playersIn = nextTeamData.picks.filter(p => !basePlayerIds.has(p.element));
     
     // Create pending transfer records - pair up IN and OUT players
     const pendingTransfers: Transfer[] = [];
