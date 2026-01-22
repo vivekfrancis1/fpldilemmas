@@ -1689,14 +1689,16 @@ export default function MyDashboard() {
                                     <div className="relative flex flex-col items-center">
                                       {/* Jersey Image */}
                                       <div className="relative">
-                                        <img 
-                                          src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                          alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
-                                          onError={(e) => {
-                                            (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                          }}
-                                        />
+                                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                                          <img 
+                                            src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                            alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                            className="w-full h-full object-contain drop-shadow-lg"
+                                            onError={(e) => {
+                                              (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                            }}
+                                          />
+                                        </div>
                                         {/* Captain Badge */}
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
@@ -1755,11 +1757,13 @@ export default function MyDashboard() {
                                   <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative flex flex-col items-center">
                                       <div className="relative">
-                                        <img 
-                                          src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
-                                          alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
-                                        />
+                                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                                          <img 
+                                            src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
+                                            alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                            className="w-full h-full object-contain drop-shadow-lg"
+                                          />
+                                        </div>
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
                                             <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
@@ -1813,11 +1817,13 @@ export default function MyDashboard() {
                                   <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative flex flex-col items-center">
                                       <div className="relative">
-                                        <img 
-                                          src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
-                                          alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
-                                        />
+                                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                                          <img 
+                                            src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
+                                            alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                            className="w-full h-full object-contain drop-shadow-lg"
+                                          />
+                                        </div>
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
                                             <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
@@ -1871,11 +1877,13 @@ export default function MyDashboard() {
                                   <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
                                     <div className="relative flex flex-col items-center">
                                       <div className="relative">
-                                        <img 
-                                          src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
-                                          alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
-                                        />
+                                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                                          <img 
+                                            src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
+                                            alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                            className="w-full h-full object-contain drop-shadow-lg"
+                                          />
+                                        </div>
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
                                             <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
@@ -1925,14 +1933,16 @@ export default function MyDashboard() {
                               <div key={pick.element} className="flex flex-col items-center w-[19.5%] opacity-90" data-testid={`pitch-bench-${player.id}`}>
                                 <div className="relative flex flex-col items-center">
                                   <div className="relative">
-                                    <img 
-                                      src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                      alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                      className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
-                                      onError={(e) => {
-                                        (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                      }}
-                                    />
+                                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                                      <img 
+                                        src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                        alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                        className="w-full h-full object-contain drop-shadow-lg"
+                                        onError={(e) => {
+                                          (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                        }}
+                                      />
+                                    </div>
                                     {player.in_dreamteam && (
                                       <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-sm">
                                         <Star className="w-2 h-2 sm:w-3 sm:h-3 text-white fill-white" />
@@ -2128,14 +2138,16 @@ export default function MyDashboard() {
                                         <div key={pick.element} className="flex flex-col items-center w-[19.5%]">
                                           <div className="relative flex flex-col items-center">
                                             <div className="relative">
-                                              <img 
-                                                src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                                alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                                className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
-                                                onError={(e) => {
-                                                  (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                                }}
-                                              />
+                                              <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                                                <img 
+                                                  src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                                  alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                                  className="w-full h-full object-contain drop-shadow-lg"
+                                                  onError={(e) => {
+                                                    (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                                  }}
+                                                />
+                                              </div>
                                               {pick.is_captain && (
                                                 <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
                                                   <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
@@ -2185,14 +2197,16 @@ export default function MyDashboard() {
                                       <div key={pick.element} className="flex flex-col items-center w-[19.5%] opacity-90">
                                         <div className="relative flex flex-col items-center">
                                           <div className="relative">
-                                            <img 
-                                              src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                              alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                              className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
-                                              onError={(e) => {
-                                                (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                              }}
-                                            />
+                                            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                                              <img 
+                                                src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                                alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                                className="w-full h-full object-contain drop-shadow-lg"
+                                                onError={(e) => {
+                                                  (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                                }}
+                                              />
+                                            </div>
                                           </div>
                                           <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
                                             <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
@@ -2616,14 +2630,16 @@ export default function MyDashboard() {
                                         <div className="relative flex flex-col items-center">
                                           {/* Jersey Image */}
                                           <div className="relative">
-                                            <img 
-                                              src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                              alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                              className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
-                                              onError={(e) => {
-                                                (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                              }}
-                                            />
+                                            <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                                              <img 
+                                                src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                                alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                                className="w-full h-full object-contain drop-shadow-lg"
+                                                onError={(e) => {
+                                                  (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                                }}
+                                              />
+                                            </div>
                                             {/* Captain Badge */}
                                             {pick.is_captain && (
                                               <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
@@ -2685,14 +2701,16 @@ export default function MyDashboard() {
                                       <div className="relative flex flex-col items-center">
                                         {/* Jersey Image */}
                                         <div className="relative">
-                                          <img 
-                                            src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                            alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
-                                            onError={(e) => {
-                                              (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                            }}
-                                          />
+                                          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                                            <img 
+                                              src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
+                                              alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                              className="w-full h-full object-contain drop-shadow-lg"
+                                              onError={(e) => {
+                                                (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                              }}
+                                            />
+                                          </div>
                                         </div>
                                         {/* Team Name */}
                                         <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">

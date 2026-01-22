@@ -120,14 +120,16 @@ function PlayerCard({
       <div className="relative flex flex-col items-center">
         {/* Jersey Image */}
         <div className="relative">
-          <img 
-            src={getImageSrc()}
-            alt={`${player.team_short_name || 'Team'} jersey`}
-            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
-            onError={() => {
-              if (imgError < 2) setImgError(imgError + 1);
-            }}
-          />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+            <img 
+              src={getImageSrc()}
+              alt={`${player.team_short_name || 'Team'} jersey`}
+              className="w-full h-full object-contain drop-shadow-lg"
+              onError={() => {
+                if (imgError < 2) setImgError(imgError + 1);
+              }}
+            />
+          </div>
           {/* Captain Badge */}
           {player.is_captain && (
             <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">

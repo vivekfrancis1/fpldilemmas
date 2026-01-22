@@ -6930,14 +6930,16 @@ export default function TransferPlanner() {
                                     data-testid={`pitch-jersey-${pick.element}`}
                                   >
                                     <div className="relative">
-                                      <img 
-                                        src={getJerseyImageUrl(getTeamCode(playerTeam), player.element_type === 1)}
-                                        alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                        className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
-                                        onError={(e) => {
-                                          (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                        }}
-                                      />
+                                      <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                                        <img 
+                                          src={getJerseyImageUrl(getTeamCode(playerTeam), player.element_type === 1)}
+                                          alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                          className="w-full h-full object-contain drop-shadow-lg"
+                                          onError={(e) => {
+                                            (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                          }}
+                                        />
+                                      </div>
                                       {isPlayerTransferredIn(pick) && (
                                         <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center border border-white shadow-sm">
                                           <span className="text-[10px] font-bold text-white">+</span>
@@ -7153,14 +7155,16 @@ export default function TransferPlanner() {
                               data-testid={`pitch-bench-jersey-${pick.element}`}
                             >
                               <div className="relative">
-                                <img 
-                                  src={getJerseyImageUrl(getTeamCode(playerTeam), player.element_type === 1)}
-                                  alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                  className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
-                                  onError={(e) => {
-                                    (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                  }}
-                                />
+                                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                                  <img 
+                                    src={getJerseyImageUrl(getTeamCode(playerTeam), player.element_type === 1)}
+                                    alt={`${playerTeam?.short_name || 'Team'} jersey`}
+                                    className="w-full h-full object-contain drop-shadow-lg"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
+                                    }}
+                                  />
+                                </div>
                                 {pick.is_captain && (
                                   <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-300 rounded-full flex items-center justify-center border border-yellow-600 shadow-sm">
                                     <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
