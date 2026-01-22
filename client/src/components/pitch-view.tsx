@@ -150,29 +150,32 @@ function PlayerCard({
           )}
         </div>
         
-        {/* Team Name (optional) */}
-        {showTeamName && (
-          <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-              {player.team_short_name || 'UNK'}
+        {/* Text Labels Container - same width as jersey frame */}
+        <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
+          {/* Team Name (optional) */}
+          {showTeamName && (
+            <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+              <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                {player.team_short_name || 'UNK'}
+              </div>
+            </div>
+          )}
+          
+          {/* Player Name */}
+          <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+              {player.web_name || player.player_name || 'Unknown'}
             </div>
           </div>
-        )}
-        
-        {/* Player Name */}
-        <div className={`${showTeamName ? '' : 'mt-0.5'} px-1 py-0.5 bg-white/90 rounded text-center max-w-full`}>
-          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-            {player.web_name || player.player_name || 'Unknown'}
-          </div>
-        </div>
-        
-        {/* Points/Opponent Badge */}
-        <div className={`px-2 py-0.5 ${getBadgeColor(player, isBench)} rounded text-center`}>
-          <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white">
-            {showOpponent && player.fixture_opponent 
-              ? `${player.fixture_opponent} (${player.fixture_is_home ? 'H' : 'A'})`
-              : getPointsDisplay(player)
-            }
+          
+          {/* Points/Opponent Badge */}
+          <div className={`w-full px-2 py-0.5 ${getBadgeColor(player, isBench)} rounded text-center`}>
+            <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+              {showOpponent && player.fixture_opponent 
+                ? `${player.fixture_opponent} (${player.fixture_is_home ? 'H' : 'A'})`
+                : getPointsDisplay(player)
+              }
+            </div>
           </div>
         </div>
       </div>

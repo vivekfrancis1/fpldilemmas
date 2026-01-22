@@ -1718,16 +1718,19 @@ export default function MyDashboard() {
                                           </div>
                                         )}
                                       </div>
-                                      {/* Player Name */}
-                                      <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-                                          {player.web_name}
+                                      {/* Text Labels Container - same width as jersey frame */}
+                                      <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
+                                        {/* Player Name */}
+                                        <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                            {player.web_name}
+                                          </div>
                                         </div>
-                                      </div>
-                                      {/* Points */}
-                                      <div className="px-2 py-0.5 bg-green-600 rounded text-center">
-                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white">
-                                          {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
+                                        {/* Points */}
+                                        <div className="w-full px-2 py-0.5 bg-green-600 rounded text-center">
+                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white truncate">
+                                            {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
@@ -1780,14 +1783,17 @@ export default function MyDashboard() {
                                           </div>
                                         )}
                                       </div>
-                                      <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-                                          {player.web_name}
+                                      {/* Text Labels Container - same width as jersey frame */}
+                                      <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
+                                        <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                            {player.web_name}
+                                          </div>
                                         </div>
-                                      </div>
-                                      <div className="px-2 py-0.5 bg-green-600 rounded text-center">
-                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white">
-                                          {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
+                                        <div className="w-full px-2 py-0.5 bg-green-600 rounded text-center">
+                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white truncate">
+                                            {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
@@ -1840,14 +1846,17 @@ export default function MyDashboard() {
                                           </div>
                                         )}
                                       </div>
-                                      <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-                                          {player.web_name}
+                                      {/* Text Labels Container - same width as jersey frame */}
+                                      <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
+                                        <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                            {player.web_name}
+                                          </div>
                                         </div>
-                                      </div>
-                                      <div className="px-2 py-0.5 bg-green-600 rounded text-center">
-                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white">
-                                          {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
+                                        <div className="w-full px-2 py-0.5 bg-green-600 rounded text-center">
+                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white truncate">
+                                            {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
@@ -1900,14 +1909,17 @@ export default function MyDashboard() {
                                           </div>
                                         )}
                                       </div>
-                                      <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-                                          {player.web_name}
+                                      {/* Text Labels Container - same width as jersey frame */}
+                                      <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
+                                        <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                            {player.web_name}
+                                          </div>
                                         </div>
-                                      </div>
-                                      <div className="px-2 py-0.5 bg-green-600 rounded text-center">
-                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white">
-                                          {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
+                                        <div className="w-full px-2 py-0.5 bg-green-600 rounded text-center">
+                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white truncate">
+                                            {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
@@ -1949,14 +1961,17 @@ export default function MyDashboard() {
                                       </div>
                                     )}
                                   </div>
-                                  <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                    <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-                                      {player.web_name}
+                                  {/* Text Labels Container - same width as jersey frame */}
+                                  <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
+                                    <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                      <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                        {player.web_name}
+                                      </div>
                                     </div>
-                                  </div>
-                                  <div className="px-2 py-0.5 bg-gray-500 rounded text-center">
-                                    <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white">
-                                      {getPlayerDisplayPoints(player, playerTeam?.id || 0, false)}
+                                    <div className="w-full px-2 py-0.5 bg-gray-500 rounded text-center">
+                                      <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+                                        {getPlayerDisplayPoints(player, playerTeam?.id || 0, false)}
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
@@ -2159,19 +2174,22 @@ export default function MyDashboard() {
                                                 </div>
                                               )}
                                             </div>
-                                            <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                              <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-                                                {playerTeam?.short_name || 'UNK'}
+                                            {/* Text Labels Container - same width as jersey frame */}
+                                            <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
+                                              <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                                <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                                  {playerTeam?.short_name || 'UNK'}
+                                                </div>
                                               </div>
-                                            </div>
-                                            <div className="px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                              <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-                                                {player.web_name}
+                                              <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                                <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                                  {player.web_name}
+                                                </div>
                                               </div>
-                                            </div>
-                                            <div className="px-2 py-0.5 bg-purple-600 rounded text-center">
-                                              <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white">
-                                                {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
+                                              <div className="w-full px-2 py-0.5 bg-purple-600 rounded text-center">
+                                                <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+                                                  {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
+                                                </div>
                                               </div>
                                             </div>
                                           </div>
@@ -2208,14 +2226,17 @@ export default function MyDashboard() {
                                               />
                                             </div>
                                           </div>
-                                          <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-                                              {player.web_name}
+                                          {/* Text Labels Container - same width as jersey frame */}
+                                          <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
+                                            <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                              <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                                {player.web_name}
+                                              </div>
                                             </div>
-                                          </div>
-                                          <div className="px-2 py-0.5 bg-gray-500 rounded text-center">
-                                            <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white">
-                                              {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
+                                            <div className="w-full px-2 py-0.5 bg-gray-500 rounded text-center">
+                                              <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+                                                {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
+                                              </div>
                                             </div>
                                           </div>
                                         </div>
@@ -2653,22 +2674,25 @@ export default function MyDashboard() {
                                               </div>
                                             )}
                                           </div>
-                                          {/* Team Name */}
-                                          <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-                                              {playerTeam?.short_name || 'UNK'}
+                                          {/* Text Labels Container - same width as jersey frame */}
+                                          <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
+                                            {/* Team Name */}
+                                            <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                              <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                                {playerTeam?.short_name || 'UNK'}
+                                              </div>
                                             </div>
-                                          </div>
-                                          {/* Player Name */}
-                                          <div className="px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-                                              {player.web_name}
+                                            {/* Player Name */}
+                                            <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                              <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                                {player.web_name}
+                                              </div>
                                             </div>
-                                          </div>
-                                          {/* Opponent (H/A) */}
-                                          <div className="px-2 py-0.5 bg-purple-600 rounded text-center">
-                                            <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white">
-                                              {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
+                                            {/* Opponent (H/A) */}
+                                            <div className="w-full px-2 py-0.5 bg-purple-600 rounded text-center">
+                                              <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+                                                {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
+                                              </div>
                                             </div>
                                           </div>
                                         </div>
@@ -2712,22 +2736,25 @@ export default function MyDashboard() {
                                             />
                                           </div>
                                         </div>
-                                        {/* Team Name */}
-                                        <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-                                            {playerTeam?.short_name || 'UNK'}
+                                        {/* Text Labels Container - same width as jersey frame */}
+                                        <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
+                                          {/* Team Name */}
+                                          <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                              {playerTeam?.short_name || 'UNK'}
+                                            </div>
                                           </div>
-                                        </div>
-                                        {/* Player Name */}
-                                        <div className="px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">
-                                            {player.web_name}
+                                          {/* Player Name */}
+                                          <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                              {player.web_name}
+                                            </div>
                                           </div>
-                                        </div>
-                                        {/* Opponent (H/A) */}
-                                        <div className="px-2 py-0.5 bg-gray-500 rounded text-center">
-                                          <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white">
-                                            {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
+                                          {/* Opponent (H/A) */}
+                                          <div className="w-full px-2 py-0.5 bg-gray-500 rounded text-center">
+                                            <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+                                              {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
+                                            </div>
                                           </div>
                                         </div>
                                       </div>

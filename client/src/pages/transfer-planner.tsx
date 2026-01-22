@@ -6961,24 +6961,27 @@ export default function TransferPlanner() {
                                         </div>
                                       )}
                                     </div>
-                                    <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                      <div className="text-[7px] sm:text-[9px] font-semibold text-gray-600 truncate">{playerTeam?.short_name || 'UNK'}</div>
-                                    </div>
-                                    <div className="px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                      <div className="text-[8px] sm:text-[10px] font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">{player.web_name}</div>
-                                    </div>
-                                    <div className="px-2 py-0.5 bg-purple-600 rounded text-center">
-                                      <div className="text-[8px] sm:text-[10px] font-bold text-white">
-                                        {pick.is_captain && projectedPoints !== null 
-                                          ? `${(projectedPoints * 2).toFixed(1)} (${projectedPoints.toFixed(1)})` 
-                                          : projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
+                                    {/* Text Labels Container - same width as jersey frame */}
+                                    <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
+                                      <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                        <div className="text-[7px] sm:text-[9px] font-semibold text-gray-600 truncate">{playerTeam?.short_name || 'UNK'}</div>
                                       </div>
-                                    </div>
-                                    {fixture && (
-                                      <div className="px-1 py-0.5 bg-gray-700 rounded text-center mt-0.5">
-                                        <div className="text-[6px] sm:text-[8px] font-medium text-white">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                      <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                        <div className="text-[8px] sm:text-[10px] font-semibold text-gray-800 truncate">{player.web_name}</div>
                                       </div>
-                                    )}
+                                      <div className="w-full px-2 py-0.5 bg-purple-600 rounded text-center">
+                                        <div className="text-[8px] sm:text-[10px] font-bold text-white truncate">
+                                          {pick.is_captain && projectedPoints !== null 
+                                            ? `${(projectedPoints * 2).toFixed(1)} (${projectedPoints.toFixed(1)})` 
+                                            : projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
+                                        </div>
+                                      </div>
+                                      {fixture && (
+                                        <div className="w-full px-1 py-0.5 bg-gray-700 rounded text-center">
+                                          <div className="text-[6px] sm:text-[8px] font-medium text-white truncate">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                   {/* Availability Badge for Pitch View */}
                                   <div className="flex justify-center mt-1">
@@ -7181,20 +7184,23 @@ export default function TransferPlanner() {
                                   </div>
                                 )}
                               </div>
-                              <div className="mt-0.5 px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                <div className="text-[7px] sm:text-[9px] font-semibold text-gray-600 truncate">{playerTeam?.short_name || 'UNK'}</div>
-                              </div>
-                              <div className="px-1 py-0.5 bg-white/90 rounded text-center max-w-full">
-                                <div className="text-[8px] sm:text-[10px] font-semibold text-gray-800 truncate max-w-[60px] sm:max-w-[80px]">{player.web_name}</div>
-                              </div>
-                              <div className="px-2 py-0.5 bg-gray-500 rounded text-center">
-                                <div className="text-[8px] sm:text-[10px] font-bold text-white">{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</div>
-                              </div>
-                              {fixture && (
-                                <div className="px-1 py-0.5 bg-gray-700 rounded text-center mt-0.5">
-                                  <div className="text-[6px] sm:text-[8px] font-medium text-white">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                              {/* Text Labels Container - same width as jersey frame */}
+                              <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
+                                <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                  <div className="text-[7px] sm:text-[9px] font-semibold text-gray-600 truncate">{playerTeam?.short_name || 'UNK'}</div>
                                 </div>
-                              )}
+                                <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+                                  <div className="text-[8px] sm:text-[10px] font-semibold text-gray-800 truncate">{player.web_name}</div>
+                                </div>
+                                <div className="w-full px-2 py-0.5 bg-gray-500 rounded text-center">
+                                  <div className="text-[8px] sm:text-[10px] font-bold text-white truncate">{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</div>
+                                </div>
+                                {fixture && (
+                                  <div className="w-full px-1 py-0.5 bg-gray-700 rounded text-center">
+                                    <div className="text-[6px] sm:text-[8px] font-medium text-white truncate">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             {/* Availability Badge for Bench Players */}
                             <div className="flex justify-center mt-1">
