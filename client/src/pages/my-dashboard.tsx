@@ -2906,7 +2906,9 @@ export default function MyDashboard() {
                             GW{getNextGameweekDashboard()} Transfer Summary
                           </h3>
                           <p className="text-sm text-emerald-600">
-                            {nextTeamData?.transfers ? 'Pending transfers for next gameweek' : 'Sync FPL account for detailed transfer info'}
+                            {nextTeamData?.transfers 
+                              ? 'Pending transfers for next gameweek' 
+                              : '1 free transfer available at the beginning of the gameweek. Login to see transfers made and remaining free transfers.'}
                           </p>
                         </div>
                       </div>
