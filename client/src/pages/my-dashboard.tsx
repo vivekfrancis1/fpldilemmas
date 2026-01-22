@@ -2908,7 +2908,7 @@ export default function MyDashboard() {
                           <p className="text-sm text-emerald-600">
                             {nextTeamData?.transfers 
                               ? 'Pending transfers for next gameweek' 
-                              : '1 free transfer available at the beginning of the gameweek. Login to see transfers made and remaining free transfers.'}
+                              : '1 free transfer available at the beginning of the gameweek. Login and connect your FPL account to see transfers made and remaining free transfers.'}
                           </p>
                         </div>
                       </div>
