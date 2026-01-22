@@ -885,7 +885,14 @@ export default function TransferRecommendations() {
                       <div className="text-sm text-gray-600">
                         <strong>Target:</strong> Maximize points for {gwData.targetRange}
                       </div>
-                      {finances && (
+                      {finances && (() => {
+                        const freeTransfersAtStart = getCascadedFreeTransfersAvailable(gw);
+                        const transfersMade = getAppliedTransfersForGW(gw).length;
+                        const freeTransfersRemaining = getFreeTransfersRemaining(gw);
+                        const hitsTaken = getHitsTaken(gw);
+                        const hitsApplicable = hitsTaken > 0;
+                        
+                        return (
                         <div className="flex flex-wrap gap-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-3" data-testid={`finance-summary-gw${gw}`}>
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-4 w-4 text-green-600" />
@@ -893,33 +900,40 @@ export default function TransferRecommendations() {
                               <div className="text-xs text-gray-500">Cash in Bank</div>
                               <div className="text-sm font-bold text-green-700" data-testid={`cash-in-bank-gw${gw}`}>
                                 £{(getRunningBankForGW(gw) / 10).toFixed(1)}m
-                                {(getAppliedTransfersForGW(gw).length > 0 || getCumulativeBankForGW(gw) !== finances.cashBefore) && (
-                                  <span className="text-xs text-gray-500 ml-1">(started £{(getCumulativeBankForGW(gw) / 10).toFixed(1)}m)</span>
-                                )}
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 border-l border-green-300 pl-3">
                             <ArrowRightLeft className="h-4 w-4 text-green-600" />
                             <div>
-                              <div className="text-xs text-gray-500">Free Transfers</div>
-                              <div className="text-sm font-bold text-green-700" data-testid={`free-transfers-gw${gw}`}>
-                                {getFreeTransfersRemaining(gw)} remaining
-                                <span className="text-xs text-gray-500 ml-1">({getCascadedFreeTransfersAvailable(gw)} available)</span>
+                              <div className="text-xs text-gray-500">Free Transfers at Start</div>
+                              <div className="text-sm font-bold text-green-700">
+                                {freeTransfersAtStart}
                               </div>
                             </div>
                           </div>
-                          {getHitsTaken(gw) > 0 && (
-                            <div className="flex items-center gap-2 border-l border-red-300 pl-3">
-                              <AlertCircle className="h-4 w-4 text-red-600" />
-                              <div>
-                                <div className="text-xs text-gray-500">Hit Points</div>
-                                <div className="text-sm font-bold text-red-600">-{getHitsTaken(gw)}</div>
+                          <div className="flex items-center gap-2 border-l border-green-300 pl-3">
+                            <ArrowRightLeft className="h-4 w-4 text-blue-600" />
+                            <div>
+                              <div className="text-xs text-gray-500">Transfers Made</div>
+                              <div className={`text-sm font-bold ${hitsApplicable ? 'text-red-600' : 'text-blue-700'}`}>
+                                {transfersMade}
+                                {hitsApplicable && <span className="text-xs ml-1">(-{hitsTaken}pts)</span>}
                               </div>
                             </div>
-                          )}
+                          </div>
+                          <div className="flex items-center gap-2 border-l border-green-300 pl-3">
+                            <ArrowRightLeft className="h-4 w-4 text-green-600" />
+                            <div>
+                              <div className="text-xs text-gray-500">Free Transfers Left</div>
+                              <div className="text-sm font-bold text-green-700" data-testid={`free-transfers-gw${gw}`}>
+                                {freeTransfersRemaining}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      )}
+                      );
+                      })()}
                     </div>
                     {gwData.recommendations && gwData.recommendations.length > 0 ? (
                       <div className="space-y-3">
