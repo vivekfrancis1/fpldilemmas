@@ -2516,7 +2516,8 @@ export default function MyDashboard() {
                               <p className="text-xl sm:text-2xl font-bold text-green-900">
                                 {formatPrice((() => {
                                   const squadValue = nextTeamData.picks.reduce((total: number, pick: any) => {
-                                    return total + (pick.selling_price || 0);
+                                    const player = getPlayerById(pick.element);
+                                    return total + (player?.now_cost || 0);
                                   }, 0);
                                   return squadValue;
                                 })())}
