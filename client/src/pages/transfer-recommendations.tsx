@@ -85,10 +85,20 @@ export default function TransferRecommendations() {
   }, [recommendationsError, shouldUseAuthenticatedEndpoint, searchedId]);
 
   // Fetch bootstrap data
-  const { data: bootstrapData } = useQuery<any>({
+  const { data: bootstrapData, isLoading: isLoadingBootstrap, error: bootstrapError } = useQuery<any>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 15 * 60 * 1000,
   });
+  
+  // Debug bootstrap loading
+  useEffect(() => {
+    console.log('🔍 Bootstrap Data Status:', {
+      hasData: !!bootstrapData,
+      isLoading: isLoadingBootstrap,
+      error: bootstrapError?.message || null,
+      dataKeys: bootstrapData ? Object.keys(bootstrapData) : null
+    });
+  }, [bootstrapData, isLoadingBootstrap, bootstrapError]);
 
   // Fetch team data for current squad
   const { data: teamData } = useQuery<any>({
