@@ -6942,10 +6942,16 @@ export default function TransferPlanner() {
                                         <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
                                       </div>
                                     )}
-                                    {/* Dream Team Star - Inside frame, top-right */}
-                                    {player.in_dreamteam && (
+                                    {/* Dream Team Star - Inside frame, top-right (only show if not transferred in) */}
+                                    {player.in_dreamteam && !isPlayerTransferredIn(pick) && (
                                       <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
                                         <span className="text-[8px] sm:text-[10px] text-white">★</span>
+                                      </div>
+                                    )}
+                                    {/* Transfer In Badge - Inside frame, top-right */}
+                                    {isPlayerTransferredIn(pick) && (
+                                      <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center border border-white shadow-md">
+                                        <span className="text-[8px] sm:text-[10px] font-bold text-white">+</span>
                                       </div>
                                     )}
                                     {/* Unified Card Container */}
@@ -6960,11 +6966,6 @@ export default function TransferPlanner() {
                                             (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                           }}
                                         />
-                                        {isPlayerTransferredIn(pick) && (
-                                          <div className="absolute top-1 right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center border border-white shadow-sm">
-                                            <span className="text-[10px] font-bold text-white">+</span>
-                                          </div>
-                                        )}
                                       </div>
                                       {/* Text Labels - 2 lines only */}
                                       <div className="flex flex-col">
