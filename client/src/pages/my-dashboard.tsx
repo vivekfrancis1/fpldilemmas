@@ -1692,7 +1692,7 @@ export default function MyDashboard() {
                                         <img 
                                           src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
                                           alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
                                           onError={(e) => {
                                             (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                           }}
@@ -1758,7 +1758,7 @@ export default function MyDashboard() {
                                         <img 
                                           src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
                                           alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
                                         />
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
@@ -1816,7 +1816,7 @@ export default function MyDashboard() {
                                         <img 
                                           src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
                                           alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
                                         />
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
@@ -1874,7 +1874,7 @@ export default function MyDashboard() {
                                         <img 
                                           src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
                                           alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                          className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
                                         />
                                         {pick.is_captain && (
                                           <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
@@ -1928,7 +1928,7 @@ export default function MyDashboard() {
                                     <img 
                                       src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
                                       alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                      className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                      className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
                                       onError={(e) => {
                                         (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                       }}
@@ -2131,7 +2131,7 @@ export default function MyDashboard() {
                                               <img 
                                                 src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
                                                 alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                                className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                                className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
                                                 onError={(e) => {
                                                   (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                                 }}
@@ -2188,7 +2188,7 @@ export default function MyDashboard() {
                                             <img 
                                               src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
                                               alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                              className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                              className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
                                               onError={(e) => {
                                                 (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                               }}
@@ -2619,7 +2619,7 @@ export default function MyDashboard() {
                                             <img 
                                               src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
                                               alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                              className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                              className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
                                               onError={(e) => {
                                                 (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                               }}
@@ -2688,7 +2688,7 @@ export default function MyDashboard() {
                                           <img 
                                             src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
                                             alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                            className="w-12 h-14 sm:w-14 sm:h-16 md:w-16 md:h-20 object-contain drop-shadow-lg"
+                                            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
                                             onError={(e) => {
                                               (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                             }}

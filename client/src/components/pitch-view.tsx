@@ -123,7 +123,7 @@ function PlayerCard({
           <img 
             src={getImageSrc()}
             alt={`${player.team_short_name || 'Team'} jersey`}
-            className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 object-contain drop-shadow-lg"
+            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 object-contain drop-shadow-lg"
             onError={() => {
               if (imgError < 2) setImgError(imgError + 1);
             }}
