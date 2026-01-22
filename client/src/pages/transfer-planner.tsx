@@ -6942,7 +6942,7 @@ export default function TransferPlanner() {
                                     )}
                                     {/* Dream Team Star - Outside card container */}
                                     {player.in_dreamteam && (
-                                      <div className="absolute -top-1 -right-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                                      <div className="absolute top-0 right-0 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
                                         <span className="text-[10px] sm:text-[12px] text-white">★</span>
                                       </div>
                                     )}
@@ -7174,7 +7174,7 @@ export default function TransferPlanner() {
                               )}
                               {/* Dream Team Star - Outside card container */}
                               {player.in_dreamteam && (
-                                <div className="absolute -top-1 -right-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                                <div className="absolute top-0 right-0 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
                                   <span className="text-[10px] sm:text-[12px] text-white">★</span>
                                 </div>
                               )}

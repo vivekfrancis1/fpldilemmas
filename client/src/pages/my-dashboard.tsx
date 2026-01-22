@@ -1699,7 +1699,7 @@ export default function MyDashboard() {
                                         </div>
                                       )}
                                       {player.in_dreamteam && (
-                                        <div className="absolute -top-1 -right-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                                        <div className="absolute top-0 right-0 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
                                           <Star className="w-3 h-3 text-white fill-white" />
                                         </div>
                                       )}
@@ -1767,7 +1767,7 @@ export default function MyDashboard() {
                                         </div>
                                       )}
                                       {player.in_dreamteam && (
-                                        <div className="absolute -top-1 -right-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                                        <div className="absolute top-0 right-0 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
                                           <Star className="w-3 h-3 text-white fill-white" />
                                         </div>
                                       )}
@@ -1830,7 +1830,7 @@ export default function MyDashboard() {
                                         </div>
                                       )}
                                       {player.in_dreamteam && (
-                                        <div className="absolute -top-1 -right-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                                        <div className="absolute top-0 right-0 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
                                           <Star className="w-3 h-3 text-white fill-white" />
                                         </div>
                                       )}
@@ -1893,7 +1893,7 @@ export default function MyDashboard() {
                                         </div>
                                       )}
                                       {player.in_dreamteam && (
-                                        <div className="absolute -top-1 -right-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                                        <div className="absolute top-0 right-0 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
                                           <Star className="w-3 h-3 text-white fill-white" />
                                         </div>
                                       )}
@@ -1942,7 +1942,7 @@ export default function MyDashboard() {
                               <div key={pick.element} className="flex flex-col items-center w-[19.5%] opacity-90" data-testid={`pitch-bench-${player.id}`}>
                                 <div className="relative flex flex-col items-center">
                                   {player.in_dreamteam && (
-                                    <div className="absolute -top-1 -right-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                                    <div className="absolute top-0 right-0 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-purple-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
                                       <Star className="w-3 h-3 text-white fill-white" />
                                     </div>
                                   )}
