@@ -4050,35 +4050,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`DEBUG: GW${targetGW}: Found ${transferRecommendations.length} transfer opportunities, ${filteredRecommendations.length} after filtering conflicts`);
         
-        // Execute ALL primary transfers - they all count as "free" for this gameweek
-        // This affects future gameweeks' recommendations
-        if (primaryTransfers.length > 0) {
-          primaryTransfers.forEach(primaryTransfer => {
-            executedTransfers.push(primaryTransfer);
-            
-            // Update team composition for next gameweek - replace the transferred out player with the transferred in player
-            currentTeamComposition = currentTeamComposition.map(player => {
-              if (player.playerId === primaryTransfer.playerOut.id) {
-                // Replace the transferred out player with the transferred in player
-                return {
-                  playerId: primaryTransfer.playerIn.id,
-                  position: player.position, // Keep the same squad position
-                  elementType: elementsByPlayerId.get(primaryTransfer.playerIn.id)?.element_type
-                };
-              }
-              return player;
-            });
-            
-            console.log(`  Executed: ${primaryTransfer.playerOut.webName} OUT → ${primaryTransfer.playerIn.webName} IN`);
-          });
-          
-          // Update running bank for next gameweek to reflect final balance after all primaries
-          runningBank = currentBank;
-        }
+        // DO NOT automatically execute transfers - user must apply them explicitly
+        // Recommendations for each gameweek are generated based on the original squad
+        // The frontend handles cascading logic based on user-applied transfers only
+        // This ensures the same recommendations appear in future GWs until user applies them
+        
+        // Note: We still update running bank and free transfers for display purposes,
+        // but the squad composition remains unchanged between gameweeks
+        console.log(`  GW${targetGW}: ${primaryTransfers.length} primary recommendations generated (not auto-executed)`);
         
         // Update free transfers for next gameweek with banking logic
-        // Formula: (current FTs - transfers used) + 1 new FT, capped at max 5 (2024/25 rule)
-        const transfersUsedThisGW = primaryTransfers.length;
+        // Since we don't auto-execute transfers, assume no transfers are used for FT calculation
+        // This gives the user the maximum possible FTs for planning purposes
+        // Frontend handles actual FT tracking based on user-applied transfers
+        const transfersUsedThisGW = 0; // No auto-execution, so no transfers used
         const unusedFTs = Math.max(0, freeTransfersForGW - transfersUsedThisGW);
         let nextGWFTs = unusedFTs + 1;
         
