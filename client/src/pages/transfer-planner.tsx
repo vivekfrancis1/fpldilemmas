@@ -6929,58 +6929,60 @@ export default function TransferPlanner() {
                                     onClick={() => setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element)}
                                     data-testid={`pitch-jersey-${pick.element}`}
                                   >
-                                    <div className="relative">
-                                      <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                                    {/* Unified Card Container */}
+                                    <div className="w-16 sm:w-20 md:w-24 bg-white/20 rounded-lg border-2 border-white/40 overflow-hidden">
+                                      {/* Jersey Image */}
+                                      <div className="relative p-1">
                                         <img 
                                           src={getJerseyImageUrl(getTeamCode(playerTeam), player.element_type === 1)}
                                           alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-full h-full object-contain drop-shadow-lg"
+                                          className="w-full h-14 sm:h-18 md:h-22 object-contain drop-shadow-lg"
                                           onError={(e) => {
                                             (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                           }}
                                         />
+                                        {isPlayerTransferredIn(pick) && (
+                                          <div className="absolute top-0 right-0 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <span className="text-[10px] font-bold text-white">+</span>
+                                          </div>
+                                        )}
+                                        {pick.is_captain && (
+                                          <div className="absolute top-0 left-0 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-300 rounded-full flex items-center justify-center border border-yellow-600 shadow-sm">
+                                            <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
+                                          </div>
+                                        )}
+                                        {pick.is_vice_captain && !pick.is_captain && (
+                                          <div className="absolute top-0 left-0 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-blue-600 shadow-sm">
+                                            <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
+                                          </div>
+                                        )}
+                                        {player.in_dreamteam && (
+                                          <div className="absolute bottom-0 right-0 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                            <span className="text-[8px] text-white">★</span>
+                                          </div>
+                                        )}
                                       </div>
-                                      {isPlayerTransferredIn(pick) && (
-                                        <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center border border-white shadow-sm">
-                                          <span className="text-[10px] font-bold text-white">+</span>
+                                      {/* Text Labels */}
+                                      <div className="flex flex-col">
+                                        <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
+                                          <div className="text-[7px] sm:text-[9px] font-semibold text-gray-600 truncate">{playerTeam?.short_name || 'UNK'}</div>
                                         </div>
-                                      )}
-                                      {pick.is_captain && (
-                                        <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-300 rounded-full flex items-center justify-center border border-yellow-600 shadow-sm">
-                                          <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
+                                        <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
+                                          <div className="text-[8px] sm:text-[10px] font-semibold text-gray-800 truncate">{player.web_name}</div>
                                         </div>
-                                      )}
-                                      {pick.is_vice_captain && !pick.is_captain && (
-                                        <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-blue-600 shadow-sm">
-                                          <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
+                                        <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
+                                          <div className="text-[8px] sm:text-[10px] font-bold text-white truncate">
+                                            {pick.is_captain && projectedPoints !== null 
+                                              ? `${(projectedPoints * 2).toFixed(1)} (${projectedPoints.toFixed(1)})` 
+                                              : projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
+                                          </div>
                                         </div>
-                                      )}
-                                      {player.in_dreamteam && (
-                                        <div className="absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-500 rounded-full flex items-center justify-center border border-white shadow-sm">
-                                          <span className="text-[8px] text-white">★</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                    {/* Text Labels Container - same width as jersey frame */}
-                                    <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
-                                      <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
-                                        <div className="text-[7px] sm:text-[9px] font-semibold text-gray-600 truncate">{playerTeam?.short_name || 'UNK'}</div>
+                                        {fixture && (
+                                          <div className="w-full px-1 py-0.5 bg-gray-700 text-center">
+                                            <div className="text-[6px] sm:text-[8px] font-medium text-white truncate">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                          </div>
+                                        )}
                                       </div>
-                                      <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
-                                        <div className="text-[8px] sm:text-[10px] font-semibold text-gray-800 truncate">{player.web_name}</div>
-                                      </div>
-                                      <div className="w-full px-2 py-0.5 bg-purple-600 rounded text-center">
-                                        <div className="text-[8px] sm:text-[10px] font-bold text-white truncate">
-                                          {pick.is_captain && projectedPoints !== null 
-                                            ? `${(projectedPoints * 2).toFixed(1)} (${projectedPoints.toFixed(1)})` 
-                                            : projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
-                                        </div>
-                                      </div>
-                                      {fixture && (
-                                        <div className="w-full px-1 py-0.5 bg-gray-700 rounded text-center">
-                                          <div className="text-[6px] sm:text-[8px] font-medium text-white truncate">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
-                                        </div>
-                                      )}
                                     </div>
                                   </div>
                                   {/* Availability Badge for Pitch View */}
@@ -7157,49 +7159,49 @@ export default function TransferPlanner() {
                               onClick={() => setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element)}
                               data-testid={`pitch-bench-jersey-${pick.element}`}
                             >
-                              <div className="relative">
-                                <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+                              {/* Unified Card Container */}
+                              <div className="w-16 sm:w-20 md:w-24 bg-white/20 rounded-lg border-2 border-white/40 overflow-hidden">
+                                <div className="relative p-1">
                                   <img 
                                     src={getJerseyImageUrl(getTeamCode(playerTeam), player.element_type === 1)}
                                     alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                    className="w-full h-full object-contain drop-shadow-lg"
+                                    className="w-full h-14 sm:h-18 md:h-22 object-contain drop-shadow-lg"
                                     onError={(e) => {
                                       (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
                                     }}
                                   />
+                                  {pick.is_captain && (
+                                    <div className="absolute top-0 left-0 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-300 rounded-full flex items-center justify-center border border-yellow-600 shadow-sm">
+                                      <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
+                                    </div>
+                                  )}
+                                  {pick.is_vice_captain && !pick.is_captain && (
+                                    <div className="absolute top-0 left-0 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-blue-600 shadow-sm">
+                                      <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
+                                    </div>
+                                  )}
+                                  {player.in_dreamteam && (
+                                    <div className="absolute bottom-0 right-0 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+                                      <span className="text-[8px] text-white">★</span>
+                                    </div>
+                                  )}
                                 </div>
-                                {pick.is_captain && (
-                                  <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-300 rounded-full flex items-center justify-center border border-yellow-600 shadow-sm">
-                                    <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
+                                <div className="flex flex-col">
+                                  <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
+                                    <div className="text-[7px] sm:text-[9px] font-semibold text-gray-600 truncate">{playerTeam?.short_name || 'UNK'}</div>
                                   </div>
-                                )}
-                                {pick.is_vice_captain && !pick.is_captain && (
-                                  <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-blue-600 shadow-sm">
-                                    <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
+                                  <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
+                                    <div className="text-[8px] sm:text-[10px] font-semibold text-gray-800 truncate">{player.web_name}</div>
                                   </div>
-                                )}
-                                {player.in_dreamteam && (
-                                  <div className="absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-500 rounded-full flex items-center justify-center border border-white shadow-sm">
-                                    <span className="text-[8px] text-white">★</span>
+                                  <div className="w-full px-2 py-0.5 bg-gray-500 text-center">
+                                    <div className="text-[8px] sm:text-[10px] font-bold text-white truncate">{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</div>
                                   </div>
-                                )}
-                              </div>
-                              {/* Text Labels Container - same width as jersey frame */}
-                              <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
-                                <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
-                                  <div className="text-[7px] sm:text-[9px] font-semibold text-gray-600 truncate">{playerTeam?.short_name || 'UNK'}</div>
+                                  {fixture && (
+                                    <div className="w-full px-1 py-0.5 bg-gray-700 text-center">
+                                      <div className="text-[6px] sm:text-[8px] font-medium text-white truncate">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
-                                  <div className="text-[8px] sm:text-[10px] font-semibold text-gray-800 truncate">{player.web_name}</div>
-                                </div>
-                                <div className="w-full px-2 py-0.5 bg-gray-500 rounded text-center">
-                                  <div className="text-[8px] sm:text-[10px] font-bold text-white truncate">{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</div>
-                                </div>
-                                {fixture && (
-                                  <div className="w-full px-1 py-0.5 bg-gray-700 rounded text-center">
-                                    <div className="text-[6px] sm:text-[8px] font-medium text-white truncate">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
-                                  </div>
-                                )}
                               </div>
                             </div>
                             {/* Availability Badge for Bench Players */}

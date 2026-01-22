@@ -118,63 +118,64 @@ function PlayerCard({
   return (
     <div className={`flex flex-col items-center ${isBench ? 'w-[19.5%]' : 'w-[19%]'} ${isBench ? 'opacity-90' : ''}`}>
       <div className="relative flex flex-col items-center">
-        {/* Jersey Image */}
-        <div className="relative">
-          <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-white/20 rounded-lg border-2 border-white/40 flex items-center justify-center p-1">
+        {/* Unified Card Container */}
+        <div className="w-16 sm:w-20 md:w-24 bg-white/20 rounded-lg border-2 border-white/40 overflow-hidden">
+          {/* Jersey Image */}
+          <div className="relative p-1">
             <img 
               src={getImageSrc()}
               alt={`${player.team_short_name || 'Team'} jersey`}
-              className="w-full h-full object-contain drop-shadow-lg"
+              className="w-full h-14 sm:h-18 md:h-22 object-contain drop-shadow-lg"
               onError={() => {
                 if (imgError < 2) setImgError(imgError + 1);
               }}
             />
+            {/* Captain Badge */}
+            {player.is_captain && (
+              <div className="absolute top-0 left-0 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
+                <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
+              </div>
+            )}
+            {/* Vice Captain Badge */}
+            {player.is_vice_captain && !player.is_captain && (
+              <div className="absolute top-0 left-0 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-sm">
+                <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
+              </div>
+            )}
+            {/* Dream Team Star */}
+            {player.in_dreamteam && (
+              <div className="absolute top-0 right-0 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-sm">
+                <span className="text-[8px] text-white">★</span>
+              </div>
+            )}
           </div>
-          {/* Captain Badge */}
-          {player.is_captain && (
-            <div className="absolute -top-1 -left-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-sm">
-              <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
-            </div>
-          )}
-          {/* Vice Captain Badge */}
-          {player.is_vice_captain && !player.is_captain && (
-            <div className="absolute -top-1 -left-1 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-sm">
-              <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
-            </div>
-          )}
-          {/* Dream Team Star */}
-          {player.in_dreamteam && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-sm">
-              <span className="text-[8px] text-white">★</span>
-            </div>
-          )}
-        </div>
-        
-        {/* Text Labels Container - same width as jersey frame */}
-        <div className="w-16 sm:w-20 md:w-24 flex flex-col items-center gap-0.5 mt-0.5">
-          {/* Team Name (optional) */}
-          {showTeamName && (
-            <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
+          
+          {/* Text Labels */}
+          <div className="flex flex-col">
+            {/* Team Name (optional) */}
+            {showTeamName && (
+              <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
+                <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                  {player.team_short_name || 'UNK'}
+                </div>
+              </div>
+            )}
+            
+            {/* Player Name */}
+            <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
               <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
-                {player.team_short_name || 'UNK'}
+                {player.web_name || player.player_name || 'Unknown'}
               </div>
             </div>
-          )}
-          
-          {/* Player Name */}
-          <div className="w-full px-1 py-0.5 bg-white/90 rounded text-center">
-            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
-              {player.web_name || player.player_name || 'Unknown'}
-            </div>
-          </div>
-          
-          {/* Points/Opponent Badge */}
-          <div className={`w-full px-2 py-0.5 ${getBadgeColor(player, isBench)} rounded text-center`}>
-            <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
-              {showOpponent && player.fixture_opponent 
-                ? `${player.fixture_opponent} (${player.fixture_is_home ? 'H' : 'A'})`
-                : getPointsDisplay(player)
-              }
+            
+            {/* Points/Opponent Badge */}
+            <div className={`w-full px-2 py-0.5 ${getBadgeColor(player, isBench)} text-center`}>
+              <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+                {showOpponent && player.fixture_opponent 
+                  ? `${player.fixture_opponent} (${player.fixture_is_home ? 'H' : 'A'})`
+                  : getPointsDisplay(player)
+                }
+              </div>
             </div>
           </div>
         </div>
