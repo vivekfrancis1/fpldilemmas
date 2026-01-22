@@ -2423,7 +2423,7 @@ export default function MyDashboard() {
                     })()}
 
                     {/* Team Overview Cards */}
-                    <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 mb-6">
+                    <div className="grid gap-4 sm:gap-6 grid-cols-2 lg:grid-cols-4 mb-6">
                       <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
                         <CardContent className="p-4">
                           <div className="flex items-center justify-between gap-2">
@@ -2492,6 +2492,27 @@ export default function MyDashboard() {
                             </div>
                             <div className="p-2 bg-amber-200 rounded-full">
                               <DollarSign className="h-5 w-5 text-amber-700" />
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs sm:text-sm font-medium text-green-700 mb-1">Squad Value</p>
+                              <p className="text-xl sm:text-2xl font-bold text-green-900">
+                                {formatPrice((() => {
+                                  const squadValue = nextTeamData.picks.reduce((total: number, pick: any) => {
+                                    return total + (pick.selling_price || 0);
+                                  }, 0);
+                                  return squadValue;
+                                })())}
+                              </p>
+                            </div>
+                            <div className="p-2 bg-green-200 rounded-full">
+                              <TrendingUp className="h-5 w-5 text-green-700" />
                             </div>
                           </div>
                         </CardContent>
