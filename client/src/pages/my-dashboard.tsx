@@ -1717,13 +1717,13 @@ export default function MyDashboard() {
                                         </div>
                                         {/* Text Labels */}
                                         <div className="flex flex-col">
-                                          <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                          <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                               {player.web_name}
                                             </div>
                                           </div>
-                                          <div className="w-full px-2 py-0.5 bg-green-600 text-center">
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white truncate">
+                                          <div className="w-full px-2 py-1 bg-green-600 text-center">
+                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                               {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                             </div>
                                           </div>
@@ -1781,13 +1781,13 @@ export default function MyDashboard() {
                                           />
                                         </div>
                                         <div className="flex flex-col">
-                                          <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                          <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                               {player.web_name}
                                             </div>
                                           </div>
-                                          <div className="w-full px-2 py-0.5 bg-green-600 text-center">
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white truncate">
+                                          <div className="w-full px-2 py-1 bg-green-600 text-center">
+                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                               {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                             </div>
                                           </div>
@@ -1844,13 +1844,13 @@ export default function MyDashboard() {
                                           />
                                         </div>
                                         <div className="flex flex-col">
-                                          <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                          <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                               {player.web_name}
                                             </div>
                                           </div>
-                                          <div className="w-full px-2 py-0.5 bg-green-600 text-center">
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white truncate">
+                                          <div className="w-full px-2 py-1 bg-green-600 text-center">
+                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                               {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                             </div>
                                           </div>
@@ -1907,13 +1907,13 @@ export default function MyDashboard() {
                                           />
                                         </div>
                                         <div className="flex flex-col">
-                                          <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                          <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                               {player.web_name}
                                             </div>
                                           </div>
-                                          <div className="w-full px-2 py-0.5 bg-green-600 text-center">
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white truncate">
+                                          <div className="w-full px-2 py-1 bg-green-600 text-center">
+                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                               {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                             </div>
                                           </div>
@@ -1959,13 +1959,13 @@ export default function MyDashboard() {
                                       />
                                     </div>
                                     <div className="flex flex-col">
-                                      <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                      <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                        <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                           {player.web_name}
                                         </div>
                                       </div>
-                                      <div className="w-full px-2 py-0.5 bg-gray-500 text-center">
-                                        <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+                                      <div className="w-full px-2 py-1 bg-gray-500 text-center">
+                                        <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, false)}
                                         </div>
                                       </div>
@@ -2172,18 +2172,18 @@ export default function MyDashboard() {
                                                 />
                                               </div>
                                               <div className="flex flex-col">
-                                                <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                                  <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                                <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                                  <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                                     {playerTeam?.short_name || 'UNK'}
                                                   </div>
                                                 </div>
-                                                <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                                  <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                                <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                                  <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                                     {player.web_name}
                                                   </div>
                                                 </div>
-                                                <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
-                                                  <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+                                                <div className="w-full px-2 py-1 bg-purple-600 text-center">
+                                                  <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                                     {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
                                                   </div>
                                                 </div>
@@ -2224,13 +2224,13 @@ export default function MyDashboard() {
                                               />
                                             </div>
                                             <div className="flex flex-col">
-                                              <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                                <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                              <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                                   {player.web_name}
                                                 </div>
                                               </div>
-                                              <div className="w-full px-2 py-0.5 bg-gray-500 text-center">
-                                                <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+                                              <div className="w-full px-2 py-1 bg-gray-500 text-center">
+                                                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                                   {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
                                                 </div>
                                               </div>
@@ -2672,20 +2672,20 @@ export default function MyDashboard() {
                                             </div>
                                             <div className="flex flex-col">
                                               {/* Team Name */}
-                                              <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                                <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                              <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                                   {playerTeam?.short_name || 'UNK'}
                                                 </div>
                                               </div>
                                               {/* Player Name */}
-                                              <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                                <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                              <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                                   {player.web_name}
                                                 </div>
                                               </div>
                                               {/* Opponent (H/A) */}
-                                              <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
-                                                <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+                                              <div className="w-full px-2 py-1 bg-purple-600 text-center">
+                                                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                                   {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
                                                 </div>
                                               </div>
@@ -2733,20 +2733,20 @@ export default function MyDashboard() {
                                           </div>
                                           <div className="flex flex-col">
                                             {/* Team Name */}
-                                            <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                              <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                            <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                              <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                                 {playerTeam?.short_name || 'UNK'}
                                               </div>
                                             </div>
                                             {/* Player Name */}
-                                            <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                              <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+                                            <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                              <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                                 {player.web_name}
                                               </div>
                                             </div>
                                             {/* Opponent (H/A) */}
-                                            <div className="w-full px-2 py-0.5 bg-gray-500 text-center">
-                                              <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+                                            <div className="w-full px-2 py-1 bg-gray-500 text-center">
+                                              <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                                 {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
                                               </div>
                                             </div>

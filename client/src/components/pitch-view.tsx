@@ -154,23 +154,23 @@ function PlayerCard({
           <div className="flex flex-col">
             {/* Team Name (optional) */}
             {showTeamName && (
-              <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+              <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                <div className="text-[9px] sm:text-[11px] md:text-sm font-semibold text-gray-800 truncate">
                   {player.team_short_name || 'UNK'}
                 </div>
               </div>
             )}
             
             {/* Player Name */}
-            <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-              <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-gray-800 truncate">
+            <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+              <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                 {player.web_name || player.player_name || 'Unknown'}
               </div>
             </div>
             
             {/* Points/Opponent Badge */}
-            <div className={`w-full px-2 py-0.5 ${getBadgeColor(player, isBench)} text-center`}>
-              <div className="text-[7px] sm:text-[9px] md:text-xs font-bold text-white truncate">
+            <div className={`w-full px-2 py-1 ${getBadgeColor(player, isBench)} text-center`}>
+              <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                 {showOpponent && player.fixture_opponent 
                   ? `${player.fixture_opponent} (${player.fixture_is_home ? 'H' : 'A'})`
                   : getPointsDisplay(player)

@@ -6966,22 +6966,22 @@ export default function TransferPlanner() {
                                       </div>
                                       {/* Text Labels */}
                                       <div className="flex flex-col">
-                                        <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                          <div className="text-[7px] sm:text-[9px] font-semibold text-gray-600 truncate">{playerTeam?.short_name || 'UNK'}</div>
+                                        <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                          <div className="text-[9px] sm:text-[11px] md:text-sm font-semibold text-gray-700 truncate">{playerTeam?.short_name || 'UNK'}</div>
                                         </div>
-                                        <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                          <div className="text-[8px] sm:text-[10px] font-semibold text-gray-800 truncate">{player.web_name}</div>
+                                        <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                          <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">{player.web_name}</div>
                                         </div>
-                                        <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
-                                          <div className="text-[8px] sm:text-[10px] font-bold text-white truncate">
+                                        <div className="w-full px-2 py-1 bg-purple-600 text-center">
+                                          <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                             {pick.is_captain && projectedPoints !== null 
                                               ? `${(projectedPoints * 2).toFixed(1)} (${projectedPoints.toFixed(1)})` 
                                               : projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                           </div>
                                         </div>
                                         {fixture && (
-                                          <div className="w-full px-1 py-0.5 bg-gray-700 text-center">
-                                            <div className="text-[6px] sm:text-[8px] font-medium text-white truncate">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                          <div className="w-full px-1 py-1 bg-gray-700 text-center">
+                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-medium text-white truncate">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
                                           </div>
                                         )}
                                       </div>
@@ -7191,18 +7191,18 @@ export default function TransferPlanner() {
                                   />
                                 </div>
                                 <div className="flex flex-col">
-                                  <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                    <div className="text-[7px] sm:text-[9px] font-semibold text-gray-600 truncate">{playerTeam?.short_name || 'UNK'}</div>
+                                  <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                    <div className="text-[9px] sm:text-[11px] md:text-sm font-semibold text-gray-700 truncate">{playerTeam?.short_name || 'UNK'}</div>
                                   </div>
-                                  <div className="w-full px-1 py-0.5 bg-white/90 text-center border-t border-white/40">
-                                    <div className="text-[8px] sm:text-[10px] font-semibold text-gray-800 truncate">{player.web_name}</div>
+                                  <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                    <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">{player.web_name}</div>
                                   </div>
-                                  <div className="w-full px-2 py-0.5 bg-gray-500 text-center">
-                                    <div className="text-[8px] sm:text-[10px] font-bold text-white truncate">{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</div>
+                                  <div className="w-full px-2 py-1 bg-gray-500 text-center">
+                                    <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</div>
                                   </div>
                                   {fixture && (
-                                    <div className="w-full px-1 py-0.5 bg-gray-700 text-center">
-                                      <div className="text-[6px] sm:text-[8px] font-medium text-white truncate">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
+                                    <div className="w-full px-1 py-1 bg-gray-700 text-center">
+                                      <div className="text-[8px] sm:text-[10px] md:text-xs font-medium text-white truncate">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
                                     </div>
                                   )}
                                 </div>
