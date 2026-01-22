@@ -121,6 +121,9 @@ export default function TransferRecommendations() {
 
   // Backend now applies availability adjustments, so we just use the data as-is
   const adjustedRecommendations = recommendedTransfers;
+  
+  // Use authenticated team picks if available (includes pending transfers), otherwise fall back to public team data
+  const effectiveTeamPicks = adjustedRecommendations?.authenticatedTeamPicks || teamData?.picks;
 
   // Helper function to get opponent info for a player in a given gameweek
   const getOpponentInfo = (playerTeamId: number, gameweek: number): string => {
@@ -230,7 +233,7 @@ export default function TransferRecommendations() {
     } } = {};
     
     // Start with original squad
-    const originalSquadIds = teamData?.picks?.map((p: any) => p.element) || [];
+    const originalSquadIds = effectiveTeamPicks?.map((p: any) => p.element) || [];
     const initialBank = adjustedRecommendations?.bank || 0;
     const MAX_FREE_TRANSFERS = 5; // FPL 2024/25 rule: max 5 FT can be banked
     
@@ -293,11 +296,11 @@ export default function TransferRecommendations() {
     });
     
     return result;
-  }, [adjustedRecommendations, teamData, appliedTransfers]);
+  }, [adjustedRecommendations, effectiveTeamPicks, appliedTransfers]);
 
   // Get cumulative squad IDs for a gameweek (includes all transfers from previous GWs)
   const getCumulativeSquadForGW = (gw: string): number[] => {
-    return cascadedState[gw]?.squadIds || teamData?.picks?.map((p: any) => p.element) || [];
+    return cascadedState[gw]?.squadIds || effectiveTeamPicks?.map((p: any) => p.element) || [];
   };
 
   // Get cumulative bank for a gameweek (after all transfers from previous GWs)
@@ -372,11 +375,11 @@ export default function TransferRecommendations() {
     let startingSquadIds: number[];
     if (gwIndex === 0 || gwIndex === -1) {
       // First gameweek or not found - use original squad
-      startingSquadIds = teamData?.picks?.map((p: any) => p.element) || [];
+      startingSquadIds = effectiveTeamPicks?.map((p: any) => p.element) || [];
     } else {
       // Use the squad at end of previous gameweek
       const previousGW = gameweeks[gwIndex - 1];
-      startingSquadIds = cascadedState[previousGW]?.squadIds || teamData?.picks?.map((p: any) => p.element) || [];
+      startingSquadIds = cascadedState[previousGW]?.squadIds || effectiveTeamPicks?.map((p: any) => p.element) || [];
     }
     
     // Apply this gameweek's transfers to get current state
@@ -437,10 +440,10 @@ export default function TransferRecommendations() {
     const gwIndex = gameweeks.indexOf(gw);
     let startingSquadIds: number[];
     if (gwIndex === 0 || gwIndex === -1) {
-      startingSquadIds = teamData?.picks?.map((p: any) => p.element) || [];
+      startingSquadIds = effectiveTeamPicks?.map((p: any) => p.element) || [];
     } else {
       const previousGW = gameweeks[gwIndex - 1];
-      startingSquadIds = cascadedState[previousGW]?.squadIds || teamData?.picks?.map((p: any) => p.element) || [];
+      startingSquadIds = cascadedState[previousGW]?.squadIds || effectiveTeamPicks?.map((p: any) => p.element) || [];
     }
     
     return recommendations.filter((rec: any) => {
@@ -457,7 +460,7 @@ export default function TransferRecommendations() {
 
   // Apply cascaded transfers to current team (reflects all transfers from previous GWs + current GW)
   const applyRecommendedTransfers = useMemo(() => {
-    if (!selectedGameweek || !teamData?.picks) {
+    if (!selectedGameweek || !effectiveTeamPicks) {
       return null;
     }
 
@@ -476,11 +479,11 @@ export default function TransferRecommendations() {
     }
 
     // Map back to picks format, preserving original pick structure where possible
-    return teamData.picks.map((pick: any, index: number) => ({
+    return effectiveTeamPicks.map((pick: any, index: number) => ({
       ...pick,
       element: finalSquadIds[index] || pick.element,
     }));
-  }, [selectedGameweek, teamData, appliedTransfers, cascadedState]);
+  }, [selectedGameweek, effectiveTeamPicks, appliedTransfers, cascadedState]);
 
   // Track transferred-in players for highlighting (all players brought in up to and including this GW)
   const transferredInPlayers = useMemo(() => {

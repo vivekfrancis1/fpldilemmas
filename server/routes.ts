@@ -1379,6 +1379,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       recommendations.pendingTransfersMade = transfersMade;
       recommendations.freeTransfersAtStart = transferLimit;
       
+      // Include authenticated team picks so frontend can display current squad with pending transfers
+      recommendations.authenticatedTeamPicks = teamData.picks;
+      
       res.json(recommendations);
     } catch (error) {
       console.error('FPL authenticated recommendations error:', error);
