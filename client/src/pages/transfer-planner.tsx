@@ -6930,20 +6930,22 @@ export default function TransferPlanner() {
                                     data-testid={`pitch-jersey-${pick.element}`}
                                   >
                                     {/* Captain/VC Badge - Outside card container */}
+                                    {/* Captain Badge - Inside frame, top-left */}
                                     {pick.is_captain && (
-                                      <div className="absolute -top-1 -left-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-300 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-                                        <span className="text-[9px] sm:text-[11px] font-bold text-yellow-800">C</span>
+                                      <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
+                                        <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
                                       </div>
                                     )}
+                                    {/* Vice Captain Badge - Inside frame, top-left */}
                                     {pick.is_vice_captain && !pick.is_captain && (
-                                      <div className="absolute -top-1 -left-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-                                        <span className="text-[8px] sm:text-[10px] font-bold text-blue-800">VC</span>
+                                      <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
+                                        <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
                                       </div>
                                     )}
-                                    {/* Dream Team Star - Outside card container */}
+                                    {/* Dream Team Star - Inside frame, top-right */}
                                     {player.in_dreamteam && (
-                                      <div className="absolute top-0 right-0 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-                                        <span className="text-[10px] sm:text-[12px] text-white">★</span>
+                                      <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
+                                        <span className="text-[8px] sm:text-[10px] text-white">★</span>
                                       </div>
                                     )}
                                     {/* Unified Card Container */}
@@ -7154,20 +7156,22 @@ export default function TransferPlanner() {
                               data-testid={`pitch-bench-jersey-${pick.element}`}
                             >
                               {/* Captain/VC Badge - Outside card container */}
+                              {/* Captain Badge - Inside frame, top-left */}
                               {pick.is_captain && (
-                                <div className="absolute -top-1 -left-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-300 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-                                  <span className="text-[9px] sm:text-[11px] font-bold text-yellow-800">C</span>
+                                <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
+                                  <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
                                 </div>
                               )}
+                              {/* Vice Captain Badge - Inside frame, top-left */}
                               {pick.is_vice_captain && !pick.is_captain && (
-                                <div className="absolute -top-1 -left-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-                                  <span className="text-[8px] sm:text-[10px] font-bold text-blue-800">VC</span>
+                                <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
+                                  <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
                                 </div>
                               )}
-                              {/* Dream Team Star - Outside card container */}
+                              {/* Dream Team Star - Inside frame, top-right */}
                               {player.in_dreamteam && (
-                                <div className="absolute top-0 right-0 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-500 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-                                  <span className="text-[10px] sm:text-[12px] text-white">★</span>
+                                <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
+                                  <span className="text-[8px] sm:text-[10px] text-white">★</span>
                                 </div>
                               )}
                               {/* Unified Card Container */}

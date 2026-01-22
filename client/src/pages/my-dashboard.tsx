@@ -2646,16 +2646,16 @@ export default function MyDashboard() {
                                     return (
                                       <div key={pick.element} className="flex flex-col items-center w-[19.5%]">
                                         <div className="relative flex flex-col items-center">
-                                          {/* Captain Badge */}
+                                          {/* Captain Badge - Inside frame, top-left */}
                                           {pick.is_captain && (
-                                            <div className="absolute -top-1 -left-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-yellow-400 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-                                              <span className="text-[9px] sm:text-[11px] font-bold text-yellow-800">C</span>
+                                            <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
+                                              <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
                                             </div>
                                           )}
-                                          {/* Vice Captain Badge */}
+                                          {/* Vice Captain Badge - Inside frame, top-left */}
                                           {pick.is_vice_captain && (
-                                            <div className="absolute -top-1 -left-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-blue-200 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-                                              <span className="text-[8px] sm:text-[10px] font-bold text-blue-800">VC</span>
+                                            <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
+                                              <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
                                             </div>
                                           )}
                                           {/* Unified Card Container */}
