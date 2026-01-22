@@ -1373,7 +1373,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      console.log(`✅ Authenticated recommendations for manager ${managerId}: Bank ${myTeamData.transfers.bank}, FTs ${freeTransfersRemaining}`);
+      console.log(`✅ Authenticated recommendations for manager ${managerId}: Bank ${myTeamData.transfers.bank}, FTs ${freeTransfersRemaining}, Transfers Made: ${transfersMade}`);
+      
+      // Add pending transfers info to response for first gameweek display
+      recommendations.pendingTransfersMade = transfersMade;
+      recommendations.freeTransfersAtStart = transferLimit;
       
       res.json(recommendations);
     } catch (error) {

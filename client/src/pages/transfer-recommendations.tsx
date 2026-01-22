@@ -886,10 +886,30 @@ export default function TransferRecommendations() {
                         <strong>Target:</strong> Maximize points for {gwData.targetRange}
                       </div>
                       {finances && (() => {
-                        const freeTransfersAtStart = getCascadedFreeTransfersAvailable(gw);
-                        const transfersMade = getAppliedTransfersForGW(gw).length;
-                        const freeTransfersRemaining = getFreeTransfersRemaining(gw);
-                        const hitsTaken = getHitsTaken(gw);
+                        // Get all gameweek keys to identify the first (current) gameweek
+                        const allGWKeys = Object.keys(adjustedRecommendations.gameweeks || {}).sort((a, b) => parseInt(a) - parseInt(b));
+                        const isFirstGW = allGWKeys.length > 0 && gw === allGWKeys[0];
+                        
+                        // For the first gameweek, use pending transfers from authenticated data if available
+                        const pendingTransfersMade = adjustedRecommendations?.pendingTransfersMade || 0;
+                        const freeTransfersAtStartFromAPI = adjustedRecommendations?.freeTransfersAtStart;
+                        
+                        // Free transfers at start: use API value for first GW if available, otherwise calculate
+                        const freeTransfersAtStart = isFirstGW && freeTransfersAtStartFromAPI !== undefined
+                          ? freeTransfersAtStartFromAPI
+                          : getCascadedFreeTransfersAvailable(gw);
+                        
+                        // Transfers made: for first GW, combine pending transfers + applied transfers
+                        const appliedTransfersCount = getAppliedTransfersForGW(gw).length;
+                        const transfersMade = isFirstGW 
+                          ? pendingTransfersMade + appliedTransfersCount
+                          : appliedTransfersCount;
+                        
+                        // Free transfers remaining: start - made
+                        const freeTransfersRemaining = Math.max(0, freeTransfersAtStart - transfersMade);
+                        
+                        // Calculate hits: (transfers made - free transfers at start) * 4, if positive
+                        const hitsTaken = Math.max(0, transfersMade - freeTransfersAtStart) * 4;
                         const hitsApplicable = hitsTaken > 0;
                         
                         return (
