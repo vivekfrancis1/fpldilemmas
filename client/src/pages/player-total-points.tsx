@@ -1110,7 +1110,7 @@ export default function PlayerTotalPoints() {
   const teams = useMemo(() => {
     if (!adjustedPlayerData) return [];
     return Array.from(new Set(adjustedPlayerData.map(p => p.team)))
-      .filter(team => team.length > 3) // Remove short forms (e.g., ARS, LIV), keep full names
+      .filter(team => team && team.length > 3) // Remove short forms (e.g., ARS, LIV), keep full names
       .sort();
   }, [adjustedPlayerData]);
 
