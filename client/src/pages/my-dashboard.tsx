@@ -2473,6 +2473,17 @@ export default function MyDashboard() {
                                   </>
                                 )}
                               </p>
+                              {(() => {
+                                const transferCost = nextTeamData.transfers?.cost || 0;
+                                if (transferCost > 0) {
+                                  return (
+                                    <p className="text-xs text-red-600 font-semibold mt-1">
+                                      -{transferCost} pts
+                                    </p>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </div>
                             <div className="p-2 bg-blue-200 rounded-full">
                               <ArrowLeftRight className="h-5 w-5 text-blue-700" />
