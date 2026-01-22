@@ -1128,7 +1128,7 @@ export default function MyDashboard() {
 
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-6 mt-6 sm:mt-8">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                   {/* Total Points */}
                   <Card className="border-0 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-total-points">
                     <CardContent className="p-4 sm:p-6">
@@ -1166,39 +1166,6 @@ export default function MyDashboard() {
                         </div>
                         <div className="p-2 sm:p-2.5 bg-amber-100 rounded-full flex-shrink-0">
                           <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Gameweek Points */}
-                  <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-gameweek-points">
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-green-600 mb-1 sm:mb-2">GW Points</p>
-                          <p className="text-xl sm:text-2xl font-bold text-green-900">{managerData.summary_event_points}</p>
-                          <p className="text-xs text-green-600 font-medium mt-1">
-                            GW{managerData.current_event}
-                          </p>
-                        </div>
-                        <div className="p-2 sm:p-2.5 bg-green-100 rounded-full flex-shrink-0">
-                          <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Gameweek Rank */}
-                  <Card className="border-0 bg-gradient-to-br from-purple-50 to-violet-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-gameweek-rank">
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-purple-600 mb-1 sm:mb-2">GW Rank</p>
-                          <p className="text-xl sm:text-2xl font-bold text-purple-900">{formatRank(managerData.summary_event_rank)}</p>
-                        </div>
-                        <div className="p-2 sm:p-2.5 bg-purple-100 rounded-full flex-shrink-0">
-                          <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
                         </div>
                       </div>
                     </CardContent>
@@ -1616,18 +1583,18 @@ export default function MyDashboard() {
                       </CardContent>
                     </Card>
 
-                    <Card className="bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200 shadow-sm">
+                    <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm">
                       <CardContent className="p-4 sm:p-5">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs sm:text-sm font-medium text-indigo-700 mb-1 truncate">Total Points</p>
-                            <p className="text-xl sm:text-2xl font-bold text-indigo-900 truncate">
-                              {getTotalPoints()}
+                            <p className="text-xs sm:text-sm font-medium text-purple-700 mb-1 truncate">GW Rank</p>
+                            <p className="text-xl sm:text-2xl font-bold text-purple-900 truncate">
+                              {formatRank(managerData?.summary_event_rank || 0)}
                             </p>
-                            <p className="text-xs text-indigo-600 mt-1 truncate">All gameweeks</p>
+                            <p className="text-xs text-purple-600 mt-1 truncate">GW {managerData?.current_event || getCurrentGameweekDashboard()}</p>
                           </div>
-                          <div className="p-1.5 sm:p-2 bg-indigo-200 rounded-full flex-shrink-0">
-                            <Star className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-700" />
+                          <div className="p-1.5 sm:p-2 bg-purple-200 rounded-full flex-shrink-0">
+                            <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-purple-700" />
                           </div>
                         </div>
                       </CardContent>
