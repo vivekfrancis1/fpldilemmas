@@ -150,19 +150,10 @@ function PlayerCard({
             />
           </div>
           
-          {/* Text Labels */}
+          {/* Text Labels - 2 lines only */}
           <div className="flex flex-col">
-            {/* Team Name (optional) */}
-            {showTeamName && (
-              <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
-                <div className="text-[9px] sm:text-[11px] md:text-sm font-semibold text-gray-800 truncate">
-                  {player.team_short_name || 'UNK'}
-                </div>
-              </div>
-            )}
-            
             {/* Player Name */}
-            <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+            <div className="w-full px-1 py-1 bg-white/95 text-center">
               <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                 {player.web_name || player.player_name || 'Unknown'}
               </div>

@@ -6964,12 +6964,9 @@ export default function TransferPlanner() {
                                           </div>
                                         )}
                                       </div>
-                                      {/* Text Labels */}
+                                      {/* Text Labels - 2 lines only */}
                                       <div className="flex flex-col">
-                                        <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
-                                          <div className="text-[9px] sm:text-[11px] md:text-sm font-semibold text-gray-700 truncate">{playerTeam?.short_name || 'UNK'}</div>
-                                        </div>
-                                        <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                        <div className="w-full px-1 py-1 bg-white/95 text-center">
                                           <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">{player.web_name}</div>
                                         </div>
                                         <div className="w-full px-2 py-1 bg-purple-600 text-center">
@@ -6979,11 +6976,6 @@ export default function TransferPlanner() {
                                               : projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                           </div>
                                         </div>
-                                        {fixture && (
-                                          <div className="w-full px-1 py-1 bg-gray-700 text-center">
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-medium text-white truncate">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
-                                          </div>
-                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -7191,20 +7183,12 @@ export default function TransferPlanner() {
                                   />
                                 </div>
                                 <div className="flex flex-col">
-                                  <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
-                                    <div className="text-[9px] sm:text-[11px] md:text-sm font-semibold text-gray-700 truncate">{playerTeam?.short_name || 'UNK'}</div>
-                                  </div>
-                                  <div className="w-full px-1 py-1 bg-white/95 text-center border-t border-white/40">
+                                  <div className="w-full px-1 py-1 bg-white/95 text-center">
                                     <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">{player.web_name}</div>
                                   </div>
                                   <div className="w-full px-2 py-1 bg-gray-500 text-center">
                                     <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</div>
                                   </div>
-                                  {fixture && (
-                                    <div className="w-full px-1 py-1 bg-gray-700 text-center">
-                                      <div className="text-[8px] sm:text-[10px] md:text-xs font-medium text-white truncate">vs {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})</div>
-                                    </div>
-                                  )}
                                 </div>
                               </div>
                             </div>
