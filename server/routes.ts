@@ -1290,12 +1290,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       // Use the standard public endpoint with the converted team data
-      // This allows us to reuse all the recommendation logic
+      // Pass authenticated team picks via POST to ensure current squad is used
       const managerId = user.fplManagerId;
       
-      // Forward to the standard endpoint's logic by calling it internally
+      // Forward to the standard endpoint's logic, but pass the authenticated team picks
+      // This ensures recommendations are based on current squad including pending transfers
       const internalUrl = `http://localhost:5000/api/manager/${managerId}/recommended-transfers`;
-      const internalResponse = await fetch(internalUrl);
+      const internalResponse = await fetch(internalUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          authenticatedPicks: teamData.picks,
+          authenticatedBank: myTeamData.transfers.bank
+        })
+      });
       
       if (!internalResponse.ok) {
         throw new Error('Failed to calculate recommendations');
@@ -3288,7 +3298,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get recommended transfers for next gameweek
-  app.get("/api/manager/:managerId/recommended-transfers", async (req, res) => {
+  // Supports both GET (public, uses GW22 team) and POST (authenticated, uses current squad)
+  app.all("/api/manager/:managerId/recommended-transfers", async (req, res) => {
     // Add cache-busting headers to prevent 304 responses
     res.set({
       'Cache-Control': 'no-cache, no-store, must-revalidate, private, max-age=0',
@@ -3318,14 +3329,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGameweek = currentGW?.id || 1;
       
       // Check cache (keyed by managerId + currentGameweek for auto-invalidation)
+      // Skip cache when authenticated picks are provided (POST request with pending transfers)
+      const isAuthenticatedRequest = req.method === 'POST' && req.body?.authenticatedPicks;
       const cacheKey = `${managerId}:${currentGameweek}`;
       
-      if (!refresh) {
+      if (!refresh && !isAuthenticatedRequest) {
         const cached = recommendedTransfersCache.get(cacheKey);
         if (cached) {
           console.log(`✅ CACHE HIT: Serving cached transfer recommendations for manager ${managerId} GW${currentGameweek}`);
           return res.json(cached);
         }
+      } else if (isAuthenticatedRequest) {
+        console.log(`🔐 AUTHENTICATED REQUEST: Bypassing cache to use current squad with pending transfers`);
       } else {
         console.log(`🔄 CACHE REFRESH: Bypassing cache for manager ${managerId} due to refresh=true`);
       }
@@ -3359,14 +3374,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamDataGameweek = Math.max(1, teamDataGameweek - 1);
       }
       
-      // Get team data - use the determined gameweek
-      const teamResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${teamDataGameweek}/picks/`);
-      if (!teamResponse.ok) {
-        throw new Error("Failed to fetch team data");
-      }
-      const teamData = await teamResponse.json();
+      // Check if authenticated team picks were provided via POST
+      const authenticatedPicks = req.method === 'POST' && req.body?.authenticatedPicks;
+      const authenticatedBank = req.method === 'POST' && req.body?.authenticatedBank;
       
-      console.log(`DEBUG: Team data fetched from GW${teamDataGameweek}${freeHitInTeamDataGW ? ' (pre-Free Hit team)' : ''} (current GW${currentGameweek} is_current=${currentGW?.is_current}, finished=${isCurrentGWFinished})`);
+      let teamData: any;
+      
+      if (authenticatedPicks) {
+        // Use authenticated picks (current squad including pending transfers)
+        teamData = { picks: authenticatedPicks };
+        console.log(`DEBUG: Using authenticated team picks (${authenticatedPicks.length} players) - includes pending transfers`);
+      } else {
+        // Get team data from public API - use the determined gameweek
+        const teamResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/event/${teamDataGameweek}/picks/`);
+        if (!teamResponse.ok) {
+          throw new Error("Failed to fetch team data");
+        }
+        teamData = await teamResponse.json();
+        console.log(`DEBUG: Team data fetched from GW${teamDataGameweek}${freeHitInTeamDataGW ? ' (pre-Free Hit team)' : ''} (current GW${currentGameweek} is_current=${currentGW?.is_current}, finished=${isCurrentGWFinished})`);
+      }
       
       // Get entry data for accurate bank balance and transfer info
       const entryResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/entry/${managerId}/`);
@@ -3379,7 +3405,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get the most recent gameweek data from history
       const mostRecentGW = historyData.current?.[historyData.current.length - 1];
-      const bank = entryData.last_deadline_bank || 0;
+      // Use authenticated bank if provided (includes pending transfer costs), otherwise use entry data
+      const bank = authenticatedBank !== undefined && authenticatedBank !== false ? authenticatedBank : (entryData.last_deadline_bank || 0);
       
       // Calculate free transfers for next gameweek (NEW 2024/25 RULE: Max 5 FTs)
       // Start with 1 FT and look back through history to count accumulated unused transfers
