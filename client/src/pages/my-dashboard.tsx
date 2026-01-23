@@ -2194,11 +2194,6 @@ export default function MyDashboard() {
                                               <div className="flex flex-col">
                                                 <div className="w-full px-1 py-1 bg-white/95 text-center">
                                                   <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
-                                                    {playerTeam?.short_name || 'UNK'}
-                                                  </div>
-                                                </div>
-                                                <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                                  <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                                     {player.web_name}
                                                   </div>
                                                 </div>
