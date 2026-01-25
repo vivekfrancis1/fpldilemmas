@@ -980,7 +980,7 @@ export default function ManagerTeam() {
             <CardContent>
               {historyLoading ? (
                 <Skeleton className="h-64 w-full" />
-              ) : managerHistory?.past && managerHistory.past.length > 0 ? (
+              ) : (managerHistory?.past && managerHistory.past.length > 0) || managerHistory?.current ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -990,13 +990,37 @@ export default function ManagerTeam() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {managerHistory.past.map((season: any, index: number) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-medium">{season.season_name}</TableCell>
-                        <TableCell>{season.total_points?.toLocaleString()}</TableCell>
-                        <TableCell>#{season.rank?.toLocaleString()}</TableCell>
-                      </TableRow>
-                    ))}
+                    {(() => {
+                      const currentSeasonData = managerHistory?.current && managerHistory.current.length > 0 
+                        ? managerHistory.current[managerHistory.current.length - 1]
+                        : null;
+                      const currentSeason = currentSeasonData ? {
+                        season_name: '2024/25',
+                        total_points: currentSeasonData.total_points,
+                        rank: currentSeasonData.overall_rank,
+                        isCurrent: true
+                      } : null;
+                      const pastSeasons = [...(managerHistory?.past || [])]
+                        .sort((a, b) => parseInt(b.season_name.split('/')[0]) - parseInt(a.season_name.split('/')[0]));
+                      const allSeasons = currentSeason ? [currentSeason, ...pastSeasons] : pastSeasons;
+                      
+                      return allSeasons.map((season: any, index: number) => (
+                        <TableRow key={index} className={season.isCurrent ? "bg-blue-50" : ""}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {season.season_name}
+                              {season.isCurrent && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 border-blue-300">
+                                  Current
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>{season.total_points?.toLocaleString()}</TableCell>
+                          <TableCell>#{season.rank?.toLocaleString()}</TableCell>
+                        </TableRow>
+                      ));
+                    })()}
                   </TableBody>
                 </Table>
               ) : (
