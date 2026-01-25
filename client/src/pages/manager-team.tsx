@@ -924,11 +924,23 @@ export default function ManagerTeam() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {managerHistory.current.map((gw) => {
+                    {[...managerHistory.current].sort((a, b) => b.event - a.event).map((gw) => {
                       const chipName = getChipForGameweek(gw.event);
+                      const currentEvent = bootstrapData?.events?.find((e: any) => e.is_current);
+                      const isCurrentGW = currentEvent?.id === gw.event;
+                      const isInProgress = isCurrentGW && !currentEvent?.finished;
                       return (
-                        <TableRow key={gw.event}>
-                          <TableCell className="font-medium">{gw.event}</TableCell>
+                        <TableRow key={gw.event} className={isInProgress ? "bg-green-50" : ""}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              {gw.event}
+                              {isInProgress && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 border-green-300 animate-pulse">
+                                  LIVE
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>{gw.points}</TableCell>
                           <TableCell>{gw.total_points}</TableCell>
                           <TableCell>#{gw.overall_rank?.toLocaleString()}</TableCell>
