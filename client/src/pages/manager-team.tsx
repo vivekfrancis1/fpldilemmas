@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "wouter";
+import { Link, useParams, useLocation } from "wouter";
 import {
   Card,
   CardContent,
@@ -192,6 +192,7 @@ function getRankChangeDisplay(rankChange: number) {
 
 export default function ManagerTeam() {
   const { managerId } = useParams<{ managerId: string }>();
+  const [, navigate] = useLocation();
   
   // Fetch manager general info (name, etc.)
   const { data: managerInfo } = useQuery<any>({
@@ -462,7 +463,7 @@ export default function ManagerTeam() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => window.history.back()}
+            onClick={() => navigate('/')}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
@@ -590,7 +591,7 @@ export default function ManagerTeam() {
             variant="outline" 
             size="sm" 
             className="hover:bg-blue-50"
-            onClick={() => window.history.back()}
+            onClick={() => navigate('/')}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
