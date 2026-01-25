@@ -955,7 +955,7 @@ export default function ManagerTeam() {
                 );
                 
                 const filteredTransfers = (transfersData || [])
-                  .filter(t => !freeHitGameweeks.has(t.event))
+                  .filter(t => !freeHitGameweeks.has(t.event) && !wildcardGameweeks.has(t.event))
                   .sort((a, b) => {
                     if (b.event !== a.event) return b.event - a.event;
                     return new Date(b.time).getTime() - new Date(a.time).getTime();
