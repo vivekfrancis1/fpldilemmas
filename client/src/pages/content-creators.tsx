@@ -531,6 +531,7 @@ export default function ContentCreators() {
     staleTime: 25 * 60 * 1000, // Consider stale after 25 minutes (cache is 30 min)
     gcTime: 35 * 60 * 1000, // Keep in memory for 35 minutes
     refetchOnWindowFocus: false,
+    refetchInterval: 30 * 60 * 1000, // Auto-refresh every 30 minutes
   });
 
   // Also fetch original creators for database info (name, social links etc)
@@ -561,11 +562,11 @@ export default function ContentCreators() {
     isFetching: isTeamDataRefreshing
   } = useQuery<ContentCreatorBatchResponse>({
     queryKey: ["/api/content-creators/teams"],
-    staleTime: 1 * 60 * 1000, // 1 minute
-    gcTime: 5 * 60 * 1000, // 5 minutes 
+    staleTime: 25 * 60 * 1000, // 25 minutes
+    gcTime: 35 * 60 * 1000, // 35 minutes 
     retry: 2,
     refetchOnWindowFocus: false,
-    refetchInterval: 60000, // Auto-refresh every 60 seconds
+    refetchInterval: 30 * 60 * 1000, // Auto-refresh every 30 minutes
   });
 
   // Transform the API response to match the expected data structure
