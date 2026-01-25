@@ -845,55 +845,121 @@ export default function ManagerTeam() {
                 <ArrowLeftRight className="h-5 w-5" />
                 Transfer History
               </CardTitle>
-              <CardDescription>Recent transfer activity for this manager</CardDescription>
+              <CardDescription>All transfers made this season (excluding Free Hit gameweeks)</CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoadingTransfers ? (
+              {isLoadingTransfers || historyLoading ? (
                 <div className="space-y-2">
                   {[...Array(3)].map((_, i) => (
                     <Skeleton key={i} className="h-12 w-full" />
                   ))}
                 </div>
-              ) : transfersData && transfersData.length > 0 ? (
-                <div className="space-y-2">
-                  {transfersData
-                    .slice()
-                    .sort((a, b) => {
-                      // Sort by timestamp (most recent first), then by gameweek (descending)
-                      const timeA = new Date(a.time).getTime();
-                      const timeB = new Date(b.time).getTime();
-                      if (timeB !== timeA) return timeB - timeA;
-                      return b.event - a.event;
-                    })
-                    .slice(0, 10)
-                    .map((transfer, index) => {
-                    const inPlayer = getPlayerData(transfer.element_in);
-                    const outPlayer = getPlayerData(transfer.element_out);
+              ) : (() => {
+                const freeHitGameweeks = new Set(
+                  managerHistory?.chips
+                    ?.filter((c: any) => c.name === 'freehit')
+                    .map((c: any) => c.event) || []
+                );
+                const wildcardGameweeks = new Set(
+                  managerHistory?.chips
+                    ?.filter((c: any) => c.name === 'wildcard')
+                    .map((c: any) => c.event) || []
+                );
+                
+                const filteredTransfers = (transfersData || [])
+                  .filter(t => !freeHitGameweeks.has(t.event))
+                  .sort((a, b) => {
+                    if (b.event !== a.event) return b.event - a.event;
+                    return new Date(b.time).getTime() - new Date(a.time).getTime();
+                  });
+                
+                const totalTransfers = filteredTransfers.length;
+                
+                const currentGW = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 1;
+                const lastFinishedGW = managerHistory?.current
+                  ?.filter((h: any) => h.event < currentGW || bootstrapData?.events?.find((e: any) => e.id === h.event)?.finished)
+                  .sort((a: any, b: any) => b.event - a.event)[0];
+                
+                let freeTransfersRemaining = 1;
+                if (lastFinishedGW) {
+                  const lastGWChip = managerHistory?.chips?.find((c: any) => c.event === lastFinishedGW.event);
+                  if (lastGWChip?.name === 'wildcard' || lastGWChip?.name === 'freehit') {
+                    freeTransfersRemaining = lastGWChip.name === 'wildcard' ? 1 : freeTransfersRemaining;
+                  } else {
+                    const transfersMade = lastFinishedGW.event_transfers || 0;
+                    const previousGWHistory = managerHistory?.current?.find((h: any) => h.event === lastFinishedGW.event - 1);
+                    const previousFT = previousGWHistory ? Math.min(5, 1 + (previousGWHistory.event_transfers === 0 ? 1 : 0)) : 1;
+                    freeTransfersRemaining = Math.min(5, Math.max(1, previousFT - transfersMade + 1));
+                  }
+                }
+                
+                if (filteredTransfers.length === 0) {
+                  return <p className="text-gray-500">No transfers made this season</p>;
+                }
+                
+                const groupedByGW = filteredTransfers.reduce((acc, t) => {
+                  if (!acc[t.event]) acc[t.event] = [];
+                  acc[t.event].push(t);
+                  return acc;
+                }, {} as Record<number, Transfer[]>);
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-3 mb-4">
+                      <Badge variant="outline" className="text-sm px-3 py-1">
+                        Total Transfers: {totalTransfers}
+                      </Badge>
+                      <Badge variant="outline" className="text-sm px-3 py-1 bg-green-50 text-green-700 border-green-300">
+                        Free Transfers Available: {freeTransfersRemaining}
+                      </Badge>
+                    </div>
                     
-                    return (
-                      <div key={index} className="flex items-center gap-4 p-3 border rounded-lg">
-                        <div className="text-sm text-gray-500">
-                          GW{transfer.event}
-                        </div>
-                        <div className="flex-1 flex items-center gap-2">
-                          <span className="text-red-600 text-sm">
-                            {outPlayer ? `${outPlayer.first_name} ${outPlayer.second_name}` : 'Unknown'}
-                          </span>
-                          <ArrowLeftRight className="h-4 w-4 text-gray-400" />
-                          <span className="text-green-600 text-sm">
-                            {inPlayer ? `${inPlayer.first_name} ${inPlayer.second_name}` : 'Unknown'}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {formatPrice(transfer.element_out_cost)} → {formatPrice(transfer.element_in_cost)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-gray-500">No transfer data available</p>
-              )}
+                    {Object.entries(groupedByGW)
+                      .sort(([a], [b]) => Number(b) - Number(a))
+                      .map(([gw, transfers]) => {
+                        const gwNum = Number(gw);
+                        const isWildcard = wildcardGameweeks.has(gwNum);
+                        
+                        return (
+                          <div key={gw} className="border rounded-lg overflow-hidden">
+                            <div className={`px-3 py-2 flex items-center gap-2 ${isWildcard ? 'bg-purple-50' : 'bg-gray-50'}`}>
+                              <span className="font-medium text-sm">Gameweek {gw}</span>
+                              <span className="text-xs text-gray-500">({transfers.length} transfer{transfers.length > 1 ? 's' : ''})</span>
+                              {isWildcard && (
+                                <Badge className="text-[10px] px-1.5 py-0.5 bg-purple-600 text-white">
+                                  Wildcard
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="divide-y">
+                              {transfers.map((transfer, index) => {
+                                const inPlayer = getPlayerData(transfer.element_in);
+                                const outPlayer = getPlayerData(transfer.element_out);
+                                
+                                return (
+                                  <div key={index} className="flex items-center gap-2 sm:gap-4 p-2 sm:p-3">
+                                    <div className="flex-1 flex items-center gap-1 sm:gap-2 flex-wrap sm:flex-nowrap">
+                                      <span className="text-red-600 text-xs sm:text-sm">
+                                        {outPlayer ? `${outPlayer.first_name?.charAt(0)}. ${outPlayer.second_name}` : 'Unknown'}
+                                      </span>
+                                      <ArrowLeftRight className="h-3 w-3 sm:h-4 sm:w-4 text-gray-400" />
+                                      <span className="text-green-600 text-xs sm:text-sm">
+                                        {inPlayer ? `${inPlayer.first_name?.charAt(0)}. ${inPlayer.second_name}` : 'Unknown'}
+                                      </span>
+                                    </div>
+                                    <div className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+                                      {formatPrice(transfer.element_out_cost)} → {formatPrice(transfer.element_in_cost)}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
