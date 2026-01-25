@@ -489,7 +489,7 @@ export default function CreatorTeam() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-purple-700">
-                    #{teamData.entry_history.overall_rank?.toLocaleString()}
+                    #{teamData.entry_history.overall_rank != null ? teamData.entry_history.overall_rank.toLocaleString() : 'N/A'}
                   </div>
                   <div className="text-sm text-muted-foreground">Overall Rank</div>
                 </div>
@@ -545,7 +545,7 @@ export default function CreatorTeam() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-purple-700">
-                    #{teamData.general_info.summary_overall_rank?.toLocaleString()}
+                    #{teamData.general_info.summary_overall_rank != null ? teamData.general_info.summary_overall_rank.toLocaleString() : 'N/A'}
                   </div>
                   <div className="text-sm text-muted-foreground">Overall Rank</div>
                 </div>
@@ -932,10 +932,10 @@ export default function CreatorTeam() {
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell>{entry.total_points.toLocaleString()}</TableCell>
+                                <TableCell>{entry.total_points?.toLocaleString() ?? '-'}</TableCell>
                                 <TableCell>
                                   <div className="flex items-center">
-                                    #{entry.overall_rank.toLocaleString()}
+                                    #{entry.overall_rank?.toLocaleString() ?? 'N/A'}
                                     {rankChange !== null && (
                                       <span className={`ml-2 flex items-center text-xs ${
                                         rankChange > 0 ? 'text-green-600' : rankChange < 0 ? 'text-red-600' : 'text-gray-500'
@@ -950,7 +950,7 @@ export default function CreatorTeam() {
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell>#{entry.rank.toLocaleString()}</TableCell>
+                                <TableCell>#{entry.rank?.toLocaleString() ?? 'N/A'}</TableCell>
                                 <TableCell>£{((entry.value - (entry.bank || 0)) / 10).toFixed(1)}m</TableCell>
                                 <TableCell>£{((entry.bank || 0) / 10).toFixed(1)}m</TableCell>
                                 <TableCell>
@@ -1021,9 +1021,9 @@ export default function CreatorTeam() {
                         <div>
                           <div className="text-2xl font-bold text-purple-700">
                             #{filteredCreatorHistory && filteredCreatorHistory.length > 0
-                              ? Math.min(...filteredCreatorHistory.map(track => track.overallRank)).toLocaleString()
-                              : filteredManagerHistory 
-                                ? Math.min(...filteredManagerHistory.map(e => e.overall_rank)).toLocaleString()
+                              ? Math.min(...filteredCreatorHistory.map(track => track.overallRank).filter(r => r != null))?.toLocaleString() ?? 'N/A'
+                              : filteredManagerHistory && filteredManagerHistory.length > 0
+                                ? Math.min(...filteredManagerHistory.map(e => e.overall_rank).filter(r => r != null))?.toLocaleString() ?? 'N/A'
                                 : 'N/A'
                             }
                           </div>
@@ -1077,8 +1077,8 @@ export default function CreatorTeam() {
                             .map((season) => (
                               <TableRow key={season.season_name}>
                                 <TableCell className="font-medium">{season.season_name}</TableCell>
-                                <TableCell>{season.total_points.toLocaleString()}</TableCell>
-                                <TableCell>#{season.rank.toLocaleString()}</TableCell>
+                                <TableCell>{season.total_points?.toLocaleString() ?? '-'}</TableCell>
+                                <TableCell>#{season.rank?.toLocaleString() ?? 'N/A'}</TableCell>
                               </TableRow>
                             ))}
                         </TableBody>
