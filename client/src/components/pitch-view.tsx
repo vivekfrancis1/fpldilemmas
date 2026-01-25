@@ -48,6 +48,7 @@ export interface PitchViewProps {
   showTeamName?: boolean;
   showOpponent?: boolean;
   isBench?: boolean;
+  onPlayerClick?: (player: PitchPlayer) => void;
 }
 
 // Get jersey image URL from FPL API
@@ -95,12 +96,14 @@ function PlayerCard({
   isBench = false,
   showTeamName = false,
   showOpponent = false,
+  onClick,
 }: { 
   player: PitchPlayer;
   isGoalkeeper?: boolean;
   isBench?: boolean;
   showTeamName?: boolean;
   showOpponent?: boolean;
+  onClick?: () => void;
 }) {
   const [imgError, setImgError] = useState(0); // 0: initial, 1: first error (try non-GK), 2: all failed (use fallback)
   const teamCode = player.team_code || 0;
@@ -137,7 +140,10 @@ function PlayerCard({
           </div>
         )}
         {/* Unified Card Container - Square borders */}
-        <div className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40">
+        <div 
+          className={`w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40 ${onClick ? 'cursor-pointer hover:bg-white/30 transition-colors' : ''}`}
+          onClick={onClick}
+        >
           {/* Jersey Image */}
           <div className="p-1">
             <img 
@@ -180,6 +186,7 @@ export function PitchView({
   benchPlayers = [], 
   showTeamName = false,
   showOpponent = false,
+  onPlayerClick,
 }: PitchViewProps) {
   const sortedPlayers = sortPlayersByPosition(players);
   const sortedBench = sortPlayersByPosition(benchPlayers);
@@ -229,6 +236,7 @@ export function PitchView({
                     isGoalkeeper={true}
                     showTeamName={showTeamName}
                     showOpponent={showOpponent}
+                    onClick={onPlayerClick ? () => onPlayerClick(player) : undefined}
                   />
                 ))}
               </div>
@@ -248,6 +256,7 @@ export function PitchView({
                       player={player}
                       showTeamName={showTeamName}
                       showOpponent={showOpponent}
+                      onClick={onPlayerClick ? () => onPlayerClick(player) : undefined}
                     />
                   ))}
                 </div>
@@ -268,6 +277,7 @@ export function PitchView({
                       player={player}
                       showTeamName={showTeamName}
                       showOpponent={showOpponent}
+                      onClick={onPlayerClick ? () => onPlayerClick(player) : undefined}
                     />
                   ))}
                 </div>
@@ -288,6 +298,7 @@ export function PitchView({
                       player={player}
                       showTeamName={showTeamName}
                       showOpponent={showOpponent}
+                      onClick={onPlayerClick ? () => onPlayerClick(player) : undefined}
                     />
                   ))}
                 </div>
@@ -310,6 +321,7 @@ export function PitchView({
                     isBench={true}
                     showTeamName={showTeamName}
                     showOpponent={showOpponent}
+                    onClick={onPlayerClick ? () => onPlayerClick(player) : undefined}
                   />
                 ))}
               </div>

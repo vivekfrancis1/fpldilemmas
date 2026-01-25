@@ -13,6 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -187,6 +193,18 @@ export default function CreatorTeam() {
 
   // Always default to pitch view
   const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
+  
+  // State for points breakdown modal
+  const [showPointsBreakdown, setShowPointsBreakdown] = useState(false);
+  const [selectedPlayerForBreakdown, setSelectedPlayerForBreakdown] = useState<{
+    element: number;
+    web_name?: string;
+    first_name?: string;
+    second_name?: string;
+    element_type?: number;
+    isCaptain?: boolean;
+    liveStats?: any;
+  } | null>(null);
 
   // Get bootstrap data to determine completed gameweeks
   const { data: bootstrapData } = useQuery<any>({
@@ -238,6 +256,115 @@ export default function CreatorTeam() {
   const getCurrentGameweek = (): number => {
     const currentEvent = bootstrapData?.events.find(e => e.is_current);
     return currentEvent?.id || 1;
+  };
+
+  // Query for live gameweek data
+  const { data: liveGameweekData } = useQuery<any>({
+    queryKey: [`/api/event/${getCurrentGameweek()}/live`],
+    enabled: !!bootstrapData?.events,
+    staleTime: 60000, // 1 minute
+  });
+
+  // Get player live stats from live gameweek data
+  const getPlayerLiveStats = (playerId: number) => {
+    if (!liveGameweekData?.elements) return null;
+    return liveGameweekData.elements.find((el: any) => el.id === playerId);
+  };
+
+  // Helper function to get points breakdown for a player
+  const getPointsBreakdown = (player: any) => {
+    if (!player?.liveStats?.stats) return [];
+    
+    const stats = player.liveStats.stats;
+    const elementType = player.element_type || 1;
+    const breakdown: { label: string; value: any; points: number }[] = [];
+    
+    // Minutes
+    if (stats.minutes > 0) {
+      const minutePoints = stats.minutes >= 60 ? 2 : stats.minutes > 0 ? 1 : 0;
+      breakdown.push({ label: "Minutes", value: stats.minutes, points: minutePoints });
+    }
+    
+    // Goals Scored - points depend on position
+    if (stats.goals_scored > 0) {
+      const goalPoints = elementType <= 2 ? 6 : elementType === 3 ? 5 : 4;
+      breakdown.push({ label: "Goals", value: stats.goals_scored, points: stats.goals_scored * goalPoints });
+    }
+    
+    // Assists
+    if (stats.assists > 0) {
+      breakdown.push({ label: "Assists", value: stats.assists, points: stats.assists * 3 });
+    }
+    
+    // Clean sheets - only for GK and DEF
+    if (stats.clean_sheets > 0 && elementType <= 2) {
+      breakdown.push({ label: "Clean Sheet", value: stats.clean_sheets, points: stats.clean_sheets * 4 });
+    } else if (stats.clean_sheets > 0 && elementType === 3) {
+      breakdown.push({ label: "Clean Sheet", value: stats.clean_sheets, points: stats.clean_sheets * 1 });
+    }
+    
+    // Goals conceded (GK and DEF lose points)
+    if (stats.goals_conceded >= 2 && elementType <= 2) {
+      const penaltyPoints = -Math.floor(stats.goals_conceded / 2);
+      breakdown.push({ label: "Goals Conceded", value: stats.goals_conceded, points: penaltyPoints });
+    }
+    
+    // Saves (GK only, 3 saves = 1 point)
+    if (stats.saves > 0 && elementType === 1) {
+      const savePoints = Math.floor(stats.saves / 3);
+      if (savePoints > 0) {
+        breakdown.push({ label: "Saves", value: stats.saves, points: savePoints });
+      }
+    }
+    
+    // Penalties saved
+    if (stats.penalties_saved > 0) {
+      breakdown.push({ label: "Penalties Saved", value: stats.penalties_saved, points: stats.penalties_saved * 5 });
+    }
+    
+    // Penalties missed
+    if (stats.penalties_missed > 0) {
+      breakdown.push({ label: "Penalties Missed", value: stats.penalties_missed, points: stats.penalties_missed * -2 });
+    }
+    
+    // Bonus
+    if (stats.bonus > 0) {
+      breakdown.push({ label: "Bonus", value: stats.bonus, points: stats.bonus });
+    }
+    
+    // Yellow cards
+    if (stats.yellow_cards > 0) {
+      breakdown.push({ label: "Yellow Cards", value: stats.yellow_cards, points: stats.yellow_cards * -1 });
+    }
+    
+    // Red cards
+    if (stats.red_cards > 0) {
+      breakdown.push({ label: "Red Cards", value: stats.red_cards, points: stats.red_cards * -3 });
+    }
+    
+    // Own goals
+    if (stats.own_goals > 0) {
+      breakdown.push({ label: "Own Goals", value: stats.own_goals, points: stats.own_goals * -2 });
+    }
+    
+    return breakdown;
+  };
+
+  // Handle player card click for points breakdown
+  const handlePlayerCardClick = (player: any, isCaptain: boolean = false) => {
+    const playerData = getPlayerData(player.element);
+    const liveStats = getPlayerLiveStats(player.element);
+    
+    setSelectedPlayerForBreakdown({
+      element: player.element,
+      web_name: playerData?.web_name,
+      first_name: playerData?.first_name,
+      second_name: playerData?.second_name,
+      element_type: playerData?.element_type,
+      isCaptain,
+      liveStats,
+    });
+    setShowPointsBreakdown(true);
   };
 
   const getCurrentGameweekFixture = (teamId: number) => {
@@ -644,6 +771,7 @@ export default function CreatorTeam() {
                           benchPlayers={benchPlayers}
                           getNextFixtures={getNextFixtures}
                           showFixtures={true}
+                          onPlayerClick={(player) => handlePlayerCardClick(player, player.is_captain)}
                         />
                       </CardContent>
                     </Card>
@@ -679,6 +807,7 @@ export default function CreatorTeam() {
                     showForm={true}
                     showOwnership={true}
                     showPrice={true}
+                    onPlayerClick={(listPlayer) => handlePlayerCardClick(listPlayer, listPlayer.is_captain)}
                   />
                 )}
               </div>
@@ -1218,6 +1347,71 @@ export default function CreatorTeam() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Player Points Breakdown Modal */}
+      <Dialog open={showPointsBreakdown} onOpenChange={setShowPointsBreakdown}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <div className="flex flex-col">
+                <span className="text-lg font-bold">
+                  {selectedPlayerForBreakdown?.web_name || selectedPlayerForBreakdown?.second_name}
+                </span>
+                <span className="text-sm text-gray-500 font-normal">
+                  {selectedPlayerForBreakdown?.first_name} {selectedPlayerForBreakdown?.second_name}
+                </span>
+              </div>
+              {selectedPlayerForBreakdown?.isCaptain && (
+                <Badge className="bg-yellow-400 text-yellow-900">Captain (2x)</Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {selectedPlayerForBreakdown?.liveStats ? (
+              <>
+                <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Total Points</p>
+                  <p className="text-4xl font-bold text-green-700">
+                    {(selectedPlayerForBreakdown.liveStats.stats?.total_points || 0) * (selectedPlayerForBreakdown.isCaptain ? 2 : 1)}
+                  </p>
+                  {selectedPlayerForBreakdown.isCaptain && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      ({selectedPlayerForBreakdown.liveStats.stats?.total_points} × 2 captain bonus)
+                    </p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-sm text-gray-700 border-b pb-1">Points Breakdown</h4>
+                  {getPointsBreakdown(selectedPlayerForBreakdown).length > 0 ? (
+                    <div className="space-y-1">
+                      {getPointsBreakdown(selectedPlayerForBreakdown).map((item, idx) => (
+                        <div key={idx} className="flex justify-between items-center py-1.5 px-2 rounded hover:bg-gray-50">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-700">{item.label}</span>
+                            <span className="text-xs text-gray-400">({item.value})</span>
+                          </div>
+                          <span className={`font-semibold text-sm ${item.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {item.points > 0 ? '+' : ''}{item.points}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 text-center py-2">No points yet</p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>No live data available for this player</p>
+                <p className="text-sm mt-1">Match may not have started yet</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

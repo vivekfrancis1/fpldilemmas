@@ -2293,6 +2293,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Live gameweek data for player stats
+  app.get("/api/event/:gameweek/live", async (req, res) => {
+    const gameweek = parseInt(req.params.gameweek);
+    
+    if (!gameweek || gameweek < 1 || gameweek > 38) {
+      return res.status(400).json({ error: "Invalid gameweek" });
+    }
+    
+    try {
+      const response = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
+      if (!response || !response.ok) {
+        console.error(`FPL API returned status ${response?.status} for gameweek ${gameweek}`);
+        return res.status(404).json({ error: "Failed to fetch live data", elements: [] });
+      }
+      
+      // Check content type to ensure we got JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error(`FPL API returned non-JSON content for gameweek ${gameweek}`);
+        return res.status(500).json({ error: "Invalid response from FPL API", elements: [] });
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching live gameweek data:", error);
+      res.status(500).json({ error: "Failed to fetch live data", elements: [] });
+    }
+  });
+
   // Individual player detailed data
   app.get("/api/element-summary/:playerId", async (req, res) => {
     try {
