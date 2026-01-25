@@ -624,52 +624,52 @@ export default function ManagerTeam() {
 
       {/* Team Statistics */}
       {teamData?.entry_history && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-blue-700">{teamData.entry_history.points}</div>
-                  <div className="text-sm text-muted-foreground">GW Points</div>
+            <CardContent className="p-2 sm:p-4">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0 flex-1">
+                  <div className="text-lg sm:text-2xl font-bold text-blue-700">{teamData.entry_history.points}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">GW Points</div>
                 </div>
-                <Trophy className="h-8 w-8 text-blue-500" />
+                <Trophy className="h-5 w-5 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-green-700">{teamData.entry_history.total_points}</div>
-                  <div className="text-sm text-muted-foreground">Total Points</div>
+            <CardContent className="p-2 sm:p-4">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0 flex-1">
+                  <div className="text-lg sm:text-2xl font-bold text-green-700">{teamData.entry_history.total_points}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Total Points</div>
                 </div>
-                <Star className="h-8 w-8 text-green-500" />
+                <Star className="h-5 w-5 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-purple-700">
+            <CardContent className="p-2 sm:p-4">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0 flex-1">
+                  <div className="text-lg sm:text-2xl font-bold text-purple-700 truncate">
                     #{teamData.entry_history.overall_rank?.toLocaleString()}
                   </div>
-                  <div className="text-sm text-muted-foreground">Overall Rank</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Overall Rank</div>
                 </div>
-                <Crown className="h-8 w-8 text-purple-500" />
+                <Crown className="h-5 w-5 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-orange-700">
+            <CardContent className="p-2 sm:p-4">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0 flex-1">
+                  <div className="text-lg sm:text-2xl font-bold text-orange-700">
                     £{((teamData.entry_history.value || 0) / 10).toFixed(1)}m
                   </div>
-                  <div className="text-sm text-muted-foreground">Team Value</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Team Value</div>
                 </div>
-                <DollarSign className="h-8 w-8 text-orange-500" />
+                <DollarSign className="h-5 w-5 sm:h-8 sm:w-8 text-orange-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -678,52 +678,52 @@ export default function ManagerTeam() {
 
       {/* General Info Fallback */}
       {managerInfo && !teamData?.entry_history && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-green-700">{managerInfo.summary_overall_points}</div>
-                  <div className="text-sm text-muted-foreground">Total Points</div>
+            <CardContent className="p-2 sm:p-4">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0 flex-1">
+                  <div className="text-lg sm:text-2xl font-bold text-green-700">{managerInfo.summary_overall_points}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Total Points</div>
                 </div>
-                <Star className="h-8 w-8 text-green-500" />
+                <Star className="h-5 w-5 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-2xl font-bold text-purple-700">
+            <CardContent className="p-2 sm:p-4">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0 flex-1">
+                  <div className="text-lg sm:text-2xl font-bold text-purple-700 truncate">
                     #{managerInfo.summary_overall_rank?.toLocaleString()}
                   </div>
-                  <div className="text-sm text-muted-foreground">Overall Rank</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Overall Rank</div>
                 </div>
-                <Crown className="h-8 w-8 text-purple-500" />
+                <Crown className="h-5 w-5 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xl font-bold text-blue-700">{managerInfo.name}</div>
-                  <div className="text-sm text-muted-foreground">Team Name</div>
+            <CardContent className="p-2 sm:p-4">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0 flex-1">
+                  <div className="text-base sm:text-xl font-bold text-blue-700 truncate">{managerInfo.name}</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Team Name</div>
                 </div>
-                <Trophy className="h-8 w-8 text-blue-500" />
+                <Trophy className="h-5 w-5 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           <Card className="border-l-4 border-l-gray-500 bg-gradient-to-r from-gray-50 to-white">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-lg font-bold text-gray-700">
+            <CardContent className="p-2 sm:p-4">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm sm:text-lg font-bold text-gray-700 truncate">
                     {managerInfo.player_first_name} {managerInfo.player_last_name}
                   </div>
-                  <div className="text-sm text-muted-foreground">Manager</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Manager</div>
                 </div>
-                <Users className="h-8 w-8 text-gray-500" />
+                <Users className="h-5 w-5 sm:h-8 sm:w-8 text-gray-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
@@ -732,25 +732,26 @@ export default function ManagerTeam() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="team" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5 bg-gray-100 rounded-lg p-1">
-          <TabsTrigger value="team" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <Users className="h-4 w-4" />
+        <TabsList className="grid w-full grid-cols-5 bg-gray-100 rounded-lg p-1 h-auto">
+          <TabsTrigger value="team" className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm py-2 sm:py-2.5 px-1 sm:px-3 text-xs sm:text-sm min-h-[40px]">
+            <Users className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />
             Team
           </TabsTrigger>
-          <TabsTrigger value="transfers" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <ArrowLeftRight className="h-4 w-4" />
+          <TabsTrigger value="transfers" className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm py-2 sm:py-2.5 px-1 sm:px-3 text-xs sm:text-sm min-h-[40px]">
+            <ArrowLeftRight className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />
             Transfers
           </TabsTrigger>
-          <TabsTrigger value="performance" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <BarChart3 className="h-4 w-4" />
-            Performance
+          <TabsTrigger value="performance" className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm py-2 sm:py-2.5 px-1 sm:px-3 text-xs sm:text-sm min-h-[40px]">
+            <BarChart3 className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />
+            <span className="hidden sm:inline">Performance</span>
+            <span className="sm:hidden">Perf</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <Calendar className="h-4 w-4" />
+          <TabsTrigger value="history" className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm py-2 sm:py-2.5 px-1 sm:px-3 text-xs sm:text-sm min-h-[40px]">
+            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />
             History
           </TabsTrigger>
-          <TabsTrigger value="chips" className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm">
-            <Star className="h-4 w-4" />
+          <TabsTrigger value="chips" className="flex items-center justify-center gap-1 sm:gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm py-2 sm:py-2.5 px-1 sm:px-3 text-xs sm:text-sm min-h-[40px]">
+            <Star className="h-3 w-3 sm:h-4 sm:w-4 hidden sm:block" />
             Chips
           </TabsTrigger>
         </TabsList>
