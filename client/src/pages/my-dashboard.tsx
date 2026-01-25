@@ -3760,31 +3760,31 @@ export default function MyDashboard() {
         )}
       </div>
 
-      {/* Player Points Breakdown Modal */}
+      {/* Player Points Breakdown Modal - Mobile Optimized */}
       <Dialog open={showPointsBreakdown} onOpenChange={setShowPointsBreakdown}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="flex flex-col">
-                <span className="text-lg font-bold">
+        <DialogContent className="w-[95vw] max-w-md mx-auto p-4 sm:p-6 rounded-xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex flex-col min-w-0">
+                <span className="text-base sm:text-lg font-bold truncate">
                   {selectedPlayerForBreakdown?.web_name || selectedPlayerForBreakdown?.second_name}
                 </span>
-                <span className="text-sm text-gray-500 font-normal">
+                <span className="text-xs sm:text-sm text-gray-500 font-normal truncate">
                   {selectedPlayerForBreakdown?.first_name} {selectedPlayerForBreakdown?.second_name}
                 </span>
               </div>
               {selectedPlayerForBreakdown?.isCaptain && (
-                <Badge className="bg-yellow-400 text-yellow-900">Captain (2x)</Badge>
+                <Badge className="bg-yellow-400 text-yellow-900 text-xs shrink-0">Captain (2x)</Badge>
               )}
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {selectedPlayerForBreakdown?.liveStats ? (
               <>
-                <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                  <p className="text-sm text-gray-600 mb-1">Total Points</p>
-                  <p className="text-4xl font-bold text-green-700">
+                <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                  <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Points</p>
+                  <p className="text-3xl sm:text-4xl font-bold text-green-700">
                     {(selectedPlayerForBreakdown.liveStats.total_points || 0) * (selectedPlayerForBreakdown.isCaptain ? 2 : 1)}
                   </p>
                   {selectedPlayerForBreakdown.isCaptain && (
@@ -3794,31 +3794,31 @@ export default function MyDashboard() {
                   )}
                 </div>
                 
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-sm text-gray-700 border-b pb-1">Points Breakdown</h4>
+                <div className="space-y-1 sm:space-y-2">
+                  <h4 className="font-semibold text-xs sm:text-sm text-gray-700 border-b pb-1">Points Breakdown</h4>
                   {getPointsBreakdown(selectedPlayerForBreakdown).length > 0 ? (
-                    <div className="space-y-1">
+                    <div className="space-y-0.5 sm:space-y-1">
                       {getPointsBreakdown(selectedPlayerForBreakdown).map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-center py-1.5 px-2 rounded hover:bg-gray-50">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-700">{item.label}</span>
+                        <div key={idx} className="flex justify-between items-center py-2 sm:py-1.5 px-2 rounded hover:bg-gray-50 active:bg-gray-100 touch-manipulation">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <span className="text-xs sm:text-sm text-gray-700">{item.label}</span>
                             <span className="text-xs text-gray-400">({item.value})</span>
                           </div>
-                          <span className={`font-semibold text-sm ${item.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <span className={`font-semibold text-xs sm:text-sm ${item.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {item.points > 0 ? '+' : ''}{item.points}
                           </span>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500 text-center py-2">No points yet</p>
+                    <p className="text-xs sm:text-sm text-gray-500 text-center py-2">No points yet</p>
                   )}
                 </div>
               </>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <p>No live data available for this player</p>
-                <p className="text-sm mt-1">Match may not have started yet</p>
+              <div className="text-center py-6 sm:py-8 text-gray-500">
+                <p className="text-sm">No live data available for this player</p>
+                <p className="text-xs sm:text-sm mt-1">Match may not have started yet</p>
               </div>
             )}
           </div>
