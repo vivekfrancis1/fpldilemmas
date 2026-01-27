@@ -3540,71 +3540,90 @@ export default function MyDashboard() {
                             </div>
                             Gameweek History
                           </CardTitle>
+                          <CardDescription>Points and rank progression by gameweek</CardDescription>
                         </CardHeader>
                         <CardContent className="p-4 sm:p-6">
-                          <div className="space-y-3">
-                            {historyData.current.slice().reverse().map((gw, index, reversedArray) => {
-                              // Calculate rank change from previous gameweek
-                              // Since array is reversed, previous GW is at index + 1
-                              const prevGw = reversedArray[index + 1];
-                              const currentRank = gw.overall_rank || 0;
-                              const prevRank = prevGw?.overall_rank || 0;
-                              
-                              // Rank change: positive means rank improved (went from higher number to lower)
-                              // negative means rank dropped
-                              const rankChange = prevGw ? prevRank - currentRank : 0;
-                              
-                              // Check if a chip was used in this gameweek
-                              const chipUsed = historyData.chips?.find((chip: any) => chip.event === gw.event);
-                              const getChipDisplay = (chipName: string) => {
-                                switch (chipName) {
-                                  case 'freehit': return { name: 'Free Hit', color: 'bg-purple-100 text-purple-700' };
-                                  case 'wildcard': return { name: 'Wildcard', color: 'bg-blue-100 text-blue-700' };
-                                  case '3xc': return { name: 'Triple Captain', color: 'bg-amber-100 text-amber-700' };
-                                  case 'bboost': return { name: 'Bench Boost', color: 'bg-green-100 text-green-700' };
-                                  default: return { name: chipName, color: 'bg-gray-100 text-gray-700' };
-                                }
-                              };
-                              
-                              return (
-                                <div key={gw.event} className="flex items-center justify-between p-3 sm:p-4 bg-white/70 rounded-xl border-0 shadow-sm hover:shadow-md transition-all duration-200 gap-3">
-                                  <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="text-base sm:text-lg font-semibold text-gray-800">Gameweek {gw.event}</span>
-                                      {chipUsed && (
-                                        <Badge className={`text-xs ${getChipDisplay(chipUsed.name).color}`}>
-                                          {getChipDisplay(chipUsed.name).name}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <div className="text-xs sm:text-sm text-gray-600 truncate">
-                                      {gw.event_transfers || 0} transfers • {formatPrice(gw.bank || 0)} bank
-                                    </div>
-                                  </div>
-                                  <div className="text-right shrink-0">
-                                    <div className="text-lg sm:text-xl font-bold text-emerald-700">{gw.points || 0} pts</div>
-                                    <div className="text-xs sm:text-sm text-gray-600">
-                                      Rank: {formatRank(gw.overall_rank || 0)}
-                                    </div>
-                                    {prevGw && rankChange !== 0 && (
-                                      <div className={`flex items-center justify-end gap-1 mt-1 font-medium ${rankChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {rankChange > 0 ? (
-                                          <>
-                                            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                                            <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <TrendingDown className="h-3 w-3 sm:h-4 sm:w-4" />
-                                            <span className="text-xs">{formatRank(Math.abs(rankChange))}</span>
-                                          </>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
+                          <div className="overflow-x-auto">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-xs sm:text-sm">GW</TableHead>
+                                  <TableHead className="text-xs sm:text-sm font-bold text-green-700 bg-green-50">GW Pts</TableHead>
+                                  <TableHead className="text-xs sm:text-sm">Total Pts</TableHead>
+                                  <TableHead className="text-xs sm:text-sm">GW Rank</TableHead>
+                                  <TableHead className="text-xs sm:text-sm">Total Rank</TableHead>
+                                  <TableHead className="text-xs sm:text-sm">Gain</TableHead>
+                                  <TableHead className="text-xs sm:text-sm">Transfers</TableHead>
+                                  <TableHead className="text-xs sm:text-sm">Cost</TableHead>
+                                  <TableHead className="text-xs sm:text-sm">Bench</TableHead>
+                                  <TableHead className="text-xs sm:text-sm">Chip</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {(() => {
+                                  const sortedHistory = [...historyData.current].sort((a, b) => b.event - a.event);
+                                  return sortedHistory.map((gw, index) => {
+                                    const chipUsed = historyData.chips?.find((chip: any) => chip.event === gw.event);
+                                    const getChipName = (chipName: string) => {
+                                      switch (chipName) {
+                                        case 'freehit': return 'Free Hit';
+                                        case 'wildcard': return 'Wildcard';
+                                        case '3xc': return 'Triple Captain';
+                                        case 'bboost': return 'Bench Boost';
+                                        default: return chipName;
+                                      }
+                                    };
+                                    
+                                    const currentEvent = bootstrapData?.events?.find((e: any) => e.is_current) as any;
+                                    const isCurrentGW = currentEvent?.id === gw.event;
+                                    const isInProgress = isCurrentGW && !currentEvent?.finished;
+                                    
+                                    const previousGW = sortedHistory[index + 1];
+                                    const rankGain = previousGW ? (previousGW.overall_rank || 0) - (gw.overall_rank || 0) : 0;
+                                    
+                                    return (
+                                      <TableRow key={gw.event} className={isInProgress ? "bg-green-50" : ""}>
+                                        <TableCell className="font-medium text-xs sm:text-sm">
+                                          <div className="flex items-center gap-1 sm:gap-2">
+                                            {gw.event}
+                                            {isInProgress && (
+                                              <Badge variant="outline" className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 bg-green-100 text-green-700 border-green-300 animate-pulse">
+                                                LIVE
+                                              </Badge>
+                                            )}
+                                          </div>
+                                        </TableCell>
+                                        <TableCell className="font-bold text-sm sm:text-base text-green-700 bg-green-50">{gw.points}</TableCell>
+                                        <TableCell className="text-xs sm:text-sm">{gw.total_points?.toLocaleString()}</TableCell>
+                                        <TableCell className="text-xs sm:text-sm">{gw.rank ? `#${gw.rank.toLocaleString()}` : '-'}</TableCell>
+                                        <TableCell className="text-xs sm:text-sm">#{gw.overall_rank?.toLocaleString()}</TableCell>
+                                        <TableCell className="text-xs sm:text-sm">
+                                          {previousGW ? (
+                                            <span className={`font-medium ${rankGain > 0 ? 'text-green-600' : rankGain < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                                              {rankGain > 0 ? '+' : ''}{rankGain.toLocaleString()}
+                                            </span>
+                                          ) : (
+                                            <span className="text-gray-400">-</span>
+                                          )}
+                                        </TableCell>
+                                        <TableCell className="text-xs sm:text-sm">{gw.event_transfers}</TableCell>
+                                        <TableCell className="text-xs sm:text-sm">{gw.event_transfers_cost > 0 ? `-${gw.event_transfers_cost}` : '0'}</TableCell>
+                                        <TableCell className="text-xs sm:text-sm">{(gw as any).points_on_bench ?? '-'}</TableCell>
+                                        <TableCell className="text-xs sm:text-sm">
+                                          {chipUsed ? (
+                                            <Badge variant="outline" className="text-[10px] sm:text-xs bg-amber-50 text-amber-700 border-amber-300">
+                                              {getChipName(chipUsed.name)}
+                                            </Badge>
+                                          ) : (
+                                            <span className="text-gray-400">-</span>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  });
+                                })()}
+                              </TableBody>
+                            </Table>
                           </div>
                         </CardContent>
                       </Card>
