@@ -753,7 +753,7 @@ export default function ManagerTeam() {
               <div className="flex items-center justify-between gap-1">
                 <div className="min-w-0 flex-1">
                   <div className="text-lg sm:text-2xl font-bold text-orange-700">
-                    £{((teamData.entry_history.value || 0) / 10).toFixed(1)}m
+                    £{(((teamData.entry_history.value || 0) - (teamData.entry_history.bank || 0)) / 10).toFixed(1)}m
                   </div>
                   <div className="text-xs sm:text-sm text-muted-foreground">Squad Value</div>
                 </div>
