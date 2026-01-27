@@ -65,11 +65,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/player-total-points", label: "Total Projected Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: false },
         { path: "/player-goals-scored-projections", label: "Goals", icon: Trophy, description: "Individual player goal projections", popular: false },
         { path: "/player-assist-projections", label: "Assists", icon: Zap, description: "Individual player assist projections", popular: false },
-        { path: "/player-defensive-contributions", label: "Def Con", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
+        { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
         { path: "/player-saves", label: "Saves", icon: Shield, description: "Goalkeeper saves and penalty save projections", popular: false },
         { path: "/player-bonus-points", label: "Bonus Points", icon: Star, description: "Bonus point projections", popular: false },
-        { path: "/best-freehit-team", label: "Best Freehit Team", icon: Users, description: "Optimal 15-player squad for maximum points with captain selection", popular: false },
-        { path: "/best-wildcard-team", label: "Best Wildcard Team", icon: Star, description: "Optimal 15-player squad considering total points across next 6 gameweeks", popular: false }
+        { path: "/best-freehit-team", label: "Freehit Team", icon: Users, description: "Optimal 15-player squad for maximum points with captain selection", popular: false },
+        { path: "/best-wildcard-team", label: "Wildcard Team", icon: Star, description: "Optimal 15-player squad considering total points across next 6 gameweeks", popular: false }
         // { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
         // { path: "/player-minutes", label: "Player Minutes", icon: Clock, description: "Expected minutes and points per game", popular: false },
         // { path: "/player-cleansheet-points", label: "Player CS Points", icon: Shield, description: "Expected clean sheet points per gameweek", popular: false }
