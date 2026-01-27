@@ -43,7 +43,8 @@ import {
   RefreshCw,
   AlertCircle,
   Sparkles,
-  Clock
+  Clock,
+  Wallet
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
@@ -1599,7 +1600,42 @@ export default function MyDashboard() {
               {teamData && (
                 <>
                   {/* Team Overview Cards */}
-                  <div className="grid gap-4 sm:gap-6 lg:grid-cols-3 xl:grid-cols-5">
+                  <div className="grid gap-4 sm:gap-6 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+                    {/* 1. GW Points */}
+                    <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">GW Points</p>
+                            <p className="text-xl sm:text-2xl font-bold text-green-900 truncate">
+                              {managerData?.summary_event_points || 0}
+                            </p>
+                          </div>
+                          <div className="p-1.5 sm:p-2 bg-green-200 rounded-full flex-shrink-0">
+                            <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-green-700" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* 2. GW Rank */}
+                    <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm">
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-purple-700 mb-1 truncate">GW Rank</p>
+                            <p className="text-xl sm:text-2xl font-bold text-purple-900 truncate">
+                              {formatRank(managerData?.summary_event_rank || 0)}
+                            </p>
+                          </div>
+                          <div className="p-1.5 sm:p-2 bg-purple-200 rounded-full flex-shrink-0">
+                            <Target className="h-4 w-4 sm:h-5 sm:w-5 text-purple-700" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* 3. Formation */}
                     <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 shadow-sm">
                       <CardContent className="p-4 sm:p-5">
                         <div className="flex items-center justify-between gap-2">
@@ -1610,31 +1646,47 @@ export default function MyDashboard() {
                             </p>
                           </div>
                           <div className="p-1.5 sm:p-2 bg-emerald-200 rounded-full flex-shrink-0">
-                            <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-700" />
+                            <Users className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-700" />
                           </div>
                         </div>
                       </CardContent>
                     </Card>
 
-                    <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 shadow-sm">
+                    {/* 4. Squad Value */}
+                    <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
                       <CardContent className="p-4 sm:p-5">
                         <div className="flex items-center justify-between gap-2">
                           <div className="min-w-0 flex-1">
-                            <p className="text-xs sm:text-sm font-medium text-green-700 mb-1 truncate">Squad Value</p>
-                            <p className="text-xl sm:text-2xl font-bold text-green-900 truncate">
+                            <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Squad Value</p>
+                            <p className="text-xl sm:text-2xl font-bold text-orange-900 truncate">
                               {formatPrice(getTotalTeamValue())}
                             </p>
-                            <p className="text-xs text-green-600 mt-1 truncate">
-                              Bank: {formatPrice(teamData.entry_history?.bank || 0)}
-                            </p>
                           </div>
-                          <div className="p-1.5 sm:p-2 bg-green-200 rounded-full flex-shrink-0">
-                            <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-700" />
+                          <div className="p-1.5 sm:p-2 bg-orange-200 rounded-full flex-shrink-0">
+                            <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-orange-700" />
                           </div>
                         </div>
                       </CardContent>
                     </Card>
 
+                    {/* 5. Cash in Bank */}
+                    <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 shadow-sm">
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs sm:text-sm font-medium text-yellow-700 mb-1 truncate">Cash in Bank</p>
+                            <p className="text-xl sm:text-2xl font-bold text-yellow-900 truncate">
+                              {formatPrice(teamData.entry_history?.bank || 0)}
+                            </p>
+                          </div>
+                          <div className="p-1.5 sm:p-2 bg-yellow-200 rounded-full flex-shrink-0">
+                            <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-700" />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* 6. Transfers */}
                     <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 shadow-sm">
                       <CardContent className="p-4 sm:p-5">
                         <div className="flex items-center justify-between gap-2">
@@ -1650,41 +1702,7 @@ export default function MyDashboard() {
                             </p>
                           </div>
                           <div className="p-1.5 sm:p-2 bg-blue-200 rounded-full flex-shrink-0">
-                            <Star className="h-4 w-4 sm:h-5 sm:w-5 text-blue-700" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 shadow-sm">
-                      <CardContent className="p-4 sm:p-5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs sm:text-sm font-medium text-orange-700 mb-1 truncate">Current GW Points</p>
-                            <p className="text-xl sm:text-2xl font-bold text-orange-900 truncate">
-                              {managerData?.summary_event_points || 0}
-                            </p>
-                            <p className="text-xs text-orange-600 mt-1 truncate">GW {managerData?.current_event || getCurrentGameweekDashboard()}</p>
-                          </div>
-                          <div className="p-1.5 sm:p-2 bg-orange-200 rounded-full flex-shrink-0">
-                            <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-orange-700" />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 shadow-sm">
-                      <CardContent className="p-4 sm:p-5">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs sm:text-sm font-medium text-purple-700 mb-1 truncate">GW Rank</p>
-                            <p className="text-xl sm:text-2xl font-bold text-purple-900 truncate">
-                              {formatRank(managerData?.summary_event_rank || 0)}
-                            </p>
-                            <p className="text-xs text-purple-600 mt-1 truncate">GW {managerData?.current_event || getCurrentGameweekDashboard()}</p>
-                          </div>
-                          <div className="p-1.5 sm:p-2 bg-purple-200 rounded-full flex-shrink-0">
-                            <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-purple-700" />
+                            <ArrowLeftRight className="h-4 w-4 sm:h-5 sm:w-5 text-blue-700" />
                           </div>
                         </div>
                       </CardContent>
