@@ -1065,57 +1065,78 @@ export default function ManagerTeam() {
               {historyLoading ? (
                 <Skeleton className="h-64 w-full" />
               ) : managerHistory?.current && managerHistory.current.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>GW</TableHead>
-                      <TableHead>Points</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Rank</TableHead>
-                      <TableHead>Transfers</TableHead>
-                      <TableHead>Cost</TableHead>
-                      <TableHead>Bench</TableHead>
-                      <TableHead>Chip</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {[...managerHistory.current].sort((a, b) => b.event - a.event).map((gw) => {
-                      const chipName = getChipForGameweek(gw.event);
-                      const currentEvent = bootstrapData?.events?.find((e: any) => e.is_current);
-                      const isCurrentGW = currentEvent?.id === gw.event;
-                      const isInProgress = isCurrentGW && !currentEvent?.finished;
-                      return (
-                        <TableRow key={gw.event} className={isInProgress ? "bg-green-50" : ""}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              {gw.event}
-                              {isInProgress && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 border-green-300 animate-pulse">
-                                  LIVE
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>{gw.points}</TableCell>
-                          <TableCell>{gw.total_points}</TableCell>
-                          <TableCell>#{gw.overall_rank?.toLocaleString()}</TableCell>
-                          <TableCell>{gw.event_transfers}</TableCell>
-                          <TableCell>-{gw.event_transfers_cost}</TableCell>
-                          <TableCell>{gw.points_on_bench}</TableCell>
-                          <TableCell>
-                            {chipName ? (
-                              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-300">
-                                {chipName}
-                              </Badge>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs sm:text-sm">GW</TableHead>
+                        <TableHead className="text-xs sm:text-sm font-bold text-green-700 bg-green-50">GW Pts</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Total Pts</TableHead>
+                        <TableHead className="text-xs sm:text-sm">GW Rank</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Total Rank</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Gain</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Transfers</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Cost</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Bench</TableHead>
+                        <TableHead className="text-xs sm:text-sm">Chip</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const sortedHistory = [...managerHistory.current].sort((a, b) => b.event - a.event);
+                        return sortedHistory.map((gw, index) => {
+                          const chipName = getChipForGameweek(gw.event);
+                          const currentEvent = bootstrapData?.events?.find((e: any) => e.is_current);
+                          const isCurrentGW = currentEvent?.id === gw.event;
+                          const isInProgress = isCurrentGW && !currentEvent?.finished;
+                          
+                          const previousGW = sortedHistory[index + 1];
+                          const rankGain = previousGW ? (previousGW.overall_rank || 0) - (gw.overall_rank || 0) : 0;
+                          
+                          return (
+                            <TableRow key={gw.event} className={isInProgress ? "bg-green-50" : ""}>
+                              <TableCell className="font-medium text-xs sm:text-sm">
+                                <div className="flex items-center gap-1 sm:gap-2">
+                                  {gw.event}
+                                  {isInProgress && (
+                                    <Badge variant="outline" className="text-[8px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 bg-green-100 text-green-700 border-green-300 animate-pulse">
+                                      LIVE
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-bold text-sm sm:text-base text-green-700 bg-green-50">{gw.points}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">{gw.total_points?.toLocaleString()}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">{gw.rank ? `#${gw.rank.toLocaleString()}` : '-'}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">#{gw.overall_rank?.toLocaleString()}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">
+                                {previousGW ? (
+                                  <span className={`font-medium ${rankGain > 0 ? 'text-green-600' : rankGain < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                                    {rankGain > 0 ? '+' : ''}{rankGain.toLocaleString()}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-xs sm:text-sm">{gw.event_transfers}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">{gw.event_transfers_cost > 0 ? `-${gw.event_transfers_cost}` : '0'}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">{gw.points_on_bench}</TableCell>
+                              <TableCell className="text-xs sm:text-sm">
+                                {chipName ? (
+                                  <Badge variant="outline" className="text-[10px] sm:text-xs bg-amber-50 text-amber-700 border-amber-300">
+                                    {chipName}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-gray-400">-</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        });
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
                 <p className="text-gray-500">No gameweek history available</p>
               )}
