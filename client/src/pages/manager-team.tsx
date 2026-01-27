@@ -226,7 +226,7 @@ export default function ManagerTeam() {
   });
 
   // Get bootstrap data to determine completed gameweeks
-  const { data: bootstrapData } = useQuery<any>({
+  const { data: bootstrapData, isLoading: bootstrapLoading } = useQuery<any>({
     queryKey: ['/api/bootstrap-static'],
   });
 
