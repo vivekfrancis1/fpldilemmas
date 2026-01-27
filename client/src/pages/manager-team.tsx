@@ -40,7 +40,8 @@ import {
   TrendingDown,
   Calendar,
   BarChart3,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Wallet
 } from "lucide-react";
 import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 import { ListView, type ListPlayer } from "@/components/list-view";
@@ -711,7 +712,7 @@ export default function ManagerTeam() {
 
       {/* Team Statistics */}
       {teamData?.entry_history && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
           <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
             <CardContent className="p-2 sm:p-4">
               <div className="flex items-center justify-between gap-1">
@@ -754,9 +755,22 @@ export default function ManagerTeam() {
                   <div className="text-lg sm:text-2xl font-bold text-orange-700">
                     £{((teamData.entry_history.value || 0) / 10).toFixed(1)}m
                   </div>
-                  <div className="text-xs sm:text-sm text-muted-foreground">Team Value</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Squad Value</div>
                 </div>
                 <DollarSign className="h-5 w-5 sm:h-8 sm:w-8 text-orange-500 flex-shrink-0" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-l-4 border-l-yellow-500 bg-gradient-to-r from-yellow-50 to-white">
+            <CardContent className="p-2 sm:p-4">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0 flex-1">
+                  <div className="text-lg sm:text-2xl font-bold text-yellow-700">
+                    £{((teamData.entry_history.bank || 0) / 10).toFixed(1)}m
+                  </div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">Cash in Bank</div>
+                </div>
+                <Wallet className="h-5 w-5 sm:h-8 sm:w-8 text-yellow-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
