@@ -618,8 +618,8 @@ export default function ManagerTeam() {
       is_captain: pick.is_captain,
       is_vice_captain: pick.is_vice_captain,
       multiplier: pick.multiplier,
-      player_name: pick.player_name,
-      web_name: playerData?.web_name,
+      player_name: playerData ? `${playerData.first_name} ${playerData.second_name}` : pick.player_name,
+      web_name: playerData?.web_name || pick.player_name?.split(' ').pop() || `Player ${pick.element}`,
       team_name: pick.team_name,
       team_short_name: teamDataLocal?.short_name,
       team_id: playerData?.team,
@@ -647,8 +647,8 @@ export default function ManagerTeam() {
       is_captain: false,
       is_vice_captain: false,
       multiplier: pick.multiplier,
-      player_name: pick.player_name,
-      web_name: playerData?.web_name,
+      player_name: playerData ? `${playerData.first_name} ${playerData.second_name}` : pick.player_name,
+      web_name: playerData?.web_name || pick.player_name?.split(' ').pop() || `Player ${pick.element}`,
       team_name: pick.team_name,
       team_short_name: teamDataLocal?.short_name,
       team_id: playerData?.team,
@@ -845,7 +845,12 @@ export default function ManagerTeam() {
 
         <TabsContent value="team" className="space-y-6">
           {/* Team Formation */}
-          {teamData.picks && teamData.picks.length > 0 && (
+          {bootstrapLoading ? (
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-[400px] w-full" />
+            </div>
+          ) : teamData.picks && teamData.picks.length > 0 && bootstrapData?.elements && (
             <>
               <div>
                 <h2 className="text-xl font-semibold mb-4">Team Squad</h2>
