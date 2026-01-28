@@ -98,87 +98,98 @@ FPL Dilemmas uses a sophisticated multi-layered projection system that combines 
 
 ## Core Projection Algorithms
 
-### Team Goal Projections (8-Phase Algorithm)
+### Team Goal Projections (Season Data Formula)
 
-The team goal projection system uses an advanced 8-phase calculation process:
+The team goal projection system uses verified season data from the official FPL Current Standings API with no estimations.
 
-#### Phase 1: Base Expected Goals (xG)
+#### Core Formula
+
 ```javascript
-baseXG = MASTER_TEAM_DEFAULTS.averageBaseXGPerTeamPerGame; // 1.5
+// Base expected goals calculation using ONLY verified season data
+baseExpectedGoals = (
+  teamAvgGoalsPerGame +      // Team's actual goals scored / games played
+  teamAvgXGPerGame +         // Team's actual xG for / games played
+  opponentAvgGCPerGame +     // Opponent's actual goals conceded / games played
+  opponentAvgXGCPerGame      // Opponent's actual xGC / games played
+) × 0.25;
+
+// Then apply venue multiplier
+venueMultiplier = isHome ? 1.16 : 0.84;
+adjustedGoals = baseExpectedGoals × venueMultiplier;
 ```
 
-#### Phase 2: Venue Factors
-```javascript
-homeGoals = baseXG * MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier; // 1.12
-awayGoals = baseXG * MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier;     // 0.88
-```
+#### Data Sources (All from Official FPL API)
 
-#### Phase 3: Defensive Tier Adjustments
+| Metric | Source | Description |
+|--------|--------|-------------|
+| Team Goals/Game | `/api/current-standings` | `goalsFor / played` |
+| Team xG/Game | `/api/current-standings` | `expectedGoalsFor / played` |
+| Opponent GC/Game | `/api/current-standings` | `goalsAgainst / played` |
+| Opponent xGC/Game | `/api/current-standings` | `expectedGoalsAgainst / played` |
+
+**Note**: Previous versions used a blended average with "last 6 games" data. This has been removed because the FPL API doesn't provide per-match xG data - only season totals. The estimation was based on a formula `(actual goals × 0.7) + (league average × 0.3)` which was not accurate. The current implementation uses only verified season data.
+
+#### Venue Multipliers
+
 ```javascript
-const defensiveMultipliers = {
-  elite: 0.7,     // Arsenal
-  strong: 0.85,   // Liverpool, Man City, Chelsea, Newcastle
-  average: 1.0,   // Mid-table teams
-  weak: 1.15,     // Lower teams
-  promoted: 1.3   // Newly promoted
+const venueMultipliers = {
+  home: 1.16,   // Home advantage boost
+  away: 0.84    // Away penalty
 };
 ```
 
-#### Phase 4: Attacking Tier Adjustments
+#### Context Multipliers
+
+After calculating the base expected goals with venue adjustment, the system applies context multipliers based on match type and team form:
+
+##### Team Form Multiplier
 ```javascript
-const attackingMultipliers = {
-  elite: 1.35,    // Liverpool, Man City
-  strong: 1.15,   // Arsenal, Chelsea, Newcastle, Tottenham
-  average: 1.0,   // Mid-table teams
-  weak: 0.85,     // Lower teams
-  promoted: 0.7   // Newly promoted
+// Based on wins in last 5 games
+function calculateTeamForm(teamId, fixturesData) {
+  const recentGames = getLastNGames(teamId, 5, fixturesData);
+  const wins = countWins(recentGames, teamId);
+  
+  if (wins >= 3) return 1.06;      // Good form boost
+  if (wins <= 1) return 0.94;      // Poor form penalty
+  return 1.00;                      // Neutral form
+}
+```
+
+##### Match Type Multipliers
+```javascript
+const matchTypeMultipliers = {
+  derbyMatch: 0.87,        // Rivalry matches - tighter, fewer goals
+  topSixClash: 1.12,       // Top 6 vs Top 6 matches - more open, more goals
+  relegationBattle: 0.83   // Bottom 5 vs Bottom 5 - tighter defensive games
+};
+
+// Applied in priority order (first match wins):
+// 1. Derby Matches (rivalry multiplier 0.87):
+//    - Arsenal (1) vs Tottenham (18) - North London Derby
+//    - Liverpool (12) vs Everton (8) - Merseyside Derby
+//    - Man City (13) vs Man United (14) - Manchester Derby
+// 2. Top Six Battle (multiplier 1.12):
+//    - Any match between: Arsenal (1), Chelsea (6), Liverpool (12), 
+//      Man City (13), Man United (14), Tottenham (18)
+// 3. Relegation Battle (multiplier 0.83):
+//    - Any match between bottom 5 teams (IDs 17, 20, 19, 4, 5)
+```
+
+##### Season Context Multipliers
+```javascript
+const seasonContextMultipliers = {
+  seasonFinale: 1.05   // GW37-38 (higher scoring end of season)
 };
 ```
 
-#### Phase 5: Context Multipliers
+**Note**: Previous versions included additional context multipliers (weather, travel distance, post-European fatigue, early/late kickoff timing, new manager bounce) which have been removed. These were synthetic calculations not based on official FPL API data. The current implementation only uses factors that can be verified from official sources.
+
+#### Final Bounds
 ```javascript
-const contextMultipliers = {
-  derbyMatch: 0.87,
-  topSixClash: 1.12,
-  relegationBattle: 0.83,
-  earlyKickoff: 0.94,
-  lateKickoff: 1.07,
-  postEuropean: 0.88,
-  midweekFixture: 0.91,
-  newManagerBounce: 1.08,
-  weatherConditions: 0.92
-};
-```
-
-#### Phase 6: Market Dynamics
-```javascript
-// Apply realistic Premier League goal distributions
-const marketBounds = {
-  floor: goals * 0.4,  // Minimum possible
-  ceiling: goals * 2.0, // Maximum possible
-  absoluteMin: 0.0,
-  absoluteMax: 7.0
-};
-```
-
-#### Phase 7: Fixture-Specific Calculations
-For each fixture, the algorithm combines:
-- Home team attack vs Away team defense
-- Away team attack vs Home team defense
-- Head-to-head historical patterns
-- Current form and momentum
-
-#### Phase 8: Mathematical Balance
-```javascript
-// Ensure league-wide goals sum to realistic total
-const targetLeagueGoals = 1034; // Historic Premier League average
-const currentTotal = teamProjections.reduce((sum, team) => sum + team.totalGoals, 0);
-const balanceFactor = targetLeagueGoals / currentTotal;
-
-teamProjections.forEach(team => {
-  team.homeGoals *= balanceFactor;
-  team.awayGoals *= balanceFactor;
-});
+// Ensure projections stay within realistic limits
+const absoluteMin = 0.0;   // Minimum goals projection
+const absoluteMax = 7.0;   // Maximum goals projection
+finalGoals = Math.max(absoluteMin, Math.min(absoluteMax, adjustedGoals));
 ```
 
 ### Player Goal Projections (Pure Projection Methodology)
@@ -202,7 +213,11 @@ const minutesFactor = calculateExpectedMinutes(playerId) / 90;
 const finalGoals = adjustedGoals * formFactor * minutesFactor;
 ```
 
-#### Penalty Taker Adjustments
+#### Set Piece Adjustments (Goal Share)
+
+Set piece taker adjustments use official FPL API data (`penalties_order`, `direct_freekicks_order`) to boost goal share for designated set piece takers.
+
+##### Penalty Taker Adjustment
 ```javascript
 function getPenaltyTakerAdjustment(playerId, bootstrapData) {
   const player = bootstrapData.elements.find(p => p.id === playerId);
@@ -210,14 +225,33 @@ function getPenaltyTakerAdjustment(playerId, bootstrapData) {
   
   let adjustment = 0;
   if (penaltyOrder === 1) {
-    // Primary penalty taker - enhanced advantage
-    adjustment = 0.6 + (player.goals_scored || 0) * 0.03;
+    // Primary penalty taker - MAJOR boost
+    adjustment = 1.5 + (player.goals_scored || 0) * 0.08;
   } else if (penaltyOrder === 2) {
-    // Secondary penalty taker
-    adjustment = 0.3 + (player.goals_scored || 0) * 0.025;
+    // Secondary penalty taker - Moderate boost
+    adjustment = 0.8 + (player.goals_scored || 0) * 0.05;
   }
   
-  return Math.min(0.8, Math.max(0, adjustment));
+  return Math.min(3.0, Math.max(0, adjustment));  // Cap at 3.0
+}
+```
+
+##### Direct Free Kick Adjustment
+```javascript
+function getDirectFreekickAdjustment(playerId, bootstrapData) {
+  const player = bootstrapData.elements.find(p => p.id === playerId);
+  const freekickOrder = player.direct_freekicks_order || 99;
+  
+  let adjustment = 0;
+  if (freekickOrder === 1) {
+    adjustment = 0.25 + (player.goals_scored || 0) * 0.02;
+  } else if (freekickOrder === 2) {
+    adjustment = 0.15 + (player.goals_scored || 0) * 0.015;
+  } else if (freekickOrder === 3) {
+    adjustment = 0.1 + (player.goals_scored || 0) * 0.01;
+  }
+  
+  return Math.min(0.4, Math.max(0, adjustment));  // Cap at 0.4
 }
 ```
 
@@ -251,20 +285,26 @@ const assistCaps = {
 };
 ```
 
-#### Set Piece Adjustments
+#### Set Piece Adjustments (Assist Share)
+
+Corner and indirect free kick taker adjustments use official FPL API data (`corners_and_indirect_freekicks_order`) to boost assist share.
+
 ```javascript
-function getSetPieceAssistBonus(playerId, bootstrapData) {
+function getCornerFreekickAdjustment(playerId, bootstrapData) {
   const player = bootstrapData.elements.find(p => p.id === playerId);
+  const cornerOrder = player.corners_and_indirect_freekicks_order || 99;
   
-  let bonus = 0;
-  if (player.corners_and_indirect_freekicks_order === 1) {
-    bonus += 0.4; // Primary corner/freekick taker
-  }
-  if (player.direct_freekicks_order === 1) {
-    bonus += 0.2; // Direct freekick specialist
+  let adjustment = 0;
+  if (cornerOrder === 1) {
+    // Primary corner/indirect FK taker - significant assist advantage
+    adjustment = 0.8 + (player.assists || 0) * 0.04;
+  } else if (cornerOrder === 2) {
+    adjustment = 0.5 + (player.assists || 0) * 0.03;
+  } else if (cornerOrder === 3) {
+    adjustment = 0.3 + (player.assists || 0) * 0.02;
   }
   
-  return bonus;
+  return Math.min(1.2, Math.max(0, adjustment));  // Cap at 1.2
 }
 ```
 
