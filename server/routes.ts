@@ -13474,35 +13474,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get actual completed games for this player's team
           const teamGamesPlayed = Math.max(1, teamCompletedFixtures.get(player.team) || 1); // Ensure at least 1 to avoid division by zero
           
-          // SEASON AVERAGE: Calculate saves per team game for this player (full season)
-          const savesPerTeamGameSeason = currentSeasonSaves / teamGamesPlayed;
-          
-          // LAST 6 GAMES AVERAGE: Calculate saves from last 6 gameweeks
-          let savesPerTeamGameLast6 = savesPerTeamGameSeason; // Default to season average
-          try {
-            const playerHistoryResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-            if (playerHistoryResponse.ok) {
-              const playerHistory = await playerHistoryResponse.json();
-              const recentGames = playerHistory.history
-                .filter((gw: any) => gw.minutes > 0)
-                .sort((a: any, b: any) => b.round - a.round)
-                .slice(0, 6);
-              
-              if (recentGames.length > 0) {
-                const last6Saves = recentGames.reduce((sum: number, gw: any) => sum + (gw.saves || 0), 0);
-                savesPerTeamGameLast6 = last6Saves / recentGames.length;
-              }
-            }
-          } catch (error) {
-            // Fallback to season average
-          }
-          
-          // WEIGHTED BLEND: Season gets weight based on completed GWs, last 6 gets weight of 6
-          const completedGameweeks = currentGameweek - 1;
-          const seasonWeight = completedGameweeks;
-          const last6Weight = 6;
-          const totalWeight = seasonWeight + last6Weight;
-          const savesPerTeamGame = (savesPerTeamGameSeason * seasonWeight + savesPerTeamGameLast6 * last6Weight) / totalWeight;
+          // FULL SEASON: Calculate saves per team game for this player
+          const savesPerTeamGame = currentSeasonSaves / teamGamesPlayed;
           
           // Process each FUTURE gameweek only with new formula
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
@@ -14448,43 +14421,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Filter only players with 1+ minutes for meaningful projections
         const activePlayers = fplData.elements.filter((player: any) => (player.minutes || 0) >= 1);
         
-        // Pre-fetch last 6 games BPS data for all active players in batches
-        // Store both season BPS and last 6 games BPS (raw totals, not per minute)
+        // Store full season BPS for all players (no last 6 games fetching)
         const playerSeasonBPSMap = new Map<number, number>();
-        const playerLast6BPSMap = new Map<number, number>();
-        
-        // Store season BPS for all players first
         activePlayers.forEach((player: any) => {
           playerSeasonBPSMap.set(player.id, player.bps || 0);
-          playerLast6BPSMap.set(player.id, player.bps || 0); // Default to season if no last 6 data
         });
         
-        // Fetch last 6 games data in parallel batches (limit concurrent requests)
-        const BATCH_SIZE = 50;
-        for (let i = 0; i < activePlayers.length; i += BATCH_SIZE) {
-          const batch = activePlayers.slice(i, i + BATCH_SIZE);
-          await Promise.all(batch.map(async (player: any) => {
-            try {
-              const response = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-              if (response.ok) {
-                const data = await response.json();
-                const recentGames = data.history
-                  .filter((gw: any) => gw.minutes > 0)
-                  .sort((a: any, b: any) => b.round - a.round)
-                  .slice(0, 6);
-                
-                if (recentGames.length > 0) {
-                  const last6BPS = recentGames.reduce((sum: number, gw: any) => sum + (gw.bps || 0), 0);
-                  playerLast6BPSMap.set(player.id, last6BPS);
-                }
-              }
-            } catch (error) {
-              // Keep season BPS as fallback
-            }
-          }));
-        }
-        
-        // Extract bonus points projections using blended BPS formula
+        // Extract bonus points projections using full season BPS ratio
         const bonusPointsProjections = activePlayers.map((player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
@@ -14493,9 +14436,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalBonusPoints = 0;
           let totalPoints = 0;
           
-          // Get player's season and last 6 games BPS
+          // Get player's full season BPS
           const playerSeasonBPS = playerSeasonBPSMap.get(player.id) || 0;
-          const playerLast6BPS = playerLast6BPSMap.get(player.id) || 0;
           
           // Process each FUTURE gameweek
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
@@ -14510,26 +14452,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const homeTeamId = fixture.team_h;
               const awayTeamId = fixture.team_a;
               
-              // Calculate total BPS for both teams combined (season and last 6 separately)
+              // Calculate total BPS for both teams combined (full season)
               const bothTeamsPlayers = activePlayers.filter((p: any) => 
                 p.team === homeTeamId || p.team === awayTeamId
               );
               
-              let totalBothTeamsSeasonBPS = 0;
-              let totalBothTeamsLast6BPS = 0;
+              let totalBothTeamsBPS = 0;
               bothTeamsPlayers.forEach((p: any) => {
-                totalBothTeamsSeasonBPS += playerSeasonBPSMap.get(p.id) || 0;
-                totalBothTeamsLast6BPS += playerLast6BPSMap.get(p.id) || 0;
+                totalBothTeamsBPS += playerSeasonBPSMap.get(p.id) || 0;
               });
               
-              // Weighted Formula: season gets weight based on completed GWs (gw-1), last 6 gets weight of 6
-              const completedGameweeks = gw - 1;
-              const seasonWeight = completedGameweeks;
-              const last6Weight = 6;
-              const totalWeight = seasonWeight + last6Weight;
-              const seasonRatio = totalBothTeamsSeasonBPS > 0 ? playerSeasonBPS / totalBothTeamsSeasonBPS : 0;
-              const last6Ratio = totalBothTeamsLast6BPS > 0 ? playerLast6BPS / totalBothTeamsLast6BPS : 0;
-              gwBonusPoints = ((seasonRatio * seasonWeight + last6Ratio * last6Weight) / totalWeight) * 6;
+              // Full Season Formula: player's BPS share of total match BPS × 6 bonus points available
+              const bpsRatio = totalBothTeamsBPS > 0 ? playerSeasonBPS / totalBothTeamsBPS : 0;
+              gwBonusPoints = bpsRatio * 6;
             }
             
             bonusPoints[`gw${gw}`] = parseFloat(gwBonusPoints.toFixed(3));
@@ -14553,7 +14488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
         
-        console.log(`✅ LIVE SUCCESS: Generated blended BPS bonus projections for ${bonusPointsProjections.length} players`);
+        console.log(`✅ LIVE SUCCESS: Generated full season BPS bonus projections for ${bonusPointsProjections.length} players`);
         return res.json(bonusPointsProjections);
 
       } catch (liveError) {
