@@ -256,23 +256,26 @@ const playerSeasonAssistShare = getPlayerSeasonAssistShare(playerId);
 
 #### Set Piece Taker Bonus (Assist Share)
 
-Corner and indirect free kick taker adjustments use official FPL API data (`corners_and_indirect_freekicks_order`) to boost assist share for designated set piece takers.
+Corner and indirect free kick taker adjustments use official FPL API data (`corners_and_indirect_freekicks_order`) to boost assist share for designated set piece takers (no normalization - individuals are boosted without adjusting others).
 
 ```javascript
-// Applied during assist share calculation
+// Applied during assist share calculation (no normalization)
 const cornerOrder = player.corners_and_indirect_freekicks_order || 99;
 let setPieceBonus = 0;
 if (cornerOrder === 1) {
   // Primary corner/indirect freekick taker - significant assist advantage
-  setPieceBonus = 0.8 + (assists || 0) * 0.04;
+  setPieceBonus = 0.8 + assists * 0.04;
 } else if (cornerOrder === 2) {
   // Secondary taker
-  setPieceBonus = 0.5 + (assists || 0) * 0.03;
+  setPieceBonus = 0.5 + assists * 0.03;
 } else if (cornerOrder === 3) {
   // Tertiary taker
-  setPieceBonus = 0.3 + (assists || 0) * 0.02;
+  setPieceBonus = 0.3 + assists * 0.02;
 }
 setPieceBonus = Math.min(1.2, Math.max(0, setPieceBonus)); // Cap at 1.2
+
+// Add to assist share (no normalization)
+assistShare += setPieceBonus;
 ```
 
 This boosts assist share for creative set piece specialists like Bruno Fernandes and Bukayo Saka who take corners and indirect free kicks.

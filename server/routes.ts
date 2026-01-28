@@ -8485,21 +8485,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       bootstrapData.elements.forEach((player: any) => {
         const assists = parseInt(player.assists || 0);
         const expectedAssists = parseFloat(player.expected_assists || 0);
-        let playerTotal = assists + expectedAssists;
+        const playerTotal = assists + expectedAssists;
         
-        // Include set piece taker bonus in team total for proper normalization
-        const cornerOrder = player.corners_and_indirect_freekicks_order || 99;
-        let setPieceBonus = 0;
-        if (cornerOrder === 1) {
-          setPieceBonus = 0.8 + (assists || 0) * 0.04;
-        } else if (cornerOrder === 2) {
-          setPieceBonus = 0.5 + (assists || 0) * 0.03;
-        } else if (cornerOrder === 3) {
-          setPieceBonus = 0.3 + (assists || 0) * 0.02;
-        }
-        setPieceBonus = Math.min(1.2, Math.max(0, setPieceBonus));
-        playerTotal += setPieceBonus;
-        
+        // Raw team totals - no set piece bonus for base share calculation
         if (teamTotals[player.team]) {
           teamTotals[player.team].total += playerTotal;
         }
@@ -8520,26 +8508,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamPlayersList.forEach((player: any) => {
           const assists = parseInt(player.assists || 0);
           const expectedAssists = parseFloat(player.expected_assists || 0);
-          let playerTotal = assists + expectedAssists;
+          const playerTotal = assists + expectedAssists;
           
-          // Apply set piece taker bonus for corner/indirect freekick takers
-          const cornerOrder = player.corners_and_indirect_freekicks_order || 99;
-          let setPieceBonus = 0;
-          if (cornerOrder === 1) {
-            // Primary corner/indirect freekick taker - significant assist advantage
-            setPieceBonus = 0.8 + (assists || 0) * 0.04;
-          } else if (cornerOrder === 2) {
-            // Secondary taker
-            setPieceBonus = 0.5 + (assists || 0) * 0.03;
-          } else if (cornerOrder === 3) {
-            // Tertiary taker
-            setPieceBonus = 0.3 + (assists || 0) * 0.02;
-          }
-          setPieceBonus = Math.min(1.2, Math.max(0, setPieceBonus));
-          playerTotal += setPieceBonus;
-          
-          if (playerTotal > 0) {
-            const assistShare = (playerTotal / teamData.total) * 100;
+          if (playerTotal > 0 && teamData.total > 0) {
+            // Base assist share from raw data
+            let assistShare = (playerTotal / teamData.total) * 100;
+            
+            // Apply set piece taker bonus (no normalization - just boost individuals)
+            const cornerOrder = player.corners_and_indirect_freekicks_order || 99;
+            let setPieceBonus = 0;
+            if (cornerOrder === 1) {
+              // Primary corner/indirect freekick taker - significant assist advantage
+              setPieceBonus = 0.8 + assists * 0.04;
+            } else if (cornerOrder === 2) {
+              // Secondary taker
+              setPieceBonus = 0.5 + assists * 0.03;
+            } else if (cornerOrder === 3) {
+              // Tertiary taker
+              setPieceBonus = 0.3 + assists * 0.02;
+            }
+            setPieceBonus = Math.min(1.2, Math.max(0, setPieceBonus));
+            
+            // Add bonus to assist share (no normalization)
+            assistShare += setPieceBonus;
+            
             const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
             
             teamPlayers.push({
