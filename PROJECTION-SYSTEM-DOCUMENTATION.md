@@ -205,6 +205,43 @@ playerProjectedGoals = teamProjectedGoals * (playerSeasonGoalShare / 100);
 
 **Note**: Previous versions used a blended average with "last 6 games" data. This has been removed to ensure projections are based on verified, non-estimated season-long performance metrics.
 
+#### Set Piece Taker Bonus (Goal Share)
+
+Penalty taker and direct freekick taker adjustments use official FPL API data to boost goal share for designated set piece takers (no normalization - individuals are boosted without adjusting others).
+
+```javascript
+// Penalty taker bonus (penalties_order)
+const penaltyOrder = player.penalties_order || 99;
+let penaltyBonus = 0;
+if (penaltyOrder === 1) {
+  // Primary penalty taker - significant goal advantage
+  penaltyBonus = 0.8 + goalsScored * 0.04;
+} else if (penaltyOrder === 2) {
+  // Secondary penalty taker
+  penaltyBonus = 0.5 + goalsScored * 0.03;
+}
+penaltyBonus = Math.min(1.5, Math.max(0, penaltyBonus)); // Cap at 1.5
+
+// Direct freekick taker bonus (direct_freekicks_order)
+const freekickOrder = player.direct_freekicks_order || 99;
+let freekickBonus = 0;
+if (freekickOrder === 1) {
+  // Primary direct freekick taker
+  freekickBonus = 0.3 + goalsScored * 0.02;
+} else if (freekickOrder === 2) {
+  // Secondary direct freekick taker
+  freekickBonus = 0.2 + goalsScored * 0.015;
+}
+freekickBonus = Math.min(0.4, Math.max(0, freekickBonus)); // Cap at 0.4
+
+// Add to goal share (no normalization)
+goalShare += penaltyBonus + freekickBonus;
+```
+
+This boosts goal share for penalty specialists like Salah, Saka, Bruno Fernandes and direct freekick specialists like Bruno Fernandes, Declan Rice.
+
+**Note**: Corners and indirect freekicks are NOT included in goal share bonus - they are applied to assist share instead as they primarily create chances rather than direct scoring opportunities.
+
 ### Player Assist Projections (Full Season Share Formula)
 
 #### Core Formula

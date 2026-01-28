@@ -7416,7 +7416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Helper function to build goal share response for full season
-  // NO position caps, NO minutes weight, NO penalty adjustments - pure raw share
+  // With penalty taker and direct freekick taker bonuses (no normalization)
   function buildGoalShareResponse(bootstrapData: any, teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } }) {
     const finalResponse: any[] = [];
     
@@ -7429,7 +7429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamPlayers: any[] = [];
       const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
       
-      // Calculate raw totals - NO penalty adjustments
+      // Calculate raw totals for base share calculation
       let teamTotal = 0;
       const playerTotals: { [playerId: number]: number } = {};
       
@@ -7442,13 +7442,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamTotal += playerTotal;
       });
       
-      // Calculate shares based on raw totals
+      // Calculate shares with set piece bonuses (no normalization - just boost individuals)
       teamPlayersList.forEach((player: any) => {
         const playerTotal = playerTotals[player.id] || 0;
+        const goalsScored = parseInt(player.goals_scored || 0);
         
         if (playerTotal > 0 && teamTotal > 0) {
-          // Raw goal share - NO position caps, NO minutes weight, NO penalty adjustments
-          const goalShare = (playerTotal / teamTotal) * 100;
+          // Base goal share from raw data
+          let goalShare = (playerTotal / teamTotal) * 100;
+          
+          // Apply penalty taker bonus (no normalization)
+          const penaltyOrder = player.penalties_order || 99;
+          let penaltyBonus = 0;
+          if (penaltyOrder === 1) {
+            // Primary penalty taker - significant goal advantage
+            penaltyBonus = 0.8 + goalsScored * 0.04;
+          } else if (penaltyOrder === 2) {
+            // Secondary penalty taker
+            penaltyBonus = 0.5 + goalsScored * 0.03;
+          }
+          penaltyBonus = Math.min(1.5, Math.max(0, penaltyBonus));
+          
+          // Apply direct freekick taker bonus (no normalization)
+          const freekickOrder = player.direct_freekicks_order || 99;
+          let freekickBonus = 0;
+          if (freekickOrder === 1) {
+            // Primary direct freekick taker
+            freekickBonus = 0.3 + goalsScored * 0.02;
+          } else if (freekickOrder === 2) {
+            // Secondary direct freekick taker
+            freekickBonus = 0.2 + goalsScored * 0.015;
+          }
+          freekickBonus = Math.min(0.4, Math.max(0, freekickBonus));
+          
+          // Add bonuses to goal share (boosting individual without normalization)
+          goalShare += penaltyBonus + freekickBonus;
+          
           const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
           
           teamPlayers.push({
@@ -7456,7 +7485,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             playerName: `${player.first_name} ${player.second_name}`,
             position: position,
             goalShare: Math.round(goalShare * 100) / 100,
-            projectedGoals: Math.round(playerTotal * 100) / 100
+            projectedGoals: Math.round(playerTotal * 100) / 100,
+            penaltyTaker: penaltyOrder <= 2 ? penaltyOrder : null,
+            directFreekickTaker: freekickOrder <= 2 ? freekickOrder : null
           });
         }
       });
