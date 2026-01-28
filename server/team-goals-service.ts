@@ -215,9 +215,9 @@ export class TeamGoalsService {
   }
   
   /**
-   * Calculate expected goals for a single fixture using weighted season + last 6 games formula
-   * Formula: Weighted blend where season gets weight = (GW - 1), last 6 gets weight = 6
-   * For GW 23: weight is 22:6. For GW 24: weight is 23:6, etc.
+   * Calculate expected goals for a single fixture using season data only
+   * Formula: (Team Goals/Game + Team xG/Game + Opponent GC/Game + Opponent xGC/Game) × 0.25 × venue multiplier
+   * Uses verified data from current standings API - no estimations
    */
   private static async calculateFixtureGoals(
     team: any, 
@@ -231,9 +231,8 @@ export class TeamGoalsService {
     MASTER_TEAM_DEFAULTS: any
   ): Promise<number> {
     try {
-      // WEIGHTED BLEND: Season and last 6 games with dynamic weights based on completed gameweeks
-      // For GW 23: season weight = 22, last 6 weight = 6 (ratio 22:6)
-      // Formula: (season_value * seasonWeight + last6_value * last6Weight) / totalWeight * venue * context
+      // SEASON DATA ONLY: Uses verified data from current standings API
+      // Formula: (Team Goals/Game + Team xG/Game + Opponent GC/Game + Opponent xGC/Game) × 0.25 × venue multiplier
       
       // SEASON AVERAGES (from current standings - full season data)
       const teamAvgGoalsSeason = await TeamGoalsService.getTeamAverageGoals(team.id);
@@ -241,58 +240,25 @@ export class TeamGoalsService {
       const opponentAvgGCSeason = await TeamGoalsService.getTeamAverageGoalsConceded(opponent.id);
       const opponentAvgXGCSeason = await TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
       
-      // LAST 6 GAMES AVERAGES (from recent fixtures)
-      const teamLast6Stats = await TeamGoalsService.getLast6GamesStats(team.id, fixture.event, fixturesData);
-      const opponentLast6Stats = await TeamGoalsService.getLast6GamesStats(opponent.id, fixture.event, fixturesData);
+      // Calculate base expected goals using season data only
+      let baseExpectedGoals = (teamAvgGoalsSeason + teamAvgXGSeason + opponentAvgGCSeason + opponentAvgXGCSeason) * 0.25;
       
-      const teamAvgGoalsLast6 = teamLast6Stats.avgGoalsScored;
-      const teamAvgXGLast6 = teamLast6Stats.avgXG;
-      const opponentAvgGCLast6 = opponentLast6Stats.avgGoalsConceded;
-      const opponentAvgXGCLast6 = opponentLast6Stats.avgXGC;
-      
-      // Phase 1: Calculate season-based expected goals
-      const seasonExpectedGoals = (teamAvgGoalsSeason + teamAvgXGSeason + opponentAvgGCSeason + opponentAvgXGCSeason) * 0.25;
-      
-      // Phase 2: Calculate last 6 games-based expected goals
-      const last6ExpectedGoals = (teamAvgGoalsLast6 + teamAvgXGLast6 + opponentAvgGCLast6 + opponentAvgXGCLast6) * 0.25;
-      
-      // Phase 3: Weighted blend based on gameweek
-      // For GW 23: season weight = 22 (completed GWs), last 6 weight = 6
-      // This gives more weight to season data as the season progresses
-      const completedGameweeks = fixture.event - 1;
-      const seasonWeight = completedGameweeks;
-      const last6Weight = 6;
-      const totalWeight = seasonWeight + last6Weight;
-      
-      let baseExpectedGoals = (seasonExpectedGoals * seasonWeight + last6ExpectedGoals * last6Weight) / totalWeight;
-      
-      // Phase 2: Venue Factors (with safe multiplication)
+      // Apply Venue Multiplier (Home = 1.16, Away = 0.84)
       const venueMultiplier = isHome ? 
         TeamGoalsService.num(adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier, 1.16) :
         TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.84);
       
-      
       baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, venueMultiplier, 1.0);
       
-      
-      // REMOVED: All tier-based multipliers - now using dynamic performance-based calculations only
-      
-      // Phase 3: Context Multipliers (with enhanced error handling)
-      const beforeContextMultipliers = baseExpectedGoals;
+      // Apply Context Multipliers (fixture congestion, rest days, etc.)
       baseExpectedGoals = TeamGoalsService.applyContextMultipliers(
         baseExpectedGoals, team, opponent, fixture, isHome, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
       );
       
-      
-      
-      // REMOVED: Phase 4 (Market Bounds) - No longer constraining projections with market-based limits
-      // This allows projections to reflect pure performance data without artificial constraints
-      
-      // Phase 4: Final Bounds and Validation
+      // Final Bounds and Validation (min 0.0, max 7.0)
       const absoluteMin = TeamGoalsService.num(adminGoalSettings.absoluteMinGoals, 0.0);
       const absoluteMax = TeamGoalsService.num(adminGoalSettings.absoluteMaxGoals, 7.0);
       const expectedGoals = Math.max(absoluteMin, Math.min(absoluteMax, baseExpectedGoals));
-      
       
       return expectedGoals;
       
