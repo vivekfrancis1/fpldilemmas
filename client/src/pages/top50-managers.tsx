@@ -744,7 +744,7 @@ export default function Top50Managers() {
           <div className="fpl-page-header-content">
             <div className="fpl-page-title">
               <Trophy className="h-8 w-8" />
-              <h1>Top 50 FPL Managers (Current)</h1>
+              <h1>Top FPL Managers (Current Season)</h1>
             </div>
             <p className="fpl-page-subtitle">
               Current top 50 Fantasy Premier League managers from the overall league
