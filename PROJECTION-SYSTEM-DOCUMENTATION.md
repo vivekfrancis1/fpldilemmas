@@ -192,121 +192,55 @@ const absoluteMax = 7.0;   // Maximum goals projection
 finalGoals = Math.max(absoluteMin, Math.min(absoluteMax, adjustedGoals));
 ```
 
-### Player Goal Projections (Pure Projection Methodology)
+### Player Goal Projections (Full Season Share Formula)
 
-#### Base Algorithm
-```javascript
-// Step 1: Team Goals Distribution
-const teamGoalShare = getTeamGoalShare(playerId, teamId);
-const teamProjectedGoals = getTeamProjectedGoals(teamId, gameweekRange);
+The player goal projection system uses verified full season goal share data from the official FPL API with no estimations.
 
-// Step 2: Player Share Application
-const basePlayerGoals = teamProjectedGoals * (teamGoalShare / 100);
-
-// Step 3: Fixture Difficulty Adjustment
-const fixtureMultiplier = calculateFixtureDifficulty(fixtures);
-const adjustedGoals = basePlayerGoals * fixtureMultiplier;
-
-// Step 4: Form & Minutes Adjustment
-const formFactor = calculateRecentForm(playerId);
-const minutesFactor = calculateExpectedMinutes(playerId) / 90;
-const finalGoals = adjustedGoals * formFactor * minutesFactor;
-```
-
-#### Set Piece Adjustments (Goal Share)
-
-Set piece taker adjustments use official FPL API data (`penalties_order`, `direct_freekicks_order`) to boost goal share for designated set piece takers.
-
-##### Penalty Taker Adjustment
-```javascript
-function getPenaltyTakerAdjustment(playerId, bootstrapData) {
-  const player = bootstrapData.elements.find(p => p.id === playerId);
-  const penaltyOrder = player.penalties_order || 99;
-  
-  let adjustment = 0;
-  if (penaltyOrder === 1) {
-    // Primary penalty taker - MAJOR boost
-    adjustment = 1.5 + (player.goals_scored || 0) * 0.08;
-  } else if (penaltyOrder === 2) {
-    // Secondary penalty taker - Moderate boost
-    adjustment = 0.8 + (player.goals_scored || 0) * 0.05;
-  }
-  
-  return Math.min(3.0, Math.max(0, adjustment));  // Cap at 3.0
-}
-```
-
-##### Direct Free Kick Adjustment
-```javascript
-function getDirectFreekickAdjustment(playerId, bootstrapData) {
-  const player = bootstrapData.elements.find(p => p.id === playerId);
-  const freekickOrder = player.direct_freekicks_order || 99;
-  
-  let adjustment = 0;
-  if (freekickOrder === 1) {
-    adjustment = 0.25 + (player.goals_scored || 0) * 0.02;
-  } else if (freekickOrder === 2) {
-    adjustment = 0.15 + (player.goals_scored || 0) * 0.015;
-  } else if (freekickOrder === 3) {
-    adjustment = 0.1 + (player.goals_scored || 0) * 0.01;
-  }
-  
-  return Math.min(0.4, Math.max(0, adjustment));  // Cap at 0.4
-}
-```
-
-#### Position-Based Caps
-```javascript
-const goalShareCaps = {
-  goalkeeper: 2,    // Max 2% of team goals
-  defender: 10,     // Max 10% of team goals
-  midfielder: 30,   // Max 30% of team goals
-  forward: 40       // Max 40% of team goals
-};
-```
-
-### Player Assist Projections
-
-#### Core Algorithm
-```javascript
-// Base assist calculation using team creativity
-const teamAssists = calculateTeamAssists(teamId, gameweekRange);
-const playerCreativity = getPlayerCreativity(playerId);
-const positionWeight = getPositionAssistWeight(position);
-
-const baseAssists = teamAssists * (playerCreativity / 100) * positionWeight;
-
-// Apply position-specific caps
-const assistCaps = {
-  goalkeeper: 2,    // Max 2% share
-  defender: 15,     // Max 15% share
-  midfielder: 40,   // Max 40% share
-  forward: 25       // Max 25% share
-};
-```
-
-#### Set Piece Adjustments (Assist Share)
-
-Corner and indirect free kick taker adjustments use official FPL API data (`corners_and_indirect_freekicks_order`) to boost assist share.
+#### Core Formula
 
 ```javascript
-function getCornerFreekickAdjustment(playerId, bootstrapData) {
-  const player = bootstrapData.elements.find(p => p.id === playerId);
-  const cornerOrder = player.corners_and_indirect_freekicks_order || 99;
-  
-  let adjustment = 0;
-  if (cornerOrder === 1) {
-    // Primary corner/indirect FK taker - significant assist advantage
-    adjustment = 0.8 + (player.assists || 0) * 0.04;
-  } else if (cornerOrder === 2) {
-    adjustment = 0.5 + (player.assists || 0) * 0.03;
-  } else if (cornerOrder === 3) {
-    adjustment = 0.3 + (player.assists || 0) * 0.02;
-  }
-  
-  return Math.min(1.2, Math.max(0, adjustment));  // Cap at 1.2
-}
+// Base player goals calculation using ONLY verified full season data
+playerProjectedGoals = teamProjectedGoals * (playerSeasonGoalShare / 100);
 ```
+
+**Note**: Previous versions used a blended average with "last 6 games" data. This has been removed to ensure projections are based on verified, non-estimated season-long performance metrics.
+
+### Player Assist Projections (Full Season Share Formula)
+
+#### Core Formula
+
+```javascript
+// Base player assists calculation using ONLY verified full season data
+playerProjectedAssists = teamProjectedAssists * (playerSeasonAssistShare / 100);
+```
+
+**Note**: Previous versions used a blended average with "last 6 games" data. This has been removed for consistency across all player share projection tools.
+
+### Player Saves Projections (Full Season Formula)
+
+#### Core Formula
+
+```javascript
+// Step 1: Calculate full season saves per team game
+savesPerTeamGame = currentSeasonSaves / teamGamesPlayed;
+
+// Step 2: Apply opponent difficulty factor
+expectedSaves = savesPerTeamGame * (opponentAGR / 1.35);
+```
+
+### Player Bonus Points Projections (Full Season BPS Ratio)
+
+#### Core Formula
+
+```javascript
+// Step 1: Calculate player's BPS share of total match BPS (Season Data)
+bpsRatio = playerSeasonBPS / (totalHomeTeamSeasonBPS + totalAwayTeamSeasonBPS);
+
+// Step 2: Project bonus points
+gwBonusPoints = bpsRatio * 6;
+```
+
+**Note**: Both Saves and Bonus Points projections were updated to use only full season FPL data, removing "last 6 games" element-summary fetching. This significantly improves API performance by eliminating hundreds of individual player-summary network calls per request.
 
 ### Player Total Points Algorithm
 
