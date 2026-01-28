@@ -210,11 +210,12 @@ playerProjectedGoals = teamProjectedGoals * (playerSeasonGoalShare / 100);
 #### Core Formula
 
 ```javascript
-// Base player assists calculation using ONLY verified full season data
-playerProjectedAssists = teamProjectedAssists * (playerSeasonAssistShare / 100);
+// Base assist calculation using team creativity
+const teamAssists = calculateTeamAssists(teamId, gameweekRange); // Now 110% of team goals
+const playerSeasonAssistShare = getPlayerSeasonAssistShare(playerId);
 ```
 
-**Note**: Previous versions used a blended average with "last 6 games" data. This has been removed for consistency across all player share projection tools.
+**Note**: The team assist projection factor was increased from 85% to 110% of team goals. FPL's unique assist criteria (penalties won, rebounds, etc.) results in significantly more assists than traditional data providers, often exceeding one assist per goal on aggregate.
 
 ### Player Saves Projections (Full Season Formula)
 
