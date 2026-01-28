@@ -252,7 +252,7 @@ const getTop50ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="font-mono font-medium">
-                #{rank.toLocaleString()}
+                {rank.toLocaleString()}
               </span>
               {getRankChangeDisplay(manager.rankChange)}
             </div>
