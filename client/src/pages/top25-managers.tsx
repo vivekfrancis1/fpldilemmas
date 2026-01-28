@@ -164,9 +164,9 @@ const getTop25ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn
         return (
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Badge variant={getRankBadgeVariant(rank)} className="font-mono">
+              <span className="font-mono font-medium">
                 #{rank.toLocaleString()}
-              </Badge>
+              </span>
               {getRankChangeDisplay(manager.rankChange ?? undefined)}
             </div>
           </div>
