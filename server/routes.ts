@@ -6939,11 +6939,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { TeamGoalsService } = await import('./team-goals-service');
       const teamGoals = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
       
-      // FORMULA: Team Assists = 110% of Team Goals (FPL awards more assists than standard stats, including rebounds/penalties)
+      // FORMULA: Team Assists = 85% of Team Goals (FPL awards more assists than standard stats)
       const assistProjections = teamGoals.map((tp: any) => {
         const gameweekAssists = Object.fromEntries(
           Object.entries(tp.gameweekProjections || {}).map(([gw, g]: [string, any]) => 
-            [Number(gw), Math.round((g || 0) * 1.10 * 100) / 100]
+            [Number(gw), Math.round((g || 0) * 0.85 * 100) / 100]
           )
         );
         
@@ -6952,8 +6952,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamName: tp.teamName,
           teamShort: tp.teamShort,
           gameweekProjections: gameweekAssists,
-          totalAssists: Math.round((tp.totalGoals || 0) * 1.10 * 100) / 100,
-          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * 1.10 * 100) / 100,
+          totalAssists: Math.round((tp.totalGoals || 0) * 0.85 * 100) / 100,
+          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * 0.85 * 100) / 100,
           confidence: tp.confidence
         };
       });
