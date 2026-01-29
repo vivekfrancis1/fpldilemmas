@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 import { ListView, type ListPlayer } from "@/components/list-view";
+import { calculateFreeTransfers } from "@/lib/free-transfers";
 
 type TeamPick = {
   element: number;
@@ -983,22 +984,12 @@ export default function ManagerTeam() {
                 const totalTransfers = filteredTransfers.length;
                 
                 const currentGW = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 1;
-                const lastFinishedGW = managerHistory?.current
-                  ?.filter((h: any) => h.event < currentGW || bootstrapData?.events?.find((e: any) => e.id === h.event)?.finished)
-                  .sort((a: any, b: any) => b.event - a.event)[0];
                 
-                let freeTransfersRemaining = 1;
-                if (lastFinishedGW) {
-                  const lastGWChip = managerHistory?.chips?.find((c: any) => c.event === lastFinishedGW.event);
-                  if (lastGWChip?.name === 'wildcard' || lastGWChip?.name === 'freehit') {
-                    freeTransfersRemaining = lastGWChip.name === 'wildcard' ? 1 : freeTransfersRemaining;
-                  } else {
-                    const transfersMade = lastFinishedGW.event_transfers || 0;
-                    const previousGWHistory = managerHistory?.current?.find((h: any) => h.event === lastFinishedGW.event - 1);
-                    const previousFT = previousGWHistory ? Math.min(5, 1 + (previousGWHistory.event_transfers === 0 ? 1 : 0)) : 1;
-                    freeTransfersRemaining = Math.min(5, Math.max(1, previousFT - transfersMade + 1));
-                  }
-                }
+                const freeTransfersRemaining = calculateFreeTransfers(
+                  managerHistory?.current,
+                  managerHistory?.chips,
+                  currentGW
+                );
                 
                 if (filteredTransfers.length === 0) {
                   return <p className="text-gray-500">No transfers made this season</p>;
