@@ -347,9 +347,12 @@ export default function Fixtures() {
       team1: typeof teams[0];
       team2: typeof teams[0];
       rotationScore: number;
-      weeklyRecommendations: Array<{ gw: number; recommendedTeam: typeof teams[0]; difficulty: number; opponent: string; isHome: boolean }>;
+      fixturesByGameweek: Array<{ 
+        gw: number; 
+        team1Fixture: { opponent: string; isHome: boolean; difficulty: number };
+        team2Fixture: { opponent: string; isHome: boolean; difficulty: number };
+      }>;
       combinedAvgDifficulty: number;
-      perfectWeeks: number;
     }> = [];
 
     // Calculate rotation score for each pair
@@ -360,8 +363,11 @@ export default function Fixtures() {
         
         let rotationScore = 0;
         let combinedDifficulty = 0;
-        let perfectWeeks = 0;
-        const weeklyRecommendations: Array<{ gw: number; recommendedTeam: typeof teams[0]; difficulty: number; opponent: string; isHome: boolean }> = [];
+        const fixturesByGameweek: Array<{ 
+          gw: number; 
+          team1Fixture: { opponent: string; isHome: boolean; difficulty: number };
+          team2Fixture: { opponent: string; isHome: boolean; difficulty: number };
+        }> = [];
         
         gameweeks.forEach(gw => {
           const fixture1 = fixtureMatrix[team1.id]?.[gw];
@@ -370,25 +376,26 @@ export default function Fixtures() {
           const diff1 = fixture1?.difficulty || 3;
           const diff2 = fixture2?.difficulty || 3;
           
-          // Choose the easier fixture for this gameweek
-          const recommendedTeam = diff1 <= diff2 ? team1 : team2;
-          const recommendedFixture = diff1 <= diff2 ? fixture1 : fixture2;
           const easierDifficulty = Math.min(diff1, diff2);
           combinedDifficulty += easierDifficulty;
           
-          weeklyRecommendations.push({
+          fixturesByGameweek.push({
             gw,
-            recommendedTeam,
-            difficulty: easierDifficulty,
-            opponent: recommendedFixture?.opponent || '-',
-            isHome: recommendedFixture?.isHome ?? true
+            team1Fixture: {
+              opponent: fixture1?.opponent || '-',
+              isHome: fixture1?.isHome ?? true,
+              difficulty: diff1
+            },
+            team2Fixture: {
+              opponent: fixture2?.opponent || '-',
+              isHome: fixture2?.isHome ?? true,
+              difficulty: diff2
+            }
           });
           
           // Rotation score: reward when one team has easy (1-2) while other has hard (4-5)
-          // Perfect rotation: one has 1-2, other has 4-5
           if ((diff1 <= 2 && diff2 >= 4) || (diff2 <= 2 && diff1 >= 4)) {
             rotationScore += 3; // Perfect rotation week
-            perfectWeeks++;
           } else if ((diff1 <= 2 && diff2 === 3) || (diff2 <= 2 && diff1 === 3)) {
             rotationScore += 2; // Good rotation week
           } else if ((diff1 <= 3 && diff2 >= 4) || (diff2 <= 3 && diff1 >= 4)) {
@@ -402,9 +409,8 @@ export default function Fixtures() {
           team1,
           team2,
           rotationScore,
-          weeklyRecommendations,
-          combinedAvgDifficulty: parseFloat((combinedDifficulty / gameweeks.length).toFixed(2)),
-          perfectWeeks
+          fixturesByGameweek,
+          combinedAvgDifficulty: parseFloat((combinedDifficulty / gameweeks.length).toFixed(2))
         });
       }
     }
@@ -962,70 +968,79 @@ export default function Fixtures() {
                 </p>
               </div>
               <CardContent className="p-4">
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {rotationPairs.map((pair, index) => (
-                    <div key={`${pair.team1.id}-${pair.team2.id}`} className="border rounded-lg p-4 bg-gradient-to-r from-purple-50/50 to-blue-50/50">
-                      {/* Pair Header */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-700 font-bold text-sm">
-                            #{index + 1}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <img 
-                              src={pair.team1.code === 14 
-                                ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
-                                : `https://resources.premierleague.com/premierleague/badges/t${pair.team1.code}.png`}
-                              alt={`${pair.team1.name} badge`}
-                              className="w-6 h-6 object-contain"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                            <span className="font-semibold text-gray-900">{pair.team1.short_name}</span>
-                          </div>
-                          <span className="text-gray-400 font-medium">+</span>
-                          <div className="flex items-center gap-2">
-                            <img 
-                              src={pair.team2.code === 14 
-                                ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
-                                : `https://resources.premierleague.com/premierleague/badges/t${pair.team2.code}.png`}
-                              alt={`${pair.team2.name} badge`}
-                              className="w-6 h-6 object-contain"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
-                            <span className="font-semibold text-gray-900">{pair.team2.short_name}</span>
-                          </div>
+                    <div key={`${pair.team1.id}-${pair.team2.id}`} className="border rounded-lg overflow-hidden">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-50 to-blue-50 border-b">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-700 font-bold text-xs">
+                          {index + 1}
                         </div>
-                        <div className="flex items-center gap-3 text-xs sm:text-sm">
-                          <div className="bg-green-100 text-green-800 px-2 py-1 rounded font-medium">
-                            Avg FDR: {pair.combinedAvgDifficulty}
-                          </div>
-                          <div className="bg-purple-100 text-purple-800 px-2 py-1 rounded font-medium">
-                            {pair.perfectWeeks} perfect weeks
-                          </div>
-                        </div>
+                        <span className="text-sm font-medium text-gray-700">
+                          {pair.team1.short_name} + {pair.team2.short_name}
+                        </span>
+                        <span className="ml-auto text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded font-medium">
+                          Avg FDR: {pair.combinedAvgDifficulty}
+                        </span>
                       </div>
-                      
-                      {/* Weekly Recommendations */}
                       <div className="overflow-x-auto">
-                        <div className="flex gap-1 min-w-max">
-                          {pair.weeklyRecommendations.map(rec => (
-                            <div 
-                              key={rec.gw} 
-                              className="flex flex-col items-center min-w-[55px]"
-                            >
-                              <div className="text-xs text-gray-500 mb-1">GW{rec.gw}</div>
-                              <div 
-                                className={`w-full px-2 py-1 rounded text-center text-xs font-medium ${getDifficultyColor(rec.difficulty)}`}
-                                title={`Play ${rec.recommendedTeam.short_name} (FDR: ${rec.difficulty})`}
-                              >
-                                {rec.recommendedTeam.short_name}
-                              </div>
-                              <div className="text-[10px] text-gray-500 mt-0.5">
-                                {rec.opponent} ({rec.isHome ? 'H' : 'A'})
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-gray-50 border-b">
+                              <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-medium text-gray-700 min-w-[80px]">Team</th>
+                              {pair.fixturesByGameweek.map(fw => (
+                                <th key={fw.gw} className="px-2 py-2 text-center font-medium text-gray-600 min-w-[60px]">
+                                  GW{fw.gw}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr className="border-b">
+                              <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900">
+                                <div className="flex items-center gap-2">
+                                  <img 
+                                    src={pair.team1.code === 14 
+                                      ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                      : `https://resources.premierleague.com/premierleague/badges/t${pair.team1.code}.png`}
+                                    alt={pair.team1.name}
+                                    className="w-4 h-4 object-contain"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                  {pair.team1.short_name}
+                                </div>
+                              </td>
+                              {pair.fixturesByGameweek.map(fw => (
+                                <td key={fw.gw} className="px-1 py-1 text-center">
+                                  <div className={`px-1 py-1 rounded text-xs font-medium ${getDifficultyColor(fw.team1Fixture.difficulty)}`}>
+                                    {fw.team1Fixture.opponent} ({fw.team1Fixture.isHome ? 'H' : 'A'})
+                                  </div>
+                                </td>
+                              ))}
+                            </tr>
+                            <tr>
+                              <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900">
+                                <div className="flex items-center gap-2">
+                                  <img 
+                                    src={pair.team2.code === 14 
+                                      ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                      : `https://resources.premierleague.com/premierleague/badges/t${pair.team2.code}.png`}
+                                    alt={pair.team2.name}
+                                    className="w-4 h-4 object-contain"
+                                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                  />
+                                  {pair.team2.short_name}
+                                </div>
+                              </td>
+                              {pair.fixturesByGameweek.map(fw => (
+                                <td key={fw.gw} className="px-1 py-1 text-center">
+                                  <div className={`px-1 py-1 rounded text-xs font-medium ${getDifficultyColor(fw.team2Fixture.difficulty)}`}>
+                                    {fw.team2Fixture.opponent} ({fw.team2Fixture.isHome ? 'H' : 'A'})
+                                  </div>
+                                </td>
+                              ))}
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
                     </div>
                   ))}
