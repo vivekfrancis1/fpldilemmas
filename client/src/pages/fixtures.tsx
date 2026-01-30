@@ -338,6 +338,83 @@ export default function Fixtures() {
     return allGameweeksInRange.filter(gw => !excludedGameweeks.has(gw));
   }, [allGameweeksInRange, excludedGameweeks]);
 
+  // Calculate best rotation pairs - teams that complement each other's fixtures
+  const rotationPairs = useMemo(() => {
+    if (!bootstrapData?.teams || !fixtureMatrix || gameweeks.length === 0) return [];
+    
+    const teams = bootstrapData.teams.filter(t => !excludedTeams.has(t.id));
+    const pairs: Array<{
+      team1: typeof teams[0];
+      team2: typeof teams[0];
+      rotationScore: number;
+      weeklyRecommendations: Array<{ gw: number; recommendedTeam: typeof teams[0]; difficulty: number }>;
+      combinedAvgDifficulty: number;
+      perfectWeeks: number;
+    }> = [];
+
+    // Calculate rotation score for each pair
+    for (let i = 0; i < teams.length; i++) {
+      for (let j = i + 1; j < teams.length; j++) {
+        const team1 = teams[i];
+        const team2 = teams[j];
+        
+        let rotationScore = 0;
+        let combinedDifficulty = 0;
+        let perfectWeeks = 0;
+        const weeklyRecommendations: Array<{ gw: number; recommendedTeam: typeof teams[0]; difficulty: number }> = [];
+        
+        gameweeks.forEach(gw => {
+          const fixture1 = fixtureMatrix[team1.id]?.[gw];
+          const fixture2 = fixtureMatrix[team2.id]?.[gw];
+          
+          const diff1 = fixture1?.difficulty || 3;
+          const diff2 = fixture2?.difficulty || 3;
+          
+          // Choose the easier fixture for this gameweek
+          const recommendedTeam = diff1 <= diff2 ? team1 : team2;
+          const easierDifficulty = Math.min(diff1, diff2);
+          combinedDifficulty += easierDifficulty;
+          
+          weeklyRecommendations.push({
+            gw,
+            recommendedTeam,
+            difficulty: easierDifficulty
+          });
+          
+          // Rotation score: reward when one team has easy (1-2) while other has hard (4-5)
+          // Perfect rotation: one has 1-2, other has 4-5
+          if ((diff1 <= 2 && diff2 >= 4) || (diff2 <= 2 && diff1 >= 4)) {
+            rotationScore += 3; // Perfect rotation week
+            perfectWeeks++;
+          } else if ((diff1 <= 2 && diff2 === 3) || (diff2 <= 2 && diff1 === 3)) {
+            rotationScore += 2; // Good rotation week
+          } else if ((diff1 <= 3 && diff2 >= 4) || (diff2 <= 3 && diff1 >= 4)) {
+            rotationScore += 1; // Decent rotation week
+          } else if (diff1 >= 4 && diff2 >= 4) {
+            rotationScore -= 2; // Both have hard fixtures - bad
+          }
+        });
+        
+        pairs.push({
+          team1,
+          team2,
+          rotationScore,
+          weeklyRecommendations,
+          combinedAvgDifficulty: parseFloat((combinedDifficulty / gameweeks.length).toFixed(2)),
+          perfectWeeks
+        });
+      }
+    }
+    
+    // Sort by rotation score (higher is better), then by combined avg difficulty (lower is better)
+    return pairs.sort((a, b) => {
+      if (b.rotationScore !== a.rotationScore) {
+        return b.rotationScore - a.rotationScore;
+      }
+      return a.combinedAvgDifficulty - b.combinedAvgDifficulty;
+    }).slice(0, 10); // Top 10 pairs
+  }, [bootstrapData, fixtureMatrix, gameweeks, excludedTeams]);
+
   // Handle column header click for sorting
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -866,6 +943,106 @@ export default function Fixtures() {
                   </tbody>
                 </table>
               </div>
+            </Card>
+          )}
+
+          {/* Best Rotation Pairs Section */}
+          {rotationPairs.length > 0 && (
+            <Card className="mt-6">
+              <div className="p-4 border-b">
+                <div className="flex items-center gap-2">
+                  <RotateCcw className="h-5 w-5 text-purple-600" />
+                  <h2 className="text-lg font-semibold text-gray-900">Best Rotation Pairs</h2>
+                </div>
+                <p className="text-sm text-gray-600 mt-1">
+                  Teams that complement each other's fixtures - when one has a hard game, the other has an easy one
+                </p>
+              </div>
+              <CardContent className="p-4">
+                <div className="space-y-4">
+                  {rotationPairs.map((pair, index) => (
+                    <div key={`${pair.team1.id}-${pair.team2.id}`} className="border rounded-lg p-4 bg-gradient-to-r from-purple-50/50 to-blue-50/50">
+                      {/* Pair Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 text-purple-700 font-bold text-sm">
+                            #{index + 1}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <img 
+                              src={pair.team1.code === 14 
+                                ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                : `https://resources.premierleague.com/premierleague/badges/t${pair.team1.code}.png`}
+                              alt={`${pair.team1.name} badge`}
+                              className="w-6 h-6 object-contain"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                            <span className="font-semibold text-gray-900">{pair.team1.short_name}</span>
+                          </div>
+                          <span className="text-gray-400 font-medium">+</span>
+                          <div className="flex items-center gap-2">
+                            <img 
+                              src={pair.team2.code === 14 
+                                ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
+                                : `https://resources.premierleague.com/premierleague/badges/t${pair.team2.code}.png`}
+                              alt={`${pair.team2.name} badge`}
+                              className="w-6 h-6 object-contain"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                            <span className="font-semibold text-gray-900">{pair.team2.short_name}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs sm:text-sm">
+                          <div className="bg-green-100 text-green-800 px-2 py-1 rounded font-medium">
+                            Avg FDR: {pair.combinedAvgDifficulty}
+                          </div>
+                          <div className="bg-purple-100 text-purple-800 px-2 py-1 rounded font-medium">
+                            {pair.perfectWeeks} perfect weeks
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Weekly Recommendations */}
+                      <div className="overflow-x-auto">
+                        <div className="flex gap-1 min-w-max">
+                          {pair.weeklyRecommendations.map(rec => {
+                            const isTeam1 = rec.recommendedTeam.id === pair.team1.id;
+                            return (
+                              <div 
+                                key={rec.gw} 
+                                className="flex flex-col items-center min-w-[50px]"
+                              >
+                                <div className="text-xs text-gray-500 mb-1">GW{rec.gw}</div>
+                                <div 
+                                  className={`w-full px-2 py-1 rounded text-center text-xs font-medium ${getDifficultyColor(rec.difficulty)}`}
+                                  title={`Play ${rec.recommendedTeam.short_name} (FDR: ${rec.difficulty})`}
+                                >
+                                  {rec.recommendedTeam.short_name}
+                                </div>
+                                <div className={`w-2 h-2 rounded-full mt-1 ${isTeam1 ? 'bg-purple-500' : 'bg-blue-500'}`} 
+                                  title={isTeam1 ? pair.team1.name : pair.team2.name}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      
+                      {/* Legend */}
+                      <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full bg-purple-500" />
+                          <span>{pair.team1.short_name}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <div className="w-2 h-2 rounded-full bg-blue-500" />
+                          <span>{pair.team2.short_name}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
             </Card>
           )}
         </div>
