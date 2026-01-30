@@ -1009,13 +1009,16 @@ export default function Fixtures() {
                                   {pair.team1.short_name}
                                 </div>
                               </td>
-                              {pair.fixturesByGameweek.map(fw => (
-                                <td key={fw.gw} className="px-1 py-1 text-center">
-                                  <div className={`px-1 py-1 rounded text-xs font-medium ${getDifficultyColor(fw.team1Fixture.difficulty)}`}>
-                                    {fw.team1Fixture.opponent} ({fw.team1Fixture.isHome ? 'H' : 'A'})
-                                  </div>
-                                </td>
-                              ))}
+                              {pair.fixturesByGameweek.map(fw => {
+                                const isRecommended = fw.team1Fixture.difficulty <= fw.team2Fixture.difficulty;
+                                return (
+                                  <td key={fw.gw} className="px-1 py-1 text-center">
+                                    <div className={`px-1 py-1 rounded text-xs ${isRecommended ? 'font-bold' : 'font-medium'} ${getDifficultyColor(fw.team1Fixture.difficulty)}`}>
+                                      {fw.team1Fixture.opponent} ({fw.team1Fixture.isHome ? 'H' : 'A'})
+                                    </div>
+                                  </td>
+                                );
+                              })}
                             </tr>
                             <tr>
                               <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900">
@@ -1031,13 +1034,16 @@ export default function Fixtures() {
                                   {pair.team2.short_name}
                                 </div>
                               </td>
-                              {pair.fixturesByGameweek.map(fw => (
-                                <td key={fw.gw} className="px-1 py-1 text-center">
-                                  <div className={`px-1 py-1 rounded text-xs font-medium ${getDifficultyColor(fw.team2Fixture.difficulty)}`}>
-                                    {fw.team2Fixture.opponent} ({fw.team2Fixture.isHome ? 'H' : 'A'})
-                                  </div>
-                                </td>
-                              ))}
+                              {pair.fixturesByGameweek.map(fw => {
+                                const isRecommended = fw.team2Fixture.difficulty < fw.team1Fixture.difficulty;
+                                return (
+                                  <td key={fw.gw} className="px-1 py-1 text-center">
+                                    <div className={`px-1 py-1 rounded text-xs ${isRecommended ? 'font-bold' : 'font-medium'} ${getDifficultyColor(fw.team2Fixture.difficulty)}`}>
+                                      {fw.team2Fixture.opponent} ({fw.team2Fixture.isHome ? 'H' : 'A'})
+                                    </div>
+                                  </td>
+                                );
+                              })}
                             </tr>
                           </tbody>
                         </table>
