@@ -1010,7 +1010,10 @@ export default function Fixtures() {
                                 </div>
                               </td>
                               {pair.fixturesByGameweek.map(fw => {
-                                const isRecommended = fw.team1Fixture.difficulty <= fw.team2Fixture.difficulty;
+                                // Recommend based on FDR, with home game as tiebreaker when equal
+                                const diff1 = fw.team1Fixture.difficulty;
+                                const diff2 = fw.team2Fixture.difficulty;
+                                const isRecommended = diff1 < diff2 || (diff1 === diff2 && fw.team1Fixture.isHome && !fw.team2Fixture.isHome) || (diff1 === diff2 && fw.team1Fixture.isHome === fw.team2Fixture.isHome);
                                 return (
                                   <td key={fw.gw} className="px-1 py-1 text-center">
                                     <div className={`px-1 py-1 rounded text-xs ${isRecommended ? 'font-bold' : 'font-medium'} ${getDifficultyColor(fw.team1Fixture.difficulty)}`}>
@@ -1035,7 +1038,10 @@ export default function Fixtures() {
                                 </div>
                               </td>
                               {pair.fixturesByGameweek.map(fw => {
-                                const isRecommended = fw.team2Fixture.difficulty < fw.team1Fixture.difficulty;
+                                // Recommend based on FDR, with home game as tiebreaker when equal
+                                const diff1 = fw.team1Fixture.difficulty;
+                                const diff2 = fw.team2Fixture.difficulty;
+                                const isRecommended = diff2 < diff1 || (diff1 === diff2 && fw.team2Fixture.isHome && !fw.team1Fixture.isHome);
                                 return (
                                   <td key={fw.gw} className="px-1 py-1 text-center">
                                     <div className={`px-1 py-1 rounded text-xs ${isRecommended ? 'font-bold' : 'font-medium'} ${getDifficultyColor(fw.team2Fixture.difficulty)}`}>
