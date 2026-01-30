@@ -1008,41 +1008,23 @@ export default function Fixtures() {
                       {/* Weekly Recommendations */}
                       <div className="overflow-x-auto">
                         <div className="flex gap-1 min-w-max">
-                          {pair.weeklyRecommendations.map(rec => {
-                            const isTeam1 = rec.recommendedTeam.id === pair.team1.id;
-                            return (
+                          {pair.weeklyRecommendations.map(rec => (
+                            <div 
+                              key={rec.gw} 
+                              className="flex flex-col items-center min-w-[55px]"
+                            >
+                              <div className="text-xs text-gray-500 mb-1">GW{rec.gw}</div>
                               <div 
-                                key={rec.gw} 
-                                className="flex flex-col items-center min-w-[55px]"
+                                className={`w-full px-2 py-1 rounded text-center text-xs font-medium ${getDifficultyColor(rec.difficulty)}`}
+                                title={`Play ${rec.recommendedTeam.short_name} (FDR: ${rec.difficulty})`}
                               >
-                                <div className="text-xs text-gray-500 mb-1">GW{rec.gw}</div>
-                                <div 
-                                  className={`w-full px-2 py-1 rounded text-center text-xs font-medium ${getDifficultyColor(rec.difficulty)}`}
-                                  title={`Play ${rec.recommendedTeam.short_name} (FDR: ${rec.difficulty})`}
-                                >
-                                  {rec.recommendedTeam.short_name}
-                                </div>
-                                <div className="text-[10px] text-gray-500 mt-0.5">
-                                  {rec.opponent} ({rec.isHome ? 'H' : 'A'})
-                                </div>
-                                <div className={`w-2 h-2 rounded-full mt-1 ${isTeam1 ? 'bg-purple-500' : 'bg-blue-500'}`} 
-                                  title={isTeam1 ? pair.team1.name : pair.team2.name}
-                                />
+                                {rec.recommendedTeam.short_name}
                               </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      
-                      {/* Legend */}
-                      <div className="flex items-center gap-4 mt-3 text-xs text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full bg-purple-500" />
-                          <span>{pair.team1.short_name}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <div className="w-2 h-2 rounded-full bg-blue-500" />
-                          <span>{pair.team2.short_name}</span>
+                              <div className="text-[10px] text-gray-500 mt-0.5">
+                                {rec.opponent} ({rec.isHome ? 'H' : 'A'})
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     </div>
