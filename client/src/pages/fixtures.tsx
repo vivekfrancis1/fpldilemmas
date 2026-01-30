@@ -347,7 +347,7 @@ export default function Fixtures() {
       team1: typeof teams[0];
       team2: typeof teams[0];
       rotationScore: number;
-      weeklyRecommendations: Array<{ gw: number; recommendedTeam: typeof teams[0]; difficulty: number }>;
+      weeklyRecommendations: Array<{ gw: number; recommendedTeam: typeof teams[0]; difficulty: number; opponent: string; isHome: boolean }>;
       combinedAvgDifficulty: number;
       perfectWeeks: number;
     }> = [];
@@ -361,7 +361,7 @@ export default function Fixtures() {
         let rotationScore = 0;
         let combinedDifficulty = 0;
         let perfectWeeks = 0;
-        const weeklyRecommendations: Array<{ gw: number; recommendedTeam: typeof teams[0]; difficulty: number }> = [];
+        const weeklyRecommendations: Array<{ gw: number; recommendedTeam: typeof teams[0]; difficulty: number; opponent: string; isHome: boolean }> = [];
         
         gameweeks.forEach(gw => {
           const fixture1 = fixtureMatrix[team1.id]?.[gw];
@@ -372,13 +372,16 @@ export default function Fixtures() {
           
           // Choose the easier fixture for this gameweek
           const recommendedTeam = diff1 <= diff2 ? team1 : team2;
+          const recommendedFixture = diff1 <= diff2 ? fixture1 : fixture2;
           const easierDifficulty = Math.min(diff1, diff2);
           combinedDifficulty += easierDifficulty;
           
           weeklyRecommendations.push({
             gw,
             recommendedTeam,
-            difficulty: easierDifficulty
+            difficulty: easierDifficulty,
+            opponent: recommendedFixture?.opponent || '-',
+            isHome: recommendedFixture?.isHome ?? true
           });
           
           // Rotation score: reward when one team has easy (1-2) while other has hard (4-5)
@@ -1010,7 +1013,7 @@ export default function Fixtures() {
                             return (
                               <div 
                                 key={rec.gw} 
-                                className="flex flex-col items-center min-w-[50px]"
+                                className="flex flex-col items-center min-w-[55px]"
                               >
                                 <div className="text-xs text-gray-500 mb-1">GW{rec.gw}</div>
                                 <div 
@@ -1018,6 +1021,9 @@ export default function Fixtures() {
                                   title={`Play ${rec.recommendedTeam.short_name} (FDR: ${rec.difficulty})`}
                                 >
                                   {rec.recommendedTeam.short_name}
+                                </div>
+                                <div className="text-[10px] text-gray-500 mt-0.5">
+                                  {rec.opponent} ({rec.isHome ? 'H' : 'A'})
                                 </div>
                                 <div className={`w-2 h-2 rounded-full mt-1 ${isTeam1 ? 'bg-purple-500' : 'bg-blue-500'}`} 
                                   title={isTeam1 ? pair.team1.name : pair.team2.name}
