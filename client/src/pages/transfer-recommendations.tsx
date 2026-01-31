@@ -1329,12 +1329,17 @@ export default function TransferRecommendations() {
         )}
 
         {/* No recommendations available state */}
-        {searchedId && !isLoadingRecommendations && adjustedRecommendations && (!adjustedRecommendations.gameweeks || Object.keys(adjustedRecommendations.gameweeks).length === 0) && (
-          <Card>
+        {searchedId && !isLoadingRecommendations && adjustedRecommendations && (!adjustedRecommendations.gameweeks || !adjustedRecommendations.gameweeks[selectedGameweek!]) && (
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-sm">
             <CardContent className="pt-6">
-              <div className="text-center py-8">
-                <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                <p className="text-gray-600">No transfer recommendations available for this manager</p>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ArrowRightLeft className="h-8 w-8 text-blue-500" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Roll Your Transfer</h3>
+                <p className="text-gray-600 max-w-md mx-auto">
+                  Your current team is perfectly optimized for GW{selectedGameweek}. No transfers are recommended this week - save your free transfer for next week!
+                </p>
               </div>
             </CardContent>
           </Card>
