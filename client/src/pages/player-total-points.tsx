@@ -1214,7 +1214,10 @@ export default function PlayerTotalPoints() {
     });
 
     // Apply Load Group filtering
-    if (selectedLoadGroup !== "all") {
+    if (selectedLoadGroup === "My Team") {
+      // Filter to only show players in my team
+      filtered = filtered.filter(player => myTeamPlayerIds.has(player.playerId));
+    } else if (selectedLoadGroup !== "all") {
       // Parse the load group option to determine criteria and position filter
       const [criteria, count, ...positionParts] = selectedLoadGroup.split(' ');
       const position = positionParts.length > 0 ? positionParts.join(' ') : null;
@@ -1283,7 +1286,7 @@ export default function PlayerTotalPoints() {
     });
 
     return filtered;
-  }, [adjustedPlayerData, selectedPositions, selectedTeams, searchTerm, selectedLoadGroup, selectedAvailability, sortField, sortDirection]);
+  }, [adjustedPlayerData, selectedPositions, selectedTeams, searchTerm, selectedLoadGroup, selectedAvailability, sortField, sortDirection, myTeamPlayerIds]);
 
   // Calculate max points per gameweek for highlighting
   const maxPointsPerGameweek = useMemo(() => {
@@ -1447,6 +1450,7 @@ export default function PlayerTotalPoints() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem key="load-group-all" value="all">All</SelectItem>
+                  <SelectItem key="load-group-my-team" value="My Team">My Team</SelectItem>
                   <SelectItem key="load-group-top-50" value="Top 50">Top 50</SelectItem>
                   <SelectItem key="load-group-value-50" value="Value 50">Value 50</SelectItem>
                 </SelectContent>
