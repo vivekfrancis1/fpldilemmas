@@ -1051,15 +1051,22 @@ export default function TransferRecommendations() {
                               });
                               
                               // Apply top pick filter if enabled - show only the first (best) recommendation per playerOut AND per playerIn
+                              // Use reduce to properly track which players have been included
                               const finalRecommendations = showTopPickOnly 
-                                ? affordableRecommendations.filter((rec: any, index: number, arr: any[]) => {
-                                    if (rec.type === 'roll') return true;
-                                    // Keep only the first occurrence of each playerOut.id
-                                    const isFirstOut = arr.findIndex((r: any) => r.playerOut?.id === rec.playerOut?.id) === index;
-                                    // Keep only the first occurrence of each playerIn.id
-                                    const isFirstIn = arr.findIndex((r: any) => r.playerIn?.id === rec.playerIn?.id) === index;
-                                    return isFirstOut && isFirstIn;
-                                  })
+                                ? affordableRecommendations.reduce((acc: any[], rec: any) => {
+                                    if (rec.type === 'roll') {
+                                      acc.push(rec);
+                                      return acc;
+                                    }
+                                    // Check if playerOut or playerIn is already in the accumulated results
+                                    const playerOutUsed = acc.some((r: any) => r.playerOut?.id === rec.playerOut?.id);
+                                    const playerInUsed = acc.some((r: any) => r.playerIn?.id === rec.playerIn?.id);
+                                    // Only add if neither player has been used yet
+                                    if (!playerOutUsed && !playerInUsed) {
+                                      acc.push(rec);
+                                    }
+                                    return acc;
+                                  }, [])
                                 : affordableRecommendations;
 
                               // Check if we should show "Roll Your Transfer" card instead of empty recommendations
