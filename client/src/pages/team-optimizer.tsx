@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, AlertCircle, Heart, XCircle, Clock } from "lucide-react";
+import { Target, Search, TrendingUp, Crown, Users, AlertTriangle, AlertCircle, Heart, XCircle, Clock, LayoutGrid, List } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,7 @@ import { applyAvailabilityAdjustments, type BootstrapData as AvailabilityBootstr
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 
 // Player Availability Badge Component
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -144,6 +145,7 @@ interface BootstrapData {
     id: number;
     name: string;
     short_name: string;
+    code: number;
   }>;
   events: Array<{
     id: number;
@@ -185,6 +187,7 @@ export default function TeamOptimizer() {
   const [freeHitOptimizations, setFreeHitOptimizations] = useState<Map<number, number>>(new Map());
   const [isOptimizingFreeHit, setIsOptimizingFreeHit] = useState(false);
   const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
+  const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -1260,78 +1263,152 @@ export default function TeamOptimizer() {
           </Card>
         )}
 
-        {/* Optimized Lineup Table */}
+        {/* Optimized Lineup - Pitch/List View */}
         {selectedGameweek && optimizedLineups.get(selectedGameweek) && (
           <Card className="border-0 shadow-lg">
             <CardHeader className="pb-3 sm:pb-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-t-lg">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <CardTitle className="flex items-center gap-2 sm:gap-3 text-sm sm:text-base md:text-lg font-bold">
                   <Users className="h-4 w-4 sm:h-5 sm:w-5" />
                   <span>GW{selectedGameweek} Optimized Lineup</span>
                 </CardTitle>
-                {(() => {
-                  const gwLineup = optimizedLineups.get(selectedGameweek);
-                  if (gwLineup?.starting11) {
-                    const formation = calculateFormation(gwLineup.starting11);
-                    const totalPoints = gwLineup.starting11.reduce((sum: number, p: any) => sum + (p.projectedPoints || 0), 0);
-                    return (
-                      <div className="flex items-center gap-2">
-                        <Badge className="bg-white/20 text-white border-white/30 text-[10px] sm:text-xs px-2 py-0.5">
-                          {formation}
-                        </Badge>
-                        <Badge className="bg-white text-purple-700 font-bold text-[10px] sm:text-xs px-2 py-0.5">
-                          {totalPoints.toFixed(1)} pts
-                        </Badge>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const gwLineup = optimizedLineups.get(selectedGameweek);
+                    if (gwLineup?.starting11) {
+                      const formation = calculateFormation(gwLineup.starting11);
+                      const totalPoints = gwLineup.starting11.reduce((sum: number, p: any) => sum + (p.projectedPoints || 0), 0);
+                      return (
+                        <>
+                          <Badge className="bg-white/20 text-white border-white/30 text-[10px] sm:text-xs px-2 py-0.5">
+                            {formation}
+                          </Badge>
+                          <Badge className="bg-white text-purple-700 font-bold text-[10px] sm:text-xs px-2 py-0.5">
+                            {totalPoints.toFixed(1)} pts
+                          </Badge>
+                        </>
+                      );
+                    }
+                    return null;
+                  })()}
+                  <div className="flex gap-1 ml-2">
+                    <Button
+                      size="sm"
+                      variant={teamView === "pitch" ? "secondary" : "ghost"}
+                      onClick={() => setTeamView("pitch")}
+                      className={`h-7 px-2 ${teamView === "pitch" ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={teamView === "list" ? "secondary" : "ghost"}
+                      onClick={() => setTeamView("list")}
+                      className={`h-7 px-2 ${teamView === "list" ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-100 dark:bg-gray-800 border-b-2 border-purple-200 dark:border-purple-800">
-                      <TableHead className="sticky left-0 z-10 bg-gray-100 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 min-w-[180px] sm:min-w-[220px] py-3">
-                        Player
-                      </TableHead>
-                      <TableHead className="hidden lg:table-cell text-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 py-3">
-                        Price
-                      </TableHead>
-                      <TableHead className="text-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 py-3 min-w-[70px]">
-                        Pts
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {(() => {
-                      const gwLineup = optimizedLineups.get(selectedGameweek)!;
-                      const starting = gwLineup.starting11 || [];
-                      const bench = gwLineup.bench || [];
-                      const gw = nextGameweeks.find(g => g.id === selectedGameweek)!;
+              {/* Pitch View */}
+              {teamView === "pitch" && (() => {
+                const gwLineup = optimizedLineups.get(selectedGameweek)!;
+                const starting = gwLineup.starting11 || [];
+                const bench = gwLineup.bench || [];
+                
+                // Transform to PitchPlayer format
+                const pitchPlayers: PitchPlayer[] = starting.map(pick => {
+                  const player = bootstrapData?.elements.find((p: Player) => p.id === pick.element);
+                  const team = bootstrapData?.teams.find((t: any) => t.id === player?.team);
+                  return {
+                    element: pick.element,
+                    element_type: player?.element_type || 4,
+                    position: pick.position,
+                    is_captain: pick.isCaptain,
+                    is_vice_captain: pick.isViceCaptain,
+                    web_name: pick.web_name || player?.web_name,
+                    team_short_name: team?.short_name,
+                    team_code: team?.code,
+                    custom_badge_text: pick.projectedPoints?.toFixed(1) || '0',
+                    custom_badge_color: 'bg-purple-600',
+                  };
+                });
+                
+                const benchPitchPlayers: PitchPlayer[] = bench.map(pick => {
+                  const player = bootstrapData?.elements.find((p: Player) => p.id === pick.element);
+                  const team = bootstrapData?.teams.find((t: any) => t.id === player?.team);
+                  return {
+                    element: pick.element,
+                    element_type: player?.element_type || 4,
+                    position: pick.position,
+                    is_captain: false,
+                    is_vice_captain: false,
+                    web_name: pick.web_name || player?.web_name,
+                    team_short_name: team?.short_name,
+                    team_code: team?.code,
+                    custom_badge_text: pick.projectedPoints?.toFixed(1) || '0',
+                    custom_badge_color: 'bg-gray-500',
+                  };
+                });
+                
+                return (
+                  <div className="p-2 sm:p-4">
+                    <PitchView 
+                      players={pitchPlayers} 
+                      benchPlayers={benchPitchPlayers}
+                    />
+                  </div>
+                );
+              })()}
+              
+              {/* List View */}
+              {teamView === "list" && (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-100 dark:bg-gray-800 border-b-2 border-purple-200 dark:border-purple-800">
+                        <TableHead className="sticky left-0 z-10 bg-gray-100 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 min-w-[180px] sm:min-w-[220px] py-3">
+                          Player
+                        </TableHead>
+                        <TableHead className="hidden lg:table-cell text-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 py-3">
+                          Price
+                        </TableHead>
+                        <TableHead className="text-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 py-3 min-w-[70px]">
+                          Pts
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(() => {
+                        const gwLineup = optimizedLineups.get(selectedGameweek)!;
+                        const starting = gwLineup.starting11 || [];
+                        const bench = gwLineup.bench || [];
+                        const gw = nextGameweeks.find(g => g.id === selectedGameweek)!;
 
-                      return (
-                        <>
-                          {starting.map((pick, idx) => renderPlayerRow(pick, gw, idx, false))}
-                          {bench.length > 0 && (
-                            <TableRow className="border-t-2 border-gray-300 dark:border-gray-600">
-                              <TableCell colSpan={3} className="bg-gray-200 dark:bg-gray-700 py-2">
-                                <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-                                  Bench
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          )}
-                          {bench.map((pick, idx) => renderPlayerRow(pick, gw, idx, true))}
-                        </>
-                      );
-                    })()}
-                  </TableBody>
-                </Table>
-              </div>
+                        return (
+                          <>
+                            {starting.map((pick, idx) => renderPlayerRow(pick, gw, idx, false))}
+                            {bench.length > 0 && (
+                              <TableRow className="border-t-2 border-gray-300 dark:border-gray-600">
+                                <TableCell colSpan={3} className="bg-gray-200 dark:bg-gray-700 py-2">
+                                  <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                                    Bench
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                            {bench.map((pick, idx) => renderPlayerRow(pick, gw, idx, true))}
+                          </>
+                        );
+                      })()}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
