@@ -14,6 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LoadingExperience } from "@/components/loading-experience";
 import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
+import { useAuth } from "@/hooks/useAuth";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) {
@@ -617,6 +618,7 @@ function createPlayerTotalPointsColumns(
 
 export default function PlayerTotalPoints() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery<BootstrapData>({
@@ -630,13 +632,18 @@ export default function PlayerTotalPoints() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Get saved manager ID from localStorage for "My Team" indicator
+  // Get manager ID for "My Team" indicator - prefer authenticated user, fallback to localStorage
   const savedManagerId = useMemo(() => {
+    // First check authenticated user's fplManagerId
+    if (user?.fplManagerId) {
+      return user.fplManagerId.toString();
+    }
+    // Fallback to localStorage
     if (typeof window !== 'undefined') {
       return localStorage.getItem('fplManagerId') || null;
     }
     return null;
-  }, []);
+  }, [user?.fplManagerId]);
 
   // Fetch manager's team to show "My Team" indicator
   const { data: managerTeamData } = useQuery<{ picks?: { element: number }[] }>({
