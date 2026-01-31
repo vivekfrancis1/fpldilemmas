@@ -1058,9 +1058,31 @@ export default function TransferRecommendations() {
                                     return arr.findIndex((r: any) => r.playerOut?.id === rec.playerOut?.id) === index;
                                   })
                                 : affordableRecommendations;
+
+                              // Check if we should show "Roll Your Transfer" card instead of empty recommendations
+                              const isRollGW = availableRecommendations.some(r => r.type === 'roll');
+                              const appliedTransfersInGW = getAppliedTransfersForGW(gw);
+
+                              if (finalRecommendations.length === 0 && isRollGW && appliedTransfersInGW.length === 0) {
+                                return (
+                                  <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-sm mt-4">
+                                    <CardContent className="pt-8 pb-10">
+                                      <div className="text-center py-6">
+                                        <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-indigo-100">
+                                          <ArrowRightLeft className="h-8 w-8 text-indigo-600" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-gray-900 mb-3">Roll Your Transfer</h3>
+                                        <p className="text-gray-600 max-w-md mx-auto px-4 leading-relaxed">
+                                          Your current team is perfectly optimized for GW{gw}. No transfers are recommended this week - save your free transfer to have more flexibility next week!
+                                        </p>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                );
+                              }
                               
                               // Show message if filter returns no results
-                              if (availableRecommendations.length === 0 && positionFilter.length > 0 && getAppliedTransfersForGW(gw).length === 0) {
+                              if (availableRecommendations.length === 0 && positionFilter.length > 0 && appliedTransfersInGW.length === 0) {
                                 return (
                                   <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-lg">
                                     No {positionFilter.join('/')} transfer recommendations for this gameweek
