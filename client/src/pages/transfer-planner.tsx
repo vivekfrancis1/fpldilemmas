@@ -942,7 +942,6 @@ export default function TransferPlanner() {
   // Collapsible sections state - default to collapsed
   const [isChipsPlanningOpen, setIsChipsPlanningOpen] = useState(false);
   const [isDraftSelectionOpen, setIsDraftSelectionOpen] = useState(false);
-  const [isGameweekSelectionOpen, setIsGameweekSelectionOpen] = useState(false);
   const [isTeamSummaryOpen, setIsTeamSummaryOpen] = useState(false);
   const [isTeamEvolutionOpen, setIsTeamEvolutionOpen] = useState(false);
   const [isDraftComparisonOpen, setIsDraftComparisonOpen] = useState(false);
@@ -5974,50 +5973,6 @@ export default function TransferPlanner() {
         </Collapsible>
       )}
 
-      {/* Gameweek Selection Section */}
-      {searchedId && teamData && selectedGameweek && (
-        <Collapsible open={isGameweekSelectionOpen} onOpenChange={setIsGameweekSelectionOpen}>
-          <Card className="bg-background shadow-sm border">
-            <CollapsibleTrigger asChild>
-              <CardHeader className="py-3 px-3 sm:px-6 cursor-pointer hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5 text-purple-600" />
-                    <span className="text-base sm:text-lg font-semibold">Gameweek Selection</span>
-                    <Badge variant="secondary" className="text-xs sm:text-sm px-2 py-0.5">GW {selectedGameweek}</Badge>
-                  </div>
-                  {isGameweekSelectionOpen ? (
-                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="pt-0 pb-4 px-3 sm:px-6">
-                <div className="flex gap-2 flex-wrap items-center">
-                  {nextGameweeks.map(gw => (
-                    <Button
-                      key={gw.id}
-                      variant={selectedGameweek === gw.id ? "default" : "outline"}
-                      className="h-8 sm:h-9 text-sm sm:text-base font-semibold min-w-[2.5rem] px-2 sm:px-3"
-                      onClick={() => {
-                        setSelectedPlayer(null);
-                        setSelectedGameweek(gw.id);
-                      }}
-                      data-testid={`gw-button-${gw.id}`}
-                    >
-                      {gw.id}
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      )}
-
       {/* Team Selection Section */}
       {searchedId && teamData && selectedGameweek && (
         <Card ref={teamLineupRef} className="border-blue-200 bg-gradient-to-br from-blue-50 to-white dark:from-blue-950/20 dark:to-background">
@@ -6029,35 +5984,52 @@ export default function TransferPlanner() {
                 <Badge variant={activeDraft === "Base" ? "secondary" : "default"} className="text-xs sm:text-sm px-2 py-0.5">
                   {activeDraft === "Base" ? "Base" : `Draft ${activeDraft}`}
                 </Badge>
-                <Badge variant="secondary" className="text-xs sm:text-sm px-2 py-0.5">GW {selectedGameweek}</Badge>
+                {(() => {
+                  const currentChip = plannedChips[selectedGameweek];
+                  if (currentChip) {
+                    return (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="cursor-help">
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs px-2 py-1 ${getChipIconColor(currentChip)} bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-700`}
+                              >
+                                <Sparkles className="h-3 w-3 mr-1" />
+                                {getChipDisplayNameWithNumber(currentChip)}
+                              </Badge>
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs font-semibold">{getChipDisplayName(currentChip)}</p>
+                            <p className="text-xs text-muted-foreground">{getChipDescription(currentChip)}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
-              {(() => {
-                const currentChip = plannedChips[selectedGameweek];
-                if (currentChip) {
-                  return (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="cursor-help">
-                            <Badge 
-                              variant="outline" 
-                              className={`text-xs px-2 py-1 ${getChipIconColor(currentChip)} bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-700`}
-                            >
-                              <Sparkles className="h-3 w-3 mr-1" />
-                              {getChipDisplayNameWithNumber(currentChip)} - GW{selectedGameweek}
-                            </Badge>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p className="text-xs font-semibold">{getChipDisplayName(currentChip)}</p>
-                          <p className="text-xs text-muted-foreground">{getChipDescription(currentChip)}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  );
-                }
-                return null;
-              })()}
+              {/* Gameweek Selection - Top Right */}
+              <div className="flex gap-1 sm:gap-1.5 flex-wrap items-center">
+                {nextGameweeks.map(gw => (
+                  <Button
+                    key={gw.id}
+                    variant={selectedGameweek === gw.id ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 sm:h-8 text-xs sm:text-sm font-semibold min-w-[2rem] px-2"
+                    onClick={() => {
+                      setSelectedPlayer(null);
+                      setSelectedGameweek(gw.id);
+                    }}
+                    data-testid={`gw-button-${gw.id}`}
+                  >
+                    {gw.id}
+                  </Button>
+                ))}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="px-3 sm:px-6">
