@@ -1875,7 +1875,34 @@ export default function TransferPlanner() {
 
     const gwKey = selectedGameweek.toString();
     const points = projection.gameweekProjections?.[gwKey];
-    return points !== undefined ? points : null;
+    if (points === undefined) return null;
+
+    // Apply availability adjustments based on player status
+    const player = bootstrapData?.elements?.find((el: any) => el.id === playerId);
+    if (player) {
+      const chance = player.chance_of_playing_next_round ?? 100;
+      const status = player.status;
+      
+      // Get current gameweek
+      const currentGW = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 
+                       bootstrapData?.events?.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 23;
+      const nextGW = currentGW + 1;
+      
+      // If player is injured/unavailable (0% chance), return 0 for immediate gameweeks
+      if (chance === 0 || status === 'i' || status === 'u' || status === 's') {
+        // For the next gameweek and potentially more, reduce to 0
+        if (selectedGameweek <= nextGW + 2) {
+          return 0;
+        }
+      } else if (chance < 100 && chance > 0) {
+        // Apply partial availability only to immediate next gameweek
+        if (selectedGameweek === nextGW) {
+          return points * (chance / 100);
+        }
+      }
+    }
+
+    return points;
   };
 
   // Get fixture info for a player in a specific gameweek
