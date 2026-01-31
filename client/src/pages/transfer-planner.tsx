@@ -7033,10 +7033,16 @@ export default function TransferPlanner() {
                         const player = getPlayerById(pick.element);
                         return player?.element_type === 1;
                       });
-                      const outfieldBench = benchPlayers.filter(pick => {
-                        const player = getPlayerById(pick.element);
-                        return player?.element_type !== 1;
-                      });
+                      const outfieldBench = benchPlayers
+                        .filter(pick => {
+                          const player = getPlayerById(pick.element);
+                          return player?.element_type !== 1;
+                        })
+                        .sort((a, b) => {
+                          const aPoints = getPlayerProjectedPoints(a.element) || 0;
+                          const bPoints = getPlayerProjectedPoints(b.element) || 0;
+                          return bPoints - aPoints; // Descending order by points
+                        });
                       const reorderedBench = gkBench ? [gkBench, ...outfieldBench] : outfieldBench;
                       return reorderedBench.map((pick) => {
                         const benchIndex = manualLineup.indexOf(pick) - 11;
