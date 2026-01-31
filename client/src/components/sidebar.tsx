@@ -53,7 +53,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       section: "My FPL",
       items: [
         { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview" },
-        { path: "/projected-points", label: "My Team Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false },
+        { path: "/projected-points", label: "My Team Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false, adminOnly: true },
         { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, description: "Auto-optimize your team lineup", popular: false },
         { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false },
         { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, mobileHidden: false }
@@ -67,7 +67,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/player-assist-projections", label: "Assists", icon: Zap, description: "Individual player assist projections", popular: false },
         { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
         { path: "/player-saves", label: "Saves", icon: Shield, description: "Goalkeeper saves and penalty save projections", popular: false },
-        { path: "/player-bonus-points", label: "Bonus Points", icon: Star, description: "Bonus point projections", popular: false },
+        { path: "/player-bonus-points", label: "Bonus Points", icon: Star, description: "Bonus point projections", popular: false, adminOnly: true },
         { path: "/best-freehit-team", label: "Freehit Team", icon: Users, description: "Optimal 15-player squad for maximum points with captain selection", popular: false },
         { path: "/best-wildcard-team", label: "Wildcard Team", icon: Star, description: "Optimal 15-player squad considering total points across next 6 gameweeks", popular: false }
         // { path: "/defensive-contribution-projections", label: "Defensive Contribution", icon: Shield, description: "Tackles, recoveries, and CBI projections", popular: false },
@@ -160,8 +160,11 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     }
   ];
 
-  // No filtering needed - all sections visible to all users
-  const filteredNavItems = navItems;
+  // Filter out adminOnly items for non-admin users
+  const filteredNavItems = navItems.map(section => ({
+    ...section,
+    items: section.items.filter(item => !item.adminOnly || isAdmin)
+  }));
 
   // Combine filtered public and admin navigation items
   const allNavItems = isAdmin ? [...filteredNavItems, ...adminNavItems] : filteredNavItems;
