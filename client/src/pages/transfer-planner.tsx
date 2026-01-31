@@ -1274,41 +1274,17 @@ export default function TransferPlanner() {
     }
   }, [teamData, searchedId]); // Removed buyPricesData and buyPriceOverridesData to prevent resetting optimized lineups
 
-  // Fetch player projections for the selected gameweek
-  const { data: playerProjections, isLoading: projectionsLoading, error: projectionsError } = useQuery<any[]>({
-    queryKey: ["/api/player-total-points", selectedGameweek],
-    enabled: !!selectedGameweek && selectedGameweek > 0,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    queryFn: async () => {
-      if (!selectedGameweek || selectedGameweek <= 0) return [];
-      const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch projections: ${response.statusText}`);
-      }
-      const data = await response.json();
-      return Array.isArray(data) ? data : [];
-    }
+  // Fetch player projections from cached endpoint (contains all 12 gameweeks)
+  // This allows instant gameweek switching without refetching
+  const { data: cachedPlayerProjections, isLoading: projectionsLoading, error: projectionsError } = useQuery<any[]>({
+    queryKey: ["/api/cached/player-total-points"],
+    staleTime: 60 * 60 * 1000, // 1 hour cache
   });
 
-  // Fetch player projections for next 6 gameweeks (for 6GW total calculation)
-  const { data: playerProjections6GW, isLoading: projections6GWLoading } = useQuery<any[]>({
-    queryKey: ["/api/player-total-points-6gw", bootstrapData?.events],
-    enabled: !!bootstrapData,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    queryFn: async () => {
-      const nextGWs = getNextGameweeks();
-      if (nextGWs.length === 0) return [];
-      const startGW = nextGWs[0]?.id;
-      const endGW = nextGWs[nextGWs.length - 1]?.id;
-      if (!startGW || !endGW) return [];
-      const response = await fetch(`/api/player-total-points?startGameweek=${startGW}&endGameweek=${endGW}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch 6GW projections: ${response.statusText}`);
-      }
-      const data = await response.json();
-      return Array.isArray(data) ? data : [];
-    }
-  });
+  // Use cached projections for both single GW and 6GW calculations
+  const playerProjections = cachedPlayerProjections;
+  const playerProjections6GW = cachedPlayerProjections;
+  const projections6GWLoading = projectionsLoading;
 
   // Fetch recommended transfers for the current manager
   const { data: recommendedTransfers, isLoading: isLoadingRecommendations } = useQuery<any>({
