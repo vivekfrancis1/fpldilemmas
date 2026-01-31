@@ -1328,18 +1328,24 @@ export default function TransferRecommendations() {
           </Card>
         )}
 
-        {/* No recommendations available state */}
-        {searchedId && !isLoadingRecommendations && adjustedRecommendations && (!adjustedRecommendations.gameweeks || !adjustedRecommendations.gameweeks[selectedGameweek!]) && (
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-sm">
-            <CardContent className="pt-6">
-              <div className="text-center py-12">
-                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <ArrowRightLeft className="h-8 w-8 text-blue-500" />
+        {/* No recommendations available state or Roll Transfer suggestion */}
+        {searchedId && !isLoadingRecommendations && adjustedRecommendations && 
+          (!adjustedRecommendations.gameweeks || !selectedGameweek || !adjustedRecommendations.gameweeks[selectedGameweek]) && (
+          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-sm mt-6">
+            <CardContent className="pt-8 pb-10">
+              <div className="text-center py-6 sm:py-10">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border border-indigo-100">
+                  <ArrowRightLeft className="h-8 w-8 sm:h-10 sm:w-10 text-indigo-600" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Roll Your Transfer</h3>
-                <p className="text-gray-600 max-w-md mx-auto">
-                  Your current team is perfectly optimized for GW{selectedGameweek}. No transfers are recommended this week - save your free transfer for next week!
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3">Roll Your Transfer</h3>
+                <p className="text-gray-600 max-w-md mx-auto px-4 leading-relaxed">
+                  Your current team is perfectly optimized for GW{selectedGameweek}. No transfers are recommended this week - save your free transfer to have more flexibility next week!
                 </p>
+                <div className="mt-8">
+                  <Badge variant="outline" className="px-3 py-1 text-xs font-medium border-indigo-200 text-indigo-700 bg-indigo-50/50">
+                    GW{selectedGameweek} Strategy: Save FT
+                  </Badge>
+                </div>
               </div>
             </CardContent>
           </Card>
