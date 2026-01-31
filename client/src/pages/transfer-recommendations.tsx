@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowRightLeft, Search, TrendingUp, TrendingDown, DollarSign, AlertCircle, Users, Target, Filter, Plus, X, Check } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
@@ -30,6 +31,7 @@ export default function TransferRecommendations() {
   const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
   const [positionFilter, setPositionFilter] = useState<string[]>([]);
   const [appliedTransfers, setAppliedTransfers] = useState<{ [gw: string]: any[] }>({});
+  const [showTopPickOnly, setShowTopPickOnly] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -873,6 +875,18 @@ export default function TransferRecommendations() {
                   </button>
                 )}
               </div>
+              {/* Top Pick Only Toggle */}
+              <div className="flex items-center gap-2 pt-2">
+                <Switch 
+                  id="top-pick-toggle"
+                  checked={showTopPickOnly}
+                  onCheckedChange={setShowTopPickOnly}
+                  className="data-[state=checked]:bg-indigo-600"
+                />
+                <label htmlFor="top-pick-toggle" className="text-xs text-gray-600 cursor-pointer">
+                  Show only top pick per player out
+                </label>
+              </div>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue={Object.keys(adjustedRecommendations.gameweeks)[0]} className="w-full" onValueChange={setSelectedGameweek}>
@@ -1036,6 +1050,15 @@ export default function TransferRecommendations() {
                                 return netCost <= runningBank;
                               });
                               
+                              // Apply top pick filter if enabled - show only the first (best) recommendation per playerOut
+                              const finalRecommendations = showTopPickOnly 
+                                ? affordableRecommendations.filter((rec: any, index: number, arr: any[]) => {
+                                    if (rec.type === 'roll') return true;
+                                    // Keep only the first occurrence of each playerOut.id
+                                    return arr.findIndex((r: any) => r.playerOut?.id === rec.playerOut?.id) === index;
+                                  })
+                                : affordableRecommendations;
+                              
                               // Show message if filter returns no results
                               if (availableRecommendations.length === 0 && positionFilter.length > 0 && getAppliedTransfersForGW(gw).length === 0) {
                                 return (
@@ -1045,7 +1068,7 @@ export default function TransferRecommendations() {
                                 );
                               }
 
-                              if (affordableRecommendations.length === 0 && getAppliedTransfersForGW(gw).length > 0) {
+                              if (finalRecommendations.length === 0 && getAppliedTransfersForGW(gw).length > 0) {
                                 return (
                                   <div className="text-center py-6 text-gray-500 text-sm bg-gray-50 rounded-lg">
                                     No more affordable transfer recommendations available
@@ -1055,13 +1078,13 @@ export default function TransferRecommendations() {
                               
                               return (
                                 <>
-                                  {affordableRecommendations.length > 0 && (
+                                  {finalRecommendations.length > 0 && (
                                 <div>
                                   <h3 className="text-base font-semibold text-gray-700 mb-2">
                                     Transfer Recommendations
                                   </h3>
                                   <div className="space-y-2">
-                                    {affordableRecommendations.slice(0, 10).map((rec: any, index: number) => {
+                                    {finalRecommendations.slice(0, 10).map((rec: any, index: number) => {
                                       const netCost = rec.playerIn.nowCost - rec.playerOut.sellingPrice;
                                       const itbAfterThisTransfer = runningBank - netCost;
                                       const freeTransfersRemaining = getFreeTransfersRemaining(gw);
