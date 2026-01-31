@@ -62,7 +62,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Player Projections", 
       items: [
-        { path: "/player-total-points", label: "Total Projected Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: false },
+        { path: "/player-total-points", label: "Projected Points", icon: Target, description: "Complete FPL points projections combining all scoring components", popular: false },
         { path: "/player-goals-scored-projections", label: "Goals", icon: Trophy, description: "Individual player goal projections", popular: false },
         { path: "/player-assist-projections", label: "Assists", icon: Zap, description: "Individual player assist projections", popular: false },
         { path: "/player-defensive-contributions", label: "Defensive Contributions", icon: Shield, description: "Gameweek table view of defensive contributions", popular: false },
