@@ -16736,12 +16736,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bench = enrichedPicks
         .filter(p => !starting11Ids.has(p.element))
         .sort((a, b) => {
-          // Bench order: GK first, then all outfield players by projected points
+          // Bench order: GK first, then all outfield players by projected points (descending)
           if (a.position === 1 && b.position !== 1) return -1;
           if (a.position !== 1 && b.position === 1) return 1;
           
           // Both are outfield or both are GK - order by projected points
-          return b.projectedPoints - a.projectedPoints;
+          // Use a small epsilon for floating point comparison if needed, but standard subtraction is fine
+          return (b.projectedPoints || 0) - (a.projectedPoints || 0);
         });
 
       // Select captain (highest projected points in starting 11)
