@@ -884,7 +884,7 @@ export default function TransferRecommendations() {
                   className="data-[state=checked]:bg-indigo-600"
                 />
                 <label htmlFor="top-pick-toggle" className="text-xs text-gray-600 cursor-pointer">
-                  Show only top pick per player out
+                  Show only top pick per player
                 </label>
               </div>
             </CardHeader>
@@ -1050,12 +1050,15 @@ export default function TransferRecommendations() {
                                 return netCost <= runningBank;
                               });
                               
-                              // Apply top pick filter if enabled - show only the first (best) recommendation per playerOut
+                              // Apply top pick filter if enabled - show only the first (best) recommendation per playerOut AND per playerIn
                               const finalRecommendations = showTopPickOnly 
                                 ? affordableRecommendations.filter((rec: any, index: number, arr: any[]) => {
                                     if (rec.type === 'roll') return true;
                                     // Keep only the first occurrence of each playerOut.id
-                                    return arr.findIndex((r: any) => r.playerOut?.id === rec.playerOut?.id) === index;
+                                    const isFirstOut = arr.findIndex((r: any) => r.playerOut?.id === rec.playerOut?.id) === index;
+                                    // Keep only the first occurrence of each playerIn.id
+                                    const isFirstIn = arr.findIndex((r: any) => r.playerIn?.id === rec.playerIn?.id) === index;
+                                    return isFirstOut && isFirstIn;
                                   })
                                 : affordableRecommendations;
 
