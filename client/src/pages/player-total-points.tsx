@@ -462,7 +462,8 @@ function createPlayerTotalPointsColumns(
   showOpponent?: boolean,
   excludedComponents?: Set<string>,
   applyAvailability?: boolean,
-  originalPlayerDataMap?: Map<number, PlayerTotalPointsData>
+  originalPlayerDataMap?: Map<number, PlayerTotalPointsData>,
+  myTeamPlayerIds?: Set<number>
 ): TableColumn<PlayerTotalPointsData>[] {
   return [
     {
@@ -473,6 +474,11 @@ function createPlayerTotalPointsColumns(
       render: (_, player) => (
         <div className="min-w-[100px] md:min-w-[160px]">
           <div className="flex items-center gap-0.5 flex-wrap">
+            {myTeamPlayerIds?.has(player.playerId) && (
+              <span className="text-purple-600 flex-shrink-0" title="In My Team">
+                <Users className="h-3 w-3" />
+              </span>
+            )}
             <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[80px] md:max-w-none">
               {(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName || player.name}
             </span>
@@ -623,6 +629,32 @@ export default function PlayerTotalPoints() {
     queryKey: ["/api/fixtures"],
     staleTime: 5 * 60 * 1000,
   });
+
+  // Get saved manager ID from localStorage for "My Team" indicator
+  const savedManagerId = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('fplManagerId') || null;
+    }
+    return null;
+  }, []);
+
+  // Fetch manager's team to show "My Team" indicator
+  const { data: managerTeamData } = useQuery<{ picks?: { element: number }[] }>({
+    queryKey: ["/api/manager", savedManagerId, "team"],
+    enabled: !!savedManagerId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Create a Set of player IDs in the user's team
+  const myTeamPlayerIds = useMemo(() => {
+    const ids = new Set<number>();
+    if (managerTeamData?.picks) {
+      managerTeamData.picks.forEach((pick) => {
+        ids.add(pick.element);
+      });
+    }
+    return ids;
+  }, [managerTeamData]);
 
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
@@ -1736,7 +1768,8 @@ export default function PlayerTotalPoints() {
                       showOpponent,
                       excludedComponents,
                       applyAvailability,
-                      originalPlayerDataMap
+                      originalPlayerDataMap,
+                      myTeamPlayerIds
                     )}
                     onSort={handleSort}
                     sortField={sortField}
