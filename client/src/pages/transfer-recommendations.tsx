@@ -31,7 +31,7 @@ export default function TransferRecommendations() {
   const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
   const [positionFilter, setPositionFilter] = useState<string[]>([]);
   const [appliedTransfers, setAppliedTransfers] = useState<{ [gw: string]: any[] }>({});
-  const [showTopPickOnly, setShowTopPickOnly] = useState(false);
+  const [showTopPickOnly, setShowTopPickOnly] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
 
