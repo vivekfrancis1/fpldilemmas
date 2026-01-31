@@ -189,7 +189,9 @@ export function PitchView({
   onPlayerClick,
 }: PitchViewProps) {
   const sortedPlayers = sortPlayersByPosition(players);
-  const sortedBench = sortPlayersByPosition(benchPlayers);
+  // Bench players come pre-sorted from the backend (GK first, then outfield by projected points)
+  // Don't re-sort them here
+  const sortedBench = benchPlayers;
   
   return (
     <div className="space-y-0 sm:space-y-4 h-full">
