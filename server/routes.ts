@@ -16741,8 +16741,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (a.position !== 1 && b.position === 1) return 1;
           
           // Both are outfield or both are GK - order by projected points
-          // Use a small epsilon for floating point comparison if needed, but standard subtraction is fine
-          return (b.projectedPoints || 0) - (a.projectedPoints || 0);
+          // Use Math.round or similar to ensure stable comparison if pts are very close
+          const diff = (b.projectedPoints || 0) - (a.projectedPoints || 0);
+          if (Math.abs(diff) < 0.001) {
+            // Tie-break by element ID for stability
+            return a.element - b.element;
+          }
+          return diff;
         });
 
       // Select captain (highest projected points in starting 11)
