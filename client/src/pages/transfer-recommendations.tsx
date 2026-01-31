@@ -1060,10 +1060,13 @@ export default function TransferRecommendations() {
                                 : affordableRecommendations;
 
                               // Check if we should show "Roll Your Transfer" card instead of empty recommendations
-                              const isRollGW = availableRecommendations.some(r => r.type === 'roll');
+                              // availableRecommendations contains all valid moves after position/applied filtering
+                              const isRollGW = availableRecommendations.some(r => r.type === 'roll') || 
+                                              (gwData.recommendations && gwData.recommendations.some((r: any) => r.type === 'roll'));
                               const appliedTransfersInGW = getAppliedTransfersForGW(gw);
 
-                              if (finalRecommendations.length === 0 && isRollGW && appliedTransfersInGW.length === 0) {
+                              if ((finalRecommendations.length === 0 || (finalRecommendations.length === 1 && finalRecommendations[0].type === 'roll')) 
+                                  && isRollGW && appliedTransfersInGW.length === 0) {
                                 return (
                                   <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-sm mt-4">
                                     <CardContent className="pt-8 pb-10">
