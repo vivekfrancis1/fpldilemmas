@@ -7425,6 +7425,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Past Player Total Points endpoint - actual FPL points from finished gameweeks
+  app.get("/api/player-total-points-history", async (req, res) => {
+    try {
+      console.log(`DEBUG: Player Total Points History API called`);
+      
+      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      
+      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+      const lastFinishedGW = finishedEvents.length > 0 
+        ? Math.max(...finishedEvents.map((e: any) => e.id))
+        : 0;
+      
+      const playerPointsMap = new Map();
+      
+      for (let gw = 1; gw <= lastFinishedGW; gw++) {
+        try {
+          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            liveData.elements.forEach((el: any) => {
+              if (!playerPointsMap.has(el.id)) {
+                const player = bootstrapData.elements.find((p: any) => p.id === el.id);
+                if (player) {
+                  const team = bootstrapData.teams.find((t: any) => t.id === player.team);
+                  const position = bootstrapData.element_types.find((et: any) => et.id === player.element_type);
+                  playerPointsMap.set(el.id, {
+                    id: el.id,
+                    name: player.web_name,
+                    teamName: team?.name || 'Unknown',
+                    teamShort: team?.short_name || 'UNK',
+                    position: position?.singular_name_short || 'UNK',
+                    price: player.now_cost / 10,
+                    gameweekPoints: {},
+                    totalPoints: 0
+                  });
+                }
+              }
+              const playerData = playerPointsMap.get(el.id);
+              if (playerData) {
+                // Use actual FPL total points from the live API
+                const gwPoints = el.stats.total_points || 0;
+                playerData.gameweekPoints[gw] = gwPoints;
+                playerData.totalPoints += gwPoints;
+              }
+            });
+          }
+        } catch (err) {
+          console.error(`Error fetching GW${gw} live data:`, err);
+        }
+      }
+      
+      const players = Array.from(playerPointsMap.values());
+      res.json({ lastFinishedGW, players });
+    } catch (error) {
+      console.error("Error fetching player total points history:", error);
+      res.status(500).json({ error: "Failed to fetch player total points history" });
+    }
+  });
+
   // Team Assist Projections endpoint - using correct assist values based on actual FPL data analysis
   app.get("/api/team-assist-projections", async (req, res) => {
     try {

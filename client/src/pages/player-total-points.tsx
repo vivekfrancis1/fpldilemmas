@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw, UserPlus, Heart, AlertTriangle, XCircle, Clock, CheckCircle, X } from "lucide-react";
+import { Trophy, Calendar, Filter, Search, ChevronDown, ChevronUp, Target, Info, Zap, Shield, Swords, Timer, Users, RefreshCw, UserPlus, Heart, AlertTriangle, XCircle, Clock, CheckCircle, X, History } from "lucide-react";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -663,6 +663,7 @@ export default function PlayerTotalPoints() {
     return ids;
   }, [managerTeamData]);
 
+  const [viewMode, setViewMode] = useState<"past" | "future">("future");
   const [startGameweek, setStartGameweek] = useState<number | null>(null);
   const [endGameweek, setEndGameweek] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -750,13 +751,24 @@ export default function PlayerTotalPoints() {
   // Availability adjustments toggle (default ON)
   const [applyAvailability, setApplyAvailability] = useState(true);
 
-  // Get available gameweeks for dropdown (next 12 gameweeks)
+  // Get last finished gameweek
+  const lastFinishedGW = useMemo(() => {
+    if (!bootstrapData?.events) return 0;
+    const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+    return finishedEvents.length > 0 ? Math.max(...finishedEvents.map((e: any) => e.id)) : 0;
+  }, [bootstrapData?.events]);
+
+  // Get available gameweeks for dropdown - different for past vs future
   const availableGameweeks = useMemo(() => {
     if (!bootstrapData?.events) {
       return [];
     }
+    if (viewMode === "past") {
+      // Past mode: GW1 to last finished gameweek
+      return Array.from({ length: lastFinishedGW }, (_, i) => i + 1);
+    }
     return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
-  }, [bootstrapData?.events]);
+  }, [bootstrapData?.events, viewMode, lastFinishedGW]);
 
   // One-time initialization when bootstrap data loads
   useEffect(() => {
@@ -773,6 +785,23 @@ export default function PlayerTotalPoints() {
       setInitialized(true);
     }
   }, [bootstrapData, initialized]);
+
+  // Reset gameweek range when viewMode changes
+  useEffect(() => {
+    if (!bootstrapData?.events || lastFinishedGW === 0) return;
+    
+    if (viewMode === "past") {
+      // Past mode: default to last 6 finished gameweeks
+      const defaultStart = Math.max(1, lastFinishedGW - 5);
+      setStartGameweek(defaultStart);
+      setEndGameweek(lastFinishedGW);
+    } else {
+      // Future mode: default to next 6 gameweeks
+      const range = getDefaultGameweekRange(bootstrapData.events, 6);
+      setStartGameweek(parseInt(range.startGameweek));
+      setEndGameweek(parseInt(range.endGameweek));
+    }
+  }, [viewMode, bootstrapData?.events, lastFinishedGW]);
 
   // Calculate current gameweek and upcoming gameweeks
   const currentGameweek = useMemo(() => {
@@ -875,6 +904,26 @@ export default function PlayerTotalPoints() {
   const { data: cachedTotalPointsData, isLoading: cachedLoading, error: cachedError, refetch: refetchCached } = useQuery<PlayerTotalPointsData[]>({
     queryKey: ["/api/cached/player-total-points"],
     staleTime: 60 * 60 * 1000, // 1 hour cache
+    enabled: viewMode === "future",
+  });
+
+  // History query for past gameweeks
+  const { data: historyData, isLoading: historyLoading } = useQuery<{
+    lastFinishedGW: number;
+    players: Array<{
+      id: number;
+      name: string;
+      teamName: string;
+      teamShort: string;
+      position: string;
+      price: number;
+      gameweekPoints: { [gw: string]: number };
+      totalPoints: number;
+    }>;
+  }>({
+    queryKey: ["/api/player-total-points-history"],
+    staleTime: 60 * 60 * 1000,
+    enabled: viewMode === "past",
   });
 
   const { data: liveTotalPointsData, isLoading: liveLoading, error: liveError, refetch: refetchLive } = useQuery<PlayerTotalPointsData[]>({
@@ -1051,6 +1100,11 @@ export default function PlayerTotalPoints() {
 
   // Loading state - Cache-first loading logic: show loading for cache, then live API if needed
   const isLoading = useMemo(() => {
+    // For past mode, show loading while history loads
+    if (viewMode === "past") {
+      return historyLoading;
+    }
+    
     const isDefaultRange = startGameweek === nextGameweek && endGameweek === maxAvailableGW;
     
     // PRIORITY 1: For default range, show loading while cache loads
@@ -1063,7 +1117,7 @@ export default function PlayerTotalPoints() {
     if (!liveTotalPointsData && !cachedTotalPointsData && !liveError && !cachedError) return true;
     
     return false;
-  }, [liveLoading, liveError, liveTotalPointsData, cachedLoading, cachedTotalPointsData, cachedError, startGameweek, endGameweek, nextGameweek, maxAvailableGW]);
+  }, [viewMode, historyLoading, liveLoading, liveError, liveTotalPointsData, cachedLoading, cachedTotalPointsData, cachedError, startGameweek, endGameweek, nextGameweek, maxAvailableGW]);
 
   // Error handling - API-first: prioritize live API errors, only show cached errors if live API succeeds
   const error = useMemo(() => {
@@ -1130,6 +1184,39 @@ export default function PlayerTotalPoints() {
     setExcludedGameweeks(new Set());
   };
 
+  // Display data - transforms history data to match projection format for past mode
+  const displayData = useMemo(() => {
+    if (viewMode === "future") {
+      return adjustedPlayerData;
+    }
+    
+    // Past mode - transform history data to match projection format
+    if (!historyData?.players || !startGameweek || !endGameweek) return null;
+    
+    return historyData.players.map(player => {
+      // Calculate total for selected range
+      let rangeTotal = 0;
+      const gameweekProjections: { [gw: string]: number } = {};
+      
+      for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        const pts = player.gameweekPoints[gw] || 0;
+        gameweekProjections[gw] = pts;
+        rangeTotal += pts;
+      }
+      
+      return {
+        playerId: player.id,
+        name: player.name,
+        team: player.teamName,
+        teamShort: player.teamShort,
+        position: player.position,
+        price: player.price,
+        totalExpectedPoints: rangeTotal,
+        gameweekProjections,
+      } as PlayerTotalPointsData;
+    }).filter(p => p.totalExpectedPoints > 0);
+  }, [viewMode, adjustedPlayerData, historyData, startGameweek, endGameweek]);
+
   // Generate full gameweek range (for toggle display)
   const fullGameweekRange = useMemo(() => {
     if (!startGameweek || !endGameweek) return [];
@@ -1147,18 +1234,18 @@ export default function PlayerTotalPoints() {
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
-    if (!adjustedPlayerData) return [];
-    return Array.from(new Set(adjustedPlayerData.map(p => p.team)))
+    if (!displayData) return [];
+    return Array.from(new Set(displayData.map(p => p.team)))
       .filter(team => team && team.length > 3) // Remove short forms (e.g., ARS, LIV), keep full names
       .sort();
-  }, [adjustedPlayerData]);
+  }, [displayData]);
 
   const positions = useMemo(() => {
-    if (!adjustedPlayerData) return [];
-    return Array.from(new Set(adjustedPlayerData.map(p => p.position)))
+    if (!displayData) return [];
+    return Array.from(new Set(displayData.map(p => p.position)))
       .filter(pos => pos !== 'FWD') // Remove FWD since Forward already exists
       .sort();
-  }, [adjustedPlayerData]);
+  }, [displayData]);
 
   // Helper to normalize position strings for filtering
   const normalizePosition = (pos: string): string => {
@@ -1173,9 +1260,9 @@ export default function PlayerTotalPoints() {
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
-    if (!adjustedPlayerData) return [];
+    if (!displayData) return [];
     
-    let filtered = adjustedPlayerData.filter(player => {
+    let filtered = displayData.filter(player => {
       // Position filter - normalize both sides for comparison
       if (selectedPositions.size > 0) {
         const normalizedPos = normalizePosition(player.position);
@@ -1286,7 +1373,7 @@ export default function PlayerTotalPoints() {
     });
 
     return filtered;
-  }, [adjustedPlayerData, selectedPositions, selectedTeams, searchTerm, selectedLoadGroup, selectedAvailability, sortField, sortDirection, myTeamPlayerIds]);
+  }, [displayData, selectedPositions, selectedTeams, searchTerm, selectedLoadGroup, selectedAvailability, sortField, sortDirection, myTeamPlayerIds]);
 
   // Calculate max points per gameweek for highlighting
   const maxPointsPerGameweek = useMemo(() => {
@@ -1366,11 +1453,34 @@ export default function PlayerTotalPoints() {
             <div className="fpl-page-header-content">
               <div className="fpl-page-title">
                 <Target className="h-8 w-8" />
-                <h1>Player Points Projections</h1>
+                <h1>{viewMode === "future" ? "Player Points Projections" : "Player Points History"}</h1>
               </div>
               <p className="fpl-page-subtitle">
-                Complete FPL points projection combining all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points
+                {viewMode === "future" 
+                  ? "Complete FPL points projection combining all scoring components: goals, assists, clean sheets, minutes, saves, goals conceded, cards, defensive contributions and bonus points"
+                  : "Actual FPL points scored by players in past gameweeks"}
               </p>
+              {/* Past/Future Toggle */}
+              <div className="flex gap-2 mt-3">
+                <Button
+                  variant={viewMode === "past" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("past")}
+                  className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+                >
+                  <History className="h-4 w-4" />
+                  Past GW Points
+                </Button>
+                <Button
+                  variant={viewMode === "future" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setViewMode("future")}
+                  className={`flex items-center gap-1.5 ${viewMode === "future" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+                >
+                  <Calendar className="h-4 w-4" />
+                  Future GW Projections
+                </Button>
+              </div>
             </div>
           </div>
 
