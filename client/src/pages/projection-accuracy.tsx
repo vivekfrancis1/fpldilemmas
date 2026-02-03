@@ -112,7 +112,7 @@ export default function ProjectionAccuracy() {
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [positionFilter, setPositionFilter] = useState<string>("all");
 
-  const availableGameweeks = Array.from({ length: 14 }, (_, i) => i + 25);
+  const availableGameweeks = Array.from({ length: 38 }, (_, i) => i + 1);
 
   const { data: accuracyData, isLoading, error } = useQuery<GameweekAccuracyData>({
     queryKey: ['/api/projection-accuracy/gameweek', selectedGameweek],
