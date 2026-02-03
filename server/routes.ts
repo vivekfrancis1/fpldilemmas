@@ -7461,9 +7461,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     teamName: team?.name || 'Unknown',
                     teamShort: team?.short_name || 'UNK',
                     position: position?.singular_name_short || 'UNK',
+                    elementType: player.element_type,
                     price: player.now_cost / 10,
                     gameweekPoints: {},
                     gameweekMinutes: {},
+                    gameweekStats: {},
                     totalPoints: 0,
                     totalMinutes: 0,
                     gamesPlayed: 0
@@ -7477,6 +7479,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const gwMinutes = el.stats.minutes || 0;
                 playerData.gameweekPoints[gw] = gwPoints;
                 playerData.gameweekMinutes[gw] = gwMinutes;
+                // Store detailed stats for tooltip breakdown
+                playerData.gameweekStats[gw] = {
+                  minutes: el.stats.minutes || 0,
+                  goals: el.stats.goals_scored || 0,
+                  assists: el.stats.assists || 0,
+                  cleanSheets: el.stats.clean_sheets || 0,
+                  goalsConceded: el.stats.goals_conceded || 0,
+                  ownGoals: el.stats.own_goals || 0,
+                  penaltiesSaved: el.stats.penalties_saved || 0,
+                  penaltiesMissed: el.stats.penalties_missed || 0,
+                  yellowCards: el.stats.yellow_cards || 0,
+                  redCards: el.stats.red_cards || 0,
+                  saves: el.stats.saves || 0,
+                  bonus: el.stats.bonus || 0,
+                  totalPoints: el.stats.total_points || 0
+                };
                 playerData.totalPoints += gwPoints;
                 playerData.totalMinutes += gwMinutes;
                 if (gwMinutes > 0) {

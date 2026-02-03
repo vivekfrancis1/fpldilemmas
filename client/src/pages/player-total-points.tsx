@@ -254,6 +254,141 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
   );
 }
 
+// Past Gameweek Breakdown Tooltip Component - for historical data
+function PastGameweekBreakdownTooltip({ player, gameweek }: { player: PlayerTotalPointsData, gameweek: number }) {
+  const gwKey = gameweek.toString();
+  const gwStats = (player as any).gameweekStats?.[gwKey];
+  const gwPoints = player.gameweekProjections?.[gwKey] || 0;
+  const elementType = (player as any).elementType || 3; // Default to MID if unknown
+  
+  if (!gwStats) {
+    return <span className="font-semibold text-gray-800">{Math.round(gwPoints)}</span>;
+  }
+
+  // Calculate FPL points breakdown based on element type
+  // 1=GKP, 2=DEF, 3=MID, 4=FWD
+  const getGoalPoints = (type: number) => type === 1 || type === 2 ? 6 : type === 3 ? 5 : 4;
+  const getCleanSheetPoints = (type: number) => type === 1 || type === 2 ? 4 : type === 3 ? 1 : 0;
+  const getGoalsConcededPenalty = (type: number, conceded: number) => {
+    if (type === 1 || type === 2) return Math.floor(conceded / 2) * -1;
+    return 0;
+  };
+  
+  const breakdown = {
+    minutes: gwStats.minutes >= 60 ? 2 : gwStats.minutes > 0 ? 1 : 0,
+    goals: gwStats.goals * getGoalPoints(elementType),
+    assists: gwStats.assists * 3,
+    cleanSheets: gwStats.cleanSheets * getCleanSheetPoints(elementType),
+    goalsConceded: getGoalsConcededPenalty(elementType, gwStats.goalsConceded),
+    ownGoals: gwStats.ownGoals * -2,
+    penaltiesSaved: gwStats.penaltiesSaved * 5,
+    penaltiesMissed: gwStats.penaltiesMissed * -2,
+    yellowCards: gwStats.yellowCards * -1,
+    redCards: gwStats.redCards * -3,
+    saves: elementType === 1 ? Math.floor(gwStats.saves / 3) : 0,
+    bonus: gwStats.bonus
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+          <span className="font-semibold text-gray-800">{Math.round(gwPoints)}</span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
+        <div className="space-y-2">
+          <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
+            GW{gameweek} Actual Points Breakdown
+          </div>
+          
+          <div className="space-y-1.5 text-sm">
+            {gwStats.minutes > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">⏱️ Minutes ({gwStats.minutes}):</span>
+                <span className="font-medium text-purple-700">{breakdown.minutes}</span>
+              </div>
+            )}
+            {gwStats.goals > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">⚽ Goals ({gwStats.goals}):</span>
+                <span className="font-medium text-green-700">{breakdown.goals}</span>
+              </div>
+            )}
+            {gwStats.assists > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">🎯 Assists ({gwStats.assists}):</span>
+                <span className="font-medium text-blue-700">{breakdown.assists}</span>
+              </div>
+            )}
+            {gwStats.cleanSheets > 0 && getCleanSheetPoints(elementType) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">🛡️ Clean Sheet:</span>
+                <span className="font-medium text-yellow-700">{breakdown.cleanSheets}</span>
+              </div>
+            )}
+            {breakdown.goalsConceded < 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">🚪 Goals Conceded ({gwStats.goalsConceded}):</span>
+                <span className="font-medium text-red-600">{breakdown.goalsConceded}</span>
+              </div>
+            )}
+            {gwStats.saves > 0 && elementType === 1 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">🥅 Saves ({gwStats.saves}):</span>
+                <span className="font-medium text-cyan-700">{breakdown.saves}</span>
+              </div>
+            )}
+            {gwStats.penaltiesSaved > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">🧤 Penalties Saved ({gwStats.penaltiesSaved}):</span>
+                <span className="font-medium text-green-700">{breakdown.penaltiesSaved}</span>
+              </div>
+            )}
+            {gwStats.penaltiesMissed > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">❌ Penalties Missed ({gwStats.penaltiesMissed}):</span>
+                <span className="font-medium text-red-600">{breakdown.penaltiesMissed}</span>
+              </div>
+            )}
+            {gwStats.ownGoals > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">🙈 Own Goals ({gwStats.ownGoals}):</span>
+                <span className="font-medium text-red-600">{breakdown.ownGoals}</span>
+              </div>
+            )}
+            {gwStats.yellowCards > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">🟨 Yellow Cards ({gwStats.yellowCards}):</span>
+                <span className="font-medium text-yellow-600">{breakdown.yellowCards}</span>
+              </div>
+            )}
+            {gwStats.redCards > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">🟥 Red Cards ({gwStats.redCards}):</span>
+                <span className="font-medium text-red-700">{breakdown.redCards}</span>
+              </div>
+            )}
+            {gwStats.bonus > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-600">✨ Bonus:</span>
+                <span className="font-medium text-pink-700">{breakdown.bonus}</span>
+              </div>
+            )}
+          </div>
+          
+          <div className="border-t pt-2 mt-3">
+            <div className="flex justify-between items-center font-semibold">
+              <span className="text-gray-800">GW{gameweek} Total:</span>
+              <span className="text-green-800">{Math.round(gwPoints)}</span>
+            </div>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // Range Total Point Breakdown Tooltip Component
 interface RangeTotalBreakdownTooltipProps {
   player: PlayerTotalPointsData;
@@ -544,7 +679,7 @@ function createPlayerTotalPointsColumns(
           return (
             <div className={`${isMaxForGameweek ? 'bg-gradient-to-br from-green-100 to-emerald-100 rounded-md p-1' : ''}`}>
               {isPastMode ? (
-                <span className="font-semibold text-gray-800">{Math.round(playerPoints)}</span>
+                <PastGameweekBreakdownTooltip player={player} gameweek={gw} />
               ) : (
                 <GameweekPointBreakdownTooltip player={player} gameweek={gw} excludedComponents={excludedComponents} />
               )}
@@ -926,9 +1061,25 @@ export default function PlayerTotalPoints() {
       teamName: string;
       teamShort: string;
       position: string;
+      elementType: number;
       price: number;
       gameweekPoints: { [gw: string]: number };
       gameweekMinutes: { [gw: string]: number };
+      gameweekStats: { [gw: string]: {
+        minutes: number;
+        goals: number;
+        assists: number;
+        cleanSheets: number;
+        goalsConceded: number;
+        ownGoals: number;
+        penaltiesSaved: number;
+        penaltiesMissed: number;
+        yellowCards: number;
+        redCards: number;
+        saves: number;
+        bonus: number;
+        totalPoints: number;
+      }};
       totalPoints: number;
       totalMinutes: number;
       gamesPlayed: number;
@@ -1234,6 +1385,7 @@ export default function PlayerTotalPoints() {
         team: player.teamName,
         teamShort: player.teamShort,
         position: player.position,
+        elementType: player.elementType,
         price: player.price,
         totalExpectedPoints: rangeTotal,
         totalMinutes: rangeMinutes,
@@ -1241,6 +1393,7 @@ export default function PlayerTotalPoints() {
         averageValue: avgValue,
         avgMinutesPerGameweek: avgMinsPerGame,
         gameweekProjections,
+        gameweekStats: player.gameweekStats,
       } as unknown as PlayerTotalPointsData;
     }).filter(p => p.totalExpectedPoints > 0);
   }, [viewMode, adjustedPlayerData, historyData, startGameweek, endGameweek]);
