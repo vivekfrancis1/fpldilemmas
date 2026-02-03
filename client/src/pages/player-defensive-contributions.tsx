@@ -925,11 +925,12 @@ export default function PlayerDefensiveContributions() {
                   </TableHead>
 
                   <TableHead 
-                    className="hidden md:table-cell min-w-[60px] cursor-pointer hover:bg-muted/50 px-1 md:px-2 text-xs"
+                    className="hidden md:table-cell min-w-[80px] cursor-pointer hover:bg-muted/50 px-1 md:px-2 text-xs"
                     onClick={handleCurrentDCSort}
                   >
-                    <div className="flex items-center justify-center gap-1">
-                      DC/g
+                    <div className="flex items-center justify-center gap-1 text-center">
+                      <span className="whitespace-nowrap">DC/game</span>
+                      <span className="text-[10px] text-gray-500">(season)</span>
                       {sortByCurrentDC && (
                         <span className="text-xs">
                           {currentDCSortOrder === "desc" ? "↓" : "↑"}
@@ -940,11 +941,11 @@ export default function PlayerDefensiveContributions() {
                   {activeGameweeks.map(gw => (
                     <TableHead 
                       key={gw} 
-                      className="text-center min-w-[40px] md:min-w-[50px] cursor-pointer hover:bg-muted/50 px-1 text-xs md:text-sm"
+                      className="text-center min-w-[45px] md:min-w-[55px] cursor-pointer hover:bg-muted/50 px-1 text-xs md:text-sm"
                       onClick={() => handleGameweekSort(gw)}
                     >
                       <div className="flex items-center justify-center gap-1">
-                        {gw}
+                        GW {gw}
                         {gameweekSortColumn === gw && (
                           <span className="text-xs">
                             {gameweekSortOrder === "desc" ? "↓" : "↑"}
