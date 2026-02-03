@@ -1214,8 +1214,9 @@ export default function PlayerTotalPoints() {
         if (mins > 0) rangeGamesPlayed++;
       }
       
-      const avgPoints = rangeGamesPlayed > 0 ? rangeTotal / rangeGamesPlayed : 0;
-      const value = player.price > 0 ? rangeTotal / player.price : 0;
+      const avgPointsPerGame = rangeGamesPlayed > 0 ? rangeTotal / rangeGamesPlayed : 0;
+      const avgValue = player.price > 0 ? rangeTotal / player.price : 0;
+      const avgMinsPerGame = rangeGamesPlayed > 0 ? rangeMinutes / rangeGamesPlayed : 0;
       
       return {
         playerId: player.id,
@@ -1226,8 +1227,9 @@ export default function PlayerTotalPoints() {
         price: player.price,
         totalExpectedPoints: rangeTotal,
         totalMinutes: rangeMinutes,
-        avgPoints: avgPoints,
-        value: value,
+        averagePerGameweek: avgPointsPerGame,
+        averageValue: avgValue,
+        avgMinutesPerGameweek: avgMinsPerGame,
         gameweekProjections,
       } as unknown as PlayerTotalPointsData;
     }).filter(p => p.totalExpectedPoints > 0);
