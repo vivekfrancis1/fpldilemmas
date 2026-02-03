@@ -17486,96 +17486,187 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // No snapshot - fetch live projections from API
-      console.log(`No snapshot for GW${gameweek}, fetching live projections...`);
+      // No snapshot - determine if this is a past or future gameweek
+      console.log(`No snapshot for GW${gameweek}, checking gameweek status...`);
       
-      const [playerResponse, teamResponse, bootstrapResponse] = await Promise.all([
-        internalFetch('/api/cached/player-total-points'),
-        internalFetch('/api/cached/team-goal-projections'),
-        fetchWithRetry('https://fantasy.premierleague.com/api/bootstrap-static/')
-      ]);
+      const bootstrapResponse = await fetchWithRetry('https://fantasy.premierleague.com/api/bootstrap-static/');
       
       let players: any[] = [];
       let teams: any[] = [];
+      let dataSource = 'live';
       
-      // Build team name lookup
+      // Build team name lookup and determine current gameweek
       const teamIdToName: Record<number, string> = {};
+      const teamIdToShort: Record<number, string> = {};
+      let currentGW = 1;
+      let isFinishedGW = false;
+      
       if (bootstrapResponse?.ok) {
         const bootstrapData = await bootstrapResponse.json();
         bootstrapData.teams?.forEach((t: any) => {
           teamIdToName[t.id] = t.name;
+          teamIdToShort[t.id] = t.short_name;
         });
-      }
-      
-      // Process player projections
-      if (playerResponse.ok) {
-        const playerData = await playerResponse.json();
-        // Handle array format from /api/cached/player-total-points
-        const playerArray = Array.isArray(playerData) ? playerData : Object.values(playerData);
-        players = playerArray.map((playerInfo: any) => {
-          // Get projected points for this gameweek from gameweekProjections
-          const projectedPoints = playerInfo.gameweekProjections?.[gameweek.toString()] || 0;
-          return {
-            id: playerInfo.playerId,
-            player_id: playerInfo.playerId,
-            player_name: playerInfo.playerName || playerInfo.name || '',
-            team_id: 0,
-            team_name: playerInfo.team || '',
-            position: playerInfo.position || '',
-            projected_points: projectedPoints.toString(),
-            projected_minutes: '0',
-            projected_goals: (playerInfo.pointsFromGoals?.[gameweek.toString()] || 0).toString(),
-            projected_assists: (playerInfo.pointsFromAssists?.[gameweek.toString()] || 0).toString(),
-            projected_clean_sheet: '0',
-            projected_bonus: '0',
-            projected_saves: '0',
-            actual_points: null,
-            actual_minutes: null,
-            actual_goals: null,
-            actual_assists: null,
-            actual_clean_sheet: null,
-            actual_bonus: null,
-            actual_saves: null,
-            points_difference: null,
-            absolute_error: null,
-            percentage_error: null
-          };
-        })
-        .filter(p => parseFloat(p.projected_points) > 0)
-        .sort((a, b) => parseFloat(b.projected_points) - parseFloat(a.projected_points))
-        .slice(0, 100);
-      }
-      
-      // Process team projections
-      if (teamResponse.ok) {
-        const teamData = await teamResponse.json();
-        // Handle array format from /api/cached/team-goal-projections
-        const teamArray = Array.isArray(teamData) ? teamData : Object.values(teamData);
-        teams = teamArray.map((teamInfo: any) => {
-          // Get projected goals for this gameweek
-          const projectedGoals = teamInfo.gameweekProjections?.[gameweek.toString()] || 0;
-          return {
-            id: teamInfo.teamId || teamInfo.id,
-            team_id: teamInfo.teamId || teamInfo.id,
-            team_name: teamInfo.teamName || teamInfo.team || '',
-            projected_goals_scored: projectedGoals.toString(),
-            projected_goals_conceded: '0',
-            projected_clean_sheet_prob: '0',
-            actual_goals_scored: null,
-            actual_goals_conceded: null,
-            actual_clean_sheet: null,
-            goals_scored_difference: null,
-            goals_conceded_difference: null
-          };
-        })
-        .filter(t => parseFloat(t.projected_goals_scored) > 0)
-        .sort((a, b) => parseFloat(b.projected_goals_scored) - parseFloat(a.projected_goals_scored));
+        
+        const currentEvent = bootstrapData.events?.find((e: any) => e.is_current);
+        if (currentEvent) {
+          currentGW = currentEvent.id;
+        }
+        
+        // Check if the requested gameweek is finished
+        const requestedEvent = bootstrapData.events?.find((e: any) => e.id === gameweek);
+        isFinishedGW = requestedEvent?.finished === true;
+        
+        // For past/finished gameweeks, fetch actual data from bootstrap
+        if (isFinishedGW || gameweek < currentGW) {
+          dataSource = 'historical';
+          
+          // Get player actual points for this gameweek from bootstrap elements
+          const positionMap: Record<number, string> = { 1: 'Goalkeeper', 2: 'Defender', 3: 'Midfielder', 4: 'Forward' };
+          
+          // Fetch gameweek live data for actual points
+          const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
+          const fixturesResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/fixtures/?event=${gameweek}`);
+          
+          if (liveResponse?.ok) {
+            const liveData = await liveResponse.json();
+            
+            players = liveData.elements?.map((el: any) => {
+              const playerInfo = bootstrapData.elements?.find((p: any) => p.id === el.id);
+              if (!playerInfo) return null;
+              
+              const stats = el.stats || {};
+              return {
+                id: el.id,
+                player_id: el.id,
+                player_name: playerInfo.web_name || `${playerInfo.first_name} ${playerInfo.second_name}`,
+                team_id: playerInfo.team,
+                team_name: teamIdToName[playerInfo.team] || '',
+                position: positionMap[playerInfo.element_type] || '',
+                projected_points: '0',
+                projected_minutes: '0',
+                projected_goals: '0',
+                projected_assists: '0',
+                projected_clean_sheet: '0',
+                projected_bonus: '0',
+                projected_saves: '0',
+                actual_points: stats.total_points || 0,
+                actual_minutes: stats.minutes || 0,
+                actual_goals: stats.goals_scored || 0,
+                actual_assists: stats.assists || 0,
+                actual_clean_sheet: stats.clean_sheets || 0,
+                actual_bonus: stats.bonus || 0,
+                actual_saves: stats.saves || 0,
+                points_difference: null,
+                absolute_error: null,
+                percentage_error: null
+              };
+            }).filter((p: any) => p && p.actual_points > 0)
+              .sort((a: any, b: any) => b.actual_points - a.actual_points)
+              .slice(0, 100);
+          }
+          
+          // Get team actual goals from fixtures
+          if (fixturesResponse?.ok) {
+            const fixtures = await fixturesResponse.json();
+            const teamGoals: Record<number, number> = {};
+            const teamCleanSheets: Record<number, number> = {};
+            
+            fixtures.forEach((f: any) => {
+              if (f.finished) {
+                teamGoals[f.team_h] = (teamGoals[f.team_h] || 0) + (f.team_h_score || 0);
+                teamGoals[f.team_a] = (teamGoals[f.team_a] || 0) + (f.team_a_score || 0);
+                teamCleanSheets[f.team_h] = f.team_a_score === 0 ? 1 : 0;
+                teamCleanSheets[f.team_a] = f.team_h_score === 0 ? 1 : 0;
+              }
+            });
+            
+            teams = Object.entries(teamGoals).map(([teamId, goals]) => ({
+              id: parseInt(teamId),
+              team_id: parseInt(teamId),
+              team_name: teamIdToName[parseInt(teamId)] || '',
+              projected_goals_scored: '0',
+              projected_goals_conceded: '0',
+              projected_clean_sheet_prob: '0',
+              actual_goals_scored: goals,
+              actual_goals_conceded: null,
+              actual_clean_sheet: teamCleanSheets[parseInt(teamId)] || 0,
+              goals_scored_difference: null,
+              goals_conceded_difference: null
+            })).sort((a, b) => (b.actual_goals_scored || 0) - (a.actual_goals_scored || 0));
+          }
+        } else {
+          // Future gameweek - fetch live projections
+          const [playerResponse, teamResponse] = await Promise.all([
+            internalFetch('/api/cached/player-total-points'),
+            internalFetch('/api/cached/team-goal-projections')
+          ]);
+          
+          if (playerResponse.ok) {
+            const playerData = await playerResponse.json();
+            const playerArray = Array.isArray(playerData) ? playerData : Object.values(playerData);
+            players = playerArray.map((playerInfo: any) => {
+              const projectedPoints = playerInfo.gameweekProjections?.[gameweek.toString()] || 0;
+              return {
+                id: playerInfo.playerId,
+                player_id: playerInfo.playerId,
+                player_name: playerInfo.playerName || playerInfo.name || '',
+                team_id: 0,
+                team_name: playerInfo.team || '',
+                position: playerInfo.position || '',
+                projected_points: projectedPoints.toString(),
+                projected_minutes: '0',
+                projected_goals: (playerInfo.pointsFromGoals?.[gameweek.toString()] || 0).toString(),
+                projected_assists: (playerInfo.pointsFromAssists?.[gameweek.toString()] || 0).toString(),
+                projected_clean_sheet: '0',
+                projected_bonus: '0',
+                projected_saves: '0',
+                actual_points: null,
+                actual_minutes: null,
+                actual_goals: null,
+                actual_assists: null,
+                actual_clean_sheet: null,
+                actual_bonus: null,
+                actual_saves: null,
+                points_difference: null,
+                absolute_error: null,
+                percentage_error: null
+              };
+            })
+            .filter(p => parseFloat(p.projected_points) > 0)
+            .sort((a, b) => parseFloat(b.projected_points) - parseFloat(a.projected_points))
+            .slice(0, 100);
+          }
+          
+          if (teamResponse.ok) {
+            const teamData = await teamResponse.json();
+            const teamArray = Array.isArray(teamData) ? teamData : Object.values(teamData);
+            teams = teamArray.map((teamInfo: any) => {
+              const projectedGoals = teamInfo.gameweekProjections?.[gameweek.toString()] || 0;
+              return {
+                id: teamInfo.teamId || teamInfo.id,
+                team_id: teamInfo.teamId || teamInfo.id,
+                team_name: teamInfo.teamName || teamInfo.team || '',
+                projected_goals_scored: projectedGoals.toString(),
+                projected_goals_conceded: '0',
+                projected_clean_sheet_prob: '0',
+                actual_goals_scored: null,
+                actual_goals_conceded: null,
+                actual_clean_sheet: null,
+                goals_scored_difference: null,
+                goals_conceded_difference: null
+              };
+            })
+            .filter(t => parseFloat(t.projected_goals_scored) > 0)
+            .sort((a, b) => parseFloat(b.projected_goals_scored) - parseFloat(a.projected_goals_scored));
+          }
+        }
       }
       
       res.json({
         gameweek,
         season,
-        dataSource: 'live',
+        dataSource,
         summary: null,
         players,
         teams
