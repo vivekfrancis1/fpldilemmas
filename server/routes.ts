@@ -17448,41 +17448,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameweek = parseInt(req.params.gw);
       const season = req.query.season || '2024/25';
       
+      // Check if snapshot exists (deadline has passed)
       const snapshot = await db.execute(sql`
         SELECT id FROM gameweek_projection_snapshots 
         WHERE gameweek = ${gameweek} AND season = ${season} AND snapshot_type = 'deadline'
       `);
       
-      if (snapshot.rows.length === 0) {
-        return res.json({ message: `No data for GW${gameweek}`, players: [], teams: [] });
+      // If snapshot exists, return snapshot data
+      if (snapshot.rows.length > 0) {
+        const snapshotId = snapshot.rows[0].id;
+        
+        const [players, teams, summary] = await Promise.all([
+          db.execute(sql`
+            SELECT * FROM player_projection_records 
+            WHERE snapshot_id = ${snapshotId}
+            ORDER BY CAST(projected_points AS DECIMAL) DESC
+            LIMIT 100
+          `),
+          db.execute(sql`
+            SELECT * FROM team_projection_records 
+            WHERE snapshot_id = ${snapshotId}
+            ORDER BY CAST(projected_goals_scored AS DECIMAL) DESC
+          `),
+          db.execute(sql`
+            SELECT * FROM projection_accuracy_summary 
+            WHERE gameweek = ${gameweek} AND season = ${season}
+          `)
+        ]);
+        
+        return res.json({
+          gameweek,
+          season,
+          dataSource: 'snapshot',
+          summary: summary.rows[0] || null,
+          players: players.rows,
+          teams: teams.rows
+        });
       }
       
-      const snapshotId = snapshot.rows[0].id;
+      // No snapshot - fetch live projections from API
+      console.log(`No snapshot for GW${gameweek}, fetching live projections...`);
       
-      const [players, teams, summary] = await Promise.all([
-        db.execute(sql`
-          SELECT * FROM player_projection_records 
-          WHERE snapshot_id = ${snapshotId}
-          ORDER BY ABS(COALESCE(points_difference, 0)) DESC
-          LIMIT 100
-        `),
-        db.execute(sql`
-          SELECT * FROM team_projection_records 
-          WHERE snapshot_id = ${snapshotId}
-          ORDER BY team_name
-        `),
-        db.execute(sql`
-          SELECT * FROM projection_accuracy_summary 
-          WHERE gameweek = ${gameweek} AND season = ${season}
-        `)
+      const [playerResponse, teamResponse, bootstrapResponse] = await Promise.all([
+        internalFetch('/api/cached/player-total-points'),
+        internalFetch('/api/cached/team-goal-projections'),
+        fetchWithRetry('https://fantasy.premierleague.com/api/bootstrap-static/')
       ]);
+      
+      let players: any[] = [];
+      let teams: any[] = [];
+      
+      // Build team name lookup
+      const teamIdToName: Record<number, string> = {};
+      if (bootstrapResponse?.ok) {
+        const bootstrapData = await bootstrapResponse.json();
+        bootstrapData.teams?.forEach((t: any) => {
+          teamIdToName[t.id] = t.name;
+        });
+      }
+      
+      // Process player projections
+      if (playerResponse.ok) {
+        const playerData = await playerResponse.json();
+        // Handle array format from /api/cached/player-total-points
+        const playerArray = Array.isArray(playerData) ? playerData : Object.values(playerData);
+        players = playerArray.map((playerInfo: any) => {
+          // Get projected points for this gameweek from gameweekProjections
+          const projectedPoints = playerInfo.gameweekProjections?.[gameweek.toString()] || 0;
+          return {
+            id: playerInfo.playerId,
+            player_id: playerInfo.playerId,
+            player_name: playerInfo.playerName || playerInfo.name || '',
+            team_id: 0,
+            team_name: playerInfo.team || '',
+            position: playerInfo.position || '',
+            projected_points: projectedPoints.toString(),
+            projected_minutes: '0',
+            projected_goals: (playerInfo.pointsFromGoals?.[gameweek.toString()] || 0).toString(),
+            projected_assists: (playerInfo.pointsFromAssists?.[gameweek.toString()] || 0).toString(),
+            projected_clean_sheet: '0',
+            projected_bonus: '0',
+            projected_saves: '0',
+            actual_points: null,
+            actual_minutes: null,
+            actual_goals: null,
+            actual_assists: null,
+            actual_clean_sheet: null,
+            actual_bonus: null,
+            actual_saves: null,
+            points_difference: null,
+            absolute_error: null,
+            percentage_error: null
+          };
+        })
+        .filter(p => parseFloat(p.projected_points) > 0)
+        .sort((a, b) => parseFloat(b.projected_points) - parseFloat(a.projected_points))
+        .slice(0, 100);
+      }
+      
+      // Process team projections
+      if (teamResponse.ok) {
+        const teamData = await teamResponse.json();
+        // Handle array format from /api/cached/team-goal-projections
+        const teamArray = Array.isArray(teamData) ? teamData : Object.values(teamData);
+        teams = teamArray.map((teamInfo: any) => {
+          // Get projected goals for this gameweek
+          const projectedGoals = teamInfo.gameweekProjections?.[gameweek.toString()] || 0;
+          return {
+            id: teamInfo.teamId || teamInfo.id,
+            team_id: teamInfo.teamId || teamInfo.id,
+            team_name: teamInfo.teamName || teamInfo.team || '',
+            projected_goals_scored: projectedGoals.toString(),
+            projected_goals_conceded: '0',
+            projected_clean_sheet_prob: '0',
+            actual_goals_scored: null,
+            actual_goals_conceded: null,
+            actual_clean_sheet: null,
+            goals_scored_difference: null,
+            goals_conceded_difference: null
+          };
+        })
+        .filter(t => parseFloat(t.projected_goals_scored) > 0)
+        .sort((a, b) => parseFloat(b.projected_goals_scored) - parseFloat(a.projected_goals_scored));
+      }
       
       res.json({
         gameweek,
         season,
-        summary: summary.rows[0] || null,
-        players: players.rows,
-        teams: teams.rows
+        dataSource: 'live',
+        summary: null,
+        players,
+        teams
       });
     } catch (error) {
       console.error('Error fetching gameweek accuracy:', error);
