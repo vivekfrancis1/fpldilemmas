@@ -6,6 +6,7 @@ import { priceSplitWorker } from "./price-split-worker";
 import { projectionCacheScheduler } from "./projection-cache-scheduler";
 import { fplScoringCacheScheduler } from "./fpl-scoring-cache-scheduler";
 import { twitterScheduler } from "./twitter-scheduler";
+import { projectionAccuracyScheduler } from "./projection-accuracy-scheduler";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedContentCreators } from "./seed-database";
 import { seedAdminUser } from "./seed-admin-user";
@@ -135,6 +136,10 @@ app.use((req, res, next) => {
       }).catch((error) => {
         console.error("Failed to start daily projections scheduler:", error);
       });
+      
+      // Start projection accuracy scheduler (tracks GW25-38 projections vs actuals)
+      projectionAccuracyScheduler.start();
+      console.log("✓ Projection accuracy scheduler started");
     });
 
     // Handle server startup errors

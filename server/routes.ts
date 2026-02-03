@@ -17429,6 +17429,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ Twitter API routes registered successfully");
 
+  // Projection Accuracy API endpoints
+  app.get("/api/projection-accuracy/summary", async (req, res) => {
+    try {
+      const result = await db.execute(sql`
+        SELECT * FROM projection_accuracy_summary 
+        ORDER BY gameweek DESC
+      `);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Error fetching projection accuracy summary:', error);
+      res.status(500).json({ error: 'Failed to fetch summary' });
+    }
+  });
+
+  app.get("/api/projection-accuracy/gameweek/:gw", async (req, res) => {
+    try {
+      const gameweek = parseInt(req.params.gw);
+      const season = req.query.season || '2024/25';
+      
+      const snapshot = await db.execute(sql`
+        SELECT id FROM gameweek_projection_snapshots 
+        WHERE gameweek = ${gameweek} AND season = ${season} AND snapshot_type = 'deadline'
+      `);
+      
+      if (snapshot.rows.length === 0) {
+        return res.json({ message: `No data for GW${gameweek}`, players: [], teams: [] });
+      }
+      
+      const snapshotId = snapshot.rows[0].id;
+      
+      const [players, teams, summary] = await Promise.all([
+        db.execute(sql`
+          SELECT * FROM player_projection_records 
+          WHERE snapshot_id = ${snapshotId}
+          ORDER BY ABS(COALESCE(points_difference, 0)) DESC
+          LIMIT 100
+        `),
+        db.execute(sql`
+          SELECT * FROM team_projection_records 
+          WHERE snapshot_id = ${snapshotId}
+          ORDER BY team_name
+        `),
+        db.execute(sql`
+          SELECT * FROM projection_accuracy_summary 
+          WHERE gameweek = ${gameweek} AND season = ${season}
+        `)
+      ]);
+      
+      res.json({
+        gameweek,
+        season,
+        summary: summary.rows[0] || null,
+        players: players.rows,
+        teams: teams.rows
+      });
+    } catch (error) {
+      console.error('Error fetching gameweek accuracy:', error);
+      res.status(500).json({ error: 'Failed to fetch data' });
+    }
+  });
+
+  app.get("/api/projection-accuracy/player/:playerId", async (req, res) => {
+    try {
+      const playerId = parseInt(req.params.playerId);
+      
+      const result = await db.execute(sql`
+        SELECT * FROM player_projection_records 
+        WHERE player_id = ${playerId}
+        ORDER BY gameweek DESC
+      `);
+      
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Error fetching player accuracy:', error);
+      res.status(500).json({ error: 'Failed to fetch data' });
+    }
+  });
+
+  app.post("/api/admin/projection-accuracy/capture-deadline", async (req, res) => {
+    try {
+      const { gameweek } = req.body;
+      if (!gameweek) {
+        return res.status(400).json({ error: 'Gameweek required' });
+      }
+      
+      const { projectionAccuracyScheduler } = await import('./projection-accuracy-scheduler');
+      const result = await projectionAccuracyScheduler.manualCaptureDeadline(gameweek);
+      res.json(result);
+    } catch (error) {
+      console.error('Error capturing deadline:', error);
+      res.status(500).json({ error: 'Failed to capture deadline' });
+    }
+  });
+
+  app.post("/api/admin/projection-accuracy/capture-actuals", async (req, res) => {
+    try {
+      const { gameweek } = req.body;
+      if (!gameweek) {
+        return res.status(400).json({ error: 'Gameweek required' });
+      }
+      
+      const { projectionAccuracyScheduler } = await import('./projection-accuracy-scheduler');
+      const result = await projectionAccuracyScheduler.manualCaptureActuals(gameweek);
+      res.json(result);
+    } catch (error) {
+      console.error('Error capturing actuals:', error);
+      res.status(500).json({ error: 'Failed to capture actuals' });
+    }
+  });
+
+  console.log("✓ Projection accuracy API routes registered");
+
   const httpServer = createServer(app);
   return httpServer;
 }
