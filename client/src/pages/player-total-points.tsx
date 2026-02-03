@@ -1590,12 +1590,20 @@ export default function PlayerTotalPoints() {
 
   // Show loading only when actually needed
   if (!initialized || !bootstrapData || isLoading) {
+    const isPastMode = viewMode === "past";
     return (
       <LoadingExperience
         variant="table"
-        title="Loading Player Points Projections"
-        description="Fetching comprehensive FPL points data for all players across the next 12 gameweeks..."
-        steps={[
+        title={isPastMode ? "Loading Historical Points Data" : "Loading Player Points Projections"}
+        description={isPastMode 
+          ? `Fetching actual FPL points data for GW${startGameweek || 1}-${endGameweek || lastFinishedGW}...`
+          : "Fetching comprehensive FPL points data for all players across the next 12 gameweeks..."
+        }
+        steps={isPastMode ? [
+          { text: "Fetching historical gameweek data", delay: "0s" },
+          { text: "Loading actual player performance stats", delay: "0.2s" },
+          { text: "Preparing historical points table", delay: "0.4s" },
+        ] : [
           { text: "Loading player data and fixture difficulty", delay: "0s" },
           { text: "Calculating projected points from multiple components", delay: "0.2s" },
           { text: "Preparing sortable projection table", delay: "0.4s" },
