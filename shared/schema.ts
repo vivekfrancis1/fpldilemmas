@@ -1678,3 +1678,149 @@ export const insertBuyPriceOverrideSchema = createInsertSchema(buyPriceOverrides
   updatedAt: true,
 });
 export type InsertBuyPriceOverrideType = z.infer<typeof insertBuyPriceOverrideSchema>;
+
+// ============================================
+// PROJECTION ACCURACY TRACKING TABLES
+// ============================================
+
+// Gameweek Projection Snapshots - Store projections at deadline for each gameweek
+export const gameweekProjectionSnapshots = pgTable("gameweek_projection_snapshots", {
+  id: serial("id").primaryKey(),
+  gameweek: integer("gameweek").notNull(),
+  season: varchar("season", { length: 10 }).notNull().default("2024/25"),
+  
+  // Snapshot timing
+  snapshotType: varchar("snapshot_type", { length: 20 }).notNull(), // 'deadline' or 'end_of_gw'
+  capturedAt: timestamp("captured_at").defaultNow(),
+  
+  // Status
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // 'pending', 'projected', 'actual', 'compared'
+}, (table) => [
+  index("idx_gw_snapshots_gameweek").on(table.gameweek),
+  index("idx_gw_snapshots_season").on(table.season),
+  uniqueIndex("idx_gw_snapshots_unique").on(table.gameweek, table.season, table.snapshotType),
+]);
+
+export type GameweekProjectionSnapshot = typeof gameweekProjectionSnapshots.$inferSelect;
+export type InsertGameweekProjectionSnapshot = typeof gameweekProjectionSnapshots.$inferInsert;
+
+// Player Projection Records - Individual player projections for each gameweek
+export const playerProjectionRecords = pgTable("player_projection_records", {
+  id: serial("id").primaryKey(),
+  snapshotId: integer("snapshot_id").notNull().references(() => gameweekProjectionSnapshots.id),
+  gameweek: integer("gameweek").notNull(),
+  season: varchar("season", { length: 10 }).notNull().default("2024/25"),
+  
+  // Player identification
+  playerId: integer("player_id").notNull(),
+  playerName: varchar("player_name", { length: 100 }).notNull(),
+  teamId: integer("team_id").notNull(),
+  teamName: varchar("team_name", { length: 50 }).notNull(),
+  position: varchar("position", { length: 20 }).notNull(),
+  
+  // Projected values (captured at deadline)
+  projectedPoints: decimal("projected_points", { precision: 6, scale: 2 }),
+  projectedMinutes: decimal("projected_minutes", { precision: 5, scale: 2 }),
+  projectedGoals: decimal("projected_goals", { precision: 5, scale: 3 }),
+  projectedAssists: decimal("projected_assists", { precision: 5, scale: 3 }),
+  projectedCleanSheet: decimal("projected_clean_sheet", { precision: 5, scale: 3 }),
+  projectedBonus: decimal("projected_bonus", { precision: 5, scale: 3 }),
+  projectedSaves: decimal("projected_saves", { precision: 5, scale: 2 }),
+  
+  // Actual values (captured after gameweek ends)
+  actualPoints: integer("actual_points"),
+  actualMinutes: integer("actual_minutes"),
+  actualGoals: integer("actual_goals"),
+  actualAssists: integer("actual_assists"),
+  actualCleanSheet: integer("actual_clean_sheet"), // 0 or 1
+  actualBonus: integer("actual_bonus"),
+  actualSaves: integer("actual_saves"),
+  
+  // Comparison metrics
+  pointsDifference: decimal("points_difference", { precision: 6, scale: 2 }),
+  absoluteError: decimal("absolute_error", { precision: 6, scale: 2 }),
+  percentageError: decimal("percentage_error", { precision: 6, scale: 2 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_player_projections_snapshot").on(table.snapshotId),
+  index("idx_player_projections_player").on(table.playerId),
+  index("idx_player_projections_gameweek").on(table.gameweek),
+  index("idx_player_projections_team").on(table.teamId),
+  uniqueIndex("idx_player_projections_unique").on(table.snapshotId, table.playerId),
+]);
+
+export type PlayerProjectionRecord = typeof playerProjectionRecords.$inferSelect;
+export type InsertPlayerProjectionRecord = typeof playerProjectionRecords.$inferInsert;
+
+// Team Projection Records - Team-level projections for goals scored/conceded
+export const teamProjectionRecords = pgTable("team_projection_records", {
+  id: serial("id").primaryKey(),
+  snapshotId: integer("snapshot_id").notNull().references(() => gameweekProjectionSnapshots.id),
+  gameweek: integer("gameweek").notNull(),
+  season: varchar("season", { length: 10 }).notNull().default("2024/25"),
+  
+  // Team identification
+  teamId: integer("team_id").notNull(),
+  teamName: varchar("team_name", { length: 50 }).notNull(),
+  opponentTeamId: integer("opponent_team_id"),
+  opponentTeamName: varchar("opponent_team_name", { length: 50 }),
+  isHome: boolean("is_home"),
+  
+  // Projected values (captured at deadline)
+  projectedGoalsScored: decimal("projected_goals_scored", { precision: 5, scale: 3 }),
+  projectedGoalsConceded: decimal("projected_goals_conceded", { precision: 5, scale: 3 }),
+  projectedCleanSheetProb: decimal("projected_clean_sheet_prob", { precision: 5, scale: 3 }),
+  
+  // Actual values (captured after gameweek ends)
+  actualGoalsScored: integer("actual_goals_scored"),
+  actualGoalsConceded: integer("actual_goals_conceded"),
+  actualCleanSheet: integer("actual_clean_sheet"), // 0 or 1
+  
+  // Comparison metrics
+  goalsScoredDifference: decimal("goals_scored_difference", { precision: 5, scale: 3 }),
+  goalsConcededDifference: decimal("goals_conceded_difference", { precision: 5, scale: 3 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_team_projections_snapshot").on(table.snapshotId),
+  index("idx_team_projections_team").on(table.teamId),
+  index("idx_team_projections_gameweek").on(table.gameweek),
+  uniqueIndex("idx_team_projections_unique").on(table.snapshotId, table.teamId),
+]);
+
+export type TeamProjectionRecord = typeof teamProjectionRecords.$inferSelect;
+export type InsertTeamProjectionRecord = typeof teamProjectionRecords.$inferInsert;
+
+// Projection Accuracy Summary - Aggregated accuracy metrics per gameweek
+export const projectionAccuracySummary = pgTable("projection_accuracy_summary", {
+  id: serial("id").primaryKey(),
+  gameweek: integer("gameweek").notNull(),
+  season: varchar("season", { length: 10 }).notNull().default("2024/25"),
+  
+  // Player projection accuracy
+  totalPlayersProjected: integer("total_players_projected").default(0),
+  avgPlayerPointsDifference: decimal("avg_player_points_difference", { precision: 6, scale: 3 }),
+  avgPlayerAbsoluteError: decimal("avg_player_absolute_error", { precision: 6, scale: 3 }),
+  avgPlayerPercentageError: decimal("avg_player_percentage_error", { precision: 6, scale: 3 }),
+  
+  // Top performer accuracy (top 50 projected players)
+  topPerformerAvgError: decimal("top_performer_avg_error", { precision: 6, scale: 3 }),
+  
+  // Team projection accuracy
+  totalTeamsProjected: integer("total_teams_projected").default(0),
+  avgGoalsScoredError: decimal("avg_goals_scored_error", { precision: 5, scale: 3 }),
+  avgGoalsConcededError: decimal("avg_goals_conceded_error", { precision: 5, scale: 3 }),
+  cleanSheetAccuracy: decimal("clean_sheet_accuracy", { precision: 5, scale: 3 }), // Percentage of correct CS predictions
+  
+  // Overall metrics
+  correlationCoefficient: decimal("correlation_coefficient", { precision: 5, scale: 4 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_accuracy_summary_gameweek").on(table.gameweek),
+  uniqueIndex("idx_accuracy_summary_unique").on(table.gameweek, table.season),
+]);

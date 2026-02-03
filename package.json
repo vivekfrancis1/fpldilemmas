@@ -14,7 +14,6 @@
     "@babel/core": "^7.28.5",
     "@babel/plugin-transform-react-jsx-self": "^7.27.1",
     "@babel/plugin-transform-react-jsx-source": "^7.27.1",
-    "@esbuild/linux-x64": "^0.25.12",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@neondatabase/serverless": "^0.10.4",
@@ -112,8 +111,6 @@
     "@types/react-dom": "^18.3.1",
     "@types/ws": "^8.5.13",
     "autoprefixer": "^10.4.20",
-    "drizzle-kit": "^0.30.4",
-    "esbuild": "^0.25.12",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.6.3"
