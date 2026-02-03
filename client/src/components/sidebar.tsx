@@ -107,8 +107,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Analysis Tools", 
       items: [
-        // { path: "/league-comparison", label: "League Analysis", icon: Users, description: "Single league analysis", popular: false },
-        // { path: "/captain", label: "Captain Choice", icon: Crown, description: "Captain selection", popular: false }
+        { path: "/projection-accuracy", label: "Projection Accuracy", icon: Target, description: "Compare projected vs actual results (GW25-38)", popular: false }
       ]
     },
   ];

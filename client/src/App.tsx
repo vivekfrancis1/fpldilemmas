@@ -74,6 +74,7 @@ import TransferPlanner from "./pages/transfer-planner";
 import ProjectedPoints from "./pages/projected-points";
 import TeamOptimizer from "./pages/team-optimizer";
 import TransferRecommendations from "./pages/transfer-recommendations";
+import ProjectionAccuracy from "./pages/projection-accuracy";
 
 
 function Router() {
@@ -146,6 +147,7 @@ function Router() {
       <Route path="/player-yellow-cards" component={PlayerYellowCards} />
       <Route path="/player-red-cards" component={PlayerRedCards} />
       <Route path="/player-bonus-points" component={PlayerBonusPoints} />
+      <Route path="/projection-accuracy" component={ProjectionAccuracy} />
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
       <Route path="/admin-clean-sheet-config" component={AdminCleanSheetConfig} />
