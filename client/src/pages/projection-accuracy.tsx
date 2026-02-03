@@ -456,7 +456,7 @@ export default function ProjectionAccuracy() {
                               <Badge variant="secondary" className="text-xs">{posShort}</Badge>
                             </td>
                             <td className="text-center p-3 font-medium text-purple-600">
-                              {parseFloat(player.projected_points).toFixed(2)}
+                              {player.projected_points !== null && player.projected_points !== '0' ? parseFloat(player.projected_points).toFixed(2) : <span className="text-gray-400">-</span>}
                             </td>
                             <td className="text-center p-3 font-medium">
                               {player.actual_points !== null ? (
@@ -552,7 +552,7 @@ export default function ProjectionAccuracy() {
                         <tr key={team.id} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="p-3 font-medium text-gray-900">{getTeamShortCode(team.team_name)}</td>
                           <td className="text-center p-3 font-medium text-purple-600">
-                            {parseFloat(team.projected_goals_scored).toFixed(2)}
+                            {team.projected_goals_scored !== null && team.projected_goals_scored !== '0' ? parseFloat(team.projected_goals_scored).toFixed(2) : <span className="text-gray-400">-</span>}
                           </td>
                           <td className="text-center p-3 font-medium">
                             {team.actual_goals_scored !== null ? (

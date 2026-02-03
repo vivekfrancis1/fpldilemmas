@@ -17543,13 +17543,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 team_id: playerInfo.team,
                 team_name: teamIdToName[playerInfo.team] || '',
                 position: positionMap[playerInfo.element_type] || '',
-                projected_points: '0',
-                projected_minutes: '0',
-                projected_goals: '0',
-                projected_assists: '0',
-                projected_clean_sheet: '0',
-                projected_bonus: '0',
-                projected_saves: '0',
+                projected_points: null,
+                projected_minutes: null,
+                projected_goals: null,
+                projected_assists: null,
+                projected_clean_sheet: null,
+                projected_bonus: null,
+                projected_saves: null,
                 actual_points: stats.total_points || 0,
                 actual_minutes: stats.minutes || 0,
                 actual_goals: stats.goals_scored || 0,
@@ -17562,8 +17562,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 percentage_error: null
               };
             }).filter((p: any) => p && p.actual_points > 0)
-              .sort((a: any, b: any) => b.actual_points - a.actual_points)
-              .slice(0, 100);
+              .sort((a: any, b: any) => b.actual_points - a.actual_points);
           }
           
           // Get team actual goals from fixtures
@@ -17585,9 +17584,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               id: parseInt(teamId),
               team_id: parseInt(teamId),
               team_name: teamIdToName[parseInt(teamId)] || '',
-              projected_goals_scored: '0',
-              projected_goals_conceded: '0',
-              projected_clean_sheet_prob: '0',
+              projected_goals_scored: null,
+              projected_goals_conceded: null,
+              projected_clean_sheet_prob: null,
               actual_goals_scored: goals,
               actual_goals_conceded: null,
               actual_clean_sheet: teamCleanSheets[parseInt(teamId)] || 0,
@@ -17634,8 +17633,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             })
             .filter(p => parseFloat(p.projected_points) > 0)
-            .sort((a, b) => parseFloat(b.projected_points) - parseFloat(a.projected_points))
-            .slice(0, 100);
+            .sort((a, b) => parseFloat(b.projected_points) - parseFloat(a.projected_points));
           }
           
           if (teamResponse.ok) {
