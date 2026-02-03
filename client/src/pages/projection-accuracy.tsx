@@ -493,15 +493,12 @@ export default function ProjectionAccuracy() {
                       <th className="text-center p-3 font-semibold cursor-pointer hover:bg-gray-100" onClick={() => handleSort('difference')}>
                         Goals Diff <SortIcon field="difference" />
                       </th>
-                      <th className="text-center p-3 font-semibold">Proj CS</th>
-                      <th className="text-center p-3 font-semibold">Actual CS</th>
-                      <th className="text-center p-3 font-semibold">CS Accuracy</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredTeams.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="text-center p-8 text-gray-500">
+                        <td colSpan={4} className="text-center p-8 text-gray-500">
                           No team projections found for GW{selectedGameweek}
                         </td>
                       </tr>
@@ -524,25 +521,6 @@ export default function ProjectionAccuracy() {
                               {getDifferenceIcon(team.goals_scored_difference)}
                               {team.goals_scored_difference !== null ? parseFloat(team.goals_scored_difference).toFixed(2) : '-'}
                             </div>
-                          </td>
-                          <td className="text-center p-3 font-medium text-purple-600">
-                            {(parseFloat(team.projected_clean_sheet_prob) * 100).toFixed(0)}%
-                          </td>
-                          <td className="text-center p-3 font-medium">
-                            {team.actual_clean_sheet !== null ? (
-                              <span className="text-green-600">{team.actual_clean_sheet === 1 ? 'Yes' : 'No'}</span>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className={`text-center p-3 font-medium`}>
-                            {team.actual_clean_sheet !== null ? (
-                              team.actual_clean_sheet === 1 && parseFloat(team.projected_clean_sheet_prob) >= 0.5 ? 
-                                <span className="text-green-600">Correct</span> :
-                              team.actual_clean_sheet === 0 && parseFloat(team.projected_clean_sheet_prob) < 0.5 ?
-                                <span className="text-green-600">Correct</span> :
-                                <span className="text-red-600">Wrong</span>
-                            ) : '-'}
                           </td>
                         </tr>
                       ))
