@@ -1085,9 +1085,17 @@ export default function PlayerTotalPoints() {
       gamesPlayed: number;
     }>;
   }>({
-    queryKey: ["/api/player-total-points-history"],
+    queryKey: ["/api/player-total-points-history", startGameweek, endGameweek],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (startGameweek) params.set('startGw', startGameweek.toString());
+      if (endGameweek) params.set('endGw', endGameweek.toString());
+      const response = await fetch(`/api/player-total-points-history?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch history");
+      return response.json();
+    },
     staleTime: 60 * 60 * 1000,
-    enabled: viewMode === "past",
+    enabled: viewMode === "past" && startGameweek !== null && endGameweek !== null,
   });
 
   const { data: liveTotalPointsData, isLoading: liveLoading, error: liveError, refetch: refetchLive } = useQuery<PlayerTotalPointsData[]>({

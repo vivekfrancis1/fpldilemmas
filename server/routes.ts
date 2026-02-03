@@ -7428,7 +7428,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Past Player Total Points endpoint - actual FPL points from finished gameweeks
   app.get("/api/player-total-points-history", async (req, res) => {
     try {
-      console.log(`DEBUG: Player Total Points History API called`);
+      const startGw = req.query.startGw ? parseInt(req.query.startGw as string) : undefined;
+      const endGw = req.query.endGw ? parseInt(req.query.endGw as string) : undefined;
+      
+      console.log(`DEBUG: Player Total Points History API called (GW${startGw || 1}-${endGw || 'last'})`);
       
       const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
       if (!bootstrapResponse.ok) {
@@ -7442,74 +7445,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? Math.max(...finishedEvents.map((e: any) => e.id))
         : 0;
       
-      const playerPointsMap = new Map();
+      // Use provided range or default to last 12 gameweeks for performance
+      const effectiveEndGw = endGw ? Math.min(endGw, lastFinishedGW) : lastFinishedGW;
+      const effectiveStartGw = startGw ? Math.max(startGw, 1) : Math.max(1, effectiveEndGw - 11);
       
-      for (let gw = 1; gw <= lastFinishedGW; gw++) {
+      console.log(`DEBUG: Fetching history for GW${effectiveStartGw}-${effectiveEndGw} (${effectiveEndGw - effectiveStartGw + 1} gameweeks)`);
+      
+      // Build list of gameweeks to fetch
+      const gameweeksToFetch: number[] = [];
+      for (let gw = effectiveStartGw; gw <= effectiveEndGw; gw++) {
+        gameweeksToFetch.push(gw);
+      }
+      
+      // Fetch all gameweeks in PARALLEL for speed
+      const liveDataPromises = gameweeksToFetch.map(async (gw) => {
         try {
           const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
           if (liveResponse.ok) {
             const liveData = await liveResponse.json();
-            liveData.elements.forEach((el: any) => {
-              if (!playerPointsMap.has(el.id)) {
-                const player = bootstrapData.elements.find((p: any) => p.id === el.id);
-                if (player) {
-                  const team = bootstrapData.teams.find((t: any) => t.id === player.team);
-                  const position = bootstrapData.element_types.find((et: any) => et.id === player.element_type);
-                  playerPointsMap.set(el.id, {
-                    id: el.id,
-                    name: player.web_name,
-                    teamName: team?.name || 'Unknown',
-                    teamShort: team?.short_name || 'UNK',
-                    position: position?.singular_name_short || 'UNK',
-                    elementType: player.element_type,
-                    price: player.now_cost / 10,
-                    gameweekPoints: {},
-                    gameweekMinutes: {},
-                    gameweekStats: {},
-                    totalPoints: 0,
-                    totalMinutes: 0,
-                    gamesPlayed: 0
-                  });
-                }
-              }
-              const playerData = playerPointsMap.get(el.id);
-              if (playerData) {
-                // Use actual FPL total points and minutes from the live API
-                const gwPoints = el.stats.total_points || 0;
-                const gwMinutes = el.stats.minutes || 0;
-                playerData.gameweekPoints[gw] = gwPoints;
-                playerData.gameweekMinutes[gw] = gwMinutes;
-                // Store detailed stats for tooltip breakdown
-                playerData.gameweekStats[gw] = {
-                  minutes: el.stats.minutes || 0,
-                  goals: el.stats.goals_scored || 0,
-                  assists: el.stats.assists || 0,
-                  cleanSheets: el.stats.clean_sheets || 0,
-                  goalsConceded: el.stats.goals_conceded || 0,
-                  ownGoals: el.stats.own_goals || 0,
-                  penaltiesSaved: el.stats.penalties_saved || 0,
-                  penaltiesMissed: el.stats.penalties_missed || 0,
-                  yellowCards: el.stats.yellow_cards || 0,
-                  redCards: el.stats.red_cards || 0,
-                  saves: el.stats.saves || 0,
-                  bonus: el.stats.bonus || 0,
-                  totalPoints: el.stats.total_points || 0
-                };
-                playerData.totalPoints += gwPoints;
-                playerData.totalMinutes += gwMinutes;
-                if (gwMinutes > 0) {
-                  playerData.gamesPlayed += 1;
-                }
-              }
-            });
+            return { gw, data: liveData };
           }
         } catch (err) {
           console.error(`Error fetching GW${gw} live data:`, err);
         }
+        return null;
+      });
+      
+      const liveResults = await Promise.all(liveDataPromises);
+      
+      const playerPointsMap = new Map();
+      
+      // Process all fetched gameweek data
+      for (const result of liveResults) {
+        if (!result) continue;
+        const { gw, data: liveData } = result;
+        
+        liveData.elements.forEach((el: any) => {
+          if (!playerPointsMap.has(el.id)) {
+            const player = bootstrapData.elements.find((p: any) => p.id === el.id);
+            if (player) {
+              const team = bootstrapData.teams.find((t: any) => t.id === player.team);
+              const position = bootstrapData.element_types.find((et: any) => et.id === player.element_type);
+              playerPointsMap.set(el.id, {
+                id: el.id,
+                name: player.web_name,
+                teamName: team?.name || 'Unknown',
+                teamShort: team?.short_name || 'UNK',
+                position: position?.singular_name_short || 'UNK',
+                elementType: player.element_type,
+                price: player.now_cost / 10,
+                gameweekPoints: {},
+                gameweekMinutes: {},
+                gameweekStats: {},
+                totalPoints: 0,
+                totalMinutes: 0,
+                gamesPlayed: 0
+              });
+            }
+          }
+          const playerData = playerPointsMap.get(el.id);
+          if (playerData) {
+            const gwPoints = el.stats.total_points || 0;
+            const gwMinutes = el.stats.minutes || 0;
+            playerData.gameweekPoints[gw] = gwPoints;
+            playerData.gameweekMinutes[gw] = gwMinutes;
+            playerData.gameweekStats[gw] = {
+              minutes: el.stats.minutes || 0,
+              goals: el.stats.goals_scored || 0,
+              assists: el.stats.assists || 0,
+              cleanSheets: el.stats.clean_sheets || 0,
+              goalsConceded: el.stats.goals_conceded || 0,
+              ownGoals: el.stats.own_goals || 0,
+              penaltiesSaved: el.stats.penalties_saved || 0,
+              penaltiesMissed: el.stats.penalties_missed || 0,
+              yellowCards: el.stats.yellow_cards || 0,
+              redCards: el.stats.red_cards || 0,
+              saves: el.stats.saves || 0,
+              bonus: el.stats.bonus || 0,
+              totalPoints: el.stats.total_points || 0
+            };
+            playerData.totalPoints += gwPoints;
+            playerData.totalMinutes += gwMinutes;
+            if (gwMinutes > 0) {
+              playerData.gamesPlayed += 1;
+            }
+          }
+        });
       }
       
       const players = Array.from(playerPointsMap.values());
-      res.json({ lastFinishedGW, players });
+      console.log(`DEBUG: Player Total Points History - returned ${players.length} players for GW${effectiveStartGw}-${effectiveEndGw}`);
+      res.json({ lastFinishedGW, startGW: effectiveStartGw, endGW: effectiveEndGw, players });
     } catch (error) {
       console.error("Error fetching player total points history:", error);
       res.status(500).json({ error: "Failed to fetch player total points history" });
