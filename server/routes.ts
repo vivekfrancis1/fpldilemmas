@@ -7088,6 +7088,343 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Past Team Goals Against endpoint - actual goals conceded from finished fixtures
+  app.get("/api/team-goals-against-history", async (req, res) => {
+    try {
+      console.log(`DEBUG: Team Goals Against History API called - fetching actual past gameweek data`);
+      
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("http://localhost:5000/api/bootstrap-static"),
+        fetch("http://localhost:5000/api/fixtures")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      const teams = bootstrapData.teams;
+      
+      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+      const lastFinishedGW = finishedEvents.length > 0 
+        ? Math.max(...finishedEvents.map((e: any) => e.id))
+        : 0;
+      
+      const teamGoalsAgainstMap = new Map();
+      teams.forEach((team: any) => {
+        const gameweekGoals: { [key: number]: number } = {};
+        for (let gw = 1; gw <= lastFinishedGW; gw++) {
+          gameweekGoals[gw] = 0;
+        }
+        teamGoalsAgainstMap.set(team.id, {
+          id: team.id,
+          team: team.name,
+          teamShort: team.short_name,
+          gameweekGoals: gameweekGoals,
+          totalGoals: 0,
+          averageGoalsPerGame: 0,
+          position: team.position || 0
+        });
+      });
+      
+      fixturesData.forEach((fixture: any) => {
+        if (fixture.finished && fixture.event <= lastFinishedGW) {
+          const homeTeam = teamGoalsAgainstMap.get(fixture.team_h);
+          const awayTeam = teamGoalsAgainstMap.get(fixture.team_a);
+          
+          // Home team concedes away team's goals
+          if (homeTeam && fixture.team_a_score !== null) {
+            homeTeam.gameweekGoals[fixture.event] = (homeTeam.gameweekGoals[fixture.event] || 0) + fixture.team_a_score;
+            homeTeam.totalGoals += fixture.team_a_score;
+          }
+          // Away team concedes home team's goals
+          if (awayTeam && fixture.team_h_score !== null) {
+            awayTeam.gameweekGoals[fixture.event] = (awayTeam.gameweekGoals[fixture.event] || 0) + fixture.team_h_score;
+            awayTeam.totalGoals += fixture.team_h_score;
+          }
+        }
+      });
+      
+      const result = Array.from(teamGoalsAgainstMap.values()).map((team: any) => {
+        const gamesPlayed = Object.keys(team.gameweekGoals).length;
+        return {
+          ...team,
+          averageGoalsPerGame: gamesPlayed > 0 ? Math.round((team.totalGoals / gamesPlayed) * 100) / 100 : 0
+        };
+      });
+      
+      res.json({ lastFinishedGW, teams: result });
+    } catch (error) {
+      console.error("Error fetching team goals against history:", error);
+      res.status(500).json({ error: "Failed to fetch team goals against history" });
+    }
+  });
+
+  // Past Player Goals endpoint - actual goals from finished gameweeks
+  app.get("/api/player-goals-history", async (req, res) => {
+    try {
+      console.log(`DEBUG: Player Goals History API called`);
+      
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("http://localhost:5000/api/bootstrap-static"),
+        fetch("http://localhost:5000/api/fixtures")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      
+      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+      const lastFinishedGW = finishedEvents.length > 0 
+        ? Math.max(...finishedEvents.map((e: any) => e.id))
+        : 0;
+      
+      // Fetch live data for each finished gameweek
+      const playerGoalsMap = new Map();
+      
+      for (let gw = 1; gw <= lastFinishedGW; gw++) {
+        try {
+          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            liveData.elements.forEach((el: any) => {
+              if (!playerGoalsMap.has(el.id)) {
+                const player = bootstrapData.elements.find((p: any) => p.id === el.id);
+                if (player) {
+                  const team = bootstrapData.teams.find((t: any) => t.id === player.team);
+                  const position = bootstrapData.element_types.find((et: any) => et.id === player.element_type);
+                  playerGoalsMap.set(el.id, {
+                    playerId: el.id,
+                    playerName: player.web_name,
+                    teamName: team?.name || 'Unknown',
+                    teamShort: team?.short_name || 'UNK',
+                    position: position?.singular_name_short || 'UNK',
+                    gameweekGoals: {},
+                    totalGoals: 0
+                  });
+                }
+              }
+              const playerData = playerGoalsMap.get(el.id);
+              if (playerData) {
+                playerData.gameweekGoals[gw] = el.stats.goals_scored || 0;
+                playerData.totalGoals += el.stats.goals_scored || 0;
+              }
+            });
+          }
+        } catch (err) {
+          console.error(`Error fetching GW${gw} live data:`, err);
+        }
+      }
+      
+      const players = Array.from(playerGoalsMap.values()).filter((p: any) => p.totalGoals > 0);
+      res.json({ lastFinishedGW, players });
+    } catch (error) {
+      console.error("Error fetching player goals history:", error);
+      res.status(500).json({ error: "Failed to fetch player goals history" });
+    }
+  });
+
+  // Past Player Assists endpoint - actual assists from finished gameweeks
+  app.get("/api/player-assists-history", async (req, res) => {
+    try {
+      console.log(`DEBUG: Player Assists History API called`);
+      
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("http://localhost:5000/api/bootstrap-static"),
+        fetch("http://localhost:5000/api/fixtures")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      
+      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+      const lastFinishedGW = finishedEvents.length > 0 
+        ? Math.max(...finishedEvents.map((e: any) => e.id))
+        : 0;
+      
+      const playerAssistsMap = new Map();
+      
+      for (let gw = 1; gw <= lastFinishedGW; gw++) {
+        try {
+          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            liveData.elements.forEach((el: any) => {
+              if (!playerAssistsMap.has(el.id)) {
+                const player = bootstrapData.elements.find((p: any) => p.id === el.id);
+                if (player) {
+                  const team = bootstrapData.teams.find((t: any) => t.id === player.team);
+                  const position = bootstrapData.element_types.find((et: any) => et.id === player.element_type);
+                  playerAssistsMap.set(el.id, {
+                    playerId: el.id,
+                    playerName: player.web_name,
+                    teamName: team?.name || 'Unknown',
+                    teamShort: team?.short_name || 'UNK',
+                    position: position?.singular_name_short || 'UNK',
+                    gameweekAssists: {},
+                    totalAssists: 0
+                  });
+                }
+              }
+              const playerData = playerAssistsMap.get(el.id);
+              if (playerData) {
+                playerData.gameweekAssists[gw] = el.stats.assists || 0;
+                playerData.totalAssists += el.stats.assists || 0;
+              }
+            });
+          }
+        } catch (err) {
+          console.error(`Error fetching GW${gw} live data:`, err);
+        }
+      }
+      
+      const players = Array.from(playerAssistsMap.values()).filter((p: any) => p.totalAssists > 0);
+      res.json({ lastFinishedGW, players });
+    } catch (error) {
+      console.error("Error fetching player assists history:", error);
+      res.status(500).json({ error: "Failed to fetch player assists history" });
+    }
+  });
+
+  // Past Player Saves endpoint - actual saves from finished gameweeks
+  app.get("/api/player-saves-history", async (req, res) => {
+    try {
+      console.log(`DEBUG: Player Saves History API called`);
+      
+      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      
+      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+      const lastFinishedGW = finishedEvents.length > 0 
+        ? Math.max(...finishedEvents.map((e: any) => e.id))
+        : 0;
+      
+      const playerSavesMap = new Map();
+      
+      for (let gw = 1; gw <= lastFinishedGW; gw++) {
+        try {
+          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            liveData.elements.forEach((el: any) => {
+              const player = bootstrapData.elements.find((p: any) => p.id === el.id);
+              // Only include goalkeepers
+              if (player && player.element_type === 1) {
+                if (!playerSavesMap.has(el.id)) {
+                  const team = bootstrapData.teams.find((t: any) => t.id === player.team);
+                  playerSavesMap.set(el.id, {
+                    playerId: el.id,
+                    playerName: player.web_name,
+                    teamName: team?.name || 'Unknown',
+                    teamShort: team?.short_name || 'UNK',
+                    position: 'GKP',
+                    gameweekSaves: {},
+                    totalSaves: 0
+                  });
+                }
+                const playerData = playerSavesMap.get(el.id);
+                if (playerData) {
+                  playerData.gameweekSaves[gw] = el.stats.saves || 0;
+                  playerData.totalSaves += el.stats.saves || 0;
+                }
+              }
+            });
+          }
+        } catch (err) {
+          console.error(`Error fetching GW${gw} live data:`, err);
+        }
+      }
+      
+      const players = Array.from(playerSavesMap.values());
+      res.json({ lastFinishedGW, players });
+    } catch (error) {
+      console.error("Error fetching player saves history:", error);
+      res.status(500).json({ error: "Failed to fetch player saves history" });
+    }
+  });
+
+  // Past Player Defensive Contributions endpoint - actual defensive stats from finished gameweeks
+  app.get("/api/player-defensive-history", async (req, res) => {
+    try {
+      console.log(`DEBUG: Player Defensive History API called`);
+      
+      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      
+      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+      const lastFinishedGW = finishedEvents.length > 0 
+        ? Math.max(...finishedEvents.map((e: any) => e.id))
+        : 0;
+      
+      const playerDefenseMap = new Map();
+      
+      for (let gw = 1; gw <= lastFinishedGW; gw++) {
+        try {
+          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            liveData.elements.forEach((el: any) => {
+              const player = bootstrapData.elements.find((p: any) => p.id === el.id);
+              // Include GKP and DEF
+              if (player && (player.element_type === 1 || player.element_type === 2)) {
+                if (!playerDefenseMap.has(el.id)) {
+                  const team = bootstrapData.teams.find((t: any) => t.id === player.team);
+                  const position = bootstrapData.element_types.find((et: any) => et.id === player.element_type);
+                  playerDefenseMap.set(el.id, {
+                    playerId: el.id,
+                    playerName: player.web_name,
+                    teamName: team?.name || 'Unknown',
+                    teamShort: team?.short_name || 'UNK',
+                    position: position?.singular_name_short || 'UNK',
+                    gameweekStats: {},
+                    totalDefensiveContribution: 0
+                  });
+                }
+                const playerData = playerDefenseMap.get(el.id);
+                if (playerData) {
+                  // Defensive contribution = clearances + blocks + interceptions + tackles + recoveries
+                  const dc = (el.stats.clearances_blocks_interceptions || 0) + 
+                             (el.stats.tackles || 0) + 
+                             (el.stats.recoveries || 0);
+                  playerData.gameweekStats[gw] = {
+                    defensiveContribution: dc,
+                    cbi: el.stats.clearances_blocks_interceptions || 0,
+                    tackles: el.stats.tackles || 0,
+                    recoveries: el.stats.recoveries || 0
+                  };
+                  playerData.totalDefensiveContribution += dc;
+                }
+              }
+            });
+          }
+        } catch (err) {
+          console.error(`Error fetching GW${gw} live data:`, err);
+        }
+      }
+      
+      const players = Array.from(playerDefenseMap.values());
+      res.json({ lastFinishedGW, players });
+    } catch (error) {
+      console.error("Error fetching player defensive history:", error);
+      res.status(500).json({ error: "Failed to fetch player defensive history" });
+    }
+  });
+
   // Team Assist Projections endpoint - using correct assist values based on actual FPL data analysis
   app.get("/api/team-assist-projections", async (req, res) => {
     try {

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Target, Filter, BarChart3, Search, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp, History, Calendar } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +25,21 @@ interface PlayerGoalProjection {
   goalShare: number;
 }
 
+interface PlayerGoalsHistory {
+  lastFinishedGW: number;
+  players: {
+    playerId: number;
+    playerName: string;
+    teamName: string;
+    teamShort: string;
+    position: string;
+    gameweekGoals: { [key: number]: number };
+    totalGoals: number;
+  }[];
+}
+
 export default function PlayerGoalsScoredProjections() {
+  const [viewMode, setViewMode] = useState<"past" | "future">("future");
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -70,6 +84,12 @@ export default function PlayerGoalsScoredProjections() {
 
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
+  });
+
+  // Fetch past player goals history
+  const { data: historyData, isLoading: historyLoading } = useQuery<PlayerGoalsHistory>({
+    queryKey: ["/api/player-goals-history"],
+    enabled: viewMode === "past",
   });
 
   // Fetch fixtures for opponent information
@@ -120,13 +140,39 @@ export default function PlayerGoalsScoredProjections() {
   // Create availability map for player availability badges
   const playerAvailabilityMap = usePlayerAvailabilityMap(bootstrapData);
 
-  // Get available gameweeks for dropdown (next 12 gameweeks)
+  // Get available gameweeks for dropdown based on view mode
   const availableGameweeks = useMemo(() => {
+    if (viewMode === "past") {
+      const lastFinished = historyData?.lastFinishedGW || 24;
+      return Array.from({ length: lastFinished }, (_, i) => i + 1);
+    }
     if (!bootstrapData?.events) {
       return [];
     }
     return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
-  }, [bootstrapData?.events]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
+
+  // Reset gameweek range when view mode changes
+  useEffect(() => {
+    if (viewMode === "past" && historyData?.lastFinishedGW) {
+      const lastFinished = historyData.lastFinishedGW;
+      const startGW = Math.max(1, lastFinished - 5);
+      setStartGameweek(startGW);
+      setEndGameweek(lastFinished);
+      setExcludedGameweeks(new Set());
+      setInitialized(true);
+    } else if (viewMode === "future" && bootstrapData?.events) {
+      const range = getDefaultGameweekRange(bootstrapData.events, 6);
+      const start = parseInt(range.startGameweek);
+      const end = parseInt(range.endGameweek);
+      if (start > 0 && end > 0 && start <= end && end <= 38) {
+        setStartGameweek(start);
+        setEndGameweek(end);
+        setExcludedGameweeks(new Set());
+        setInitialized(true);
+      }
+    }
+  }, [viewMode, bootstrapData?.events, historyData?.lastFinishedGW]);
 
   // One-time initialization when bootstrap data loads
   useEffect(() => {
@@ -162,7 +208,8 @@ export default function PlayerGoalsScoredProjections() {
     networkMode: 'online',
     placeholderData: [], // Show empty table immediately while loading
     refetchOnWindowFocus: false, // Prevent unnecessary refetches
-    throwOnError: false // Don't throw errors, handle gracefully
+    throwOnError: false, // Don't throw errors, handle gracefully
+    enabled: viewMode === "future"
   });
 
   // Get current gameweek from bootstrap data (for display purposes)
@@ -225,11 +272,30 @@ export default function PlayerGoalsScoredProjections() {
     return total;
   };
 
+  // Transform data based on view mode
+  const displayData = useMemo(() => {
+    if (viewMode === "past" && historyData?.players) {
+      return historyData.players.map(player => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamName,
+        teamShort: player.teamShort,
+        position: player.position,
+        totalProjectedGoals: player.totalGoals,
+        gameweekProjections: Object.fromEntries(
+          Object.entries(player.gameweekGoals).map(([gw, goals]) => [gw, goals])
+        ),
+        goalShare: 0
+      }));
+    }
+    return playerGoalData || [];
+  }, [viewMode, historyData, playerGoalData]);
+
   // Filter and sort data
   const filteredProjections = useMemo(() => {
-    if (!playerGoalData) return [];
+    if (!displayData.length) return [];
 
-    return playerGoalData
+    return displayData
       .filter(player => {
         // Position filter - normalize both sides for comparison
         if (selectedPositions.size > 0) {
@@ -283,7 +349,7 @@ export default function PlayerGoalsScoredProjections() {
           }
         }
       });
-  }, [playerGoalData, selectedTeams, selectedPositions, searchQuery, sortBy, sortDirection, selectedGameweeks, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData]);
+  }, [displayData, selectedTeams, selectedPositions, searchQuery, sortBy, sortDirection, selectedGameweeks, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, viewMode]);
 
   const totalGoals = useMemo(() => {
     if (!filteredProjections.length) return { 
@@ -389,17 +455,38 @@ export default function PlayerGoalsScoredProjections() {
     return 'bg-red-50 text-red-800';
   };
 
+  // Format goals based on view mode - integers for past, decimals for future
+  const formatGoals = (goals: number) => {
+    if (viewMode === "past") {
+      return goals.toString();
+    }
+    return goals.toFixed(2);
+  };
+
+  const formatPoints = (points: number) => {
+    if (viewMode === "past") {
+      return Math.round(points).toString();
+    }
+    return points.toFixed(1);
+  };
+
   // Show loading only when actually needed (also when data is empty/loading)
-  if (!initialized || !bootstrapData || isLoading || playerGoalLoading || !playerGoalData || playerGoalData.length === 0) {
+  const isDataLoading = isLoading || 
+    (viewMode === "future" && (playerGoalLoading || !playerGoalData || playerGoalData.length === 0)) ||
+    (viewMode === "past" && historyLoading);
+  
+  if (!initialized || !bootstrapData || isDataLoading) {
     return (
       <LoadingExperience
         variant="analysis"
-        title="Loading Goal Projections"
-        description="Calculating projected goals for all players based on team projections and goal share..."
+        title={viewMode === "future" ? "Loading Goal Projections" : "Loading Historical Goals"}
+        description={viewMode === "future" 
+          ? "Calculating projected goals for all players based on team projections and goal share..."
+          : "Loading actual goals scored by players in past gameweeks..."}
         steps={[
-          { text: "Loading team goal projections", delay: "0s" },
-          { text: "Analyzing player goal share percentages", delay: "0.2s" },
-          { text: "Computing individual player projections", delay: "0.4s" },
+          { text: viewMode === "future" ? "Loading team goal projections" : "Loading gameweek results", delay: "0s" },
+          { text: viewMode === "future" ? "Analyzing player goal share percentages" : "Aggregating player goals", delay: "0.2s" },
+          { text: viewMode === "future" ? "Computing individual player projections" : "Preparing data display", delay: "0.4s" },
         ]}
       />
     );
@@ -440,16 +527,18 @@ export default function PlayerGoalsScoredProjections() {
   return (
     <div className="fpl-page-container">
       {/* Loading overlay when refetching data after gameweek change */}
-      {initialized && (isLoading || playerGoalLoading) && (
+      {initialized && (isLoading || playerGoalLoading || historyLoading) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" data-testid="overlay-loading-goals">
           <LoadingExperience
             variant="analysis"
-            title="Updating Goal Projections"
-            description="Recalculating projected goals for the selected gameweek range..."
+            title={viewMode === "future" ? "Updating Goal Projections" : "Updating Historical Goals"}
+            description={viewMode === "future" 
+              ? "Recalculating projected goals for the selected gameweek range..."
+              : "Loading actual goals scored in the selected gameweek range..."}
             steps={[
-              { text: "Loading team goal projections", delay: "0s" },
-              { text: "Updating player goal shares", delay: "0.2s" },
-              { text: "Computing player projections", delay: "0.4s" },
+              { text: viewMode === "future" ? "Loading team goal projections" : "Loading gameweek results", delay: "0s" },
+              { text: viewMode === "future" ? "Updating player goal shares" : "Aggregating player goals", delay: "0.2s" },
+              { text: viewMode === "future" ? "Computing player projections" : "Preparing data display", delay: "0.4s" },
             ]}
           />
         </div>
@@ -460,11 +549,34 @@ export default function PlayerGoalsScoredProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Target className="h-8 w-8" />
-            <h1>Player Goal Projections</h1>
+            <h1>{viewMode === "future" ? "Player Goal Projections" : "Player Goals Scored"}</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Projected Goals for each player across all upcoming fixtures
+            {viewMode === "future" 
+              ? "Projected Goals for each player across all upcoming fixtures"
+              : "Actual goals scored by each player in past gameweeks"}
           </p>
+          {/* Past/Future Toggle */}
+          <div className="flex gap-2 mt-3">
+            <Button
+              variant={viewMode === "past" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("past")}
+              className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-orange-600 hover:bg-orange-700 text-white" : "text-gray-600"}`}
+            >
+              <History className="h-4 w-4" />
+              Past GW Data
+            </Button>
+            <Button
+              variant={viewMode === "future" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("future")}
+              className={`flex items-center gap-1.5 ${viewMode === "future" ? "bg-orange-600 hover:bg-orange-700 text-white" : "text-gray-600"}`}
+            >
+              <Calendar className="h-4 w-4" />
+              Future GW Projections
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -777,14 +889,14 @@ export default function PlayerGoalsScoredProjections() {
                           return (
                             <td key={gw} className="px-1 py-2 text-center min-w-[40px] md:min-w-[50px]">
                               <div className="text-xs md:text-sm">
-                                {hasGwAdjustment && goals > 0 ? (
+                                {hasGwAdjustment && goals > 0 && viewMode === "future" ? (
                                   <div className="flex flex-col items-center">
-                                    <span className="font-bold text-purple-700">{displayGoals.toFixed(2)}</span>
-                                    <span className="text-gray-400 line-through text-xs">{goals.toFixed(2)}</span>
+                                    <span className="font-bold text-purple-700">{formatGoals(displayGoals)}</span>
+                                    <span className="text-gray-400 line-through text-xs">{formatGoals(goals)}</span>
                                   </div>
                                 ) : (
                                   <div className="font-bold text-gray-900">
-                                    {goals > 0 ? goals.toFixed(2) : "-"}
+                                    {goals > 0 ? formatGoals(goals) : "-"}
                                   </div>
                                 )}
                                 {showOpponent && (
@@ -796,24 +908,24 @@ export default function PlayerGoalsScoredProjections() {
                             </td>
                           );
                         })}
-                        <td className={`px-1 md:px-3 py-2 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
-                          {hasAnyAdjustment ? (
+                        <td className={`px-1 md:px-3 py-2 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                          {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
-                              <span className="text-sm md:text-lg font-bold text-purple-700">{adjustedTotal.toFixed(2)}</span>
-                              <span className="text-gray-400 line-through text-[10px] md:text-xs">{originalTotal.toFixed(2)}</span>
+                              <span className="text-sm md:text-lg font-bold text-purple-700">{formatGoals(adjustedTotal)}</span>
+                              <span className="text-gray-400 line-through text-[10px] md:text-xs">{formatGoals(originalTotal)}</span>
                             </div>
                           ) : (
-                            <span className="text-sm md:text-lg font-bold text-orange-900">{adjustedTotal.toFixed(2)}</span>
+                            <span className="text-sm md:text-lg font-bold text-orange-900">{formatGoals(adjustedTotal)}</span>
                           )}
                         </td>
-                        <td className={`px-1 md:px-3 py-2 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
-                          {hasAnyAdjustment ? (
+                        <td className={`px-1 md:px-3 py-2 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                          {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
-                              <span className="text-sm md:text-lg font-bold text-purple-700">{totalPoints.toFixed(1)}</span>
-                              <span className="text-gray-400 line-through text-[10px] md:text-xs">{originalTotalPoints.toFixed(1)}</span>
+                              <span className="text-sm md:text-lg font-bold text-purple-700">{formatPoints(totalPoints)}</span>
+                              <span className="text-gray-400 line-through text-[10px] md:text-xs">{formatPoints(originalTotalPoints)}</span>
                             </div>
                           ) : (
-                            <span className="text-sm md:text-lg font-bold text-blue-900">{totalPoints.toFixed(1)}</span>
+                            <span className="text-sm md:text-lg font-bold text-blue-900">{formatPoints(totalPoints)}</span>
                           )}
                         </td>
                       </tr>
@@ -827,17 +939,17 @@ export default function PlayerGoalsScoredProjections() {
                     </td>
                     {selectedGameweeks.map(gw => (
                       <td key={gw} className="px-2 sm:px-4 py-2 sm:py-4 text-center text-sm font-bold text-gray-900 bg-gray-100">
-                        {(totalGoals.gameweekTotals[gw] || 0) > 0 ? (totalGoals.gameweekTotals[gw] || 0).toFixed(2) : "-"}
+                        {(totalGoals.gameweekTotals[gw] || 0) > 0 ? formatGoals(totalGoals.gameweekTotals[gw] || 0) : "-"}
                       </td>
                     ))}
                     <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-orange-100">
                       <span className="text-lg font-bold text-orange-900">
-                        {totalGoals.overallTotal.toFixed(2)}
+                        {formatGoals(totalGoals.overallTotal)}
                       </span>
                     </td>
                     <td className="px-2 sm:px-4 py-2 sm:py-4 text-center bg-blue-100">
                       <span className="text-lg font-bold text-blue-900">
-                        {totalGoals.pointsOverallTotal.toFixed(1)}
+                        {formatPoints(totalGoals.pointsOverallTotal)}
                       </span>
                     </td>
                   </tr>

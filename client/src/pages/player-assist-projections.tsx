@@ -4,7 +4,7 @@ import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDro
 import { BootstrapData } from "@shared/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBatchAssistsProjections } from "@/hooks/use-batch-projections";
-import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Zap, TrendingUp, Users, Calendar, Target, Search, Filter, ArrowUpDown, RefreshCw, Loader2, X, ChevronDown, ChevronUp, History } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -19,10 +19,23 @@ interface PlayerAssistProjection {
   playerId: number;
   playerName: string;
   teamShort?: string;
-  position: string;
+  position?: string;
   gameweekProjections: { [gameweek: string]: number };
   totalProjectedAssists: number;
   assistShare: number;
+}
+
+interface PlayerAssistsHistory {
+  lastFinishedGW: number;
+  players: {
+    playerId: number;
+    playerName: string;
+    teamName: string;
+    teamShort: string;
+    position: string;
+    gameweekAssists: { [key: number]: number };
+    totalAssists: number;
+  }[];
 }
 
 type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'rangeTotal' | 'rangePoints' | 'assistShare' | string; // string allows dynamic gameweek fields like 'gw4', 'gw5', etc.
@@ -43,6 +56,15 @@ export default function PlayerAssistProjections() {
   const { data: fixturesData } = useQuery({
     queryKey: ["/api/fixtures"],
     staleTime: 5 * 60 * 1000,
+  });
+
+  // View mode: "future" for projections, "past" for historical data
+  const [viewMode, setViewMode] = useState<"future" | "past">("future");
+
+  // Fetch past player assists history
+  const { data: historyData, isLoading: historyLoading } = useQuery<PlayerAssistsHistory>({
+    queryKey: ["/api/player-assists-history"],
+    enabled: viewMode === "past",
   });
 
   // All useState hooks
@@ -99,13 +121,19 @@ export default function PlayerAssistProjections() {
     });
   };
 
-  // Get available gameweeks for dropdown (next 12 gameweeks)
+  // Get available gameweeks for dropdown based on view mode
   const availableGameweeks = useMemo(() => {
+    if (viewMode === "past") {
+      // Past mode: GW1 to last finished gameweek
+      const lastFinished = historyData?.lastFinishedGW || 24;
+      return Array.from({ length: lastFinished }, (_, i) => i + 1);
+    }
+    // Future mode: next 12 gameweeks
     if (!bootstrapData?.events) {
       return [];
     }
     return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
-  }, [bootstrapData?.events]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
 
   // Initialize gameweeks when bootstrap data loads
   useEffect(() => {
@@ -123,22 +151,59 @@ export default function PlayerAssistProjections() {
     }
   }, [bootstrapData, initialized]);
 
+  // Reset gameweek range when viewMode changes
+  useEffect(() => {
+    if (viewMode === "past" && historyData?.lastFinishedGW) {
+      const lastFinished = historyData.lastFinishedGW;
+      const startGW = Math.max(1, lastFinished - 5);
+      setStartGameweek(startGW);
+      setEndGameweek(lastFinished);
+      setExcludedGameweeks(new Set());
+    } else if (viewMode === "future" && bootstrapData?.events) {
+      const newRange = getDefaultGameweekRange(bootstrapData.events, 6);
+      setStartGameweek(parseInt(newRange.startGameweek));
+      setEndGameweek(parseInt(newRange.endGameweek));
+      setExcludedGameweeks(new Set());
+    }
+  }, [viewMode, historyData?.lastFinishedGW, bootstrapData?.events]);
+
   // BATCH OPTIMIZED: Use new batch hook for better performance
   const { 
     data: playerAssistData, 
-    isLoading, 
+    isLoading: projectionsLoading, 
     error, 
     usedBatch 
   } = useBatchAssistsProjections(
     initialized ? startGameweek : undefined,
     initialized ? endGameweek : undefined,
     {
-      enabled: true,
+      enabled: viewMode === "future",
       staleTime: 5 * 60 * 1000, // 5 minutes
       batchSize: 150, // Process 150 players per batch
       maxConcurrency: 3, // Max 3 concurrent requests
     }
   );
+
+  // Transform history data to match projection format for unified display
+  const displayData = useMemo(() => {
+    if (viewMode === "past" && historyData?.players) {
+      return historyData.players.map(player => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamShort: player.teamShort,
+        position: player.position,
+        gameweekProjections: Object.fromEntries(
+          Object.entries(player.gameweekAssists).map(([gw, assists]) => [gw, assists])
+        ),
+        totalProjectedAssists: player.totalAssists,
+        assistShare: 0, // Not available in history data
+      }));
+    }
+    return playerAssistData || [];
+  }, [viewMode, historyData, playerAssistData]);
+
+  // Combined loading state
+  const isLoading = (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading);
 
   // ALL useMemo hooks
   // Create a mapping of teamShort + gameweek -> opponent info
@@ -189,16 +254,16 @@ export default function PlayerAssistProjections() {
 
   // Get unique teams and positions for filters
   const teams = useMemo(() => {
-    if (!playerAssistData) return [];
-    const uniqueTeams = Array.from(new Set(playerAssistData.map(p => p.teamShort).filter((t): t is string => !!t)));
+    if (!displayData.length) return [];
+    const uniqueTeams = Array.from(new Set(displayData.map(p => p.teamShort).filter((t): t is string => !!t)));
     return uniqueTeams.sort();
-  }, [playerAssistData]);
+  }, [displayData]);
 
   const positions = useMemo(() => {
-    if (!playerAssistData) return [];
-    const uniquePositions = Array.from(new Set(playerAssistData.map(p => p.position)));
+    if (!displayData.length) return [];
+    const uniquePositions = Array.from(new Set(displayData.map(p => p.position)));
     return uniquePositions.sort();
-  }, [playerAssistData]);
+  }, [displayData]);
 
   // Create teamNameToShort mapping from bootstrapData
   const teamNameToShort = useMemo(() => {
@@ -269,9 +334,9 @@ export default function PlayerAssistProjections() {
 
   // Filter and sort data
   const filteredAndSortedData = useMemo(() => {
-    if (!playerAssistData) return [];
+    if (!displayData.length) return [];
     
-    let filtered = playerAssistData.filter(player => {
+    let filtered = displayData.filter(player => {
       // Search filter
       if (searchTerm) {
         const matchesSearch = player.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -366,12 +431,12 @@ export default function PlayerAssistProjections() {
     });
 
     return filtered;
-  }, [playerAssistData, searchTerm, selectedPositions, selectedTeams, startGameweek, endGameweek, sortField, sortDirection, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns]);
+  }, [displayData, searchTerm, selectedPositions, selectedTeams, startGameweek, endGameweek, sortField, sortDirection, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode]);
 
   // Calculate dynamic totals based on selected gameweek range (excluding excluded gameweeks)
   const getFilteredTotal = (player: PlayerAssistProjection, useAvailability: boolean = false) => {
     let total = 0;
-    const playerInfo = playerAvailabilityMap.get(player.playerId);
+    const playerInfo = playerAvailabilityMap?.get(player.playerId);
     const availabilityFactor = useAvailability && playerInfo 
       ? (playerInfo.chanceOfPlayingNextRound ?? 100) / 100 
       : 1;
@@ -421,19 +486,21 @@ export default function PlayerAssistProjections() {
     );
   }
 
-  if (isLoading || !initialized || !playerAssistData || playerAssistData.length === 0) {
+  if (isLoading || !initialized || displayData.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
         <Card className="w-96 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
               <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-              Loading Assist Projections
+              {viewMode === "future" ? "Loading Assist Projections" : "Loading Assist History"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-gray-600">
-              Calculating projected assists for all players across the next 12 gameweeks...
+              {viewMode === "future" 
+                ? "Calculating projected assists for all players across the next 12 gameweeks..."
+                : "Loading historical assist data for all players..."}
             </p>
           </CardContent>
         </Card>
@@ -448,11 +515,34 @@ export default function PlayerAssistProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Zap className="h-8 w-8" />
-            <h1>Player Assist Projections</h1>
+            <h1>{viewMode === "future" ? "Player Assist Projections" : "Player Assist History"}</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Projected Assists for each player across all upcoming fixtures
+            {viewMode === "future" 
+              ? "Projected assists for each player across upcoming gameweeks"
+              : "Actual assists recorded by each player in past gameweeks"}
           </p>
+          {/* Past/Future Toggle */}
+          <div className="flex gap-2 mt-3">
+            <Button
+              variant={viewMode === "past" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("past")}
+              className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+            >
+              <History className="h-4 w-4" />
+              Past GW Data
+            </Button>
+            <Button
+              variant={viewMode === "future" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("future")}
+              className={`flex items-center gap-1.5 ${viewMode === "future" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+            >
+              <Calendar className="h-4 w-4" />
+              Future GW Projections
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -677,7 +767,7 @@ export default function PlayerAssistProjections() {
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <CardTitle className="flex items-center gap-2">
                       <Zap className="h-5 w-5 text-green-600" />
-                      Player Assist Projections: GW{startGameweek}-GW{endGameweek}
+                      {viewMode === "future" ? "Player Assist Projections" : "Player Assist History"}: GW{startGameweek}-GW{endGameweek}
                       {excludedGameweeks.size > 0 && (
                         <Badge variant="secondary" className="ml-1 text-xs">
                           {excludedGameweeks.size} excluded
@@ -767,16 +857,17 @@ export default function PlayerAssistProjections() {
                               const multiplier = gwMultipliers[gw] ?? 1;
                               const displayValue = projValue * multiplier;
                               const hasGwAdjustment = applyAvailability && multiplier !== 1;
+                              const formatValue = (val: number) => viewMode === "past" ? Math.round(val).toString() : val.toFixed(2);
                               return (
                                 <td key={`assists-cell-${player.playerId}-gw${gw}`} className="text-center py-2 px-1 text-xs md:text-sm min-w-[40px] md:min-w-[50px]">
                                   <div className="flex flex-col items-center">
                                     {hasGwAdjustment && projValue > 0 ? (
                                       <>
-                                        <span className="text-purple-700 font-medium">{displayValue.toFixed(2)}</span>
-                                        <span className="text-gray-400 line-through text-xs">{projValue.toFixed(2)}</span>
+                                        <span className="text-purple-700 font-medium">{formatValue(displayValue)}</span>
+                                        <span className="text-gray-400 line-through text-xs">{formatValue(projValue)}</span>
                                       </>
                                     ) : (
-                                      <span>{projValue > 0 ? projValue.toFixed(2) : "-"}</span>
+                                      <span>{projValue > 0 ? formatValue(projValue) : "-"}</span>
                                     )}
                                     {showOpponent && opponentInfo && (
                                       <span className={`text-xs ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
@@ -790,21 +881,21 @@ export default function PlayerAssistProjections() {
                             <td className={`text-center py-2 px-1 font-semibold min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
                               {hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
-                                  <span className="text-sm md:text-lg font-bold text-purple-700">{adjustedTotal.toFixed(2)}</span>
-                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{originalTotal.toFixed(2)}</span>
+                                  <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(2)}</span>
+                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotal) : originalTotal.toFixed(2)}</span>
                                 </div>
                               ) : (
-                                <span className="text-sm md:text-lg font-bold text-orange-900">{adjustedTotal.toFixed(2)}</span>
+                                <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(2)}</span>
                               )}
                             </td>
                             <td className={`text-center py-2 px-1 font-semibold min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                               {hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
-                                  <span className="text-sm md:text-lg font-bold text-purple-700">{pointsTotal.toFixed(2)}</span>
-                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{originalPointsTotal.toFixed(2)}</span>
+                                  <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(pointsTotal) : pointsTotal.toFixed(2)}</span>
+                                  <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalPointsTotal) : originalPointsTotal.toFixed(2)}</span>
                                 </div>
                               ) : (
-                                <span className="text-sm md:text-lg font-bold text-blue-900">{pointsTotal.toFixed(2)}</span>
+                                <span className="text-sm md:text-lg font-bold text-blue-900">{viewMode === "past" ? Math.round(pointsTotal) : pointsTotal.toFixed(2)}</span>
                               )}
                             </td>
                           </tr>

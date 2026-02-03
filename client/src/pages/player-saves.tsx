@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, Search, ArrowUpDown, Users, Loader2, X, Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { Shield, Search, ArrowUpDown, Users, Loader2, X, Filter, ChevronDown, ChevronUp, History, Calendar } from "lucide-react";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,19 @@ interface SavesProjection {
   averagePerGameweek: number;
 }
 
+interface PlayerSavesHistory {
+  lastFinishedGW: number;
+  players: {
+    playerId: number;
+    playerName: string;
+    teamName: string;
+    teamShort: string;
+    position: string;
+    gameweekSaves: { [key: number]: number };
+    totalSaves: number;
+  }[];
+}
+
 type SortField = 'name' | 'team' | 'totalSaves' | string;
 type SortDirection = 'asc' | 'desc';
 
@@ -46,6 +59,8 @@ export default function PlayerSaves() {
   const [applyAvailability, setApplyAvailability] = useState(true);
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  // View mode: "future" for projections, "past" for historical data
+  const [viewMode, setViewMode] = useState<"future" | "past">("future");
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -57,13 +72,23 @@ export default function PlayerSaves() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Get available gameweeks for dropdown (next 12 gameweeks)
+  // Fetch past player saves history
+  const { data: historyData, isLoading: historyLoading } = useQuery<PlayerSavesHistory>({
+    queryKey: ["/api/player-saves-history"],
+    enabled: viewMode === "past",
+  });
+
+  // Get available gameweeks for dropdown based on view mode
   const availableGameweeks = useMemo(() => {
+    if (viewMode === "past") {
+      const lastFinished = historyData?.lastFinishedGW || 24;
+      return Array.from({ length: lastFinished }, (_, i) => i + 1);
+    }
     if (!bootstrapData?.events) {
       return [];
     }
-    return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
-  }, [bootstrapData?.events]);
+    return getNextGameweeksForDropdown(bootstrapData.events, 12);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
 
   // Create teamName to short_name mapping
   const teamNameToShort = useMemo(() => {
@@ -118,16 +143,32 @@ export default function PlayerSaves() {
     }
   }, [bootstrapData, initialized]);
 
+  // Reset gameweek range when viewMode changes
+  useEffect(() => {
+    if (viewMode === "past" && historyData?.lastFinishedGW) {
+      const lastFinished = historyData.lastFinishedGW;
+      const startGW = Math.max(1, lastFinished - 5);
+      setStartGameweek(startGW);
+      setEndGameweek(lastFinished);
+      setExcludedGameweeks(new Set());
+    } else if (viewMode === "future" && bootstrapData?.events) {
+      const newRange = getDefaultGameweekRange(bootstrapData.events, 6);
+      setStartGameweek(parseInt(newRange.startGameweek));
+      setEndGameweek(parseInt(newRange.endGameweek));
+      setExcludedGameweeks(new Set());
+    }
+  }, [viewMode, historyData?.lastFinishedGW, bootstrapData?.events]);
+
   // API call for saves projections - use cached endpoint for 10-20x faster loading
   const { data: allSavesProjections, isLoading: isLoadingProjections } = useQuery({
     queryKey: ["/api/cached/player-saves-projections"],
-    enabled: initialized,
+    enabled: initialized && viewMode === "future",
     staleTime: 60 * 60 * 1000, // Cache for 1 hour
   });
 
   // Filter cached data to selected gameweek range (client-side filtering is instant)
   const savesProjections = useMemo(() => {
-    if (!allSavesProjections) return allSavesProjections;
+    if (!allSavesProjections || !Array.isArray(allSavesProjections)) return null;
     
     // Filter each player's saves to only include selected range (excluding excluded gameweeks)
     return allSavesProjections.map((player: any) => {
@@ -165,6 +206,39 @@ export default function PlayerSaves() {
     });
   }, [allSavesProjections, startGameweek, endGameweek, excludedGameweeks]);
 
+  // Unified display data - transforms history data to match projection format
+  const displayData = useMemo(() => {
+    if (viewMode === "past" && historyData?.players) {
+      return historyData.players.map(player => {
+        const saves: Record<string, number> = {};
+        let totalSaves = 0;
+        let activeCount = 0;
+        
+        for (let gw = startGameweek; gw <= endGameweek; gw++) {
+          const gwSaves = player.gameweekSaves[gw] || 0;
+          saves[`gw${gw}`] = gwSaves;
+          if (!excludedGameweeks.has(gw)) {
+            totalSaves += gwSaves;
+            activeCount++;
+          }
+        }
+        
+        return {
+          playerId: player.playerId,
+          playerName: player.playerName,
+          teamName: player.teamName,
+          position: player.position,
+          saves,
+          pointsFromSaves: {},
+          totalSaves,
+          totalPoints: 0,
+          averagePerGameweek: activeCount > 0 ? totalSaves / activeCount : 0
+        } as SavesProjection;
+      });
+    }
+    return savesProjections || [];
+  }, [viewMode, historyData, savesProjections, startGameweek, endGameweek, excludedGameweeks]);
+
   // Create playerIdToWebName mapping for short names
   const playerIdToWebName = useMemo(() => {
     if (!bootstrapData?.elements) return null;
@@ -185,10 +259,10 @@ export default function PlayerSaves() {
   }, [bootstrapData]);
 
   const teams = useMemo(() => {
-    if (!savesProjections || !Array.isArray(savesProjections)) return [];
-    const uniqueTeams = Array.from(new Set(savesProjections.map((p: SavesProjection) => p.teamName)));
+    if (!displayData || !Array.isArray(displayData)) return [];
+    const uniqueTeams = Array.from(new Set(displayData.map((p: SavesProjection) => p.teamName)));
     return uniqueTeams.sort();
-  }, [savesProjections]);
+  }, [displayData]);
 
   // Toggle team selection
   const toggleTeamSelection = (team: string) => {
@@ -232,7 +306,7 @@ export default function PlayerSaves() {
   // Calculate dynamic totals based on selected gameweek range (using filtered columns)
   const getFilteredTotal = (player: SavesProjection, useAvailability: boolean = false) => {
     let total = 0;
-    const playerInfo = playerAvailabilityMap.get(player.playerId);
+    const playerInfo = playerAvailabilityMap?.get(player.playerId);
     const availabilityFactor = useAvailability && playerInfo 
       ? (playerInfo.chanceOfPlayingNextRound ?? 100) / 100 
       : 1;
@@ -258,9 +332,9 @@ export default function PlayerSaves() {
   };
 
   const filteredAndSortedData = useMemo(() => {
-    if (!savesProjections || !Array.isArray(savesProjections)) return [];
+    if (!displayData || !Array.isArray(displayData)) return [];
     
-    let filtered = savesProjections.filter((projection: SavesProjection) => {
+    let filtered = displayData.filter((projection: SavesProjection) => {
       const matchesSearch = !searchTerm || 
         projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -311,7 +385,7 @@ export default function PlayerSaves() {
     });
 
     return filtered;
-  }, [savesProjections, searchTerm, selectedTeams, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns]);
+  }, [displayData, searchTerm, selectedTeams, sortField, sortDirection, startGameweek, endGameweek, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, dynamicGameweekColumns, viewMode]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -331,20 +405,27 @@ export default function PlayerSaves() {
       <ArrowUpDown className="h-4 w-4 text-blue-600" />;
   };
 
-  // Show loading state while data is loading OR while initializing gameweeks OR when data is empty
-  if (isLoadingBootstrap || isLoadingProjections || !initialized || !savesProjections || savesProjections.length === 0) {
+  // Check if data is loading based on view mode
+  const isDataLoading = isLoadingBootstrap || !initialized || 
+    (viewMode === "future" && (isLoadingProjections || !displayData || displayData.length === 0)) ||
+    (viewMode === "past" && historyLoading);
+
+  // Show loading state while data is loading
+  if (isDataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
         <Card className="w-96 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-xl">
               <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-              Loading Saves Projections
+              {viewMode === "future" ? "Loading Saves Projections" : "Loading Historical Saves"}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-gray-600">
-              Calculating goalkeeper saves and FPL points for all players across the next 12 gameweeks...
+              {viewMode === "future" 
+                ? "Calculating goalkeeper saves and FPL points for all players across the next 12 gameweeks..."
+                : "Loading historical goalkeeper saves data..."}
             </p>
           </CardContent>
         </Card>
@@ -359,11 +440,34 @@ export default function PlayerSaves() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Shield className="h-8 w-8" />
-            <h1>Goalkeeper Saves Projections</h1>
+            <h1>{viewMode === "future" ? "Goalkeeper Saves Projections" : "Goalkeeper Saves History"}</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Goalkeeper save predictions and FPL points analysis for upcoming gameweeks
+            {viewMode === "future" 
+              ? "Goalkeeper save predictions and FPL points analysis for upcoming gameweeks"
+              : "Actual goalkeeper saves from past gameweeks"}
           </p>
+          {/* Past/Future Toggle */}
+          <div className="flex gap-2 mt-3">
+            <Button
+              variant={viewMode === "past" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("past")}
+              className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+            >
+              <History className="h-4 w-4" />
+              Past GW Data
+            </Button>
+            <Button
+              variant={viewMode === "future" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("future")}
+              className={`flex items-center gap-1.5 ${viewMode === "future" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+            >
+              <Calendar className="h-4 w-4" />
+              Future GW Projections
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -552,7 +656,7 @@ export default function PlayerSaves() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5 text-blue-600" />
-                Expected Saves: GW{startGameweek}-GW{endGameweek}
+                {viewMode === "future" ? "Expected Saves" : "Actual Saves"}: GW{startGameweek}-GW{endGameweek}
                 {excludedGameweeks.size > 0 && (
                   <Badge variant="secondary" className="ml-1 text-xs">
                     {excludedGameweeks.size} excluded
@@ -560,7 +664,9 @@ export default function PlayerSaves() {
                 )}
               </CardTitle>
               <CardDescription>
-                Projected number of saves for each goalkeeper based on opponent strength and team defensive quality
+                {viewMode === "future" 
+                  ? "Projected number of saves for each goalkeeper based on opponent strength and team defensive quality"
+                  : "Actual saves recorded for each goalkeeper in past gameweeks"}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -632,16 +738,17 @@ export default function PlayerSaves() {
                             const multiplier = gwMultipliers[gw] ?? 1;
                             const displayValue = rawValue * multiplier;
                             const hasGwAdjustment = applyAvailability && multiplier !== 1;
+                            const formatValue = (val: number) => viewMode === "past" ? val.toFixed(0) : val.toFixed(2);
                             return (
                               <td key={`saves-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 px-1 text-xs md:text-sm min-w-[40px] md:min-w-[50px]">
                                 <div className="flex flex-col items-center">
                                   {hasGwAdjustment && rawValue ? (
                                     <>
-                                      <span className="text-purple-700 font-medium">{displayValue.toFixed(2)}</span>
-                                      <span className="text-gray-400 line-through text-xs">{rawValue.toFixed(2)}</span>
+                                      <span className="text-purple-700 font-medium">{formatValue(displayValue)}</span>
+                                      <span className="text-gray-400 line-through text-xs">{formatValue(rawValue)}</span>
                                     </>
                                   ) : (
-                                    <span>{rawValue ? rawValue.toFixed(2) : '-'}</span>
+                                    <span>{rawValue ? formatValue(rawValue) : '-'}</span>
                                   )}
                                   {showOpponent && opponentInfo && (
                                     <span className={`text-xs mt-0.5 ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
@@ -655,11 +762,11 @@ export default function PlayerSaves() {
                           <td className={`text-center py-2 px-1 font-semibold min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
-                                <span className="text-sm md:text-lg font-bold text-purple-700">{adjustedTotal.toFixed(2)}</span>
-                                <span className="text-gray-400 line-through text-[10px] md:text-xs">{originalTotal.toFixed(2)}</span>
+                                <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? adjustedTotal.toFixed(0) : adjustedTotal.toFixed(2)}</span>
+                                <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? originalTotal.toFixed(0) : originalTotal.toFixed(2)}</span>
                               </div>
                             ) : (
-                              <span className="text-sm md:text-lg font-bold text-blue-900">{adjustedTotal.toFixed(2)}</span>
+                              <span className="text-sm md:text-lg font-bold text-blue-900">{viewMode === "past" ? adjustedTotal.toFixed(0) : adjustedTotal.toFixed(2)}</span>
                             )}
                           </td>
                           <td className={`text-center py-2 px-1 min-w-[40px] md:min-w-[60px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>

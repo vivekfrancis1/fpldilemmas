@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, History, Calendar } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -48,11 +48,33 @@ interface PlayerDefensiveData {
   confidence: number;
 }
 
+interface PlayerDefensiveHistory {
+  lastFinishedGW: number;
+  players: {
+    playerId: number;
+    playerName: string;
+    teamName: string;
+    teamShort: string;
+    position: string;
+    gameweekStats: { [key: number]: { defensiveContribution: number; cbi: number; tackles: number; recoveries: number } };
+    totalDefensiveContribution: number;
+  }[];
+}
+
 export default function PlayerDefensiveContributions() {
+  // View mode: "future" for projections, "past" for historical data
+  const [viewMode, setViewMode] = useState<"future" | "past">("future");
+
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch past defensive history
+  const { data: historyData, isLoading: historyLoading } = useQuery<PlayerDefensiveHistory>({
+    queryKey: ["/api/player-defensive-history"],
+    enabled: viewMode === "past",
   });
 
   // Create playerIdToWebName mapping for short names
@@ -102,26 +124,44 @@ export default function PlayerDefensiveContributions() {
   // Dynamic gameweek range state - only set once bootstrap data is loaded
   const [gameweekRange, setGameweekRange] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
   
-  // Update range when bootstrap data loads and currentGameweek becomes available
+  // Update range when bootstrap data loads, currentGameweek becomes available, or viewMode changes
   useEffect(() => {
-    if (nextGameweek && nextGameweek > 0) {
+    if (viewMode === "past" && historyData?.lastFinishedGW) {
+      const lastFinished = historyData.lastFinishedGW;
+      const start = Math.max(1, lastFinished - 5);
+      setGameweekRange({ start: 1, end: lastFinished });
+      setStartGameweek(start);
+      setEndGameweek(lastFinished);
+      setExcludedGameweeks(new Set());
+    } else if (viewMode === "future" && nextGameweek && nextGameweek > 0) {
       const start = nextGameweek;
       const end = Math.min(nextGameweek + 11, 38);
       setGameweekRange({ start, end });
-      // Also set display range
       setStartGameweek(start);
       setEndGameweek(Math.min(start + 5, 38));
+      setExcludedGameweeks(new Set());
     }
-  }, [nextGameweek]);
+  }, [nextGameweek, viewMode, historyData?.lastFinishedGW]);
 
   // Fetch defensive contribution projections using new formula-based endpoint with current season data
-  // Only fetch when gameweekRange is valid (after bootstrap data loads)
-  const { data: defensiveData, isLoading } = useQuery({
+  // Only fetch when gameweekRange is valid (after bootstrap data loads) and in future mode
+  const { data: defensiveData, isLoading: projectionsLoading } = useQuery({
     queryKey: ["player-defensive-contributions-current-season", gameweekRange.start, gameweekRange.end],
     queryFn: () => fetch(`/api/player-defensive-contributions-projections?startGameweek=${gameweekRange.start}&endGameweek=${gameweekRange.end}`).then(res => res.json()),
     staleTime: 1 * 60 * 1000, // 1 minute to see changes faster
-    enabled: gameweekRange.start > 0 && gameweekRange.end > 0, // Only fetch when range is valid
+    enabled: viewMode === "future" && gameweekRange.start > 0 && gameweekRange.end > 0,
   });
+
+  // Get available gameweeks for dropdown options based on view mode
+  const availableGameweeks = useMemo(() => {
+    if (viewMode === "past") {
+      const lastFinished = historyData?.lastFinishedGW || 24;
+      return Array.from({ length: lastFinished }, (_, i) => i + 1);
+    }
+    // Future mode: next 12 gameweeks
+    if (!nextGameweek) return Array.from({ length: 12 }, (_, i) => i + 1);
+    return Array.from({ length: 12 }, (_, i) => nextGameweek + i).filter(gw => gw <= 38);
+  }, [viewMode, historyData?.lastFinishedGW, nextGameweek]);
 
   // Fetch fixtures for opponent data
   const { data: fixturesData } = useQuery({
@@ -223,10 +263,63 @@ export default function PlayerDefensiveContributions() {
     });
   }, [defensiveData, bootstrapData, fixturesData]);
 
-  // Get all gameweeks from the API data (already filtered to future gameweeks, up to 12 available)
-  const allGameweeks = players.length > 0 && players[0].gameweekProjections.length > 0 
-    ? players[0].gameweekProjections.map(gw => gw.gameweek)
-    : gameweekRange.start > 0 ? Array.from({ length: 12 }, (_, i) => gameweekRange.start + i).filter(gw => gw <= 38) : [];
+  // Transform history data to match projection format for past mode
+  const displayData: PlayerDefensiveData[] = useMemo(() => {
+    if (viewMode === "past" && historyData?.players) {
+      return historyData.players.map(player => {
+        const gameweekProjections = Object.entries(player.gameweekStats || {}).map(([gwKey, stats]) => {
+          const gameweek = parseInt(gwKey);
+          return {
+            gameweek,
+            defensiveContribution: stats.defensiveContribution || 0,
+            tackles: stats.tackles || 0,
+            recoveries: stats.recoveries || 0,
+            cbi: stats.cbi || 0,
+            opponent: "",
+            opponentTier: "Average",
+            fixtureMultiplier: 1,
+            isHome: false,
+            isActual: true,
+            isProjected: false,
+          };
+        }).sort((a, b) => a.gameweek - b.gameweek);
+
+        const totalDC = player.totalDefensiveContribution || 0;
+        const gamesPlayed = Object.keys(player.gameweekStats || {}).length;
+        const dcPerGame = gamesPlayed > 0 ? totalDC / gamesPlayed : 0;
+
+        return {
+          playerId: player.playerId,
+          playerName: player.playerName,
+          position: player.position,
+          teamName: player.teamShort || player.teamName,
+          teamCode: 0,
+          currentSeasonStats: {
+            dcPer90: Math.round(dcPerGame * 100) / 100,
+            tacklesPer90: 0,
+            recoveriesPer90: 0,
+            cbiPer90: 0,
+          },
+          gameweekProjections,
+          form: 0,
+          confidence: 1,
+        };
+      });
+    }
+    return players;
+  }, [viewMode, historyData, players]);
+
+  // Get all gameweeks from the data (based on view mode)
+  const allGameweeks = useMemo(() => {
+    if (viewMode === "past") {
+      const lastFinished = historyData?.lastFinishedGW || 24;
+      return Array.from({ length: lastFinished }, (_, i) => i + 1);
+    }
+    if (displayData.length > 0 && displayData[0].gameweekProjections.length > 0) {
+      return displayData[0].gameweekProjections.map(gw => gw.gameweek);
+    }
+    return gameweekRange.start > 0 ? Array.from({ length: 12 }, (_, i) => gameweekRange.start + i).filter(gw => gw <= 38) : [];
+  }, [viewMode, historyData?.lastFinishedGW, displayData, gameweekRange.start]);
   
   // Filter gameweeks based on selected range
   const gameweeks = useMemo(() => {
@@ -258,7 +351,7 @@ export default function PlayerDefensiveContributions() {
 
   // Calculate totals for each player
   const playersWithTotals = useMemo(() => {
-    return players.map(player => {
+    return displayData.map(player => {
       // Calculate defensive contribution points for each gameweek
       const gameweekPoints = player.gameweekProjections.map(gw => {
         let dcPoints = 0;
@@ -293,7 +386,7 @@ export default function PlayerDefensiveContributions() {
         avgDCPoints: activeProjections.length > 0 ? activeProjections.reduce((sum, gw) => sum + gw.dcPoints, 0) / activeProjections.length : 0
       };
     });
-  }, [players, startGameweek, endGameweek, activeGameweeks]);
+  }, [displayData, startGameweek, endGameweek, activeGameweeks]);
 
   // Helper to get adjusted total for sorting with per-gameweek multipliers
   const getAdjustedTotalDC = (player: any) => {
@@ -412,8 +505,11 @@ export default function PlayerDefensiveContributions() {
   }, [playersWithTotals, searchTerm, selectedPositions, selectedTeams, gameweekSortColumn, gameweekSortOrder, sortByCurrentDC, currentDCSortOrder, sortByTotal, totalSortOrder, applyAvailability, playerAvailabilityMap, currentGameweek, bootstrapData, activeGameweeks]);
 
   // Get unique values for filters
-  const positions = Array.from(new Set(players.map(p => p.position).filter(Boolean)));
-  const teams = Array.from(new Set(players.map(p => p.teamName).filter(Boolean))).sort();
+  const positions = Array.from(new Set(displayData.map(p => p.position).filter(Boolean)));
+  const teams = Array.from(new Set(displayData.map(p => p.teamName).filter(Boolean))).sort();
+
+  // Combined loading state
+  const isLoading = (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading);
 
   // Toggle functions for multi-select
   const togglePositionSelection = (position: string) => {
@@ -479,7 +575,7 @@ export default function PlayerDefensiveContributions() {
   };
 
 
-  if (isLoading || !defensiveData || players.length === 0) {
+  if (isLoading || displayData.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
         <Card className="w-96 shadow-lg">
@@ -491,7 +587,9 @@ export default function PlayerDefensiveContributions() {
           </CardHeader>
           <CardContent>
             <p className="text-gray-600">
-              Calculating defensive contribution projections for all players across the next 12 gameweeks...
+              {viewMode === "future" 
+                ? "Calculating defensive contribution projections for all players across the next 12 gameweeks..."
+                : "Loading historical defensive contribution data..."}
             </p>
           </CardContent>
         </Card>
@@ -506,11 +604,34 @@ export default function PlayerDefensiveContributions() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Shield className="h-8 w-8" />
-            <h1>Player Defensive Contributions Projections</h1>
+            <h1>Player Defensive Contributions {viewMode === "future" ? "Projections" : "History"}</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Comprehensive defensive stats and FPL points projections with fixture-aware analysis
+            {viewMode === "future" 
+              ? "Comprehensive defensive stats and FPL points projections with fixture-aware analysis"
+              : "Actual defensive contribution stats from past gameweeks"}
           </p>
+          {/* Past/Future Toggle */}
+          <div className="flex gap-2 mt-3">
+            <Button
+              variant={viewMode === "past" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("past")}
+              className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+            >
+              <History className="h-4 w-4" />
+              Past GW Data
+            </Button>
+            <Button
+              variant={viewMode === "future" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("future")}
+              className={`flex items-center gap-1.5 ${viewMode === "future" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+            >
+              <Calendar className="h-4 w-4" />
+              Future GW Projections
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -539,7 +660,7 @@ export default function PlayerDefensiveContributions() {
                     {filteredPlayers.length > 0 ? filteredPlayers[0].playerName.split(' ').slice(-1)[0] : "None"}
                   </p>
                   <p className="text-sm text-green-600">
-                    {filteredPlayers.length > 0 ? filteredPlayers[0].totalDC.toFixed(1) + " DC" : ""}
+                    {filteredPlayers.length > 0 ? (viewMode === "past" ? Math.round(filteredPlayers[0].totalDC) : filteredPlayers[0].totalDC.toFixed(1)) + " DC" : ""}
                   </p>
                 </div>
               </div>
@@ -554,7 +675,9 @@ export default function PlayerDefensiveContributions() {
                   <p className="text-sm font-medium text-purple-900">Average DC</p>
                   <p className="text-2xl font-bold text-purple-700">
                     {filteredPlayers.length > 0 ? 
-                      (filteredPlayers.reduce((sum, p) => sum + p.totalDC, 0) / filteredPlayers.length).toFixed(1) : "0"}
+                      viewMode === "past" 
+                        ? Math.round(filteredPlayers.reduce((sum, p) => sum + p.totalDC, 0) / filteredPlayers.length)
+                        : (filteredPlayers.reduce((sum, p) => sum + p.totalDC, 0) / filteredPlayers.length).toFixed(1) : "0"}
                   </p>
                 </div>
               </div>
@@ -611,7 +734,7 @@ export default function PlayerDefensiveContributions() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {allGameweeks.map(gw => (
+                  {availableGameweeks.map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
@@ -625,7 +748,7 @@ export default function PlayerDefensiveContributions() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {allGameweeks.filter(gw => gw >= startGameweek).map(gw => (
+                  {availableGameweeks.filter(gw => gw >= startGameweek).map(gw => (
                     <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
                   ))}
                 </SelectContent>
@@ -884,7 +1007,7 @@ export default function PlayerDefensiveContributions() {
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell font-mono px-1 py-2 text-xs">
-                      {player.currentSeasonStats.dcPer90.toFixed(1)}
+                      {viewMode === "past" ? Math.round(player.currentSeasonStats.dcPer90) : player.currentSeasonStats.dcPer90.toFixed(1)}
                     </TableCell>
                     {player.gameweekProjections
                       .filter(gw => activeGameweeks.includes(gw.gameweek))
@@ -897,12 +1020,14 @@ export default function PlayerDefensiveContributions() {
                         <div className={`p-1 md:p-2 rounded text-xs md:text-sm ${getOpponentColor(gw.opponentTier)} ${gw.isActual ? 'border-2 border-blue-400' : ''}`}>
                           {hasGwAdjustment && !gw.isActual ? (
                             <div className="flex flex-col items-center">
-                              <span className="font-bold text-purple-700">{displayDC.toFixed(1)}</span>
-                              <span className="text-gray-400 line-through text-xs">{gw.defensiveContribution.toFixed(1)}</span>
+                              <span className="font-bold text-purple-700">{viewMode === "past" ? Math.round(displayDC) : displayDC.toFixed(1)}</span>
+                              <span className="text-gray-400 line-through text-xs">{viewMode === "past" ? Math.round(gw.defensiveContribution) : gw.defensiveContribution.toFixed(1)}</span>
                             </div>
                           ) : (
                             <div className="font-bold">
-                              {gw.isActual ? gw.defensiveContribution.toFixed(1) : displayDC.toFixed(1)}
+                              {gw.isActual 
+                                ? (viewMode === "past" ? Math.round(gw.defensiveContribution) : gw.defensiveContribution.toFixed(1))
+                                : (viewMode === "past" ? Math.round(displayDC) : displayDC.toFixed(1))}
                               {gw.isActual && <span className="text-xs ml-1 text-blue-600">✓</span>}
                             </div>
                           )}
@@ -918,11 +1043,11 @@ export default function PlayerDefensiveContributions() {
                     <TableCell className={`text-center font-bold ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
                       {hasAnyAdjustment ? (
                         <div className="flex flex-col items-center">
-                          <span className="text-lg font-bold text-purple-700">{adjustedTotalDC.toFixed(1)}</span>
-                          <span className="text-gray-400 line-through text-xs">{originalTotalDC.toFixed(1)}</span>
+                          <span className="text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
+                          <span className="text-gray-400 line-through text-xs">{viewMode === "past" ? Math.round(originalTotalDC) : originalTotalDC.toFixed(1)}</span>
                         </div>
                       ) : (
-                        <span className="text-lg font-bold text-orange-900">{adjustedTotalDC.toFixed(1)}</span>
+                        <span className="text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
                       )}
                     </TableCell>
                   </TableRow>
