@@ -44,12 +44,14 @@ interface TeamProjectionRecord {
   season: string;
   team_id: number;
   team_name: string;
-  projected_goals: string;
-  projected_clean_sheet: string;
-  actual_goals: number | null;
+  projected_goals_scored: string;
+  projected_goals_conceded: string;
+  projected_clean_sheet_prob: string;
+  actual_goals_scored: number | null;
+  actual_goals_conceded: number | null;
   actual_clean_sheet: number | null;
-  goals_difference: string | null;
-  cs_difference: string | null;
+  goals_scored_difference: string | null;
+  goals_conceded_difference: string | null;
 }
 
 interface GameweekAccuracyData {
@@ -132,13 +134,13 @@ export default function ProjectionAccuracy() {
           comparison = a.team_name.localeCompare(b.team_name);
           break;
         case 'projected':
-          comparison = parseFloat(a.projected_goals) - parseFloat(b.projected_goals);
+          comparison = parseFloat(a.projected_goals_scored) - parseFloat(b.projected_goals_scored);
           break;
         case 'actual':
-          comparison = (a.actual_goals || 0) - (b.actual_goals || 0);
+          comparison = (a.actual_goals_scored || 0) - (b.actual_goals_scored || 0);
           break;
         case 'difference':
-          comparison = Math.abs(parseFloat(a.goals_difference || '0')) - Math.abs(parseFloat(b.goals_difference || '0'));
+          comparison = Math.abs(parseFloat(a.goals_scored_difference || '0')) - Math.abs(parseFloat(b.goals_scored_difference || '0'));
           break;
       }
       return sortDirection === 'asc' ? comparison : -comparison;
@@ -183,7 +185,7 @@ export default function ProjectionAccuracy() {
     if (activeTab === 'players') {
       return accuracyData?.players?.some(p => p.actual_points !== null) || false;
     }
-    return accuracyData?.teams?.some(t => t.actual_goals !== null) || false;
+    return accuracyData?.teams?.some(t => t.actual_goals_scored !== null) || false;
   }, [accuracyData, activeTab]);
 
   const playerStats = useMemo(() => {
@@ -205,12 +207,12 @@ export default function ProjectionAccuracy() {
 
   const teamStats = useMemo(() => {
     if (!accuracyData?.teams || !hasActuals) return null;
-    const teamsWithActuals = accuracyData.teams.filter(t => t.actual_goals !== null);
+    const teamsWithActuals = accuracyData.teams.filter(t => t.actual_goals_scored !== null);
     if (teamsWithActuals.length === 0) return null;
 
-    const totalProjectedGoals = teamsWithActuals.reduce((sum, t) => sum + parseFloat(t.projected_goals), 0);
-    const totalActualGoals = teamsWithActuals.reduce((sum, t) => sum + (t.actual_goals || 0), 0);
-    const avgGoalsDiff = teamsWithActuals.reduce((sum, t) => sum + Math.abs(parseFloat(t.goals_difference || '0')), 0) / teamsWithActuals.length;
+    const totalProjectedGoals = teamsWithActuals.reduce((sum, t) => sum + parseFloat(t.projected_goals_scored), 0);
+    const totalActualGoals = teamsWithActuals.reduce((sum, t) => sum + (t.actual_goals_scored || 0), 0);
+    const avgGoalsDiff = teamsWithActuals.reduce((sum, t) => sum + Math.abs(parseFloat(t.goals_scored_difference || '0')), 0) / teamsWithActuals.length;
 
     return {
       count: teamsWithActuals.length,
@@ -476,7 +478,7 @@ export default function ProjectionAccuracy() {
                       </th>
                       <th className="text-center p-3 font-semibold">Proj CS</th>
                       <th className="text-center p-3 font-semibold">Actual CS</th>
-                      <th className="text-center p-3 font-semibold">CS Diff</th>
+                      <th className="text-center p-3 font-semibold">CS Accuracy</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -491,23 +493,23 @@ export default function ProjectionAccuracy() {
                         <tr key={team.id} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="p-3 font-medium text-gray-900">{team.team_name}</td>
                           <td className="text-center p-3 font-medium text-purple-600">
-                            {parseFloat(team.projected_goals).toFixed(2)}
+                            {parseFloat(team.projected_goals_scored).toFixed(2)}
                           </td>
                           <td className="text-center p-3 font-medium">
-                            {team.actual_goals !== null ? (
-                              <span className="text-green-600">{team.actual_goals}</span>
+                            {team.actual_goals_scored !== null ? (
+                              <span className="text-green-600">{team.actual_goals_scored}</span>
                             ) : (
                               <span className="text-gray-400">-</span>
                             )}
                           </td>
-                          <td className={`text-center p-3 font-medium ${getDifferenceColor(team.goals_difference)}`}>
+                          <td className={`text-center p-3 font-medium ${getDifferenceColor(team.goals_scored_difference)}`}>
                             <div className="flex items-center justify-center gap-1">
-                              {getDifferenceIcon(team.goals_difference)}
-                              {team.goals_difference !== null ? parseFloat(team.goals_difference).toFixed(2) : '-'}
+                              {getDifferenceIcon(team.goals_scored_difference)}
+                              {team.goals_scored_difference !== null ? parseFloat(team.goals_scored_difference).toFixed(2) : '-'}
                             </div>
                           </td>
                           <td className="text-center p-3 font-medium text-purple-600">
-                            {(parseFloat(team.projected_clean_sheet) * 100).toFixed(0)}%
+                            {(parseFloat(team.projected_clean_sheet_prob) * 100).toFixed(0)}%
                           </td>
                           <td className="text-center p-3 font-medium">
                             {team.actual_clean_sheet !== null ? (
@@ -516,8 +518,14 @@ export default function ProjectionAccuracy() {
                               <span className="text-gray-400">-</span>
                             )}
                           </td>
-                          <td className={`text-center p-3 font-medium ${getDifferenceColor(team.cs_difference)}`}>
-                            {team.cs_difference !== null ? parseFloat(team.cs_difference).toFixed(2) : '-'}
+                          <td className={`text-center p-3 font-medium`}>
+                            {team.actual_clean_sheet !== null ? (
+                              team.actual_clean_sheet === 1 && parseFloat(team.projected_clean_sheet_prob) >= 0.5 ? 
+                                <span className="text-green-600">Correct</span> :
+                              team.actual_clean_sheet === 0 && parseFloat(team.projected_clean_sheet_prob) < 0.5 ?
+                                <span className="text-green-600">Correct</span> :
+                                <span className="text-red-600">Wrong</span>
+                            ) : '-'}
                           </td>
                         </tr>
                       ))

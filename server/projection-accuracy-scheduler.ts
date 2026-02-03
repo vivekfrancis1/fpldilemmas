@@ -348,29 +348,39 @@ class ProjectionAccuracyScheduler {
     const projections: PlayerProjectionRecord[] = [];
     
     try {
-      const cachedData = await db.select().from(cachedPlayerTotalPoints);
+      const response = await fetch(`http://localhost:${process.env.PORT || 5000}/api/cached/player-total-points`);
+      if (!response.ok) {
+        console.error('❌ Failed to fetch cached player total points');
+        return projections;
+      }
+      
+      const cachedData = await response.json();
       const teams = bootstrapData.teams || [];
-      const players = bootstrapData.elements || [];
       const teamMap = new Map<number, string>(teams.map((t: any) => [t.id, t.name]));
-      const playerMap = new Map<number, any>(players.map((p: any) => [p.id, p]));
+      const gwKey = String(gameweek);
 
-      for (const cached of cachedData) {
-        const gameweekData = cached.gameweekData as Record<string, any>;
-        const totalPointsData = cached.totalPointsData as Record<string, any>;
-        const gwKey = String(gameweek);
-        const projectedPoints = gameweekData?.[gwKey];
-        const gwBreakdown = totalPointsData?.[gwKey];
+      for (const player of cachedData) {
+        const projectedPoints = player.gameweekProjections?.[gwKey];
+        const gwBreakdown = player.pointsFromGoals?.[gwKey] !== undefined ? {
+          goals: player.pointsFromGoals?.[gwKey] || 0,
+          assists: player.pointsFromAssists?.[gwKey] || 0,
+          cleanSheet: player.pointsFromCleanSheets?.[gwKey] || 0,
+          bonus: player.pointsFromBonus?.[gwKey] || 0,
+          saves: player.pointsFromSaves?.[gwKey] || 0,
+          minutes: player.avgMinutesPerGameweek || 0
+        } : null;
         
         if (projectedPoints !== undefined && projectedPoints > 0) {
-          const player = playerMap.get(cached.playerId);
-          const teamId: number = player?.team || 0;
+          const teamName = player.team || player.teamName || '';
+          const teamId = typeof player.teamId === 'number' ? player.teamId : 
+            (teams.find((t: any) => t.name === teamName || t.short_name === teamName)?.id || 0);
           
           projections.push({
-            player_id: cached.playerId,
-            player_name: cached.playerName,
+            player_id: player.playerId,
+            player_name: player.playerName,
             team_id: teamId,
-            team_name: teamMap.get(teamId) || cached.teamName,
-            position: cached.position,
+            team_name: teamName || teamMap.get(teamId) || 'Unknown',
+            position: player.position,
             projected_points: projectedPoints,
             projected_minutes: gwBreakdown?.minutes || 0,
             projected_goals: gwBreakdown?.goals || 0,
@@ -381,7 +391,7 @@ class ProjectionAccuracyScheduler {
           });
         }
       }
-      console.log(`📊 Found ${projections.length} player projections for GW${gameweek}`);
+      console.log(`📊 Found ${projections.length} player projections for GW${gameweek} from cached API`);
     } catch (error) {
       console.error('Error fetching player projections:', error);
     }
