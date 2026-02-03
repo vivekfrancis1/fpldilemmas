@@ -64,6 +64,18 @@ interface GameweekAccuracyData {
 type SortField = 'name' | 'projected' | 'actual' | 'difference' | 'error';
 type SortDirection = 'asc' | 'desc';
 
+const TEAM_SHORT_CODES: Record<string, string> = {
+  'Arsenal': 'ARS', 'Aston Villa': 'AVL', 'Bournemouth': 'BOU', 'Brentford': 'BRE',
+  'Brighton': 'BHA', 'Chelsea': 'CHE', 'Crystal Palace': 'CRY', 'Everton': 'EVE',
+  'Fulham': 'FUL', 'Ipswich': 'IPS', 'Leicester': 'LEI', 'Liverpool': 'LIV',
+  'Man City': 'MCI', 'Man Utd': 'MUN', 'Newcastle': 'NEW', 'Nott\'m Forest': 'NFO',
+  'Southampton': 'SOU', 'Spurs': 'TOT', 'West Ham': 'WHU', 'Wolves': 'WOL'
+};
+
+const getTeamShortCode = (teamName: string): string => {
+  return TEAM_SHORT_CODES[teamName] || teamName?.substring(0, 3).toUpperCase() || 'UNK';
+};
+
 export default function ProjectionAccuracy() {
   const [selectedGameweek, setSelectedGameweek] = useState<number>(25);
   const [activeTab, setActiveTab] = useState<string>("players");
@@ -382,43 +394,48 @@ export default function ProjectionAccuracy() {
                         </td>
                       </tr>
                     ) : (
-                      filteredPlayers.map((player) => (
-                        <tr key={player.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3">
-                            <div className="font-medium text-gray-900">{player.player_name}</div>
-                            <div className="text-xs text-gray-500 sm:hidden">{player.team_name} • {player.position}</div>
-                          </td>
-                          <td className="text-center p-3 hidden sm:table-cell">
-                            <Badge variant="outline" className="text-xs">{player.team_name}</Badge>
-                          </td>
-                          <td className="text-center p-3 hidden sm:table-cell">
-                            <Badge variant="secondary" className="text-xs">{player.position}</Badge>
-                          </td>
-                          <td className="text-center p-3 font-medium text-purple-600">
-                            {parseFloat(player.projected_points).toFixed(1)}
-                          </td>
-                          <td className="text-center p-3 font-medium">
-                            {player.actual_points !== null ? (
-                              <span className="text-green-600">{player.actual_points}</span>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                          <td className={`text-center p-3 font-medium ${getDifferenceColor(player.points_difference)}`}>
-                            <div className="flex items-center justify-center gap-1">
-                              {getDifferenceIcon(player.points_difference)}
-                              {player.points_difference !== null ? parseFloat(player.points_difference).toFixed(1) : '-'}
-                            </div>
-                          </td>
-                          <td className="text-center p-3 hidden sm:table-cell">
-                            {player.absolute_error !== null ? (
-                              <span className="text-gray-600">{parseFloat(player.absolute_error).toFixed(1)}</span>
-                            ) : (
-                              <span className="text-gray-400">-</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))
+                      filteredPlayers.map((player) => {
+                        const shortName = player.player_name.split(' ').pop() || player.player_name;
+                        const teamShort = getTeamShortCode(player.team_name);
+                        const posShort = player.position?.substring(0, 3) || player.position;
+                        return (
+                          <tr key={player.id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="p-3">
+                              <div className="font-medium text-gray-900">{shortName}</div>
+                              <div className="text-xs text-gray-500 sm:hidden">{teamShort} • {posShort}</div>
+                            </td>
+                            <td className="text-center p-3 hidden sm:table-cell">
+                              <Badge variant="outline" className="text-xs">{teamShort}</Badge>
+                            </td>
+                            <td className="text-center p-3 hidden sm:table-cell">
+                              <Badge variant="secondary" className="text-xs">{posShort}</Badge>
+                            </td>
+                            <td className="text-center p-3 font-medium text-purple-600">
+                              {parseFloat(player.projected_points).toFixed(2)}
+                            </td>
+                            <td className="text-center p-3 font-medium">
+                              {player.actual_points !== null ? (
+                                <span className="text-green-600">{player.actual_points}</span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className={`text-center p-3 font-medium ${getDifferenceColor(player.points_difference)}`}>
+                              <div className="flex items-center justify-center gap-1">
+                                {getDifferenceIcon(player.points_difference)}
+                                {player.points_difference !== null ? parseFloat(player.points_difference).toFixed(2) : '-'}
+                              </div>
+                            </td>
+                            <td className="text-center p-3 hidden sm:table-cell">
+                              {player.absolute_error !== null ? (
+                                <span className="text-gray-600">{parseFloat(player.absolute_error).toFixed(2)}</span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
@@ -491,7 +508,7 @@ export default function ProjectionAccuracy() {
                     ) : (
                       filteredTeams.map((team) => (
                         <tr key={team.id} className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="p-3 font-medium text-gray-900">{team.team_name}</td>
+                          <td className="p-3 font-medium text-gray-900">{getTeamShortCode(team.team_name)}</td>
                           <td className="text-center p-3 font-medium text-purple-600">
                             {parseFloat(team.projected_goals_scored).toFixed(2)}
                           </td>
