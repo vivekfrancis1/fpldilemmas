@@ -3199,6 +3199,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
             const chipsAvailable = Math.max(0, 4 - secondHalfChipsUsed);
             
+            // Get latest GW rank from history
+            const latestGWHistory = historyData?.current?.length > 0 
+              ? historyData.current[historyData.current.length - 1] 
+              : null;
+            
             return {
               managerId,
               historyData: historyData ? {
@@ -3208,7 +3213,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               managerData: managerData ? {
                 teamValue: managerData.last_deadline_value || 0,
                 bank: managerData.last_deadline_bank || 0,
-                totalTransfers: managerData.last_deadline_total_transfers || 0
+                totalTransfers: managerData.last_deadline_total_transfers || 0,
+                overallRank: managerData.summary_overall_rank || 0,
+                gameweekRank: latestGWHistory?.rank || 0,
+                gameweekPoints: managerData.summary_event_points || 0
               } : null,
               chipsAvailable
             };

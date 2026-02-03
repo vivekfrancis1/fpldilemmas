@@ -79,6 +79,9 @@ interface ManagerBatchData {
     teamValue: number;
     bank: number;
     totalTransfers: number;
+    overallRank: number;
+    gameweekRank: number;
+    gameweekPoints: number;
   } | null;
   chipsAvailable: number;
 }
@@ -92,6 +95,9 @@ interface EnrichedLeagueEntry extends LeagueEntry {
     teamValue: number;
     bank: number;
     totalTransfers: number;
+    overallRank: number;
+    gameweekRank: number;
+    gameweekPoints: number;
   };
   chipsAvailable: number;
   rankChange: number;
@@ -106,6 +112,9 @@ interface EnrichedLiveEntry extends LiveLeagueEntry {
     teamValue: number;
     bank: number;
     totalTransfers: number;
+    overallRank: number;
+    gameweekRank: number;
+    gameweekPoints: number;
   };
   chipsAvailable: number;
 }
@@ -256,6 +265,10 @@ export default function LeagueAnalysisPage() {
             return entry.total || 0;
           case 'event_total':
             return entry.event_total || 0;
+          case 'overallRank':
+            return entry.managerData?.overallRank || 0;
+          case 'gameweekRank':
+            return entry.managerData?.gameweekRank || 0;
           case 'squadValue':
             const teamValue = entry.managerData?.teamValue || 0;
             const bank = entry.managerData?.bank || 0;
@@ -354,12 +367,40 @@ export default function LeagueAnalysisPage() {
       render: (value, entry) => entry.event_total || 0
     },
     {
+      key: 'overallRank',
+      header: 'Overall Rank',
+      priority: 'secondary',
+      align: 'right',
+      mobileLabel: 'OR',
+      cardOrder: 5,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => {
+        const rank = entry.managerData?.overallRank;
+        return rank ? rank.toLocaleString() : 'N/A';
+      }
+    },
+    {
+      key: 'gameweekRank',
+      header: 'GW Rank',
+      priority: 'secondary',
+      align: 'right',
+      mobileLabel: 'GWR',
+      cardOrder: 6,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => {
+        const rank = entry.managerData?.gameweekRank;
+        return rank ? rank.toLocaleString() : 'N/A';
+      }
+    },
+    {
       key: 'squadValue',
       header: 'Squad Value',
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'Squad',
-      cardOrder: 5,
+      cardOrder: 7,
       sortable: true,
       className: 'font-mono',
       render: (value, entry) => {
@@ -376,7 +417,7 @@ export default function LeagueAnalysisPage() {
       priority: 'optional',
       align: 'right',
       mobileLabel: 'Bank',
-      cardOrder: 6,
+      cardOrder: 8,
       sortable: true,
       className: 'font-mono',
       render: (value, entry) => {
@@ -392,7 +433,7 @@ export default function LeagueAnalysisPage() {
       priority: 'optional',
       align: 'right',
       mobileLabel: 'FT',
-      cardOrder: 7,
+      cardOrder: 9,
       sortable: true,
       className: 'font-mono',
       render: (value, entry) => {
@@ -406,7 +447,7 @@ export default function LeagueAnalysisPage() {
       priority: 'optional',
       align: 'right',
       mobileLabel: 'Chips',
-      cardOrder: 8,
+      cardOrder: 10,
       sortable: true,
       className: 'font-mono',
       render: (value, entry) => entry.chipsAvailable
@@ -509,12 +550,40 @@ export default function LeagueAnalysisPage() {
       )
     },
     {
+      key: 'overallRank',
+      header: 'Overall Rank',
+      priority: 'secondary',
+      align: 'right',
+      mobileLabel: 'OR',
+      cardOrder: 5,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => {
+        const rank = entry.managerData?.overallRank;
+        return rank ? rank.toLocaleString() : 'N/A';
+      }
+    },
+    {
+      key: 'gameweekRank',
+      header: 'GW Rank',
+      priority: 'secondary',
+      align: 'right',
+      mobileLabel: 'GWR',
+      cardOrder: 6,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => {
+        const rank = entry.managerData?.gameweekRank;
+        return rank ? rank.toLocaleString() : 'N/A';
+      }
+    },
+    {
       key: 'squadValue',
       header: 'Squad Value',
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'Squad',
-      cardOrder: 5,
+      cardOrder: 7,
       sortable: true,
       className: 'font-mono',
       render: (value, entry) => {
@@ -531,7 +600,7 @@ export default function LeagueAnalysisPage() {
       priority: 'optional',
       align: 'right',
       mobileLabel: 'Bank',
-      cardOrder: 6,
+      cardOrder: 8,
       sortable: true,
       className: 'font-mono',
       render: (value, entry) => {
@@ -547,7 +616,7 @@ export default function LeagueAnalysisPage() {
       priority: 'optional',
       align: 'right',
       mobileLabel: 'FT',
-      cardOrder: 7,
+      cardOrder: 9,
       sortable: true,
       className: 'font-mono',
       render: (value, entry) => {
@@ -561,7 +630,7 @@ export default function LeagueAnalysisPage() {
       priority: 'optional',
       align: 'right',
       mobileLabel: 'Chips',
-      cardOrder: 8,
+      cardOrder: 10,
       sortable: true,
       className: 'font-mono',
       render: (value, entry) => entry.chipsAvailable
