@@ -464,8 +464,10 @@ function createPlayerTotalPointsColumns(
   excludedComponents?: Set<string>,
   applyAvailability?: boolean,
   originalPlayerDataMap?: Map<number, PlayerTotalPointsData>,
-  myTeamPlayerIds?: Set<number>
+  myTeamPlayerIds?: Set<number>,
+  viewMode?: "past" | "future"
 ): TableColumn<PlayerTotalPointsData>[] {
+  const isPastMode = viewMode === "past";
   return [
     {
       key: 'name',
@@ -541,7 +543,11 @@ function createPlayerTotalPointsColumns(
           
           return (
             <div className={`${isMaxForGameweek ? 'bg-gradient-to-br from-green-100 to-emerald-100 rounded-md p-1' : ''}`}>
-              <GameweekPointBreakdownTooltip player={player} gameweek={gw} excludedComponents={excludedComponents} />
+              {isPastMode ? (
+                <span className="font-semibold text-gray-800">{Math.round(playerPoints)}</span>
+              ) : (
+                <GameweekPointBreakdownTooltip player={player} gameweek={gw} excludedComponents={excludedComponents} />
+              )}
               {showOpponent && opponentInfo && (
                 <div className="text-[9px] text-gray-500 mt-0.5">
                   {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
@@ -559,13 +565,17 @@ function createPlayerTotalPointsColumns(
       align: 'center',
       className: 'min-w-[60px] md:min-w-[80px] bg-gradient-to-r from-green-50 to-emerald-50 border-l-2 border-gray-300 px-1',
       render: (_, player) => (
-        <RangeTotalBreakdownTooltip 
-          player={player} 
-          gameweekCount={gameweekRange.length} 
-          excludedComponents={excludedComponents}
-          applyAvailability={applyAvailability}
-          originalPlayer={originalPlayerDataMap?.get(player.playerId)}
-        />
+        isPastMode ? (
+          <span className="font-bold text-green-800 text-lg">{Math.round(player.totalExpectedPoints || 0)}</span>
+        ) : (
+          <RangeTotalBreakdownTooltip 
+            player={player} 
+            gameweekCount={gameweekRange.length} 
+            excludedComponents={excludedComponents}
+            applyAvailability={applyAvailability}
+            originalPlayer={originalPlayerDataMap?.get(player.playerId)}
+          />
+        )
       )
     },
     {
@@ -1908,7 +1918,8 @@ export default function PlayerTotalPoints() {
                       excludedComponents,
                       applyAvailability,
                       originalPlayerDataMap,
-                      myTeamPlayerIds
+                      myTeamPlayerIds,
+                      viewMode
                     )}
                     onSort={handleSort}
                     sortField={sortField}
