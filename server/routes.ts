@@ -3142,7 +3142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Batch fetch manager histories for league analysis
+  // Batch fetch manager histories and data for league analysis
   app.post("/api/managers/batch-history", async (req, res) => {
     try {
       const { managerIds } = req.body;
@@ -3158,40 +3158,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const results = await Promise.all(
         idsToFetch.map(async (managerId: number) => {
           try {
-            // Check cache first
-            const cached = managerHistoryCache.get(String(managerId));
-            if (cached && (now - cached.timestamp) < MANAGER_CACHE_DURATION) {
-              return {
-                managerId,
-                historyData: {
-                  current: cached.data.current || [],
-                  chips: cached.data.chips || []
+            // Fetch both history and manager data in parallel
+            const [historyResponse, managerResponse] = await Promise.all([
+              (async () => {
+                // Check cache first for history
+                const cached = managerHistoryCache.get(String(managerId));
+                if (cached && (now - cached.timestamp) < MANAGER_CACHE_DURATION) {
+                  return { cached: true, data: cached.data };
                 }
-              };
-            }
+                const response = await fetchWithRetry(
+                  `https://fantasy.premierleague.com/api/entry/${managerId}/history/`
+                );
+                if (!response.ok) return { cached: false, data: null };
+                const data = await response.json();
+                managerHistoryCache.set(String(managerId), { data, timestamp: Date.now() });
+                return { cached: false, data };
+              })(),
+              (async () => {
+                // Check cache first for manager data
+                const cached = managerDataCache.get(String(managerId));
+                if (cached && (now - cached.timestamp) < MANAGER_CACHE_DURATION) {
+                  return cached.data;
+                }
+                const response = await fetchWithRetry(
+                  `https://fantasy.premierleague.com/api/entry/${managerId}/`
+                );
+                if (!response.ok) return null;
+                const data = await response.json();
+                managerDataCache.set(String(managerId), { data, timestamp: Date.now() });
+                return data;
+              })()
+            ]);
             
-            const response = await fetchWithRetry(
-              `https://fantasy.premierleague.com/api/entry/${managerId}/history/`
-            );
+            const historyData = historyResponse.data;
+            const managerData = managerResponse;
             
-            if (!response.ok) {
-              return { managerId, historyData: null };
-            }
-            
-            const data = await response.json();
-            
-            // Cache the data
-            managerHistoryCache.set(String(managerId), { data, timestamp: Date.now() });
+            // Calculate chips available (4 chips in second half - chips used in GW20+)
+            const chips = historyData?.chips || [];
+            const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
+            const chipsAvailable = Math.max(0, 4 - secondHalfChipsUsed);
             
             return {
               managerId,
-              historyData: {
-                current: data.current || [],
-                chips: data.chips || []
-              }
+              historyData: historyData ? {
+                current: historyData.current || [],
+                chips: historyData.chips || []
+              } : null,
+              managerData: managerData ? {
+                teamValue: managerData.last_deadline_value || 0,
+                bank: managerData.last_deadline_bank || 0,
+                totalTransfers: managerData.last_deadline_total_transfers || 0
+              } : null,
+              chipsAvailable
             };
           } catch (error) {
-            return { managerId, historyData: null };
+            return { managerId, historyData: null, managerData: null, chipsAvailable: 0 };
           }
         })
       );

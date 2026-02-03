@@ -69,12 +69,18 @@ interface LeagueEntry {
   entry_name: string;
 }
 
-interface ManagerHistoryData {
+interface ManagerBatchData {
   managerId: number;
   historyData: {
     current: GWHistory[];
     chips: ChipUsage[];
   } | null;
+  managerData: {
+    teamValue: number;
+    bank: number;
+    totalTransfers: number;
+  } | null;
+  chipsAvailable: number;
 }
 
 interface EnrichedLeagueEntry extends LeagueEntry {
@@ -82,6 +88,12 @@ interface EnrichedLeagueEntry extends LeagueEntry {
     current: GWHistory[];
     chips: ChipUsage[];
   };
+  managerData?: {
+    teamValue: number;
+    bank: number;
+    totalTransfers: number;
+  };
+  chipsAvailable: number;
   rankChange: number;
 }
 
@@ -157,8 +169,8 @@ export default function LeagueAnalysisPage() {
 
   const managerIds = useMemo(() => topEntries.map(e => e.entry), [topEntries]);
 
-  const { data: historyDataResponse } = useQuery<{ managers: ManagerHistoryData[] }>({
-    queryKey: [`/api/leagues/${leagueId}/manager-histories`, managerIds.join(',')],
+  const { data: batchDataResponse } = useQuery<{ managers: ManagerBatchData[] }>({
+    queryKey: [`/api/leagues/${leagueId}/manager-batch-data`, managerIds.join(',')],
     queryFn: async () => {
       if (managerIds.length === 0) return { managers: [] };
       const response = await fetch(`/api/managers/batch-history`, {
@@ -174,21 +186,24 @@ export default function LeagueAnalysisPage() {
   });
 
   const enrichedEntries: EnrichedLeagueEntry[] = useMemo(() => {
-    const historyMap = new Map<number, { current: GWHistory[]; chips: ChipUsage[] }>();
-    if (historyDataResponse?.managers) {
-      historyDataResponse.managers.forEach(m => {
-        if (m.historyData) {
-          historyMap.set(m.managerId, m.historyData);
-        }
+    const dataMap = new Map<number, ManagerBatchData>();
+    if (batchDataResponse?.managers) {
+      batchDataResponse.managers.forEach(m => {
+        dataMap.set(m.managerId, m);
       });
     }
 
-    return topEntries.map(entry => ({
-      ...entry,
-      historyData: historyMap.get(entry.entry),
-      rankChange: entry.last_rank && entry.last_rank > 0 ? entry.last_rank - entry.rank : 0
-    }));
-  }, [topEntries, historyDataResponse]);
+    return topEntries.map(entry => {
+      const batchData = dataMap.get(entry.entry);
+      return {
+        ...entry,
+        historyData: batchData?.historyData || undefined,
+        managerData: batchData?.managerData || undefined,
+        chipsAvailable: batchData?.chipsAvailable || 0,
+        rankChange: entry.last_rank && entry.last_rank > 0 ? entry.last_rank - entry.rank : 0
+      };
+    });
+  }, [topEntries, batchDataResponse]);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -209,9 +224,17 @@ export default function LeagueAnalysisPage() {
             return entry.total || 0;
           case 'event_total':
             return entry.event_total || 0;
+          case 'squadValue':
+            const teamValue = entry.managerData?.teamValue || 0;
+            const bank = entry.managerData?.bank || 0;
+            return teamValue - bank;
+          case 'bank':
+            return entry.managerData?.bank || 0;
           case 'freeTransfers':
             if (!entry.historyData?.current) return 0;
             return calculateFreeTransfers(entry.historyData.current, entry.historyData.chips, upcomingGameweek);
+          case 'chipsAvailable':
+            return entry.chipsAvailable;
           case 'player_name':
             return entry.player_name;
           default:
@@ -236,45 +259,43 @@ export default function LeagueAnalysisPage() {
 
   const getColumns = (): ResponsiveTableColumn<EnrichedLeagueEntry>[] => [
     {
-      key: 'rank',
-      header: 'Rank',
-      priority: 'essential',
-      align: 'center',
-      mobileLabel: 'Rank',
-      cardOrder: 1,
-      sortable: true,
-      render: (value, entry) => {
-        const isCurrentManager = entry.entry.toString() === managerId;
-        return (
-          <div className="flex items-center justify-center gap-2">
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
-              entry.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
-              entry.rank === 2 ? 'bg-gray-100 text-gray-800' :
-              entry.rank === 3 ? 'bg-orange-100 text-orange-800' :
-              'bg-blue-100 text-blue-800'
-            }`}>
-              {entry.rank}
-            </div>
-            {isCurrentManager && <Badge className="bg-blue-600 text-xs">You</Badge>}
-          </div>
-        );
-      }
-    },
-    {
       key: 'player_name',
       header: 'Manager',
       priority: 'essential',
       align: 'left',
       mobileLabel: 'Manager',
+      cardOrder: 1,
+      sortable: true,
+      render: (value, entry) => {
+        const isCurrentManager = entry.entry.toString() === managerId;
+        return (
+          <div>
+            <div className="font-medium flex items-center gap-2">
+              {entry.player_name}
+              {entry.rankChange !== 0 && getRankChangeDisplay(entry.rankChange)}
+              {isCurrentManager && <Badge className="bg-blue-600 text-xs">You</Badge>}
+            </div>
+            <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'rank',
+      header: 'Rank',
+      priority: 'important',
+      align: 'center',
+      mobileLabel: 'Rank',
       cardOrder: 2,
       sortable: true,
       render: (value, entry) => (
-        <div>
-          <div className="font-medium flex items-center gap-2">
-            {entry.player_name}
-            {entry.rankChange !== 0 && getRankChangeDisplay(entry.rankChange)}
-          </div>
-          <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
+        <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
+          entry.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
+          entry.rank === 2 ? 'bg-gray-100 text-gray-800' :
+          entry.rank === 3 ? 'bg-orange-100 text-orange-800' :
+          'bg-blue-100 text-blue-800'
+        }`}>
+          {entry.rank}
         </div>
       )
     },
@@ -301,83 +322,125 @@ export default function LeagueAnalysisPage() {
       render: (value, entry) => entry.event_total || 0
     },
     {
+      key: 'squadValue',
+      header: 'Squad Value',
+      priority: 'secondary',
+      align: 'right',
+      mobileLabel: 'Squad',
+      cardOrder: 5,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => {
+        const teamValue = entry.managerData?.teamValue;
+        const bank = entry.managerData?.bank;
+        if (teamValue === undefined || teamValue === null) return 'N/A';
+        const bankValue = bank !== undefined && bank !== null ? bank : 0;
+        return `£${((teamValue - bankValue) / 10).toFixed(1)}m`;
+      }
+    },
+    {
+      key: 'bank',
+      header: 'Bank',
+      priority: 'optional',
+      align: 'right',
+      mobileLabel: 'Bank',
+      cardOrder: 6,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => {
+        const bank = entry.managerData?.bank;
+        return bank !== undefined && bank !== null 
+          ? `£${(bank / 10).toFixed(1)}m` 
+          : '£0.0m';
+      }
+    },
+    {
       key: 'freeTransfers',
       header: `FT (GW${upcomingGameweek})`,
       priority: 'optional',
       align: 'right',
       mobileLabel: 'FT',
-      cardOrder: 5,
+      cardOrder: 7,
       sortable: true,
       className: 'font-mono',
       render: (value, entry) => {
         if (!entry.historyData?.current) return 'N/A';
         return calculateFreeTransfers(entry.historyData.current, entry.historyData.chips, upcomingGameweek);
       }
+    },
+    {
+      key: 'chipsAvailable',
+      header: 'Chips Available',
+      priority: 'optional',
+      align: 'right',
+      mobileLabel: 'Chips',
+      cardOrder: 8,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => entry.chipsAvailable
     }
   ];
 
   const getLiveColumns = (): ResponsiveTableColumn<LiveLeagueEntry>[] => [
-    {
-      key: 'live_rank',
-      header: 'Rank',
-      priority: 'essential',
-      align: 'center',
-      mobileLabel: 'Rank',
-      cardOrder: 1,
-      sortable: true,
-      render: (value, entry) => {
-        const isCurrentManager = entry.entry.toString() === managerId;
-        return (
-          <div className="flex items-center justify-center gap-2">
-            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
-              entry.live_rank === 1 ? 'bg-yellow-100 text-yellow-800' :
-              entry.live_rank === 2 ? 'bg-gray-100 text-gray-800' :
-              entry.live_rank === 3 ? 'bg-orange-100 text-orange-800' :
-              'bg-blue-100 text-blue-800'
-            }`}>
-              {entry.live_rank}
-            </div>
-            {isCurrentManager && <Badge className="bg-blue-600 text-xs">You</Badge>}
-          </div>
-        );
-      }
-    },
     {
       key: 'player_name',
       header: 'Manager',
       priority: 'essential',
       align: 'left',
       mobileLabel: 'Manager',
+      cardOrder: 1,
+      sortable: true,
+      render: (value, entry) => {
+        const isCurrentManager = entry.entry.toString() === managerId;
+        return (
+          <div>
+            <div className="font-medium flex items-center gap-2">
+              {entry.player_name}
+              {entry.rank_change !== 0 && (
+                <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${
+                  entry.rank_change > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+                }`}>
+                  {entry.rank_change > 0 ? (
+                    <>
+                      <ChevronUp className="h-3 w-3" />
+                      <span>{entry.rank_change}</span>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3 w-3" />
+                      <span>{Math.abs(entry.rank_change)}</span>
+                    </>
+                  )}
+                </div>
+              )}
+              {isCurrentManager && <Badge className="bg-blue-600 text-xs">You</Badge>}
+              {entry.active_chip && (
+                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                  {entry.active_chip}
+                </Badge>
+              )}
+            </div>
+            <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
+          </div>
+        );
+      }
+    },
+    {
+      key: 'live_rank',
+      header: 'Rank',
+      priority: 'important',
+      align: 'center',
+      mobileLabel: 'Rank',
       cardOrder: 2,
       sortable: true,
       render: (value, entry) => (
-        <div>
-          <div className="font-medium flex items-center gap-2">
-            {entry.player_name}
-            {entry.rank_change !== 0 && (
-              <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${
-                entry.rank_change > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
-              }`}>
-                {entry.rank_change > 0 ? (
-                  <>
-                    <ChevronUp className="h-3 w-3" />
-                    <span>{entry.rank_change}</span>
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-3 w-3" />
-                    <span>{Math.abs(entry.rank_change)}</span>
-                  </>
-                )}
-              </div>
-            )}
-            {entry.active_chip && (
-              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                {entry.active_chip}
-              </Badge>
-            )}
-          </div>
-          <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
+        <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
+          entry.live_rank === 1 ? 'bg-yellow-100 text-yellow-800' :
+          entry.live_rank === 2 ? 'bg-gray-100 text-gray-800' :
+          entry.live_rank === 3 ? 'bg-orange-100 text-orange-800' :
+          'bg-blue-100 text-blue-800'
+        }`}>
+          {entry.live_rank}
         </div>
       )
     },
@@ -466,7 +529,7 @@ export default function LeagueAnalysisPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-2 sm:p-4">
-      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
