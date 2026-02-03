@@ -61,6 +61,33 @@ interface GameweekAccuracyData {
   teams: TeamProjectionRecord[];
 }
 
+interface AggregatePlayerData {
+  player_id: number;
+  player_name: string;
+  team_id: number;
+  team_name: string;
+  position: string;
+  total_projected_points: number;
+  gameweek_breakdown: Record<number, { projected: number; source: 'snapshot' | 'live' }>;
+}
+
+interface AggregateTeamData {
+  team_id: number;
+  team_name: string;
+  total_projected_goals: number;
+  gameweek_breakdown: Record<number, { projected: number; source: 'snapshot' | 'live' }>;
+}
+
+interface AggregateAccuracyData {
+  season: string;
+  gameweekRange: { start: number; end: number };
+  currentGameweek: number;
+  gwsWithSnapshot: number[];
+  gwsWithLiveData: number[];
+  players: AggregatePlayerData[];
+  teams: AggregateTeamData[];
+}
+
 type SortField = 'name' | 'projected' | 'actual' | 'difference' | 'error';
 type SortDirection = 'asc' | 'desc';
 
@@ -93,6 +120,11 @@ export default function ProjectionAccuracy() {
 
   const { data: bootstrapData } = useQuery<{ elements: Array<{ id: number; web_name: string }> }>({
     queryKey: ['/api/bootstrap-static'],
+  });
+
+  const { data: aggregateData, isLoading: aggregateLoading } = useQuery<AggregateAccuracyData>({
+    queryKey: ['/api/projection-accuracy/aggregate'],
+    enabled: activeTab === 'aggregate-players' || activeTab === 'aggregate-teams',
   });
 
   const playerIdToWebName = useMemo(() => {
@@ -308,14 +340,22 @@ export default function ProjectionAccuracy() {
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="players" className="flex items-center gap-2">
+            <TabsList className="grid w-full grid-cols-4 mb-4">
+              <TabsTrigger value="players" className="flex items-center gap-2 text-xs sm:text-sm">
                 <Users className="h-4 w-4" />
-                Player Projections
+                <span className="hidden sm:inline">GW</span> Players
               </TabsTrigger>
-              <TabsTrigger value="teams" className="flex items-center gap-2">
+              <TabsTrigger value="teams" className="flex items-center gap-2 text-xs sm:text-sm">
                 <BarChart3 className="h-4 w-4" />
-                Team Projections
+                <span className="hidden sm:inline">GW</span> Teams
+              </TabsTrigger>
+              <TabsTrigger value="aggregate-players" className="flex items-center gap-2 text-xs sm:text-sm">
+                <Target className="h-4 w-4" />
+                Total Pts
+              </TabsTrigger>
+              <TabsTrigger value="aggregate-teams" className="flex items-center gap-2 text-xs sm:text-sm">
+                <Target className="h-4 w-4" />
+                Total Goals
               </TabsTrigger>
             </TabsList>
 
@@ -543,6 +583,121 @@ export default function ProjectionAccuracy() {
               </div>
               {filteredTeams.length > 0 && (
                 <p className="text-xs text-gray-500 mt-2 text-right">Showing {filteredTeams.length} teams</p>
+              )}
+            </TabsContent>
+
+            {/* Aggregate Player Projections - Total Points across all GW25-38 */}
+            <TabsContent value="aggregate-players" className="mt-0">
+              {aggregateLoading ? (
+                <LoadingExperience variant="analysis" message="Loading aggregate projections..." />
+              ) : aggregateData ? (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3">
+                      <p className="text-xs text-purple-600 font-medium">Players Tracked</p>
+                      <p className="text-xl font-bold text-purple-800">{aggregateData.players.length}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
+                      <p className="text-xs text-blue-600 font-medium">Locked GWs</p>
+                      <p className="text-xl font-bold text-blue-800">{aggregateData.gwsWithSnapshot.length}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3">
+                      <p className="text-xs text-green-600 font-medium">Live GWs</p>
+                      <p className="text-xl font-bold text-green-800">{aggregateData.gwsWithLiveData.length}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Showing total projected points across GW{aggregateData.gameweekRange.start}-{aggregateData.gameweekRange.end}. 
+                    Locked: GW{aggregateData.gwsWithSnapshot.join(', GW') || 'None'} | 
+                    Live: GW{aggregateData.gwsWithLiveData.join(', GW') || 'None'}
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="text-left p-3 font-semibold">Player</th>
+                          <th className="text-center p-3 font-semibold">Team</th>
+                          <th className="text-center p-3 font-semibold">Pos</th>
+                          <th className="text-center p-3 font-semibold">Total Proj Pts (GW25-38)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {aggregateData.players.slice(0, 100).map((player) => {
+                          const webName = playerIdToWebName.get(player.player_id) || player.player_name.split(' ').pop() || player.player_name;
+                          return (
+                            <tr key={player.player_id} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="p-3 font-medium text-gray-900">{webName}</td>
+                              <td className="text-center p-3 text-gray-600">{getTeamShortCode(player.team_name)}</td>
+                              <td className="text-center p-3 text-gray-600">{player.position?.substring(0, 3) || player.position}</td>
+                              <td className="text-center p-3 font-bold text-purple-600">
+                                {player.total_projected_points.toFixed(2)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 text-right">
+                    Showing top {Math.min(100, aggregateData.players.length)} of {aggregateData.players.length} players
+                  </p>
+                </>
+              ) : (
+                <p className="text-center text-gray-500 py-8">No aggregate data available</p>
+              )}
+            </TabsContent>
+
+            {/* Aggregate Team Projections - Total Goals across all GW25-38 */}
+            <TabsContent value="aggregate-teams" className="mt-0">
+              {aggregateLoading ? (
+                <LoadingExperience variant="analysis" message="Loading aggregate projections..." />
+              ) : aggregateData ? (
+                <>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+                    <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-3">
+                      <p className="text-xs text-purple-600 font-medium">Teams Tracked</p>
+                      <p className="text-xl font-bold text-purple-800">{aggregateData.teams.length}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3">
+                      <p className="text-xs text-blue-600 font-medium">Locked GWs</p>
+                      <p className="text-xl font-bold text-blue-800">{aggregateData.gwsWithSnapshot.length}</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3">
+                      <p className="text-xs text-green-600 font-medium">Live GWs</p>
+                      <p className="text-xl font-bold text-green-800">{aggregateData.gwsWithLiveData.length}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Showing total projected goals across GW{aggregateData.gameweekRange.start}-{aggregateData.gameweekRange.end}. 
+                    Locked: GW{aggregateData.gwsWithSnapshot.join(', GW') || 'None'} | 
+                    Live: GW{aggregateData.gwsWithLiveData.join(', GW') || 'None'}
+                  </p>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="text-left p-3 font-semibold">Team</th>
+                          <th className="text-center p-3 font-semibold">Total Proj Goals (GW25-38)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {aggregateData.teams.map((team) => (
+                          <tr key={team.team_id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="p-3 font-medium text-gray-900">{getTeamShortCode(team.team_name)}</td>
+                            <td className="text-center p-3 font-bold text-purple-600">
+                              {team.total_projected_goals.toFixed(2)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2 text-right">
+                    Showing {aggregateData.teams.length} teams
+                  </p>
+                </>
+              ) : (
+                <p className="text-center text-gray-500 py-8">No aggregate data available</p>
               )}
             </TabsContent>
           </Tabs>

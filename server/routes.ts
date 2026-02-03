@@ -17539,6 +17539,239 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Aggregated projection accuracy endpoint - sums projections across all GW25-38
+  // Uses snapshot data for past deadlines, live API data for future gameweeks
+  app.get("/api/projection-accuracy/aggregate", async (req, res) => {
+    try {
+      const season = (req.query.season as string) || '2024/25';
+      const startGW = 25;
+      const endGW = 38;
+      
+      // Get current gameweek info from bootstrap
+      let currentGW = 25;
+      let deadlines: Record<number, Date> = {};
+      try {
+        const bootstrapResponse = await fetchWithRetry('https://fantasy.premierleague.com/api/bootstrap-static/');
+        if (bootstrapResponse?.ok) {
+          const bootstrapData = await bootstrapResponse.json();
+          const currentEvent = bootstrapData.events?.find((e: any) => e.is_current);
+          if (currentEvent) {
+            currentGW = currentEvent.id;
+          }
+          // Get deadlines for all gameweeks
+          bootstrapData.events?.forEach((e: any) => {
+            if (e.id >= startGW && e.id <= endGW) {
+              deadlines[e.id] = new Date(e.deadline_time);
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Could not fetch bootstrap for aggregate:', e);
+      }
+      
+      const now = new Date();
+      
+      // Determine which gameweeks have passed their deadline
+      const gwsWithDeadlinePassed: number[] = [];
+      const gwsWithLiveData: number[] = [];
+      
+      for (let gw = startGW; gw <= endGW; gw++) {
+        const deadline = deadlines[gw];
+        if (deadline && now >= deadline) {
+          gwsWithDeadlinePassed.push(gw);
+        } else {
+          gwsWithLiveData.push(gw);
+        }
+      }
+      
+      // Fetch snapshot data for past deadlines
+      const snapshotPlayerData: Record<number, any[]> = {};
+      const snapshotTeamData: Record<number, any[]> = {};
+      
+      for (const gw of gwsWithDeadlinePassed) {
+        const snapshot = await db.execute(sql`
+          SELECT id FROM gameweek_projection_snapshots 
+          WHERE gameweek = ${gw} AND season = ${season} AND snapshot_type = 'deadline'
+        `);
+        
+        if (snapshot.rows.length > 0) {
+          const snapshotId = snapshot.rows[0].id;
+          const [players, teams] = await Promise.all([
+            db.execute(sql`
+              SELECT player_id, player_name, team_id, team_name, position, projected_points
+              FROM player_projection_records 
+              WHERE snapshot_id = ${snapshotId}
+            `),
+            db.execute(sql`
+              SELECT team_id, team_name, projected_goals_scored
+              FROM team_projection_records 
+              WHERE snapshot_id = ${snapshotId}
+            `)
+          ]);
+          snapshotPlayerData[gw] = players.rows;
+          snapshotTeamData[gw] = teams.rows;
+        }
+      }
+      
+      // Fetch live data for future gameweeks
+      const livePlayerData: Record<number, any[]> = {};
+      const liveTeamData: Record<number, any[]> = {};
+      
+      if (gwsWithLiveData.length > 0) {
+        try {
+          // Fetch live player projections
+          const playerResponse = await internalFetch('/api/cached/player-total-points');
+          if (playerResponse.ok) {
+            const playerData = await playerResponse.json();
+            
+            for (const gw of gwsWithLiveData) {
+              livePlayerData[gw] = Object.entries(playerData).map(([playerId, playerInfo]: [string, any]) => {
+                const gwData = playerInfo.gameweeks?.[`gw${gw}`] || {};
+                return {
+                  player_id: parseInt(playerId),
+                  player_name: playerInfo.name || '',
+                  team_id: playerInfo.team || 0,
+                  team_name: playerInfo.teamName || '',
+                  position: playerInfo.position || '',
+                  projected_points: gwData.total || 0
+                };
+              }).filter(p => p.projected_points > 0);
+            }
+          }
+          
+          // Fetch live team projections
+          const teamResponse = await internalFetch('/api/cached/team-goal-projections');
+          if (teamResponse.ok) {
+            const teamData = await teamResponse.json();
+            
+            for (const gw of gwsWithLiveData) {
+              liveTeamData[gw] = Object.entries(teamData).map(([teamId, teamInfo]: [string, any]) => {
+                const gwData = teamInfo.gameweeks?.[`gw${gw}`] || {};
+                return {
+                  team_id: parseInt(teamId),
+                  team_name: teamInfo.name || '',
+                  projected_goals_scored: gwData.goals || 0
+                };
+              }).filter(t => t.projected_goals_scored > 0);
+            }
+          }
+        } catch (e) {
+          console.warn('Could not fetch live data for aggregate:', e);
+        }
+      }
+      
+      // Aggregate player projections by player_id
+      const playerAggregates: Record<number, {
+        player_id: number;
+        player_name: string;
+        team_id: number;
+        team_name: string;
+        position: string;
+        total_projected_points: number;
+        gameweek_breakdown: Record<number, { projected: number; source: 'snapshot' | 'live' }>;
+      }> = {};
+      
+      // Process snapshot data
+      for (const gw of gwsWithDeadlinePassed) {
+        const players = snapshotPlayerData[gw] || [];
+        for (const p of players) {
+          if (!playerAggregates[p.player_id]) {
+            playerAggregates[p.player_id] = {
+              player_id: p.player_id,
+              player_name: p.player_name,
+              team_id: p.team_id,
+              team_name: p.team_name,
+              position: p.position,
+              total_projected_points: 0,
+              gameweek_breakdown: {}
+            };
+          }
+          const points = parseFloat(p.projected_points) || 0;
+          playerAggregates[p.player_id].total_projected_points += points;
+          playerAggregates[p.player_id].gameweek_breakdown[gw] = { projected: points, source: 'snapshot' };
+        }
+      }
+      
+      // Process live data
+      for (const gw of gwsWithLiveData) {
+        const players = livePlayerData[gw] || [];
+        for (const p of players) {
+          if (!playerAggregates[p.player_id]) {
+            playerAggregates[p.player_id] = {
+              player_id: p.player_id,
+              player_name: p.player_name,
+              team_id: p.team_id,
+              team_name: p.team_name,
+              position: p.position,
+              total_projected_points: 0,
+              gameweek_breakdown: {}
+            };
+          }
+          const points = parseFloat(p.projected_points) || 0;
+          playerAggregates[p.player_id].total_projected_points += points;
+          playerAggregates[p.player_id].gameweek_breakdown[gw] = { projected: points, source: 'live' };
+        }
+      }
+      
+      // Aggregate team projections by team_id
+      const teamAggregates: Record<number, {
+        team_id: number;
+        team_name: string;
+        total_projected_goals: number;
+        gameweek_breakdown: Record<number, { projected: number; source: 'snapshot' | 'live' }>;
+      }> = {};
+      
+      // Process snapshot data
+      for (const gw of gwsWithDeadlinePassed) {
+        const teams = snapshotTeamData[gw] || [];
+        for (const t of teams) {
+          if (!teamAggregates[t.team_id]) {
+            teamAggregates[t.team_id] = {
+              team_id: t.team_id,
+              team_name: t.team_name,
+              total_projected_goals: 0,
+              gameweek_breakdown: {}
+            };
+          }
+          const goals = parseFloat(t.projected_goals_scored) || 0;
+          teamAggregates[t.team_id].total_projected_goals += goals;
+          teamAggregates[t.team_id].gameweek_breakdown[gw] = { projected: goals, source: 'snapshot' };
+        }
+      }
+      
+      // Process live data
+      for (const gw of gwsWithLiveData) {
+        const teams = liveTeamData[gw] || [];
+        for (const t of teams) {
+          if (!teamAggregates[t.team_id]) {
+            teamAggregates[t.team_id] = {
+              team_id: t.team_id,
+              team_name: t.team_name,
+              total_projected_goals: 0,
+              gameweek_breakdown: {}
+            };
+          }
+          const goals = parseFloat(t.projected_goals_scored) || 0;
+          teamAggregates[t.team_id].total_projected_goals += goals;
+          teamAggregates[t.team_id].gameweek_breakdown[gw] = { projected: goals, source: 'live' };
+        }
+      }
+      
+      res.json({
+        season,
+        gameweekRange: { start: startGW, end: endGW },
+        currentGameweek: currentGW,
+        gwsWithSnapshot: gwsWithDeadlinePassed,
+        gwsWithLiveData: gwsWithLiveData,
+        players: Object.values(playerAggregates).sort((a, b) => b.total_projected_points - a.total_projected_points),
+        teams: Object.values(teamAggregates).sort((a, b) => b.total_projected_goals - a.total_projected_goals)
+      });
+    } catch (error) {
+      console.error('Error fetching aggregate projection accuracy:', error);
+      res.status(500).json({ error: 'Failed to fetch aggregate data' });
+    }
+  });
+
   console.log("✓ Projection accuracy API routes registered");
 
   const httpServer = createServer(app);
