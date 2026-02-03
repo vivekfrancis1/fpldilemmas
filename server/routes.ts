@@ -7008,6 +7008,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Past Team Goals endpoint - actual goals from finished fixtures
+  app.get("/api/team-goals-history", async (req, res) => {
+    try {
+      console.log(`DEBUG: Team Goals History API called - fetching actual past gameweek data`);
+      
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        fetch("http://localhost:5000/api/bootstrap-static"),
+        fetch("http://localhost:5000/api/fixtures")
+      ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const fixturesData = await fixturesResponse.json();
+      const teams = bootstrapData.teams;
+      
+      // Find the last fully finished gameweek
+      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+      const lastFinishedGW = finishedEvents.length > 0 
+        ? Math.max(...finishedEvents.map((e: any) => e.id))
+        : 0;
+      
+      console.log(`DEBUG: Last finished gameweek: ${lastFinishedGW}`);
+      
+      // Initialize team goals data structure
+      const teamGoalsMap = new Map();
+      teams.forEach((team: any) => {
+        const gameweekGoals: { [key: number]: number } = {};
+        for (let gw = 1; gw <= lastFinishedGW; gw++) {
+          gameweekGoals[gw] = 0;
+        }
+        teamGoalsMap.set(team.id, {
+          id: team.id,
+          team: team.name,
+          teamShort: team.short_name,
+          gameweekGoals: gameweekGoals,
+          totalGoals: 0,
+          averageGoalsPerGame: 0,
+          position: team.position || 0
+        });
+      });
+      
+      // Populate actual goals from finished fixtures
+      fixturesData.forEach((fixture: any) => {
+        if (fixture.finished && fixture.event <= lastFinishedGW) {
+          const homeTeam = teamGoalsMap.get(fixture.team_h);
+          const awayTeam = teamGoalsMap.get(fixture.team_a);
+          
+          if (homeTeam && fixture.team_h_score !== null) {
+            homeTeam.gameweekGoals[fixture.event] = (homeTeam.gameweekGoals[fixture.event] || 0) + fixture.team_h_score;
+            homeTeam.totalGoals += fixture.team_h_score;
+          }
+          if (awayTeam && fixture.team_a_score !== null) {
+            awayTeam.gameweekGoals[fixture.event] = (awayTeam.gameweekGoals[fixture.event] || 0) + fixture.team_a_score;
+            awayTeam.totalGoals += fixture.team_a_score;
+          }
+        }
+      });
+      
+      // Calculate averages
+      const result = Array.from(teamGoalsMap.values()).map((team: any) => {
+        const gamesPlayed = Object.values(team.gameweekGoals).filter((g: any) => g > 0 || Object.keys(team.gameweekGoals).includes(String(g))).length;
+        return {
+          ...team,
+          averageGoalsPerGame: gamesPlayed > 0 ? Math.round((team.totalGoals / gamesPlayed) * 100) / 100 : 0
+        };
+      });
+      
+      res.json({
+        lastFinishedGW,
+        teams: result
+      });
+    } catch (error) {
+      console.error("Error fetching team goals history:", error);
+      res.status(500).json({ error: "Failed to fetch team goals history" });
+    }
+  });
+
   // Team Assist Projections endpoint - using correct assist values based on actual FPL data analysis
   app.get("/api/team-assist-projections", async (req, res) => {
     try {

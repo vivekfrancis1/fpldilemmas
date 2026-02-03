@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Target, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Target, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, History, Calendar } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +8,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+
+interface TeamGoalsHistory {
+  lastFinishedGW: number;
+  teams: {
+    id: number;
+    team: string;
+    teamShort: string;
+    gameweekGoals: { [key: number]: number };
+    totalGoals: number;
+    averageGoalsPerGame: number;
+    position: number;
+  }[];
+}
 
 interface TeamGoalProjection {
   id: number;
@@ -28,14 +41,30 @@ export default function TeamGoalProjections() {
     queryKey: ["/api/bootstrap-static"],
   });
 
-  // Calculate dynamic gameweek defaults based on bootstrap data
+  // View mode: "future" for projections, "past" for historical data
+  const [viewMode, setViewMode] = useState<"future" | "past">("future");
+
+  // Fetch past team goals history
+  const { data: historyData, isLoading: historyLoading } = useQuery<TeamGoalsHistory>({
+    queryKey: ["/api/team-goals-history"],
+    enabled: viewMode === "past",
+  });
+
+  // Calculate dynamic gameweek defaults based on bootstrap data and view mode
   const defaultGameweekRange = useMemo(() => {
+    if (viewMode === "past") {
+      // Past mode: default to last 6 finished gameweeks
+      const lastFinished = historyData?.lastFinishedGW || 24;
+      const startGW = Math.max(1, lastFinished - 5);
+      return { startGameweek: String(startGW), endGameweek: String(lastFinished) };
+    }
+    // Future mode: use existing logic
     if (!bootstrapData?.events) {
       return { startGameweek: "1", endGameweek: "6" }; // Fallback
     }
     debugGameweekCalculation(bootstrapData.events);
     return getDefaultGameweekRange(bootstrapData.events, 6);
-  }, [bootstrapData?.events]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek); 
@@ -76,22 +105,35 @@ export default function TeamGoalProjections() {
     setExcludedGameweeks(new Set());
   };
 
-  // Get available gameweeks for dropdown options (next 12 gameweeks)
+  // Get available gameweeks for dropdown options based on view mode
   const availableGameweeks = useMemo(() => {
+    if (viewMode === "past") {
+      // Past mode: GW1 to last finished gameweek
+      const lastFinished = historyData?.lastFinishedGW || 24;
+      return Array.from({ length: lastFinished }, (_, i) => i + 1);
+    }
+    // Future mode: next 12 gameweeks
     if (!bootstrapData?.events) {
       return Array.from({ length: 12 }, (_, i) => i + 1); // Fallback
     }
     return getNextGameweeksForDropdown(bootstrapData.events, 12);
-  }, [bootstrapData?.events]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
 
-  // Update state when bootstrap data changes (e.g., on page load)
+  // Update state when bootstrap data or view mode changes
   useEffect(() => {
-    if (bootstrapData?.events) {
+    if (viewMode === "past" && historyData?.lastFinishedGW) {
+      const lastFinished = historyData.lastFinishedGW;
+      const startGW = Math.max(1, lastFinished - 5);
+      setStartGameweek(String(startGW));
+      setEndGameweek(String(lastFinished));
+      setExcludedGameweeks(new Set());
+    } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, 6);
       setStartGameweek(newRange.startGameweek);
       setEndGameweek(newRange.endGameweek);
+      setExcludedGameweeks(new Set());
     }
-  }, [bootstrapData?.events]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
 
   // Fetch fixtures for opponent information
   const { data: fixturesData } = useQuery({
@@ -141,18 +183,36 @@ export default function TeamGoalProjections() {
     return map;
   }, [bootstrapData?.teams, fixturesData]);
 
-  // Use cached endpoint for faster loading
+  // Use cached endpoint for faster loading (future projections)
   const { data: projectionsData, isLoading: projectionsLoading, error: projectionsError, refetch: refetchProjections } = useQuery<TeamGoalProjection[]>({
     queryKey: ["/api/cached/team-goal-projections"],
     staleTime: 60 * 60 * 1000, // 1 hour cache
     retry: 2,
     retryDelay: 1000,
+    enabled: viewMode === "future",
   });
 
+  // Unified data for display - adapts based on view mode
+  const displayData = useMemo(() => {
+    if (viewMode === "past" && historyData?.teams) {
+      return historyData.teams.map(team => ({
+        id: team.id,
+        team: team.team,
+        teamShort: team.teamShort,
+        gameweekProjections: team.gameweekGoals,
+        totalProjectedGoals: team.totalGoals,
+        averageGoalsPerGame: team.averageGoalsPerGame,
+        confidence: 'High' as const,
+        position: team.position
+      }));
+    }
+    return projectionsData || [];
+  }, [viewMode, historyData, projectionsData]);
+
   const filteredProjections = useMemo(() => {
-    if (!projectionsData) return [];
+    if (!displayData.length) return [];
     
-    return projectionsData
+    return displayData
       .filter(team => selectedTeam === "all" || team.teamShort === selectedTeam)
       .sort((a, b) => {
         if (sortBy.startsWith('gw')) {
@@ -177,7 +237,7 @@ export default function TeamGoalProjections() {
           default: return b.totalProjectedGoals - a.totalProjectedGoals;
         }
       });
-  }, [projectionsData, selectedTeam, sortBy, activeGameweeks]);
+  }, [displayData, selectedTeam, sortBy, activeGameweeks]);
 
 
   const totalGoals = useMemo(() => {
@@ -224,7 +284,9 @@ export default function TeamGoalProjections() {
     return 'bg-red-50 text-red-800';
   };
 
-  if (isLoading || projectionsLoading) {
+  const isDataLoading = isLoading || (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading);
+
+  if (isDataLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
         <Card className="w-96 shadow-lg">
@@ -236,7 +298,9 @@ export default function TeamGoalProjections() {
           </CardHeader>
           <CardContent>
             <p className="text-gray-600">
-              Calculating team goal projections across the next 12 gameweeks...
+              {viewMode === "future" 
+                ? "Calculating team goal projections across the next 12 gameweeks..."
+                : "Loading historical team goals data..."}
             </p>
           </CardContent>
         </Card>
@@ -245,7 +309,7 @@ export default function TeamGoalProjections() {
   }
 
   // Handle API errors gracefully
-  if (projectionsError) {
+  if (viewMode === "future" && projectionsError) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center p-8">
@@ -263,12 +327,16 @@ export default function TeamGoalProjections() {
   }
 
   // Handle missing data
-  if (!projectionsData || projectionsData.length === 0) {
+  if (!displayData.length) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="text-center p-8">
           <h2 className="text-xl font-semibold text-gray-700 mb-4">No Data Available</h2>
-          <p className="text-gray-600">Team goal projections are currently unavailable. Please try again later.</p>
+          <p className="text-gray-600">
+            {viewMode === "future" 
+              ? "Team goal projections are currently unavailable. Please try again later."
+              : "Historical team goals data is currently unavailable. Please try again later."}
+          </p>
         </div>
       </div>
     );
@@ -281,11 +349,34 @@ export default function TeamGoalProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Target className="h-8 w-8" />
-            <h1>Team Goal Projections</h1>
+            <h1>Team Goals</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Goals for each team across all upcoming gameweeks
+            {viewMode === "future" 
+              ? "Projected goals for each team across upcoming gameweeks"
+              : "Actual goals scored by each team in past gameweeks"}
           </p>
+          {/* Past/Future Toggle */}
+          <div className="flex gap-2 mt-3">
+            <Button
+              variant={viewMode === "past" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("past")}
+              className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+            >
+              <History className="h-4 w-4" />
+              Past GW Data
+            </Button>
+            <Button
+              variant={viewMode === "future" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("future")}
+              className={`flex items-center gap-1.5 ${viewMode === "future" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+            >
+              <Calendar className="h-4 w-4" />
+              Future GW Projections
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -422,12 +513,14 @@ export default function TeamGoalProjections() {
             </Card>
           </Collapsible>
 
-          {/* Team Goal Projections Table */}
+          {/* Team Goals Table */}
           <Card className="overflow-hidden">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 flex-wrap">
                 <BarChart3 className="h-5 w-5" />
-                {`Team Goal Projections: GW${startGameweek}-GW${endGameweek}`}
+                {viewMode === "future" 
+                  ? `Team Goal Projections: GW${startGameweek}-GW${endGameweek}`
+                  : `Team Goals History: GW${startGameweek}-GW${endGameweek}`}
                 {excludedGameweeks.size > 0 && (
                   <Badge variant="secondary" className="ml-1 text-xs">
                     {excludedGameweeks.size} excluded
@@ -436,6 +529,11 @@ export default function TeamGoalProjections() {
                 <Badge variant="outline" className="ml-2">
                   {filteredProjections.length} teams
                 </Badge>
+                {viewMode === "past" && (
+                  <Badge className="ml-2 bg-blue-100 text-blue-800">
+                    Actual Data
+                  </Badge>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -506,7 +604,7 @@ export default function TeamGoalProjections() {
                           return (
                             <td key={`${team.id}-gw${gwNumber}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsColor(goals || 0)}`}>
                               <div className="flex flex-col items-center">
-                                <span>{goals !== undefined ? goals.toFixed(2) : "-"}</span>
+                                <span>{goals !== undefined ? (viewMode === "past" ? goals : goals.toFixed(2)) : "-"}</span>
                                 {showOpponent && opponentInfo && (
                                   <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
                                     {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
@@ -519,7 +617,9 @@ export default function TeamGoalProjections() {
                         
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 min-w-[50px] md:min-w-[70px]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
-                            {activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0).toFixed(2)}
+                            {viewMode === "past" 
+                              ? activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0)
+                              : activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0).toFixed(2)}
                           </span>
                         </td>
                         
@@ -542,14 +642,14 @@ export default function TeamGoalProjections() {
                         const gwTotal = totalGoals.gameweekTotals[gwNumber] || 0;
                         return (
                           <td key={`total-gw${gwNumber}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 min-w-[40px] md:min-w-[50px]">
-                            {gwTotal.toFixed(2)}
+                            {viewMode === "past" ? gwTotal : gwTotal.toFixed(2)}
                           </td>
                         );
                       })}
                       
                       <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-100 min-w-[50px] md:min-w-[70px]">
                         <span className="text-sm md:text-lg font-bold text-orange-900">
-                          {totalGoals.overallTotal.toFixed(2)}
+                          {viewMode === "past" ? totalGoals.overallTotal : totalGoals.overallTotal.toFixed(2)}
                         </span>
                       </td>
                       
@@ -564,26 +664,50 @@ export default function TeamGoalProjections() {
           {/* Info Panel */}
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle className="text-lg">About Team Goal Projections</CardTitle>
+              <CardTitle className="text-lg">
+                {viewMode === "future" ? "About Team Goal Projections" : "About Team Goals History"}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Data Sources</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Team attacking performance data</li>
-                    <li>• Historical goal-scoring patterns</li>
-                    <li>• Current form and statistics</li>
-                    <li>• Fixture context factors</li>
+                    {viewMode === "future" ? (
+                      <>
+                        <li>• Team attacking performance data</li>
+                        <li>• Historical goal-scoring patterns</li>
+                        <li>• Current form and statistics</li>
+                        <li>• Fixture context factors</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>• Official FPL match results</li>
+                        <li>• Verified gameweek data</li>
+                        <li>• Home and away goal breakdown</li>
+                        <li>• Complete season history</li>
+                      </>
+                    )}
                   </ul>
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Key Features</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Projected goals per gameweek</li>
-                    <li>• Season-long goal estimates</li>
-                    <li>• Comparative team analysis</li>
-                    <li>• Updated regularly throughout season</li>
+                    {viewMode === "future" ? (
+                      <>
+                        <li>• Projected goals per gameweek</li>
+                        <li>• Season-long goal estimates</li>
+                        <li>• Comparative team analysis</li>
+                        <li>• Updated regularly throughout season</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>• Actual goals scored per gameweek</li>
+                        <li>• Historical performance trends</li>
+                        <li>• Team comparison across periods</li>
+                        <li>• Filter by gameweek range</li>
+                      </>
+                    )}
                   </ul>
                 </div>
               </div>
