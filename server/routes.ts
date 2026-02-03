@@ -2997,6 +2997,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Enhanced manager data cache with in-flight de-duplication (2 minutes TTL)
   const managerCache = new Map<string, { data: any; timestamp: number }>();
+  const managerDataCache = new Map<string, { data: any; timestamp: number }>();
   const managerHistoryCache = new Map<string, { data: any; timestamp: number }>();
   const managerLeaguesCache = new Map<string, { data: any; timestamp: number }>();
   const managerTransfersCache = new Map<string, { data: any; timestamp: number }>();
