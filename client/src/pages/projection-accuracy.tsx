@@ -91,6 +91,19 @@ export default function ProjectionAccuracy() {
     queryKey: ['/api/projection-accuracy/gameweek', selectedGameweek],
   });
 
+  const { data: bootstrapData } = useQuery<{ elements: Array<{ id: number; web_name: string }> }>({
+    queryKey: ['/api/bootstrap-static'],
+  });
+
+  const playerIdToWebName = useMemo(() => {
+    if (!bootstrapData?.elements) return new Map<number, string>();
+    const map = new Map<number, string>();
+    bootstrapData.elements.forEach(player => {
+      map.set(player.id, player.web_name);
+    });
+    return map;
+  }, [bootstrapData?.elements]);
+
   const uniqueTeams = useMemo(() => {
     if (!accuracyData?.players) return [];
     const teams = [...new Set(accuracyData.players.map(p => p.team_name))];
@@ -395,7 +408,7 @@ export default function ProjectionAccuracy() {
                       </tr>
                     ) : (
                       filteredPlayers.map((player) => {
-                        const shortName = player.player_name.split(' ').pop() || player.player_name;
+                        const shortName = playerIdToWebName.get(player.player_id) || player.player_name.split(' ').pop() || player.player_name;
                         const teamShort = getTeamShortCode(player.team_name);
                         const posShort = player.position?.substring(0, 3) || player.position;
                         return (
