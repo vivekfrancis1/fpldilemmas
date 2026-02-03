@@ -7088,6 +7088,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Past Team xG (Expected Goals) endpoint - aggregated player xG by team from finished gameweeks
+  app.get("/api/team-xg-history", async (req, res) => {
+    try {
+      const startGw = req.query.startGw ? parseInt(req.query.startGw as string) : undefined;
+      const endGw = req.query.endGw ? parseInt(req.query.endGw as string) : undefined;
+      
+      console.log(`DEBUG: Team xG History API called (GW${startGw || 1}-${endGw || 'last'})`);
+      
+      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      const teams = bootstrapData.teams;
+      
+      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+      const lastFinishedGW = finishedEvents.length > 0 
+        ? Math.max(...finishedEvents.map((e: any) => e.id))
+        : 0;
+      
+      // Use provided range or default to last 6 gameweeks
+      const effectiveEndGw = endGw ? Math.min(endGw, lastFinishedGW) : lastFinishedGW;
+      const effectiveStartGw = startGw ? Math.max(startGw, 1) : Math.max(1, effectiveEndGw - 5);
+      
+      console.log(`DEBUG: Fetching team xG history for GW${effectiveStartGw}-${effectiveEndGw}`);
+      
+      // Initialize team xG data structure
+      const teamXgMap = new Map();
+      teams.forEach((team: any) => {
+        const gameweekXg: { [key: number]: number } = {};
+        for (let gw = effectiveStartGw; gw <= effectiveEndGw; gw++) {
+          gameweekXg[gw] = 0;
+        }
+        teamXgMap.set(team.id, {
+          id: team.id,
+          team: team.name,
+          teamShort: team.short_name,
+          gameweekXg: gameweekXg,
+          totalXg: 0,
+          averageXgPerGame: 0,
+          position: team.position || 0
+        });
+      });
+      
+      // Build list of gameweeks to fetch
+      const gameweeksToFetch: number[] = [];
+      for (let gw = effectiveStartGw; gw <= effectiveEndGw; gw++) {
+        gameweeksToFetch.push(gw);
+      }
+      
+      // Fetch all gameweeks in PARALLEL for speed
+      const liveDataPromises = gameweeksToFetch.map(async (gw) => {
+        try {
+          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            return { gw, data: liveData };
+          }
+        } catch (err) {
+          console.error(`Error fetching GW${gw} live data for team xG:`, err);
+        }
+        return null;
+      });
+      
+      const liveResults = await Promise.all(liveDataPromises);
+      
+      // Process all fetched gameweek data - aggregate player xG by team
+      for (const result of liveResults) {
+        if (!result) continue;
+        const { gw, data: liveData } = result;
+        
+        liveData.elements.forEach((el: any) => {
+          // Find the player to get their team
+          const player = bootstrapData.elements.find((p: any) => p.id === el.id);
+          if (player) {
+            const teamData = teamXgMap.get(player.team);
+            if (teamData) {
+              const xg = parseFloat(el.stats.expected_goals) || 0;
+              teamData.gameweekXg[gw] = (teamData.gameweekXg[gw] || 0) + xg;
+              teamData.totalXg += xg;
+            }
+          }
+        });
+      }
+      
+      // Calculate averages and round xG values
+      const result = Array.from(teamXgMap.values()).map((team: any) => {
+        const gamesPlayed = gameweeksToFetch.length;
+        // Round gameweek values
+        const roundedGameweekXg: { [key: number]: number } = {};
+        for (const [gw, xg] of Object.entries(team.gameweekXg)) {
+          roundedGameweekXg[Number(gw)] = Math.round((xg as number) * 100) / 100;
+        }
+        return {
+          ...team,
+          gameweekXg: roundedGameweekXg,
+          totalXg: Math.round(team.totalXg * 100) / 100,
+          averageXgPerGame: gamesPlayed > 0 ? Math.round((team.totalXg / gamesPlayed) * 100) / 100 : 0
+        };
+      });
+      
+      console.log(`DEBUG: Team xG History - returned ${result.length} teams for GW${effectiveStartGw}-${effectiveEndGw}`);
+      res.json({
+        lastFinishedGW,
+        startGW: effectiveStartGw,
+        endGW: effectiveEndGw,
+        teams: result
+      });
+    } catch (error) {
+      console.error("Error fetching team xG history:", error);
+      res.status(500).json({ error: "Failed to fetch team xG history" });
+    }
+  });
+
   // Past Team Goals Against endpoint - actual goals conceded from finished fixtures
   app.get("/api/team-goals-against-history", async (req, res) => {
     try {
