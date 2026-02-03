@@ -17,7 +17,7 @@ import {
 
 export interface ResponsiveTableColumn<T = any> {
   key: string;
-  header: string;
+  header: string | React.ReactNode;
   render?: (value: any, item: T, index: number) => React.ReactNode;
   
   // Responsive visibility

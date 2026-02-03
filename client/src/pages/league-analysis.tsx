@@ -346,7 +346,7 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'total',
-      header: 'Total Points',
+      header: <span className="whitespace-nowrap">Total Pts</span>,
       priority: 'important',
       align: 'right',
       mobileLabel: 'Points',
@@ -357,7 +357,7 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'event_total',
-      header: `GW ${currentGameweek}`,
+      header: <span className="text-center">GW{currentGameweek}<br/>Pts</span>,
       priority: 'secondary',
       align: 'right',
       mobileLabel: `GW ${currentGameweek}`,
@@ -368,13 +368,13 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'overallRank',
-      header: 'Overall Rank',
+      header: <span className="text-center">Overall<br/>Rank</span>,
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'OR',
       cardOrder: 5,
       sortable: true,
-      className: 'font-mono',
+      className: 'font-mono text-xs',
       render: (value, entry) => {
         const rank = entry.managerData?.overallRank;
         return rank ? rank.toLocaleString() : 'N/A';
@@ -382,13 +382,13 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'gameweekRank',
-      header: 'GW Rank',
+      header: <span className="text-center">GW<br/>Rank</span>,
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'GWR',
       cardOrder: 6,
       sortable: true,
-      className: 'font-mono',
+      className: 'font-mono text-xs',
       render: (value, entry) => {
         const rank = entry.managerData?.gameweekRank;
         return rank ? rank.toLocaleString() : 'N/A';
@@ -396,13 +396,13 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'squadValue',
-      header: 'Squad Value',
+      header: <span className="text-center">Squad<br/>Value</span>,
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'Squad',
       cardOrder: 7,
       sortable: true,
-      className: 'font-mono',
+      className: 'font-mono text-xs',
       render: (value, entry) => {
         const teamValue = entry.managerData?.teamValue;
         const bank = entry.managerData?.bank;
@@ -419,7 +419,7 @@ export default function LeagueAnalysisPage() {
       mobileLabel: 'Bank',
       cardOrder: 8,
       sortable: true,
-      className: 'font-mono',
+      className: 'font-mono text-xs',
       render: (value, entry) => {
         const bank = entry.managerData?.bank;
         return bank !== undefined && bank !== null 
@@ -429,13 +429,13 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'freeTransfers',
-      header: `FT (GW${upcomingGameweek})`,
+      header: <span className="text-center">Free<br/>Transfers</span>,
       priority: 'optional',
       align: 'right',
       mobileLabel: 'FT',
       cardOrder: 9,
       sortable: true,
-      className: 'font-mono',
+      className: 'font-mono text-xs',
       render: (value, entry) => {
         if (!entry.historyData?.current) return 'N/A';
         return calculateFreeTransfers(entry.historyData.current, entry.historyData.chips, upcomingGameweek);
@@ -443,13 +443,13 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'chipsAvailable',
-      header: 'Chips Available',
+      header: <span className="text-center">Chips<br/>Available</span>,
       priority: 'optional',
       align: 'right',
       mobileLabel: 'Chips',
       cardOrder: 10,
       sortable: true,
-      className: 'font-mono',
+      className: 'font-mono text-xs',
       render: (value, entry) => entry.chipsAvailable
     }
   ];
@@ -519,7 +519,7 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'live_total',
-      header: 'Total Points',
+      header: <span className="whitespace-nowrap">Total Pts</span>,
       priority: 'important',
       align: 'right',
       mobileLabel: 'Total',
@@ -530,7 +530,7 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'live_points',
-      header: `GW ${liveStandingsData?.current_gameweek || currentGameweek}`,
+      header: <span className="text-center">GW{liveStandingsData?.current_gameweek || currentGameweek}<br/>Pts</span>,
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'GW Pts',
@@ -551,13 +551,13 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'overallRank',
-      header: 'Overall Rank',
+      header: <span className="text-center">Overall<br/>Rank</span>,
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'OR',
       cardOrder: 5,
       sortable: true,
-      className: 'font-mono',
+      className: 'font-mono text-xs',
       render: (value, entry) => {
         const rank = entry.managerData?.overallRank;
         return rank ? rank.toLocaleString() : 'N/A';
@@ -565,13 +565,13 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'gameweekRank',
-      header: 'GW Rank',
+      header: <span className="text-center">GW<br/>Rank</span>,
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'GWR',
       cardOrder: 6,
       sortable: true,
-      className: 'font-mono',
+      className: 'font-mono text-xs',
       render: (value, entry) => {
         const rank = entry.managerData?.gameweekRank;
         return rank ? rank.toLocaleString() : 'N/A';
@@ -579,13 +579,13 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'squadValue',
-      header: 'Squad Value',
+      header: <span className="text-center">Squad<br/>Value</span>,
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'Squad',
       cardOrder: 7,
       sortable: true,
-      className: 'font-mono',
+      className: 'font-mono text-xs',
       render: (value, entry) => {
         const teamValue = entry.managerData?.teamValue;
         const bank = entry.managerData?.bank;
@@ -602,7 +602,7 @@ export default function LeagueAnalysisPage() {
       mobileLabel: 'Bank',
       cardOrder: 8,
       sortable: true,
-      className: 'font-mono',
+      className: 'font-mono text-xs',
       render: (value, entry) => {
         const bank = entry.managerData?.bank;
         return bank !== undefined && bank !== null 
@@ -612,13 +612,13 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'freeTransfers',
-      header: `FT (GW${upcomingGameweek})`,
+      header: <span className="text-center">Free<br/>Transfers</span>,
       priority: 'optional',
       align: 'right',
       mobileLabel: 'FT',
       cardOrder: 9,
       sortable: true,
-      className: 'font-mono',
+      className: 'font-mono text-xs',
       render: (value, entry) => {
         if (!entry.historyData?.current) return 'N/A';
         return calculateFreeTransfers(entry.historyData.current, entry.historyData.chips, upcomingGameweek);
@@ -626,13 +626,13 @@ export default function LeagueAnalysisPage() {
     },
     {
       key: 'chipsAvailable',
-      header: 'Chips Available',
+      header: <span className="text-center">Chips<br/>Available</span>,
       priority: 'optional',
       align: 'right',
       mobileLabel: 'Chips',
       cardOrder: 10,
       sortable: true,
-      className: 'font-mono',
+      className: 'font-mono text-xs',
       render: (value, entry) => entry.chipsAvailable
     }
   ];
