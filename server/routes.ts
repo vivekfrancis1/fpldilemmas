@@ -7228,6 +7228,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Past Player xG (Expected Goals) endpoint - actual xG from finished gameweeks
+  app.get("/api/player-xg-history", async (req, res) => {
+    try {
+      const startGw = req.query.startGw ? parseInt(req.query.startGw as string) : undefined;
+      const endGw = req.query.endGw ? parseInt(req.query.endGw as string) : undefined;
+      
+      console.log(`DEBUG: Player xG History API called (GW${startGw || 1}-${endGw || 'last'})`);
+      
+      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      if (!bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      
+      const bootstrapData = await bootstrapResponse.json();
+      
+      const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+      const lastFinishedGW = finishedEvents.length > 0 
+        ? Math.max(...finishedEvents.map((e: any) => e.id))
+        : 0;
+      
+      // Use provided range or default to last 6 gameweeks
+      const effectiveEndGw = endGw ? Math.min(endGw, lastFinishedGW) : lastFinishedGW;
+      const effectiveStartGw = startGw ? Math.max(startGw, 1) : Math.max(1, effectiveEndGw - 5);
+      
+      console.log(`DEBUG: Fetching xG history for GW${effectiveStartGw}-${effectiveEndGw}`);
+      
+      // Build list of gameweeks to fetch
+      const gameweeksToFetch: number[] = [];
+      for (let gw = effectiveStartGw; gw <= effectiveEndGw; gw++) {
+        gameweeksToFetch.push(gw);
+      }
+      
+      // Fetch all gameweeks in PARALLEL for speed
+      const liveDataPromises = gameweeksToFetch.map(async (gw) => {
+        try {
+          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+          if (liveResponse.ok) {
+            const liveData = await liveResponse.json();
+            return { gw, data: liveData };
+          }
+        } catch (err) {
+          console.error(`Error fetching GW${gw} live data for xG:`, err);
+        }
+        return null;
+      });
+      
+      const liveResults = await Promise.all(liveDataPromises);
+      
+      const playerXgMap = new Map();
+      
+      // Process all fetched gameweek data
+      for (const result of liveResults) {
+        if (!result) continue;
+        const { gw, data: liveData } = result;
+        
+        liveData.elements.forEach((el: any) => {
+          if (!playerXgMap.has(el.id)) {
+            const player = bootstrapData.elements.find((p: any) => p.id === el.id);
+            if (player) {
+              const team = bootstrapData.teams.find((t: any) => t.id === player.team);
+              const position = bootstrapData.element_types.find((et: any) => et.id === player.element_type);
+              playerXgMap.set(el.id, {
+                id: el.id,
+                name: player.web_name,
+                teamName: team?.name || 'Unknown',
+                teamShort: team?.short_name || 'UNK',
+                position: position?.singular_name_short || 'UNK',
+                gameweekXg: {},
+                totalXg: 0
+              });
+            }
+          }
+          const playerData = playerXgMap.get(el.id);
+          if (playerData) {
+            // expected_goals is available in FPL live API stats
+            const xg = parseFloat(el.stats.expected_goals) || 0;
+            playerData.gameweekXg[gw] = xg;
+            playerData.totalXg += xg;
+          }
+        });
+      }
+      
+      // Filter to only players with xG > 0
+      const players = Array.from(playerXgMap.values()).filter((p: any) => p.totalXg > 0);
+      console.log(`DEBUG: Player xG History - returned ${players.length} players for GW${effectiveStartGw}-${effectiveEndGw}`);
+      res.json({ lastFinishedGW, startGW: effectiveStartGw, endGW: effectiveEndGw, players });
+    } catch (error) {
+      console.error("Error fetching player xG history:", error);
+      res.status(500).json({ error: "Failed to fetch player xG history" });
+    }
+  });
+
   // Past Player Assists endpoint - actual assists from finished gameweeks
   app.get("/api/player-assists-history", async (req, res) => {
     try {

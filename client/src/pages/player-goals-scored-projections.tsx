@@ -39,7 +39,7 @@ interface PlayerGoalsHistory {
 }
 
 export default function PlayerGoalsScoredProjections() {
-  const [viewMode, setViewMode] = useState<"past" | "future">("future");
+  const [viewMode, setViewMode] = useState<"past" | "pastXg" | "future">("future");
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -92,6 +92,31 @@ export default function PlayerGoalsScoredProjections() {
     enabled: viewMode === "past",
   });
 
+  // Fetch past player xG history
+  const { data: xgHistoryData, isLoading: xgHistoryLoading } = useQuery<{
+    lastFinishedGW: number;
+    players: Array<{
+      id: number;
+      name: string;
+      teamName: string;
+      teamShort: string;
+      position: string;
+      gameweekXg: { [gw: string]: number };
+      totalXg: number;
+    }>;
+  }>({
+    queryKey: ["/api/player-xg-history", startGameweek, endGameweek],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (startGameweek) params.set('startGw', startGameweek.toString());
+      if (endGameweek) params.set('endGw', endGameweek.toString());
+      const response = await fetch(`/api/player-xg-history?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch xG history");
+      return response.json();
+    },
+    enabled: viewMode === "pastXg" && startGameweek !== null && endGameweek !== null,
+  });
+
   // Fetch fixtures for opponent information
   const { data: fixturesData } = useQuery({
     queryKey: ["/api/fixtures"],
@@ -142,20 +167,20 @@ export default function PlayerGoalsScoredProjections() {
 
   // Get available gameweeks for dropdown based on view mode
   const availableGameweeks = useMemo(() => {
-    if (viewMode === "past") {
-      const lastFinished = historyData?.lastFinishedGW || 24;
+    if (viewMode === "past" || viewMode === "pastXg") {
+      const lastFinished = historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW || 24;
       return Array.from({ length: lastFinished }, (_, i) => i + 1);
     }
     if (!bootstrapData?.events) {
       return [];
     }
     return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW]);
 
   // Reset gameweek range when view mode changes
   useEffect(() => {
-    if (viewMode === "past" && historyData?.lastFinishedGW) {
-      const lastFinished = historyData.lastFinishedGW;
+    if ((viewMode === "past" || viewMode === "pastXg") && (historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW || bootstrapData?.events)) {
+      const lastFinished = historyData?.lastFinishedGW || xgHistoryData?.lastFinishedGW || 24;
       const startGW = Math.max(1, lastFinished - 5);
       setStartGameweek(startGW);
       setEndGameweek(lastFinished);
@@ -172,7 +197,7 @@ export default function PlayerGoalsScoredProjections() {
         setInitialized(true);
       }
     }
-  }, [viewMode, bootstrapData?.events, historyData?.lastFinishedGW]);
+  }, [viewMode, bootstrapData?.events, historyData?.lastFinishedGW, xgHistoryData?.lastFinishedGW]);
 
   // One-time initialization when bootstrap data loads
   useEffect(() => {
@@ -288,8 +313,22 @@ export default function PlayerGoalsScoredProjections() {
         goalShare: 0
       }));
     }
+    if (viewMode === "pastXg" && xgHistoryData?.players) {
+      return xgHistoryData.players.map(player => ({
+        playerId: player.id,
+        playerName: player.name,
+        teamName: player.teamName,
+        teamShort: player.teamShort,
+        position: player.position,
+        totalProjectedGoals: player.totalXg,
+        gameweekProjections: Object.fromEntries(
+          Object.entries(player.gameweekXg).map(([gw, xg]) => [gw, xg])
+        ),
+        goalShare: 0
+      }));
+    }
     return playerGoalData || [];
-  }, [viewMode, historyData, playerGoalData]);
+  }, [viewMode, historyData, xgHistoryData, playerGoalData]);
 
   // Filter and sort data
   const filteredProjections = useMemo(() => {
@@ -460,6 +499,9 @@ export default function PlayerGoalsScoredProjections() {
     if (viewMode === "past") {
       return goals.toString();
     }
+    if (viewMode === "pastXg") {
+      return goals.toFixed(2);
+    }
     return goals.toFixed(2);
   };
 
@@ -473,19 +515,30 @@ export default function PlayerGoalsScoredProjections() {
   // Show loading only when actually needed (also when data is empty/loading)
   const isDataLoading = isLoading || 
     (viewMode === "future" && (playerGoalLoading || !playerGoalData || playerGoalData.length === 0)) ||
-    (viewMode === "past" && historyLoading);
+    (viewMode === "past" && historyLoading) ||
+    (viewMode === "pastXg" && xgHistoryLoading);
+  
+  const getLoadingTitle = () => {
+    if (viewMode === "future") return "Loading Goal Projections";
+    if (viewMode === "pastXg") return "Loading Historical xG Data";
+    return "Loading Historical Goals";
+  };
+  
+  const getLoadingDescription = () => {
+    if (viewMode === "future") return "Calculating projected goals for all players based on team projections and goal share...";
+    if (viewMode === "pastXg") return "Loading expected goals (xG) data for players in past gameweeks...";
+    return "Loading actual goals scored by players in past gameweeks...";
+  };
   
   if (!initialized || !bootstrapData || isDataLoading) {
     return (
       <LoadingExperience
         variant="analysis"
-        title={viewMode === "future" ? "Loading Goal Projections" : "Loading Historical Goals"}
-        description={viewMode === "future" 
-          ? "Calculating projected goals for all players based on team projections and goal share..."
-          : "Loading actual goals scored by players in past gameweeks..."}
+        title={getLoadingTitle()}
+        description={getLoadingDescription()}
         steps={[
           { text: viewMode === "future" ? "Loading team goal projections" : "Loading gameweek results", delay: "0s" },
-          { text: viewMode === "future" ? "Analyzing player goal share percentages" : "Aggregating player goals", delay: "0.2s" },
+          { text: viewMode === "future" ? "Analyzing player goal share percentages" : viewMode === "pastXg" ? "Aggregating player xG data" : "Aggregating player goals", delay: "0.2s" },
           { text: viewMode === "future" ? "Computing individual player projections" : "Preparing data display", delay: "0.4s" },
         ]}
       />
@@ -549,15 +602,17 @@ export default function PlayerGoalsScoredProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Target className="h-8 w-8" />
-            <h1>{viewMode === "future" ? "Player Goal Projections" : "Player Goals Scored"}</h1>
+            <h1>{viewMode === "future" ? "Player Goal Projections" : viewMode === "pastXg" ? "Player xG History" : "Player Goals Scored"}</h1>
           </div>
           <p className="fpl-page-subtitle">
             {viewMode === "future" 
               ? "Projected Goals for each player across all upcoming fixtures"
-              : "Actual goals scored by each player in past gameweeks"}
+              : viewMode === "pastXg"
+                ? "Expected Goals (xG) for each player in past gameweeks"
+                : "Actual goals scored by each player in past gameweeks"}
           </p>
           {/* Past/Future Toggle */}
-          <div className="flex gap-2 mt-3">
+          <div className="flex flex-wrap gap-2 mt-3">
             <Button
               variant={viewMode === "past" ? "default" : "outline"}
               size="sm"
@@ -565,7 +620,16 @@ export default function PlayerGoalsScoredProjections() {
               className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-orange-600 hover:bg-orange-700 text-white" : "text-gray-600"}`}
             >
               <History className="h-4 w-4" />
-              Past GW Data
+              Past GW Goal Data
+            </Button>
+            <Button
+              variant={viewMode === "pastXg" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("pastXg")}
+              className={`flex items-center gap-1.5 ${viewMode === "pastXg" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+            >
+              <History className="h-4 w-4" />
+              Past GW xG
             </Button>
             <Button
               variant={viewMode === "future" ? "default" : "outline"}
@@ -825,7 +889,7 @@ export default function PlayerGoalsScoredProjections() {
                     ))}
                     <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors min-w-[50px] md:min-w-[70px]">
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("total")}>
-                        Goals
+                        {viewMode === "pastXg" ? "xG" : "Goals"}
                         {sortBy === "total" && (
                           sortDirection === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
                         )}
