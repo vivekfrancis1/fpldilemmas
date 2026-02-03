@@ -38,6 +38,21 @@ interface PlayerAssistsHistory {
   }[];
 }
 
+interface PlayerXaHistory {
+  lastFinishedGW: number;
+  startGW: number;
+  endGW: number;
+  players: {
+    id: number;
+    name: string;
+    teamName: string;
+    teamShort: string;
+    position: string;
+    gameweekXa: { [key: number]: number };
+    totalXa: number;
+  }[];
+}
+
 type SortField = 'name' | 'team' | 'position' | 'totalAssists' | 'rangeTotal' | 'rangePoints' | 'assistShare' | string; // string allows dynamic gameweek fields like 'gw4', 'gw5', etc.
 type SortDirection = 'asc' | 'desc';
 
@@ -58,8 +73,8 @@ export default function PlayerAssistProjections() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // View mode: "future" for projections, "past" for historical data
-  const [viewMode, setViewMode] = useState<"future" | "past">("future");
+  // View mode: "future" for projections, "past" for historical data, "pastXa" for xA history
+  const [viewMode, setViewMode] = useState<"future" | "past" | "pastXa">("future");
 
   // Fetch past player assists history
   const { data: historyData, isLoading: historyLoading } = useQuery<PlayerAssistsHistory>({
@@ -67,7 +82,7 @@ export default function PlayerAssistProjections() {
     enabled: viewMode === "past",
   });
 
-  // All useState hooks
+  // All useState hooks (must come before xA query that depends on startGameweek/endGameweek)
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -82,6 +97,12 @@ export default function PlayerAssistProjections() {
   const [applyAvailability, setApplyAvailability] = useState(true);
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+
+  // Fetch past player xA (expected assists) history (after startGameweek/endGameweek are defined)
+  const { data: xaHistoryData, isLoading: xaHistoryLoading } = useQuery<PlayerXaHistory>({
+    queryKey: ["/api/player-xa-history", startGameweek, endGameweek],
+    enabled: viewMode === "pastXa" && startGameweek > 0 && endGameweek > 0,
+  });
 
   // Toggle gameweek exclusion
   const toggleGameweekExclusion = (gw: number) => {
@@ -123,9 +144,9 @@ export default function PlayerAssistProjections() {
 
   // Get available gameweeks for dropdown based on view mode
   const availableGameweeks = useMemo(() => {
-    if (viewMode === "past") {
-      // Past mode: GW1 to last finished gameweek
-      const lastFinished = historyData?.lastFinishedGW || 24;
+    if (viewMode === "past" || viewMode === "pastXa") {
+      // Past modes: GW1 to last finished gameweek
+      const lastFinished = historyData?.lastFinishedGW || xaHistoryData?.lastFinishedGW || 24;
       return Array.from({ length: lastFinished }, (_, i) => i + 1);
     }
     // Future mode: next 12 gameweeks
@@ -133,7 +154,7 @@ export default function PlayerAssistProjections() {
       return [];
     }
     return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
-  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
+  }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW, xaHistoryData?.lastFinishedGW]);
 
   // Initialize gameweeks when bootstrap data loads
   useEffect(() => {
@@ -153,8 +174,8 @@ export default function PlayerAssistProjections() {
 
   // Reset gameweek range when viewMode changes
   useEffect(() => {
-    if (viewMode === "past" && historyData?.lastFinishedGW) {
-      const lastFinished = historyData.lastFinishedGW;
+    if ((viewMode === "past" || viewMode === "pastXa") && (historyData?.lastFinishedGW || xaHistoryData?.lastFinishedGW)) {
+      const lastFinished = historyData?.lastFinishedGW || xaHistoryData?.lastFinishedGW || 24;
       const startGW = Math.max(1, lastFinished - 5);
       setStartGameweek(startGW);
       setEndGameweek(lastFinished);
@@ -165,7 +186,7 @@ export default function PlayerAssistProjections() {
       setEndGameweek(parseInt(newRange.endGameweek));
       setExcludedGameweeks(new Set());
     }
-  }, [viewMode, historyData?.lastFinishedGW, bootstrapData?.events]);
+  }, [viewMode, historyData?.lastFinishedGW, xaHistoryData?.lastFinishedGW, bootstrapData?.events]);
 
   // BATCH OPTIMIZED: Use new batch hook for better performance
   const { 
@@ -199,11 +220,24 @@ export default function PlayerAssistProjections() {
         assistShare: 0, // Not available in history data
       }));
     }
+    if (viewMode === "pastXa" && xaHistoryData?.players) {
+      return xaHistoryData.players.map(player => ({
+        playerId: player.id,
+        playerName: player.name,
+        teamShort: player.teamShort,
+        position: player.position,
+        gameweekProjections: Object.fromEntries(
+          Object.entries(player.gameweekXa).map(([gw, xa]) => [gw, xa])
+        ),
+        totalProjectedAssists: player.totalXa,
+        assistShare: 0, // Not available in history data
+      }));
+    }
     return playerAssistData || [];
-  }, [viewMode, historyData, playerAssistData]);
+  }, [viewMode, historyData, xaHistoryData, playerAssistData]);
 
   // Combined loading state
-  const isLoading = (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading);
+  const isLoading = (viewMode === "future" && projectionsLoading) || (viewMode === "past" && historyLoading) || (viewMode === "pastXa" && xaHistoryLoading);
 
   // ALL useMemo hooks
   // Create a mapping of teamShort + gameweek -> opponent info
@@ -515,15 +549,17 @@ export default function PlayerAssistProjections() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Zap className="h-8 w-8" />
-            <h1>{viewMode === "future" ? "Player Assist Projections" : "Player Assist History"}</h1>
+            <h1>{viewMode === "future" ? "Player Assist Projections" : viewMode === "pastXa" ? "Player xA History" : "Player Assist History"}</h1>
           </div>
           <p className="fpl-page-subtitle">
             {viewMode === "future" 
               ? "Projected assists for each player across upcoming gameweeks"
-              : "Actual assists recorded by each player in past gameweeks"}
+              : viewMode === "pastXa"
+                ? "Expected Assists (xA) for each player in past gameweeks"
+                : "Actual assists recorded by each player in past gameweeks"}
           </p>
           {/* Past/Future Toggle */}
-          <div className="flex gap-2 mt-3">
+          <div className="flex flex-wrap gap-2 mt-3">
             <Button
               variant={viewMode === "past" ? "default" : "outline"}
               size="sm"
@@ -531,7 +567,16 @@ export default function PlayerAssistProjections() {
               className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
             >
               <History className="h-4 w-4" />
-              Past GW Data
+              Past GW Assist Data
+            </Button>
+            <Button
+              variant={viewMode === "pastXa" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("pastXa")}
+              className={`flex items-center gap-1.5 ${viewMode === "pastXa" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+            >
+              <TrendingUp className="h-4 w-4" />
+              Past GW xA
             </Button>
             <Button
               variant={viewMode === "future" ? "default" : "outline"}
@@ -807,7 +852,7 @@ export default function PlayerAssistProjections() {
                           ))}
                           <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider border-l border-gray-200 bg-orange-50 min-w-[50px] md:min-w-[70px]">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('rangeTotal')} className="h-auto p-0 font-medium text-gray-500 hover:bg-orange-100 hover:text-gray-700 text-xs md:text-sm">
-                              Assists {getSortIcon('rangeTotal')}
+                              {viewMode === "pastXa" ? "xA" : "Assists"} {getSortIcon('rangeTotal')}
                             </Button>
                           </th>
                           <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-blue-50 min-w-[50px] md:min-w-[70px]">
