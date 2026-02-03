@@ -80,8 +80,8 @@ export default function ProjectionAccuracy() {
   const [selectedGameweek, setSelectedGameweek] = useState<number>(25);
   const [activeTab, setActiveTab] = useState<string>("players");
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [sortField, setSortField] = useState<SortField>('difference');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortField, setSortField] = useState<SortField>('projected');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [positionFilter, setPositionFilter] = useState<string>("all");
 
