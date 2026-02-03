@@ -155,10 +155,20 @@ export default function ProjectedGoalsCS() {
         const homeCSData = csMap.get(homeTeam.id) || {};
         const awayCSData = csMap.get(awayTeam.id) || {};
 
-        const homeExpectedGoals = homeGoalData[fixture.event.toString()] || 0;
-        const awayExpectedGoals = awayGoalData[fixture.event.toString()] || 0;
-        const homeCleanSheetOdds = homeCSData[fixture.event.toString()] || 0;
-        const awayCleanSheetOdds = awayCSData[fixture.event.toString()] || 0;
+        // For past mode with finished fixtures, use actual goals; otherwise use projections
+        const homeExpectedGoals = (viewMode === "past" && fixture.finished) 
+          ? (fixture.team_h_score ?? 0)
+          : (homeGoalData[fixture.event.toString()] || 0);
+        const awayExpectedGoals = (viewMode === "past" && fixture.finished)
+          ? (fixture.team_a_score ?? 0)
+          : (awayGoalData[fixture.event.toString()] || 0);
+        // For past mode with finished fixtures, actual clean sheet is 1 if opponent scored 0, else 0
+        const homeCleanSheetOdds = (viewMode === "past" && fixture.finished)
+          ? (fixture.team_a_score === 0 ? 1 : 0)
+          : (homeCSData[fixture.event.toString()] || 0);
+        const awayCleanSheetOdds = (viewMode === "past" && fixture.finished)
+          ? (fixture.team_h_score === 0 ? 1 : 0)
+          : (awayCSData[fixture.event.toString()] || 0);
 
         matches.push({
           id: fixture.id,
@@ -200,7 +210,7 @@ export default function ProjectedGoalsCS() {
       }
       return new Date(a.kickoffTime).getTime() - new Date(b.kickoffTime).getTime();
     });
-  }, [teamGoalData, teamCSData, fixturesData, bootstrapData, startGameweek, endGameweek]);
+  }, [teamGoalData, teamCSData, fixturesData, bootstrapData, startGameweek, endGameweek, viewMode]);
 
   const filteredProjections = useMemo(() => {
     if (!projectionsData) return [];
