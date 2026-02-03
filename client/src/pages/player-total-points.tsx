@@ -918,7 +918,10 @@ export default function PlayerTotalPoints() {
       position: string;
       price: number;
       gameweekPoints: { [gw: string]: number };
+      gameweekMinutes: { [gw: string]: number };
       totalPoints: number;
+      totalMinutes: number;
+      gamesPlayed: number;
     }>;
   }>({
     queryKey: ["/api/player-total-points-history"],
@@ -1193,16 +1196,26 @@ export default function PlayerTotalPoints() {
     // Past mode - transform history data to match projection format
     if (!historyData?.players || !startGameweek || !endGameweek) return null;
     
+    const numGameweeks = endGameweek - startGameweek + 1;
+    
     return historyData.players.map(player => {
-      // Calculate total for selected range
+      // Calculate totals for selected range
       let rangeTotal = 0;
+      let rangeMinutes = 0;
+      let rangeGamesPlayed = 0;
       const gameweekProjections: { [gw: string]: number } = {};
       
       for (let gw = startGameweek; gw <= endGameweek; gw++) {
         const pts = player.gameweekPoints[gw] || 0;
+        const mins = player.gameweekMinutes?.[gw] || 0;
         gameweekProjections[gw] = pts;
         rangeTotal += pts;
+        rangeMinutes += mins;
+        if (mins > 0) rangeGamesPlayed++;
       }
+      
+      const avgPoints = rangeGamesPlayed > 0 ? rangeTotal / rangeGamesPlayed : 0;
+      const value = player.price > 0 ? rangeTotal / player.price : 0;
       
       return {
         playerId: player.id,
@@ -1212,8 +1225,11 @@ export default function PlayerTotalPoints() {
         position: player.position,
         price: player.price,
         totalExpectedPoints: rangeTotal,
+        totalMinutes: rangeMinutes,
+        avgPoints: avgPoints,
+        value: value,
         gameweekProjections,
-      } as PlayerTotalPointsData;
+      } as unknown as PlayerTotalPointsData;
     }).filter(p => p.totalExpectedPoints > 0);
   }, [viewMode, adjustedPlayerData, historyData, startGameweek, endGameweek]);
 

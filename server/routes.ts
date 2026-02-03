@@ -7463,16 +7463,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     position: position?.singular_name_short || 'UNK',
                     price: player.now_cost / 10,
                     gameweekPoints: {},
-                    totalPoints: 0
+                    gameweekMinutes: {},
+                    totalPoints: 0,
+                    totalMinutes: 0,
+                    gamesPlayed: 0
                   });
                 }
               }
               const playerData = playerPointsMap.get(el.id);
               if (playerData) {
-                // Use actual FPL total points from the live API
+                // Use actual FPL total points and minutes from the live API
                 const gwPoints = el.stats.total_points || 0;
+                const gwMinutes = el.stats.minutes || 0;
                 playerData.gameweekPoints[gw] = gwPoints;
+                playerData.gameweekMinutes[gw] = gwMinutes;
                 playerData.totalPoints += gwPoints;
+                playerData.totalMinutes += gwMinutes;
+                if (gwMinutes > 0) {
+                  playerData.gamesPlayed += 1;
+                }
               }
             });
           }
