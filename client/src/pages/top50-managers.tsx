@@ -225,7 +225,7 @@ function getRankChangeDisplay(change: number | undefined | null) {
 }
 
 // Column configuration for ResponsiveTable
-const getTop50ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn<Top50Manager>[] => [
+const getTop50ManagerColumns = (currentGameweek?: number, upcomingGameweek?: number): ResponsiveTableColumn<Top50Manager>[] => [
   {
     key: 'name',
     header: 'Manager',
@@ -325,7 +325,7 @@ const getTop50ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn
   },
   {
     key: 'freeTransfers',
-    header: 'FT (GW23)',
+    header: `FT (GW${upcomingGameweek || 25})`,
     priority: 'optional',
     align: 'right',
     mobileLabel: 'FT',
@@ -337,7 +337,7 @@ const getTop50ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn
       const chips = manager.historyData?.chips;
       if (!history || history.length === 0) return "N/A";
       
-      const freeTransfers = calculateFreeTransfers(history, chips, 23);
+      const freeTransfers = calculateFreeTransfers(history, chips, upcomingGameweek || 25);
       return freeTransfers;
     }
   },
@@ -455,12 +455,20 @@ export default function Top50Managers() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  // Get current gameweek from bootstrap data
+  // Get current and upcoming gameweek from bootstrap data
   const currentGameweek = useMemo(() => {
     if (!bootstrapData?.events) return undefined;
     const currentEvent = bootstrapData.events.find(e => e.is_current);
     return currentEvent?.id;
   }, [bootstrapData]);
+
+  const upcomingGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return undefined;
+    const nextEvent = bootstrapData.events.find((e: any) => e.is_next);
+    if (nextEvent) return nextEvent.id;
+    // Fallback to current + 1
+    return currentGameweek ? Math.min(currentGameweek + 1, 38) : undefined;
+  }, [bootstrapData, currentGameweek]);
 
   // Fetch Top 50 teams data using batch endpoint with React Query
   const { 
@@ -692,7 +700,7 @@ export default function Top50Managers() {
             const history = manager.historyData?.current;
             const chips = manager.historyData?.chips;
             if (!history || history.length === 0) return 0;
-            return calculateFreeTransfers(history, chips, 23);
+            return calculateFreeTransfers(history, chips, upcomingGameweek || 25);
           case 'chipsAvailable':
             // 4 chips in second half - second half chips used
             return 4 - (manager.latestTracking?.secondHalfChipsUsed || 0);
@@ -718,7 +726,7 @@ export default function Top50Managers() {
     });
 
     return sorted;
-  }, [managersWithData, sortField, sortDirection]);
+  }, [managersWithData, sortField, sortDirection, upcomingGameweek]);
 
   // Show loading screen when bootstrap data is loading
   if (bootstrapLoading) {
@@ -798,7 +806,7 @@ export default function Top50Managers() {
         <CardContent className="p-0">
           <ResponsiveTable
             data={sortedManagersData}
-            columns={getTop50ManagerColumns(currentGameweek)}
+            columns={getTop50ManagerColumns(currentGameweek, upcomingGameweek)}
             enableMobileCards={true}
             mobileCardTitle={(manager) => manager.name}
             loading={managersWithData.length === 0}

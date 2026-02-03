@@ -3142,6 +3142,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Batch fetch manager histories for league analysis
+  app.post("/api/managers/batch-history", async (req, res) => {
+    try {
+      const { managerIds } = req.body;
+      
+      if (!Array.isArray(managerIds) || managerIds.length === 0) {
+        return res.status(400).json({ message: "managerIds array is required" });
+      }
+
+      // Limit to 50 managers to prevent overload
+      const idsToFetch = managerIds.slice(0, 50);
+      const now = Date.now();
+      
+      const results = await Promise.all(
+        idsToFetch.map(async (managerId: number) => {
+          try {
+            // Check cache first
+            const cached = managerHistoryCache.get(String(managerId));
+            if (cached && (now - cached.timestamp) < MANAGER_CACHE_DURATION) {
+              return {
+                managerId,
+                historyData: {
+                  current: cached.data.current || [],
+                  chips: cached.data.chips || []
+                }
+              };
+            }
+            
+            const response = await fetchWithRetry(
+              `https://fantasy.premierleague.com/api/entry/${managerId}/history/`
+            );
+            
+            if (!response.ok) {
+              return { managerId, historyData: null };
+            }
+            
+            const data = await response.json();
+            
+            // Cache the data
+            managerHistoryCache.set(String(managerId), { data, timestamp: Date.now() });
+            
+            return {
+              managerId,
+              historyData: {
+                current: data.current || [],
+                chips: data.chips || []
+              }
+            };
+          } catch (error) {
+            return { managerId, historyData: null };
+          }
+        })
+      );
+      
+      res.json({ managers: results });
+    } catch (error) {
+      console.error("Error in batch manager history:", error);
+      res.status(500).json({ error: "Failed to fetch batch manager histories" });
+    }
+  });
+
   // Get manager team picks for current gameweek
   app.get("/api/manager/:managerId/team", async (req, res) => {
     try {

@@ -1,11 +1,24 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, ArrowLeft, Trophy, Activity, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
+import { ResponsiveTable, ResponsiveTableColumn } from "@/components/ui/responsive-table";
+import { BarChart3, ArrowLeft, Trophy, Activity, RefreshCw, ChevronUp, ChevronDown, TrendingUp, TrendingDown } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { calculateFreeTransfers } from "@/lib/free-transfers";
+
+interface GWHistory {
+  event: number;
+  event_transfers: number;
+  event_transfers_cost: number;
+}
+
+interface ChipUsage {
+  event: number;
+  name: string;
+}
 
 interface LiveLeagueEntry {
   id: number;
@@ -56,26 +69,56 @@ interface LeagueEntry {
   entry_name: string;
 }
 
-interface LeagueAnalysisProps {
-  leagueId: number;
-  managerId: string;
-  leagueName: string;
+interface ManagerHistoryData {
+  managerId: number;
+  historyData: {
+    current: GWHistory[];
+    chips: ChipUsage[];
+  } | null;
+}
+
+interface EnrichedLeagueEntry extends LeagueEntry {
+  historyData?: {
+    current: GWHistory[];
+    chips: ChipUsage[];
+  };
+  rankChange: number;
+}
+
+function getRankChangeDisplay(change: number | undefined | null) {
+  if (!change || change === 0) return null;
+  if (change > 0) {
+    return (
+      <div className="flex items-center text-green-600 text-xs">
+        <TrendingUp className="h-3 w-3 mr-1" />
+        +{change}
+      </div>
+    );
+  } else {
+    return (
+      <div className="flex items-center text-red-600 text-xs">
+        <TrendingDown className="h-3 w-3 mr-1" />
+        {change}
+      </div>
+    );
+  }
 }
 
 export default function LeagueAnalysisPage() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const pathParts = location.split('/').filter(part => part);
-  const leagueId = pathParts[1]; // league-analysis/:leagueId/:leagueName/:managerId
+  const leagueId = pathParts[1];
   const leagueName = pathParts[2] ? decodeURIComponent(pathParts[2]) : 'League Analysis';
   const managerId = pathParts[3];
   
-  // Live standings state
   const [showLiveStandings, setShowLiveStandings] = useState(false);
+  const [sortField, setSortField] = useState<string>('rank');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   if (!leagueId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center py-8">
             <p className="text-muted-foreground">Missing league information</p>
             <Link href="/my-dashboard">
@@ -90,40 +133,309 @@ export default function LeagueAnalysisPage() {
     );
   }
 
+  const { data: bootstrapData } = useQuery<any>({
+    queryKey: ['/api/bootstrap-static'],
+  });
+
+  const currentGameweek = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 24;
+  const upcomingGameweek = bootstrapData?.events?.find((e: any) => e.is_next)?.id || currentGameweek + 1;
+
   const { data: leagueData, isLoading, error } = useQuery({
     queryKey: [`/api/leagues-classic/${leagueId}/standings`],
     enabled: !!leagueId
   });
 
-  const { data: leagueAnalysisData } = useQuery({
-    queryKey: [`/api/leagues/${leagueId}/analyze`],
-    enabled: !!leagueId
-  });
-
-  // Live standings query
   const { data: liveStandingsData, isLoading: isLoadingLive, refetch: refetchLive } = useQuery<LiveLeagueStandings>({
     queryKey: [`/api/leagues-classic/${leagueId}/live-standings`],
     enabled: !!leagueId && showLiveStandings,
-    refetchInterval: showLiveStandings ? 30000 : false, // Auto-refresh every 30 seconds when live view is active
+    refetchInterval: showLiveStandings ? 30000 : false,
     staleTime: 15000,
   });
 
-  // Get current gameweek for confirmed standings display
-  const { data: bootstrapData } = useQuery<any>({
-    queryKey: ['/api/bootstrap-static'],
+  const allEntries: LeagueEntry[] = (leagueData as any)?.standings?.results || [];
+  const topEntries = allEntries.length > 100 ? allEntries.slice(0, 100) : allEntries;
+
+  const managerIds = useMemo(() => topEntries.map(e => e.entry), [topEntries]);
+
+  const { data: historyDataResponse } = useQuery<{ managers: ManagerHistoryData[] }>({
+    queryKey: [`/api/leagues/${leagueId}/manager-histories`, managerIds.join(',')],
+    queryFn: async () => {
+      if (managerIds.length === 0) return { managers: [] };
+      const response = await fetch(`/api/managers/batch-history`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ managerIds: managerIds.slice(0, 50) })
+      });
+      if (!response.ok) return { managers: [] };
+      return response.json();
+    },
+    enabled: managerIds.length > 0 && !showLiveStandings,
+    staleTime: 5 * 60 * 1000,
   });
-  const currentGameweek = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 15;
+
+  const enrichedEntries: EnrichedLeagueEntry[] = useMemo(() => {
+    const historyMap = new Map<number, { current: GWHistory[]; chips: ChipUsage[] }>();
+    if (historyDataResponse?.managers) {
+      historyDataResponse.managers.forEach(m => {
+        if (m.historyData) {
+          historyMap.set(m.managerId, m.historyData);
+        }
+      });
+    }
+
+    return topEntries.map(entry => ({
+      ...entry,
+      historyData: historyMap.get(entry.entry),
+      rankChange: entry.last_rank && entry.last_rank > 0 ? entry.last_rank - entry.rank : 0
+    }));
+  }, [topEntries, historyDataResponse]);
+
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedEntries = useMemo(() => {
+    return [...enrichedEntries].sort((a, b) => {
+      const getValue = (entry: EnrichedLeagueEntry, field: string) => {
+        switch (field) {
+          case 'rank':
+            return entry.rank;
+          case 'total':
+            return entry.total || 0;
+          case 'event_total':
+            return entry.event_total || 0;
+          case 'freeTransfers':
+            if (!entry.historyData?.current) return 0;
+            return calculateFreeTransfers(entry.historyData.current, entry.historyData.chips, upcomingGameweek);
+          case 'player_name':
+            return entry.player_name;
+          default:
+            return 0;
+        }
+      };
+
+      const aVal = getValue(a, sortField);
+      const bVal = getValue(b, sortField);
+      
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return sortDirection === 'asc' 
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+      
+      return sortDirection === 'asc' 
+        ? (aVal as number) - (bVal as number)
+        : (bVal as number) - (aVal as number);
+    });
+  }, [enrichedEntries, sortField, sortDirection, upcomingGameweek]);
+
+  const getColumns = (): ResponsiveTableColumn<EnrichedLeagueEntry>[] => [
+    {
+      key: 'rank',
+      header: 'Rank',
+      priority: 'essential',
+      align: 'center',
+      mobileLabel: 'Rank',
+      cardOrder: 1,
+      sortable: true,
+      render: (value, entry) => {
+        const isCurrentManager = entry.entry.toString() === managerId;
+        return (
+          <div className="flex items-center justify-center gap-2">
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
+              entry.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
+              entry.rank === 2 ? 'bg-gray-100 text-gray-800' :
+              entry.rank === 3 ? 'bg-orange-100 text-orange-800' :
+              'bg-blue-100 text-blue-800'
+            }`}>
+              {entry.rank}
+            </div>
+            {isCurrentManager && <Badge className="bg-blue-600 text-xs">You</Badge>}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'player_name',
+      header: 'Manager',
+      priority: 'essential',
+      align: 'left',
+      mobileLabel: 'Manager',
+      cardOrder: 2,
+      sortable: true,
+      render: (value, entry) => (
+        <div>
+          <div className="font-medium flex items-center gap-2">
+            {entry.player_name}
+            {entry.rankChange !== 0 && getRankChangeDisplay(entry.rankChange)}
+          </div>
+          <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
+        </div>
+      )
+    },
+    {
+      key: 'total',
+      header: 'Total Points',
+      priority: 'important',
+      align: 'right',
+      mobileLabel: 'Points',
+      cardOrder: 3,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => entry.total?.toLocaleString() || 'N/A'
+    },
+    {
+      key: 'event_total',
+      header: `GW ${currentGameweek}`,
+      priority: 'secondary',
+      align: 'right',
+      mobileLabel: `GW ${currentGameweek}`,
+      cardOrder: 4,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => entry.event_total || 0
+    },
+    {
+      key: 'freeTransfers',
+      header: `FT (GW${upcomingGameweek})`,
+      priority: 'optional',
+      align: 'right',
+      mobileLabel: 'FT',
+      cardOrder: 5,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => {
+        if (!entry.historyData?.current) return 'N/A';
+        return calculateFreeTransfers(entry.historyData.current, entry.historyData.chips, upcomingGameweek);
+      }
+    }
+  ];
+
+  const getLiveColumns = (): ResponsiveTableColumn<LiveLeagueEntry>[] => [
+    {
+      key: 'live_rank',
+      header: 'Rank',
+      priority: 'essential',
+      align: 'center',
+      mobileLabel: 'Rank',
+      cardOrder: 1,
+      sortable: true,
+      render: (value, entry) => {
+        const isCurrentManager = entry.entry.toString() === managerId;
+        return (
+          <div className="flex items-center justify-center gap-2">
+            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
+              entry.live_rank === 1 ? 'bg-yellow-100 text-yellow-800' :
+              entry.live_rank === 2 ? 'bg-gray-100 text-gray-800' :
+              entry.live_rank === 3 ? 'bg-orange-100 text-orange-800' :
+              'bg-blue-100 text-blue-800'
+            }`}>
+              {entry.live_rank}
+            </div>
+            {isCurrentManager && <Badge className="bg-blue-600 text-xs">You</Badge>}
+          </div>
+        );
+      }
+    },
+    {
+      key: 'player_name',
+      header: 'Manager',
+      priority: 'essential',
+      align: 'left',
+      mobileLabel: 'Manager',
+      cardOrder: 2,
+      sortable: true,
+      render: (value, entry) => (
+        <div>
+          <div className="font-medium flex items-center gap-2">
+            {entry.player_name}
+            {entry.rank_change !== 0 && (
+              <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${
+                entry.rank_change > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
+              }`}>
+                {entry.rank_change > 0 ? (
+                  <>
+                    <ChevronUp className="h-3 w-3" />
+                    <span>{entry.rank_change}</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-3 w-3" />
+                    <span>{Math.abs(entry.rank_change)}</span>
+                  </>
+                )}
+              </div>
+            )}
+            {entry.active_chip && (
+              <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                {entry.active_chip}
+              </Badge>
+            )}
+          </div>
+          <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
+        </div>
+      )
+    },
+    {
+      key: 'live_total',
+      header: 'Total Points',
+      priority: 'important',
+      align: 'right',
+      mobileLabel: 'Total',
+      cardOrder: 3,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => entry.live_total?.toLocaleString() || 'N/A'
+    },
+    {
+      key: 'live_points',
+      header: `GW ${liveStandingsData?.current_gameweek || currentGameweek}`,
+      priority: 'important',
+      align: 'right',
+      mobileLabel: 'GW Pts',
+      cardOrder: 4,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => (
+        <div>
+          <span>{entry.live_points}</span>
+          {entry.auto_sub_points > 0 && (
+            <span className="text-orange-600 text-xs ml-1">(+{entry.auto_sub_points})</span>
+          )}
+          {entry.bonus_points > 0 && liveStandingsData?.has_provisional_bonus && (
+            <span className="text-green-600 text-xs ml-1">(+{entry.bonus_points})</span>
+          )}
+        </div>
+      )
+    },
+    {
+      key: 'players_played',
+      header: 'Played',
+      priority: 'secondary',
+      align: 'center',
+      mobileLabel: 'Played',
+      cardOrder: 5,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => `${entry.players_played}/11`
+    }
+  ];
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="space-y-4">
             <div className="animate-pulse space-y-3">
               <div className="h-4 bg-gray-200 rounded w-1/4"></div>
               <div className="h-4 bg-gray-200 rounded w-1/2"></div>
               <div className="space-y-2">
-                {[...Array(5)].map((_, i) => (
+                {[...Array(8)].map((_, i) => (
                   <div key={i} className="h-12 bg-gray-100 rounded"></div>
                 ))}
               </div>
@@ -137,7 +449,7 @@ export default function LeagueAnalysisPage() {
   if (error || !leagueData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center py-8">
             <p className="text-muted-foreground">Failed to load league data</p>
             <Link href="/my-dashboard">
@@ -152,43 +464,35 @@ export default function LeagueAnalysisPage() {
     );
   }
 
-  const currentManagerEntry = (leagueData as any).standings?.results?.find(
-    (entry: any) => entry.entry.toString() === managerId
-  );
-
-  // Show top 100 or all entries if less than 100
-  const allEntries = (leagueData as any).standings?.results || [];
-  const topEntries = allEntries.length > 100 ? allEntries.slice(0, 100) : allEntries;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 p-2 sm:p-4">
+      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Link href="/my-dashboard">
               <Button variant="outline" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Dashboard
+                Back
               </Button>
             </Link>
             <div>
-              <h1 className="fpl-heading-page flex items-center gap-2">
-                <Trophy className="h-6 w-6" />
+              <h1 className="fpl-heading-page flex items-center gap-2 text-lg sm:text-xl">
+                <Trophy className="h-5 w-5 sm:h-6 sm:w-6" />
                 {decodeURIComponent(leagueName)}
               </h1>
-              <p className="text-muted-foreground">League ID: {leagueId}</p>
+              <p className="text-muted-foreground text-sm">League ID: {leagueId}</p>
             </div>
           </div>
         </div>
 
         {/* League Standings */}
         <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">
-          <CardHeader>
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <CardTitle className="fpl-heading-card flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                {showLiveStandings ? 'Live Standings' : 'Current Standings (confirmed)'}
+              <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
+                <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5" />
+                {showLiveStandings ? 'Live Standings' : 'Current Standings'}
               </CardTitle>
               <div className="flex items-center gap-2">
                 {showLiveStandings && (
@@ -198,7 +502,6 @@ export default function LeagueAnalysisPage() {
                     onClick={() => refetchLive()}
                     disabled={isLoadingLive}
                     className="h-8"
-                    data-testid="btn-refresh-live"
                   >
                     <RefreshCw className={`h-4 w-4 ${isLoadingLive ? 'animate-spin' : ''}`} />
                   </Button>
@@ -208,14 +511,13 @@ export default function LeagueAnalysisPage() {
                   size="sm"
                   className={`h-8 ${showLiveStandings ? 'bg-green-600 hover:bg-green-700' : 'border-green-200 text-green-700 hover:bg-green-50'}`}
                   onClick={() => setShowLiveStandings(!showLiveStandings)}
-                  data-testid="btn-toggle-live"
                 >
                   <Activity className={`h-4 w-4 mr-1 ${showLiveStandings ? 'animate-pulse' : ''}`} />
                   {showLiveStandings ? 'Live On' : 'Live Points'}
                 </Button>
               </div>
             </div>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm">
               {showLiveStandings 
                 ? liveStandingsData 
                   ? `GW${liveStandingsData.current_gameweek} • Updated ${new Date(liveStandingsData.last_updated).toLocaleTimeString()}${liveStandingsData.is_gameweek_finished ? ' (GW Finished)' : ''}`
@@ -224,151 +526,54 @@ export default function LeagueAnalysisPage() {
               }
             </p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             {showLiveStandings ? (
-              // Live Standings View
               isLoadingLive ? (
-                <div className="space-y-2">
+                <div className="p-4 space-y-2">
                   {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
                     <Skeleton key={i} className="h-16 w-full" />
                   ))}
                 </div>
               ) : liveStandingsData ? (
-                <div className="space-y-2">
-                  {liveStandingsData.standings.results.map((entry, index) => {
-                    const isCurrentManager = entry.entry.toString() === managerId;
-                    return (
-                      <Link 
-                        key={entry.entry}
-                        href={`/manager-team/${entry.entry}`}
-                        className="block"
-                      >
-                        <div 
-                          className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-200 cursor-pointer ${
-                            isCurrentManager ? 'bg-blue-50 border-blue-200 shadow-md' : 'hover:bg-gray-50 hover:shadow-sm'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
-                              entry.live_rank === 1 ? 'bg-yellow-100 text-yellow-800' :
-                              entry.live_rank === 2 ? 'bg-gray-100 text-gray-800' :
-                              entry.live_rank === 3 ? 'bg-orange-100 text-orange-800' :
-                              'bg-blue-100 text-blue-800'
-                            }`}>
-                              {entry.live_rank}
-                            </div>
-                            <div>
-                              <div className="font-medium flex items-center gap-2">
-                                {entry.player_name}
-                                {entry.rank_change !== 0 && (
-                                  <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${
-                                    entry.rank_change > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
-                                  }`}>
-                                    {entry.rank_change > 0 ? (
-                                      <>
-                                        <ChevronUp className="h-3 w-3" />
-                                        <span>{entry.rank_change}</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <ChevronDown className="h-3 w-3" />
-                                        <span>{Math.abs(entry.rank_change)}</span>
-                                      </>
-                                    )}
-                                  </div>
-                                )}
-                                {isCurrentManager && <Badge className="bg-blue-600">You</Badge>}
-                                {entry.active_chip && (
-                                  <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                                    {entry.active_chip}
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold">{entry.live_total?.toLocaleString()} pts</p>
-                            <p className="text-sm text-muted-foreground">
-                              GW {liveStandingsData.current_gameweek}: {entry.live_points}pts
-                              {entry.auto_sub_points > 0 && (
-                                <span className="text-orange-600 ml-1">(+{entry.auto_sub_points} autosub)</span>
-                              )}
-                              {entry.bonus_points > 0 && liveStandingsData.has_provisional_bonus && (
-                                <span className="text-green-600 ml-1">(+{entry.bonus_points} prov. bonus)</span>
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  })}
-                </div>
+                <ResponsiveTable
+                  data={liveStandingsData.standings.results}
+                  columns={getLiveColumns()}
+                  enableMobileCards={true}
+                  mobileCardTitle={(entry) => entry.player_name}
+                  loading={false}
+                  emptyMessage="No standings data available"
+                  onRowClick={(entry) => {
+                    navigate(`/manager-team/${entry.entry}`);
+                  }}
+                  sortField="live_rank"
+                  sortDirection="asc"
+                  stickyHeader={true}
+                  enableHorizontalScroll={true}
+                  getRowTestId={(entry, index) => `row-live-${entry.entry}`}
+                />
               ) : (
                 <div className="text-center text-gray-500 py-8">
                   Failed to load live standings
                 </div>
               )
             ) : (
-              // Regular Standings View
-              <div className="space-y-2">
-                {topEntries.map((entry: any, index: number) => {
-                  const isCurrentManager = entry.entry.toString() === managerId;
-                  const rankChange = entry.last_rank && entry.last_rank > 0 ? entry.last_rank - entry.rank : 0;
-                  return (
-                    <Link 
-                      key={entry.entry}
-                      href={`/manager-team/${entry.entry}`}
-                      className="block"
-                    >
-                      <div 
-                        className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-200 cursor-pointer ${
-                          isCurrentManager ? 'bg-blue-50 border-blue-200 shadow-md' : 'hover:bg-gray-50 hover:shadow-sm'
-                        }`}
-                      >
-                      <div className="flex items-center gap-3">
-                        <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold ${
-                          index === 0 ? 'bg-yellow-100 text-yellow-800' :
-                          index === 1 ? 'bg-gray-100 text-gray-800' :
-                          index === 2 ? 'bg-orange-100 text-orange-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {entry.rank}
-                        </div>
-                        <div>
-                          <div className="font-medium flex items-center gap-2">
-                            {entry.player_name}
-                            {rankChange !== 0 && (
-                              <div className={`flex items-center gap-0.5 text-xs font-medium px-1.5 py-0.5 rounded ${
-                                rankChange > 0 ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'
-                              }`}>
-                                {rankChange > 0 ? (
-                                  <>
-                                    <ChevronUp className="h-3 w-3" />
-                                    <span>{rankChange}</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <ChevronDown className="h-3 w-3" />
-                                    <span>{Math.abs(rankChange)}</span>
-                                  </>
-                                )}
-                              </div>
-                            )}
-                            {isCurrentManager && <Badge className="bg-blue-600">You</Badge>}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{entry.entry_name}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{entry.total?.toLocaleString()} pts</p>
-                        <p className="text-sm text-muted-foreground">GW {currentGameweek}: {entry.event_total || 0} pts</p>
-                      </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
+              <ResponsiveTable
+                data={sortedEntries}
+                columns={getColumns()}
+                enableMobileCards={true}
+                mobileCardTitle={(entry) => entry.player_name}
+                loading={sortedEntries.length === 0}
+                emptyMessage="No standings data available"
+                onRowClick={(entry) => {
+                  navigate(`/manager-team/${entry.entry}`);
+                }}
+                onSort={handleSort}
+                sortField={sortField}
+                sortDirection={sortDirection}
+                stickyHeader={true}
+                enableHorizontalScroll={true}
+                getRowTestId={(entry, index) => `row-manager-${entry.entry}`}
+              />
             )}
           </CardContent>
         </Card>
