@@ -92,6 +92,14 @@ export default function TeamGoalProjections() {
   // Fetch past team xG history (after startGameweek/endGameweek defined)
   const { data: xgHistoryData, isLoading: xgHistoryLoading } = useQuery<TeamXgHistory>({
     queryKey: ["/api/team-xg-history", startGameweek, endGameweek],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (startGameweek) params.set('startGw', startGameweek);
+      if (endGameweek) params.set('endGw', endGameweek);
+      const response = await fetch(`/api/team-xg-history?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch team xG history");
+      return response.json();
+    },
     enabled: viewMode === "pastXg" && parseInt(startGameweek) > 0 && parseInt(endGameweek) > 0,
   });
 

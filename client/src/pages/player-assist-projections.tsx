@@ -101,6 +101,14 @@ export default function PlayerAssistProjections() {
   // Fetch past player xA (expected assists) history (after startGameweek/endGameweek are defined)
   const { data: xaHistoryData, isLoading: xaHistoryLoading } = useQuery<PlayerXaHistory>({
     queryKey: ["/api/player-xa-history", startGameweek, endGameweek],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (startGameweek) params.set('startGw', startGameweek.toString());
+      if (endGameweek) params.set('endGw', endGameweek.toString());
+      const response = await fetch(`/api/player-xa-history?${params}`);
+      if (!response.ok) throw new Error("Failed to fetch xA history");
+      return response.json();
+    },
     enabled: viewMode === "pastXa" && startGameweek > 0 && endGameweek > 0,
   });
 
