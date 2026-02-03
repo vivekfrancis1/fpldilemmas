@@ -340,22 +340,14 @@ export default function ProjectionAccuracy() {
           )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4 mb-4">
-              <TabsTrigger value="players" className="flex items-center gap-2 text-xs sm:text-sm">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="players" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
-                <span className="hidden sm:inline">GW</span> Players
+                Player Projections
               </TabsTrigger>
-              <TabsTrigger value="teams" className="flex items-center gap-2 text-xs sm:text-sm">
+              <TabsTrigger value="teams" className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
-                <span className="hidden sm:inline">GW</span> Teams
-              </TabsTrigger>
-              <TabsTrigger value="aggregate-players" className="flex items-center gap-2 text-xs sm:text-sm">
-                <Target className="h-4 w-4" />
-                Total Pts
-              </TabsTrigger>
-              <TabsTrigger value="aggregate-teams" className="flex items-center gap-2 text-xs sm:text-sm">
-                <Target className="h-4 w-4" />
-                Total Goals
+                Team Projections
               </TabsTrigger>
             </TabsList>
 
@@ -450,7 +442,7 @@ export default function ProjectionAccuracy() {
                       filteredPlayers.map((player) => {
                         const shortName = playerIdToWebName.get(player.player_id) || player.player_name.split(' ').pop() || player.player_name;
                         const teamShort = getTeamShortCode(player.team_name);
-                        const posShort = player.position?.substring(0, 3) || player.position;
+                        const posShort = (player.position?.substring(0, 3) || player.position)?.toUpperCase();
                         return (
                           <tr key={player.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="p-3">
@@ -628,7 +620,7 @@ export default function ProjectionAccuracy() {
                             <tr key={player.player_id} className="border-b border-gray-100 hover:bg-gray-50">
                               <td className="p-3 font-medium text-gray-900">{webName}</td>
                               <td className="text-center p-3 text-gray-600">{getTeamShortCode(player.team_name)}</td>
-                              <td className="text-center p-3 text-gray-600">{player.position?.substring(0, 3) || player.position}</td>
+                              <td className="text-center p-3 text-gray-600">{(player.position?.substring(0, 3) || player.position)?.toUpperCase()}</td>
                               <td className="text-center p-3 font-bold text-purple-600">
                                 {player.total_projected_points.toFixed(2)}
                               </td>
