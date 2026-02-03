@@ -97,6 +97,19 @@ interface EnrichedLeagueEntry extends LeagueEntry {
   rankChange: number;
 }
 
+interface EnrichedLiveEntry extends LiveLeagueEntry {
+  historyData?: {
+    current: GWHistory[];
+    chips: ChipUsage[];
+  };
+  managerData?: {
+    teamValue: number;
+    bank: number;
+    totalTransfers: number;
+  };
+  chipsAvailable: number;
+}
+
 function getRankChangeDisplay(change: number | undefined | null) {
   if (!change || change === 0) return null;
   if (change > 0) {
@@ -169,6 +182,7 @@ export default function LeagueAnalysisPage() {
 
   const managerIds = useMemo(() => topEntries.map(e => e.entry), [topEntries]);
 
+  // Always fetch batch data (needed for both regular and live views)
   const { data: batchDataResponse } = useQuery<{ managers: ManagerBatchData[] }>({
     queryKey: [`/api/leagues/${leagueId}/manager-batch-data`, managerIds.join(',')],
     queryFn: async () => {
@@ -181,20 +195,24 @@ export default function LeagueAnalysisPage() {
       if (!response.ok) return { managers: [] };
       return response.json();
     },
-    enabled: managerIds.length > 0 && !showLiveStandings,
+    enabled: managerIds.length > 0,
     staleTime: 5 * 60 * 1000,
   });
 
-  const enrichedEntries: EnrichedLeagueEntry[] = useMemo(() => {
-    const dataMap = new Map<number, ManagerBatchData>();
+  // Create a map from batch data for easy lookup
+  const batchDataMap = useMemo(() => {
+    const map = new Map<number, ManagerBatchData>();
     if (batchDataResponse?.managers) {
       batchDataResponse.managers.forEach(m => {
-        dataMap.set(m.managerId, m);
+        map.set(m.managerId, m);
       });
     }
+    return map;
+  }, [batchDataResponse]);
 
+  const enrichedEntries: EnrichedLeagueEntry[] = useMemo(() => {
     return topEntries.map(entry => {
-      const batchData = dataMap.get(entry.entry);
+      const batchData = batchDataMap.get(entry.entry);
       return {
         ...entry,
         historyData: batchData?.historyData || undefined,
@@ -203,7 +221,21 @@ export default function LeagueAnalysisPage() {
         rankChange: entry.last_rank && entry.last_rank > 0 ? entry.last_rank - entry.rank : 0
       };
     });
-  }, [topEntries, batchDataResponse]);
+  }, [topEntries, batchDataMap]);
+
+  // Enrich live entries with batch data
+  const enrichedLiveEntries: EnrichedLiveEntry[] = useMemo(() => {
+    if (!liveStandingsData?.standings?.results) return [];
+    return liveStandingsData.standings.results.map(entry => {
+      const batchData = batchDataMap.get(entry.entry);
+      return {
+        ...entry,
+        historyData: batchData?.historyData || undefined,
+        managerData: batchData?.managerData || undefined,
+        chipsAvailable: batchData?.chipsAvailable || 0
+      };
+    });
+  }, [liveStandingsData, batchDataMap]);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -381,7 +413,7 @@ export default function LeagueAnalysisPage() {
     }
   ];
 
-  const getLiveColumns = (): ResponsiveTableColumn<LiveLeagueEntry>[] => [
+  const getLiveColumns = (): ResponsiveTableColumn<EnrichedLiveEntry>[] => [
     {
       key: 'player_name',
       header: 'Manager',
@@ -458,7 +490,7 @@ export default function LeagueAnalysisPage() {
     {
       key: 'live_points',
       header: `GW ${liveStandingsData?.current_gameweek || currentGameweek}`,
-      priority: 'important',
+      priority: 'secondary',
       align: 'right',
       mobileLabel: 'GW Pts',
       cardOrder: 4,
@@ -477,15 +509,62 @@ export default function LeagueAnalysisPage() {
       )
     },
     {
-      key: 'players_played',
-      header: 'Played',
+      key: 'squadValue',
+      header: 'Squad Value',
       priority: 'secondary',
-      align: 'center',
-      mobileLabel: 'Played',
+      align: 'right',
+      mobileLabel: 'Squad',
       cardOrder: 5,
       sortable: true,
       className: 'font-mono',
-      render: (value, entry) => `${entry.players_played}/11`
+      render: (value, entry) => {
+        const teamValue = entry.managerData?.teamValue;
+        const bank = entry.managerData?.bank;
+        if (teamValue === undefined || teamValue === null) return 'N/A';
+        const bankValue = bank !== undefined && bank !== null ? bank : 0;
+        return `£${((teamValue - bankValue) / 10).toFixed(1)}m`;
+      }
+    },
+    {
+      key: 'bank',
+      header: 'Bank',
+      priority: 'optional',
+      align: 'right',
+      mobileLabel: 'Bank',
+      cardOrder: 6,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => {
+        const bank = entry.managerData?.bank;
+        return bank !== undefined && bank !== null 
+          ? `£${(bank / 10).toFixed(1)}m` 
+          : '£0.0m';
+      }
+    },
+    {
+      key: 'freeTransfers',
+      header: `FT (GW${upcomingGameweek})`,
+      priority: 'optional',
+      align: 'right',
+      mobileLabel: 'FT',
+      cardOrder: 7,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => {
+        if (!entry.historyData?.current) return 'N/A';
+        return calculateFreeTransfers(entry.historyData.current, entry.historyData.chips, upcomingGameweek);
+      }
+    },
+    {
+      key: 'chipsAvailable',
+      header: 'Chips Available',
+      priority: 'optional',
+      align: 'right',
+      mobileLabel: 'Chips',
+      cardOrder: 8,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => entry.chipsAvailable
     }
   ];
 
@@ -597,9 +676,9 @@ export default function LeagueAnalysisPage() {
                     <Skeleton key={i} className="h-16 w-full" />
                   ))}
                 </div>
-              ) : liveStandingsData ? (
+              ) : enrichedLiveEntries.length > 0 ? (
                 <ResponsiveTable
-                  data={liveStandingsData.standings.results}
+                  data={enrichedLiveEntries}
                   columns={getLiveColumns()}
                   enableMobileCards={true}
                   mobileCardTitle={(entry) => entry.player_name}
