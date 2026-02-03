@@ -1007,8 +1007,10 @@ export default function PlayerDefensiveContributions() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell font-mono px-1 py-2 text-xs">
-                      {viewMode === "past" ? Math.round(player.currentSeasonStats.dcPer90) : player.currentSeasonStats.dcPer90.toFixed(1)}
+                    <TableCell className="hidden md:table-cell text-center px-1 py-2 text-xs">
+                      <div className="p-1 md:p-2 rounded bg-blue-50 font-bold text-blue-800">
+                        {viewMode === "past" ? Math.round(player.currentSeasonStats.dcPer90) : player.currentSeasonStats.dcPer90.toFixed(2)}
+                      </div>
                     </TableCell>
                     {player.gameweekProjections
                       .filter(gw => activeGameweeks.includes(gw.gameweek))
