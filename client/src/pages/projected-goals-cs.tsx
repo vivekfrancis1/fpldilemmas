@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Target, TrendingUp, Filter, Calendar, Trophy, Clock, Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Target, TrendingUp, Filter, Calendar, Trophy, Clock, Loader2, ChevronDown, ChevronUp, History } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface MatchProjection {
@@ -39,14 +40,30 @@ export default function ProjectedGoalsCS() {
     queryKey: ["/api/bootstrap-static"],
   });
 
-  // Calculate dynamic gameweek defaults based on bootstrap data (default 6 weeks, max 12)
+  // View mode: "future" for projections, "past" for historical results
+  const [viewMode, setViewMode] = useState<"future" | "past">("future");
+
+  // Calculate last finished gameweek
+  const lastFinishedGW = useMemo(() => {
+    if (!bootstrapData?.events) return 24;
+    const finishedEvents = bootstrapData.events.filter((e: any) => e.finished);
+    return finishedEvents.length > 0 
+      ? Math.max(...finishedEvents.map((e: any) => e.id))
+      : 0;
+  }, [bootstrapData?.events]);
+
+  // Calculate dynamic gameweek defaults based on bootstrap data and view mode
   const defaultGameweekRange = useMemo(() => {
+    if (viewMode === "past") {
+      const startGW = Math.max(1, lastFinishedGW - 5);
+      return { startGameweek: String(startGW), endGameweek: String(lastFinishedGW) };
+    }
     if (!bootstrapData?.events) {
       return { startGameweek: "7", endGameweek: "12" }; // Fallback to likely next 6 gameweeks
     }
     debugGameweekCalculation(bootstrapData.events);
     return getDefaultGameweekRange(bootstrapData.events, 6); // Default to 6 gameweeks
-  }, [bootstrapData?.events]);
+  }, [bootstrapData?.events, viewMode, lastFinishedGW]);
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
@@ -54,22 +71,29 @@ export default function ProjectedGoalsCS() {
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
-  // Get available gameweeks for dropdown options (next 12 gameweeks available)
+  // Get available gameweeks for dropdown options based on view mode
   const availableGameweeks = useMemo(() => {
+    if (viewMode === "past") {
+      return Array.from({ length: lastFinishedGW }, (_, i) => i + 1);
+    }
     if (!bootstrapData?.events) {
       return Array.from({ length: 12 }, (_, i) => i + 7); // Fallback starting from GW7
     }
     return getNextGameweeksForDropdown(bootstrapData.events, 12); // Show 12 gameweeks in dropdown
-  }, [bootstrapData?.events]);
+  }, [bootstrapData?.events, viewMode, lastFinishedGW]);
 
-  // Update state when bootstrap data changes (e.g., on page load)
+  // Update state when bootstrap data or view mode changes
   useEffect(() => {
-    if (bootstrapData?.events) {
+    if (viewMode === "past" && lastFinishedGW > 0) {
+      const startGW = Math.max(1, lastFinishedGW - 5);
+      setStartGameweek(String(startGW));
+      setEndGameweek(String(lastFinishedGW));
+    } else if (viewMode === "future" && bootstrapData?.events) {
       const newRange = getDefaultGameweekRange(bootstrapData.events, 6); // Default to 6 gameweeks
       setStartGameweek(newRange.startGameweek);
       setEndGameweek(newRange.endGameweek);
     }
-  }, [bootstrapData?.events]);
+  }, [bootstrapData?.events, viewMode, lastFinishedGW]);
 
   // Fetch team goal projections with gameweek range
   const { data: teamGoalData, isLoading: goalsLoading } = useQuery<any[]>({
@@ -311,11 +335,34 @@ export default function ProjectedGoalsCS() {
         <div className="fpl-page-header-content">
           <div className="fpl-page-title">
             <Target className="h-8 w-8" />
-            <h1>Match Predictions</h1>
+            <h1>{viewMode === "future" ? "Match Predictions" : "Match Results"}</h1>
           </div>
           <p className="fpl-page-subtitle">
-            Projected goals and clean sheet odds for each match
+            {viewMode === "future" 
+              ? "Projected goals and clean sheet odds for upcoming matches"
+              : "Actual results and scores from past matches"}
           </p>
+          {/* Past/Future Toggle */}
+          <div className="flex gap-2 mt-3">
+            <Button
+              variant={viewMode === "past" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("past")}
+              className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+            >
+              <History className="h-4 w-4" />
+              Past GW Results
+            </Button>
+            <Button
+              variant={viewMode === "future" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("future")}
+              className={`flex items-center gap-1.5 ${viewMode === "future" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
+            >
+              <Calendar className="h-4 w-4" />
+              Future GW Predictions
+            </Button>
+          </div>
         </div>
       </div>
 
