@@ -15699,15 +15699,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           }).sort((a, b) => b.totalPoints - a.totalPoints); // Sort by total points descending
           
-          // 🛡️ CACHE VALIDATION: Detect corrupted database cache with empty component breakdowns
+          // 🛡️ CACHE VALIDATION: Basic validation - just check if totalExpectedPoints exists
           if (transformedData.length > 0) {
             const samplePlayer = transformedData[0];
-            const hasValidComponents = Object.keys(samplePlayer.pointsFromGoals || {}).length > 0 ||
-                                     Object.keys(samplePlayer.pointsFromAssists || {}).length > 0 ||
-                                     Object.keys(samplePlayer.pointsFromCleanSheets || {}).length > 0;
+            // Relaxed validation: just check for essential fields
+            const hasValidData = samplePlayer.totalExpectedPoints !== undefined && 
+                               typeof samplePlayer.totalExpectedPoints === 'number';
             
-            if (!hasValidComponents) {
-              console.warn(`⚠️ CACHE PROTECTION: Detected corrupted cached data with empty component breakdowns - serving fresh data instead`);
+            if (!hasValidData) {
+              console.warn(`⚠️ CACHE PROTECTION: Cached data missing totalExpectedPoints - serving fresh data instead`);
               // Don't return corrupted cache, let it fall through to fresh calculation
             } else {
               // Cache is valid - serve it

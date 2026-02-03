@@ -1098,6 +1098,9 @@ export default function PlayerTotalPoints() {
     enabled: viewMode === "past" && startGameweek !== null && endGameweek !== null,
   });
 
+  // Check if default range (for deciding whether to use cached or live endpoint)
+  const isDefaultRange = startGameweek === nextGameweek && endGameweek === maxAvailableGW;
+  
   const { data: liveTotalPointsData, isLoading: liveLoading, error: liveError, refetch: refetchLive } = useQuery<PlayerTotalPointsData[]>({
     queryKey: ["/api/player-total-points", startGameweek, endGameweek],
     queryFn: async () => {
@@ -1108,15 +1111,13 @@ export default function PlayerTotalPoints() {
       return response.json();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes for live data
-    enabled: startGameweek !== null && endGameweek !== null, // Only fetch when gameweek values are initialized
+    // Only fetch live data when: future mode AND custom range (not default range which uses cached data)
+    enabled: viewMode === "future" && startGameweek !== null && endGameweek !== null && !isDefaultRange,
   });
 
   // Data selection logic - Cache-first approach for faster loading
   const totalPointsData = useMemo(() => {
     let selectedData: PlayerTotalPointsData[] | null = null;
-    
-    // Check if user selected default range (next 12 GWs from current+1)
-    const isDefaultRange = startGameweek === nextGameweek && endGameweek === maxAvailableGW;
     
     // PRIORITY 1: Use cached data if available and user is viewing default range (fast path)
     if (isDefaultRange && cachedTotalPointsData && cachedTotalPointsData.length > 0) {
@@ -1157,7 +1158,7 @@ export default function PlayerTotalPoints() {
     }
     
     return selectedData;
-  }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek, bootstrapData, currentGameweek, nextGameweek, maxAvailableGW, applyAvailability]);
+  }, [liveTotalPointsData, liveError, cachedTotalPointsData, isDefaultRange, bootstrapData, currentGameweek, applyAvailability]);
 
   // Recalculate player data based on excluded point components
   const adjustedPlayerData = useMemo((): PlayerTotalPointsData[] | null => {
@@ -1239,7 +1240,6 @@ export default function PlayerTotalPoints() {
     const map = new Map<number, PlayerTotalPointsData>();
     
     // Get the raw selected data (same logic as totalPointsData but WITHOUT availability adjustments)
-    const isDefaultRange = startGameweek === nextGameweek && endGameweek === maxAvailableGW;
     let rawData: PlayerTotalPointsData[] | null = null;
     
     // PRIORITY 1: Use cached data if available and user is viewing default range
@@ -1268,7 +1268,7 @@ export default function PlayerTotalPoints() {
       });
     }
     return map;
-  }, [liveTotalPointsData, liveError, cachedTotalPointsData, startGameweek, endGameweek, nextGameweek, maxAvailableGW]);
+  }, [liveTotalPointsData, liveError, cachedTotalPointsData, isDefaultRange]);
 
   // Loading state - Cache-first loading logic: show loading for cache, then live API if needed
   const isLoading = useMemo(() => {
@@ -1276,8 +1276,6 @@ export default function PlayerTotalPoints() {
     if (viewMode === "past") {
       return historyLoading;
     }
-    
-    const isDefaultRange = startGameweek === nextGameweek && endGameweek === maxAvailableGW;
     
     // PRIORITY 1: For default range, show loading while cache loads
     if (isDefaultRange && cachedLoading) return true;
@@ -1289,7 +1287,7 @@ export default function PlayerTotalPoints() {
     if (!liveTotalPointsData && !cachedTotalPointsData && !liveError && !cachedError) return true;
     
     return false;
-  }, [viewMode, historyLoading, liveLoading, liveError, liveTotalPointsData, cachedLoading, cachedTotalPointsData, cachedError, startGameweek, endGameweek, nextGameweek, maxAvailableGW]);
+  }, [viewMode, historyLoading, liveLoading, liveError, liveTotalPointsData, cachedLoading, cachedTotalPointsData, cachedError, isDefaultRange]);
 
   // Error handling - API-first: prioritize live API errors, only show cached errors if live API succeeds
   const error = useMemo(() => {
