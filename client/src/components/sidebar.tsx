@@ -104,13 +104,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/transfer-tracker", label: "Transfer Tracker", icon: BarChart3, description: "Transfer analysis and ownership tracking", popular: false }
       ]
     },
-    {
-      section: "Analysis Tools", 
-      items: [
-        { path: "/projection-accuracy", label: "Projection Accuracy", icon: Target, description: "Compare projected vs actual results (GW25-38)", popular: false }
-      ]
-    },
-  ];
+    ];
 
   // Admin-only navigation items
   const adminNavItems = [
@@ -123,6 +117,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
     {
       section: "Admin Tools",
       items: [
+        { path: "/projection-accuracy", label: "Projection Accuracy", icon: Target, description: "Compare projected vs actual results", popular: false },
         { path: "/admin-content-creators", label: "Content Creator Admin", icon: UserCog, description: "Manage FPL content creators", popular: false },
         { path: "/admin-cache-management", label: "Cache Management", icon: Database, description: "Refresh projection caches", popular: false },
         { path: "/admin-goal-projections", label: "Goal Projections Admin", icon: Settings, description: "Configure goal projection settings", popular: false },

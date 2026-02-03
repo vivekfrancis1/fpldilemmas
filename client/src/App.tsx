@@ -147,7 +147,11 @@ function Router() {
       <Route path="/player-yellow-cards" component={PlayerYellowCards} />
       <Route path="/player-red-cards" component={PlayerRedCards} />
       <Route path="/player-bonus-points" component={PlayerBonusPoints} />
-      <Route path="/projection-accuracy" component={ProjectionAccuracy} />
+      <Route path="/projection-accuracy">
+        <ProtectedRoute requireAdmin={true}>
+          <ProjectionAccuracy />
+        </ProtectedRoute>
+      </Route>
       <Route path="/openfpl-projections" component={OpenFPLProjections} />
       <Route path="/admin-goal-projections" component={AdminGoalProjections} />
       <Route path="/admin-clean-sheet-config" component={AdminCleanSheetConfig} />
