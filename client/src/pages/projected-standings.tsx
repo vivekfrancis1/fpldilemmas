@@ -256,10 +256,7 @@ export default function ProjectedStandings() {
                                 />
                               ) : null;
                             })()}
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{team.name}</div>
-                              <div className="text-xs text-gray-500">{team.shortName}</div>
-                            </div>
+                            <span className="text-sm font-medium text-gray-900">{team.shortName}</span>
                           </div>
                         </td>
                         

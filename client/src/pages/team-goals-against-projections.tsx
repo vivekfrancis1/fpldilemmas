@@ -574,11 +574,7 @@ export default function TeamGoalsAgainstProjections() {
                                 />
                               ) : null;
                             })()}
-                            <div>
-                              <div className="text-xs md:text-sm font-medium text-gray-900 md:hidden">{team.teamShort}</div>
-                              <div className="text-xs md:text-sm font-medium text-gray-900 hidden md:block">{team.team}</div>
-                              <div className="text-[10px] text-gray-500 hidden md:block">{team.teamShort}</div>
-                            </div>
+                            <span className="text-xs md:text-sm font-medium text-gray-900">{team.teamShort}</span>
                           </div>
                         </td>
                         
