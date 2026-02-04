@@ -120,14 +120,17 @@ export default function BestFreehitTeam() {
     if (!allCachedData) return allCachedData;
     
     // Filter each player's gameweek projections to only the selected gameweek
+    // Handle both key formats: "25" (numeric) and "gw25" (prefixed)
     return allCachedData.map((player: any) => {
       const originalProjections = player.gameweekProjections || {};
-      const gwKey = selectedGameweek.toString();
-      const points = originalProjections[gwKey] || 0;
+      const numericKey = selectedGameweek.toString();
+      const prefixedKey = `gw${selectedGameweek}`;
+      // Try both key formats
+      const points = originalProjections[numericKey] ?? originalProjections[prefixedKey] ?? 0;
       
       return {
         ...player,
-        gameweekProjections: { [gwKey]: points },
+        gameweekProjections: { [numericKey]: points },
         totalExpectedPoints: points
       };
     });
