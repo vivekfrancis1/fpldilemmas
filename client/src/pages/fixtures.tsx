@@ -83,18 +83,21 @@ export default function Fixtures() {
 
   const { data: bootstrapData, isLoading, error } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
   const { data: fixturesData } = useQuery<Fixture[]>({
     queryKey: ["/api/fixtures"],
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
-  // Fetch form-based FDR ratings
+  // Fetch form-based FDR ratings - only when form mode is selected
   const { data: formBasedFDR } = useQuery<Record<number, { home: number; away: number }>>({
     queryKey: ["/api/form-based-fdr"],
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
     enabled: fdrMode === 'form',
   });
 
@@ -469,17 +472,33 @@ export default function Fixtures() {
     }
   }, [bootstrapData, fixtureMatrix, teamAverageFDR, sortBy, sortDirection, excludedTeams]);
 
+  if (isLoading) {
+    return (
+      <div className="fpl-page-container">
+        <div className="fpl-page-header">
+          <div className="fpl-page-title">
+            <Calendar className="h-6 w-6 sm:h-8 sm:w-8" />
+            <h1 className="text-lg sm:text-xl lg:text-2xl">Fixture Analyzer</h1>
+          </div>
+        </div>
+        <div className="flex justify-center py-8 sm:py-12">
+          <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-green-600"></div>
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-rose-50/30">
-        <div className="w-full max-w-7xl mx-auto px-1 sm:px-3 lg:px-4 py-2 sm:py-4 lg:py-8">
+        <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-2 sm:py-4 lg:py-8">
           <Card className="border-red-200 bg-red-50">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center">
-                <Calendar className="h-6 w-6 text-red-600 mr-3" />
+                <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-red-600 mr-2 sm:mr-3" />
                 <div>
-                  <h3 className="text-red-800 font-medium">Failed to load fixture data</h3>
-                  <p className="text-red-600 text-sm mt-1">Unable to connect to FPL API</p>
+                  <h3 className="text-red-800 font-medium text-sm sm:text-base">Failed to load fixture data</h3>
+                  <p className="text-red-600 text-xs sm:text-sm mt-1">Unable to connect to FPL API</p>
                 </div>
               </div>
             </CardContent>
@@ -494,11 +513,11 @@ export default function Fixtures() {
       {/* Page Header */}
       <div className="fpl-page-header">
         <div className="fpl-page-title">
-          <Calendar className="h-8 w-8" />
-          <h1>Fixture Analyzer</h1>
+          <Calendar className="h-6 w-6 sm:h-8 sm:w-8" />
+          <h1 className="text-lg sm:text-xl lg:text-2xl">Fixture Analyzer</h1>
         </div>
-        <p className="fpl-page-subtitle">
-          Analyze upcoming fixtures based on official FPL difficulty ratings, Season form or Custom ratings
+        <p className="fpl-page-subtitle text-xs sm:text-sm">
+          Analyze fixtures based on Official FPL ratings, Season Form or Custom ratings
         </p>
       </div>
 
@@ -814,26 +833,26 @@ export default function Fixtures() {
         </div>
 
         {/* Fixture Difficulty Analysis */}
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2 text-[10px] justify-center">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="flex flex-wrap gap-1.5 sm:gap-3 text-[9px] sm:text-xs justify-center">
             <div className="flex items-center gap-0.5">
-              <div className="w-2.5 h-2.5 bg-green-300 rounded"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-300 rounded"></div>
               <span>1</span>
             </div>
             <div className="flex items-center gap-0.5">
-              <div className="w-2.5 h-2.5 bg-green-100 border border-green-200 rounded"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-green-100 border border-green-200 rounded"></div>
               <span>2</span>
             </div>
             <div className="flex items-center gap-0.5">
-              <div className="w-2.5 h-2.5 bg-gray-100 border border-gray-300 rounded"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-gray-100 border border-gray-300 rounded"></div>
               <span>3</span>
             </div>
             <div className="flex items-center gap-0.5">
-              <div className="w-2.5 h-2.5 bg-red-100 border border-red-200 rounded"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-100 border border-red-200 rounded"></div>
               <span>4</span>
             </div>
             <div className="flex items-center gap-0.5">
-              <div className="w-2.5 h-2.5 bg-red-300 rounded"></div>
+              <div className="w-2 h-2 sm:w-3 sm:h-3 bg-red-300 rounded"></div>
               <span>5</span>
             </div>
           </div>
@@ -845,10 +864,10 @@ export default function Fixtures() {
           ) : (
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-[10px] md:text-xs border-collapse">
+                <table className="w-full text-[9px] sm:text-[10px] md:text-xs lg:text-sm border-collapse">
                   <thead>
                     <tr className="border-b bg-gray-50">
-                      <th className="sticky left-0 bg-gray-50 px-1 md:px-2 py-1 text-left font-semibold min-w-[60px] md:min-w-[80px] z-20">
+                      <th className="sticky left-0 bg-gray-50 px-1 sm:px-2 py-1 text-left font-semibold min-w-[50px] sm:min-w-[65px] md:min-w-[80px] lg:min-w-[100px] z-20">
                         <button
                           onClick={() => handleSort('team')}
                           className="flex items-center gap-0.5 hover:text-blue-600 transition-colors"
@@ -856,11 +875,11 @@ export default function Fixtures() {
                         >
                           Team
                           {sortBy === 'team' && (
-                            sortDirection === 'asc' ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />
+                            sortDirection === 'asc' ? <ArrowUp className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> : <ArrowDown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                           )}
                         </button>
                       </th>
-                      <th className="sticky left-[60px] md:left-[80px] bg-gray-50 px-1 py-1 text-center font-semibold min-w-[36px] md:min-w-[50px] border-l z-20">
+                      <th className="sticky left-[50px] sm:left-[65px] md:left-[80px] lg:left-[100px] bg-gray-50 px-0.5 sm:px-1 py-1 text-center font-semibold min-w-[28px] sm:min-w-[36px] md:min-w-[45px] lg:min-w-[55px] border-l z-20">
                         <button
                           onClick={() => handleSort('fdr-avg')}
                           className="flex items-center gap-0.5 hover:text-blue-600 transition-colors mx-auto"
@@ -868,12 +887,12 @@ export default function Fixtures() {
                         >
                           Avg
                           {sortBy === 'fdr-avg' && (
-                            sortDirection === 'asc' ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />
+                            sortDirection === 'asc' ? <ArrowUp className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> : <ArrowDown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                           )}
                         </button>
                       </th>
                       {gameweeks.map(gw => (
-                        <th key={gw} className={`px-0.5 md:px-1 py-1 text-center font-semibold min-w-[36px] md:min-w-[50px] ${
+                        <th key={gw} className={`px-0.5 py-1 text-center font-semibold min-w-[32px] sm:min-w-[40px] md:min-w-[50px] lg:min-w-[60px] ${
                           gw === nextGameweek ? 'bg-blue-100 text-blue-900' : ''
                         }`}>
                           <button
@@ -892,21 +911,21 @@ export default function Fixtures() {
                       const avgFDR = teamAverageFDR[team.id];
                       return (
                         <tr key={team.id} className="border-b hover:bg-gray-50">
-                          <td className="sticky left-0 bg-white px-1 md:px-2 py-1 font-medium text-gray-900 border-r z-10">
-                            <div className="flex items-center gap-1">
+                          <td className="sticky left-0 bg-white px-1 sm:px-2 py-0.5 sm:py-1 font-medium text-gray-900 border-r z-10">
+                            <div className="flex items-center gap-0.5 sm:gap-1">
                               <img 
                                 src={team.code === 14 
                                   ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
                                   : `https://resources.premierleague.com/premierleague/badges/t${team.code}.png`}
                                 alt={`${team.name} badge`}
-                                className="w-4 h-4 object-contain"
+                                className="w-3 h-3 sm:w-4 sm:h-4 object-contain"
                                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
                               />
                               <span className="font-semibold">{team.short_name}</span>
                             </div>
                           </td>
-                          <td className="sticky left-[60px] md:left-[80px] bg-white px-0.5 py-1 text-center font-medium border-l border-r z-10">
-                            <div className={`inline-block px-1 py-0.5 rounded text-[10px] font-semibold ${
+                          <td className="sticky left-[50px] sm:left-[65px] md:left-[80px] lg:left-[100px] bg-white px-0.5 py-0.5 sm:py-1 text-center font-medium border-l border-r z-10">
+                            <div className={`inline-block px-0.5 sm:px-1 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold ${
                               avgFDR <= 2 ? 'bg-green-100 text-green-800' :
                               avgFDR <= 3 ? 'bg-yellow-100 text-yellow-800' :
                               avgFDR <= 4 ? 'bg-orange-100 text-orange-800' :
@@ -923,7 +942,7 @@ export default function Fixtures() {
                               }`}>
                                 {fixture ? (
                                   <div 
-                                    className={`px-0.5 py-0.5 rounded text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
+                                    className={`px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
                                       fixture.finished ? 'opacity-50' : ''
                                     }`}
                                     title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} (FDR: ${fixture.difficulty})`}
@@ -934,7 +953,7 @@ export default function Fixtures() {
                                     </span>
                                   </div>
                                 ) : (
-                                  <div className="px-1 py-0.5 text-gray-300">-</div>
+                                  <div className="px-0.5 py-0.5 text-gray-300">-</div>
                                 )}
                               </td>
                             );
