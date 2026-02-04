@@ -898,7 +898,7 @@ export default function PlayerGoalsScoredProjections() {
                     </th>
                     <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-blue-50 font-semibold cursor-pointer hover:bg-blue-100 transition-colors min-w-[50px] md:min-w-[70px]">
                       <div className="flex items-center justify-center gap-1" onClick={() => handleSort("totalPoints")}>
-                        Pts
+                        {viewMode === "pastXg" ? "xPts" : "Pts"}
                         {sortBy === "totalPoints" && (
                           sortDirection === 'desc' ? <ArrowDown className="h-3 w-3" /> : <ArrowUp className="h-3 w-3" />
                         )}
