@@ -519,11 +519,11 @@ export default function Fixtures() {
           </div>
           {filtersExpanded && (
           <div className="fpl-card-content">
-            <div className="flex flex-col gap-4">
-              {/* FDR Mode Selector */}
-              <div className="flex flex-col items-center gap-2">
-                <Label className="text-xs font-semibold text-gray-700">FDR Mode</Label>
-                <RadioGroup value={fdrMode} onValueChange={(value: 'official' | 'form' | 'custom') => setFdrMode(value)} className="flex gap-3 justify-center">
+            <div className="flex flex-col gap-3">
+              {/* Section 1: FDR Mode */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <Label className="text-xs font-semibold text-gray-700 block mb-2">FDR Mode</Label>
+                <RadioGroup value={fdrMode} onValueChange={(value: 'official' | 'form' | 'custom') => setFdrMode(value)} className="flex flex-wrap gap-2 justify-center">
                   <div className="flex items-center space-x-1">
                     <RadioGroupItem value="official" id="fdr-official" data-testid="radio-fdr-official" />
                     <Label htmlFor="fdr-official" className="text-xs cursor-pointer">Official ratings</Label>
@@ -537,239 +537,232 @@ export default function Fixtures() {
                     <Label htmlFor="fdr-custom" className="text-xs cursor-pointer">Custom</Label>
                   </div>
                 </RadioGroup>
-              </div>
-
-              {/* Gameweek Range and Customize Button */}
-              <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
-                <div className="flex items-center gap-1">
-                  <label className="text-xs font-medium text-gray-700">GW:</label>
-                  <select 
-                    value={gameweekRange?.start || ''} 
-                    onChange={(e) => handleGameweekRangeChange(parseInt(e.target.value), gameweekRange?.end || 38)}
-                    className="px-2 py-1 border border-gray-300 rounded text-xs"
-                    data-testid="select-start-gameweek"
-                  >
-                    {availableGameweeks.map(gw => (
-                      <option key={gw} value={gw}>{gw}</option>
-                    ))}
-                  </select>
-                  <span className="text-gray-500 text-xs">to</span>
-                  <select 
-                    value={gameweekRange?.end || ''} 
-                    onChange={(e) => handleGameweekRangeChange(gameweekRange?.start || 1, parseInt(e.target.value))}
-                    className="px-2 py-1 border border-gray-300 rounded text-xs"
-                    data-testid="select-end-gameweek"
-                  >
-                    {availableGameweeks.filter(gw => gw >= (gameweekRange?.start || 1)).map(gw => (
-                      <option key={gw} value={gw}>{gw}</option>
-                    ))}
-                  </select>
-                </div>
-
                 {fdrMode === 'custom' && (
-                <div className="flex items-center gap-2">
-                <Dialog open={customFDROpen} onOpenChange={setCustomFDROpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      className="flex items-center gap-2"
-                      data-testid="button-customize-fdr"
-                    >
-                      <Settings className="h-4 w-4" />
-                      Customize FDR
-                    </Button>
-                  </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Customize Fixture Difficulty Ratings</DialogTitle>
-                    <DialogDescription>
-                      Set custom FDR values (1-5) for each opponent. (H) = when YOU play at home vs them. (A) = when YOU play away vs them.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 mt-4">
-                    <div className="flex flex-wrap gap-3 text-xs justify-center bg-gray-50 p-3 rounded-lg border">
-                      <div className="flex items-center gap-1">
-                        <div className="w-4 h-4 bg-green-300 rounded"></div>
-                        <span className="font-medium">1 - Very Easy</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
-                        <span className="font-medium">2 - Easy</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
-                        <span className="font-medium">3 - Medium</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
-                        <span className="font-medium">4 - Hard</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <div className="w-4 h-4 bg-red-300 rounded"></div>
-                        <span className="font-medium">5 - Very Hard</span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {bootstrapData?.teams.map(team => {
-                        const teamDefaultFDR = defaultFDR[team.id] || { home: 3, away: 3 };
-                        const hasCustom = !!customFDR[team.id];
-                        
-                        return (
-                          <div key={team.id} className={`border rounded-lg p-3 space-y-2 ${hasCustom ? 'border-blue-300 bg-blue-50/30' : ''}`}>
-                            <div className="flex items-center justify-between">
-                              <div className="font-semibold text-sm">{team.name}</div>
-                              {hasCustom && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => resetTeamFDR(team.id)}
-                                  className="h-6 px-2 text-xs"
-                                  data-testid={`button-reset-team-${team.id}`}
-                                >
-                                  <RotateCcw className="h-3 w-3 mr-1" />
-                                  Reset
-                                </Button>
-                              )}
+                  <div className="flex items-center gap-2 justify-center mt-2">
+                    <Dialog open={customFDROpen} onOpenChange={setCustomFDROpen}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="flex items-center gap-1 text-xs"
+                          data-testid="button-customize-fdr"
+                        >
+                          <Settings className="h-3 w-3" />
+                          Customize
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>Customize Fixture Difficulty Ratings</DialogTitle>
+                          <DialogDescription>
+                            Set custom FDR values (1-5) for each opponent. (H) = when YOU play at home vs them. (A) = when YOU play away vs them.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 mt-4">
+                          <div className="flex flex-wrap gap-3 text-xs justify-center bg-gray-50 p-3 rounded-lg border">
+                            <div className="flex items-center gap-1">
+                              <div className="w-4 h-4 bg-green-300 rounded"></div>
+                              <span className="font-medium">1 - Very Easy</span>
                             </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <Label htmlFor={`home-${team.id}`} className="text-xs text-gray-600">
-                                  {team.short_name} (H) <span className="text-gray-400">(Default: {teamDefaultFDR.home})</span>
-                                </Label>
-                                <Input
-                                  id={`home-${team.id}`}
-                                  type="number"
-                                  min="1"
-                                  max="5"
-                                  value={customFDR[team.id]?.home ?? ''}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    if (val >= 1 && val <= 5) {
-                                      updateCustomFDR(team.id, 'home', val);
-                                    }
-                                  }}
-                                  placeholder={teamDefaultFDR.home.toString()}
-                                  className={`h-8 ${customFDR[team.id]?.home ? 'border-blue-400 bg-blue-50' : ''}`}
-                                  data-testid={`input-fdr-home-${team.id}`}
-                                />
-                              </div>
-                              <div>
-                                <Label htmlFor={`away-${team.id}`} className="text-xs text-gray-600">
-                                  {team.short_name} (A) <span className="text-gray-400">(Default: {teamDefaultFDR.away})</span>
-                                </Label>
-                                <Input
-                                  id={`away-${team.id}`}
-                                  type="number"
-                                  min="1"
-                                  max="5"
-                                  value={customFDR[team.id]?.away ?? ''}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    if (val >= 1 && val <= 5) {
-                                      updateCustomFDR(team.id, 'away', val);
-                                    }
-                                  }}
-                                  placeholder={teamDefaultFDR.away.toString()}
-                                  className={`h-8 ${customFDR[team.id]?.away ? 'border-blue-400 bg-blue-50' : ''}`}
-                                  data-testid={`input-fdr-away-${team.id}`}
-                                />
-                              </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+                              <span className="font-medium">2 - Easy</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-4 h-4 bg-gray-100 border border-gray-300 rounded"></div>
+                              <span className="font-medium">3 - Medium</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+                              <span className="font-medium">4 - Hard</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <div className="w-4 h-4 bg-red-300 rounded"></div>
+                              <span className="font-medium">5 - Very Hard</span>
                             </div>
                           </div>
-                        );
-                      })}
-                    </div>
-                    <div className="flex justify-between pt-4 border-t">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {bootstrapData?.teams.map(team => {
+                              const teamDefaultFDR = defaultFDR[team.id] || { home: 3, away: 3 };
+                              const hasCustom = !!customFDR[team.id];
+                              
+                              return (
+                                <div key={team.id} className={`border rounded-lg p-3 space-y-2 ${hasCustom ? 'border-blue-300 bg-blue-50/30' : ''}`}>
+                                  <div className="flex items-center justify-between">
+                                    <div className="font-semibold text-sm">{team.name}</div>
+                                    {hasCustom && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => resetTeamFDR(team.id)}
+                                        className="h-6 px-2 text-xs"
+                                        data-testid={`button-reset-team-${team.id}`}
+                                      >
+                                        <RotateCcw className="h-3 w-3 mr-1" />
+                                        Reset
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                      <Label htmlFor={`home-${team.id}`} className="text-xs text-gray-600">
+                                        {team.short_name} (H) <span className="text-gray-400">(Default: {teamDefaultFDR.home})</span>
+                                      </Label>
+                                      <Input
+                                        id={`home-${team.id}`}
+                                        type="number"
+                                        min="1"
+                                        max="5"
+                                        value={customFDR[team.id]?.home ?? ''}
+                                        onChange={(e) => {
+                                          const val = parseInt(e.target.value);
+                                          if (val >= 1 && val <= 5) {
+                                            updateCustomFDR(team.id, 'home', val);
+                                          }
+                                        }}
+                                        placeholder={teamDefaultFDR.home.toString()}
+                                        className={`h-8 ${customFDR[team.id]?.home ? 'border-blue-400 bg-blue-50' : ''}`}
+                                        data-testid={`input-fdr-home-${team.id}`}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor={`away-${team.id}`} className="text-xs text-gray-600">
+                                        {team.short_name} (A) <span className="text-gray-400">(Default: {teamDefaultFDR.away})</span>
+                                      </Label>
+                                      <Input
+                                        id={`away-${team.id}`}
+                                        type="number"
+                                        min="1"
+                                        max="5"
+                                        value={customFDR[team.id]?.away ?? ''}
+                                        onChange={(e) => {
+                                          const val = parseInt(e.target.value);
+                                          if (val >= 1 && val <= 5) {
+                                            updateCustomFDR(team.id, 'away', val);
+                                          }
+                                        }}
+                                        placeholder={teamDefaultFDR.away.toString()}
+                                        className={`h-8 ${customFDR[team.id]?.away ? 'border-blue-400 bg-blue-50' : ''}`}
+                                        data-testid={`input-fdr-away-${team.id}`}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div className="flex justify-between pt-4 border-t">
+                            <Button 
+                              variant="outline" 
+                              onClick={resetCustomFDR}
+                              data-testid="button-reset-fdr"
+                            >
+                              Reset to Default
+                            </Button>
+                            <Button 
+                              onClick={() => setCustomFDROpen(false)}
+                              data-testid="button-close-fdr"
+                            >
+                              Done
+                            </Button>
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    {Object.keys(customFDR).length > 0 && (
                       <Button 
                         variant="outline" 
+                        size="sm"
                         onClick={resetCustomFDR}
-                        data-testid="button-reset-fdr"
+                        className="flex items-center gap-1 text-xs"
+                        data-testid="button-reset-fdr-main"
                       >
-                        Reset to Default
+                        <RotateCcw className="h-3 w-3" />
+                        Reset
                       </Button>
-                      <Button 
-                        onClick={() => setCustomFDROpen(false)}
-                        data-testid="button-close-fdr"
-                      >
-                        Done
-                      </Button>
-                    </div>
+                    )}
                   </div>
-                </DialogContent>
-                </Dialog>
-                
-                {Object.keys(customFDR).length > 0 && (
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={resetCustomFDR}
-                    className="flex items-center gap-2"
-                    data-testid="button-reset-fdr-main"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    Reset to Default FDR
-                  </Button>
-                )}
-                </div>
                 )}
               </div>
 
-              {/* Gameweek Toggle Section */}
-              <div className="mt-3 pt-3 border-t">
-                <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
-                  <label className="text-xs font-medium text-gray-700">
-                    Toggle GWs:
-                  </label>
-                  {excludedGameweeks.size > 0 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={clearGameweekExclusions}
-                      className="text-[10px] text-gray-500 hover:text-gray-700 px-1 py-0.5 h-auto"
-                      data-testid="button-clear-gw-exclusions"
+              {/* Section 2: Gameweek Selection */}
+              <div className="bg-blue-50 rounded-lg p-3">
+                <Label className="text-xs font-semibold text-gray-700 block mb-2">Gameweek Selection</Label>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-1 justify-center">
+                    <label className="text-xs font-medium text-gray-700">Range:</label>
+                    <select 
+                      value={gameweekRange?.start || ''} 
+                      onChange={(e) => handleGameweekRangeChange(parseInt(e.target.value), gameweekRange?.end || 38)}
+                      className="px-2 py-1 border border-gray-300 rounded text-xs"
+                      data-testid="select-start-gameweek"
                     >
-                      <X className="h-3 w-3 mr-0.5" />
-                      Clear
-                    </Button>
+                      {availableGameweeks.map(gw => (
+                        <option key={gw} value={gw}>{gw}</option>
+                      ))}
+                    </select>
+                    <span className="text-gray-500 text-xs">to</span>
+                    <select 
+                      value={gameweekRange?.end || ''} 
+                      onChange={(e) => handleGameweekRangeChange(gameweekRange?.start || 1, parseInt(e.target.value))}
+                      className="px-2 py-1 border border-gray-300 rounded text-xs"
+                      data-testid="select-end-gameweek"
+                    >
+                      {availableGameweeks.filter(gw => gw >= (gameweekRange?.start || 1)).map(gw => (
+                        <option key={gw} value={gw}>{gw}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-1">
+                    <label className="text-xs font-medium text-gray-700">Toggle:</label>
+                    {excludedGameweeks.size > 0 && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={clearGameweekExclusions}
+                        className="text-[10px] text-gray-500 hover:text-gray-700 px-1 py-0.5 h-auto"
+                        data-testid="button-clear-gw-exclusions"
+                      >
+                        <X className="h-3 w-3 mr-0.5" />
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1 justify-center">
+                    {allGameweeksInRange.map((gw) => {
+                      const isExcluded = excludedGameweeks.has(gw);
+                      return (
+                        <Button
+                          key={gw}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleGameweekExclusion(gw)}
+                          className={`min-w-[32px] text-[10px] px-1.5 py-0.5 h-6 ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'}`}
+                          data-testid={`button-toggle-gw-${gw}`}
+                        >
+                          {gw}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                  {excludedGameweeks.size > 0 && (
+                    <p className="text-[10px] text-gray-500 text-center">
+                      Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
+                    </p>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-1 justify-center">
-                  {allGameweeksInRange.map((gw) => {
-                    const isExcluded = excludedGameweeks.has(gw);
-                    return (
-                      <Button
-                        key={gw}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleGameweekExclusion(gw)}
-                        className={`min-w-[32px] text-[10px] px-1.5 py-0.5 h-6 ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'}`}
-                        data-testid={`button-toggle-gw-${gw}`}
-                      >
-                        {gw}
-                      </Button>
-                    );
-                  })}
-                </div>
-                {excludedGameweeks.size > 0 && (
-                  <p className="text-xs text-gray-500 mt-2 text-center">
-                    Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
-                  </p>
-                )}
               </div>
 
-              {/* Team Toggle Section */}
-              <div className="mt-3 pt-3 border-t">
+              {/* Section 3: Team Selection */}
+              <div className="bg-green-50 rounded-lg p-3">
                 <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
-                  <label className="text-xs font-medium text-gray-700">
-                    Toggle Teams:
-                  </label>
+                  <Label className="text-xs font-semibold text-gray-700">Team Selection</Label>
                   <div className="flex gap-1">
                     <Button 
                       variant="outline" 
                       size="sm" 
                       onClick={clearTeamExclusions}
-                      className="text-[10px] bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-1.5 py-0.5 h-auto"
+                      className="text-[10px] bg-green-100 text-green-700 hover:bg-green-200 border-green-300 px-1.5 py-0.5 h-auto"
                       data-testid="button-include-all-teams"
                     >
                       All
@@ -778,7 +771,7 @@ export default function Fixtures() {
                       variant="outline" 
                       size="sm" 
                       onClick={excludeAllTeams}
-                      className="text-[10px] bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-1.5 py-0.5 h-auto"
+                      className="text-[10px] bg-red-100 text-red-700 hover:bg-red-200 border-red-300 px-1.5 py-0.5 h-auto"
                       data-testid="button-exclude-all-teams"
                     >
                       None
@@ -806,7 +799,7 @@ export default function Fixtures() {
                     })}
                 </div>
                 {excludedTeams.size > 0 && (
-                  <p className="text-xs text-gray-500 mt-2 text-center">
+                  <p className="text-[10px] text-gray-500 mt-2 text-center">
                     Excluded: {Array.from(excludedTeams)
                       .map(id => bootstrapData?.teams.find(t => t.id === id)?.short_name || '')
                       .filter(Boolean)
