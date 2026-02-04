@@ -40,6 +40,8 @@ interface LiveLeagueEntry {
   captain_points: number;
   bench_points: number;
   active_chip: string | null;
+  projected_points: number;
+  projected_bench_points: number;
 }
 
 interface LiveLeagueStandings {

@@ -2615,6 +2615,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playerTeams.set(player.id, player.team);
       }
       
+      // Fetch projected points for players (for GW projected points calculation)
+      let playerProjectionsMap = new Map<number, number>();
+      try {
+        const projectionsResponse = await internalFetch('/api/cached/player-total-points');
+        if (projectionsResponse && projectionsResponse.ok) {
+          const projectionsData = await projectionsResponse.json();
+          for (const player of projectionsData) {
+            // Get projection for current gameweek
+            const gwKey = `gw${currentGameweek}`;
+            const projectedPoints = player.gameweekProjections?.[gwKey]?.points || 0;
+            playerProjectionsMap.set(player.playerId, projectedPoints);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch player projections for league standings:", err);
+      }
+      
       // Fetch league standings
       const standingsResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_new_entries=1&page_standings=1&phase=1`);
       if (!standingsResponse || !standingsResponse.ok) {
@@ -2768,6 +2785,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
               livePoints += benchPoints;
             }
             
+            // Calculate projected points for this manager's team
+            let projectedPoints = 0;
+            let projectedBenchPoints = 0;
+            
+            // Process starting 11 projected points
+            for (const pick of starting11) {
+              const playerProjected = playerProjectionsMap.get(pick.element) || 0;
+              const multiplier = pick.multiplier || 1; // Captain = 2, Triple Captain = 3
+              projectedPoints += playerProjected * multiplier;
+            }
+            
+            // Process bench projected points
+            for (const pick of bench) {
+              const playerProjected = playerProjectionsMap.get(pick.element) || 0;
+              projectedBenchPoints += playerProjected;
+            }
+            
+            // If bench boost is active, add bench projected points
+            if (activeChip === 'bboost') {
+              projectedPoints += projectedBenchPoints;
+            }
+            
             return {
               ...entry,
               live_points: livePoints + autoSubPoints,
@@ -2777,7 +2816,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               players_played: playersPlayed,
               captain_points: captainPoints,
               bench_points: benchPoints,
-              active_chip: activeChip
+              active_chip: activeChip,
+              projected_points: Math.round(projectedPoints * 10) / 10,
+              projected_bench_points: Math.round(projectedBenchPoints * 10) / 10
             };
           } catch (error) {
             console.warn(`Failed to get live data for manager ${entry.entry}:`, error);
@@ -2790,7 +2831,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               players_played: 0,
               captain_points: 0,
               bench_points: 0,
-              active_chip: null
+              active_chip: null,
+              projected_points: 0,
+              projected_bench_points: 0
             };
           }
         })
