@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, ArrowUpDown, ArrowUp, ArrowDown, Settings, RotateCcw, X } from "lucide-react";
+import { Calendar, ArrowUpDown, ArrowUp, ArrowDown, Settings, RotateCcw, X, ChevronDown, ChevronUp } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,7 @@ export default function Fixtures() {
   const [sortBy, setSortBy] = useState<'team' | 'fdr-avg' | string>('fdr-avg');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [customFDROpen, setCustomFDROpen] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [fdrMode, setFdrMode] = useState<'official' | 'form' | 'custom'>('official');
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [excludedTeams, setExcludedTeams] = useState<Set<number>>(new Set());
@@ -504,29 +505,36 @@ export default function Fixtures() {
       <div className="fpl-section-spacing">
         {/* Controls */}
         <div className="fpl-filters">
-          <div className="fpl-card-header">
-            <div className="fpl-card-title">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              Fixture Controls
+          <div 
+            className="fpl-card-header cursor-pointer hover:bg-gray-50 transition-colors"
+            onClick={() => setFiltersExpanded(!filtersExpanded)}
+          >
+            <div className="fpl-card-title flex items-center justify-between w-full">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-blue-600" />
+                Fixture Controls
+              </div>
+              {filtersExpanded ? <ChevronUp className="h-5 w-5 text-gray-500" /> : <ChevronDown className="h-5 w-5 text-gray-500" />}
             </div>
           </div>
+          {filtersExpanded && (
           <div className="fpl-card-content">
             <div className="flex flex-col gap-4">
               {/* FDR Mode Selector */}
               <div className="flex flex-col items-center gap-2">
-                <Label className="text-sm font-semibold text-gray-700">FDR Calculation Mode</Label>
-                <RadioGroup value={fdrMode} onValueChange={(value: 'official' | 'form' | 'custom') => setFdrMode(value)} className="flex flex-wrap gap-4 justify-center">
-                  <div className="flex items-center space-x-2">
+                <Label className="text-xs font-semibold text-gray-700">FDR Mode</Label>
+                <RadioGroup value={fdrMode} onValueChange={(value: 'official' | 'form' | 'custom') => setFdrMode(value)} className="flex gap-3 justify-center">
+                  <div className="flex items-center space-x-1">
                     <RadioGroupItem value="official" id="fdr-official" data-testid="radio-fdr-official" />
-                    <Label htmlFor="fdr-official" className="text-sm cursor-pointer">Official FPL Ratings</Label>
+                    <Label htmlFor="fdr-official" className="text-xs cursor-pointer">Official</Label>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1">
                     <RadioGroupItem value="form" id="fdr-form" data-testid="radio-fdr-form" />
-                    <Label htmlFor="fdr-form" className="text-sm cursor-pointer">Current Season Form</Label>
+                    <Label htmlFor="fdr-form" className="text-xs cursor-pointer">Form</Label>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-1">
                     <RadioGroupItem value="custom" id="fdr-custom" data-testid="radio-fdr-custom" />
-                    <Label htmlFor="fdr-custom" className="text-sm cursor-pointer">Custom FDR</Label>
+                    <Label htmlFor="fdr-custom" className="text-xs cursor-pointer">Custom</Label>
                   </div>
                 </RadioGroup>
               </div>
@@ -809,6 +817,7 @@ export default function Fixtures() {
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Fixture Difficulty Analysis */}
