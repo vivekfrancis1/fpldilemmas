@@ -1019,25 +1019,19 @@ export default function PlayerDefensiveContributions() {
                         const displayDC = gw.defensiveContribution * multiplier;
                         const hasGwAdjustment = applyAvailability && multiplier !== 1;
                         return (
-                      <TableCell key={gw.gameweek} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
-                        <div className={`${getOpponentColor(gw.opponentTier)} ${gw.isActual ? 'border-2 border-blue-400 rounded' : ''}`}>
-                          {hasGwAdjustment && !gw.isActual ? (
-                            <div className="flex flex-col items-center">
-                              <span className="font-bold text-purple-700">{viewMode === "past" ? Math.round(displayDC) : displayDC.toFixed(1)}</span>
-                              <span className="text-gray-400 line-through text-xs">{viewMode === "past" ? Math.round(gw.defensiveContribution) : gw.defensiveContribution.toFixed(1)}</span>
-                            </div>
-                          ) : (
-                            <div className="font-bold">
-                              {gw.isActual 
-                                ? (viewMode === "past" ? Math.round(gw.defensiveContribution) : gw.defensiveContribution.toFixed(1))
-                                : (viewMode === "past" ? Math.round(displayDC) : displayDC.toFixed(1))}
-                              {gw.isActual && <span className="text-xs ml-1 text-blue-600">✓</span>}
-                            </div>
-                          )}
+                      <TableCell key={gw.gameweek} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getOpponentColor(gw.opponentTier)}`}>
+                        <div className="flex flex-col items-center">
+                          <span className="font-bold">
+                            {hasGwAdjustment && !gw.isActual ? (
+                              <span className="text-purple-700">{viewMode === "past" ? Math.round(displayDC) : displayDC.toFixed(1)}</span>
+                            ) : (
+                              viewMode === "past" ? Math.round(displayDC) : displayDC.toFixed(1)
+                            )}
+                          </span>
                           {showOpponent && (
-                            <div className={`text-xs ${gw.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                            <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
                               {gw.opponent} ({gw.isHome ? 'H' : 'A'})
-                            </div>
+                            </span>
                           )}
                         </div>
                       </TableCell>
