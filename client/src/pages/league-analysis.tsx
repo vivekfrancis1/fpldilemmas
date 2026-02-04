@@ -103,6 +103,9 @@ interface EnrichedLeagueEntry extends LeagueEntry {
   };
   chipsAvailable: number;
   rankChange: number;
+  projected_points?: number;
+  projected_bench_points?: number;
+  active_chip?: string | null;
 }
 
 interface EnrichedLiveEntry extends LiveLeagueEntry {
@@ -183,7 +186,7 @@ export default function LeagueAnalysisPage() {
 
   const { data: liveStandingsData, isLoading: isLoadingLive, refetch: refetchLive } = useQuery<LiveLeagueStandings>({
     queryKey: [`/api/leagues-classic/${leagueId}/live-standings`],
-    enabled: !!leagueId && showLiveStandings,
+    enabled: !!leagueId, // Always fetch for projected points data
     refetchInterval: showLiveStandings ? 30000 : false,
     staleTime: 15000,
   });
@@ -221,18 +224,37 @@ export default function LeagueAnalysisPage() {
     return map;
   }, [batchDataResponse]);
 
+  // Create map of projected points from live standings data
+  const projectedPointsMap = useMemo(() => {
+    const map = new Map<number, { projected_points: number; projected_bench_points: number; active_chip: string | null }>();
+    if (liveStandingsData?.standings?.results) {
+      for (const entry of liveStandingsData.standings.results) {
+        map.set(entry.entry, {
+          projected_points: entry.projected_points || 0,
+          projected_bench_points: entry.projected_bench_points || 0,
+          active_chip: entry.active_chip || null
+        });
+      }
+    }
+    return map;
+  }, [liveStandingsData]);
+
   const enrichedEntries: EnrichedLeagueEntry[] = useMemo(() => {
     return topEntries.map(entry => {
       const batchData = batchDataMap.get(entry.entry);
+      const projData = projectedPointsMap.get(entry.entry);
       return {
         ...entry,
         historyData: batchData?.historyData || undefined,
         managerData: batchData?.managerData || undefined,
         chipsAvailable: batchData?.chipsAvailable || 0,
-        rankChange: entry.last_rank && entry.last_rank > 0 ? entry.last_rank - entry.rank : 0
+        rankChange: entry.last_rank && entry.last_rank > 0 ? entry.last_rank - entry.rank : 0,
+        projected_points: projData?.projected_points,
+        projected_bench_points: projData?.projected_bench_points,
+        active_chip: projData?.active_chip
       };
     });
-  }, [topEntries, batchDataMap]);
+  }, [topEntries, batchDataMap, projectedPointsMap]);
 
   // Enrich live entries with batch data
   const enrichedLiveEntries: EnrichedLiveEntry[] = useMemo(() => {
@@ -369,12 +391,30 @@ export default function LeagueAnalysisPage() {
       render: (value, entry) => entry.event_total || 0
     },
     {
+      key: 'projected_points',
+      header: <span className="text-center">GW{currentGameweek}<br/>xPts</span>,
+      priority: 'secondary',
+      align: 'right',
+      mobileLabel: 'xPts',
+      cardOrder: 5,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => (
+        <div className="text-purple-600">
+          <span>{entry.projected_points !== undefined ? entry.projected_points.toFixed(1) : '-'}</span>
+          {entry.active_chip === 'bboost' && entry.projected_bench_points && entry.projected_bench_points > 0 && (
+            <span className="text-xs ml-1">(BB)</span>
+          )}
+        </div>
+      )
+    },
+    {
       key: 'overallRank',
       header: <span className="text-center">Overall<br/>Rank</span>,
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'OR',
-      cardOrder: 5,
+      cardOrder: 6,
       sortable: true,
       className: 'font-mono text-xs',
       render: (value, entry) => {
