@@ -1008,9 +1008,15 @@ export default function PlayerDefensiveContributions() {
                         {player.currentSeasonStats.dcPer90.toFixed(1)}
                       </div>
                     </TableCell>
-                    {player.gameweekProjections
-                      .filter(gw => activeGameweeks.includes(gw.gameweek))
-                      .map((gw) => {
+                    {activeGameweeks.map((gwNum) => {
+                        const gw = player.gameweekProjections.find(g => g.gameweek === gwNum);
+                        if (!gw) {
+                          return (
+                            <TableCell key={gwNum} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] bg-gray-50">
+                              <span className="text-gray-400">-</span>
+                            </TableCell>
+                          );
+                        }
                         const multiplier = gwMultipliers[gw.gameweek] ?? 1;
                         const displayDC = gw.defensiveContribution * multiplier;
                         const hasGwAdjustment = applyAvailability && multiplier !== 1;
