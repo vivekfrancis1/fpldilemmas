@@ -21,7 +21,9 @@ import {
   cachedPlayerTotalPoints,
   teamProjections,
   users,
-  gameweekPlayerDataTable
+  gameweekPlayerDataTable,
+  playerTotalPointsWindows,
+  playerTotalPointsSnapshots
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
@@ -15982,65 +15984,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Try database cache from aggregation job (updated every 30 min)
-      console.log("📦 Checking database cache from aggregation job...");
+      // Try playerTotalPointsSnapshots table (Projection Accuracy storage - most accurate)
+      console.log("📦 Checking Projection Accuracy database for snapshots...");
       
       try {
-        const aggregatedData = await db.select().from(cachedPlayerTotalPoints);
+        // Get the active window for the current gameweek range
+        const activeWindow = await db.select()
+          .from(playerTotalPointsWindows)
+          .where(sql`${playerTotalPointsWindows.startGameweek} = ${startGameweek} AND ${playerTotalPointsWindows.isActive} = true`)
+          .limit(1);
         
-        if (aggregatedData && aggregatedData.length > 0) {
-          // Transform to match frontend expectations
-          const transformedData = aggregatedData.map((player: any) => {
-            const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
-            const price = bootstrapPlayer ? bootstrapPlayer.now_cost / 10 : 0;
-            const ownership = bootstrapPlayer ? parseFloat(bootstrapPlayer.selected_by_percent) : 0;
-            const form = bootstrapPlayer ? parseFloat(bootstrapPlayer.form) : 0;
-            const totalExpectedPoints = player.totalExpectedPoints || 0;
-            const averageValue = price > 0 ? totalExpectedPoints / price : 0;
+        if (activeWindow.length > 0) {
+          const windowId = activeWindow[0].windowId;
+          const snapshots = await db.select()
+            .from(playerTotalPointsSnapshots)
+            .where(sql`${playerTotalPointsSnapshots.windowId} = ${windowId}`);
+          
+          if (snapshots.length > 0) {
+            // Transform snapshots to match frontend expectations
+            const transformedData = snapshots.map((snapshot: any) => {
+              const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === snapshot.playerId);
+              const form = bootstrapPlayer ? parseFloat(bootstrapPlayer.form) : 0;
+              const breakdown = snapshot.gameweekBreakdown || {};
+              
+              // Extract gameweek projections from breakdown
+              const gameweekProjections: Record<string, number> = {};
+              const pointsFromGoals: Record<string, number> = {};
+              const pointsFromAssists: Record<string, number> = {};
+              const pointsFromCleanSheets: Record<string, number> = {};
+              const pointsFromMinutes: Record<string, number> = {};
+              const pointsFromGoalsConceded: Record<string, number> = {};
+              const pointsFromYellowCards: Record<string, number> = {};
+              const pointsFromRedCards: Record<string, number> = {};
+              const pointsFromBonus: Record<string, number> = {};
+              const pointsFromSaves: Record<string, number> = {};
+              const pointsFromDefensiveContributions: Record<string, number> = {};
+              
+              for (const [gw, data] of Object.entries(breakdown)) {
+                const gwNum = gw.replace(/^gw/i, '');
+                // Skip non-numeric keys like "position", "teamName", etc.
+                if (isNaN(parseInt(gwNum))) continue;
+                
+                // Data can be a number (total points) or an object with breakdown
+                const isNumeric = typeof data === 'number';
+                if (isNumeric) {
+                  gameweekProjections[gwNum] = data;
+                } else {
+                  const gwData = data as any;
+                  gameweekProjections[gwNum] = gwData.points || 0;
+                  pointsFromGoals[gwNum] = gwData.goals || 0;
+                  pointsFromAssists[gwNum] = gwData.assists || 0;
+                  pointsFromCleanSheets[gwNum] = gwData.cleanSheets || 0;
+                  pointsFromMinutes[gwNum] = gwData.minutes || 0;
+                  pointsFromGoalsConceded[gwNum] = gwData.goalsConceded || 0;
+                  pointsFromYellowCards[gwNum] = gwData.yellowCards || 0;
+                  pointsFromRedCards[gwNum] = gwData.redCards || 0;
+                  pointsFromBonus[gwNum] = gwData.bonus || 0;
+                  pointsFromSaves[gwNum] = gwData.saves || 0;
+                  pointsFromDefensiveContributions[gwNum] = gwData.defensive || 0;
+                }
+              }
 
-            return {
-              playerId: player.playerId,
-              playerName: player.playerName,
-              name: player.playerName,
-              fullName: player.playerName,
-              teamName: player.teamName,
-              team: player.teamName,
-              position: player.position,
-              price: price,
-              ownership: ownership,
-              form: form,
-              gameweekProjections: player.totalPointsData || {},
-              totalExpectedPoints: player.totalExpectedPoints || 0,
-              totalPoints: player.totalExpectedPoints || 0,
-              averagePerGameweek: player.averagePerGameweek || 0,
-              averageValue: Math.round(averageValue * 100) / 100,
-              chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
-              status: bootstrapPlayer?.status || 'a',
-              news: bootstrapPlayer?.news || '',
-              pointsFromGoals: player.pointsFromGoals || {},
-              pointsFromAssists: player.pointsFromAssists || {},
-              pointsFromCleanSheets: player.pointsFromCleanSheets || {},
-              pointsFromMinutes: player.pointsFromMinutes || {},
-              pointsFromGoalsConceded: player.pointsFromGoalsConceded || {},
-              pointsFromYellowCards: player.pointsFromYellowCards || {},
-              pointsFromRedCards: player.pointsFromRedCards || {},
-              pointsFromBonus: player.pointsFromBonus || {},
-              pointsFromSaves: player.pointsFromSaves || {},
-              pointsFromDefensiveContributions: player.pointsFromDefensiveContributions || {},
-            };
-          }).sort((a, b) => b.totalPoints - a.totalPoints);
-          
-          // Cache in memory for subsequent requests
-          totalPointsCache.set(currentCacheKey, {
-            data: transformedData,
-            timestamp: Date.now()
-          });
-          
-          console.log(`⚡ DB CACHE HIT: Serving ${transformedData.length} players from aggregation cache`);
-          return res.json(transformedData);
+              return {
+                playerId: snapshot.playerId,
+                playerName: snapshot.playerName,
+                name: snapshot.playerName,
+                fullName: snapshot.playerName,
+                teamName: snapshot.teamName,
+                team: snapshot.teamName,
+                position: snapshot.position,
+                price: parseFloat(snapshot.price) || 0,
+                ownership: parseFloat(snapshot.ownership) || 0,
+                form: form,
+                gameweekProjections,
+                totalExpectedPoints: parseFloat(snapshot.totalProjectedPoints) || 0,
+                totalPoints: parseFloat(snapshot.totalProjectedPoints) || 0,
+                averagePerGameweek: parseFloat(snapshot.averagePointsPerGameweek) || 0,
+                averageValue: parseFloat(snapshot.averageValue) || 0,
+                chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
+                status: bootstrapPlayer?.status || 'a',
+                news: bootstrapPlayer?.news || '',
+                pointsFromGoals,
+                pointsFromAssists,
+                pointsFromCleanSheets,
+                pointsFromMinutes,
+                pointsFromGoalsConceded,
+                pointsFromYellowCards,
+                pointsFromRedCards,
+                pointsFromBonus,
+                pointsFromSaves,
+                pointsFromDefensiveContributions,
+              };
+            }).sort((a, b) => b.totalPoints - a.totalPoints);
+            
+            // Cache in memory for subsequent requests
+            totalPointsCache.set(currentCacheKey, {
+              data: transformedData,
+              timestamp: Date.now()
+            });
+            
+            console.log(`⚡ SNAPSHOT DB HIT: Serving ${transformedData.length} players from Projection Accuracy snapshots`);
+            return res.json(transformedData);
+          }
         }
       } catch (dbError) {
-        console.log("📦 Database cache unavailable:", dbError);
+        console.log("📦 Projection Accuracy snapshots unavailable:", dbError);
       }
       
       // Fallback to live API calculation

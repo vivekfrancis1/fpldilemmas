@@ -45,7 +45,8 @@ export class PlayerTotalPointsAggregator {
         savePointsData,
         minutesPointsData,
         goalsPointsData,
-        assistsPointsData
+        assistsPointsData,
+        cleanSheetPointsData
       ] = await Promise.all([
         this.fetchSavesData(),
         this.fetchGoalsConcededData(),
@@ -56,10 +57,11 @@ export class PlayerTotalPointsAggregator {
         this.fetchSavePointsData(),
         this.fetchMinutesPointsData(),
         this.fetchGoalsPointsData(startGameweek, endGameweek),
-        this.fetchAssistsPointsData(startGameweek, endGameweek)
+        this.fetchAssistsPointsData(startGameweek, endGameweek),
+        this.fetchCleanSheetPointsData(startGameweek, endGameweek)
       ]);
 
-      console.log(`📊 Component data fetched - Saves: ${savesData.length}, Goals Conceded: ${goalsConcededData.length}, Cards: ${yellowCardsData.length + redCardsData.length}, Bonus: ${bonusPointsData.length}, CBIT: ${cbitPointsData.length}, Save Points: ${savePointsData.length}, Minutes: ${minutesPointsData.length}, Goals: ${goalsPointsData.length}, Assists: ${assistsPointsData.length}`);
+      console.log(`📊 Component data fetched - Saves: ${savesData.length}, Goals Conceded: ${goalsConcededData.length}, Cards: ${yellowCardsData.length + redCardsData.length}, Bonus: ${bonusPointsData.length}, CBIT: ${cbitPointsData.length}, Save Points: ${savePointsData.length}, Minutes: ${minutesPointsData.length}, Goals: ${goalsPointsData.length}, Assists: ${assistsPointsData.length}, CleanSheets: ${cleanSheetPointsData.length}`);
 
       // Step 2: Aggregate all components by player
       const playerTotalPointsMap = new Map<number, PlayerPointsData>();
@@ -75,6 +77,7 @@ export class PlayerTotalPointsAggregator {
       this.aggregateMinutesData(playerTotalPointsMap, minutesPointsData);
       this.aggregateGoalsAssistsData(playerTotalPointsMap, goalsPointsData, "goals");
       this.aggregateGoalsAssistsData(playerTotalPointsMap, assistsPointsData, "assists");
+      this.aggregateCleanSheetData(playerTotalPointsMap, cleanSheetPointsData);
 
       console.log(`🔄 Aggregated data for ${playerTotalPointsMap.size} players`);
 
@@ -217,6 +220,64 @@ export class PlayerTotalPointsAggregator {
     } catch (error) {
       console.warn("⚠️ Failed to fetch assists points data, using empty array:", error);
       return [];
+    }
+  }
+
+  /**
+   * Fetch clean sheet points data from API
+   */
+  private async fetchCleanSheetPointsData(startGameweek: number, endGameweek: number) {
+    try {
+      const response = await internalFetch(`api/player-cleansheet-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      if (!response.ok) throw new Error(`Failed to fetch clean sheet data: ${response.statusText}`);
+      
+      const cleanSheetData = await response.json();
+      
+      return cleanSheetData.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.team,
+        position: player.position,
+        pointsData: player.pointsFromCleanSheets || {},
+        totalPoints: player.totalExpectedPoints || 0
+      }));
+    } catch (error) {
+      console.warn("⚠️ Failed to fetch clean sheet points data, using empty array:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Aggregate clean sheet data into player total points map
+   */
+  private aggregateCleanSheetData(playerMap: Map<number, PlayerPointsData>, cleanSheetData: any[]) {
+    for (const component of cleanSheetData) {
+      if (!playerMap.has(component.playerId)) {
+        playerMap.set(component.playerId, {
+          playerId: component.playerId,
+          playerName: component.playerName,
+          teamName: component.teamName,
+          position: component.position,
+          gameweekPoints: {},
+          totalPoints: 0
+        });
+      }
+
+      const player = playerMap.get(component.playerId)!;
+      const pointsData = component.pointsData || {};
+
+      // Add points from clean sheets to each gameweek
+      // NORMALIZE KEYS: Convert "gw13" format to numeric "13" for consistency
+      for (const [gameweek, points] of Object.entries(pointsData)) {
+        const normalizedGW = gameweek.replace(/^gw/i, '');
+        if (!player.gameweekPoints[normalizedGW]) {
+          player.gameweekPoints[normalizedGW] = 0;
+        }
+        player.gameweekPoints[normalizedGW] += Number(points) || 0;
+      }
+
+      // Add to total points
+      player.totalPoints += component.totalPoints || 0;
     }
   }
 
