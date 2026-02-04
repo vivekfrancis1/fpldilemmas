@@ -620,7 +620,7 @@ export default function PlayerGoalsScoredProjections() {
               className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-orange-600 hover:bg-orange-700 text-white" : "text-gray-600"}`}
             >
               <History className="h-4 w-4" />
-              Past GW Goal Data
+              Past GW Goals
             </Button>
             <Button
               variant={viewMode === "pastXg" ? "default" : "outline"}
