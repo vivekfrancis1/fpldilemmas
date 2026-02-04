@@ -437,7 +437,7 @@ export default function TeamCSProjections() {
                           return (
                             <td key={`${team.id}-gw${gwNumber}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getCSColor(csPercentage)}`}>
                               <div>
-                                <span className="md:hidden">{csPercentage > 0 ? `${Math.round(csPercentage)}` : "-"}</span>
+                                <span className="md:hidden">{csPercentage > 0 ? `${Math.round(csPercentage)}%` : "-"}</span>
                                 <span className="hidden md:inline">{csPercentage > 0 ? `${csPercentage}%` : "-"}</span>
                               </div>
                               {showOpponent && opponentInfo && (
@@ -456,7 +456,7 @@ export default function TeamCSProjections() {
                             const periodAvg = periodValues.length > 0 ? periodValues.reduce((sum, val) => sum + val, 0) / periodValues.length : 0;
                             return (
                               <>
-                                <span className="text-sm font-bold text-blue-900 md:hidden">{Math.round(periodAvg)}</span>
+                                <span className="text-sm font-bold text-blue-900 md:hidden">{Math.round(periodAvg)}%</span>
                                 <span className="hidden md:inline text-lg font-bold text-blue-900">{periodAvg.toFixed(1)}%</span>
                               </>
                             );
