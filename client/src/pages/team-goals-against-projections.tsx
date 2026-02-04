@@ -585,7 +585,7 @@ export default function TeamGoalsAgainstProjections() {
                           return (
                             <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsAgainstColor(goalsAgainst)}`}>
                               <div className="flex flex-col items-center">
-                                <span>{goalsAgainst > 0 ? (goalsAgainst || 0).toFixed(2) : "-"}</span>
+                                <span>{goalsAgainst > 0 ? (viewMode === "past" ? Math.round(goalsAgainst) : goalsAgainst.toFixed(2)) : "-"}</span>
                                 {showOpponent && opponentInfo && (
                                   <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
                                     {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
@@ -598,7 +598,9 @@ export default function TeamGoalsAgainstProjections() {
                         
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 min-w-[50px] md:min-w-[70px]">
                           <span className="text-sm md:text-lg font-bold text-blue-900">
-                            {activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0).toFixed(2)}
+                            {viewMode === "past" 
+                              ? Math.round(activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0))
+                              : activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0).toFixed(2)}
                           </span>
                         </td>
                         
@@ -621,14 +623,16 @@ export default function TeamGoalsAgainstProjections() {
                         const gwTotal = totalGoalsAgainst.gameweekTotals[gwNumber] || 0;
                         return (
                           <td key={gwNumber} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-bold text-gray-900 bg-gray-100 min-w-[40px] md:min-w-[50px]">
-                            {gwTotal > 0 ? (gwTotal || 0).toFixed(2) : "-"}
+                            {gwTotal > 0 ? (viewMode === "past" ? Math.round(gwTotal) : gwTotal.toFixed(2)) : "-"}
                           </td>
                         );
                       })}
                       
                       <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-100 min-w-[50px] md:min-w-[70px]">
                         <span className="text-sm md:text-lg font-bold text-blue-900">
-                          {(totalGoalsAgainst.overallTotal || 0).toFixed(2)}
+                          {viewMode === "past" 
+                            ? Math.round(totalGoalsAgainst.overallTotal || 0)
+                            : (totalGoalsAgainst.overallTotal || 0).toFixed(2)}
                         </span>
                       </td>
                       
