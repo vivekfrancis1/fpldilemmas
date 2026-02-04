@@ -284,10 +284,6 @@ export default function PlayerDefensiveContributions() {
           };
         }).sort((a, b) => a.gameweek - b.gameweek);
 
-        const totalDC = player.totalDefensiveContribution || 0;
-        const gamesPlayed = Object.keys(player.gameweekStats || {}).length;
-        const dcPerGame = gamesPlayed > 0 ? totalDC / gamesPlayed : 0;
-
         return {
           playerId: player.playerId,
           playerName: player.playerName,
@@ -295,7 +291,7 @@ export default function PlayerDefensiveContributions() {
           teamName: player.teamShort || player.teamName,
           teamCode: 0,
           currentSeasonStats: {
-            dcPer90: Math.round(dcPerGame * 100) / 100,
+            dcPer90: player.dcPerGame || 0,
             tacklesPer90: 0,
             recoveriesPer90: 0,
             cbiPer90: 0,
@@ -929,7 +925,7 @@ export default function PlayerDefensiveContributions() {
                     onClick={handleCurrentDCSort}
                   >
                     <div className="flex items-center justify-center gap-1 text-center">
-                      <span className="whitespace-nowrap">DC/g</span>
+                      <span className="whitespace-nowrap">DC/game (season)</span>
                       {sortByCurrentDC && (
                         <span className="text-xs">
                           {currentDCSortOrder === "desc" ? "↓" : "↑"}

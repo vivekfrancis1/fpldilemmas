@@ -7716,7 +7716,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      const players = Array.from(playerDefenseMap.values());
+      const players = Array.from(playerDefenseMap.values()).map(player => {
+        const gamesPlayed = Object.keys(player.gameweekStats).length;
+        const dcPerGame = gamesPlayed > 0 ? parseFloat((player.totalDefensiveContribution / gamesPlayed).toFixed(2)) : 0;
+        return { ...player, dcPerGame, gamesPlayed };
+      });
       res.json({ lastFinishedGW, players });
     } catch (error) {
       console.error("Error fetching player defensive history:", error);
