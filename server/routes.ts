@@ -7696,17 +7696,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
                 const playerData = playerDefenseMap.get(el.id);
                 if (playerData) {
-                  // Defensive contribution = clearances + blocks + interceptions + tackles + recoveries
-                  const dc = (el.stats.clearances_blocks_interceptions || 0) + 
-                             (el.stats.tackles || 0) + 
-                             (el.stats.recoveries || 0);
-                  playerData.gameweekStats[gw] = {
-                    defensiveContribution: dc,
-                    cbi: el.stats.clearances_blocks_interceptions || 0,
-                    tackles: el.stats.tackles || 0,
-                    recoveries: el.stats.recoveries || 0
-                  };
-                  playerData.totalDefensiveContribution += dc;
+                  const minutesPlayed = el.stats.minutes || 0;
+                  // Only count games where player actually played (minutes > 0)
+                  if (minutesPlayed > 0) {
+                    // Defensive contribution using official FPL rules:
+                    // Defenders (GKP/DEF): CBIT (no recoveries)
+                    // Mids/Forwards: CBIRT (with recoveries)
+                    const cbiVal = el.stats.clearances_blocks_interceptions || 0;
+                    const tacklesVal = el.stats.tackles || 0;
+                    const recoveriesVal = el.stats.recoveries || 0;
+                    // player.element_type: 1=GKP, 2=DEF - both use CBIT
+                    const dc = (player.element_type === 1 || player.element_type === 2)
+                      ? cbiVal + tacklesVal  // GKP/DEF: CBIT only
+                      : cbiVal + tacklesVal + recoveriesVal;  // MID/FWD: CBIRT
+                    playerData.gameweekStats[gw] = {
+                      defensiveContribution: dc,
+                      cbi: cbiVal,
+                      tackles: tacklesVal,
+                      recoveries: recoveriesVal,
+                      minutes: minutesPlayed
+                    };
+                    playerData.totalDefensiveContribution += dc;
+                  }
                 }
               }
             });
@@ -14622,21 +14633,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalDC = 0;
           let totalPoints = 0;
           
-          // Get total season defensive contribution from FPL data
-          let seasonDefensiveContribution = player.defensive_contribution || 0;
-          
-          if (!seasonDefensiveContribution) {
-            // Calculate DC based on position using current season stats
-            const cbi = player.clearances_blocks_interceptions || 0;
-            const tackles = player.tackles || 0;
-            const recoveries = player.recoveries || 0;
-            
-            if (player.element_type === 2) { // Defenders: DC = CBI + Tackles
-              seasonDefensiveContribution = cbi + tackles;
-            } else { // Midfielders and Forwards: DC = CBI + Tackles + Recoveries
-              seasonDefensiveContribution = cbi + tackles + recoveries;
-            }
-          }
+          // Calculate DC from raw stats using official FPL rules:
+          // Defenders (element_type 2): CBIT (no recoveries)
+          // Midfielders/Forwards: CBIRT (with recoveries)
+          const cbi = player.clearances_blocks_interceptions || 0;
+          const tackles = player.tackles || 0;
+          const recoveries = player.recoveries || 0;
+          let seasonDefensiveContribution = player.element_type === 2 
+            ? cbi + tackles  // Defenders: CBIT only
+            : cbi + tackles + recoveries;  // Mids/Forwards: CBIRT
           
           // Determine threshold based on position (10 for DEF, 12 for MID/FWD)
           const threshold = player.element_type === 2 ? 10 : 12;
