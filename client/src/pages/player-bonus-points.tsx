@@ -581,7 +581,7 @@ export default function PlayerBonusPoints() {
                             const displayValue = rawValue * multiplier;
                             const hasGwAdjustment = applyAvailability && multiplier !== 1;
                             return (
-                              <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className="text-center py-2 px-1 text-xs md:text-sm min-w-[40px] md:min-w-[50px]">
+                              <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
                                 {hasGwAdjustment && rawValue ? (
                                   <div className="flex flex-col items-center">
                                     <span className="text-purple-700 font-medium">{displayValue.toFixed(2)}</span>
@@ -593,7 +593,7 @@ export default function PlayerBonusPoints() {
                               </td>
                             );
                           })}
-                          <td className={`text-center py-2 px-1 font-semibold min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
                                 <span className="text-sm md:text-lg font-bold text-purple-700">{adjustedTotal.toFixed(2)}</span>
@@ -603,7 +603,7 @@ export default function PlayerBonusPoints() {
                               <span className="text-sm md:text-lg font-bold text-blue-900">{adjustedTotal.toFixed(2)}</span>
                             )}
                           </td>
-                          <td className={`text-center py-2 px-1 min-w-[40px] md:min-w-[60px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
+                          <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[40px] md:min-w-[60px] hidden md:table-cell ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-green-50'}`}>
                             {hasAnyAdjustment ? (
                               <div className="flex flex-col items-center">
                                 <span className="text-sm font-medium text-purple-700">{adjustedAverage.toFixed(2)}</span>

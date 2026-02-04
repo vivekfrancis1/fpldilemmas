@@ -371,18 +371,18 @@ export default function PlayerCleanSheetPoints() {
                         </td>
                         <td className="px-1 md:px-4 py-2 md:py-3 font-medium text-gray-900 text-xs md:text-sm hidden md:table-cell">{player.team}</td>
                         {gameweekRange.map(gw => (
-                          <td key={gw} className="px-1 py-2 md:py-3 text-center min-w-[40px] md:min-w-[50px]">
-                            <span className={`inline-block px-1 md:px-2 py-0.5 md:py-1 rounded-md text-xs md:text-sm font-semibold ${
-                              (player.gameweekProjections[gw.toString()] || 0) >= 1.5 ? 'bg-green-100 text-green-800' :
-                              (player.gameweekProjections[gw.toString()] || 0) >= 0.5 ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-600'
+                          <td key={gw} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
+                            <span className={`${
+                              (player.gameweekProjections[gw.toString()] || 0) >= 1.5 ? 'text-green-700 font-bold' :
+                              (player.gameweekProjections[gw.toString()] || 0) >= 0.5 ? 'text-yellow-700' :
+                              'text-gray-600'
                             }`}>
                               {(player.gameweekProjections[gw.toString()] || 0).toFixed(2)}
                             </span>
                           </td>
                         ))}
-                        <td className="px-1 md:px-3 py-2 md:py-3 text-center min-w-[50px] md:min-w-[70px]">
-                          <span className="inline-block px-1.5 md:px-3 py-1 md:py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold text-xs md:text-sm">
+                        <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 min-w-[50px] md:min-w-[70px]">
+                          <span className="text-sm md:text-lg font-bold text-orange-900">
                             {player.totalExpectedPoints.toFixed(2)}
                           </span>
                         </td>

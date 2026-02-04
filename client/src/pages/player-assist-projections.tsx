@@ -912,7 +912,7 @@ export default function PlayerAssistProjections() {
                               const hasGwAdjustment = applyAvailability && multiplier !== 1;
                               const formatValue = (val: number) => viewMode === "past" ? Math.round(val).toString() : val.toFixed(2);
                               return (
-                                <td key={`assists-cell-${player.playerId}-gw${gw}`} className="text-center py-2 px-1 text-xs md:text-sm min-w-[40px] md:min-w-[50px]">
+                                <td key={`assists-cell-${player.playerId}-gw${gw}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
                                   <div className="flex flex-col items-center">
                                     {hasGwAdjustment && projValue > 0 ? (
                                       <>
@@ -931,7 +931,7 @@ export default function PlayerAssistProjections() {
                                 </td>
                               );
                             })}
-                            <td className={`text-center py-2 px-1 font-semibold min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
                               {hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(2)}</span>
@@ -941,7 +941,7 @@ export default function PlayerAssistProjections() {
                                 <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotal) : adjustedTotal.toFixed(2)}</span>
                               )}
                             </td>
-                            <td className={`text-center py-2 px-1 font-semibold min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                            <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-blue-50'}`}>
                               {hasAnyAdjustment ? (
                                 <div className="flex flex-col items-center">
                                   <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(pointsTotal) : pointsTotal.toFixed(2)}</span>

@@ -940,11 +940,12 @@ export default function PlayerDefensiveContributions() {
                   {activeGameweeks.map(gw => (
                     <TableHead 
                       key={gw} 
-                      className="text-center min-w-[40px] md:min-w-[50px] cursor-pointer hover:bg-muted/50 px-1 text-xs md:text-sm"
+                      className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors min-w-[40px] md:min-w-[50px]"
                       onClick={() => handleGameweekSort(gw)}
                     >
-                      <div className="flex items-center justify-center gap-1">
-                        {gw}
+                      <div className="flex items-center justify-center gap-0.5">
+                        <span className="md:hidden">{gw}</span>
+                        <span className="hidden md:inline">GW{gw}</span>
                         {gameweekSortColumn === gw && (
                           <span className="text-xs">
                             {gameweekSortOrder === "desc" ? "↓" : "↑"}
@@ -954,7 +955,7 @@ export default function PlayerDefensiveContributions() {
                     </TableHead>
                   ))}
                   <TableHead 
-                    className="text-center min-w-[50px] md:min-w-[70px] font-bold cursor-pointer hover:bg-muted/50 bg-orange-50 px-1 text-xs md:text-sm"
+                    className="px-1 md:px-3 py-2 md:py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-orange-50 font-semibold cursor-pointer hover:bg-orange-100 transition-colors min-w-[50px] md:min-w-[70px]"
                     onClick={handleTotalSort}
                   >
                     <div className="flex items-center justify-center gap-1">
@@ -1018,8 +1019,8 @@ export default function PlayerDefensiveContributions() {
                         const displayDC = gw.defensiveContribution * multiplier;
                         const hasGwAdjustment = applyAvailability && multiplier !== 1;
                         return (
-                      <TableCell key={gw.gameweek} className="text-center min-w-[35px] md:min-w-[45px] px-0.5">
-                        <div className={`p-1 md:p-2 rounded text-xs md:text-sm ${getOpponentColor(gw.opponentTier)} ${gw.isActual ? 'border-2 border-blue-400' : ''}`}>
+                      <TableCell key={gw.gameweek} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
+                        <div className={`${getOpponentColor(gw.opponentTier)} ${gw.isActual ? 'border-2 border-blue-400 rounded' : ''}`}>
                           {hasGwAdjustment && !gw.isActual ? (
                             <div className="flex flex-col items-center">
                               <span className="font-bold text-purple-700">{viewMode === "past" ? Math.round(displayDC) : displayDC.toFixed(1)}</span>
@@ -1042,14 +1043,14 @@ export default function PlayerDefensiveContributions() {
                       </TableCell>
                         );
                     })}
-                    <TableCell className={`text-center font-bold ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                    <TableCell className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment ? 'bg-purple-50' : 'bg-orange-50'}`}>
                       {hasAnyAdjustment ? (
                         <div className="flex flex-col items-center">
-                          <span className="text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
-                          <span className="text-gray-400 line-through text-xs">{viewMode === "past" ? Math.round(originalTotalDC) : originalTotalDC.toFixed(1)}</span>
+                          <span className="text-sm md:text-lg font-bold text-purple-700">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
+                          <span className="text-gray-400 line-through text-[10px] md:text-xs">{viewMode === "past" ? Math.round(originalTotalDC) : originalTotalDC.toFixed(1)}</span>
                         </div>
                       ) : (
-                        <span className="text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
+                        <span className="text-sm md:text-lg font-bold text-orange-900">{viewMode === "past" ? Math.round(adjustedTotalDC) : adjustedTotalDC.toFixed(1)}</span>
                       )}
                     </TableCell>
                   </TableRow>

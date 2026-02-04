@@ -951,8 +951,8 @@ export default function PlayerGoalsScoredProjections() {
                           const isHome = opponentInfo?.isHome ?? true;
                           
                           return (
-                            <td key={gw} className="px-1 py-2 text-center min-w-[40px] md:min-w-[50px]">
-                              <div className="text-xs md:text-sm">
+                            <td key={gw} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
+                              <div>
                                 {hasGwAdjustment && goals > 0 && viewMode === "future" ? (
                                   <div className="flex flex-col items-center">
                                     <span className="font-bold text-purple-700">{formatGoals(displayGoals)}</span>
@@ -972,7 +972,7 @@ export default function PlayerGoalsScoredProjections() {
                             </td>
                           );
                         })}
-                        <td className={`px-1 md:px-3 py-2 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-orange-50'}`}>
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
                               <span className="text-sm md:text-lg font-bold text-purple-700">{formatGoals(adjustedTotal)}</span>
@@ -982,7 +982,7 @@ export default function PlayerGoalsScoredProjections() {
                             <span className="text-sm md:text-lg font-bold text-orange-900">{formatGoals(adjustedTotal)}</span>
                           )}
                         </td>
-                        <td className={`px-1 md:px-3 py-2 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-blue-50'}`}>
+                        <td className={`px-1 md:px-3 py-2 md:py-4 text-center min-w-[50px] md:min-w-[70px] ${hasAnyAdjustment && viewMode === "future" ? 'bg-purple-50' : 'bg-blue-50'}`}>
                           {hasAnyAdjustment && viewMode === "future" ? (
                             <div className="flex flex-col items-center">
                               <span className="text-sm md:text-lg font-bold text-purple-700">{formatPoints(totalPoints)}</span>
