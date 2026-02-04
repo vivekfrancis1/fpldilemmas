@@ -540,28 +540,28 @@ export default function Fixtures() {
               </div>
 
               {/* Gameweek Range and Customize Button */}
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-center justify-center">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs sm:text-sm font-medium text-gray-700">Gameweeks:</label>
+              <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
+                <div className="flex items-center gap-1">
+                  <label className="text-xs font-medium text-gray-700">GW:</label>
                   <select 
                     value={gameweekRange?.start || ''} 
                     onChange={(e) => handleGameweekRangeChange(parseInt(e.target.value), gameweekRange?.end || 38)}
-                    className="px-3 py-1 border border-gray-300 rounded text-sm"
+                    className="px-2 py-1 border border-gray-300 rounded text-xs"
                     data-testid="select-start-gameweek"
                   >
                     {availableGameweeks.map(gw => (
-                      <option key={gw} value={gw}>GW{gw}</option>
+                      <option key={gw} value={gw}>{gw}</option>
                     ))}
                   </select>
-                  <span className="text-gray-500">to</span>
+                  <span className="text-gray-500 text-xs">to</span>
                   <select 
                     value={gameweekRange?.end || ''} 
                     onChange={(e) => handleGameweekRangeChange(gameweekRange?.start || 1, parseInt(e.target.value))}
-                    className="px-3 py-1 border border-gray-300 rounded text-sm"
+                    className="px-2 py-1 border border-gray-300 rounded text-xs"
                     data-testid="select-end-gameweek"
                   >
                     {availableGameweeks.filter(gw => gw >= (gameweekRange?.start || 1)).map(gw => (
-                      <option key={gw} value={gw}>GW{gw}</option>
+                      <option key={gw} value={gw}>{gw}</option>
                     ))}
                   </select>
                 </div>
@@ -716,25 +716,25 @@ export default function Fixtures() {
               </div>
 
               {/* Gameweek Toggle Section */}
-              <div className="mt-4 pt-4 border-t">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                  <label className="text-xs sm:text-sm font-medium text-gray-700">
-                    Toggle Gameweeks (click to exclude/include):
+              <div className="mt-3 pt-3 border-t">
+                <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
+                  <label className="text-xs font-medium text-gray-700">
+                    Toggle GWs:
                   </label>
                   {excludedGameweeks.size > 0 && (
                     <Button 
                       variant="ghost" 
                       size="sm" 
                       onClick={clearGameweekExclusions}
-                      className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1"
+                      className="text-[10px] text-gray-500 hover:text-gray-700 px-1 py-0.5 h-auto"
                       data-testid="button-clear-gw-exclusions"
                     >
-                      <X className="h-3 w-3 mr-1" />
-                      Clear GW exclusions
+                      <X className="h-3 w-3 mr-0.5" />
+                      Clear
                     </Button>
                   )}
                 </div>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center">
+                <div className="flex flex-wrap gap-1 justify-center">
                   {allGameweeksInRange.map((gw) => {
                     const isExcluded = excludedGameweeks.has(gw);
                     return (
@@ -743,10 +743,10 @@ export default function Fixtures() {
                         variant="outline"
                         size="sm"
                         onClick={() => toggleGameweekExclusion(gw)}
-                        className={`min-w-[50px] sm:min-w-[60px] text-xs sm:text-sm px-2 sm:px-3 py-1 ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'}`}
+                        className={`min-w-[32px] text-[10px] px-1.5 py-0.5 h-6 ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'}`}
                         data-testid={`button-toggle-gw-${gw}`}
                       >
-                        GW{gw}
+                        {gw}
                       </Button>
                     );
                   })}
@@ -759,33 +759,33 @@ export default function Fixtures() {
               </div>
 
               {/* Team Toggle Section */}
-              <div className="mt-4 pt-4 border-t">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                  <label className="text-xs sm:text-sm font-medium text-gray-700">
-                    Toggle Teams (click to exclude/include):
+              <div className="mt-3 pt-3 border-t">
+                <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
+                  <label className="text-xs font-medium text-gray-700">
+                    Toggle Teams:
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-1">
                     <Button 
                       variant="outline" 
                       size="sm" 
                       onClick={clearTeamExclusions}
-                      className="text-xs bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 py-1"
+                      className="text-[10px] bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-1.5 py-0.5 h-auto"
                       data-testid="button-include-all-teams"
                     >
-                      Include All
+                      All
                     </Button>
                     <Button 
                       variant="outline" 
                       size="sm" 
                       onClick={excludeAllTeams}
-                      className="text-xs bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 py-1"
+                      className="text-[10px] bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-1.5 py-0.5 h-auto"
                       data-testid="button-exclude-all-teams"
                     >
-                      Exclude All
+                      None
                     </Button>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2 justify-center">
+                <div className="flex flex-wrap gap-1 justify-center">
                   {bootstrapData?.teams
                     ?.slice()
                     .sort((a, b) => a.short_name.localeCompare(b.short_name))
@@ -797,7 +797,7 @@ export default function Fixtures() {
                           variant="outline"
                           size="sm"
                           onClick={() => toggleTeamExclusion(team.id)}
-                          className={`min-w-[45px] text-xs px-2 py-1 ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300'}`}
+                          className={`min-w-[32px] text-[10px] px-1 py-0.5 h-6 ${isExcluded ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300'}`}
                           data-testid={`button-toggle-team-${team.id}`}
                         >
                           {team.short_name}
@@ -821,30 +821,27 @@ export default function Fixtures() {
         </div>
 
         {/* Fixture Difficulty Analysis */}
-        <div className="space-y-6">
-          <div className="flex flex-wrap gap-3 text-xs justify-center">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-green-300 rounded"></div>
-              <span>1 Very Easy</span>
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-2 text-[10px] justify-center">
+            <div className="flex items-center gap-0.5">
+              <div className="w-2.5 h-2.5 bg-green-300 rounded"></div>
+              <span>1</span>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
-              <span>2 Easy</span>
+            <div className="flex items-center gap-0.5">
+              <div className="w-2.5 h-2.5 bg-green-100 border border-green-200 rounded"></div>
+              <span>2</span>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
-              <span>3 Medium</span>
+            <div className="flex items-center gap-0.5">
+              <div className="w-2.5 h-2.5 bg-gray-100 border border-gray-300 rounded"></div>
+              <span>3</span>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-red-100 border border-red-200 rounded"></div>
-              <span>4 Hard</span>
+            <div className="flex items-center gap-0.5">
+              <div className="w-2.5 h-2.5 bg-red-100 border border-red-200 rounded"></div>
+              <span>4</span>
             </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 bg-red-300 rounded"></div>
-              <span>5 Very Hard</span>
-            </div>
-            <div className="text-xs text-gray-600">
-              Colours based on official FPL classification of fixture difficulty rating
+            <div className="flex items-center gap-0.5">
+              <div className="w-2.5 h-2.5 bg-red-300 rounded"></div>
+              <span>5</span>
             </div>
           </div>
 
@@ -855,49 +852,43 @@ export default function Fixtures() {
           ) : (
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
+                <table className="w-full text-[10px] md:text-xs border-collapse">
                   <thead>
                     <tr className="border-b bg-gray-50">
-                      <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-semibold min-w-24">
+                      <th className="sticky left-0 bg-gray-50 px-1 md:px-2 py-1 text-left font-semibold min-w-[60px] md:min-w-[80px] z-20">
                         <button
                           onClick={() => handleSort('team')}
-                          className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+                          className="flex items-center gap-0.5 hover:text-blue-600 transition-colors"
                           data-testid="sort-team"
                         >
                           Team
                           {sortBy === 'team' && (
-                            sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                            sortDirection === 'asc' ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />
                           )}
-                          {sortBy !== 'team' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
                         </button>
                       </th>
-                      <th className="sticky left-20 bg-gray-50 px-2 py-2 text-center font-semibold min-w-16 border-l">
+                      <th className="sticky left-[60px] md:left-[80px] bg-gray-50 px-1 py-1 text-center font-semibold min-w-[36px] md:min-w-[50px] border-l z-20">
                         <button
                           onClick={() => handleSort('fdr-avg')}
-                          className="flex items-center gap-1 hover:text-blue-600 transition-colors mx-auto"
+                          className="flex items-center gap-0.5 hover:text-blue-600 transition-colors mx-auto"
                           data-testid="sort-avg-fdr"
                         >
-                          Avg FDR
+                          Avg
                           {sortBy === 'fdr-avg' && (
-                            sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
+                            sortDirection === 'asc' ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />
                           )}
-                          {sortBy !== 'fdr-avg' && <ArrowUpDown className="h-3 w-3 opacity-50" />}
                         </button>
                       </th>
                       {gameweeks.map(gw => (
-                        <th key={gw} className={`px-2 py-2 text-center font-semibold min-w-16 ${
+                        <th key={gw} className={`px-0.5 md:px-1 py-1 text-center font-semibold min-w-[36px] md:min-w-[50px] ${
                           gw === nextGameweek ? 'bg-blue-100 text-blue-900' : ''
                         }`}>
                           <button
                             onClick={() => handleSort(`gw-${gw}`)}
-                            className="flex items-center gap-1 hover:text-blue-600 transition-colors mx-auto"
+                            className="flex items-center justify-center hover:text-blue-600 transition-colors mx-auto"
                             data-testid={`sort-gw-${gw}`}
                           >
-                            GW{gw}
-                            {sortBy === `gw-${gw}` && (
-                              sortDirection === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />
-                            )}
-                            {sortBy !== `gw-${gw}` && <ArrowUpDown className="h-3 w-3 opacity-50" />}
+                            {gw}
                           </button>
                         </th>
                       ))}
@@ -908,21 +899,21 @@ export default function Fixtures() {
                       const avgFDR = teamAverageFDR[team.id];
                       return (
                         <tr key={team.id} className="border-b hover:bg-gray-50">
-                          <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900 border-r">
-                            <div className="flex items-center gap-2">
+                          <td className="sticky left-0 bg-white px-1 md:px-2 py-1 font-medium text-gray-900 border-r z-10">
+                            <div className="flex items-center gap-1">
                               <img 
                                 src={team.code === 14 
                                   ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
                                   : `https://resources.premierleague.com/premierleague/badges/t${team.code}.png`}
                                 alt={`${team.name} badge`}
-                                className="w-5 h-5 object-contain"
+                                className="w-4 h-4 object-contain"
                                 onError={(e) => { e.currentTarget.style.display = 'none'; }}
                               />
                               <span className="font-semibold">{team.short_name}</span>
                             </div>
                           </td>
-                          <td className="sticky left-20 bg-white px-2 py-2 text-center font-medium border-l border-r">
-                            <div className={`inline-block px-2 py-1 rounded text-xs font-semibold ${
+                          <td className="sticky left-[60px] md:left-[80px] bg-white px-0.5 py-1 text-center font-medium border-l border-r z-10">
+                            <div className={`inline-block px-1 py-0.5 rounded text-[10px] font-semibold ${
                               avgFDR <= 2 ? 'bg-green-100 text-green-800' :
                               avgFDR <= 3 ? 'bg-yellow-100 text-yellow-800' :
                               avgFDR <= 4 ? 'bg-orange-100 text-orange-800' :
@@ -934,23 +925,24 @@ export default function Fixtures() {
                           {gameweeks.map(gw => {
                             const fixture = fixtureMatrix[team.id]?.[gw];
                             return (
-                              <td key={gw} className={`px-1 py-1 text-center ${
+                              <td key={gw} className={`px-0.5 py-0.5 text-center ${
                                 gw === nextGameweek ? 'bg-blue-50' : ''
                               }`}>
                                 {fixture ? (
                                   <div 
-                                    className={`px-1 py-1 rounded text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
+                                    className={`px-0.5 py-0.5 rounded text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
                                       fixture.finished ? 'opacity-50' : ''
                                     }`}
                                     title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} (FDR: ${fixture.difficulty})`}
                                     data-testid={`fixture-${team.id}-${gw}`}
                                   >
-                                    <span className="truncate text-xs font-medium whitespace-nowrap">
-                                      {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})
+                                    <span className="truncate font-medium whitespace-nowrap">
+                                      {fixture.opponent}{fixture.isHome ? '' : ''}
                                     </span>
+                                    <span className="text-[8px] md:text-[10px] opacity-75">{fixture.isHome ? 'H' : 'A'}</span>
                                   </div>
                                 ) : (
-                                  <div className="px-2 py-1 text-gray-300">-</div>
+                                  <div className="px-1 py-0.5 text-gray-300">-</div>
                                 )}
                               </td>
                             );
@@ -966,95 +958,93 @@ export default function Fixtures() {
 
           {/* Best Rotation Pairs Section */}
           {rotationPairs.length > 0 && (
-            <Card className="mt-6">
-              <div className="p-4 border-b">
+            <Card className="mt-4">
+              <div className="p-2 md:p-4 border-b">
                 <div className="flex items-center gap-2">
-                  <RotateCcw className="h-5 w-5 text-purple-600" />
-                  <h2 className="text-lg font-semibold text-gray-900">Best Rotation Pairs</h2>
+                  <RotateCcw className="h-4 w-4 md:h-5 md:w-5 text-purple-600" />
+                  <h2 className="text-sm md:text-lg font-semibold text-gray-900">Best Rotation Pairs</h2>
                 </div>
-                <p className="text-sm text-gray-600 mt-1">
-                  Teams that complement each other's fixtures - when one has a hard game, the other has an easy one
+                <p className="text-[10px] md:text-sm text-gray-600 mt-1">
+                  Teams with complementary fixtures
                 </p>
               </div>
-              <CardContent className="p-4">
-                <div className="space-y-6">
+              <CardContent className="p-2 md:p-4">
+                <div className="space-y-4">
                   {rotationPairs.map((pair, index) => (
                     <div key={`${pair.team1.id}-${pair.team2.id}`} className="border rounded-lg overflow-hidden">
-                      <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-purple-50 to-blue-50 border-b">
-                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-purple-100 text-purple-700 font-bold text-xs">
+                      <div className="flex items-center gap-1 px-2 py-1.5 bg-gradient-to-r from-purple-50 to-blue-50 border-b">
+                        <div className="flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-700 font-bold text-[10px]">
                           {index + 1}
                         </div>
-                        <span className="text-sm font-medium text-gray-700">
+                        <span className="text-xs font-medium text-gray-700">
                           {pair.team1.short_name} + {pair.team2.short_name}
                         </span>
-                        <span className="ml-auto text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded font-medium">
-                          Avg FDR: {pair.combinedAvgDifficulty}
+                        <span className="ml-auto text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 rounded font-medium">
+                          {pair.combinedAvgDifficulty}
                         </span>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
+                        <table className="w-full text-[10px] md:text-sm">
                           <thead>
                             <tr className="bg-gray-50 border-b">
-                              <th className="sticky left-0 bg-gray-50 px-3 py-2 text-left font-medium text-gray-700 min-w-[80px]">Team</th>
+                              <th className="sticky left-0 bg-gray-50 px-1 md:px-3 py-1 text-left font-medium text-gray-700 min-w-[50px] md:min-w-[80px]">Team</th>
                               {pair.fixturesByGameweek.map(fw => (
-                                <th key={fw.gw} className="px-2 py-2 text-center font-medium text-gray-600 min-w-[60px]">
-                                  GW{fw.gw}
+                                <th key={fw.gw} className="px-0.5 md:px-2 py-1 text-center font-medium text-gray-600 min-w-[36px] md:min-w-[60px]">
+                                  {fw.gw}
                                 </th>
                               ))}
                             </tr>
                           </thead>
                           <tbody>
                             <tr className="border-b">
-                              <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900">
-                                <div className="flex items-center gap-2">
+                              <td className="sticky left-0 bg-white px-1 md:px-3 py-1 font-medium text-gray-900">
+                                <div className="flex items-center gap-1">
                                   <img 
                                     src={pair.team1.code === 14 
                                       ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
                                       : `https://resources.premierleague.com/premierleague/badges/t${pair.team1.code}.png`}
                                     alt={pair.team1.name}
-                                    className="w-4 h-4 object-contain"
+                                    className="w-3 h-3 md:w-4 md:h-4 object-contain"
                                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                   />
                                   {pair.team1.short_name}
                                 </div>
                               </td>
                               {pair.fixturesByGameweek.map(fw => {
-                                // Recommend based on FDR, with home game as tiebreaker when equal
                                 const diff1 = fw.team1Fixture.difficulty;
                                 const diff2 = fw.team2Fixture.difficulty;
                                 const isRecommended = diff1 < diff2 || (diff1 === diff2 && fw.team1Fixture.isHome && !fw.team2Fixture.isHome) || (diff1 === diff2 && fw.team1Fixture.isHome === fw.team2Fixture.isHome);
                                 return (
-                                  <td key={fw.gw} className="px-1 py-1 text-center">
-                                    <div className={`px-1 py-1 rounded text-xs ${isRecommended ? 'font-bold' : 'font-medium'} ${getDifficultyColor(fw.team1Fixture.difficulty)}`}>
-                                      {fw.team1Fixture.opponent} ({fw.team1Fixture.isHome ? 'H' : 'A'})
+                                  <td key={fw.gw} className="px-0.5 py-0.5 text-center">
+                                    <div className={`px-0.5 py-0.5 rounded text-[10px] md:text-xs ${isRecommended ? 'font-bold' : 'font-medium'} ${getDifficultyColor(fw.team1Fixture.difficulty)}`}>
+                                      {fw.team1Fixture.opponent}<span className="text-[8px] opacity-75">{fw.team1Fixture.isHome ? 'H' : 'A'}</span>
                                     </div>
                                   </td>
                                 );
                               })}
                             </tr>
                             <tr>
-                              <td className="sticky left-0 bg-white px-3 py-2 font-medium text-gray-900">
-                                <div className="flex items-center gap-2">
+                              <td className="sticky left-0 bg-white px-1 md:px-3 py-1 font-medium text-gray-900">
+                                <div className="flex items-center gap-1">
                                   <img 
                                     src={pair.team2.code === 14 
                                       ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
                                       : `https://resources.premierleague.com/premierleague/badges/t${pair.team2.code}.png`}
                                     alt={pair.team2.name}
-                                    className="w-4 h-4 object-contain"
+                                    className="w-3 h-3 md:w-4 md:h-4 object-contain"
                                     onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                   />
                                   {pair.team2.short_name}
                                 </div>
                               </td>
                               {pair.fixturesByGameweek.map(fw => {
-                                // Recommend based on FDR, with home game as tiebreaker when equal
                                 const diff1 = fw.team1Fixture.difficulty;
                                 const diff2 = fw.team2Fixture.difficulty;
                                 const isRecommended = diff2 < diff1 || (diff1 === diff2 && fw.team2Fixture.isHome && !fw.team1Fixture.isHome);
                                 return (
-                                  <td key={fw.gw} className="px-1 py-1 text-center">
-                                    <div className={`px-1 py-1 rounded text-xs ${isRecommended ? 'font-bold' : 'font-medium'} ${getDifficultyColor(fw.team2Fixture.difficulty)}`}>
-                                      {fw.team2Fixture.opponent} ({fw.team2Fixture.isHome ? 'H' : 'A'})
+                                  <td key={fw.gw} className="px-0.5 py-0.5 text-center">
+                                    <div className={`px-0.5 py-0.5 rounded text-[10px] md:text-xs ${isRecommended ? 'font-bold' : 'font-medium'} ${getDifficultyColor(fw.team2Fixture.difficulty)}`}>
+                                      {fw.team2Fixture.opponent}<span className="text-[8px] opacity-75">{fw.team2Fixture.isHome ? 'H' : 'A'}</span>
                                     </div>
                                   </td>
                                 );
