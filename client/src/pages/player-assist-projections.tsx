@@ -575,7 +575,7 @@ export default function PlayerAssistProjections() {
               className={`flex items-center gap-1.5 ${viewMode === "past" ? "bg-purple-600 hover:bg-purple-700 text-white" : "text-gray-600"}`}
             >
               <History className="h-4 w-4" />
-              Past GW Assist Data
+              Past GW Assists
             </Button>
             <Button
               variant={viewMode === "pastXa" ? "default" : "outline"}
