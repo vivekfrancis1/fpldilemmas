@@ -1428,11 +1428,9 @@ export default function PlayerTotalPoints() {
   }, [displayData]);
 
   const positions = useMemo(() => {
-    if (!displayData) return [];
-    return Array.from(new Set(displayData.map(p => p.position)))
-      .filter(pos => pos !== 'FWD') // Remove FWD since Forward already exists
-      .sort();
-  }, [displayData]);
+    // Always show all 4 FPL positions regardless of what's in the data
+    return ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'];
+  }, []);
 
   // Helper to normalize position strings for filtering
   const normalizePosition = (pos: string): string => {
@@ -1631,11 +1629,11 @@ export default function PlayerTotalPoints() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" data-testid="overlay-loading-data">
           <LoadingExperience
             variant="table"
-            title="Updating Player Projections"
-            description="Recalculating player points for the selected gameweek range..."
+            title={viewMode === "future" ? "Updating Player Projections" : "Loading Past GW Points"}
+            description={viewMode === "future" ? "Recalculating player points for the selected gameweek range..." : "Fetching actual points from past gameweeks..."}
             steps={[
               { text: "Fetching updated player data", delay: "0s" },
-              { text: "Calculating projected points", delay: "0.2s" },
+              { text: viewMode === "future" ? "Calculating projected points" : "Loading actual points", delay: "0.2s" },
               { text: "Updating table view", delay: "0.4s" },
             ]}
           />
