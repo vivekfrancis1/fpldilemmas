@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trophy, TrendingUp, Target, Users, RefreshCw, Calendar } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -69,13 +68,9 @@ export default function ProjectedStandings() {
   };
 
   const getPositionColor = (position: number) => {
+    if (position <= 5) return 'bg-green-500 text-white'; // Champions League
     if (position >= 18) return 'bg-red-500 text-white'; // Relegation
     return 'bg-gray-500 text-white'; // Mid-table
-  };
-
-  const getPositionBadge = (position: number) => {
-    if (position >= 18) return 'REL';
-    return '';
   };
 
   if (isLoading || standingsLoading) {
@@ -175,9 +170,9 @@ export default function ProjectedStandings() {
                     <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                     {isRefreshing ? 'Refreshing...' : 'Refresh'}
                   </Button>
-                  <Badge className="bg-white/20 text-white border-white/30">
+                  <span className="px-2 py-1 text-sm bg-white/20 text-white border border-white/30 rounded">
                     {totalGameweeks} gameweeks
-                  </Badge>
+                  </span>
                 </div>
               </div>
             </CardHeader>
@@ -222,15 +217,8 @@ export default function ProjectedStandings() {
                     {standingsData?.map((team) => (
                       <tr key={team.id} className="hover:bg-gray-50" data-testid={`standing-row-${team.shortName}`}>
                         <td className="px-1 md:px-2 py-1 md:py-2 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-xs font-bold ${getPositionColor(team.position)}`}>
-                              {team.position}
-                            </div>
-                            {getPositionBadge(team.position) && (
-                              <Badge variant="outline" className="text-[10px] px-1">
-                                {getPositionBadge(team.position)}
-                              </Badge>
-                            )}
+                          <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-xs font-bold ${getPositionColor(team.position)}`}>
+                            {team.position}
                           </div>
                         </td>
                         
@@ -305,6 +293,10 @@ export default function ProjectedStandings() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Position Colors</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
+                    <li className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                      1st-5th: Champions League
+                    </li>
                     <li className="flex items-center gap-2">
                       <div className="w-4 h-4 bg-red-500 rounded-full"></div>
                       18th-20th: Relegation
