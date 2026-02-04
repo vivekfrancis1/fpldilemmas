@@ -437,10 +437,11 @@ export default function TeamCSProjections() {
                           return (
                             <td key={`${team.id}-gw${gwNumber}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getCSColor(csPercentage)}`}>
                               <div>
-                                {csPercentage > 0 ? `${csPercentage}%` : "-"}
+                                <span className="md:hidden">{csPercentage > 0 ? `${Math.round(csPercentage)}` : "-"}</span>
+                                <span className="hidden md:inline">{csPercentage > 0 ? `${csPercentage}%` : "-"}</span>
                               </div>
                               {showOpponent && opponentInfo && (
-                                <div className="text-[10px] md:text-xs text-gray-500 mt-0.5">
+                                <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 hidden md:block">
                                   {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
                                 </div>
                               )}
@@ -450,13 +451,16 @@ export default function TeamCSProjections() {
 
                         
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 min-w-[50px] md:min-w-[70px]">
-                          <span className="text-sm md:text-lg font-bold text-blue-900">
-                            {(() => {
-                              const periodValues = activeGameweeks.map(gw => team.gameweekProjections[gw] || 0);
-                              const periodAvg = periodValues.length > 0 ? periodValues.reduce((sum, val) => sum + val, 0) / periodValues.length : 0;
-                              return `${periodAvg.toFixed(1)}%`;
-                            })()}
-                          </span>
+                          {(() => {
+                            const periodValues = activeGameweeks.map(gw => team.gameweekProjections[gw] || 0);
+                            const periodAvg = periodValues.length > 0 ? periodValues.reduce((sum, val) => sum + val, 0) / periodValues.length : 0;
+                            return (
+                              <>
+                                <span className="text-sm font-bold text-blue-900 md:hidden">{Math.round(periodAvg)}</span>
+                                <span className="hidden md:inline text-lg font-bold text-blue-900">{periodAvg.toFixed(1)}%</span>
+                              </>
+                            );
+                          })()}
                         </td>
                         
                       </tr>
