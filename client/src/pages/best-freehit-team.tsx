@@ -109,19 +109,33 @@ export default function BestFreehitTeam() {
   const excludeListRef = useRef<HTMLDivElement>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch live Player Total Points data for the selected gameweek (accurate projections)
-  const { data: liveData, isLoading, error, refetch: refetchProjections } = useQuery({
-    queryKey: ['/api/player-total-points', selectedGameweek, selectedGameweek],
-    queryFn: async () => {
-      const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch projections: ${response.statusText}`);
-      }
-      return response.json();
-    },
-    enabled: !!bootstrapData && selectedGameweek > 0,
-    staleTime: 5 * 60 * 1000, // 5 minutes for live data
+  // Fetch cached Player Total Points data (now uses live API with memory caching)
+  const { data: allCachedData, isLoading, error, refetch: refetchProjections } = useQuery({
+    queryKey: ['/api/cached/player-total-points'],
+    enabled: !!bootstrapData,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
+
+  // Filter cached data to selected gameweek (instant filtering, no need to refetch!)
+  const liveData = useMemo(() => {
+    if (!allCachedData || !Array.isArray(allCachedData)) return allCachedData;
+    
+    // Filter each player's gameweek projections to only the selected gameweek
+    // Handle both key formats: "25" (numeric) and "gw25" (prefixed)
+    return (allCachedData as any[]).map((player: any) => {
+      const originalProjections = player.gameweekProjections || {};
+      const numericKey = selectedGameweek.toString();
+      const prefixedKey = `gw${selectedGameweek}`;
+      // Try both key formats
+      const points = originalProjections[numericKey] ?? originalProjections[prefixedKey] ?? 0;
+      
+      return {
+        ...player,
+        gameweekProjections: { [numericKey]: points },
+        totalExpectedPoints: points
+      };
+    });
+  }, [allCachedData, selectedGameweek]);
 
   const snapshots: PlayerSnapshot[] = liveData ? liveData.map((player: any) => ({
     playerId: player.playerId || 0,

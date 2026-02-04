@@ -15981,102 +15981,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Serve from new aggregated cache database table
-      console.log(`📦 CACHED: No memory cache, checking aggregated database cache...`);
-      
-      try {
-        // Query the new aggregated cached player total points table
-        const aggregatedData = await db.select().from(cachedPlayerTotalPoints);
-        
-        if (aggregatedData && aggregatedData.length > 0) {
-          // Transform to match frontend expectations with price and ownership data
-          const transformedData = aggregatedData.map((player: any) => {
-            // Get price and ownership from bootstrap data
-            const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
-            const price = bootstrapPlayer ? bootstrapPlayer.now_cost / 10 : 0; // Convert from tenths to actual price
-            const ownership = bootstrapPlayer ? parseFloat(bootstrapPlayer.selected_by_percent) : 0; // Ensure it's a number
-            const form = bootstrapPlayer ? parseFloat(bootstrapPlayer.form) : 0; // Player's current form
-            
-            // Calculate additional metrics
-            const avgPointsPerGameweek = player.averagePerGameweek || 0;
-            const totalExpectedPoints = player.totalExpectedPoints || 0;
-            const averageValue = price > 0 ? totalExpectedPoints / price : 0;
-            // For cached data, we need to fetch the minutes data separately or store it
-            const avgMinutesPerGameweek = player.avgMinutesPerGameweek || 90; // Default assumption if not stored
-
-            return {
-              playerId: player.playerId,
-              playerName: player.playerName,
-              name: player.playerName,
-              fullName: player.playerName,
-              teamName: player.teamName,
-              team: player.teamName,
-              position: player.position,
-              price: price,
-              ownership: ownership,
-              form: form,
-              gameweekProjections: player.totalPointsData || {},
-              totalExpectedPoints: player.totalExpectedPoints || 0,
-              totalPoints: player.totalExpectedPoints || 0,
-              averagePerGameweek: player.averagePerGameweek || 0,
-              averageValue: Math.round(averageValue * 100) / 100,
-              avgMinutesPerGameweek: Math.round(avgMinutesPerGameweek * 100) / 100,
-              // Add availability status fields from bootstrap data
-              chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
-              status: bootstrapPlayer?.status || 'a',
-              news: bootstrapPlayer?.news || '',
-              // Add breakdown fields that frontend expects
-              pointsFromGoals: player.pointsFromGoals || {},
-              pointsFromAssists: player.pointsFromAssists || {},
-              pointsFromCleanSheets: player.pointsFromCleanSheets || {},
-              pointsFromMinutes: player.pointsFromMinutes || {},
-              pointsFromGoalsConceded: player.pointsFromGoalsConceded || {},
-              pointsFromYellowCards: player.pointsFromYellowCards || {},
-              pointsFromRedCards: player.pointsFromRedCards || {},
-              pointsFromBonus: player.pointsFromBonus || {},
-              pointsFromSaves: player.pointsFromSaves || {},
-              pointsFromDefensiveContributions: player.pointsFromDefensiveContributions || {},
-              // Component totals
-              totalPointsFromGoals: player.totalPointsFromGoals || 0,
-              totalPointsFromAssists: player.totalPointsFromAssists || 0,
-              totalPointsFromCleanSheets: player.totalPointsFromCleanSheets || 0,
-              totalPointsFromMinutes: player.totalPointsFromMinutes || 0,
-              totalPointsFromGoalsConceded: player.totalPointsFromGoalsConceded || 0,
-              totalPointsFromYellowCards: player.totalPointsFromYellowCards || 0,
-              totalPointsFromRedCards: player.totalPointsFromRedCards || 0,
-              totalPointsFromBonus: player.totalPointsFromBonus || 0,
-              totalPointsFromSaves: player.totalPointsFromSaves || 0,
-              totalPointsFromDefensiveContributions: player.totalPointsFromDefensiveContributions || 0
-            };
-          }).sort((a, b) => b.totalPoints - a.totalPoints); // Sort by total points descending
-          
-          // 🛡️ CACHE VALIDATION: Basic validation - just check if totalExpectedPoints exists
-          if (transformedData.length > 0) {
-            const samplePlayer = transformedData[0];
-            // Relaxed validation: just check for essential fields
-            const hasValidData = samplePlayer.totalExpectedPoints !== undefined && 
-                               typeof samplePlayer.totalExpectedPoints === 'number';
-            
-            if (!hasValidData) {
-              console.warn(`⚠️ CACHE PROTECTION: Cached data missing totalExpectedPoints - serving fresh data instead`);
-              // Don't return corrupted cache, let it fall through to fresh calculation
-            } else {
-              // Cache is valid - serve it
-              totalPointsCache.set(currentCacheKey, {
-                data: transformedData,
-                timestamp: Date.now()
-              });
-              
-              console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${transformedData.length} players)`);
-              return res.json(transformedData);
-            }
-          }
-        }
-      } catch (dbError) {
-        console.error("📦 CACHED: Aggregated database cache failed:", dbError);
-      }
-      
-      // If no cached data available, fall back to live API calculation
+      // Skip stale database cache - fetch fresh data from live API and cache in memory
+      // This ensures accurate projections while still providing caching benefits
       console.log("🔄 No valid cached data available - falling back to live API calculation");
       
       try {
@@ -16085,7 +15991,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (liveResponse.ok) {
           const liveData = await liveResponse.json();
-          console.log(`✅ LIVE FALLBACK: Generated fresh Player Total Points for GW${startGameweek}-${endGameweek} (${liveData.length} players)`);
+          
+          // Cache the fresh data in memory for subsequent requests
+          totalPointsCache.set(currentCacheKey, {
+            data: liveData,
+            timestamp: Date.now()
+          });
+          
+          console.log(`✅ LIVE: Generated and cached fresh Player Total Points for GW${startGameweek}-${endGameweek} (${liveData.length} players)`);
           return res.json(liveData);
         } else {
           throw new Error(`Live API failed with status: ${liveResponse.status}`);

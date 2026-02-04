@@ -123,19 +123,41 @@ export default function BestWildcardTeam() {
   const excludeListRef = useRef<HTMLDivElement>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch live Player Total Points data for accurate projections
-  const { data: liveData, isLoading, error, refetch: refetchProjections } = useQuery({
-    queryKey: ['/api/player-total-points', startGameweek, endGameweek],
-    queryFn: async () => {
-      const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch projections: ${response.statusText}`);
-      }
-      return response.json();
-    },
-    enabled: !!bootstrapData && startGameweek > 0 && endGameweek > 0,
-    staleTime: 5 * 60 * 1000, // 5 minutes for live data
+  // Fetch cached Player Total Points data (now uses live API with memory caching)
+  const { data: allCachedData, isLoading, error, refetch: refetchProjections } = useQuery({
+    queryKey: ['/api/cached/player-total-points'],
+    enabled: !!bootstrapData,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
+
+  // Filter cached data to selected gameweek horizon (client-side filtering is instant)
+  const liveData = useMemo(() => {
+    if (!allCachedData || !Array.isArray(allCachedData)) return allCachedData;
+    
+    // Filter each player's gameweek projections to only include selected range
+    return (allCachedData as any[]).map((player: any) => {
+      const filteredProjections: Record<string, number> = {};
+      const originalProjections = player.gameweekProjections || {};
+      
+      // Calculate total points for selected range
+      // Handle both key formats: "25" (numeric) and "gw25" (prefixed)
+      let totalPoints = 0;
+      for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        const numericKey = gw.toString();
+        const prefixedKey = `gw${gw}`;
+        // Try both key formats
+        const points = originalProjections[numericKey] ?? originalProjections[prefixedKey] ?? 0;
+        filteredProjections[numericKey] = points;
+        totalPoints += points;
+      }
+      
+      return {
+        ...player,
+        gameweekProjections: filteredProjections,
+        totalExpectedPoints: totalPoints
+      };
+    });
+  }, [allCachedData, startGameweek, endGameweek]);
 
   const snapshots: PlayerSnapshot[] = liveData ? liveData.map((player: any) => ({
     playerId: player.playerId || 0,
@@ -1067,12 +1089,16 @@ export default function BestWildcardTeam() {
 
       {/* Loading State */}
       {isLoading && (
-        <Card>
-          <CardContent className="flex items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <span className="ml-4">Loading player data...</span>
-          </CardContent>
-        </Card>
+        <LoadingExperience
+          variant="analysis"
+          title="Loading Player Projections"
+          description="Fetching projected points data for all players..."
+          steps={[
+            { text: "Connecting to projection service", delay: "0s" },
+            { text: "Calculating player expected points", delay: "0.3s" },
+            { text: "Preparing optimization data", delay: "0.6s" },
+          ]}
+        />
       )}
 
       {/* Error State */}
