@@ -13,12 +13,6 @@ import {
   teamCleanSheetProjections,
   playerMinutesProjections,
   playerDefensiveProjections,
-  cachedPlayerSaves,
-  cachedPlayerGoalsConceded,
-  cachedPlayerYellowCards,
-  cachedPlayerRedCards,
-  cachedPlayerBonusPoints,
-  cachedPlayerTotalPoints,
   teamProjections,
   users,
   gameweekPlayerDataTable,
@@ -16301,64 +16295,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(bonusResponseCache.data);
       }
 
-      console.log("📊 Serving cached player bonus probabilities from database");
+      console.log("📊 Fetching player bonus probabilities from live API");
       
-      // Fetch cached data with optimized query - only essential fields
-      const cachedData = await db.select({
-        playerId: cachedPlayerBonusPoints.playerId,
-        playerName: cachedPlayerBonusPoints.playerName,
-        teamName: cachedPlayerBonusPoints.teamName,
-        position: cachedPlayerBonusPoints.position,
-        gameweekData: cachedPlayerBonusPoints.gameweekData,
-        pointsData: cachedPlayerBonusPoints.pointsData,
-        totalValue: cachedPlayerBonusPoints.totalValue,
-        totalPoints: cachedPlayerBonusPoints.totalPoints
-      })
-        .from(cachedPlayerBonusPoints)
-        .orderBy(desc(cachedPlayerBonusPoints.totalValue));
-      
-      // If no cached data, fallback to live API
-      if (!cachedData || cachedData.length === 0) {
-        console.log("⚠️ No cached bonus probabilities data found, falling back to live API");
-        try {
-          const liveResponse = await internalFetch("api/player-bonus-probabilities");
-          if (liveResponse.ok) {
-            const liveData = await liveResponse.json();
-            console.log(`✅ Fallback successful, returning ${liveData.length} players from live API`);
-            return res.json(liveData);
-          }
-        } catch (error) {
-          console.error("Fallback API call failed:", error);
-        }
-        console.log("❌ Fallback failed, returning empty array");
-        return res.json([]);
+      // Fetch from live API since cache table was removed
+      const liveResponse = await internalFetch("api/player-bonus-probabilities");
+      if (liveResponse.ok) {
+        const liveData = await liveResponse.json();
+        console.log(`✅ Returning ${liveData.length} players from live API`);
+        bonusResponseCache = { data: liveData, timestamp: now };
+        return res.json(liveData);
       }
       
-      // Transform cached data to match expected format
-      const responseData = cachedData.map(row => {
-        const gameweekData = row.gameweekData as any;
-        const pointsData = row.pointsData as any;
-        
-        return {
-          playerId: row.playerId,
-          playerName: row.playerName,
-          teamShort: row.teamName,
-          position: row.position,
-          bonusPoints: gameweekData || {},
-          pointsFromBonus: pointsData || {},
-          totalBonusPoints: row.totalValue || 0,
-          totalPoints: row.totalPoints || 0,
-          averagePerGameweek: row.totalPoints ? parseFloat((row.totalPoints / 6).toFixed(2)) : 0
-        };
-      });
-      
-      // Cache the processed response
-      bonusResponseCache = { data: responseData, timestamp: now };
-      
-      res.json(responseData);
+      console.log("❌ Live API call failed, returning empty array");
+      return res.json([]);
     } catch (error) {
-      console.error("Error fetching cached bonus probabilities:", error);
-      res.status(500).json({ error: "Failed to fetch cached bonus probabilities" });
+      console.error("Error fetching bonus probabilities:", error);
+      res.status(500).json({ error: "Failed to fetch bonus probabilities" });
     }
   });
 

@@ -45,15 +45,16 @@ class ProjectionService {
   }
 
   /**
-   * Get cached projections from database using the aggregated cache table
+   * Get cached projections from database using the playerTotalPointsSnapshots table
    */
   private async getPlayerProjectionsFromDB(startGameweek: number, endGameweek: number): Promise<any[]> {
     try {
-      // Query the correct aggregated cache table
+      // Query the playerTotalPointsSnapshots table 
       const projections = await db.execute(sql`
-        SELECT * FROM cached_player_total_points 
-        WHERE gameweek_range = ${`${startGameweek}-${endGameweek}`}
-        ORDER BY total_expected_points DESC
+        SELECT * FROM player_total_points_snapshots 
+        WHERE start_gameweek = ${startGameweek} AND end_gameweek = ${endGameweek}
+        ORDER BY total_projected_points DESC
+        LIMIT 800
       `);
 
       if (projections.rows.length === 0) {
@@ -62,13 +63,13 @@ class ProjectionService {
       }
 
       // Check if data is stale (older than 4 hours)
-      const latestUpdate = projections.rows[0]?.last_updated;
+      const latestUpdate = projections.rows[0]?.created_at;
       if (latestUpdate && Date.now() - new Date(latestUpdate as string).getTime() > this.STALE_THRESHOLD) {
         console.log(`DEBUG: Cached projections are stale (${Math.round((Date.now() - new Date(latestUpdate as string).getTime()) / (60 * 60 * 1000))} hours old)`);
         return [];
       }
 
-      console.log(`🎯 SUCCESS: Found ${projections.rows.length} players in cached_player_total_points table`);
+      console.log(`🎯 SUCCESS: Found ${projections.rows.length} players in playerTotalPointsSnapshots table`);
 
       // Transform database format to API format with detailed breakdowns
       return projections.rows.map((projection: any) => {
@@ -147,7 +148,7 @@ class ProjectionService {
       });
 
     } catch (error) {
-      console.error("Error getting cached projections from cachedPlayerTotalPoints:", error);
+      console.error("Error getting cached projections:", error);
       return [];
     }
   }

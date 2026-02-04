@@ -1,6 +1,6 @@
 import { db } from './db';
 import { sql } from 'drizzle-orm';
-import { cachedPlayerTotalPoints } from '@shared/schema';
+import { playerTotalPointsSnapshots, playerTotalPointsWindows } from '@shared/schema';
 
 interface PlayerProjectionRecord {
   player_id: number;

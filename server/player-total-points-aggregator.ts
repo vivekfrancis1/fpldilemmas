@@ -1,20 +1,14 @@
 import { db } from "./db";
 import { 
-  cachedPlayerSaves,
-  cachedPlayerGoalsConceded,
-  cachedPlayerYellowCards,
-  cachedPlayerRedCards,
-  cachedPlayerBonusPoints,
-  cachedPlayerCbitPoints,
-  cachedPlayerSavePoints,
-  cachedPlayerMinutesPoints,
-  cachedPlayerTotalPoints,
   playerGoalsProjections,
   playerAssistProjections,
+  playerTotalPointsSnapshots,
+  playerTotalPointsWindows,
   CURRENT_SEASON
 } from "@shared/schema";
 import { internalFetch } from "./config";
 import { storage } from "./storage";
+import { sql } from "drizzle-orm";
 
 interface PlayerPointsData {
   playerId: number;
@@ -81,32 +75,11 @@ export class PlayerTotalPointsAggregator {
 
       console.log(`🔄 Aggregated data for ${playerTotalPointsMap.size} players`);
 
-      // Step 3: Clear existing cached data and insert new aggregated data
-      await db.delete(cachedPlayerTotalPoints);
-      
       const aggregatedData = Array.from(playerTotalPointsMap.values());
-      const batchSize = 50;
-      
-      for (let i = 0; i < aggregatedData.length; i += batchSize) {
-        const batch = aggregatedData.slice(i, i + batchSize);
-        await db.insert(cachedPlayerTotalPoints).values(
-          batch.map(player => ({
-            playerId: player.playerId,
-            playerName: player.playerName,
-            teamName: player.teamName,
-            position: player.position,
-            gameweekData: player.gameweekPoints,
-            totalPointsData: player.gameweekPoints,
-            totalExpectedPoints: player.totalPoints,
-            averagePerGameweek: player.totalPoints / Object.keys(player.gameweekPoints).length,
-            lastUpdated: new Date()
-          }))
-        );
-      }
 
       console.log(`✅ Player Total Points aggregation completed successfully - ${aggregatedData.length} players cached`);
       
-      // Step 4: Also save to persistent database storage for historical tracking
+      // Save to persistent database storage (playerTotalPointsSnapshots)
       await this.saveToDatabaseStorage(aggregatedData, startGameweek, endGameweek);
       
     } catch (error) {
