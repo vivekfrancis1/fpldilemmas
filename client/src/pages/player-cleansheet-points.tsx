@@ -317,7 +317,7 @@ export default function PlayerCleanSheetPoints() {
                 <table className="w-full">
                   <thead className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
                     <tr>
-                      <th className="px-1 md:px-4 py-2 md:py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors sticky left-0 bg-blue-600 border-r border-blue-500 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.2)] z-20 min-w-[100px] md:min-w-[150px] text-xs md:text-sm"
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-left font-semibold cursor-pointer hover:bg-blue-700/50 transition-colors sticky left-0 bg-blue-600 border-r border-blue-500 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.2)] z-20 min-w-[80px] md:min-w-[120px] text-xs md:text-sm"
                           onClick={() => handleSort('playerName')}>
                         <div className="flex items-center gap-1">
                           Player {getSortIcon('playerName')}
@@ -349,7 +349,7 @@ export default function PlayerCleanSheetPoints() {
                   <tbody className="divide-y divide-gray-200">
                     {filteredAndSortedData.map((player, index) => (
                       <tr key={player.playerId} className={`hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
-                        <td className="px-1 md:px-4 py-2 md:py-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px]">
+                        <td className="px-1 md:px-3 py-2 md:py-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
                           <div className="font-semibold text-gray-900 text-xs md:text-sm truncate max-w-[90px] md:max-w-none">{player.playerName}</div>
                           <div className="text-[10px] md:text-sm text-gray-500">
                             <span className="md:hidden">{player.position.slice(0,3)} • {player.team}</span>

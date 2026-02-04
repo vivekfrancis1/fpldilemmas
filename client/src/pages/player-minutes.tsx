@@ -398,7 +398,7 @@ export default function PlayerMinutes() {
                 <table className="w-full">
                   <thead className="bg-gray-50 sticky top-0">
                     <tr>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-left sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px]">
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-left sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
                         <Button
                           variant="ghost"
                           onClick={() => handleSort('name')}
@@ -425,33 +425,33 @@ export default function PlayerMinutes() {
                           Pos {getSortIcon('position')}
                         </Button>
                       </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-center min-w-[50px] md:min-w-[80px]">
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-center min-w-[40px] md:min-w-[60px]">
                         <Button
                           variant="ghost"
                           onClick={() => handleSort('currentMinutes')}
                           className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto text-xs md:text-sm"
                         >
-                          <span className="hidden md:inline">Current Min/Game</span>
-                          <span className="md:hidden">Curr</span> {getSortIcon('currentMinutes')}
+                          <span className="hidden md:inline">Curr</span>
+                          <span className="md:hidden">Cur</span> {getSortIcon('currentMinutes')}
                         </Button>
                       </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-center min-w-[50px] md:min-w-[80px]">
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-center min-w-[40px] md:min-w-[60px]">
                         <Button
                           variant="ghost"
                           onClick={() => handleSort('expectedMinutes')}
                           className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto text-xs md:text-sm"
                         >
-                          <span className="hidden md:inline">Expected Min/Game</span>
+                          <span className="hidden md:inline">Exp</span>
                           <span className="md:hidden">Exp</span> {getSortIcon('expectedMinutes')}
                         </Button>
                       </th>
-                      <th className="px-1 md:px-4 py-2 md:py-4 text-center min-w-[50px] md:min-w-[80px]">
+                      <th className="px-1 md:px-3 py-2 md:py-3 text-center min-w-[40px] md:min-w-[60px]">
                         <Button
                           variant="ghost"
                           onClick={() => handleSort('pointsFromMinutes')}
                           className="font-semibold text-gray-700 hover:text-blue-600 p-0 h-auto text-xs md:text-sm"
                         >
-                          <span className="hidden md:inline">Points from Minutes</span>
+                          <span className="hidden md:inline">Pts</span>
                           <span className="md:hidden">Pts</span> {getSortIcon('pointsFromMinutes')}
                         </Button>
                       </th>
@@ -465,7 +465,7 @@ export default function PlayerMinutes() {
                           index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                         }`}
                       >
-                        <td className="px-1 md:px-4 py-2 md:py-4 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px]">
+                        <td className="px-1 md:px-3 py-2 md:py-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
                           <div className="flex flex-col">
                             <div className="font-medium text-gray-900 text-xs md:text-sm truncate max-w-[90px] md:max-w-none">{player.playerName}</div>
                             <div className="text-[10px] md:text-sm text-gray-500">
@@ -484,24 +484,18 @@ export default function PlayerMinutes() {
                             {player.position}
                           </Badge>
                         </td>
-                        <td className="px-1 md:px-4 py-2 md:py-4 text-center min-w-[50px] md:min-w-[80px]">
+                        <td className="px-1 md:px-3 py-2 md:py-3 text-center min-w-[40px] md:min-w-[60px]">
                           <div className={`font-semibold text-xs md:text-sm ${getMinutesColor(player.currentMinutesPerGame)}`}>
                             {Math.round(player.currentMinutesPerGame)}
                           </div>
-                          <div className="text-[10px] md:text-sm text-gray-500">
-                            {Math.round((player.currentMinutesPerGame / 90) * 100)}%
-                          </div>
                         </td>
-                        <td className="px-1 md:px-4 py-2 md:py-4 text-center min-w-[50px] md:min-w-[80px]">
-                          <div className={`font-bold text-sm md:text-lg ${getMinutesColor(player.expectedMinutesPerGame)}`}>
+                        <td className="px-1 md:px-3 py-2 md:py-3 text-center min-w-[40px] md:min-w-[60px]">
+                          <div className={`font-bold text-xs md:text-sm ${getMinutesColor(player.expectedMinutesPerGame)}`}>
                             {Math.round(player.expectedMinutesPerGame)}
                           </div>
-                          <div className="text-[10px] md:text-sm text-gray-500">
-                            {Math.round((player.expectedMinutesPerGame / 90) * 100)}%
-                          </div>
                         </td>
-                        <td className="px-1 md:px-4 py-2 md:py-4 text-center min-w-[50px] md:min-w-[80px]">
-                          <div className={`font-bold text-sm md:text-lg ${player.pointsFromMinutes >= 2 ? 'text-green-600' : player.pointsFromMinutes >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
+                        <td className="px-1 md:px-3 py-2 md:py-3 text-center min-w-[40px] md:min-w-[60px]">
+                          <div className={`font-bold text-xs md:text-sm ${player.pointsFromMinutes >= 2 ? 'text-green-600' : player.pointsFromMinutes >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
                             {player.pointsFromMinutes}
                           </div>
                         </td>
