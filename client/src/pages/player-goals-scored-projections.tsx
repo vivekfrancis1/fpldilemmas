@@ -861,7 +861,7 @@ export default function PlayerGoalsScoredProjections() {
                     <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px]">
+                        <th className="px-1 md:px-3 py-2 md:py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
                           <Button
                             variant="ghost"
                             size="sm"
@@ -928,7 +928,7 @@ export default function PlayerGoalsScoredProjections() {
                     
                     return (
                       <tr key={player.playerId} className="hover:bg-gray-50">
-                        <td className="px-1 md:px-3 py-2 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px]">
+                        <td className="px-1 md:px-3 py-2 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
                           <div className="flex items-center gap-0.5 flex-wrap">
                             <PlayerNameCell 
                               name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}

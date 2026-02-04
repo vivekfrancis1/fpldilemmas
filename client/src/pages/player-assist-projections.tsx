@@ -846,7 +846,7 @@ export default function PlayerAssistProjections() {
                       <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50 border-b">
                         <tr>
-                          <th className="px-1 md:px-3 py-2 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px]">
+                          <th className="px-1 md:px-3 py-2 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('name')} className="h-auto p-0 font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-700 text-xs md:text-sm">
                               Player {getSortIcon('name')}
                             </Button>
@@ -891,7 +891,7 @@ export default function PlayerAssistProjections() {
                           
                           return (
                           <tr key={player.playerId} className={`border-b border-gray-100 hover:bg-green-50/50 ${index < 10 ? 'bg-green-50/30' : ''}`}>
-                            <td className="py-2 px-1 md:px-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px]">
+                            <td className="py-2 px-1 md:px-3 sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px]">
                               <div className="flex items-center gap-0.5 flex-wrap">
                                 <PlayerNameCell 
                                   name={(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}

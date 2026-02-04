@@ -920,17 +920,16 @@ export default function PlayerDefensiveContributions() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[100px] md:min-w-[150px] px-1 md:px-3 text-xs md:text-sm">
+                  <TableHead className="sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 min-w-[80px] md:min-w-[120px] px-1 md:px-3 text-xs md:text-sm">
                     Player
                   </TableHead>
 
                   <TableHead 
-                    className="hidden md:table-cell min-w-[80px] cursor-pointer hover:bg-muted/50 px-1 md:px-2 text-xs"
+                    className="hidden md:table-cell min-w-[50px] cursor-pointer hover:bg-muted/50 px-1 text-xs"
                     onClick={handleCurrentDCSort}
                   >
                     <div className="flex items-center justify-center gap-1 text-center">
-                      <span className="whitespace-nowrap">DC/game</span>
-                      <span className="text-[10px] text-gray-500">(season)</span>
+                      <span className="whitespace-nowrap">DC/g</span>
                       {sortByCurrentDC && (
                         <span className="text-xs">
                           {currentDCSortOrder === "desc" ? "↓" : "↑"}
@@ -941,11 +940,11 @@ export default function PlayerDefensiveContributions() {
                   {activeGameweeks.map(gw => (
                     <TableHead 
                       key={gw} 
-                      className="text-center min-w-[45px] md:min-w-[55px] cursor-pointer hover:bg-muted/50 px-1 text-xs md:text-sm"
+                      className="text-center min-w-[40px] md:min-w-[50px] cursor-pointer hover:bg-muted/50 px-1 text-xs md:text-sm"
                       onClick={() => handleGameweekSort(gw)}
                     >
                       <div className="flex items-center justify-center gap-1">
-                        GW {gw}
+                        {gw}
                         {gameweekSortColumn === gw && (
                           <span className="text-xs">
                             {gameweekSortOrder === "desc" ? "↓" : "↑"}
@@ -989,7 +988,7 @@ export default function PlayerDefensiveContributions() {
                   
                   return (
                   <TableRow key={player.playerId}>
-                    <TableCell className="font-medium sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 px-1 md:px-3 min-w-[100px] md:min-w-[150px]">
+                    <TableCell className="font-medium sticky left-0 bg-white border-r border-gray-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)] z-20 px-1 md:px-3 min-w-[80px] md:min-w-[120px]">
                       <div className="flex flex-col">
                         <div className="flex items-center gap-0.5 flex-wrap">
                           <span className="font-semibold text-xs md:text-sm text-gray-900 truncate max-w-[80px] md:max-w-none">{(playerIdToWebName && playerIdToWebName.get(player.playerId)) || player.playerName}</span>
@@ -1007,9 +1006,9 @@ export default function PlayerDefensiveContributions() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-center px-1 py-2 text-xs">
-                      <div className="p-1 md:p-2 rounded bg-blue-50 font-bold text-blue-800">
-                        {viewMode === "past" ? Math.round(player.currentSeasonStats.dcPer90) : player.currentSeasonStats.dcPer90.toFixed(2)}
+                    <TableCell className="hidden md:table-cell text-center px-0.5 py-1 text-xs">
+                      <div className="p-1 rounded bg-blue-50 font-bold text-blue-800">
+                        {player.currentSeasonStats.dcPer90.toFixed(1)}
                       </div>
                     </TableCell>
                     {player.gameweekProjections
@@ -1019,7 +1018,7 @@ export default function PlayerDefensiveContributions() {
                         const displayDC = gw.defensiveContribution * multiplier;
                         const hasGwAdjustment = applyAvailability && multiplier !== 1;
                         return (
-                      <TableCell key={gw.gameweek} className="text-center min-w-[40px] md:min-w-[50px] px-1">
+                      <TableCell key={gw.gameweek} className="text-center min-w-[35px] md:min-w-[45px] px-0.5">
                         <div className={`p-1 md:p-2 rounded text-xs md:text-sm ${getOpponentColor(gw.opponentTier)} ${gw.isActual ? 'border-2 border-blue-400' : ''}`}>
                           {hasGwAdjustment && !gw.isActual ? (
                             <div className="flex flex-col items-center">
