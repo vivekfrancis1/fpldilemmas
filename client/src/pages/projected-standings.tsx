@@ -186,34 +186,34 @@ export default function ProjectedStandings() {
                 <table className="w-full">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                         Pos
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-1 md:px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase">
                         Team
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                         P
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                         W
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                         D
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                         L
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                         GF
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                         GA
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                         GD
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th className="px-1 md:px-2 py-2 text-center text-xs font-medium text-gray-500 uppercase">
                         Pts
                       </th>
                     </tr>
@@ -221,21 +221,21 @@ export default function ProjectedStandings() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {standingsData?.map((team) => (
                       <tr key={team.id} className="hover:bg-gray-50" data-testid={`standing-row-${team.shortName}`}>
-                        <td className="px-4 py-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${getPositionColor(team.position)}`}>
+                        <td className="px-1 md:px-2 py-1 md:py-2 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-xs font-bold ${getPositionColor(team.position)}`}>
                               {team.position}
                             </div>
                             {getPositionBadge(team.position) && (
-                              <Badge variant="outline" className="text-xs">
+                              <Badge variant="outline" className="text-[10px] px-1">
                                 {getPositionBadge(team.position)}
                               </Badge>
                             )}
                           </div>
                         </td>
                         
-                        <td className="px-4 py-4">
-                          <div className="flex items-center gap-2">
+                        <td className="px-1 md:px-2 py-1 md:py-2">
+                          <div className="flex items-center gap-1">
                             {(() => {
                               const teamData = bootstrapData?.teams?.find((t: any) => t.short_name === team.shortName || t.name === team.name);
                               const teamCode = teamData?.code;
@@ -245,46 +245,46 @@ export default function ProjectedStandings() {
                                     ? 'https://upload.wikimedia.org/wikipedia/en/0/0c/Liverpool_FC.svg'
                                     : `https://resources.premierleague.com/premierleague/badges/t${teamCode}.png`}
                                   alt={`${team.name} badge`}
-                                  className="w-6 h-6 object-contain"
+                                  className="w-4 h-4 md:w-5 md:h-5 object-contain"
                                   onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                 />
                               ) : null;
                             })()}
-                            <span className="text-sm font-medium text-gray-900">{team.shortName}</span>
+                            <span className="text-xs md:text-sm font-medium text-gray-900">{team.shortName}</span>
                           </div>
                         </td>
                         
-                        <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
+                        <td className="px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm font-medium text-gray-900">
                           {team.played}
                         </td>
                         
-                        <td className="px-4 py-4 text-center text-sm font-medium text-green-600">
+                        <td className="px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm font-medium text-green-600">
                           {team.wins}
                         </td>
                         
-                        <td className="px-4 py-4 text-center text-sm font-medium text-gray-600">
+                        <td className="px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm font-medium text-gray-600">
                           {team.draws}
                         </td>
                         
-                        <td className="px-4 py-4 text-center text-sm font-medium text-red-600">
+                        <td className="px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm font-medium text-red-600">
                           {team.losses}
                         </td>
                         
-                        <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
+                        <td className="px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm font-medium text-gray-900">
                           {Math.round(team.goalsFor)}
                         </td>
                         
-                        <td className="px-4 py-4 text-center text-sm font-medium text-gray-900">
+                        <td className="px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm font-medium text-gray-900">
                           {Math.round(team.goalsAgainst)}
                         </td>
                         
-                        <td className="px-4 py-4 text-center text-sm font-medium">
+                        <td className="px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm font-medium">
                           <span className={team.goalDifference >= 0 ? 'text-green-600' : 'text-red-600'}>
                             {team.goalDifference >= 0 ? '+' : ''}{Math.round(team.goalDifference)}
                           </span>
                         </td>
                         
-                        <td className="px-4 py-4 text-center text-sm font-bold text-gray-900">
+                        <td className="px-1 md:px-2 py-1 md:py-2 text-center text-xs md:text-sm font-bold text-gray-900">
                           {team.points}
                         </td>
                       </tr>
