@@ -865,7 +865,7 @@ export default function PlayerAssistProjections() {
                           </th>
                           <th className="px-1 md:px-3 py-2 text-center text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider bg-blue-50 min-w-[50px] md:min-w-[70px]">
                             <Button variant="ghost" size="sm" onClick={() => handleSort('rangePoints')} className="h-auto p-0 font-medium text-gray-500 hover:bg-blue-100 hover:text-gray-700 text-xs md:text-sm">
-                              Pts {getSortIcon('rangePoints')}
+                              {viewMode === "pastXa" ? "xPts" : "Pts"} {getSortIcon('rangePoints')}
                             </Button>
                           </th>
                         </tr>
