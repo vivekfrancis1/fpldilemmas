@@ -1053,6 +1053,20 @@ export default function BestWildcardTeam() {
     }
   };
 
+  // Show loading state while bootstrap data or cached data is loading
+  if (!bootstrapData || isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="space-y-6">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading player data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Optimization Loading Screen */}

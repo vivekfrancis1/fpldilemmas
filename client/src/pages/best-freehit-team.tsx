@@ -1068,7 +1068,8 @@ export default function BestFreehitTeam() {
     return position;
   };
 
-  if (isLoading) {
+  // Show loading state while bootstrap data or cached data is loading
+  if (!bootstrapData || isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="space-y-6">
@@ -1081,7 +1082,7 @@ export default function BestFreehitTeam() {
     );
   }
 
-  if (error || snapshots.length === 0) {
+  if (error || (allCachedData && snapshots.length === 0)) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card>
