@@ -15981,8 +15981,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Skip stale database cache - fetch fresh data from live API and cache in memory
-      // This ensures accurate projections while still providing caching benefits
+      // Try database cache from aggregation job (updated every 30 min)
+      console.log("📦 Checking database cache from aggregation job...");
+      
+      try {
+        const aggregatedData = await db.select().from(cachedPlayerTotalPoints);
+        
+        if (aggregatedData && aggregatedData.length > 0) {
+          // Transform to match frontend expectations
+          const transformedData = aggregatedData.map((player: any) => {
+            const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
+            const price = bootstrapPlayer ? bootstrapPlayer.now_cost / 10 : 0;
+            const ownership = bootstrapPlayer ? parseFloat(bootstrapPlayer.selected_by_percent) : 0;
+            const form = bootstrapPlayer ? parseFloat(bootstrapPlayer.form) : 0;
+            const totalExpectedPoints = player.totalExpectedPoints || 0;
+            const averageValue = price > 0 ? totalExpectedPoints / price : 0;
+
+            return {
+              playerId: player.playerId,
+              playerName: player.playerName,
+              name: player.playerName,
+              fullName: player.playerName,
+              teamName: player.teamName,
+              team: player.teamName,
+              position: player.position,
+              price: price,
+              ownership: ownership,
+              form: form,
+              gameweekProjections: player.totalPointsData || {},
+              totalExpectedPoints: player.totalExpectedPoints || 0,
+              totalPoints: player.totalExpectedPoints || 0,
+              averagePerGameweek: player.averagePerGameweek || 0,
+              averageValue: Math.round(averageValue * 100) / 100,
+              chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
+              status: bootstrapPlayer?.status || 'a',
+              news: bootstrapPlayer?.news || '',
+              pointsFromGoals: player.pointsFromGoals || {},
+              pointsFromAssists: player.pointsFromAssists || {},
+              pointsFromCleanSheets: player.pointsFromCleanSheets || {},
+              pointsFromMinutes: player.pointsFromMinutes || {},
+              pointsFromGoalsConceded: player.pointsFromGoalsConceded || {},
+              pointsFromYellowCards: player.pointsFromYellowCards || {},
+              pointsFromRedCards: player.pointsFromRedCards || {},
+              pointsFromBonus: player.pointsFromBonus || {},
+              pointsFromSaves: player.pointsFromSaves || {},
+              pointsFromDefensiveContributions: player.pointsFromDefensiveContributions || {},
+            };
+          }).sort((a, b) => b.totalPoints - a.totalPoints);
+          
+          // Cache in memory for subsequent requests
+          totalPointsCache.set(currentCacheKey, {
+            data: transformedData,
+            timestamp: Date.now()
+          });
+          
+          console.log(`⚡ DB CACHE HIT: Serving ${transformedData.length} players from aggregation cache`);
+          return res.json(transformedData);
+        }
+      } catch (dbError) {
+        console.log("📦 Database cache unavailable:", dbError);
+      }
+      
+      // Fallback to live API calculation
       console.log("🔄 No valid cached data available - falling back to live API calculation");
       
       try {
