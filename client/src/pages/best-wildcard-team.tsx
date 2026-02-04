@@ -1364,7 +1364,7 @@ export default function BestWildcardTeam() {
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
             <Button 
               onClick={optimizeTeam} 
-              disabled={isOptimizing}
+              disabled={isOptimizing || isLoading || snapshots.length === 0}
               className="flex items-center gap-2"
               data-testid="button-optimize-team"
             >
@@ -1372,6 +1372,11 @@ export default function BestWildcardTeam() {
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   Optimizing...
+                </>
+              ) : isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Loading Data...
                 </>
               ) : (
                 <>
