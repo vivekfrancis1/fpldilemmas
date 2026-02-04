@@ -10691,9 +10691,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Expected minutes per game (from actual history)
               const expectedMinutesPerGame = Math.min(90, avgMinutesPerGame);
               
+              // Apply minimum appearances threshold for confidence scaling
+              // Players with < 10 appearances get scaled down proportionally
+              const MIN_APPEARANCES_THRESHOLD = 10;
+              const confidenceFactor = Math.min(1, appearances / MIN_APPEARANCES_THRESHOLD);
+              
               // Calculate points from minutes using probability-based formula
-              // Formula: (2 × % chance of 60+ mins) + (1 × % chance of 0-60 mins)
-              const pointsFromMinutes = Math.round(((pct60Plus / 100) * 2 + (pctBelow60 / 100) * 1) * 100) / 100;
+              // Formula: (2 × % chance of 60+ mins) + (1 × % chance of 0-60 mins) × confidence
+              const rawPointsFromMinutes = (pct60Plus / 100) * 2 + (pctBelow60 / 100) * 1;
+              const pointsFromMinutes = Math.round(rawPointsFromMinutes * confidenceFactor * 100) / 100;
               
               return {
                 playerId: player.id,
@@ -10709,7 +10715,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 gamesBelow60: gamesBelow60,
                 pct60Plus: pct60Plus,
                 pctBelow60: pctBelow60,
-                benchAppearances: Math.max(0, appearances - playerStarts)
+                benchAppearances: Math.max(0, appearances - playerStarts),
+                confidenceFactor: Math.round(confidenceFactor * 100) / 100
               };
             })
           );
