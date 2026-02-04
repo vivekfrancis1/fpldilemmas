@@ -498,7 +498,7 @@ export default function Fixtures() {
           <h1>Fixture Analyzer</h1>
         </div>
         <p className="fpl-page-subtitle">
-          Analyze upcoming fixtures based on official FPL difficulty ratings
+          Analyze upcoming fixtures based on official FPL difficulty ratings, Season form or Custom ratings
         </p>
       </div>
 
@@ -526,11 +526,11 @@ export default function Fixtures() {
                 <RadioGroup value={fdrMode} onValueChange={(value: 'official' | 'form' | 'custom') => setFdrMode(value)} className="flex gap-3 justify-center">
                   <div className="flex items-center space-x-1">
                     <RadioGroupItem value="official" id="fdr-official" data-testid="radio-fdr-official" />
-                    <Label htmlFor="fdr-official" className="text-xs cursor-pointer">Official</Label>
+                    <Label htmlFor="fdr-official" className="text-xs cursor-pointer">Official ratings</Label>
                   </div>
                   <div className="flex items-center space-x-1">
                     <RadioGroupItem value="form" id="fdr-form" data-testid="radio-fdr-form" />
-                    <Label htmlFor="fdr-form" className="text-xs cursor-pointer">Form</Label>
+                    <Label htmlFor="fdr-form" className="text-xs cursor-pointer">Season Form</Label>
                   </div>
                   <div className="flex items-center space-x-1">
                     <RadioGroupItem value="custom" id="fdr-custom" data-testid="radio-fdr-custom" />
