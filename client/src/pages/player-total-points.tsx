@@ -2030,7 +2030,7 @@ export default function PlayerTotalPoints() {
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <Trophy className="h-5 w-5 text-indigo-600" />
-                    <h2 className="fpl-card-title">Player Points Projections: GW{startGameweek}-GW{endGameweek}</h2>
+                    <h2 className="fpl-card-title">{viewMode === "future" ? "Player Points Projections" : "Player Points History"}: GW{startGameweek}-GW{endGameweek}</h2>
                     {excludedGameweeks.size > 0 && (
                       <Badge variant="secondary" className="ml-1 text-xs">
                         {excludedGameweeks.size} excluded
