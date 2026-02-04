@@ -2615,17 +2615,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playerTeams.set(player.id, player.team);
       }
       
-      // Fetch projected points for players (for GW projected points calculation)
+      // Fetch projected points for players from projection-accuracy endpoint (uses snapshots for past GWs, live data for future)
       let playerProjectionsMap = new Map<number, number>();
       try {
-        const projectionsResponse = await internalFetch('/api/cached/player-total-points');
+        const projectionsResponse = await internalFetch(`/api/projection-accuracy/gameweek/${currentGameweek}`);
         if (projectionsResponse && projectionsResponse.ok) {
           const projectionsData = await projectionsResponse.json();
-          for (const player of projectionsData) {
-            // Get projection for current gameweek
-            const gwKey = `gw${currentGameweek}`;
-            const projectedPoints = player.gameweekProjections?.[gwKey]?.points || 0;
-            playerProjectionsMap.set(player.playerId, projectedPoints);
+          if (projectionsData.players && Array.isArray(projectionsData.players)) {
+            for (const player of projectionsData.players) {
+              const projectedPoints = parseFloat(player.projected_points) || 0;
+              playerProjectionsMap.set(player.player_id, projectedPoints);
+            }
           }
         }
       } catch (err) {

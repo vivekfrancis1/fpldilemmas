@@ -552,6 +552,24 @@ export default function LeagueAnalysisPage() {
       )
     },
     {
+      key: 'projected_points',
+      header: <span className="text-center">GW{liveStandingsData?.current_gameweek || currentGameweek}<br/>xPts</span>,
+      priority: 'secondary',
+      align: 'right',
+      mobileLabel: 'xPts',
+      cardOrder: 5,
+      sortable: true,
+      className: 'font-mono',
+      render: (value, entry) => (
+        <div className="text-purple-600">
+          <span>{entry.projected_points?.toFixed(1) || '-'}</span>
+          {entry.active_chip === 'bboost' && entry.projected_bench_points > 0 && (
+            <span className="text-xs ml-1">(BB)</span>
+          )}
+        </div>
+      )
+    },
+    {
       key: 'overallRank',
       header: <span className="text-center">Overall<br/>Rank</span>,
       priority: 'secondary',
