@@ -140,11 +140,14 @@ export default function BestWildcardTeam() {
       const originalProjections = player.gameweekProjections || {};
       
       // Calculate total points for selected range
+      // Handle both key formats: "25" (numeric) and "gw25" (prefixed)
       let totalPoints = 0;
       for (let gw = startGameweek; gw <= endGameweek; gw++) {
-        const gwKey = gw.toString();
-        const points = originalProjections[gwKey] || 0;
-        filteredProjections[gwKey] = points;
+        const numericKey = gw.toString();
+        const prefixedKey = `gw${gw}`;
+        // Try both key formats
+        const points = originalProjections[numericKey] ?? originalProjections[prefixedKey] ?? 0;
+        filteredProjections[numericKey] = points;
         totalPoints += points;
       }
       
@@ -1467,7 +1470,10 @@ export default function BestWildcardTeam() {
                               <div className="text-right flex-shrink-0">
                                 <div className="font-medium text-sm md:text-base">£{player.price}m</div>
                                 <div className="text-xs md:text-sm text-muted-foreground">
-                                  {player.totalProjectedPoints.toFixed(1)} pts
+                                  {player.totalProjectedPoints.toFixed(1)} xPts
+                                </div>
+                                <div className="text-xs text-purple-600">
+                                  ({endGameweek - startGameweek + 1} GWs)
                                 </div>
                               </div>
                             </div>
