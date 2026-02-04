@@ -15926,10 +15926,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Get current gameweek to determine proper range and fetch bootstrap data for price/ownership
+      // Use internal cached endpoint for faster response
       let currentGameweek = 5; // fallback
       let bootstrapData = null;
       try {
-        const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        const bootstrapResponse = await internalFetch("api/bootstrap-static");
         if (bootstrapResponse.ok) {
           bootstrapData = await bootstrapResponse.json();
           currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 5;
