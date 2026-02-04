@@ -373,7 +373,7 @@ export default function TransferTracker() {
                       </th>
                       
                       {/* Season Section */}
-                      <th className="text-center py-1 px-2 border-l-2 border-blue-200 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/20" colSpan={3}>
+                      <th className="text-center py-1 px-2 border-l-2 border-blue-200 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/20" colSpan={2}>
                         <div className="text-xs font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wide">Season Totals</div>
                       </th>
                     </tr>
@@ -403,11 +403,6 @@ export default function TransferTracker() {
                       <th className="text-right py-1 px-2 border-l border-blue-200 dark:border-blue-700 min-w-[80px]">
                         <SortableHeader field="net_transfers" className="text-right text-xs">
                           Net Transfers
-                        </SortableHeader>
-                      </th>
-                      <th className="text-right py-1 px-2 min-w-[60px]">
-                        <SortableHeader field="net_transfers_percentage" className="text-right text-xs">
-                          Net %
                         </SortableHeader>
                       </th>
                       <th className="text-right py-1 px-2 min-w-[70px]">
@@ -490,14 +485,6 @@ export default function TransferTracker() {
                             {transfer.net_transfers > 0 ? "+" : ""}{Math.abs(transfer.net_transfers) >= 1000 ? 
                               `${(transfer.net_transfers / 1000).toFixed(0)}k` : 
                               transfer.net_transfers?.toLocaleString() || "0"}
-                          </span>
-                        </td>
-                        <td className="py-2 px-2 text-right bg-blue-50/20 dark:bg-blue-900/10">
-                          <span className={`font-semibold text-sm ${
-                            transfer.net_transfers_percentage! > 0 ? "text-blue-700 dark:text-blue-400" : 
-                            transfer.net_transfers_percentage! < 0 ? "text-red-700 dark:text-red-400" : "text-gray-600 dark:text-gray-400"
-                          }`}>
-                            {transfer.net_transfers_percentage! > 0 ? "+" : ""}{transfer.net_transfers_percentage?.toFixed(1) || "0.0"}%
                           </span>
                         </td>
                         <td className="py-2 px-2 text-right bg-blue-50/20 dark:bg-blue-900/10">
