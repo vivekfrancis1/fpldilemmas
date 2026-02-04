@@ -116,59 +116,149 @@ export class PlayerTotalPointsAggregator {
   }
 
   /**
-   * Fetch cached saves data
+   * Fetch saves data from live API
    */
   private async fetchSavesData() {
-    return await db.select().from(cachedPlayerSaves);
+    try {
+      const response = await internalFetch(`api/player-saves-projections?startGameweek=25&endGameweek=36`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamName,
+        position: player.position,
+        pointsData: player.pointsFromSaves || {},
+        totalPoints: player.totalPoints || 0
+      }));
+    } catch (error) {
+      console.warn("⚠️ Failed to fetch saves data:", error);
+      return [];
+    }
   }
 
   /**
-   * Fetch cached goals conceded data
+   * Fetch goals conceded data from live API
    */
   private async fetchGoalsConcededData() {
-    return await db.select().from(cachedPlayerGoalsConceded);
+    try {
+      const response = await internalFetch(`api/player-goals-conceded-projections?startGameweek=25&endGameweek=36`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamName,
+        position: player.position,
+        pointsData: player.pointsFromGoalsConceded || {},
+        totalPoints: player.totalPoints || 0
+      }));
+    } catch (error) {
+      console.warn("⚠️ Failed to fetch goals conceded data:", error);
+      return [];
+    }
   }
 
   /**
-   * Fetch cached yellow cards data
+   * Fetch yellow cards data from live API
    */
   private async fetchYellowCardsData() {
-    return await db.select().from(cachedPlayerYellowCards);
+    try {
+      const response = await internalFetch(`api/player-yellow-cards-projections?startGameweek=25&endGameweek=36`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamName,
+        position: player.position,
+        pointsData: player.pointsFromYellowCards || {},
+        totalPoints: player.totalPoints || 0
+      }));
+    } catch (error) {
+      console.warn("⚠️ Failed to fetch yellow cards data:", error);
+      return [];
+    }
   }
 
   /**
-   * Fetch cached red cards data
+   * Fetch red cards data from live API
    */
   private async fetchRedCardsData() {
-    return await db.select().from(cachedPlayerRedCards);
+    try {
+      const response = await internalFetch(`api/player-red-cards-projections?startGameweek=25&endGameweek=36`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamName,
+        position: player.position,
+        pointsData: player.pointsFromRedCards || {},
+        totalPoints: player.totalPoints || 0
+      }));
+    } catch (error) {
+      console.warn("⚠️ Failed to fetch red cards data:", error);
+      return [];
+    }
   }
 
   /**
-   * Fetch cached bonus points data
+   * Fetch bonus points data from live API
    */
   private async fetchBonusPointsData() {
-    return await db.select().from(cachedPlayerBonusPoints);
+    try {
+      const response = await internalFetch(`api/player-bonus-points-projections?startGameweek=25&endGameweek=36`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamName,
+        position: player.position,
+        pointsData: player.pointsFromBonus || {},
+        totalPoints: player.totalPoints || 0
+      }));
+    } catch (error) {
+      console.warn("⚠️ Failed to fetch bonus points data:", error);
+      return [];
+    }
   }
 
   /**
-   * Fetch cached CBIT points data
+   * Fetch CBIT points data - skip for now (included in other components)
    */
   private async fetchCbitPointsData() {
-    return await db.select().from(cachedPlayerCbitPoints);
+    return []; // CBIT is a combination of other stats, not needed separately
   }
 
   /**
-   * Fetch cached save points data
+   * Fetch save points data - already covered by fetchSavesData
    */
   private async fetchSavePointsData() {
-    return await db.select().from(cachedPlayerSavePoints);
+    return []; // Already fetched in fetchSavesData
   }
 
   /**
-   * Fetch cached minutes points data
+   * Fetch minutes points data from live API
    */
   private async fetchMinutesPointsData() {
-    return await db.select().from(cachedPlayerMinutesPoints);
+    try {
+      const response = await internalFetch(`api/player-minutes-projections`);
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamShort,
+        position: player.position,
+        minutesPerGame: player.pointsFromMinutes || 0,
+        totalPoints: player.pointsFromMinutes * 12 || 0 // Estimate for 12 gameweeks
+      }));
+    } catch (error) {
+      console.warn("⚠️ Failed to fetch minutes points data:", error);
+      return [];
+    }
   }
 
   /**
@@ -349,29 +439,37 @@ export class PlayerTotalPointsAggregator {
   }
 
   /**
-   * Aggregate minutes data (different structure)
+   * Aggregate minutes data - applies per-game points to each future gameweek
    */
   private aggregateMinutesData(playerMap: Map<number, PlayerPointsData>, minutesData: any[]) {
     for (const minutesComponent of minutesData) {
-      if (!playerMap.has(minutesComponent.playerId)) {
-        // Skip if player not found in other components
-        continue;
+      const playerId = minutesComponent.playerId;
+      
+      if (!playerMap.has(playerId)) {
+        playerMap.set(playerId, {
+          playerId: playerId,
+          playerName: minutesComponent.playerName,
+          teamName: minutesComponent.teamName,
+          position: minutesComponent.position,
+          gameweekPoints: {},
+          totalPoints: 0
+        });
       }
 
-      const player = playerMap.get(minutesComponent.playerId)!;
-      const gameweeksData = minutesComponent.gameweeksData || {};
-
-      // Minutes points are in gameweeksData structure
-      for (const [gameweek, data] of Object.entries(gameweeksData)) {
-        if (!player.gameweekPoints[gameweek]) {
-          player.gameweekPoints[gameweek] = 0;
+      const player = playerMap.get(playerId)!;
+      const minutesPerGame = minutesComponent.minutesPerGame || 0;
+      
+      // Apply minutes points to each gameweek (GW25-36)
+      for (let gw = 25; gw <= 36; gw++) {
+        const gwKey = String(gw);
+        if (!player.gameweekPoints[gwKey]) {
+          player.gameweekPoints[gwKey] = 0;
         }
-        const minutesPoints = (data as any)?.points || 0;
-        player.gameweekPoints[gameweek] += minutesPoints;
+        player.gameweekPoints[gwKey] += minutesPerGame;
       }
 
-      // Add season total to total points
-      player.totalPoints += minutesComponent.seasonTotal || 0;
+      // Add to total points (12 gameweeks)
+      player.totalPoints += minutesPerGame * 12;
     }
   }
 
