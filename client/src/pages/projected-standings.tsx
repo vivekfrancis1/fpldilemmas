@@ -69,17 +69,11 @@ export default function ProjectedStandings() {
   };
 
   const getPositionColor = (position: number) => {
-    if (position <= 4) return 'bg-green-500 text-white'; // Champions League
-    if (position === 5 || position === 6) return 'bg-blue-500 text-white'; // Europa League
-    if (position === 7) return 'bg-purple-500 text-white'; // Conference League
     if (position >= 18) return 'bg-red-500 text-white'; // Relegation
     return 'bg-gray-500 text-white'; // Mid-table
   };
 
   const getPositionBadge = (position: number) => {
-    if (position <= 4) return 'UCL';
-    if (position === 5 || position === 6) return 'UEL';
-    if (position === 7) return 'UECL';
     if (position >= 18) return 'REL';
     return '';
   };
@@ -311,18 +305,6 @@ export default function ProjectedStandings() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-2">Position Colors</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                      1st-4th: Champions League
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-blue-500 rounded-full"></div>
-                      5th-6th: Europa League
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-4 h-4 bg-purple-500 rounded-full"></div>
-                      7th: Conference League
-                    </li>
                     <li className="flex items-center gap-2">
                       <div className="w-4 h-4 bg-red-500 rounded-full"></div>
                       18th-20th: Relegation
