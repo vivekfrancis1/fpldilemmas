@@ -330,40 +330,6 @@ export default function TransferTracker() {
           </Alert>
         )}
 
-        {/* Summary Statistics */}
-        {Array.isArray(transferData) && transferData.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Transfer Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600">
-                    {transferData.filter((p: any) => p.transfers_in > 50000).length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">High Transfer In</div>
-                </div>
-                <div className="text-center p-4 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
-                  <div className="text-2xl font-bold text-amber-600">
-                    {transferData.filter((p: any) => p.transfers_out > 50000).length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">High Transfer Out</div>
-                </div>
-                <div className="text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {transferData.filter((p: any) => p.ownership_percentage > 20).length}
-                  </div>
-                  <div className="text-sm text-muted-foreground">Popular Players</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         {/* All Players Transfer Tracker */}
         <Card>
           <CardHeader>
