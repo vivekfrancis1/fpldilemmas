@@ -96,7 +96,14 @@ export default function BestFreehitTeam() {
   const startGameweek = currentGameweek + 1;
   const endGameweek = Math.min(startGameweek + 11, 38); // Next 12 gameweeks, max GW38
 
-  const [selectedGameweek, setSelectedGameweek] = useState<number>(startGameweek);
+  const [selectedGameweek, setSelectedGameweek] = useState<number>(0);
+
+  // Update selectedGameweek when bootstrapData loads
+  useEffect(() => {
+    if (bootstrapData && selectedGameweek === 0) {
+      setSelectedGameweek(startGameweek);
+    }
+  }, [bootstrapData, startGameweek, selectedGameweek]);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimalTeam, setOptimalTeam] = useState<OptimalTeam | null>(null);
   const [unlimitedBudget, setUnlimitedBudget] = useState<boolean>(true);
@@ -112,7 +119,7 @@ export default function BestFreehitTeam() {
   // Fetch cached Player Total Points data (now uses live API with memory caching)
   const { data: allCachedData, isLoading, error, refetch: refetchProjections } = useQuery({
     queryKey: ['/api/cached/player-total-points'],
-    enabled: !!bootstrapData,
+    enabled: !!bootstrapData && selectedGameweek > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
