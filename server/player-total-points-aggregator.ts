@@ -22,21 +22,34 @@ interface PlayerPointsData {
 export class PlayerTotalPointsAggregator {
   
   /**
-   * Aggregate individual component caches into comprehensive Total Points cache
+   * Aggregate individual component caches into comprehensive Total Points cache.
+   * 
+   * FPL Scoring Components (9 total):
+   * 1. Minutes (1-2 pts based on minutes played)
+   * 2. Goals (4-6 pts based on position)
+   * 3. Assists (3 pts)
+   * 4. Clean Sheets (1-4 pts based on position)
+   * 5. Goals Conceded (-0.5/-1 pts for DEF/GK)
+   * 6. Yellow Cards (-1 pt)
+   * 7. Red Cards (-3 pts)
+   * 8. Bonus (1-3 pts)
+   * 9. Saves (1 pt per 3 saves for GK)
+   * 
+   * Note: CBIT (Clearances/Blocks/Interceptions/Tackles) and Save Points were
+   * previously included but are NOT separate FPL scoring categories - they're
+   * used for BPS calculation which already feeds into Bonus points.
    */
   async aggregatePlayerTotalPoints(startGameweek: number = 12, endGameweek: number = 23): Promise<void> {
     console.log(`🔧 Starting Player Total Points aggregation for GW${startGameweek}-${endGameweek}...`);
     
     try {
-      // Step 1: Fetch all individual component caches
+      // Step 1: Fetch all 9 FPL scoring component caches
       const [
         savesData,
         goalsConcededData,
         yellowCardsData,
         redCardsData,
         bonusPointsData,
-        cbitPointsData,
-        savePointsData,
         minutesPointsData,
         goalsPointsData,
         assistsPointsData,
@@ -47,27 +60,23 @@ export class PlayerTotalPointsAggregator {
         this.fetchYellowCardsData(),
         this.fetchRedCardsData(),
         this.fetchBonusPointsData(),
-        this.fetchCbitPointsData(),
-        this.fetchSavePointsData(),
         this.fetchMinutesPointsData(),
         this.fetchGoalsPointsData(startGameweek, endGameweek),
         this.fetchAssistsPointsData(startGameweek, endGameweek),
         this.fetchCleanSheetPointsData(startGameweek, endGameweek)
       ]);
 
-      console.log(`📊 Component data fetched - Saves: ${savesData.length}, Goals Conceded: ${goalsConcededData.length}, Cards: ${yellowCardsData.length + redCardsData.length}, Bonus: ${bonusPointsData.length}, CBIT: ${cbitPointsData.length}, Save Points: ${savePointsData.length}, Minutes: ${minutesPointsData.length}, Goals: ${goalsPointsData.length}, Assists: ${assistsPointsData.length}, CleanSheets: ${cleanSheetPointsData.length}`);
+      console.log(`📊 Component data fetched - Saves: ${savesData.length}, Goals Conceded: ${goalsConcededData.length}, Cards: ${yellowCardsData.length + redCardsData.length}, Bonus: ${bonusPointsData.length}, Minutes: ${minutesPointsData.length}, Goals: ${goalsPointsData.length}, Assists: ${assistsPointsData.length}, CleanSheets: ${cleanSheetPointsData.length}`);
 
       // Step 2: Aggregate all components by player
       const playerTotalPointsMap = new Map<number, PlayerPointsData>();
 
-      // Aggregate each component
+      // Aggregate each of the 9 FPL scoring components
       this.aggregateComponentData(playerTotalPointsMap, savesData, "saves");
       this.aggregateComponentData(playerTotalPointsMap, goalsConcededData, "goalsConceded");
       this.aggregateComponentData(playerTotalPointsMap, yellowCardsData, "yellowCards");
       this.aggregateComponentData(playerTotalPointsMap, redCardsData, "redCards");
       this.aggregateComponentData(playerTotalPointsMap, bonusPointsData, "bonusPoints");
-      this.aggregateComponentData(playerTotalPointsMap, cbitPointsData, "cbitPoints");
-      this.aggregateComponentData(playerTotalPointsMap, savePointsData, "savePoints");
       this.aggregateMinutesData(playerTotalPointsMap, minutesPointsData);
       this.aggregateGoalsAssistsData(playerTotalPointsMap, goalsPointsData, "goals");
       this.aggregateGoalsAssistsData(playerTotalPointsMap, assistsPointsData, "assists");
@@ -198,19 +207,6 @@ export class PlayerTotalPointsAggregator {
     }
   }
 
-  /**
-   * Fetch CBIT points data - skip for now (included in other components)
-   */
-  private async fetchCbitPointsData() {
-    return []; // CBIT is a combination of other stats, not needed separately
-  }
-
-  /**
-   * Fetch save points data - already covered by fetchSavesData
-   */
-  private async fetchSavePointsData() {
-    return []; // Already fetched in fetchSavesData
-  }
 
   /**
    * Fetch minutes points data from live API
