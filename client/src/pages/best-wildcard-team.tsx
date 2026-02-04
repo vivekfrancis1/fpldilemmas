@@ -123,41 +123,19 @@ export default function BestWildcardTeam() {
   const excludeListRef = useRef<HTMLDivElement>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch cached Player Total Points data (pre-computed for next 12 gameweeks) - 10-20x faster!
-  const { data: allCachedData, isLoading, error, refetch: refetchProjections } = useQuery({
-    queryKey: ['/api/cached/player-total-points'],
-    enabled: !!bootstrapData,
-    staleTime: 60 * 60 * 1000, // 1 hour cache
-  });
-
-  // Filter cached data to selected gameweek horizon (client-side filtering is instant)
-  const liveData = useMemo(() => {
-    if (!allCachedData) return allCachedData;
-    
-    // Filter each player's gameweek projections to only include selected range
-    return allCachedData.map((player: any) => {
-      const filteredProjections: Record<string, number> = {};
-      const originalProjections = player.gameweekProjections || {};
-      
-      // Calculate total points for selected range
-      // Handle both key formats: "25" (numeric) and "gw25" (prefixed)
-      let totalPoints = 0;
-      for (let gw = startGameweek; gw <= endGameweek; gw++) {
-        const numericKey = gw.toString();
-        const prefixedKey = `gw${gw}`;
-        // Try both key formats
-        const points = originalProjections[numericKey] ?? originalProjections[prefixedKey] ?? 0;
-        filteredProjections[numericKey] = points;
-        totalPoints += points;
+  // Fetch live Player Total Points data for accurate projections
+  const { data: liveData, isLoading, error, refetch: refetchProjections } = useQuery({
+    queryKey: ['/api/player-total-points', startGameweek, endGameweek],
+    queryFn: async () => {
+      const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projections: ${response.statusText}`);
       }
-      
-      return {
-        ...player,
-        gameweekProjections: filteredProjections,
-        totalExpectedPoints: totalPoints
-      };
-    });
-  }, [allCachedData, startGameweek, endGameweek]);
+      return response.json();
+    },
+    enabled: !!bootstrapData && startGameweek > 0 && endGameweek > 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes for live data
+  });
 
   const snapshots: PlayerSnapshot[] = liveData ? liveData.map((player: any) => ({
     playerId: player.playerId || 0,

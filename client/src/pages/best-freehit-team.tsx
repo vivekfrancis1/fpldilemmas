@@ -109,32 +109,19 @@ export default function BestFreehitTeam() {
   const excludeListRef = useRef<HTMLDivElement>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch cached Player Total Points data (pre-computed for next 12 gameweeks) - 10-20x faster!
-  const { data: allCachedData, isLoading, error, refetch: refetchProjections } = useQuery({
-    queryKey: ['/api/cached/player-total-points'],
-    staleTime: 60 * 60 * 1000, // 1 hour cache
+  // Fetch live Player Total Points data for the selected gameweek (accurate projections)
+  const { data: liveData, isLoading, error, refetch: refetchProjections } = useQuery({
+    queryKey: ['/api/player-total-points', selectedGameweek, selectedGameweek],
+    queryFn: async () => {
+      const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch projections: ${response.statusText}`);
+      }
+      return response.json();
+    },
+    enabled: !!bootstrapData && selectedGameweek > 0,
+    staleTime: 5 * 60 * 1000, // 5 minutes for live data
   });
-
-  // Filter cached data to selected gameweek (instant filtering, no need to refetch!)
-  const liveData = useMemo(() => {
-    if (!allCachedData) return allCachedData;
-    
-    // Filter each player's gameweek projections to only the selected gameweek
-    // Handle both key formats: "25" (numeric) and "gw25" (prefixed)
-    return allCachedData.map((player: any) => {
-      const originalProjections = player.gameweekProjections || {};
-      const numericKey = selectedGameweek.toString();
-      const prefixedKey = `gw${selectedGameweek}`;
-      // Try both key formats
-      const points = originalProjections[numericKey] ?? originalProjections[prefixedKey] ?? 0;
-      
-      return {
-        ...player,
-        gameweekProjections: { [numericKey]: points },
-        totalExpectedPoints: points
-      };
-    });
-  }, [allCachedData, selectedGameweek]);
 
   const snapshots: PlayerSnapshot[] = liveData ? liveData.map((player: any) => ({
     playerId: player.playerId || 0,
