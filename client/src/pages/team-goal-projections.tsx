@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface FixtureDetail {
   opponent: string;
@@ -668,25 +669,39 @@ export default function TeamGoalProjections() {
                           const fixtures = teamWithDetails.fixtureDetails?.[gwNumber.toString()] || [];
                           const isDGW = fixtures.length > 1;
                           
-                          // Build tooltip text for DGW showing individual fixture goals
-                          const tooltipText = isDGW 
-                            ? fixtures.map((f: FixtureDetail) => `vs ${f.opponent} (${f.isHome ? 'H' : 'A'}): ${f.goals.toFixed(2)}`).join('\n')
-                            : '';
+                          const cellContent = (
+                            <div className="flex flex-col items-center">
+                              <span>{goals !== undefined ? (viewMode === "past" ? goals : goals.toFixed(2)) : "-"}</span>
+                              {showOpponent && fixtures.length > 0 && (
+                                <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
+                                  {fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ')}
+                                </span>
+                              )}
+                            </div>
+                          );
                           
                           return (
                             <td 
                               key={`${team.id}-gw${gwNumber}`} 
                               className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsColor(goals || 0)} ${isDGW ? 'cursor-help' : ''}`}
-                              title={tooltipText}
                             >
-                              <div className="flex flex-col items-center">
-                                <span>{goals !== undefined ? (viewMode === "past" ? goals : goals.toFixed(2)) : "-"}</span>
-                                {showOpponent && fixtures.length > 0 && (
-                                  <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
-                                    {fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ')}
-                                  </span>
-                                )}
-                              </div>
+                              {isDGW ? (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      {cellContent}
+                                    </TooltipTrigger>
+                                    <TooltipContent className="bg-gray-900 text-white p-2">
+                                      <div className="text-xs font-medium mb-1">DGW Breakdown:</div>
+                                      {fixtures.map((f: FixtureDetail, idx: number) => (
+                                        <div key={idx} className="text-xs">
+                                          vs {f.opponent} ({f.isHome ? 'H' : 'A'}): {f.goals.toFixed(2)}
+                                        </div>
+                                      ))}
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              ) : cellContent}
                             </td>
                           );
                         })}
