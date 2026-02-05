@@ -32,7 +32,8 @@ export default function TransferRecommendations() {
   const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
   const [positionFilter, setPositionFilter] = useState<string[]>([]);
   const [appliedTransfers, setAppliedTransfers] = useState<{ [gw: string]: any[] }>({});
-  const [showTopPickOnly, setShowTopPickOnly] = useState(false);
+  const [uniquePlayerOut, setUniquePlayerOut] = useState(false);
+  const [uniquePlayerIn, setUniquePlayerIn] = useState(false);
   const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
   const { toast } = useToast();
   const { user } = useAuth();
@@ -877,17 +878,30 @@ export default function TransferRecommendations() {
                   </button>
                 )}
               </div>
-              {/* Top Pick Only Toggle */}
-              <div className="flex items-center gap-2 pt-2">
-                <Switch 
-                  id="top-pick-toggle"
-                  checked={showTopPickOnly}
-                  onCheckedChange={setShowTopPickOnly}
-                  className="data-[state=checked]:bg-indigo-600"
-                />
-                <label htmlFor="top-pick-toggle" className="text-xs text-gray-600 cursor-pointer">
-                  Show only top pick per player
-                </label>
+              {/* Uniqueness Toggles */}
+              <div className="flex flex-wrap items-center gap-4 pt-2">
+                <div className="flex items-center gap-2">
+                  <Switch 
+                    id="unique-out-toggle"
+                    checked={uniquePlayerOut}
+                    onCheckedChange={setUniquePlayerOut}
+                    className="data-[state=checked]:bg-indigo-600"
+                  />
+                  <label htmlFor="unique-out-toggle" className="text-xs text-gray-600 cursor-pointer">
+                    Unique player out
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch 
+                    id="unique-in-toggle"
+                    checked={uniquePlayerIn}
+                    onCheckedChange={setUniquePlayerIn}
+                    className="data-[state=checked]:bg-indigo-600"
+                  />
+                  <label htmlFor="unique-in-toggle" className="text-xs text-gray-600 cursor-pointer">
+                    Unique player in
+                  </label>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -1052,18 +1066,19 @@ export default function TransferRecommendations() {
                                 return netCost <= runningBank;
                               });
                               
-                              // Apply top pick filter if enabled - show only the first (best) recommendation per playerOut AND per playerIn
-                              // Use reduce to properly track which players have been included
-                              const finalRecommendations = showTopPickOnly 
+                              // Apply uniqueness filters if enabled
+                              // uniquePlayerOut: only show first recommendation per player being transferred out
+                              // uniquePlayerIn: only show first recommendation per player being transferred in
+                              const finalRecommendations = (uniquePlayerOut || uniquePlayerIn)
                                 ? affordableRecommendations.reduce((acc: any[], rec: any) => {
                                     if (rec.type === 'roll') {
                                       acc.push(rec);
                                       return acc;
                                     }
-                                    // Check if playerOut or playerIn is already in the accumulated results
-                                    const playerOutUsed = acc.some((r: any) => r.playerOut?.id === rec.playerOut?.id);
-                                    const playerInUsed = acc.some((r: any) => r.playerIn?.id === rec.playerIn?.id);
-                                    // Only add if neither player has been used yet
+                                    // Check uniqueness constraints based on toggle states
+                                    const playerOutUsed = uniquePlayerOut && acc.some((r: any) => r.playerOut?.id === rec.playerOut?.id);
+                                    const playerInUsed = uniquePlayerIn && acc.some((r: any) => r.playerIn?.id === rec.playerIn?.id);
+                                    // Only add if player passes the enabled uniqueness constraints
                                     if (!playerOutUsed && !playerInUsed) {
                                       acc.push(rec);
                                     }
