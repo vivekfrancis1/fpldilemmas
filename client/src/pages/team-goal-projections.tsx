@@ -686,12 +686,19 @@ export default function TeamGoalProjections() {
                               className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsColor(goals || 0)} ${isDGW ? 'cursor-help' : ''}`}
                             >
                               {isDGW ? (
-                                <TooltipProvider>
+                                <TooltipProvider delayDuration={0}>
                                   <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      {cellContent}
+                                    <TooltipTrigger className="w-full">
+                                      <div className="flex flex-col items-center">
+                                        <span>{goals !== undefined ? goals.toFixed(2) : "-"}</span>
+                                        {showOpponent && fixtures.length > 0 && (
+                                          <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
+                                            {fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ')}
+                                          </span>
+                                        )}
+                                      </div>
                                     </TooltipTrigger>
-                                    <TooltipContent className="bg-gray-900 text-white p-2">
+                                    <TooltipContent side="top" className="bg-gray-900 text-white p-2 z-50">
                                       <div className="text-xs font-medium mb-1">DGW Breakdown:</div>
                                       {fixtures.map((f: FixtureDetail, idx: number) => (
                                         <div key={idx} className="text-xs">
