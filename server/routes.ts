@@ -12476,14 +12476,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const fixtureGoalsPts = (goalsFixture.goals || 0) * goalMultiplier;
               const fixtureAssistsPts = (assistsFixture.assists || 0) * 3;
               const fixtureCleansheetPts = cleansheetFixture.cleanSheetPoints || cleansheetFixture.pointsFromCleanSheets || 0;
-              const fixtureMinutesPts = numFixtures > 1 ? minutesPts / numFixtures : minutesPts;
+              // Minutes: Each fixture in a DGW earns full per-match minutes points (player plays 60+ mins in each match)
+              // Don't divide - each match independently earns ~2 pts for playing 60+ mins
+              const fixtureMinutesPts = minutesPts;
               const fixtureGoalsConcededPts = goalsConcededFixture.goalsConceded ? -(goalsConcededFixture.goalsConceded / 2) : 0;
               const fixtureYellowCardsPts = -(yellowCardsFixture.yellowCards || 0);
               const fixtureRedCardsPts = -(redCardsFixture.redCards || 0) * 3;
               const fixtureBonusPts = bonusFixture.bonusPoints || 0;
               const fixtureSavesPts = savesFixture.saves ? Math.floor(savesFixture.saves / 3) : 0;
-              // DC API doesn't provide per-fixture data, so split GW total evenly across fixtures
-              const fixtureDefensiveContributionsPts = numFixtures > 1 ? defensiveContributionsPts / numFixtures : defensiveContributionsPts;
+              // DC: Each fixture in a DGW earns full per-match defensive contribution points
+              // Don't divide - defensive actions are earned independently in each match
+              const fixtureDefensiveContributionsPts = defensiveContributionsPts;
               
               const fixtureTotalPoints = fixtureGoalsPts + fixtureAssistsPts + fixtureCleansheetPts + 
                                          fixtureMinutesPts + fixtureGoalsConcededPts + fixtureYellowCardsPts + 
