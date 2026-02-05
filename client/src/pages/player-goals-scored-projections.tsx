@@ -10,9 +10,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, SortableHeader, type TableColumn } from "@/components/enhanced-table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LoadingExperience } from "@/components/loading-experience";
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
+
+interface FixtureDetail {
+  opponent: string;
+  isHome: boolean;
+  goals: number;
+}
 
 interface PlayerGoalProjection {
   playerId: number;
@@ -22,6 +29,7 @@ interface PlayerGoalProjection {
   position: string;
   totalProjectedGoals: number;
   gameweekProjections: { [gameweek: string]: number };
+  fixtureDetails?: { [gameweek: string]: FixtureDetail[] };
   goalShare: number;
 }
 
@@ -943,6 +951,8 @@ export default function PlayerGoalsScoredProjections() {
                         </td>
                         {selectedGameweeks.map(gw => {
                           const goals = player.gameweekProjections[gw.toString()] || 0;
+                          const fixtures: FixtureDetail[] = (player as any).fixtureDetails?.[gw.toString()] || [];
+                          const isDGW = fixtures.length > 1;
                           const multiplier = gwMultipliers[gw] ?? 1;
                           const displayGoals = goals * multiplier;
                           const hasGwAdjustment = applyAvailability && multiplier !== 1;
@@ -953,7 +963,37 @@ export default function PlayerGoalsScoredProjections() {
                           return (
                             <td key={gw} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
                               <div>
-                                {hasGwAdjustment && goals > 0 && viewMode === "future" ? (
+                                {isDGW && viewMode === "future" ? (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+                                        {hasGwAdjustment && goals > 0 ? (
+                                          <div className="flex flex-col items-center">
+                                            <span className="font-bold text-purple-700">{formatGoals(displayGoals)}</span>
+                                            <span className="text-gray-400 line-through text-xs">{formatGoals(goals)}</span>
+                                          </div>
+                                        ) : (
+                                          <span className="font-bold text-gray-900">{formatGoals(goals)}</span>
+                                        )}
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
+                                      <div className="text-xs font-semibold mb-2">GW{gw} Fixture Breakdown</div>
+                                      {fixtures.map((f, idx) => (
+                                        <div key={idx} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                                          <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                            {f.opponent} ({f.isHome ? 'H' : 'A'})
+                                          </span>
+                                          <span className="font-medium text-xs">{formatGoals(f.goals * multiplier)}</span>
+                                        </div>
+                                      ))}
+                                      <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
+                                        <span>Total</span>
+                                        <span>{formatGoals(displayGoals)}</span>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                ) : hasGwAdjustment && goals > 0 && viewMode === "future" ? (
                                   <div className="flex flex-col items-center">
                                     <span className="font-bold text-purple-700">{formatGoals(displayGoals)}</span>
                                     <span className="text-gray-400 line-through text-xs">{formatGoals(goals)}</span>
@@ -963,7 +1003,7 @@ export default function PlayerGoalsScoredProjections() {
                                     {goals > 0 ? formatGoals(goals) : "-"}
                                   </div>
                                 )}
-                                {showOpponent && (
+                                {showOpponent && !isDGW && (
                                   <div className={`text-xs ${isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                     {opponent} ({isHome ? 'H' : 'A'})
                                   </div>

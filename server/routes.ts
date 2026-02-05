@@ -8864,7 +8864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const goalShareData = await goalShareResponse.json();
           const teamProjectionsData = await teamProjectionsResponse.json();
           
-          // Create lookup map for team projections by teamId
+          // Create lookup map for team projections by teamId (include fixtureDetails for DGW)
           const teamProjectionsMap: { [teamId: number]: any } = {};
           teamProjectionsData.forEach((team: any) => {
             teamProjectionsMap[team.teamId] = team;
@@ -8881,10 +8881,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const goalShare = player.goalShare || 0;
                 
                 const gameweekProjections: { [gameweek: string]: number } = {};
+                const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; goals: number }> } = {};
                 
                 // Calculate projected goals for each gameweek using full season goal share
                 Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamGoals]) => {
                   gameweekProjections[gameweek] = (goalShare / 100) * (teamGoals as number);
+                  
+                  // Build fixtureDetails for DGW support (individual fixture breakdown)
+                  const teamFixtures = teamProjections.fixtureDetails?.[gameweek] || [];
+                  if (teamFixtures.length > 0) {
+                    fixtureDetails[gameweek] = teamFixtures.map((f: any) => ({
+                      opponent: f.opponent,
+                      isHome: f.isHome,
+                      goals: (goalShare / 100) * (f.goals || 0)
+                    }));
+                  }
                 });
                 
                 // Calculate total projected goals across all gameweeks
@@ -8898,6 +8909,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   position: player.position,
                   goalShare: Math.round(goalShare * 100) / 100,
                   gameweekProjections: gameweekProjections,
+                  fixtureDetails: fixtureDetails,
                   totalProjectedGoals: totalProjectedGoals
                 });
               });
@@ -9283,7 +9295,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const assistShareData = await assistShareResponse.json();
           const teamProjectionsData = await teamProjectionsResponse.json();
           
-          // Create lookup map for team projections by teamId
+          // Create lookup map for team projections by teamId (include fixtureDetails for DGW)
           const teamProjectionsMap: { [teamId: number]: any } = {};
           teamProjectionsData.forEach((team: any) => {
             teamProjectionsMap[team.teamId] = team;
@@ -9300,10 +9312,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const assistShare = player.assistShare || 0;
                 
                 const gameweekProjections: { [gameweek: string]: number } = {};
+                const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; assists: number }> } = {};
                 
                 // Calculate projected assists for each gameweek using full season assist share
                 Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamAssists]) => {
                   gameweekProjections[gameweek] = (assistShare / 100) * (teamAssists as number);
+                  
+                  // Build fixtureDetails for DGW support (individual fixture breakdown)
+                  const teamFixtures = teamProjections.fixtureDetails?.[gameweek] || [];
+                  if (teamFixtures.length > 0) {
+                    fixtureDetails[gameweek] = teamFixtures.map((f: any) => ({
+                      opponent: f.opponent,
+                      isHome: f.isHome,
+                      assists: (assistShare / 100) * (f.assists || 0)
+                    }));
+                  }
                 });
                 
                 // Calculate total projected assists across all gameweeks
@@ -9317,6 +9340,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   position: player.position,
                   assistShare: Math.round(assistShare * 100) / 100,
                   gameweekProjections: gameweekProjections,
+                  fixtureDetails: fixtureDetails,
                   totalProjectedAssists: totalProjectedAssists
                 });
               });

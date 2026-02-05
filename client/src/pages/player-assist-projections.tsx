@@ -12,8 +12,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
+
+interface FixtureDetail {
+  opponent: string;
+  isHome: boolean;
+  assists: number;
+}
 
 interface PlayerAssistProjection {
   playerId: number;
@@ -21,6 +28,7 @@ interface PlayerAssistProjection {
   teamShort?: string;
   position?: string;
   gameweekProjections: { [gameweek: string]: number };
+  fixtureDetails?: { [gameweek: string]: FixtureDetail[] };
   totalProjectedAssists: number;
   assistShare: number;
 }
@@ -906,6 +914,8 @@ export default function PlayerAssistProjections() {
                             </td>
                             {dynamicGameweekColumns.map((gw) => {
                               const projValue = player.gameweekProjections[gw.toString()] || 0;
+                              const fixtures: FixtureDetail[] = (player as any).fixtureDetails?.[gw.toString()] || [];
+                              const isDGW = fixtures.length > 1;
                               const opponentInfo = opponentMap.get(`${player.teamShort}-${gw}`);
                               const multiplier = gwMultipliers[gw] ?? 1;
                               const displayValue = projValue * multiplier;
@@ -914,7 +924,37 @@ export default function PlayerAssistProjections() {
                               return (
                                 <td key={`assists-cell-${player.playerId}-gw${gw}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
                                   <div className="flex flex-col items-center">
-                                    {hasGwAdjustment && projValue > 0 ? (
+                                    {isDGW && viewMode === "future" ? (
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+                                            {hasGwAdjustment && projValue > 0 ? (
+                                              <div className="flex flex-col items-center">
+                                                <span className="text-purple-700 font-medium">{formatValue(displayValue)}</span>
+                                                <span className="text-gray-400 line-through text-xs">{formatValue(projValue)}</span>
+                                              </div>
+                                            ) : (
+                                              <span className="font-medium">{formatValue(projValue)}</span>
+                                            )}
+                                          </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
+                                          <div className="text-xs font-semibold mb-2">GW{gw} Fixture Breakdown</div>
+                                          {fixtures.map((f, idx) => (
+                                            <div key={idx} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                                              <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                                {f.opponent} ({f.isHome ? 'H' : 'A'})
+                                              </span>
+                                              <span className="font-medium text-xs">{formatValue(f.assists * multiplier)}</span>
+                                            </div>
+                                          ))}
+                                          <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
+                                            <span>Total</span>
+                                            <span>{formatValue(displayValue)}</span>
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
+                                    ) : hasGwAdjustment && projValue > 0 ? (
                                       <>
                                         <span className="text-purple-700 font-medium">{formatValue(displayValue)}</span>
                                         <span className="text-gray-400 line-through text-xs">{formatValue(projValue)}</span>
@@ -922,7 +962,7 @@ export default function PlayerAssistProjections() {
                                     ) : (
                                       <span>{projValue > 0 ? formatValue(projValue) : "-"}</span>
                                     )}
-                                    {showOpponent && opponentInfo && (
+                                    {showOpponent && opponentInfo && !isDGW && (
                                       <span className={`text-xs ${opponentInfo.isHome ? 'text-green-600' : 'text-blue-600'}`}>
                                         {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
                                       </span>
