@@ -250,8 +250,18 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
               ))}
             </div>
           ) : (
-            /* Single gameweek: Show standard component breakdown */
-            <div className="grid grid-cols-2 gap-3 text-sm">
+            /* Single gameweek: Show fixture info + component breakdown */
+            <div className="space-y-3">
+              {/* Show fixture details for SGW if available */}
+              {fixtures.length === 1 && fixtures[0].opponent && (
+                <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
+                  <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${fixtures[0].isHome ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                    {fixtures[0].isHome ? 'H' : 'A'}
+                  </span>
+                  <span className="font-semibold text-gray-800">vs {fixtures[0].opponent}</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3 text-sm">
               {(() => {
                 const originalCompProjs = (player as any).originalComponentProjections as { [comp: string]: { [gw: string]: number } } | undefined;
                 
@@ -293,6 +303,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
                   );
                 });
               })()}
+              </div>
             </div>
           )}
           
