@@ -5,7 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ProtectedRoute from "@/components/protected-route";
+
+interface FixtureDetail {
+  opponent: string;
+  isHome: boolean;
+  yellowCards: number;
+}
 
 interface BootstrapData {
   elements: any[];
@@ -23,6 +30,7 @@ interface YellowCardProjection {
   totalYellowCards: number;
   totalPoints: number;
   averagePerGameweek: number;
+  fixtureDetails?: { [gameweek: string]: FixtureDetail[] };
 }
 
 export default function PlayerYellowCards() {
@@ -218,9 +226,41 @@ export default function PlayerYellowCards() {
                           <td className="font-medium">{projection.playerName}</td>
                           <td className="text-center text-xs font-semibold">{projection.position}</td>
                           <td className="text-center text-sm">{projection.teamName}</td>
-                          {gameweeks.map(gw => (
-                            <td key={gw} className="text-center">{projection.yellowCards[`gw${gw}`]}</td>
-                          ))}
+                          {gameweeks.map(gw => {
+                            const fixtures = projection.fixtureDetails?.[gw.toString()] || [];
+                            const isDGW = fixtures.length > 1;
+                            const value = projection.yellowCards[`gw${gw}`];
+                            return (
+                              <td key={gw} className="text-center">
+                                {isDGW ? (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 font-medium">
+                                        {typeof value === 'number' ? value.toFixed(2) : value}
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
+                                      <div className="text-xs font-semibold mb-2">GW{gw} Fixture Breakdown</div>
+                                      {fixtures.map((f: FixtureDetail, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                                          <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                            {f.opponent} ({f.isHome ? 'H' : 'A'})
+                                          </span>
+                                          <span className="font-medium text-xs">{f.yellowCards.toFixed(2)}</span>
+                                        </div>
+                                      ))}
+                                      <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
+                                        <span>Total</span>
+                                        <span>{typeof value === 'number' ? value.toFixed(2) : value}</span>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                ) : (
+                                  typeof value === 'number' ? value.toFixed(2) : value
+                                )}
+                              </td>
+                            );
+                          })}
                           <td className="text-center font-semibold text-yellow-600">
                             {projection.totalYellowCards}
                           </td>
@@ -269,9 +309,41 @@ export default function PlayerYellowCards() {
                           <td className="font-medium">{projection.playerName}</td>
                           <td className="text-center text-xs font-semibold">{projection.position}</td>
                           <td className="text-center text-sm">{projection.teamName}</td>
-                          {gameweeks.map(gw => (
-                            <td key={gw} className="text-center">{projection.pointsFromYellowCards[`gw${gw}`]}</td>
-                          ))}
+                          {gameweeks.map(gw => {
+                            const fixtures = projection.fixtureDetails?.[gw.toString()] || [];
+                            const isDGW = fixtures.length > 1;
+                            const value = projection.pointsFromYellowCards[`gw${gw}`];
+                            return (
+                              <td key={gw} className="text-center">
+                                {isDGW ? (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 font-medium">
+                                        {typeof value === 'number' ? value.toFixed(2) : value}
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
+                                      <div className="text-xs font-semibold mb-2">GW{gw} Points Breakdown</div>
+                                      {fixtures.map((f: FixtureDetail, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                                          <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                            {f.opponent} ({f.isHome ? 'H' : 'A'})
+                                          </span>
+                                          <span className="font-medium text-xs">{(-f.yellowCards).toFixed(2)}</span>
+                                        </div>
+                                      ))}
+                                      <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
+                                        <span>Total</span>
+                                        <span>{typeof value === 'number' ? value.toFixed(2) : value}</span>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                ) : (
+                                  typeof value === 'number' ? value.toFixed(2) : value
+                                )}
+                              </td>
+                            );
+                          })}
                           <td className="text-center font-semibold text-red-600">
                             {projection.totalPoints}
                           </td>

@@ -7925,11 +7925,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         );
         
+        // Build fixtureDetails for DGW support (individual fixture breakdown)
+        const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; assists: number }> } = {};
+        if (tp.fixtureDetails) {
+          Object.entries(tp.fixtureDetails).forEach(([gw, fixtures]: [string, any]) => {
+            fixtureDetails[gw] = (fixtures || []).map((f: any) => ({
+              opponent: f.opponent,
+              isHome: f.isHome,
+              assists: Math.round((f.goals || 0) * 0.85 * 100) / 100
+            }));
+          });
+        }
+        
         return {
           teamId: tp.teamId,
           teamName: tp.teamName,
           teamShort: tp.teamShort,
           gameweekProjections: gameweekAssists,
+          fixtureDetails: fixtureDetails,
           totalAssists: Math.round((tp.totalGoals || 0) * 0.85 * 100) / 100,
           averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * 0.85 * 100) / 100,
           confidence: tp.confidence
@@ -10863,6 +10876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Clean sheet points calculation using 60-minute threshold probability
         const gameweekProjections: { [key: string]: number } = {};
+        const fixtureDetails: { [key: string]: Array<{ opponent: string; isHome: boolean; cleanSheetPoints: number }> } = {};
         let totalExpectedPoints = 0;
 
         // Use actual 60+ minute probability from player history
@@ -10878,14 +10892,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Only players who hit 60+ minutes get full clean sheet points in FPL
         for (let gw = startGameweek; gw <= endGameweek; gw++) {
           const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
+          const teamFixtureDetails = teamCSProjection.fixtureDetails?.[gw.toString()] || teamCSProjection.fixtureDetails?.[gw] || [];
           
           let cleanSheetPointsForGW = 0;
+          const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; cleanSheetPoints: number }> = [];
+          
           if (teamCleanSheetPercent !== undefined) {
-            // Formula: (Team CS %) × (% chance of 60+ mins / 100) × (Position Points)
-            cleanSheetPointsForGW = (teamCleanSheetPercent / 100) * (pct60Plus / 100) * cleanSheetPoints;
+            // For each individual fixture in this gameweek (handles DGW and SGW)
+            if (teamFixtureDetails.length > 0) {
+              teamFixtureDetails.forEach((fd: any) => {
+                // Formula: (Fixture CS %) × (% chance of 60+ mins / 100) × (Position Points)
+                const fixtureCSPoints = (fd.cleanSheetOdds / 100) * (pct60Plus / 100) * cleanSheetPoints;
+                cleanSheetPointsForGW += fixtureCSPoints;
+                gwFixtureDetails.push({
+                  opponent: fd.opponent,
+                  isHome: fd.isHome,
+                  cleanSheetPoints: Math.round(fixtureCSPoints * 100) / 100
+                });
+              });
+            } else {
+              // Fallback if no fixture details available - create synthetic fixture detail
+              cleanSheetPointsForGW = (teamCleanSheetPercent / 100) * (pct60Plus / 100) * cleanSheetPoints;
+              // Add a single fixture detail for consistency
+              gwFixtureDetails.push({
+                opponent: 'OPP',
+                isHome: true,
+                cleanSheetPoints: Math.round(cleanSheetPointsForGW * 100) / 100
+              });
+            }
           }
           
           gameweekProjections[gw.toString()] = Math.round(cleanSheetPointsForGW * 100) / 100;
+          fixtureDetails[gw.toString()] = gwFixtureDetails;
           totalExpectedPoints += cleanSheetPointsForGW;
         }
 
@@ -10906,6 +10944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pct60Plus: pct60Plus,
           pctBelow60: pctBelow60,
           gameweekProjections,
+          fixtureDetails,
           pointsFromCleanSheets,
           totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
           seasonTotalPoints: 0 // Simplified: no season calculations
@@ -14630,6 +14669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const team = fplData.teams.find((t: any) => t.id === player.team);
           const saves: { [key: string]: number } = {};
           const pointsFromSaves: { [key: string]: number } = {};
+          const fixtureDetails: { [key: string]: Array<{ opponent: string; isHome: boolean; saves: number }> } = {};
           let totalSaves = 0;
           let totalPoints = 0;
           
@@ -14651,16 +14691,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             );
             
             let gwExpectedSaves = 0;
+            const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; saves: number }> = [];
             
             // Sum saves across all fixtures in this gameweek
             fixtures.forEach((fixture: any) => {
               const opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
+              const isHome = fixture.team_h === player.team;
+              const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
               
               // Get opponent's AGR (Average Goals Received/Against per game)
               const opponentAGR = getOpponentAGR(opponentId);
               
               // Apply user's exact formula: Expected saves = Average saves/game × AGR of opponent/1.35
-              gwExpectedSaves += savesPerTeamGame * (opponentAGR / 1.35);
+              const fixtureSaves = savesPerTeamGame * (opponentAGR / 1.35);
+              gwExpectedSaves += fixtureSaves;
+              
+              gwFixtureDetails.push({
+                opponent: opponentTeam?.short_name || 'UNK',
+                isHome,
+                saves: parseFloat(fixtureSaves.toFixed(3))
+              });
             });
             
             // Apply new points formula: Points from saves = 0.33 × expected saves
@@ -14668,6 +14718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             saves[`gw${gw}`] = parseFloat(gwExpectedSaves.toFixed(3));
             pointsFromSaves[`gw${gw}`] = parseFloat(expectedPoints.toFixed(3));
+            fixtureDetails[`gw${gw}`] = gwFixtureDetails;
             totalSaves += gwExpectedSaves;
             totalPoints += expectedPoints;
           }
@@ -14679,6 +14730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             position: 'GKP',
             saves,
             pointsFromSaves,
+            fixtureDetails,
             totalSaves: parseFloat(totalSaves.toFixed(3)),
             totalPoints: parseFloat(totalPoints.toFixed(3)),
             averagePerGameweek: parseFloat((totalSaves / Math.max(1, endGameweek - Math.max(startGameweek, nextGameweek) + 1)).toFixed(3)),
@@ -15105,6 +15157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
           const yellowCards: { [key: string]: number } = {};
           const pointsFromYellowCards: { [key: string]: number } = {};
+          const fixtureDetails: { [key: string]: Array<{ opponent: string; isHome: boolean; yellowCards: number }> } = {};
           let totalYellowCards = 0;
           let totalPoints = 0;
           
@@ -15116,17 +15169,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Process each gameweek in the next 12 gameweeks range
           // DGW FIX: Count fixtures per gameweek and multiply rate
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Count how many fixtures this player's team has in this gameweek
-            const fixturesInGW = fixturesData.filter((f: any) => 
+            // Find fixtures for this team in this gameweek
+            const fixtures = fixturesData.filter((f: any) => 
               f.event === gw && (f.team_h === player.team || f.team_a === player.team)
-            ).length;
+            );
             
-            // Multiply per-game rate by number of fixtures (handles DGW)
-            const gwYellowCards = expectedYellowCardsPerGame * fixturesInGW;
+            const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; yellowCards: number }> = [];
+            let gwYellowCards = 0;
+            
+            // Sum yellow cards across all fixtures
+            fixtures.forEach((fixture: any) => {
+              const opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
+              const isHome = fixture.team_h === player.team;
+              const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
+              
+              gwYellowCards += expectedYellowCardsPerGame;
+              gwFixtureDetails.push({
+                opponent: opponentTeam?.short_name || 'UNK',
+                isHome,
+                yellowCards: parseFloat(expectedYellowCardsPerGame.toFixed(3))
+              });
+            });
+            
             const gwPoints = -gwYellowCards; // -1 point per yellow card
             
             yellowCards[`gw${gw}`] = parseFloat(gwYellowCards.toFixed(3));
             pointsFromYellowCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
+            fixtureDetails[`gw${gw}`] = gwFixtureDetails;
             totalYellowCards += gwYellowCards;
             totalPoints += gwPoints;
           }
@@ -15138,6 +15207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             position,
             yellowCards,
             pointsFromYellowCards,
+            fixtureDetails,
             totalYellowCards: parseFloat(totalYellowCards.toFixed(3)),
             totalPoints: parseFloat(totalPoints.toFixed(3)),
             averagePerGameweek: parseFloat(expectedYellowCardsPerGame.toFixed(3))
@@ -15202,6 +15272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
           const redCards: { [key: string]: number } = {};
           const pointsFromRedCards: { [key: string]: number } = {};
+          const fixtureDetails: { [key: string]: Array<{ opponent: string; isHome: boolean; redCards: number }> } = {};
           let totalRedCards = 0;
           let totalPoints = 0;
           
@@ -15213,17 +15284,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Process each gameweek in the next 6 gameweeks range
           // DGW FIX: Count fixtures per gameweek and multiply rate
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Count how many fixtures this player's team has in this gameweek
-            const fixturesInGW = fixturesData.filter((f: any) => 
+            // Find fixtures for this team in this gameweek
+            const fixtures = fixturesData.filter((f: any) => 
               f.event === gw && (f.team_h === player.team || f.team_a === player.team)
-            ).length;
+            );
             
-            // Multiply per-game rate by number of fixtures (handles DGW)
-            const gwRedCards = expectedRedCardsPerGame * fixturesInGW;
+            const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; redCards: number }> = [];
+            let gwRedCards = 0;
+            
+            // Sum red cards across all fixtures
+            fixtures.forEach((fixture: any) => {
+              const opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
+              const isHome = fixture.team_h === player.team;
+              const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
+              
+              gwRedCards += expectedRedCardsPerGame;
+              gwFixtureDetails.push({
+                opponent: opponentTeam?.short_name || 'UNK',
+                isHome,
+                redCards: parseFloat(expectedRedCardsPerGame.toFixed(3))
+              });
+            });
+            
             const gwPoints = -(gwRedCards * 3); // -3 points per red card
             
             redCards[`gw${gw}`] = parseFloat(gwRedCards.toFixed(3));
             pointsFromRedCards[`gw${gw}`] = parseFloat(gwPoints.toFixed(3));
+            fixtureDetails[`gw${gw}`] = gwFixtureDetails;
             totalRedCards += gwRedCards;
             totalPoints += gwPoints;
           }
@@ -15235,6 +15322,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             position,
             redCards,
             pointsFromRedCards,
+            fixtureDetails,
             totalRedCards: parseFloat(totalRedCards.toFixed(3)),
             totalPoints: parseFloat(totalPoints.toFixed(3)),
             averagePerGameweek: parseFloat(expectedRedCardsPerGame.toFixed(3))
@@ -15617,6 +15705,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
           const bonusPoints: { [key: string]: number } = {};
           const pointsFromBonus: { [key: string]: number } = {};
+          const fixtureDetails: { [key: string]: Array<{ opponent: string; isHome: boolean; bonusPoints: number }> } = {};
           let totalBonusPoints = 0;
           let totalPoints = 0;
           
@@ -15632,9 +15721,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             );
             
             let gwBonusPoints = 0;
+            const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; bonusPoints: number }> = [];
             
             // Sum bonus points across all fixtures in this gameweek
             fixtures.forEach((fixture: any) => {
+              const opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
+              const isHome = fixture.team_h === player.team;
+              const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
+              
+              let fixtureBonus = 0;
               if (playerSeasonBPS > 0) {
                 // Get both teams playing in this fixture
                 const homeTeamId = fixture.team_h;
@@ -15652,12 +15747,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 
                 // Full Season Formula: player's BPS share of total match BPS × 6 bonus points available
                 const bpsRatio = totalBothTeamsBPS > 0 ? playerSeasonBPS / totalBothTeamsBPS : 0;
-                gwBonusPoints += bpsRatio * 6;
+                fixtureBonus = bpsRatio * 6;
+                gwBonusPoints += fixtureBonus;
               }
+              
+              gwFixtureDetails.push({
+                opponent: opponentTeam?.short_name || 'UNK',
+                isHome,
+                bonusPoints: parseFloat(fixtureBonus.toFixed(3))
+              });
             });
             
             bonusPoints[`gw${gw}`] = parseFloat(gwBonusPoints.toFixed(3));
             pointsFromBonus[`gw${gw}`] = parseFloat(gwBonusPoints.toFixed(3));
+            fixtureDetails[`gw${gw}`] = gwFixtureDetails;
             totalBonusPoints += gwBonusPoints;
             totalPoints += gwBonusPoints;
           }
@@ -15671,6 +15774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             position,
             bonusPoints,
             pointsFromBonus,
+            fixtureDetails,
             totalBonusPoints: parseFloat(totalBonusPoints.toFixed(3)),
             totalPoints: parseFloat(totalPoints.toFixed(3)),
             averagePerGameweek: parseFloat((totalBonusPoints / numGameweeks).toFixed(3))

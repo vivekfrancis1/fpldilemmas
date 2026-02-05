@@ -6,9 +6,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ProtectedRoute from "@/components/protected-route";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { computeNextRange } from "@shared/gameweek-utils";
+
+interface FixtureDetail {
+  opponent: string;
+  isHome: boolean;
+  cleanSheetPoints: number;
+}
 
 interface PlayerCleanSheetData {
   playerId: number;
@@ -18,6 +25,7 @@ interface PlayerCleanSheetData {
   price: number;
   ownership: number;
   gameweekProjections: { [key: string]: number };
+  fixtureDetails?: { [key: string]: FixtureDetail[] };
   totalExpectedPoints: number;
   seasonTotalPoints: number;
 }
@@ -370,17 +378,52 @@ export default function PlayerCleanSheetPoints() {
                           </Badge>
                         </td>
                         <td className="px-1 md:px-4 py-2 md:py-3 font-medium text-gray-900 text-xs md:text-sm hidden md:table-cell">{player.team}</td>
-                        {gameweekRange.map(gw => (
-                          <td key={gw} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
-                            <span className={`${
-                              (player.gameweekProjections[gw.toString()] || 0) >= 1.5 ? 'text-green-700 font-bold' :
-                              (player.gameweekProjections[gw.toString()] || 0) >= 0.5 ? 'text-yellow-700' :
-                              'text-gray-600'
-                            }`}>
-                              {(player.gameweekProjections[gw.toString()] || 0).toFixed(2)}
-                            </span>
-                          </td>
-                        ))}
+                        {gameweekRange.map(gw => {
+                          const fixtures = player.fixtureDetails?.[gw.toString()] || [];
+                          const isDGW = fixtures.length > 1;
+                          const value = player.gameweekProjections[gw.toString()] || 0;
+                          
+                          return (
+                            <td key={gw} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
+                              {isDGW ? (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <button className={`cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 font-medium ${
+                                      value >= 1.5 ? 'text-green-700 font-bold' :
+                                      value >= 0.5 ? 'text-yellow-700' :
+                                      'text-gray-600'
+                                    }`}>
+                                      {value.toFixed(2)}
+                                    </button>
+                                  </PopoverTrigger>
+                                  <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
+                                    <div className="text-xs font-semibold mb-2">GW{gw} Fixture Breakdown</div>
+                                    {fixtures.map((f: FixtureDetail, idx: number) => (
+                                      <div key={idx} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                                        <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                          {f.opponent} ({f.isHome ? 'H' : 'A'})
+                                        </span>
+                                        <span className="font-medium text-xs">{f.cleanSheetPoints.toFixed(2)}</span>
+                                      </div>
+                                    ))}
+                                    <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
+                                      <span>Total</span>
+                                      <span>{value.toFixed(2)}</span>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              ) : (
+                                <span className={`${
+                                  value >= 1.5 ? 'text-green-700 font-bold' :
+                                  value >= 0.5 ? 'text-yellow-700' :
+                                  'text-gray-600'
+                                }`}>
+                                  {value.toFixed(2)}
+                                </span>
+                              )}
+                            </td>
+                          );
+                        })}
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-orange-50 min-w-[50px] md:min-w-[70px]">
                           <span className="text-sm md:text-lg font-bold text-orange-900">
                             {player.totalExpectedPoints.toFixed(2)}

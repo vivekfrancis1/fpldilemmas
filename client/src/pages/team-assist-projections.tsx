@@ -7,6 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+interface FixtureDetail {
+  opponent: string;
+  isHome: boolean;
+  assists: number;
+}
 
 interface TeamAssistProjection {
   id: number;
@@ -16,6 +23,7 @@ interface TeamAssistProjection {
   gameweekProjections: {
     [gameweek: number]: number;
   };
+  fixtureDetails?: { [gameweek: string]: FixtureDetail[] };
   totalAssists: number;
   averageAssistsPerGame: number;
   confidence: 'High' | 'Medium' | 'Low';
@@ -322,9 +330,36 @@ export default function TeamAssistProjections() {
                       {Array.from({ length: parseInt(endGameweek) - parseInt(startGameweek) + 1 }, (_, weekIndex) => {
                         const gwNumber = parseInt(startGameweek) + weekIndex;
                         const assists = team.gameweekProjections[gwNumber] || 0;
+                        const fixtures: FixtureDetail[] = team.fixtureDetails?.[gwNumber.toString()] || [];
+                        const isDGW = fixtures.length > 1;
                         return (
                           <td key={weekIndex} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getAssistsColor(assists)}`}>
-                            {assists > 0 ? assists.toFixed(2) : "-"}
+                            {isDGW ? (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 font-medium">
+                                    {assists.toFixed(2)}
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
+                                  <div className="text-xs font-semibold mb-2">GW{gwNumber} Fixture Breakdown</div>
+                                  {fixtures.map((f, idx) => (
+                                    <div key={idx} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                                      <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                        {f.opponent} ({f.isHome ? 'H' : 'A'})
+                                      </span>
+                                      <span className="font-medium text-xs">{f.assists.toFixed(2)}</span>
+                                    </div>
+                                  ))}
+                                  <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
+                                    <span>Total</span>
+                                    <span>{assists.toFixed(2)}</span>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            ) : (
+                              assists > 0 ? assists.toFixed(2) : "-"
+                            )}
                           </td>
                         );
                       })}

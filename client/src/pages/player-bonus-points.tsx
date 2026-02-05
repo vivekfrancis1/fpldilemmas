@@ -9,8 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PlayerNameCell } from "@/components/enhanced-table";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PlayerAvailabilityBadge, usePlayerAvailabilityMap } from "@/components/player-availability-badge";
 import { getGameweekMultipliers } from "@/lib/availability-adjustments";
+
+interface FixtureDetail {
+  opponent: string;
+  isHome: boolean;
+  bonusPoints: number;
+}
 
 interface BootstrapData {
   elements: any[];
@@ -28,6 +35,7 @@ interface BonusPointsProjection {
   totalBonusPoints: number;
   totalPoints: number;
   averagePerGameweek: number;
+  fixtureDetails?: { [gameweek: string]: FixtureDetail[] };
 }
 
 type SortField = 'name' | 'team' | 'totalBonusPoints' | string;
@@ -580,9 +588,38 @@ export default function PlayerBonusPoints() {
                             const multiplier = gwMultipliers[gw] ?? 1;
                             const displayValue = rawValue * multiplier;
                             const hasGwAdjustment = applyAvailability && multiplier !== 1;
+                            const fixtures = projection.fixtureDetails?.[gw.toString()] || [];
+                            const isDGW = fixtures.length > 1;
                             return (
                               <td key={`bonus-cell-${projection.playerId}-gw${gw}`} className="px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px]">
-                                {hasGwAdjustment && rawValue ? (
+                                {isDGW ? (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2 font-medium">
+                                        {hasGwAdjustment && rawValue ? (
+                                          <span className="text-purple-700">{displayValue.toFixed(2)}</span>
+                                        ) : (
+                                          <span>{rawValue ? rawValue.toFixed(2) : '-'}</span>
+                                        )}
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
+                                      <div className="text-xs font-semibold mb-2">GW{gw} Fixture Breakdown</div>
+                                      {fixtures.map((f: FixtureDetail, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                                          <span className={`text-xs ${f.isHome ? 'text-green-600' : 'text-blue-600'}`}>
+                                            {f.opponent} ({f.isHome ? 'H' : 'A'})
+                                          </span>
+                                          <span className="font-medium text-xs">{f.bonusPoints.toFixed(2)}</span>
+                                        </div>
+                                      ))}
+                                      <div className="flex justify-between items-center pt-2 mt-1 border-t border-gray-200 font-semibold text-xs">
+                                        <span>Total</span>
+                                        <span>{rawValue.toFixed(2)}</span>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                ) : hasGwAdjustment && rawValue ? (
                                   <div className="flex flex-col items-center">
                                     <span className="text-purple-700 font-medium">{displayValue.toFixed(2)}</span>
                                     <span className="text-gray-400 line-through text-xs">{rawValue.toFixed(2)}</span>
