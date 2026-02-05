@@ -346,8 +346,18 @@ export class PlayerTotalPointsAggregator {
   private convertGoalsToPoints(goalProjections: { [gameweek: string]: number }, position: string): { [gameweek: string]: number } {
     const goalPoints: { [gameweek: string]: number } = {};
     
-    // FPL scoring: Forwards/Midfielders = 4 points, Defenders/Goalkeepers = 6 points
-    const pointsPerGoal = (position === "Forward" || position === "Midfielder") ? 4 : 6;
+    // Official FPL scoring for goals:
+    // Goalkeeper: 10 points, Defender: 6 points, Midfielder: 5 points, Forward: 4 points
+    let pointsPerGoal: number;
+    if (position === "Goalkeeper" || position === "GKP") {
+      pointsPerGoal = 10;
+    } else if (position === "Defender" || position === "DEF") {
+      pointsPerGoal = 6;
+    } else if (position === "Midfielder" || position === "MID") {
+      pointsPerGoal = 5;
+    } else {
+      pointsPerGoal = 4; // Forward/FWD
+    }
     
     for (const [gameweek, goals] of Object.entries(goalProjections)) {
       goalPoints[gameweek] = goals * pointsPerGoal;
