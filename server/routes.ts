@@ -11229,22 +11229,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const csProjections = await csProjectionsResponse.json();
       const realFixtures = await fixturesResponse.json();
       
-      // Create team lookup from projection data
+      // Create team lookup from projection data (include fixtureDetails for DGW support)
       const teamLookup = new Map();
       goalProjections.forEach((team: any) => {
         teamLookup.set(team.teamId, {
           id: team.teamId,
           name: team.teamName,
           shortName: team.teamShort,
-          goalProjections: team.gameweekProjections
+          goalProjections: team.gameweekProjections,
+          goalFixtureDetails: team.fixtureDetails || {} // Individual fixture goals
         });
       });
       
-      // Add CS projections to team lookup
+      // Add CS projections to team lookup (include fixtureDetails)
       csProjections.forEach((team: any) => {
         const existingTeam = teamLookup.get(team.id);
         if (existingTeam) {
           existingTeam.csProjections = team.gameweekProjections;
+          existingTeam.csFixtureDetails = team.fixtureDetails || {}; // Individual fixture CS%
         }
       });
       
@@ -11361,10 +11363,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } else {
       // For unfinished fixtures, use projection data from Team Goal/CS tools
-      matchOdds.homeTeam.expectedGoals = homeTeam.goalProjections?.[gameweek.toString()] || 0;
-      matchOdds.awayTeam.expectedGoals = awayTeam.goalProjections?.[gameweek.toString()] || 0;
-      matchOdds.homeTeam.cleanSheetOdds = homeTeam.csProjections?.[gameweek.toString()] || 0;
-      matchOdds.awayTeam.cleanSheetOdds = awayTeam.csProjections?.[gameweek.toString()] || 0;
+      // Use individual fixture values from fixtureDetails for DGW accuracy
+      const gwKey = gameweek.toString();
+      
+      // Get individual fixture goals (find matching opponent)
+      const homeGoalFixtures = homeTeam.goalFixtureDetails?.[gwKey] || [];
+      const awayGoalFixtures = awayTeam.goalFixtureDetails?.[gwKey] || [];
+      const homeGoalFixture = homeGoalFixtures.find((f: any) => f.opponent === awayTeam.shortName);
+      const awayGoalFixture = awayGoalFixtures.find((f: any) => f.opponent === homeTeam.shortName);
+      
+      // Get individual fixture CS% (find matching opponent)
+      const homeCSFixtures = homeTeam.csFixtureDetails?.[gwKey] || [];
+      const awayCSFixtures = awayTeam.csFixtureDetails?.[gwKey] || [];
+      const homeCSFixture = homeCSFixtures.find((f: any) => f.opponent === awayTeam.shortName);
+      const awayCSFixture = awayCSFixtures.find((f: any) => f.opponent === homeTeam.shortName);
+      
+      // Use individual fixture values if available, otherwise fall back to gameweek totals
+      matchOdds.homeTeam.expectedGoals = homeGoalFixture?.goals ?? homeTeam.goalProjections?.[gwKey] ?? 0;
+      matchOdds.awayTeam.expectedGoals = awayGoalFixture?.goals ?? awayTeam.goalProjections?.[gwKey] ?? 0;
+      matchOdds.homeTeam.cleanSheetOdds = homeCSFixture?.cleanSheetOdds ?? homeTeam.csProjections?.[gwKey] ?? 0;
+      matchOdds.awayTeam.cleanSheetOdds = awayCSFixture?.cleanSheetOdds ?? awayTeam.csProjections?.[gwKey] ?? 0;
       
       // Determine projected match result based on expected goals
       if (matchOdds.homeTeam.expectedGoals > matchOdds.awayTeam.expectedGoals) {
