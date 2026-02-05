@@ -12482,7 +12482,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const fixtureRedCardsPts = -(redCardsFixture.redCards || 0) * 3;
               const fixtureBonusPts = bonusFixture.bonusPoints || 0;
               const fixtureSavesPts = savesFixture.saves ? Math.floor(savesFixture.saves / 3) : 0;
-              const fixtureDefensiveContributionsPts = defensiveContributionsFixture.defensiveContributions || 0;
+              // DC API doesn't provide per-fixture data, so split GW total evenly across fixtures
+              const fixtureDefensiveContributionsPts = numFixtures > 1 ? defensiveContributionsPts / numFixtures : defensiveContributionsPts;
               
               const fixtureTotalPoints = fixtureGoalsPts + fixtureAssistsPts + fixtureCleansheetPts + 
                                          fixtureMinutesPts + fixtureGoalsConcededPts + fixtureYellowCardsPts + 
