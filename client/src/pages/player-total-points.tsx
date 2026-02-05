@@ -783,9 +783,9 @@ export default function PlayerTotalPoints() {
     if (user?.fplManagerId) {
       return user.fplManagerId.toString();
     }
-    // Fallback to localStorage
+    // Fallback to localStorage (check both possible keys)
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('fplManagerId') || null;
+      return localStorage.getItem('fpl-manager-id') || localStorage.getItem('fplManagerId') || null;
     }
     return null;
   }, [user?.fplManagerId]);
