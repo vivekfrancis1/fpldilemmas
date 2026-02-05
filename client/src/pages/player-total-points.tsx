@@ -1560,6 +1560,19 @@ export default function PlayerTotalPoints() {
     return filtered;
   }, [displayData, selectedPositions, selectedTeams, searchTerm, selectedLoadGroup, selectedAvailability, sortField, sortDirection, myTeamPlayerIds]);
 
+  // Compute empty message based on filter state
+  const emptyMessage = useMemo(() => {
+    if (selectedLoadGroup === "My Team") {
+      if (!savedManagerId) {
+        return "To view your team, please search for your Manager ID in My Dashboard first.";
+      }
+      if (myTeamPlayerIds.size === 0) {
+        return "Loading your team data... If this persists, please search for your Manager ID in My Dashboard.";
+      }
+    }
+    return "No players found matching your criteria";
+  }, [selectedLoadGroup, savedManagerId, myTeamPlayerIds]);
+
   // Calculate max points per gameweek for highlighting
   const maxPointsPerGameweek = useMemo(() => {
     const maxPoints: { [key: string]: number } = {};
@@ -2090,7 +2103,7 @@ export default function PlayerTotalPoints() {
                     sortField={sortField}
                     sortDirection={sortDirection}
                     loading={isLoading}
-                    emptyMessage="No players found matching your criteria"
+                    emptyMessage={emptyMessage}
                     stickyHeader={true}
                     compact={true}
                     maxHeight="80vh"
