@@ -20,10 +20,10 @@ interface TeamCSProjection {
   team: string;
   teamShort: string;
   gameweekProjections: {
-    [gameweek: number]: number; // Clean sheet probability as percentage (summed for DGW)
+    [gameweek: string]: number; // Clean sheet probability as percentage (summed for DGW)
   };
   fixtureDetails?: {
-    [gameweek: number]: FixtureDetail[]; // Individual fixtures per gameweek
+    [gameweek: string]: FixtureDetail[]; // Individual fixtures per gameweek (string keys from API)
   };
   totalCSProbability: number;
   averageCSProbability: number;
@@ -436,7 +436,8 @@ export default function TeamCSProjections() {
                         </td>
                         
                         {activeGameweeks.map(gwNumber => {
-                          const fixtures = team.fixtureDetails?.[gwNumber] || [];
+                          // Use string key to match API response format
+                          const fixtures = team.fixtureDetails?.[gwNumber.toString()] || [];
                           const hasFixtures = fixtures.length > 0;
                           const avgCS = hasFixtures ? fixtures.reduce((sum, f) => sum + f.cleanSheetOdds, 0) / fixtures.length : 0;
                           
@@ -476,8 +477,8 @@ export default function TeamCSProjections() {
                         
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 min-w-[50px] md:min-w-[70px]">
                           {(() => {
-                            // Calculate average CS% per fixture across all active gameweeks
-                            const allFixtures = activeGameweeks.flatMap(gw => team.fixtureDetails?.[gw] || []);
+                            // Calculate average CS% per fixture across all active gameweeks (use string keys)
+                            const allFixtures = activeGameweeks.flatMap(gw => team.fixtureDetails?.[gw.toString()] || []);
                             const periodAvg = allFixtures.length > 0 
                               ? allFixtures.reduce((sum, f) => sum + f.cleanSheetOdds, 0) / allFixtures.length 
                               : 0;
