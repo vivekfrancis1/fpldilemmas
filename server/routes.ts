@@ -7970,9 +7970,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Processing next 12 gameweeks for clean sheets (GW${currentGameweek + 1} to GW${endGameweek}), current GW: ${currentGameweek}`);
       
       // Create lookup map for team Goals Against by gameweek for new formula
+      // Also store fixtureDetails for individual fixture CS calculations
       const teamGoalsAgainstMap = new Map();
+      const teamGoalsAgainstDetailsMap = new Map();
       goalsAgainstData.forEach((team: any) => {
         teamGoalsAgainstMap.set(team.id, team.gameweekProjections);
+        teamGoalsAgainstDetailsMap.set(team.id, team.fixtureDetails || {});
       });
       
       // Use centralized team service for consistent data
@@ -8008,19 +8011,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             };
           }
           
-          // Get team's Goals Against for this specific gameweek
-          const teamGoalsAgainstProjections = teamGoalsAgainstMap.get(team.id) || {};
-          const gameweekGoalsAgainstTotal = teamGoalsAgainstProjections[fixture.event.toString()] || 1.5; // Default if not found
+          // Get team's Goals Against fixtureDetails for this specific gameweek
+          const teamGoalsAgainstDetails = teamGoalsAgainstDetailsMap.get(team.id) || {};
+          const gwFixtureDetails = teamGoalsAgainstDetails[fixture.event.toString()] || [];
           
-          // DGW FIX: Count how many fixtures team has in this gameweek
-          // Divide summed goals against by fixture count to get per-game estimate
-          const fixturesInGW = fixturesData.filter((f: any) => 
-            (f.team_h === team.id || f.team_a === team.id) && 
-            f.event === fixture.event
-          ).length;
-          const perGameGoalsAgainst = gameweekGoalsAgainstTotal / Math.max(1, fixturesInGW);
+          // Find the specific fixture's goalsAgainst from fixtureDetails
+          // Match by opponent name
+          const matchingFixture = gwFixtureDetails.find((fd: any) => fd.opponent === opponent.short_name);
+          const perGameGoalsAgainst = matchingFixture ? matchingFixture.goalsAgainst : 1.5; // Default if not found
           
-          // POISSON DISTRIBUTION FORMULA: P(Clean Sheet) = e^(-λ) where λ is expected goals conceded PER GAME
+          // POISSON DISTRIBUTION FORMULA: P(Clean Sheet) = e^(-λ) where λ is expected goals conceded for THIS SPECIFIC FIXTURE
           let cleanSheetProbability = Math.exp(-perGameGoalsAgainst) * 100; // Convert to percentage
           
           // Ensure realistic bounds (0-100%)
