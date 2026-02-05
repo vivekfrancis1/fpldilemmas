@@ -223,9 +223,9 @@ export default function TeamGoalProjections() {
     return map;
   }, [bootstrapData?.teams, fixturesData]);
 
-  // Use cached endpoint for faster loading (future projections)
+  // Use live endpoint to get fixtureDetails for DGW display
   const { data: projectionsData, isLoading: projectionsLoading, error: projectionsError, refetch: refetchProjections } = useQuery<TeamGoalProjection[]>({
-    queryKey: ["/api/cached/team-goal-projections"],
+    queryKey: ["/api/team-goal-projections"],
     staleTime: 60 * 60 * 1000, // 1 hour cache
     retry: 2,
     retryDelay: 1000,
