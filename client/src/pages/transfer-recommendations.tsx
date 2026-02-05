@@ -32,8 +32,8 @@ export default function TransferRecommendations() {
   const [useFallbackEndpoint, setUseFallbackEndpoint] = useState(false);
   const [positionFilter, setPositionFilter] = useState<string[]>([]);
   const [appliedTransfers, setAppliedTransfers] = useState<{ [gw: string]: any[] }>({});
-  const [uniquePlayerOut, setUniquePlayerOut] = useState(false);
-  const [uniquePlayerIn, setUniquePlayerIn] = useState(false);
+  const [uniquePlayerOut, setUniquePlayerOut] = useState(true);
+  const [uniquePlayerIn, setUniquePlayerIn] = useState(true);
   const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
   const { toast } = useToast();
   const { user } = useAuth();
