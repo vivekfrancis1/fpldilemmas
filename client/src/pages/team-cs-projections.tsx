@@ -9,12 +9,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
+interface FixtureDetail {
+  opponent: string;
+  isHome: boolean;
+  cleanSheetOdds: number;
+}
+
 interface TeamCSProjection {
   id: number;
   team: string;
   teamShort: string;
   gameweekProjections: {
-    [gameweek: number]: number; // Clean sheet probability as percentage
+    [gameweek: number]: number; // Clean sheet probability as percentage (summed for DGW)
+  };
+  fixtureDetails?: {
+    [gameweek: number]: FixtureDetail[]; // Individual fixtures per gameweek
   };
   totalCSProbability: number;
   averageCSProbability: number;
@@ -427,18 +436,37 @@ export default function TeamCSProjections() {
                         </td>
                         
                         {activeGameweeks.map(gwNumber => {
-                          const csPercentage = team.gameweekProjections[gwNumber] || 0;
-                          const fplShortName = teamNameToShort.get(team.team) || teamNameToShort.get(team.teamName) || team.teamShort;
-                          const opponentInfo = opponentMap.get(`${fplShortName}-${gwNumber}`);
+                          const fixtures = team.fixtureDetails?.[gwNumber] || [];
+                          const hasFixtures = fixtures.length > 0;
+                          const avgCS = hasFixtures ? fixtures.reduce((sum, f) => sum + f.cleanSheetOdds, 0) / fixtures.length : 0;
+                          
                           return (
-                            <td key={`${team.id}-gw${gwNumber}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getCSColor(csPercentage)}`}>
-                              <div>
-                                <span className="md:hidden">{csPercentage > 0 ? `${Math.round(csPercentage)}%` : "-"}</span>
-                                <span className="hidden md:inline">{csPercentage > 0 ? `${csPercentage}%` : "-"}</span>
-                              </div>
-                              {showOpponent && opponentInfo && (
-                                <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 hidden md:block">
-                                  {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
+                            <td key={`${team.id}-gw${gwNumber}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getCSColor(avgCS)}`}>
+                              {!hasFixtures ? (
+                                <span className="text-gray-400">-</span>
+                              ) : fixtures.length === 1 ? (
+                                <div>
+                                  <span className="md:hidden">{Math.round(fixtures[0].cleanSheetOdds)}%</span>
+                                  <span className="hidden md:inline">{fixtures[0].cleanSheetOdds}%</span>
+                                  {showOpponent && (
+                                    <div className="text-[10px] md:text-xs text-gray-500 mt-0.5 hidden md:block">
+                                      {fixtures[0].opponent} ({fixtures[0].isHome ? 'H' : 'A'})
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-0.5">
+                                  {fixtures.map((fixture, idx) => (
+                                    <div key={idx} className="text-xs">
+                                      <span className="md:hidden">{Math.round(fixture.cleanSheetOdds)}%</span>
+                                      <span className="hidden md:inline">{fixture.cleanSheetOdds}%</span>
+                                      {showOpponent && (
+                                        <span className="text-[10px] text-gray-500 ml-1 hidden md:inline">
+                                          {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </td>
@@ -448,8 +476,11 @@ export default function TeamCSProjections() {
                         
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 min-w-[50px] md:min-w-[70px]">
                           {(() => {
-                            const periodValues = activeGameweeks.map(gw => team.gameweekProjections[gw] || 0);
-                            const periodAvg = periodValues.length > 0 ? periodValues.reduce((sum, val) => sum + val, 0) / periodValues.length : 0;
+                            // Calculate average CS% per fixture across all active gameweeks
+                            const allFixtures = activeGameweeks.flatMap(gw => team.fixtureDetails?.[gw] || []);
+                            const periodAvg = allFixtures.length > 0 
+                              ? allFixtures.reduce((sum, f) => sum + f.cleanSheetOdds, 0) / allFixtures.length 
+                              : 0;
                             return (
                               <>
                                 <span className="text-sm font-bold text-blue-900 md:hidden">{Math.round(periodAvg)}%</span>
