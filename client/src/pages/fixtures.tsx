@@ -246,7 +246,7 @@ export default function Fixtures() {
       teamAverageFDR: {} 
     };
 
-    const matrix: Record<number, Record<number, { opponent: string, difficulty: number, isHome: boolean, finished: boolean }>> = {};
+    const matrix: Record<number, Record<number, Array<{ opponent: string, difficulty: number, isHome: boolean, finished: boolean }>>> = {};
     const avgFDR: Record<number, number> = {};
     
     // Initialize matrix
@@ -285,26 +285,35 @@ export default function Fixtures() {
       return originalDifficulty > 0 ? originalDifficulty : 3;
     };
 
-    // Fill matrix with fixtures
+    // Fill matrix with fixtures - support multiple fixtures per gameweek (DGW)
     fixturesData.forEach(fixture => {
       if (fixture.event >= gameweekRange.start && fixture.event <= gameweekRange.end) {
         const homeTeam = bootstrapData.teams.find(t => t.id === fixture.team_h);
         const awayTeam = bootstrapData.teams.find(t => t.id === fixture.team_a);
         
         if (homeTeam && awayTeam) {
-          matrix[fixture.team_h][fixture.event] = {
+          // Initialize as array if not exists
+          if (!matrix[fixture.team_h][fixture.event]) {
+            matrix[fixture.team_h][fixture.event] = [];
+          }
+          if (!matrix[fixture.team_a][fixture.event]) {
+            matrix[fixture.team_a][fixture.event] = [];
+          }
+          
+          // Push fixtures to array (supports DGW)
+          matrix[fixture.team_h][fixture.event].push({
             opponent: awayTeam.short_name,
             difficulty: getOverallFDR(fixture.team_h_difficulty, awayTeam.id, true),
             isHome: true,
             finished: fixture.finished
-          };
+          });
           
-          matrix[fixture.team_a][fixture.event] = {
+          matrix[fixture.team_a][fixture.event].push({
             opponent: homeTeam.short_name,
             difficulty: getOverallFDR(fixture.team_a_difficulty, homeTeam.id, false),
             isHome: false,
             finished: fixture.finished
-          };
+          });
         }
       }
     });
@@ -314,8 +323,16 @@ export default function Fixtures() {
       const teamFixturesEntries = Object.entries(matrix[team.id] || {});
       const filteredFixtures = teamFixturesEntries.filter(([gw]) => !excludedGameweeks.has(parseInt(gw)));
       if (filteredFixtures.length > 0) {
-        const totalDifficulty = filteredFixtures.reduce((sum, [, fixture]) => sum + fixture.difficulty, 0);
-        avgFDR[team.id] = parseFloat((totalDifficulty / filteredFixtures.length).toFixed(2));
+        // Sum all fixture difficulties (including multiple fixtures per GW for DGW)
+        let totalDifficulty = 0;
+        let fixtureCount = 0;
+        filteredFixtures.forEach(([, fixtures]) => {
+          fixtures.forEach(fixture => {
+            totalDifficulty += fixture.difficulty;
+            fixtureCount++;
+          });
+        });
+        avgFDR[team.id] = fixtureCount > 0 ? parseFloat((totalDifficulty / fixtureCount).toFixed(2)) : 0;
       } else {
         avgFDR[team.id] = 0;
       }
@@ -374,8 +391,12 @@ export default function Fixtures() {
         }> = [];
         
         gameweeks.forEach(gw => {
-          const fixture1 = fixtureMatrix[team1.id]?.[gw];
-          const fixture2 = fixtureMatrix[team2.id]?.[gw];
+          const fixtures1 = fixtureMatrix[team1.id]?.[gw] || [];
+          const fixtures2 = fixtureMatrix[team2.id]?.[gw] || [];
+          
+          // Use the first fixture for rotation calculation (or average if multiple)
+          const fixture1 = fixtures1[0];
+          const fixture2 = fixtures2[0];
           
           const diff1 = fixture1?.difficulty || 3;
           const diff2 = fixture2?.difficulty || 3;
@@ -460,10 +481,15 @@ export default function Fixtures() {
         if (sortBy.startsWith('gw-')) {
           const gw = parseInt(sortBy.replace('gw-', ''));
           return teams.sort((a, b) => {
-            const fixtureA = fixtureMatrix[a.id]?.[gw];
-            const fixtureB = fixtureMatrix[b.id]?.[gw];
-            const diffA = fixtureA?.difficulty || 0;
-            const diffB = fixtureB?.difficulty || 0;
+            const fixturesA = fixtureMatrix[a.id]?.[gw] || [];
+            const fixturesB = fixtureMatrix[b.id]?.[gw] || [];
+            // Use average difficulty for DGW, or first fixture difficulty
+            const diffA = fixturesA.length > 0 
+              ? fixturesA.reduce((sum, f) => sum + f.difficulty, 0) / fixturesA.length 
+              : 0;
+            const diffB = fixturesB.length > 0 
+              ? fixturesB.reduce((sum, f) => sum + f.difficulty, 0) / fixturesB.length 
+              : 0;
             
             return sortDirection === 'asc' ? diffA - diffB : diffB - diffA;
           });
@@ -935,22 +961,27 @@ export default function Fixtures() {
                             </div>
                           </td>
                           {gameweeks.map(gw => {
-                            const fixture = fixtureMatrix[team.id]?.[gw];
+                            const fixtures = fixtureMatrix[team.id]?.[gw];
                             return (
                               <td key={gw} className={`px-0.5 py-0.5 text-center ${
                                 gw === nextGameweek ? 'bg-blue-50' : ''
                               }`}>
-                                {fixture ? (
-                                  <div 
-                                    className={`px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
-                                      fixture.finished ? 'opacity-50' : ''
-                                    }`}
-                                    title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} (FDR: ${fixture.difficulty})`}
-                                    data-testid={`fixture-${team.id}-${gw}`}
-                                  >
-                                    <span className="truncate font-medium whitespace-nowrap">
-                                      {fixture.opponent}({fixture.isHome ? 'H' : 'A'})
-                                    </span>
+                                {fixtures && fixtures.length > 0 ? (
+                                  <div className="flex flex-col gap-0.5">
+                                    {fixtures.map((fixture, idx) => (
+                                      <div 
+                                        key={idx}
+                                        className={`px-0.5 py-0.5 rounded text-[9px] sm:text-[10px] md:text-xs font-medium ${getDifficultyColor(fixture.difficulty)} ${
+                                          fixture.finished ? 'opacity-50' : ''
+                                        }`}
+                                        title={`${fixture.isHome ? 'vs' : '@'} ${fixture.opponent} (FDR: ${fixture.difficulty})`}
+                                        data-testid={`fixture-${team.id}-${gw}-${idx}`}
+                                      >
+                                        <span className="truncate font-medium whitespace-nowrap">
+                                          {fixture.opponent}({fixture.isHome ? 'H' : 'A'})
+                                        </span>
+                                      </div>
+                                    ))}
                                   </div>
                                 ) : (
                                   <div className="px-0.5 py-0.5 text-gray-300">-</div>
