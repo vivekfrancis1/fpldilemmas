@@ -12532,10 +12532,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
-          // For DGW with valid fixtureDetails, update component maps to use sum of per-fixture values
+          // DGW HANDLING: Use per-fixture summation for multi-fixture gameweeks
           // This ensures component totals match what's displayed in the popover
           if (fixtureDetails[gwKey] && fixtureDetails[gwKey].length > 1) {
-            // DGW: Override component maps with sum of per-fixture values for consistency
             pointsFromGoals[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromGoals, 0);
             pointsFromAssists[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromAssists, 0);
             pointsFromCleanSheets[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromCleanSheets, 0);
@@ -12548,14 +12547,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pointsFromDefensiveContributions[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromDefensiveContributions, 0);
           }
 
-          // Total points for this gameweek
-          // For DGW with valid fixtureDetails, use sum of per-fixture totals for accuracy
+          // Calculate gameweek total
           let gwTotal: number;
           if (fixtureDetails[gwKey] && fixtureDetails[gwKey].length > 1) {
             // DGW: Sum per-fixture totals for consistency with popover display
             gwTotal = fixtureDetails[gwKey].reduce((sum, f) => sum + f.totalPoints, 0);
           } else {
-            // SGW or no fixture details: Use aggregate component totals
+            // SGW: Use aggregate component totals (preserves original accuracy)
             gwTotal = goalsPts + assistsPts + cleansheetPts + minutesPts + 
                      goalsConcededPts + yellowCardsPts + redCardsPts + bonusPts + savesPts + defensiveContributionsPts;
           }
