@@ -1293,7 +1293,8 @@ export default function PlayerTotalPoints() {
       const numGameweeks = gwKeys.length || 1;
       const newAverage = newTotal / numGameweeks;
       const playerPrice = player.price || 0;
-      const newAverageValue = playerPrice > 0 ? newAverage / playerPrice : 0;
+      // Value = Total Points / Price (points per million spent)
+      const newAverageValue = playerPrice > 0 ? newTotal / playerPrice : 0;
       
       return {
         ...player,
@@ -1453,6 +1454,7 @@ export default function PlayerTotalPoints() {
       }
       
       const avgPointsPerGame = rangeGamesPlayed > 0 ? rangeTotal / rangeGamesPlayed : 0;
+      // Value = Total Points / Price (points per million spent)
       const avgValue = player.price > 0 ? rangeTotal / player.price : 0;
       const avgMinsPerGame = rangeGamesPlayed > 0 ? rangeMinutes / rangeGamesPlayed : 0;
       
