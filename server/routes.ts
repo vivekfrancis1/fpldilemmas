@@ -12509,6 +12509,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
+          // For DGW with valid fixtureDetails, update component maps to use sum of per-fixture values
+          // This ensures component totals match what's displayed in the popover
+          if (fixtureDetails[gwKey] && fixtureDetails[gwKey].length > 1) {
+            // DGW: Override component maps with sum of per-fixture values for consistency
+            pointsFromGoals[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromGoals, 0);
+            pointsFromAssists[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromAssists, 0);
+            pointsFromCleanSheets[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromCleanSheets, 0);
+            pointsFromMinutes[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromMinutes, 0);
+            pointsFromGoalsConceded[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromGoalsConceded, 0);
+            pointsFromYellowCards[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromYellowCards, 0);
+            pointsFromRedCards[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromRedCards, 0);
+            pointsFromBonus[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromBonus, 0);
+            pointsFromSaves[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromSaves, 0);
+            pointsFromDefensiveContributions[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromDefensiveContributions, 0);
+          }
+
           // Total points for this gameweek
           // For DGW with valid fixtureDetails, use sum of per-fixture totals for accuracy
           let gwTotal: number;
@@ -12534,9 +12550,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate average expected minutes per gameweek (from minutes player data)
         const avgMinutesPerGameweek = minutesPlayer?.expectedMinutesPerGame || 0;
         
+        // Calculate component totals first - these are the authoritative values
+        const totalPointsFromGoals = Object.values(pointsFromGoals).reduce((sum: number, pts: number) => sum + pts, 0);
+        const totalPointsFromAssists = Object.values(pointsFromAssists).reduce((sum: number, pts: number) => sum + pts, 0);
+        const totalPointsFromCleanSheets = Object.values(pointsFromCleanSheets).reduce((sum: number, pts: number) => sum + pts, 0);
+        const totalPointsFromMinutes = Object.values(pointsFromMinutes).reduce((sum: number, pts: number) => sum + pts, 0);
+        const totalPointsFromGoalsConceded = Object.values(pointsFromGoalsConceded).reduce((sum: number, pts: number) => sum + pts, 0);
+        const totalPointsFromYellowCards = Object.values(pointsFromYellowCards).reduce((sum: number, pts: number) => sum + pts, 0);
+        const totalPointsFromRedCards = Object.values(pointsFromRedCards).reduce((sum: number, pts: number) => sum + pts, 0);
+        const totalPointsFromBonus = Object.values(pointsFromBonus).reduce((sum: number, pts: number) => sum + pts, 0);
+        const totalPointsFromSaves = Object.values(pointsFromSaves).reduce((sum: number, pts: number) => sum + pts, 0);
+        const totalPointsFromDefensiveContributions = Object.values(pointsFromDefensiveContributions).reduce((sum: number, pts: number) => sum + pts, 0);
+        
+        // Calculate total as exact sum of all 10 components - ensures consistency between displayed total and component breakdown
+        const calculatedTotal = totalPointsFromGoals + totalPointsFromAssists + totalPointsFromCleanSheets + 
+                               totalPointsFromMinutes + totalPointsFromGoalsConceded + totalPointsFromYellowCards + 
+                               totalPointsFromRedCards + totalPointsFromBonus + totalPointsFromSaves + totalPointsFromDefensiveContributions;
+        
         // Calculate average value (total points across all gameweeks / price)
-        const avgPointsPerGameweek = totalExpectedPoints / (end - start + 1);
-        const averageValue = price > 0 ? totalExpectedPoints / price : 0;
+        const avgPointsPerGameweek = calculatedTotal / (end - start + 1);
+        const averageValue = price > 0 ? calculatedTotal / price : 0;
 
         return {
           playerId: playerId,
@@ -12549,7 +12582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ownership: ownership,
           form: form,
           gameweekProjections,
-          totalExpectedPoints: Math.round(totalExpectedPoints * 100) / 100,
+          totalExpectedPoints: Math.round(calculatedTotal * 100) / 100,
           averagePerGameweek: Math.round(avgPointsPerGameweek * 100) / 100,
           averageValue: Math.round(averageValue * 100) / 100,
           avgMinutesPerGameweek: Math.round(avgMinutesPerGameweek * 100) / 100,
@@ -12569,16 +12602,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromDefensiveContributions,
           fixtureDetails, // Per-fixture component breakdowns for DGW support
           // Component totals
-          totalPointsFromGoals: Object.values(pointsFromGoals).reduce((sum: number, pts: number) => sum + pts, 0),
-          totalPointsFromAssists: Object.values(pointsFromAssists).reduce((sum: number, pts: number) => sum + pts, 0),
-          totalPointsFromCleanSheets: Object.values(pointsFromCleanSheets).reduce((sum: number, pts: number) => sum + pts, 0),
-          totalPointsFromMinutes: Object.values(pointsFromMinutes).reduce((sum: number, pts: number) => sum + pts, 0),
-          totalPointsFromGoalsConceded: Object.values(pointsFromGoalsConceded).reduce((sum: number, pts: number) => sum + pts, 0),
-          totalPointsFromYellowCards: Object.values(pointsFromYellowCards).reduce((sum: number, pts: number) => sum + pts, 0),
-          totalPointsFromRedCards: Object.values(pointsFromRedCards).reduce((sum: number, pts: number) => sum + pts, 0),
-          totalPointsFromBonus: Object.values(pointsFromBonus).reduce((sum: number, pts: number) => sum + pts, 0),
-          totalPointsFromSaves: Object.values(pointsFromSaves).reduce((sum: number, pts: number) => sum + pts, 0),
-          totalPointsFromDefensiveContributions: Object.values(pointsFromDefensiveContributions).reduce((sum: number, pts: number) => sum + pts, 0)
+          totalPointsFromGoals,
+          totalPointsFromAssists,
+          totalPointsFromCleanSheets,
+          totalPointsFromMinutes,
+          totalPointsFromGoalsConceded,
+          totalPointsFromYellowCards,
+          totalPointsFromRedCards,
+          totalPointsFromBonus,
+          totalPointsFromSaves,
+          totalPointsFromDefensiveContributions
         };
       })
       .filter(p => p !== null && p.totalExpectedPoints > 0)
