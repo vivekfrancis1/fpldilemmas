@@ -1136,7 +1136,7 @@ export default function TransferRecommendations() {
                                     Transfer Recommendations
                                   </h3>
                                   <div className="space-y-2">
-                                    {finalRecommendations.slice(0, 10).map((rec: any, index: number) => {
+                                    {finalRecommendations.slice(0, 30).map((rec: any, index: number) => {
                                       const netCost = rec.playerIn.nowCost - rec.playerOut.sellingPrice;
                                       const itbAfterThisTransfer = runningBank - netCost;
                                       const freeTransfersRemaining = getFreeTransfersRemaining(gw);
