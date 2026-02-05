@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface FixtureDetail {
   opponent: string;
@@ -593,13 +594,47 @@ export default function TeamGoalsAgainstProjections() {
                           const teamWithDetails = team as TeamGoalsAgainstProjection;
                           const fixtures = teamWithDetails.fixtureDetails?.[gwNumber.toString()] || [];
                           const hasFixtures = fixtures.length > 0;
-                          const avgGA = hasFixtures ? fixtures.reduce((sum: number, f: FixtureDetail) => sum + f.goalsAgainst, 0) / fixtures.length : 0;
+                          const isDGW = fixtures.length > 1;
+                          const totalGA = hasFixtures ? fixtures.reduce((sum: number, f: FixtureDetail) => sum + f.goalsAgainst, 0) : 0;
+                          const avgGA = hasFixtures ? totalGA / fixtures.length : 0;
                           
                           return (
                             <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsAgainstColor(avgGA)}`}>
                               {!hasFixtures ? (
                                 <span className="text-gray-400">-</span>
-                              ) : fixtures.length === 1 ? (
+                              ) : isDGW ? (
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
+                                      <div className="flex flex-col items-center">
+                                        <span>{viewMode === "past" ? Math.round(totalGA) : totalGA.toFixed(2)}</span>
+                                        {showOpponent && (
+                                          <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
+                                            {fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ')}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </button>
+                                  </PopoverTrigger>
+                                  <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
+                                    <div className="space-y-2">
+                                      <div className="font-semibold text-gray-900 border-b pb-2">
+                                        GW{gwNumber} DGW Breakdown
+                                      </div>
+                                      {fixtures.map((f: FixtureDetail, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center text-sm">
+                                          <span className="text-gray-600">vs {f.opponent} ({f.isHome ? 'H' : 'A'})</span>
+                                          <span className="font-medium text-red-700">{f.goalsAgainst.toFixed(2)}</span>
+                                        </div>
+                                      ))}
+                                      <div className="border-t pt-2 flex justify-between items-center text-sm font-semibold">
+                                        <span className="text-gray-900">Total</span>
+                                        <span className="text-red-800">{totalGA.toFixed(2)}</span>
+                                      </div>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              ) : (
                                 <div className="flex flex-col items-center">
                                   <span>{viewMode === "past" ? Math.round(fixtures[0].goalsAgainst) : fixtures[0].goalsAgainst.toFixed(2)}</span>
                                   {showOpponent && (
@@ -607,19 +642,6 @@ export default function TeamGoalsAgainstProjections() {
                                       {fixtures[0].opponent} ({fixtures[0].isHome ? 'H' : 'A'})
                                     </span>
                                   )}
-                                </div>
-                              ) : (
-                                <div className="flex flex-col gap-0.5">
-                                  {fixtures.map((fixture: FixtureDetail, idx: number) => (
-                                    <div key={idx} className="text-xs">
-                                      <span>{viewMode === "past" ? Math.round(fixture.goalsAgainst) : fixture.goalsAgainst.toFixed(2)}</span>
-                                      {showOpponent && (
-                                        <span className="text-[10px] text-gray-500 ml-1">
-                                          {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})
-                                        </span>
-                                      )}
-                                    </div>
-                                  ))}
                                 </div>
                               )}
                             </td>
