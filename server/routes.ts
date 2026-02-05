@@ -12510,8 +12510,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Total points for this gameweek
-          const gwTotal = goalsPts + assistsPts + cleansheetPts + minutesPts + 
-                         goalsConcededPts + yellowCardsPts + redCardsPts + bonusPts + savesPts + defensiveContributionsPts;
+          // For DGW with valid fixtureDetails, use sum of per-fixture totals for accuracy
+          let gwTotal: number;
+          if (fixtureDetails[gwKey] && fixtureDetails[gwKey].length > 1) {
+            // DGW: Sum per-fixture totals for consistency with popover display
+            gwTotal = fixtureDetails[gwKey].reduce((sum, f) => sum + f.totalPoints, 0);
+          } else {
+            // SGW or no fixture details: Use aggregate component totals
+            gwTotal = goalsPts + assistsPts + cleansheetPts + minutesPts + 
+                     goalsConcededPts + yellowCardsPts + redCardsPts + bonusPts + savesPts + defensiveContributionsPts;
+          }
           
           gameweekProjections[gwKey] = Math.round(gwTotal * 100) / 100;
           totalExpectedPoints += gwTotal;
