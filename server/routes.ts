@@ -12445,13 +12445,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const defensiveContributionsFixtureDetails = defensiveContributionsPlayer?.fixtureDetails?.[gwApiKey] || defensiveContributionsPlayer?.fixtureDetails?.[gw.toString()] || [];
           
           // Determine the number of fixtures from the most complete data source
+          // BLANK GAMEWEEK HANDLING: If all fixture arrays are empty, this is a BGW with 0 fixtures
           const numFixtures = Math.max(
             goalsFixtureDetails.length,
             assistsFixtureDetails.length,
             cleansheetFixtureDetails.length,
             bonusFixtureDetails.length,
-            1 // At least 1 fixture per gameweek
+            savesFixtureDetails.length,
+            0 // BGW: Teams can have 0 fixtures in a gameweek
           );
+          
+          // BLANK GAMEWEEK: If no fixtures, set all component values to 0 and skip to next gameweek
+          if (numFixtures === 0) {
+            pointsFromGoals[gwKey] = 0;
+            pointsFromAssists[gwKey] = 0;
+            pointsFromCleanSheets[gwKey] = 0;
+            pointsFromMinutes[gwKey] = 0;
+            pointsFromGoalsConceded[gwKey] = 0;
+            pointsFromYellowCards[gwKey] = 0;
+            pointsFromRedCards[gwKey] = 0;
+            pointsFromBonus[gwKey] = 0;
+            pointsFromSaves[gwKey] = 0;
+            pointsFromDefensiveContributions[gwKey] = 0;
+            gameweekProjections[gwKey] = 0;
+            // Don't add to totalExpectedPoints - blank gameweek contributes 0
+            continue; // Skip the rest of the loop for blank gameweeks
+          }
           
           if (numFixtures > 0) {
             fixtureDetails[gwKey] = [];
