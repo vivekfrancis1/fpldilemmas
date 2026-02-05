@@ -8033,9 +8033,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const averageCleanSheetOdds = projections.length > 0 ? totalCSProbability / projections.length : 0;
         
         // Convert projections array to gameweekProjections object
+        // For DGW: Clean sheet odds don't sum (can't get 2 clean sheets from 2 games)
+        // Instead, take average or use the product of NOT conceding (multiply CS odds)
         const gameweekProjections: { [gameweek: number]: number } = {};
         projections.forEach((p: any) => {
-          gameweekProjections[p.gameweek] = p.cleanSheetOdds;
+          if (gameweekProjections[p.gameweek] !== undefined) {
+            // DGW: For clean sheets, multiply probabilities (both games need CS)
+            // CS% for DGW = CS1% × CS2% / 100 (probability of BOTH clean sheets)
+            // But for FPL points, we want total expected points = CS1% + CS2%
+            gameweekProjections[p.gameweek] = Math.round((gameweekProjections[p.gameweek] + p.cleanSheetOdds) * 10) / 10;
+          } else {
+            gameweekProjections[p.gameweek] = p.cleanSheetOdds;
+          }
         });
         
         // Elite-level confidence calculation using advanced statistical market analysis
@@ -11064,6 +11073,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // PERFECT MIRROR: For each fixture, what home scores = what away concedes (and vice versa)
+      // DGW FIX: Sum goals against when team has multiple fixtures in same gameweek
       fixturesData.forEach((fixture: any) => {
         if (fixture.event >= 1 && fixture.event <= 38) {
           const homeTeamAgainst = teamsGoalsAgainst.get(fixture.team_h);
@@ -11072,9 +11082,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (homeTeamAgainst && awayTeamAgainst) {
             // Use actual data only if the ENTIRE gameweek is complete - MATCHING TEAM GOAL PROJECTIONS LOGIC
             if (completeGameweeks.has(fixture.event)) {
-              // Use actual data for complete gameweeks only
-              homeTeamAgainst.gameweekProjections[fixture.event] = fixture.team_a_score || 0;
-              awayTeamAgainst.gameweekProjections[fixture.event] = fixture.team_h_score || 0;
+              // Use actual data for complete gameweeks only - SUM for DGW
+              const homeAgainstValue = fixture.team_a_score || 0;
+              const awayAgainstValue = fixture.team_h_score || 0;
+              homeTeamAgainst.gameweekProjections[fixture.event] = (homeTeamAgainst.gameweekProjections[fixture.event] || 0) + homeAgainstValue;
+              awayTeamAgainst.gameweekProjections[fixture.event] = (awayTeamAgainst.gameweekProjections[fixture.event] || 0) + awayAgainstValue;
             } else {
               // For incomplete gameweeks, use projections for ALL fixtures (even finished ones)
               const homeTeamScored = teamGoalProjections.find((t: any) => t.teamId === fixture.team_h);
@@ -11084,9 +11096,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const awayGoals = awayTeamScored.gameweekProjections[fixture.event];
                 const homeGoals = homeTeamScored.gameweekProjections[fixture.event];
                 if (awayGoals !== undefined && homeGoals !== undefined) {
-                  // Direct mirror: home concedes what away scores, away concedes what home scores
-                  homeTeamAgainst.gameweekProjections[fixture.event] = awayGoals;
-                  awayTeamAgainst.gameweekProjections[fixture.event] = homeGoals;
+                  // Direct mirror: home concedes what away scores, away concedes what home scores - SUM for DGW
+                  homeTeamAgainst.gameweekProjections[fixture.event] = (homeTeamAgainst.gameweekProjections[fixture.event] || 0) + awayGoals;
+                  awayTeamAgainst.gameweekProjections[fixture.event] = (awayTeamAgainst.gameweekProjections[fixture.event] || 0) + homeGoals;
                 }
               }
             }

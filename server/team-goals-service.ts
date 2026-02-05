@@ -177,9 +177,15 @@ export class TeamGoalsService {
       const totalGoals = projections.reduce((sum: number, p: any) => sum + p.expectedGoals, 0);
       
       // Convert projections array to gameweekProjections object
+      // SUM projections for DGW (when team has multiple fixtures in same gameweek)
       const gameweekProjections: { [gameweek: number]: number } = {};
       projections.forEach((p: any) => {
-        gameweekProjections[p.gameweek] = p.expectedGoals;
+        if (gameweekProjections[p.gameweek]) {
+          // DGW: Add to existing projection for this gameweek
+          gameweekProjections[p.gameweek] = Math.round((gameweekProjections[p.gameweek] + p.expectedGoals) * 100) / 100;
+        } else {
+          gameweekProjections[p.gameweek] = p.expectedGoals;
+        }
       });
       
       // Determine confidence based on betting market data
