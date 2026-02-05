@@ -129,18 +129,22 @@ export default function ProjectedGoalsCS() {
     const startGW = parseInt(startGameweek);
     const endGW = parseInt(endGameweek);
 
-    // Create lookup maps for goal and CS data
+    // Create lookup maps for goal and CS data (include fixtureDetails for DGW support)
     const goalMap = new Map();
+    const goalFixtureDetailsMap = new Map();
     const csMap = new Map();
+    const csFixtureDetailsMap = new Map();
 
     (teamGoalData || []).forEach((team: any) => {
       goalMap.set(team.teamId, team.gameweekProjections);
+      goalFixtureDetailsMap.set(team.teamId, team.fixtureDetails || {});
     });
 
     (teamCSData || []).forEach((team: any) => {
       const teamId = bootstrapData.teams.find((t: any) => t.short_name === team.team)?.id;
       if (teamId) {
         csMap.set(teamId, team.gameweekProjections);
+        csFixtureDetailsMap.set(teamId, team.fixtureDetails || {});
       }
     });
 
@@ -150,25 +154,34 @@ export default function ProjectedGoalsCS() {
       const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
 
       if (homeTeam && awayTeam) {
-        const homeGoalData = goalMap.get(homeTeam.id) || {};
-        const awayGoalData = goalMap.get(awayTeam.id) || {};
-        const homeCSData = csMap.get(homeTeam.id) || {};
-        const awayCSData = csMap.get(awayTeam.id) || {};
+        const gwKey = fixture.event.toString();
+        
+        // Get individual fixture goals from fixtureDetails (for DGW accuracy)
+        const homeGoalFixtures = goalFixtureDetailsMap.get(homeTeam.id)?.[gwKey] || [];
+        const awayGoalFixtures = goalFixtureDetailsMap.get(awayTeam.id)?.[gwKey] || [];
+        const homeGoalFixture = homeGoalFixtures.find((f: any) => f.opponent === awayTeam.short_name);
+        const awayGoalFixture = awayGoalFixtures.find((f: any) => f.opponent === homeTeam.short_name);
+        
+        // Get individual fixture CS% from fixtureDetails (for DGW accuracy)
+        const homeCSFixtures = csFixtureDetailsMap.get(homeTeam.id)?.[gwKey] || [];
+        const awayCSFixtures = csFixtureDetailsMap.get(awayTeam.id)?.[gwKey] || [];
+        const homeCSFixture = homeCSFixtures.find((f: any) => f.opponent === awayTeam.short_name);
+        const awayCSFixture = awayCSFixtures.find((f: any) => f.opponent === homeTeam.short_name);
 
-        // For past mode with finished fixtures, use actual goals; otherwise use projections
+        // For past mode with finished fixtures, use actual goals; otherwise use individual fixture projections
         const homeExpectedGoals = (viewMode === "past" && fixture.finished) 
           ? (fixture.team_h_score ?? 0)
-          : (homeGoalData[fixture.event.toString()] || 0);
+          : (homeGoalFixture?.goals ?? goalMap.get(homeTeam.id)?.[gwKey] ?? 0);
         const awayExpectedGoals = (viewMode === "past" && fixture.finished)
           ? (fixture.team_a_score ?? 0)
-          : (awayGoalData[fixture.event.toString()] || 0);
+          : (awayGoalFixture?.goals ?? goalMap.get(awayTeam.id)?.[gwKey] ?? 0);
         // For past mode with finished fixtures, actual clean sheet is 1 if opponent scored 0, else 0
         const homeCleanSheetOdds = (viewMode === "past" && fixture.finished)
           ? (fixture.team_a_score === 0 ? 1 : 0)
-          : (homeCSData[fixture.event.toString()] || 0);
+          : (homeCSFixture?.cleanSheetOdds ?? csMap.get(homeTeam.id)?.[gwKey] ?? 0);
         const awayCleanSheetOdds = (viewMode === "past" && fixture.finished)
           ? (fixture.team_h_score === 0 ? 1 : 0)
-          : (awayCSData[fixture.event.toString()] || 0);
+          : (awayCSFixture?.cleanSheetOdds ?? csMap.get(awayTeam.id)?.[gwKey] ?? 0);
 
         matches.push({
           id: fixture.id,
