@@ -4169,20 +4169,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               return false;
             }
             
-            // Filter out transfers that conflict with ANY primary transfer:
-            // 1. Don't try to transfer OUT a player who's already been transferred OUT
-            // 2. Don't try to transfer IN a player who's already been transferred IN
-            const isTryingToTransferOutSamePlayer = selectedOutIds.has(rec.playerOut.id);
-            const isTryingToTransferInSamePlayer = selectedInIds.has(rec.playerIn.id);
-            
-            if (isTryingToTransferOutSamePlayer) {
-              console.log(`  FILTERED OUT (player already transferred out): ${rec.playerOut.webName} → ${rec.playerIn.webName}`);
-            }
-            if (isTryingToTransferInSamePlayer) {
-              console.log(`  FILTERED OUT (player already transferred in): ${rec.playerOut.webName} → ${rec.playerIn.webName}`);
-            }
-            
-            return !isTryingToTransferOutSamePlayer && !isTryingToTransferInSamePlayer;
+            // Allow the same player to appear in multiple recommendations
+            // This lets users see alternatives like: Dorgu → Senesi AND Dorgu → Keane
+            return true;
           }).map((rec) => {
             // For primary transfers, return the updated version from the map
             const transferKey = `${rec.playerOut.id}-${rec.playerIn.id}`;
