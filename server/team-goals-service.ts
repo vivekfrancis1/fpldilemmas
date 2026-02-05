@@ -185,27 +185,26 @@ export class TeamGoalsService {
       
       // Convert projections array to gameweekProjections object
       // SUM projections for DGW (when team has multiple fixtures in same gameweek)
+      // BLANK GAMEWEEK HANDLING: Initialize ALL gameweeks with 0 so BGW explicitly shows 0
       const gameweekProjections: { [gameweek: number]: number } = {};
       const fixtureDetails: { [gameweek: number]: FixtureDetail[] } = {};
       
+      // Initialize all gameweeks in range with 0 (handles BGW automatically)
+      for (let gw = calculatedStartGameweek; gw <= calculatedEndGameweek; gw++) {
+        gameweekProjections[gw] = 0;
+        fixtureDetails[gw] = []; // Empty array for BGW, populated for SGW/DGW
+      }
+      
       projections.forEach((p: any) => {
-        // Initialize fixtureDetails array for this gameweek if needed
-        if (!fixtureDetails[p.gameweek]) {
-          fixtureDetails[p.gameweek] = [];
-        }
-        // Add individual fixture detail
+        // Add individual fixture detail (array already initialized above)
         fixtureDetails[p.gameweek].push({
           opponent: p.opponent,
           isHome: p.isHome,
           goals: p.expectedGoals
         });
         
-        if (gameweekProjections[p.gameweek]) {
-          // DGW: Add to existing projection for this gameweek
-          gameweekProjections[p.gameweek] = Math.round((gameweekProjections[p.gameweek] + p.expectedGoals) * 100) / 100;
-        } else {
-          gameweekProjections[p.gameweek] = p.expectedGoals;
-        }
+        // Add to gameweek projection (handles both SGW and DGW - initialized to 0 above)
+        gameweekProjections[p.gameweek] = Math.round((gameweekProjections[p.gameweek] + p.expectedGoals) * 100) / 100;
       });
       
       // Determine confidence based on betting market data
