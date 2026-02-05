@@ -8010,10 +8010,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Get team's Goals Against for this specific gameweek
           const teamGoalsAgainstProjections = teamGoalsAgainstMap.get(team.id) || {};
-          const gameweekGoalsAgainst = teamGoalsAgainstProjections[fixture.event.toString()] || 1.5; // Default if not found
+          const gameweekGoalsAgainstTotal = teamGoalsAgainstProjections[fixture.event.toString()] || 1.5; // Default if not found
           
-          // POISSON DISTRIBUTION FORMULA: P(Clean Sheet) = e^(-λ) where λ is expected goals conceded
-          let cleanSheetProbability = Math.exp(-gameweekGoalsAgainst) * 100; // Convert to percentage
+          // DGW FIX: Count how many fixtures team has in this gameweek
+          // Divide summed goals against by fixture count to get per-game estimate
+          const fixturesInGW = fixturesData.filter((f: any) => 
+            (f.team_h === team.id || f.team_a === team.id) && 
+            f.event === fixture.event
+          ).length;
+          const perGameGoalsAgainst = gameweekGoalsAgainstTotal / Math.max(1, fixturesInGW);
+          
+          // POISSON DISTRIBUTION FORMULA: P(Clean Sheet) = e^(-λ) where λ is expected goals conceded PER GAME
+          let cleanSheetProbability = Math.exp(-perGameGoalsAgainst) * 100; // Convert to percentage
           
           // Ensure realistic bounds (0-100%)
           cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
@@ -8023,7 +8031,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             opponent: opponent.short_name,
             isHome,
             cleanSheetOdds: Math.round(cleanSheetProbability * 10) / 10,
-            expectedGoalsAgainst: gameweekGoalsAgainst, // Team's Goals Against for this gameweek
+            expectedGoalsAgainst: perGameGoalsAgainst, // Team's Goals Against per game for this fixture
             isActual: false // Flag to indicate this is projected data
           };
         }).filter(Boolean);
@@ -8033,14 +8041,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const averageCleanSheetOdds = projections.length > 0 ? totalCSProbability / projections.length : 0;
         
         // Convert projections array to gameweekProjections object
-        // For DGW: Clean sheet odds don't sum (can't get 2 clean sheets from 2 games)
-        // Instead, take average or use the product of NOT conceding (multiply CS odds)
+        // For DGW: Sum CS odds for expected points (can score CS in each game)
         const gameweekProjections: { [gameweek: number]: number } = {};
+        // NEW: fixtureDetails shows individual CS% per fixture (for DGW visibility)
+        const fixtureDetails: { [gameweek: number]: Array<{ opponent: string; isHome: boolean; cleanSheetOdds: number }> } = {};
+        
         projections.forEach((p: any) => {
+          // Initialize fixture details array for this gameweek
+          if (!fixtureDetails[p.gameweek]) {
+            fixtureDetails[p.gameweek] = [];
+          }
+          // Add individual fixture details
+          fixtureDetails[p.gameweek].push({
+            opponent: p.opponent,
+            isHome: p.isHome,
+            cleanSheetOdds: p.cleanSheetOdds
+          });
+          
+          // Sum CS odds for gameweek total (expected points)
           if (gameweekProjections[p.gameweek] !== undefined) {
-            // DGW: For clean sheets, multiply probabilities (both games need CS)
-            // CS% for DGW = CS1% × CS2% / 100 (probability of BOTH clean sheets)
-            // But for FPL points, we want total expected points = CS1% + CS2%
             gameweekProjections[p.gameweek] = Math.round((gameweekProjections[p.gameweek] + p.cleanSheetOdds) * 10) / 10;
           } else {
             gameweekProjections[p.gameweek] = p.cleanSheetOdds;
@@ -8078,6 +8097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections,
+          fixtureDetails, // Individual CS% per fixture (shows 2 entries for DGW)
           totalCleanSheets: Math.round(totalCSProbability * 10) / 10,
           averageCleanSheetOdds: Math.round(averageCleanSheetOdds * 10) / 10,
           confidence,
@@ -10771,11 +10791,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // TRY LIVE CALCULATION FIRST
       try {
-        const startGameweek = parseInt(req.query.startGameweek as string) || 4;
-        const endGameweek = parseInt(req.query.endGameweek as string) || Math.min(startGameweek + 5, 38); // Default to 6 gameweeks
-      
-      // Simplified: Fetch only required data for projections
-      console.log(`DEBUG: Fetching data for clean sheet points projections for GW${startGameweek}-${endGameweek}`);
+        // Simplified: Fetch only required data for projections
+      console.log(`DEBUG: Fetching data for clean sheet points projections`);
       const [bootstrapResponse, teamCSResponse, playerMinutesResponse] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
         fetch("http://localhost:5000/api/team-cs-projections"),
@@ -10796,7 +10813,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get current gameweek from bootstrap data
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
-      console.log(`DEBUG: Current gameweek: ${currentGameweek}`);
+      
+      // Dynamic gameweek range - start from current+1 (next gameweek) for 12 weeks
+      const startGameweek = parseInt(req.query.startGameweek as string) || (currentGameweek + 1);
+      const endGameweek = parseInt(req.query.endGameweek as string) || Math.min(startGameweek + 11, 38);
+      console.log(`DEBUG: Current gameweek: ${currentGameweek}, projecting GW${startGameweek}-${endGameweek}`);
       
       // Create player clean sheet points projections
       const playerCleanSheetProjections: any[] = [];
@@ -14381,20 +14402,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         console.log("DEBUG: Player Saves Projections API called - using formula: Average saves/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game");
         
-        const startGameweek = parseInt(req.query.startGameweek as string) || 4;
-        const endGameweek = parseInt(req.query.endGameweek as string) || 9;
-      
-      // Get FPL bootstrap data and fixtures from cached endpoints for better performance
-      const [fplResponse, fixturesResponse] = await Promise.all([
-        internalFetch("api/bootstrap-static"),
-        internalFetch("api/fixtures")
-      ]);
-      const fplData = await fplResponse.json();
-      const fixturesData = await fixturesResponse.json();
-      const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
-      const nextGameweek = currentGameweek + 1; // Start from next gameweek
-      
-      console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
+        // Get FPL bootstrap data and fixtures from cached endpoints for better performance
+        const [fplResponse, fixturesResponse] = await Promise.all([
+          internalFetch("api/bootstrap-static"),
+          internalFetch("api/fixtures")
+        ]);
+        const fplData = await fplResponse.json();
+        const fixturesData = await fixturesResponse.json();
+        const currentGameweek = fplData.events.find((event: any) => event.is_current)?.id || 3;
+        const nextGameweek = currentGameweek + 1; // Start from next gameweek
+        
+        // Use dynamic gameweek calculation for next 12 gameweeks
+        const { computeNextRange } = await import("../shared/gameweek-utils");
+        const gameweekRange = computeNextRange(fplData.events, 12);
+        const startGameweek = parseInt(req.query.startGameweek as string) || gameweekRange.start;
+        const endGameweek = parseInt(req.query.endGameweek as string) || gameweekRange.end;
+        
+        console.log(`DEBUG: Current gameweek: ${currentGameweek}, saves projections from GW${startGameweek} to GW${endGameweek}`);
       
       // Calculate AGR (Adjusted Goal Rate) = 0.5 × (GF + XGF) per game for each team
       const teamGoalsFor = new Map<number, number>();
@@ -14528,29 +14552,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const savesPerTeamGame = currentSeasonSaves / teamGamesPlayed;
           
           // Process each FUTURE gameweek only with new formula
+          // DGW FIX: Find ALL fixtures for this team in each gameweek
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
-            // Find fixture for this team in this gameweek to get opponent
-            const fixture = fixturesData.find((f: any) => 
+            // Find ALL fixtures for this team in this gameweek (handles DGW)
+            const fixtures = fixturesData.filter((f: any) => 
               f.event === gw && (f.team_h === player.team || f.team_a === player.team)
             );
             
-            let opponentId = 1; // Default fallback
-            if (fixture) {
-              opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
-            }
+            let gwExpectedSaves = 0;
             
-            // Get opponent's AGR (Average Goals Received/Against per game)
-            const opponentAGR = getOpponentAGR(opponentId);
-            
-            // Apply user's exact formula: Expected saves = Average saves/game × AGR of opponent/1.35
-            const expectedSaves = savesPerTeamGame * (opponentAGR / 1.35);
+            // Sum saves across all fixtures in this gameweek
+            fixtures.forEach((fixture: any) => {
+              const opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
+              
+              // Get opponent's AGR (Average Goals Received/Against per game)
+              const opponentAGR = getOpponentAGR(opponentId);
+              
+              // Apply user's exact formula: Expected saves = Average saves/game × AGR of opponent/1.35
+              gwExpectedSaves += savesPerTeamGame * (opponentAGR / 1.35);
+            });
             
             // Apply new points formula: Points from saves = 0.33 × expected saves
-            const expectedPoints = expectedSaves * 0.33;
+            const expectedPoints = gwExpectedSaves * 0.33;
             
-            saves[`gw${gw}`] = parseFloat(expectedSaves.toFixed(3));
+            saves[`gw${gw}`] = parseFloat(gwExpectedSaves.toFixed(3));
             pointsFromSaves[`gw${gw}`] = parseFloat(expectedPoints.toFixed(3));
-            totalSaves += expectedSaves;
+            totalSaves += gwExpectedSaves;
             totalPoints += expectedPoints;
           }
           
@@ -14977,6 +15004,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const startGameweek = gameweekRange.start;
         const endGameweek = gameweekRange.end;
         
+        // Fetch fixtures to detect DGW
+        const fixturesResponse = await internalFetch("api/fixtures");
+        const fixturesData = await fixturesResponse.json();
+        
         // Extract yellow card data for all players using historical data
         const yellowCardProjections = fplData.elements.map((player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -14986,14 +15017,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalYellowCards = 0;
           let totalPoints = 0;
           
-          // Calculate expected yellow cards per gameweek using season data
+          // Calculate expected yellow cards PER GAME using season data
           const seasonYellowCards = player.yellow_cards || 0;
           const teamGamesPlayed = currentGameweek; // Average number of games team has played
-          const expectedYellowCardsPerGameweek = teamGamesPlayed > 0 ? seasonYellowCards / teamGamesPlayed : 0;
+          const expectedYellowCardsPerGame = teamGamesPlayed > 0 ? seasonYellowCards / teamGamesPlayed : 0;
           
           // Process each gameweek in the next 12 gameweeks range
+          // DGW FIX: Count fixtures per gameweek and multiply rate
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            const gwYellowCards = expectedYellowCardsPerGameweek;
+            // Count how many fixtures this player's team has in this gameweek
+            const fixturesInGW = fixturesData.filter((f: any) => 
+              f.event === gw && (f.team_h === player.team || f.team_a === player.team)
+            ).length;
+            
+            // Multiply per-game rate by number of fixtures (handles DGW)
+            const gwYellowCards = expectedYellowCardsPerGame * fixturesInGW;
             const gwPoints = -gwYellowCards; // -1 point per yellow card
             
             yellowCards[`gw${gw}`] = parseFloat(gwYellowCards.toFixed(3));
@@ -15011,7 +15049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pointsFromYellowCards,
             totalYellowCards: parseFloat(totalYellowCards.toFixed(3)),
             totalPoints: parseFloat(totalPoints.toFixed(3)),
-            averagePerGameweek: parseFloat(expectedYellowCardsPerGameweek.toFixed(3))
+            averagePerGameweek: parseFloat(expectedYellowCardsPerGame.toFixed(3))
           };
         });
         
@@ -15063,6 +15101,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const startGameweek = gameweekRange.start;
         const endGameweek = gameweekRange.end;
         
+        // Fetch fixtures to detect DGW
+        const fixturesResponse = await internalFetch("api/fixtures");
+        const fixturesData = await fixturesResponse.json();
+        
         // Extract red card data for all players using historical data
         const redCardProjections = fplData.elements.map((player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -15072,14 +15114,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalRedCards = 0;
           let totalPoints = 0;
           
-          // Calculate expected red cards per gameweek using season data
+          // Calculate expected red cards PER GAME using season data
           const seasonRedCards = player.red_cards || 0;
           const teamGamesPlayed = currentGameweek; // Average number of games team has played
-          const expectedRedCardsPerGameweek = teamGamesPlayed > 0 ? seasonRedCards / teamGamesPlayed : 0;
+          const expectedRedCardsPerGame = teamGamesPlayed > 0 ? seasonRedCards / teamGamesPlayed : 0;
           
           // Process each gameweek in the next 6 gameweeks range
+          // DGW FIX: Count fixtures per gameweek and multiply rate
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            const gwRedCards = expectedRedCardsPerGameweek;
+            // Count how many fixtures this player's team has in this gameweek
+            const fixturesInGW = fixturesData.filter((f: any) => 
+              f.event === gw && (f.team_h === player.team || f.team_a === player.team)
+            ).length;
+            
+            // Multiply per-game rate by number of fixtures (handles DGW)
+            const gwRedCards = expectedRedCardsPerGame * fixturesInGW;
             const gwPoints = -(gwRedCards * 3); // -3 points per red card
             
             redCards[`gw${gw}`] = parseFloat(gwRedCards.toFixed(3));
@@ -15097,7 +15146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pointsFromRedCards,
             totalRedCards: parseFloat(totalRedCards.toFixed(3)),
             totalPoints: parseFloat(totalPoints.toFixed(3)),
-            averagePerGameweek: parseFloat(expectedRedCardsPerGameweek.toFixed(3))
+            averagePerGameweek: parseFloat(expectedRedCardsPerGame.toFixed(3))
           };
         });
         
@@ -15484,32 +15533,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const playerSeasonBPS = playerSeasonBPSMap.get(player.id) || 0;
           
           // Process each FUTURE gameweek
+          // DGW FIX: Find ALL fixtures for this player's team per gameweek
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Find fixture for this team in this gameweek
-            const fixture = allFixtures.find((f: any) => 
+            // Find ALL fixtures for this team in this gameweek (handles DGW)
+            const fixtures = allFixtures.filter((f: any) => 
               f.event === gw && (f.team_h === player.team || f.team_a === player.team)
             );
             
             let gwBonusPoints = 0;
-            if (fixture && playerSeasonBPS > 0) {
-              // Get both teams playing in this fixture
-              const homeTeamId = fixture.team_h;
-              const awayTeamId = fixture.team_a;
-              
-              // Calculate total BPS for both teams combined (full season)
-              const bothTeamsPlayers = activePlayers.filter((p: any) => 
-                p.team === homeTeamId || p.team === awayTeamId
-              );
-              
-              let totalBothTeamsBPS = 0;
-              bothTeamsPlayers.forEach((p: any) => {
-                totalBothTeamsBPS += playerSeasonBPSMap.get(p.id) || 0;
-              });
-              
-              // Full Season Formula: player's BPS share of total match BPS × 6 bonus points available
-              const bpsRatio = totalBothTeamsBPS > 0 ? playerSeasonBPS / totalBothTeamsBPS : 0;
-              gwBonusPoints = bpsRatio * 6;
-            }
+            
+            // Sum bonus points across all fixtures in this gameweek
+            fixtures.forEach((fixture: any) => {
+              if (playerSeasonBPS > 0) {
+                // Get both teams playing in this fixture
+                const homeTeamId = fixture.team_h;
+                const awayTeamId = fixture.team_a;
+                
+                // Calculate total BPS for both teams combined (full season)
+                const bothTeamsPlayers = activePlayers.filter((p: any) => 
+                  p.team === homeTeamId || p.team === awayTeamId
+                );
+                
+                let totalBothTeamsBPS = 0;
+                bothTeamsPlayers.forEach((p: any) => {
+                  totalBothTeamsBPS += playerSeasonBPSMap.get(p.id) || 0;
+                });
+                
+                // Full Season Formula: player's BPS share of total match BPS × 6 bonus points available
+                const bpsRatio = totalBothTeamsBPS > 0 ? playerSeasonBPS / totalBothTeamsBPS : 0;
+                gwBonusPoints += bpsRatio * 6;
+              }
+            });
             
             bonusPoints[`gw${gw}`] = parseFloat(gwBonusPoints.toFixed(3));
             pointsFromBonus[`gw${gw}`] = parseFloat(gwBonusPoints.toFixed(3));
