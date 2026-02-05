@@ -278,7 +278,8 @@ export function applyAvailabilityAdjustments<T extends PlayerWithProjections>(
   const gameweekCount = Object.keys(adjustedProjections).length;
   const newTotalExpectedPoints = Object.values(adjustedProjections).reduce((sum, points) => sum + points, 0);
   const newAveragePerGameweek = gameweekCount > 0 ? newTotalExpectedPoints / gameweekCount : 0;
-  const newAverageValue = player.price && player.price > 0 ? newAveragePerGameweek / player.price : 0;
+  // Value = Total Points / Price (consistent with fully available players)
+  const newAverageValue = player.price && player.price > 0 ? newTotalExpectedPoints / player.price : 0;
   
   // Calculate overall availability factor based on total change
   const originalTotal = Object.values(originalProjections).reduce((sum, points) => sum + points, 0);
