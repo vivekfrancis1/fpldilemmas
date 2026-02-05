@@ -3,11 +3,18 @@
  * Single source of truth for team goal totals used by both team-goal-projections and goal-share endpoints
  */
 
+interface FixtureDetail {
+  opponent: string;
+  isHome: boolean;
+  goals: number;
+}
+
 interface TeamGoalProjection {
   teamId: number;
   teamName: string;
   teamShort: string;
   gameweekProjections: { [gameweek: number]: number };
+  fixtureDetails: { [gameweek: number]: FixtureDetail[] }; // Individual goals per fixture
   totalGoals: number;
   averageGoalsPerGame: number;
   confidence: 'High' | 'Medium' | 'Low';
@@ -179,7 +186,20 @@ export class TeamGoalsService {
       // Convert projections array to gameweekProjections object
       // SUM projections for DGW (when team has multiple fixtures in same gameweek)
       const gameweekProjections: { [gameweek: number]: number } = {};
+      const fixtureDetails: { [gameweek: number]: FixtureDetail[] } = {};
+      
       projections.forEach((p: any) => {
+        // Initialize fixtureDetails array for this gameweek if needed
+        if (!fixtureDetails[p.gameweek]) {
+          fixtureDetails[p.gameweek] = [];
+        }
+        // Add individual fixture detail
+        fixtureDetails[p.gameweek].push({
+          opponent: p.opponent,
+          isHome: p.isHome,
+          goals: p.expectedGoals
+        });
+        
         if (gameweekProjections[p.gameweek]) {
           // DGW: Add to existing projection for this gameweek
           gameweekProjections[p.gameweek] = Math.round((gameweekProjections[p.gameweek] + p.expectedGoals) * 100) / 100;
@@ -203,6 +223,7 @@ export class TeamGoalsService {
         teamName: team.name,
         teamShort: team.short_name,
         gameweekProjections,
+        fixtureDetails, // Individual goals per fixture (shows 2 entries for DGW)
         totalGoals: roundedTotalGoals,
         averageGoalsPerGame,
         confidence

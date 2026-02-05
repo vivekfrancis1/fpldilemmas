@@ -9,13 +9,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
+interface FixtureDetail {
+  opponent: string;
+  isHome: boolean;
+  goals: number;
+}
+
 interface TeamGoalsHistory {
   lastFinishedGW: number;
   teams: {
     id: number;
     team: string;
     teamShort: string;
-    gameweekGoals: { [key: number]: number };
+    gameweekGoals: { [key: string]: number };
+    fixtureDetails?: { [key: string]: FixtureDetail[] };
     totalGoals: number;
     averageGoalsPerGame: number;
     position: number;
@@ -30,7 +37,7 @@ interface TeamXgHistory {
     id: number;
     team: string;
     teamShort: string;
-    gameweekXg: { [key: number]: number };
+    gameweekXg: { [key: string]: number };
     totalXg: number;
     averageXgPerGame: number;
     position: number;
@@ -43,7 +50,10 @@ interface TeamGoalProjection {
   teamShort: string;
   teamBadge?: string;
   gameweekProjections: {
-    [gameweek: number]: number;
+    [gameweek: string]: number;
+  };
+  fixtureDetails?: {
+    [gameweek: string]: FixtureDetail[];
   };
   totalProjectedGoals: number;
   averageGoalsPerGame: number;
@@ -653,16 +663,27 @@ export default function TeamGoalProjections() {
                         </td>
                         
                         {activeGameweeks.map(gwNumber => {
-                          const goals = team.gameweekProjections[gwNumber];
-                          const fplShortName = teamNameToShort.get(team.team) || team.teamShort;
-                          const opponentInfo = opponentMap.get(`${fplShortName}-${gwNumber}`);
+                          const goals = team.gameweekProjections[gwNumber.toString()];
+                          const teamWithDetails = team as TeamGoalProjection;
+                          const fixtures = teamWithDetails.fixtureDetails?.[gwNumber.toString()] || [];
+                          const isDGW = fixtures.length > 1;
+                          
+                          // Build tooltip text for DGW showing individual fixture goals
+                          const tooltipText = isDGW 
+                            ? fixtures.map((f: FixtureDetail) => `vs ${f.opponent} (${f.isHome ? 'H' : 'A'}): ${f.goals.toFixed(2)}`).join('\n')
+                            : '';
+                          
                           return (
-                            <td key={`${team.id}-gw${gwNumber}`} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsColor(goals || 0)}`}>
+                            <td 
+                              key={`${team.id}-gw${gwNumber}`} 
+                              className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsColor(goals || 0)} ${isDGW ? 'cursor-help' : ''}`}
+                              title={tooltipText}
+                            >
                               <div className="flex flex-col items-center">
                                 <span>{goals !== undefined ? (viewMode === "past" ? goals : goals.toFixed(2)) : "-"}</span>
-                                {showOpponent && opponentInfo && (
+                                {showOpponent && fixtures.length > 0 && (
                                   <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
-                                    {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
+                                    {fixtures.map((f: FixtureDetail) => `${f.opponent}(${f.isHome ? 'H' : 'A'})`).join(', ')}
                                   </span>
                                 )}
                               </div>
