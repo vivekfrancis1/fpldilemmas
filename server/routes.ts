@@ -12373,25 +12373,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pointsFromBonus: { [key: string]: number } = {};
         const pointsFromSaves: { [key: string]: number } = {};
         const pointsFromDefensiveContributions: { [key: string]: number } = {};
+        const fixtureDetails: { [key: string]: Array<{
+          opponent: string;
+          isHome: boolean;
+          pointsFromGoals: number;
+          pointsFromAssists: number;
+          pointsFromCleanSheets: number;
+          pointsFromMinutes: number;
+          pointsFromGoalsConceded: number;
+          pointsFromYellowCards: number;
+          pointsFromRedCards: number;
+          pointsFromBonus: number;
+          pointsFromSaves: number;
+          pointsFromDefensiveContributions: number;
+          totalPoints: number;
+        }> } = {};
 
         let totalExpectedPoints = 0;
+        
+        // Calculate position multiplier for goals
+        const goalMultiplier = basePlayer.position === 'Goalkeeper' || basePlayer.position === 'GKP' ? 10 :
+                              basePlayer.position === 'Defender' || basePlayer.position === 'DEF' ? 6 : 
+                              basePlayer.position === 'Midfielder' || basePlayer.position === 'MID' ? 5 : 4;
 
         // Sum points for each gameweek from all APIs
         for (let gw = start; gw <= end; gw++) {
           const gwKey = gw.toString(); // Use numeric keys for consistency
+          const gwApiKey = `gw${gw}`; // Component APIs still use "gw6" format
           
           // Get points from each API for this gameweek
           // Goals: Calculate points from raw goal count × position multiplier
           const rawGoals = goalsPlayer?.gameweekProjections?.[gw.toString()] || 0;
-          const goalMultiplier = basePlayer.position === 'Goalkeeper' || basePlayer.position === 'GKP' ? 10 :
-                                basePlayer.position === 'Defender' || basePlayer.position === 'DEF' ? 6 : 
-                                basePlayer.position === 'Midfielder' || basePlayer.position === 'MID' ? 5 : 4;
           const goalsPts = rawGoals * goalMultiplier;
           
           // Assists: Calculate points from raw assist count × 3
           const rawAssists = assistsPlayer?.gameweekProjections?.[gw.toString()] || 0;
           const assistsPts = rawAssists * 3;
-          const gwApiKey = `gw${gw}`; // Component APIs still use "gw6" format
           const cleansheetPts = cleansheetPlayer?.pointsFromCleanSheets?.[gwApiKey] || 0;
           const goalsConcededPts = goalsConcededPlayer?.pointsFromGoalsConceded?.[gwApiKey] || 0;
           const yellowCardsPts = yellowCardsPlayer?.pointsFromYellowCards?.[gwApiKey] || 0;
@@ -12414,6 +12431,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromBonus[gwKey] = bonusPts;
           pointsFromSaves[gwKey] = savesPts;
           pointsFromDefensiveContributions[gwKey] = defensiveContributionsPts;
+          
+          // Build fixtureDetails for DGW support - show per-fixture component breakdowns
+          // Use goals player fixtureDetails as the base for fixtures (most likely to have accurate fixture info)
+          const goalsFixtureDetails = goalsPlayer?.fixtureDetails?.[gw.toString()] || goalsPlayer?.fixtureDetails?.[gwApiKey] || [];
+          const assistsFixtureDetails = assistsPlayer?.fixtureDetails?.[gw.toString()] || assistsPlayer?.fixtureDetails?.[gwApiKey] || [];
+          const cleansheetFixtureDetails = cleansheetPlayer?.fixtureDetails?.[gwApiKey] || cleansheetPlayer?.fixtureDetails?.[gw.toString()] || [];
+          const bonusFixtureDetails = bonusPointsPlayer?.fixtureDetails?.[gwApiKey] || bonusPointsPlayer?.fixtureDetails?.[gw.toString()] || [];
+          const savesFixtureDetails = savesPlayer?.fixtureDetails?.[gwApiKey] || savesPlayer?.fixtureDetails?.[gw.toString()] || [];
+          const yellowCardsFixtureDetails = yellowCardsPlayer?.fixtureDetails?.[gwApiKey] || yellowCardsPlayer?.fixtureDetails?.[gw.toString()] || [];
+          const redCardsFixtureDetails = redCardsPlayer?.fixtureDetails?.[gwApiKey] || redCardsPlayer?.fixtureDetails?.[gw.toString()] || [];
+          const goalsConcededFixtureDetails = goalsConcededPlayer?.fixtureDetails?.[gwApiKey] || goalsConcededPlayer?.fixtureDetails?.[gw.toString()] || [];
+          const defensiveContributionsFixtureDetails = defensiveContributionsPlayer?.fixtureDetails?.[gwApiKey] || defensiveContributionsPlayer?.fixtureDetails?.[gw.toString()] || [];
+          
+          // Determine the number of fixtures from the most complete data source
+          const numFixtures = Math.max(
+            goalsFixtureDetails.length,
+            assistsFixtureDetails.length,
+            cleansheetFixtureDetails.length,
+            bonusFixtureDetails.length,
+            1 // At least 1 fixture per gameweek
+          );
+          
+          if (numFixtures > 0) {
+            fixtureDetails[gwKey] = [];
+            
+            for (let i = 0; i < numFixtures; i++) {
+              // Get fixture info from whatever source has it
+              const goalsFixture = goalsFixtureDetails[i] || {};
+              const assistsFixture = assistsFixtureDetails[i] || {};
+              const cleansheetFixture = cleansheetFixtureDetails[i] || {};
+              const bonusFixture = bonusFixtureDetails[i] || {};
+              const savesFixture = savesFixtureDetails[i] || {};
+              const yellowCardsFixture = yellowCardsFixtureDetails[i] || {};
+              const redCardsFixture = redCardsFixtureDetails[i] || {};
+              const goalsConcededFixture = goalsConcededFixtureDetails[i] || {};
+              const defensiveContributionsFixture = defensiveContributionsFixtureDetails[i] || {};
+              
+              // Use best available opponent and venue info
+              const opponent = goalsFixture.opponent || assistsFixture.opponent || cleansheetFixture.opponent || bonusFixture.opponent || '';
+              const isHome = goalsFixture.isHome ?? assistsFixture.isHome ?? cleansheetFixture.isHome ?? bonusFixture.isHome ?? true;
+              
+              // Calculate per-fixture points for each component
+              const fixtureGoalsPts = (goalsFixture.goals || 0) * goalMultiplier;
+              const fixtureAssistsPts = (assistsFixture.assists || 0) * 3;
+              const fixtureCleansheetPts = cleansheetFixture.cleanSheetPoints || cleansheetFixture.pointsFromCleanSheets || 0;
+              const fixtureMinutesPts = numFixtures > 1 ? minutesPts / numFixtures : minutesPts;
+              const fixtureGoalsConcededPts = goalsConcededFixture.goalsConceded ? -(goalsConcededFixture.goalsConceded / 2) : 0;
+              const fixtureYellowCardsPts = -(yellowCardsFixture.yellowCards || 0);
+              const fixtureRedCardsPts = -(redCardsFixture.redCards || 0) * 3;
+              const fixtureBonusPts = bonusFixture.bonusPoints || 0;
+              const fixtureSavesPts = savesFixture.saves ? Math.floor(savesFixture.saves / 3) : 0;
+              const fixtureDefensiveContributionsPts = defensiveContributionsFixture.defensiveContributions || 0;
+              
+              const fixtureTotalPoints = fixtureGoalsPts + fixtureAssistsPts + fixtureCleansheetPts + 
+                                         fixtureMinutesPts + fixtureGoalsConcededPts + fixtureYellowCardsPts + 
+                                         fixtureRedCardsPts + fixtureBonusPts + fixtureSavesPts + fixtureDefensiveContributionsPts;
+              
+              if (opponent) { // Only add if we have valid fixture info
+                fixtureDetails[gwKey].push({
+                  opponent,
+                  isHome,
+                  pointsFromGoals: Math.round(fixtureGoalsPts * 100) / 100,
+                  pointsFromAssists: Math.round(fixtureAssistsPts * 100) / 100,
+                  pointsFromCleanSheets: Math.round(fixtureCleansheetPts * 100) / 100,
+                  pointsFromMinutes: Math.round(fixtureMinutesPts * 100) / 100,
+                  pointsFromGoalsConceded: Math.round(fixtureGoalsConcededPts * 100) / 100,
+                  pointsFromYellowCards: Math.round(fixtureYellowCardsPts * 100) / 100,
+                  pointsFromRedCards: Math.round(fixtureRedCardsPts * 100) / 100,
+                  pointsFromBonus: Math.round(fixtureBonusPts * 100) / 100,
+                  pointsFromSaves: Math.round(fixtureSavesPts * 100) / 100,
+                  pointsFromDefensiveContributions: Math.round(fixtureDefensiveContributionsPts * 100) / 100,
+                  totalPoints: Math.round(fixtureTotalPoints * 100) / 100
+                });
+              }
+            }
+          }
 
           // Total points for this gameweek
           const gwTotal = goalsPts + assistsPts + cleansheetPts + minutesPts + 
@@ -12465,6 +12558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromBonus,
           pointsFromSaves,
           pointsFromDefensiveContributions,
+          fixtureDetails, // Per-fixture component breakdowns for DGW support
           // Component totals
           totalPointsFromGoals: Object.values(pointsFromGoals).reduce((sum: number, pts: number) => sum + pts, 0),
           totalPointsFromAssists: Object.values(pointsFromAssists).reduce((sum: number, pts: number) => sum + pts, 0),

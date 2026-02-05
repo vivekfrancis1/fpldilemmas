@@ -96,15 +96,50 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 import PlayerProjectionsComparisonModal from "@/components/player-projections-comparison-modal";
 
+// Fixture detail type for DGW breakdowns
+interface FixtureDetail {
+  opponent: string;
+  isHome: boolean;
+  pointsFromGoals: number;
+  pointsFromAssists: number;
+  pointsFromCleanSheets: number;
+  pointsFromMinutes: number;
+  pointsFromGoalsConceded: number;
+  pointsFromYellowCards: number;
+  pointsFromRedCards: number;
+  pointsFromBonus: number;
+  pointsFromSaves: number;
+  pointsFromDefensiveContributions: number;
+  totalPoints: number;
+}
+
 // Gameweek Point Breakdown Tooltip Component
 function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = new Set() }: { player: PlayerTotalPointsData, gameweek: number, excludedComponents?: Set<string> }) {
   const hasBreakdownData = player.pointsFromGoals !== undefined;
   const gwKey = gameweek.toString(); // Use numeric string key format to match API data
   const gwPoints = player.gameweekProjections?.[gwKey];
   
+  // Check for fixtureDetails (DGW support)
+  const fixtures = ((player as any).fixtureDetails?.[gwKey] || []) as FixtureDetail[];
+  const isDGW = fixtures.length > 1;
+  
   // Check for availability adjustments
   const hasAdjustment = player.availabilityAdjustments?.[gwKey];
   const originalPoints = player.originalGameweekProjections?.[gwKey];
+  
+  // Component definitions for display
+  const componentDefs = [
+    { key: 'pointsFromGoals', excludeKey: 'goals', label: '⚽ Goals', color: 'text-green-700' },
+    { key: 'pointsFromAssists', excludeKey: 'assists', label: '🎯 Assists', color: 'text-blue-700' },
+    { key: 'pointsFromCleanSheets', excludeKey: 'cleanSheets', label: '🛡️ Clean Sheets', color: 'text-yellow-700' },
+    { key: 'pointsFromDefensiveContributions', excludeKey: 'defensiveContributions', label: '⚔️ Def Contrib', color: 'text-orange-700' },
+    { key: 'pointsFromMinutes', excludeKey: 'minutes', label: '⏱️ Minutes', color: 'text-purple-700' },
+    { key: 'pointsFromBonus', excludeKey: 'bonus', label: '✨ Bonus', color: 'text-pink-700' },
+    { key: 'pointsFromSaves', excludeKey: 'saves', label: '🥅 Saves', color: 'text-cyan-700' },
+    { key: 'pointsFromGoalsConceded', excludeKey: 'goalsConceded', label: '🚪 Goals Conceded', color: 'text-red-600' },
+    { key: 'pointsFromYellowCards', excludeKey: 'yellowCards', label: '🟨 Yellow Cards', color: 'text-amber-600' },
+    { key: 'pointsFromRedCards', excludeKey: 'redCards', label: '🟥 Red Cards', color: 'text-red-700' },
+  ];
   
   if (!hasBreakdownData || !gwPoints) {
     return (
@@ -143,10 +178,15 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
           />
         </button>
       </PopoverTrigger>
-      <PopoverContent side="top" className="max-w-sm p-4 bg-white shadow-xl border border-gray-200 z-50">
+      <PopoverContent side="top" className={`${isDGW ? 'max-w-lg' : 'max-w-sm'} p-4 bg-white shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto`}>
         <div className="space-y-2">
-          <div className="font-semibold text-gray-900 border-b pb-2 mb-3">
-            GW{gameweek} Points Breakdown
+          <div className="font-semibold text-gray-900 border-b pb-2 mb-3 flex items-center gap-2">
+            <span>GW{gameweek} Points Breakdown</span>
+            {isDGW && (
+              <span className="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-medium">
+                DGW - {fixtures.length} fixtures
+              </span>
+            )}
           </div>
           
           {/* Show availability adjustment notice if exists */}
@@ -180,62 +220,82 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
               </div>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            {(() => {
-              const originalCompProjs = (player as any).originalComponentProjections as { [comp: string]: { [gw: string]: number } } | undefined;
-              // Map per-gameweek keys to exclusion keys (matching the total points tooltip)
-              const componentDefs = [
-                { key: 'pointsFromGoals', excludeKey: 'goals', label: '⚽ Goals', color: 'text-green-700' },
-                { key: 'pointsFromAssists', excludeKey: 'assists', label: '🎯 Assists', color: 'text-blue-700' },
-                { key: 'pointsFromCleanSheets', excludeKey: 'cleanSheets', label: '🛡️ Clean Sheets', color: 'text-yellow-700' },
-                { key: 'pointsFromDefensiveContributions', excludeKey: 'defensiveContributions', label: '⚔️ Defensive Contributions', color: 'text-orange-700' },
-                { key: 'pointsFromMinutes', excludeKey: 'minutes', label: '⏱️ Minutes', color: 'text-purple-700' },
-                { key: 'pointsFromBonus', excludeKey: 'bonus', label: '✨ Bonus', color: 'text-pink-700' },
-                { key: 'pointsFromSaves', excludeKey: 'saves', label: '🥅 Saves', color: 'text-cyan-700' },
-                { key: 'pointsFromGoalsConceded', excludeKey: 'goalsConceded', label: '🚪 Goals Conceded', color: 'text-red-600' },
-                { key: 'pointsFromYellowCards', excludeKey: 'yellowCards', label: '🟨 Yellow Cards', color: 'text-amber-600' },
-                { key: 'pointsFromRedCards', excludeKey: 'redCards', label: '🟥 Red Cards', color: 'text-red-700' },
-              ];
-              
-              return componentDefs.map(comp => {
-                const currentValue = (player as any)[comp.key]?.[gwKey] || 0;
-                const originalValue = originalCompProjs?.[comp.key]?.[gwKey] ?? currentValue;
-                const hasCompAdjustment = hasAdjustment && Math.abs(currentValue - originalValue) > 0.001;
-                const isExcluded = excludedComponents.has(comp.excludeKey);
-                
-                return (
-                  <div key={comp.key} className={`flex justify-between items-center ${isExcluded ? 'opacity-40' : ''}`}>
-                    <span className={`text-gray-600 ${isExcluded ? 'line-through' : ''}`}>{comp.label}:</span>
-                    <div className="flex items-center gap-1.5">
-                      {isExcluded ? (
-                        <>
-                          <span className="text-gray-400 font-medium">0.00</span>
-                          <span className="text-xs text-red-500">✕</span>
-                        </>
-                      ) : hasCompAdjustment ? (
-                        <>
-                          <span className="text-gray-400 text-xs line-through">
-                            {originalValue.toFixed(2)}
-                          </span>
-                          <span className={`${comp.color} font-medium`}>
-                            {currentValue.toFixed(2)}
-                          </span>
-                        </>
-                      ) : (
-                        <ValueCell 
-                          value={currentValue} 
-                          format="points" 
-                          decimals={2} 
-                          className={comp.color}
-                          fontWeight="medium"
-                        />
-                      )}
-                    </div>
+          
+          {/* DGW: Show per-fixture breakdown with all 10 components */}
+          {isDGW ? (
+            <div className="space-y-4">
+              {fixtures.map((fixture, idx) => (
+                <div key={idx} className="border border-gray-200 rounded-lg p-3 bg-gray-50">
+                  <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
+                    <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${fixture.isHome ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                      {fixture.isHome ? 'H' : 'A'}
+                    </span>
+                    <span className="font-semibold text-gray-800">{fixture.opponent}</span>
+                    <span className="ml-auto text-sm font-bold text-purple-700">{fixture.totalPoints.toFixed(2)} pts</span>
                   </div>
-                );
-              });
-            })()}
-          </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                    {componentDefs.map(comp => {
+                      const value = fixture[comp.key as keyof FixtureDetail] as number;
+                      const isExcluded = excludedComponents.has(comp.excludeKey);
+                      if (value === 0 && !isExcluded) return null;
+                      return (
+                        <div key={comp.key} className={`flex justify-between items-center ${isExcluded ? 'opacity-40' : ''}`}>
+                          <span className={`text-gray-600 ${isExcluded ? 'line-through' : ''}`}>{comp.label}:</span>
+                          <span className={`${comp.color} font-medium`}>{isExcluded ? '0.00' : value.toFixed(2)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* Single gameweek: Show standard component breakdown */
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {(() => {
+                const originalCompProjs = (player as any).originalComponentProjections as { [comp: string]: { [gw: string]: number } } | undefined;
+                
+                return componentDefs.map(comp => {
+                  const currentValue = (player as any)[comp.key]?.[gwKey] || 0;
+                  const originalValue = originalCompProjs?.[comp.key]?.[gwKey] ?? currentValue;
+                  const hasCompAdjustment = hasAdjustment && Math.abs(currentValue - originalValue) > 0.001;
+                  const isExcluded = excludedComponents.has(comp.excludeKey);
+                  
+                  return (
+                    <div key={comp.key} className={`flex justify-between items-center ${isExcluded ? 'opacity-40' : ''}`}>
+                      <span className={`text-gray-600 ${isExcluded ? 'line-through' : ''}`}>{comp.label}:</span>
+                      <div className="flex items-center gap-1.5">
+                        {isExcluded ? (
+                          <>
+                            <span className="text-gray-400 font-medium">0.00</span>
+                            <span className="text-xs text-red-500">✕</span>
+                          </>
+                        ) : hasCompAdjustment ? (
+                          <>
+                            <span className="text-gray-400 text-xs line-through">
+                              {originalValue.toFixed(2)}
+                            </span>
+                            <span className={`${comp.color} font-medium`}>
+                              {currentValue.toFixed(2)}
+                            </span>
+                          </>
+                        ) : (
+                          <ValueCell 
+                            value={currentValue} 
+                            format="points" 
+                            decimals={2} 
+                            className={comp.color}
+                            fontWeight="medium"
+                          />
+                        )}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          )}
+          
           <div className="border-t pt-2 mt-3">
             <div className="flex justify-between items-center font-semibold">
               <span className="text-gray-800">GW{gameweek} Points Total:</span>
