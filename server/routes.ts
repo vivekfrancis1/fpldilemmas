@@ -3950,13 +3950,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isGW15 = targetGW === 15;
               
               // Dynamic threshold based on free transfers available
-              // 1 FT: 0.8 pts/game, 2 FT: 0.7 pts/game, 3 FT: 0.6 pts/game, 4 FT: 0.5 pts/game, 5 FT: 0.4 pts/game
+              // 1 FT: 0.6 pts/game, 2 FT: 0.5 pts/game, 3 FT: 0.4 pts/game, 4 FT: 0.3 pts/game, 5 FT: 0.2 pts/game
               const thresholdByFreeTransfers: { [key: number]: number } = {
-                1: 0.8,
-                2: 0.7,
-                3: 0.6,
-                4: 0.5,
-                5: 0.4
+                1: 0.6,
+                2: 0.5,
+                3: 0.4,
+                4: 0.3,
+                5: 0.2
               };
               const thresholdMultiplier = thresholdByFreeTransfers[freeTransfersForGW] || 1.0;
               const remainingGameweeks = planningEnd - targetGW + 1;
