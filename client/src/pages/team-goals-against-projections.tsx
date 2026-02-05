@@ -9,13 +9,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
+interface FixtureDetail {
+  opponent: string;
+  isHome: boolean;
+  goalsAgainst: number;
+}
+
 interface TeamGoalsAgainstHistory {
   lastFinishedGW: number;
   teams: {
     id: number;
     team: string;
     teamShort: string;
-    gameweekGoals: { [key: number]: number };
+    gameweekGoals: { [key: string]: number };
+    fixtureDetails?: { [key: string]: FixtureDetail[] };
     totalGoals: number;
     averageGoalsPerGame: number;
     position: number;
@@ -28,7 +35,10 @@ interface TeamGoalsAgainstProjection {
   teamShort: string;
   teamBadge?: string;
   gameweekProjections: {
-    [gameweek: number]: number;
+    [gameweek: string]: number;
+  };
+  fixtureDetails?: {
+    [gameweek: string]: FixtureDetail[];
   };
   totalProjectedGoalsAgainst: number;
   averageGoalsAgainstPerGame: number;
@@ -579,29 +589,56 @@ export default function TeamGoalsAgainstProjections() {
                         </td>
                         
                         {activeGameweeks.map(gwNumber => {
-                          const goalsAgainst = team.gameweekProjections[gwNumber] || 0;
-                          const fplShortName = teamNameToShort.get(team.team) || team.teamShort;
-                          const opponentInfo = opponentMap.get(`${fplShortName}-${gwNumber}`);
+                          // Use string key to match API response format
+                          const teamWithDetails = team as TeamGoalsAgainstProjection;
+                          const fixtures = teamWithDetails.fixtureDetails?.[gwNumber.toString()] || [];
+                          const hasFixtures = fixtures.length > 0;
+                          const avgGA = hasFixtures ? fixtures.reduce((sum: number, f: FixtureDetail) => sum + f.goalsAgainst, 0) / fixtures.length : 0;
+                          
                           return (
-                            <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsAgainstColor(goalsAgainst)}`}>
-                              <div className="flex flex-col items-center">
-                                <span>{goalsAgainst > 0 ? (viewMode === "past" ? Math.round(goalsAgainst) : goalsAgainst.toFixed(2)) : "-"}</span>
-                                {showOpponent && opponentInfo && (
-                                  <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
-                                    {opponentInfo.opponent} ({opponentInfo.isHome ? 'H' : 'A'})
-                                  </span>
-                                )}
-                              </div>
+                            <td key={gwNumber} className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsAgainstColor(avgGA)}`}>
+                              {!hasFixtures ? (
+                                <span className="text-gray-400">-</span>
+                              ) : fixtures.length === 1 ? (
+                                <div className="flex flex-col items-center">
+                                  <span>{viewMode === "past" ? Math.round(fixtures[0].goalsAgainst) : fixtures[0].goalsAgainst.toFixed(2)}</span>
+                                  {showOpponent && (
+                                    <span className="text-[10px] md:text-xs text-gray-500 mt-0.5">
+                                      {fixtures[0].opponent} ({fixtures[0].isHome ? 'H' : 'A'})
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-0.5">
+                                  {fixtures.map((fixture: FixtureDetail, idx: number) => (
+                                    <div key={idx} className="text-xs">
+                                      <span>{viewMode === "past" ? Math.round(fixture.goalsAgainst) : fixture.goalsAgainst.toFixed(2)}</span>
+                                      {showOpponent && (
+                                        <span className="text-[10px] text-gray-500 ml-1">
+                                          {fixture.opponent} ({fixture.isHome ? 'H' : 'A'})
+                                        </span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </td>
                           );
                         })}
                         
                         <td className="px-1 md:px-3 py-2 md:py-4 text-center bg-blue-50 min-w-[50px] md:min-w-[70px]">
-                          <span className="text-sm md:text-lg font-bold text-blue-900">
-                            {viewMode === "past" 
-                              ? Math.round(activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0))
-                              : activeGameweeks.reduce((sum, gw) => sum + (team.gameweekProjections[gw] || 0), 0).toFixed(2)}
-                          </span>
+                          {(() => {
+                            // Calculate average GA per fixture across all active gameweeks (use string keys)
+                            const teamWithDetails = team as TeamGoalsAgainstProjection;
+                            const allFixtures = activeGameweeks.flatMap(gw => teamWithDetails.fixtureDetails?.[gw.toString()] || []);
+                            const totalGA = allFixtures.reduce((sum: number, f: FixtureDetail) => sum + f.goalsAgainst, 0);
+                            const avgGA = allFixtures.length > 0 ? totalGA / allFixtures.length : 0;
+                            return (
+                              <span className="text-sm md:text-lg font-bold text-blue-900">
+                                {viewMode === "past" ? Math.round(avgGA) : avgGA.toFixed(2)}
+                              </span>
+                            );
+                          })()}
                         </td>
                         
                       </tr>

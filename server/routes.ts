@@ -11060,8 +11060,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       teams.forEach((team: any) => {
         const gameweekProjections: any = {};
+        const fixtureDetails: any = {}; // Individual fixture details per gameweek
         for (let gw = startGameweek; gw <= endGameweek; gw++) {
           gameweekProjections[gw] = 0;
+          fixtureDetails[gw] = [];
         }
         
         teamsGoalsAgainst.set(team.id, {
@@ -11070,7 +11072,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: team.short_name,
           teamName: team.name,
           gameweekProjections: gameweekProjections,
-          // Removed totalProjectedGoalsAgainst and averageGoalsAgainstPerGame
+          fixtureDetails: fixtureDetails, // Individual goals against per fixture
           confidence: 'Medium',
           position: 0
         });
@@ -11099,8 +11101,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (fixture.event >= 1 && fixture.event <= 38) {
           const homeTeamAgainst = teamsGoalsAgainst.get(fixture.team_h);
           const awayTeamAgainst = teamsGoalsAgainst.get(fixture.team_a);
+          const homeTeam = teams.find((t: any) => t.id === fixture.team_h);
+          const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
           
-          if (homeTeamAgainst && awayTeamAgainst) {
+          if (homeTeamAgainst && awayTeamAgainst && homeTeam && awayTeam) {
             // Use actual data only if the ENTIRE gameweek is complete - MATCHING TEAM GOAL PROJECTIONS LOGIC
             if (completeGameweeks.has(fixture.event)) {
               // Use actual data for complete gameweeks only - SUM for DGW
@@ -11108,18 +11112,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const awayAgainstValue = fixture.team_h_score || 0;
               homeTeamAgainst.gameweekProjections[fixture.event] = (homeTeamAgainst.gameweekProjections[fixture.event] || 0) + homeAgainstValue;
               awayTeamAgainst.gameweekProjections[fixture.event] = (awayTeamAgainst.gameweekProjections[fixture.event] || 0) + awayAgainstValue;
+              
+              // Add fixture details for complete gameweeks
+              if (homeTeamAgainst.fixtureDetails[fixture.event]) {
+                homeTeamAgainst.fixtureDetails[fixture.event].push({
+                  opponent: awayTeam.short_name,
+                  isHome: true,
+                  goalsAgainst: homeAgainstValue
+                });
+              }
+              if (awayTeamAgainst.fixtureDetails[fixture.event]) {
+                awayTeamAgainst.fixtureDetails[fixture.event].push({
+                  opponent: homeTeam.short_name,
+                  isHome: false,
+                  goalsAgainst: awayAgainstValue
+                });
+              }
             } else {
               // For incomplete gameweeks, use projections for ALL fixtures (even finished ones)
               const homeTeamScored = teamGoalProjections.find((t: any) => t.teamId === fixture.team_h);
               const awayTeamScored = teamGoalProjections.find((t: any) => t.teamId === fixture.team_a);
               
               if (homeTeamScored && awayTeamScored) {
-                const awayGoals = awayTeamScored.gameweekProjections[fixture.event];
-                const homeGoals = homeTeamScored.gameweekProjections[fixture.event];
+                // Get per-fixture goals (not summed) from fixtureDetails if available
+                const homeTeamFixtures = homeTeamScored.fixtureDetails?.[fixture.event] || [];
+                const awayTeamFixtures = awayTeamScored.fixtureDetails?.[fixture.event] || [];
+                
+                // Find the specific fixture's goals for each team
+                const homeFixtureGoals = homeTeamFixtures.find((f: any) => f.opponent === awayTeam.short_name)?.goals;
+                const awayFixtureGoals = awayTeamFixtures.find((f: any) => f.opponent === homeTeam.short_name)?.goals;
+                
+                // Use fixture-specific goals if available, otherwise fall back to per-game average
+                const fixtureCount = homeTeamFixtures.length || 1;
+                const awayGoals = awayFixtureGoals !== undefined ? awayFixtureGoals : 
+                  (awayTeamScored.gameweekProjections[fixture.event] / fixtureCount);
+                const homeGoals = homeFixtureGoals !== undefined ? homeFixtureGoals :
+                  (homeTeamScored.gameweekProjections[fixture.event] / fixtureCount);
+                
                 if (awayGoals !== undefined && homeGoals !== undefined) {
                   // Direct mirror: home concedes what away scores, away concedes what home scores - SUM for DGW
                   homeTeamAgainst.gameweekProjections[fixture.event] = (homeTeamAgainst.gameweekProjections[fixture.event] || 0) + awayGoals;
                   awayTeamAgainst.gameweekProjections[fixture.event] = (awayTeamAgainst.gameweekProjections[fixture.event] || 0) + homeGoals;
+                  
+                  // Add fixture details for projected gameweeks
+                  if (homeTeamAgainst.fixtureDetails[fixture.event]) {
+                    homeTeamAgainst.fixtureDetails[fixture.event].push({
+                      opponent: awayTeam.short_name,
+                      isHome: true,
+                      goalsAgainst: Math.round(awayGoals * 100) / 100
+                    });
+                  }
+                  if (awayTeamAgainst.fixtureDetails[fixture.event]) {
+                    awayTeamAgainst.fixtureDetails[fixture.event].push({
+                      opponent: homeTeam.short_name,
+                      isHome: false,
+                      goalsAgainst: Math.round(homeGoals * 100) / 100
+                    });
+                  }
                 }
               }
             }
