@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface FixtureDetail {
   opponent: string;
@@ -686,9 +686,9 @@ export default function TeamGoalProjections() {
                               className={`px-1 md:px-3 py-2 md:py-4 text-center text-xs md:text-sm font-medium min-w-[40px] md:min-w-[50px] ${getGoalsColor(goals || 0)} ${isDGW ? 'cursor-help' : ''}`}
                             >
                               {isDGW ? (
-                                <TooltipProvider delayDuration={0}>
-                                  <Tooltip>
-                                    <TooltipTrigger className="w-full">
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 underline decoration-dotted underline-offset-2">
                                       <div className="flex flex-col items-center">
                                         <span>{goals !== undefined ? goals.toFixed(2) : "-"}</span>
                                         {showOpponent && fixtures.length > 0 && (
@@ -697,17 +697,26 @@ export default function TeamGoalProjections() {
                                           </span>
                                         )}
                                       </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent side="top" className="bg-gray-900 text-white p-2 z-50">
-                                      <div className="text-xs font-medium mb-1">DGW Breakdown:</div>
+                                    </button>
+                                  </PopoverTrigger>
+                                  <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
+                                    <div className="space-y-2">
+                                      <div className="font-semibold text-gray-900 border-b pb-2">
+                                        GW{gwNumber} DGW Breakdown
+                                      </div>
                                       {fixtures.map((f: FixtureDetail, idx: number) => (
-                                        <div key={idx} className="text-xs">
-                                          vs {f.opponent} ({f.isHome ? 'H' : 'A'}): {f.goals.toFixed(2)}
+                                        <div key={idx} className="flex justify-between items-center text-sm">
+                                          <span className="text-gray-600">vs {f.opponent} ({f.isHome ? 'H' : 'A'})</span>
+                                          <span className="font-medium text-green-700">{f.goals.toFixed(2)}</span>
                                         </div>
                                       ))}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
+                                      <div className="border-t pt-2 flex justify-between items-center text-sm font-semibold">
+                                        <span className="text-gray-900">Total</span>
+                                        <span className="text-green-800">{goals?.toFixed(2)}</span>
+                                      </div>
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
                               ) : cellContent}
                             </td>
                           );
