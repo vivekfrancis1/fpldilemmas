@@ -1161,8 +1161,9 @@ export default function TransferRecommendations() {
                                               <div className="flex items-center gap-1.5 flex-wrap">
                                                 <TrendingDown className="h-3.5 w-3.5 text-red-500 shrink-0" />
                                                 <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-out-name-gw${gw}-${index}`}>{rec.playerOut.webName}</span>
+                                                <span className="text-xs text-gray-500 whitespace-nowrap">£{(rec.playerOut.sellingPrice / 10).toFixed(1)}m</span>
                                                 <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-out-points-gw${gw}-${index}`}>
-                                                  ({rec.playerOut.projectedPoints.toFixed(1)} pts)
+                                                  ({(rec.playerOut.fourGWPoints || 0).toFixed(1)} pts)
                                                 </span>
                                               </div>
                                             </div>
@@ -1173,8 +1174,9 @@ export default function TransferRecommendations() {
                                               <div className="flex items-center gap-1.5 flex-wrap">
                                                 <TrendingUp className="h-3.5 w-3.5 text-green-500 shrink-0" />
                                                 <span className="text-sm font-medium text-gray-900 break-words" data-testid={`player-in-name-gw${gw}-${index}`}>{rec.playerIn.webName}</span>
+                                                <span className="text-xs text-gray-500 whitespace-nowrap">£{(rec.playerIn.nowCost / 10).toFixed(1)}m</span>
                                                 <span className="text-xs text-gray-500 whitespace-nowrap" data-testid={`player-in-points-gw${gw}-${index}`}>
-                                                  ({rec.playerIn.projectedPoints.toFixed(1)} pts)
+                                                  ({(rec.playerIn.fourGWPoints || 0).toFixed(1)} pts)
                                                 </span>
                                               </div>
                                             </div>

@@ -3976,14 +3976,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     webName: playerOut.webName,
                     team: playerOut.team,
                     sellingPrice: playerOut.sellingPrice,
-                    projectedPoints: playerOut.projectedPoints
+                    projectedPoints: playerOut.projectedPoints,
+                    fourGWPoints: playerOut.fourGWPoints
                   },
                   playerIn: {
                     id: playerIn.id,
                     webName: playerIn.web_name,
                     team: playerIn.team,
                     nowCost: playerIn.now_cost,
-                    projectedPoints: playerInPoints
+                    projectedPoints: playerInPoints,
+                    fourGWPoints: playerInFourGWPoints
                   },
                   pointsGain: pointsGain,
                   singleGWPointsGain: singleGWPointsGain,
