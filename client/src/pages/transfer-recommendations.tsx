@@ -1130,6 +1130,61 @@ export default function TransferRecommendations() {
                               
                               return (
                                 <>
+                                  {gwData.bestCombination && gwData.bestCombination.length > 0 && freeTransfers >= 2 && (
+                                    <div className="mb-4">
+                                      <div className="p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-lg shadow-sm">
+                                        <div className="flex items-center gap-2 mb-3">
+                                          <div className="w-7 h-7 bg-purple-100 rounded-full flex items-center justify-center">
+                                            <Target className="h-4 w-4 text-purple-600" />
+                                          </div>
+                                          <h3 className="text-base font-bold text-purple-800">Best {gwData.bestCombination.length}-Transfer Combo</h3>
+                                          <Badge className="bg-purple-100 text-purple-800 border-purple-300 ml-auto">
+                                            +{(gwData.bestCombinationTotalGain || 0).toFixed(1)} pts (4 GWs)
+                                          </Badge>
+                                        </div>
+                                        <div className="space-y-2">
+                                          {gwData.bestCombination.map((combo: any, idx: number) => {
+                                            const comboNetCost = combo.playerIn.nowCost - combo.playerOut.sellingPrice;
+                                            return (
+                                              <div key={`combo-${combo.playerOut.id}-${combo.playerIn.id}`} className="p-2 bg-white/70 rounded-md border border-purple-200">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                  <span className="text-xs font-bold text-purple-600 w-4">{idx + 1}.</span>
+                                                  <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">OUT</Badge>
+                                                  <span className="text-sm font-medium">{combo.playerOut.webName}</span>
+                                                  <span className="text-xs text-gray-500">£{(combo.playerOut.sellingPrice / 10).toFixed(1)}m</span>
+                                                  <span className="text-xs text-gray-500">({(combo.playerOut.fourGWPoints || 0).toFixed(1)} pts)</span>
+                                                  <ArrowRightLeft className="h-3.5 w-3.5 text-gray-400" />
+                                                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">IN</Badge>
+                                                  <span className="text-sm font-medium">{combo.playerIn.webName}</span>
+                                                  <span className="text-xs text-gray-500">£{(combo.playerIn.nowCost / 10).toFixed(1)}m</span>
+                                                  <span className="text-xs text-gray-500">({(combo.playerIn.fourGWPoints || 0).toFixed(1)} pts)</span>
+                                                  <span className="text-xs font-semibold text-green-600 ml-auto">+{(combo.fourGWPointsGain || 0).toFixed(1)}</span>
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                        <div className="mt-3 flex items-center justify-between">
+                                          <span className="text-xs text-purple-600">
+                                            Combined net cost: £{(gwData.bestCombination.reduce((sum: number, c: any) => sum + c.playerIn.nowCost - c.playerOut.sellingPrice, 0) / 10).toFixed(1)}m
+                                          </span>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                              gwData.bestCombination.forEach((combo: any) => {
+                                                applyTransfer(gw, combo);
+                                              });
+                                            }}
+                                            className="h-8 px-3 bg-purple-50 border-purple-300 text-purple-700 hover:bg-purple-100 hover:border-purple-400"
+                                          >
+                                            <Plus className="h-3.5 w-3.5 mr-1" />
+                                            Apply All
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
                                   {finalRecommendations.length > 0 && (
                                 <div>
                                   <h3 className="text-base font-semibold text-gray-700 mb-2">

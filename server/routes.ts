@@ -4189,12 +4189,138 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
+        let bestCombination: any[] | null = null;
+        if (freeTransfersForGW >= 2 && transferRecommendations.length >= 2) {
+          const candidates = transferRecommendations.slice(0, 30);
+          const comboSize = Math.min(freeTransfersForGW, 5);
+          
+          const initialTeamCounts = new Map<number, number>();
+          currentTeam.forEach(player => {
+            initialTeamCounts.set(player.team, (initialTeamCounts.get(player.team) || 0) + 1);
+          });
+          
+          const isValidCombo = (combo: typeof candidates): boolean => {
+            const outIds = new Set<number>();
+            const inIds = new Set<number>();
+            let totalCost = 0;
+            
+            for (const t of combo) {
+              if (outIds.has(t.playerOut.id) || inIds.has(t.playerIn.id)) return false;
+              if (outIds.has(t.playerIn.id) || inIds.has(t.playerOut.id)) return false;
+              outIds.add(t.playerOut.id);
+              inIds.add(t.playerIn.id);
+              totalCost += t.playerIn.nowCost - t.playerOut.sellingPrice;
+            }
+            
+            if (totalCost > runningBank) return false;
+            
+            const tc = new Map(initialTeamCounts);
+            for (const t of combo) {
+              if (t.playerOut.team !== t.playerIn.team) {
+                tc.set(t.playerOut.team, (tc.get(t.playerOut.team) || 0) - 1);
+                tc.set(t.playerIn.team, (tc.get(t.playerIn.team) || 0) + 1);
+              }
+            }
+            for (const count of tc.values()) {
+              if (count > 3) return false;
+            }
+            
+            return true;
+          };
+          
+          const comboGain = (combo: typeof candidates): number => {
+            return combo.reduce((sum, t) => sum + t.fourGWPointsGain, 0);
+          };
+          
+          let bestGain = 0;
+          let bestCombo: typeof candidates = [];
+          
+          const searchSize = (size: number, pool: typeof candidates) => {
+            if (size === 2) {
+              for (let i = 0; i < pool.length; i++) {
+                for (let j = i + 1; j < pool.length; j++) {
+                  const combo = [pool[i], pool[j]];
+                  if (isValidCombo(combo)) {
+                    const gain = comboGain(combo);
+                    if (gain > bestGain) { bestGain = gain; bestCombo = combo; }
+                  }
+                }
+              }
+            } else if (size === 3) {
+              for (let i = 0; i < pool.length; i++) {
+                for (let j = i + 1; j < pool.length; j++) {
+                  for (let k = j + 1; k < pool.length; k++) {
+                    const combo = [pool[i], pool[j], pool[k]];
+                    if (isValidCombo(combo)) {
+                      const gain = comboGain(combo);
+                      if (gain > bestGain) { bestGain = gain; bestCombo = combo; }
+                    }
+                  }
+                }
+              }
+            } else if (size === 4) {
+              for (let i = 0; i < pool.length; i++) {
+                for (let j = i + 1; j < pool.length; j++) {
+                  for (let k = j + 1; k < pool.length; k++) {
+                    for (let l = k + 1; l < pool.length; l++) {
+                      const combo = [pool[i], pool[j], pool[k], pool[l]];
+                      if (isValidCombo(combo)) {
+                        const gain = comboGain(combo);
+                        if (gain > bestGain) { bestGain = gain; bestCombo = combo; }
+                      }
+                    }
+                  }
+                }
+              }
+            } else if (size === 5) {
+              const p = pool.slice(0, 15);
+              for (let i = 0; i < p.length; i++) {
+                for (let j = i + 1; j < p.length; j++) {
+                  for (let k = j + 1; k < p.length; k++) {
+                    for (let l = k + 1; l < p.length; l++) {
+                      for (let m = l + 1; m < p.length; m++) {
+                        const combo = [p[i], p[j], p[k], p[l], p[m]];
+                        if (isValidCombo(combo)) {
+                          const gain = comboGain(combo);
+                          if (gain > bestGain) { bestGain = gain; bestCombo = combo; }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          };
+          
+          for (let size = 2; size <= comboSize; size++) {
+            searchSize(size, candidates);
+          }
+          
+          if (bestCombo.length > 0) {
+            let comboBankBalance = runningBank;
+            bestCombination = bestCombo.map(t => {
+              const netChange = t.playerOut.sellingPrice - t.playerIn.nowCost;
+              comboBankBalance += netChange;
+              return {
+                ...t,
+                budgetAfter: comboBankBalance
+              };
+            });
+            bestCombination.sort((a, b) => b.fourGWPointsGain - a.fourGWPointsGain);
+            console.log(`DEBUG GW${targetGW}: Best ${comboSize}-transfer combo: +${bestGain.toFixed(2)} pts 4GW`);
+            bestCombination.forEach((t: any, i: number) => {
+              console.log(`  Combo ${i + 1}: ${t.playerOut.webName} → ${t.playerIn.webName} (+${t.fourGWPointsGain.toFixed(2)})`);
+            });
+          }
+        }
+        
         recommendationsByGameweek[targetGW] = {
           gameweek: targetGW,
           targetRange: `next 4 GWs`,
           freeTransfersAvailable: freeTransfersForGW,
           bankBefore: runningBank,
-          recommendations: filteredRecommendations
+          recommendations: filteredRecommendations,
+          ...(bestCombination && bestCombination.length > 0 ? { bestCombination, bestCombinationTotalGain: bestCombination.reduce((sum: number, t: any) => sum + t.fourGWPointsGain, 0) } : {})
         };
         
         console.log(`DEBUG: GW${targetGW}: Found ${transferRecommendations.length} transfer opportunities, ${filteredRecommendations.length} after filtering conflicts`);
