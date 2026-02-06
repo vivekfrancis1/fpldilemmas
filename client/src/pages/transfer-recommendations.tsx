@@ -926,7 +926,7 @@ export default function TransferRecommendations() {
                   <TabsContent key={gw} value={gw} className="space-y-4">
                     <div className="flex flex-col gap-3 mb-4">
                       <div className="text-sm text-gray-600">
-                        <strong>Target:</strong> Maximize points for {gwData.targetRange}
+                        <strong>Target:</strong> Maximise points for {gwData.targetRange}
                       </div>
                       {finances && (() => {
                         // Get all gameweek keys to identify the first (current) gameweek

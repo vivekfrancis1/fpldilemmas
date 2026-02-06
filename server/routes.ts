@@ -3959,18 +3959,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 5: 0.1
               };
               const thresholdMultiplier = thresholdByFreeTransfers[freeTransfersForGW] || 1.0;
-              const remainingGameweeks = planningEnd - targetGW + 1;
               const fourGameweeks = Math.min(4, fourGWEnd - targetGW + 1);
-              const minPointsGainTotal = remainingGameweeks * thresholdMultiplier;
-              const minPointsGainSingleGW = thresholdMultiplier;
               const minPointsGainFourGW = fourGameweeks * thresholdMultiplier;
               
               // Determine if this transfer meets the normal threshold
-              // Must meet threshold for: (a) single gameweek, (b) next 4 gameweeks, (c) all remaining gameweeks
+              // Only check next 4 gameweeks points gain
               const meetsNormalThreshold = 
-                singleGWPointsGain >= minPointsGainSingleGW && 
-                fourGWPointsGain >= minPointsGainFourGW && 
-                pointsGain >= minPointsGainTotal;
+                fourGWPointsGain >= minPointsGainFourGW;
               
               // Add all transfers with positive points gain to the pool
               // We'll apply threshold filtering later when selecting which to show
@@ -4194,7 +4189,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         recommendationsByGameweek[targetGW] = {
           gameweek: targetGW,
-          targetRange: `GW${targetGW}-${planningEnd}`,
+          targetRange: `next 4 GWs`,
           freeTransfersAvailable: freeTransfersForGW,
           bankBefore: runningBank,
           recommendations: filteredRecommendations
