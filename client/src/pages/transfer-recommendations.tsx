@@ -1034,7 +1034,7 @@ export default function TransferRecommendations() {
                                             <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">IN</Badge>
                                             <span className="text-sm font-medium">{rec.playerIn.webName}</span>
                                           </div>
-                                          <span className="text-xs text-green-600 font-semibold">+{rec.pointsGain.toFixed(1)} pts</span>
+                                          <span className="text-xs text-green-600 font-semibold">+{(rec.fourGWPointsGain || 0).toFixed(1)} pts</span>
                                         </div>
                                         <Button
                                           variant="ghost"
@@ -1189,18 +1189,10 @@ export default function TransferRecommendations() {
                                             Apply
                                           </Button>
                                         </div>
-                                        <div className={`grid grid-cols-3 sm:grid-cols-5 gap-2 pt-1.5 border-t ${isTopRecommendation ? 'border-green-300' : 'border-orange-200'}`}>
-                                          <div className="text-center">
-                                            <div className="text-xs text-gray-500">This GW</div>
-                                            <div className="text-sm font-bold text-green-600" data-testid={`points-gain-single-gw${gw}-${index}`}>+{(rec.singleGWPointsGain || 0).toFixed(1)}</div>
-                                          </div>
+                                        <div className={`grid grid-cols-3 sm:grid-cols-3 gap-2 pt-1.5 border-t ${isTopRecommendation ? 'border-green-300' : 'border-orange-200'}`}>
                                           <div className="text-center">
                                             <div className="text-xs text-gray-500">Next 4 GWs</div>
                                             <div className="text-sm font-bold text-green-600" data-testid={`points-gain-4gw-${gw}-${index}`}>+{(rec.fourGWPointsGain || 0).toFixed(1)}</div>
-                                          </div>
-                                          <div className="text-center">
-                                            <div className="text-xs text-gray-500">Till GW{rec.endGW || 33}</div>
-                                            <div className="text-sm font-bold text-green-600" data-testid={`points-gain-gw${gw}-${index}`}>+{rec.pointsGain.toFixed(1)}</div>
                                           </div>
                                           <div className="text-center">
                                             <div className="text-xs text-gray-500">Cost</div>

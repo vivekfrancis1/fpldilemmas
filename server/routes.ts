@@ -3969,7 +3969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               // Add all transfers with positive points gain to the pool
               // We'll apply threshold filtering later when selecting which to show
-              if (pointsGain > 0) {
+              if (fourGWPointsGain > 0) {
                 transferRecommendations.push({
                   playerOut: {
                     id: playerOut.id,
@@ -4000,7 +4000,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         // Sort by point gain (descending) - no limit, show all that meet minimum threshold
-        transferRecommendations.sort((a, b) => b.pointsGain - a.pointsGain);
+        transferRecommendations.sort((a, b) => b.fourGWPointsGain - a.fourGWPointsGain);
         
         // Select N primary transfers where N = number of free transfers for this gameweek
         // Important: Primary transfers must not conflict with each other
@@ -4100,7 +4100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               transfer.playerOut.team !== transfer.playerIn.team && 
               (teamCounts.get(transfer.playerIn.team) || 0) >= 3;
             
-            if (!conflictsWithSelected && !wouldViolateTeamConstraint && transfer.pointsGain > 0) {
+            if (!conflictsWithSelected && !wouldViolateTeamConstraint && transfer.fourGWPointsGain > 0) {
               // Recalculate budgetAfter based on current running bank balance
               const budgetBefore = currentBank;
               const netChange = transfer.playerOut.sellingPrice - transfer.playerIn.nowCost;
@@ -4123,7 +4123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               currentBank = budgetAfter;
               
-              console.log(`  ✅ 5 FT special case: Accepting ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.pointsGain.toFixed(2)} pts, positive gain only)`);
+              console.log(`  ✅ 5 FT special case: Accepting ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.fourGWPointsGain.toFixed(2)} pts 4GW, positive gain only)`);
               break; // Only accept 1 transfer in this special case
             }
           }
@@ -4131,7 +4131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log(`DEBUG GW${targetGW}: ${freeTransfersForGW} free transfer${freeTransfersForGW !== 1 ? 's' : ''} available`);
         primaryTransfers.forEach((transfer, index) => {
-          console.log(`  Primary ${index + 1}: ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.pointsGain.toFixed(2)} pts)`);
+          console.log(`  Primary ${index + 1}: ${transfer.playerOut.webName} → ${transfer.playerIn.webName} (+${transfer.fourGWPointsGain.toFixed(2)} pts 4GW)`);
         });
         
         // If no transfers meet the threshold, recommend rolling the transfer
@@ -4160,7 +4160,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // For "Other Transfers": Only show transfers that meet normal threshold (GW15 excluded as it uses all FTs anyway)
             if (!rec.meetsNormalThreshold && !isGW15) {
-              console.log(`  FILTERED OUT (doesn't meet threshold): ${rec.playerOut.webName} → ${rec.playerIn.webName} (${rec.pointsGain.toFixed(1)} pts)`);
+              console.log(`  FILTERED OUT (doesn't meet threshold): ${rec.playerOut.webName} → ${rec.playerIn.webName} (${rec.fourGWPointsGain.toFixed(1)} pts 4GW)`);
               return false;
             }
             
