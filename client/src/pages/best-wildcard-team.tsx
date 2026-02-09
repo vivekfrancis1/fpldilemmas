@@ -1507,10 +1507,10 @@ export default function BestWildcardTeam() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="h-5 w-5" />
-                Full Squad (15 Players)
+                Set & Forget Squad (15 Players)
               </CardTitle>
               <CardDescription>
-                Your complete squad optimized for maximum points across {gameweekRange}
+                Your best wildcard squad for the entire {gameweekRange} horizon. This is the optimal 15-player squad you'd pick if you activated your wildcard right now and kept it unchanged.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1612,10 +1612,10 @@ export default function BestWildcardTeam() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
-                  Gameweek-by-Gameweek Optimization
+                  Weekly Lineup Optimization
                 </CardTitle>
                 <CardDescription>
-                  Optimal starting XI and captain for each individual gameweek
+                  Using the 15-player squad above, this shows the best starting XI and captain pick for each gameweek based on fixtures and form.
                 </CardDescription>
               </CardHeader>
               <CardContent>
