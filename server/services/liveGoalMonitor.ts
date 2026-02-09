@@ -8,9 +8,7 @@ interface FixtureState {
   awayScore: number;
   playerGoals: Map<number, number>;
   playerAssists: Map<number, number>;
-  playerYellowCards: Map<number, number>;
   playerRedCards: Map<number, number>;
-  playerSaves: Map<number, number>;
   playerDC: Map<number, number>;
   tweetedEvents: Set<string>;
 }
@@ -83,15 +81,14 @@ export class LiveGoalMonitor {
   private lastBootstrapRefresh = 0;
   private readonly POLL_INTERVAL_MS = 60_000;
   private readonly BOOTSTRAP_REFRESH_MS = 10 * 60_000;
-  private readonly OWNERSHIP_THRESHOLD = 5.0;
-  private readonly SAVES_THRESHOLD = 3;
+  private readonly OWNERSHIP_THRESHOLD = 10.0;
   private readonly BONUS_MONITOR_HOURS = 12;
   private readonly SITE_URL = 'https://fpldilemmas.com';
 
   start() {
     console.log('⚽ Live match monitor starting...');
     console.log(`📋 Will tweet events when player has >${this.OWNERSHIP_THRESHOLD}% ownership`);
-    console.log(`📋 Tracking: goals, assists, yellow/red cards, saves (${this.SAVES_THRESHOLD}+), DC, bonus points`);
+    console.log(`📋 Tracking: goals, assists, red cards, DC, bonus points`);
     console.log(`📋 Bonus points monitored for ${this.BONUS_MONITOR_HOURS} hours after match ends`);
 
     this.poll();
@@ -343,9 +340,7 @@ export class LiveGoalMonitor {
 
     const currentPlayerGoals = new Map<number, number>();
     const currentPlayerAssists = new Map<number, number>();
-    const currentPlayerYellowCards = new Map<number, number>();
     const currentPlayerRedCards = new Map<number, number>();
-    const currentPlayerSaves = new Map<number, number>();
     const currentPlayerDC = new Map<number, number>();
 
     if (liveData?.elements) {
@@ -364,14 +359,8 @@ export class LiveGoalMonitor {
           if (stat.identifier === 'assists' && stat.value > 0) {
             currentPlayerAssists.set(el.id, stat.value);
           }
-          if (stat.identifier === 'yellow_cards' && stat.value > 0) {
-            currentPlayerYellowCards.set(el.id, stat.value);
-          }
           if (stat.identifier === 'red_cards' && stat.value > 0) {
             currentPlayerRedCards.set(el.id, stat.value);
-          }
-          if (stat.identifier === 'saves' && stat.value > 0) {
-            currentPlayerSaves.set(el.id, stat.value);
           }
         }
 
@@ -402,9 +391,7 @@ export class LiveGoalMonitor {
         awayScore,
         playerGoals: currentPlayerGoals,
         playerAssists: currentPlayerAssists,
-        playerYellowCards: currentPlayerYellowCards,
         playerRedCards: currentPlayerRedCards,
-        playerSaves: currentPlayerSaves,
         playerDC: currentPlayerDC,
         tweetedEvents: new Set(),
       });
@@ -452,16 +439,6 @@ export class LiveGoalMonitor {
       }
     }
 
-    const newYellowCards = this.findNewEntries(prevState.playerYellowCards, currentPlayerYellowCards);
-    for (const playerId of newYellowCards) {
-      const player = this.bootstrapPlayers.get(playerId);
-      if (!player) continue;
-      const ownership = parseFloat(player.selected_by_percent);
-      if (ownership > this.OWNERSHIP_THRESHOLD) {
-        await this.postEventTweet(this.formatYellowCardTweet(player.web_name, ownership, matchCtx));
-      }
-    }
-
     const newRedCards = this.findNewEntries(prevState.playerRedCards, currentPlayerRedCards);
     for (const playerId of newRedCards) {
       const player = this.bootstrapPlayers.get(playerId);
@@ -469,21 +446,6 @@ export class LiveGoalMonitor {
       const ownership = parseFloat(player.selected_by_percent);
       if (ownership > this.OWNERSHIP_THRESHOLD) {
         await this.postEventTweet(this.formatRedCardTweet(player.web_name, ownership, matchCtx));
-      }
-    }
-
-    const saveEntries = Array.from(currentPlayerSaves.entries());
-    for (const [playerId, saves] of saveEntries) {
-      const prevSaves = prevState.playerSaves.get(playerId) || 0;
-      const eventKey = `saves_${fixtureId}_${playerId}`;
-      if (saves >= this.SAVES_THRESHOLD && prevSaves < this.SAVES_THRESHOLD && !prevState.tweetedEvents.has(eventKey)) {
-        const player = this.bootstrapPlayers.get(playerId);
-        if (!player) continue;
-        const ownership = parseFloat(player.selected_by_percent);
-        if (ownership > this.OWNERSHIP_THRESHOLD) {
-          await this.postEventTweet(this.formatSavesTweet(player.web_name, ownership, saves, matchCtx));
-          prevState.tweetedEvents.add(eventKey);
-        }
       }
     }
 
@@ -508,9 +470,7 @@ export class LiveGoalMonitor {
     prevState.awayScore = awayScore;
     prevState.playerGoals = currentPlayerGoals;
     prevState.playerAssists = currentPlayerAssists;
-    prevState.playerYellowCards = currentPlayerYellowCards;
     prevState.playerRedCards = currentPlayerRedCards;
-    prevState.playerSaves = currentPlayerSaves;
     prevState.playerDC = currentPlayerDC;
   }
 
@@ -557,22 +517,8 @@ export class LiveGoalMonitor {
     return tweet;
   }
 
-  private formatYellowCardTweet(playerName: string, ownership: number, ctx: MatchContext): string {
-    let tweet = `🟨 Yellow Card! ${playerName} (${ctx.minute}') [${ownership.toFixed(1)}% owned]`;
-    tweet += `\n\n${this.matchLine(ctx)}`;
-    tweet += this.footer(ctx);
-    return tweet;
-  }
-
   private formatRedCardTweet(playerName: string, ownership: number, ctx: MatchContext): string {
     let tweet = `🟥 Red Card! ${playerName} (${ctx.minute}') [${ownership.toFixed(1)}% owned]`;
-    tweet += `\n\n${this.matchLine(ctx)}`;
-    tweet += this.footer(ctx);
-    return tweet;
-  }
-
-  private formatSavesTweet(playerName: string, ownership: number, saves: number, ctx: MatchContext): string {
-    let tweet = `🧤 Save Points! ${playerName} - ${saves} saves (${ctx.minute}') [${ownership.toFixed(1)}% owned]`;
     tweet += `\n\n${this.matchLine(ctx)}`;
     tweet += this.footer(ctx);
     return tweet;
@@ -634,9 +580,7 @@ export class LiveGoalMonitor {
 
     const tweets = [
       { type: 'goal', tweet: this.formatGoalTweet('Salah', 42.3, 'Alexander-Arnold', 18.7, sampleCtx) },
-      { type: 'yellow_card', tweet: this.formatYellowCardTweet('Salah', 42.3, { ...sampleCtx, minute: 67 }) },
       { type: 'red_card', tweet: this.formatRedCardTweet('Rice', 31.2, { ...sampleCtx, minute: 78 }) },
-      { type: 'saves', tweet: this.formatSavesTweet('Raya', 18.5, 3, sampleCtx2) },
       { type: 'defensive_contribution', tweet: this.formatDCTweet('Saliba', 22.1, 12, 'DEF', { ...sampleCtx2, minute: 82 }) },
       { type: 'bonus_confirmed', tweet: this.formatBonusTweet(bonusEntries, sampleCtxFT, false) },
       { type: 'bonus_updated', tweet: this.formatBonusTweet(updatedBonusEntries, sampleCtxFT, true) },
@@ -654,9 +598,7 @@ export class LiveGoalMonitor {
         match: `${homeTeam?.short_name || '?'} ${state.homeScore}-${state.awayScore} ${awayTeam?.short_name || '?'}`,
         trackedGoals: state.playerGoals.size,
         trackedAssists: state.playerAssists.size,
-        trackedYellowCards: state.playerYellowCards.size,
         trackedRedCards: state.playerRedCards.size,
-        trackedSaves: state.playerSaves.size,
         trackedDC: state.playerDC.size,
         tweetedThresholdEvents: state.tweetedEvents.size,
       };
