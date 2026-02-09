@@ -2568,11 +2568,13 @@ export default function MyDashboard() {
                                 )}
                               </p>
                               {(() => {
-                                const transferCost = nextTeamData.transfers?.cost || 0;
-                                if (transferCost > 0) {
+                                const made = nextTeamData.transfers?.made || 0;
+                                const limit = nextTeamData.transfers?.limit || 1;
+                                const hitCost = Math.max(0, (made - limit) * 4);
+                                if (hitCost > 0) {
                                   return (
                                     <p className="text-xs text-red-600 font-semibold mt-1">
-                                      -{transferCost} pts
+                                      -{hitCost} pts
                                     </p>
                                   );
                                 }
@@ -3008,17 +3010,25 @@ export default function MyDashboard() {
                                 Made
                               </div>
                             </div>
-                            {/* Point Hit - only show if cost > 0 */}
-                            {(nextTeamData.transfers.cost || 0) > 0 && (
-                              <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
-                                <div className="text-2xl sm:text-3xl font-bold text-red-600">
-                                  -{nextTeamData.transfers.cost}
-                                </div>
-                                <div className="text-xs sm:text-sm text-red-600 font-medium">
-                                  Point Hit
-                                </div>
-                              </div>
-                            )}
+                            {/* Point Hit - only show if transfers exceed free transfer limit */}
+                            {(() => {
+                              const made = nextTeamData.transfers.made || 0;
+                              const limit = nextTeamData.transfers.limit || 1;
+                              const hitCost = Math.max(0, (made - limit) * 4);
+                              if (hitCost > 0) {
+                                return (
+                                  <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
+                                    <div className="text-2xl sm:text-3xl font-bold text-red-600">
+                                      -{hitCost}
+                                    </div>
+                                    <div className="text-xs sm:text-sm text-red-600 font-medium">
+                                      Point Hit
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            })()}
                             {/* Remaining Free Transfers */}
                             <div className="text-center border-l border-emerald-200 pl-4 sm:pl-6">
                               <div className="text-2xl sm:text-3xl font-bold text-emerald-700">
