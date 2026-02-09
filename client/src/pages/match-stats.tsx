@@ -239,57 +239,45 @@ export default function MatchStats() {
     if (homePlayers.length === 0 && awayPlayers.length === 0) return null;
 
     return (
-      <Card className="border-0 shadow-sm">
-        <div className="bg-gray-700 text-white text-center py-2.5 px-4 rounded-t-lg font-semibold text-sm sm:text-base">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-gradient-to-r from-gray-800 to-gray-700 text-white text-center py-2 px-3 font-semibold text-sm">
           {title}
         </div>
-        <CardContent className="p-3 sm:p-4">
-          <div className="grid grid-cols-2 gap-3 sm:gap-6">
-            <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 text-center">
-                {homeTeam?.short_name || 'Home'}
-              </div>
-              <div className="space-y-1.5">
-                {homePlayers.map((player) => {
-                  const badge = renderBadge(player);
-                  return (
-                    <div key={player.playerId} className="flex items-center gap-2">
-                      {badge && (
-                        <span className={`inline-flex items-center justify-center min-w-[32px] h-6 ${badge.color} text-white text-xs font-bold rounded px-1 shrink-0`}>
-                          {badge.value}
-                        </span>
-                      )}
-                      <span className="text-xs sm:text-sm truncate">{renderLabel(player)}</span>
-                    </div>
-                  );
-                })}
-                {homePlayers.length === 0 && <div className="text-xs text-gray-400 text-center">-</div>}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 text-center">
-                {awayTeam?.short_name || 'Away'}
-              </div>
-              <div className="space-y-1.5">
-                {awayPlayers.map((player) => {
-                  const badge = renderBadge(player);
-                  return (
-                    <div key={player.playerId} className="flex items-center gap-2">
-                      {badge && (
-                        <span className={`inline-flex items-center justify-center min-w-[32px] h-6 ${badge.color} text-white text-xs font-bold rounded px-1 shrink-0`}>
-                          {badge.value}
-                        </span>
-                      )}
-                      <span className="text-xs sm:text-sm truncate">{renderLabel(player)}</span>
-                    </div>
-                  );
-                })}
-                {awayPlayers.length === 0 && <div className="text-xs text-gray-400 text-center">-</div>}
-              </div>
-            </div>
+        <div className="grid grid-cols-2 divide-x divide-gray-100">
+          <div className="p-2.5 sm:p-4 space-y-1.5">
+            {homePlayers.map((player) => {
+              const badge = renderBadge(player);
+              return (
+                <div key={player.playerId} className="flex items-center gap-1.5">
+                  {badge && (
+                    <span className={`inline-flex items-center justify-center min-w-[26px] sm:min-w-[30px] h-5 sm:h-6 ${badge.color} text-white text-[10px] sm:text-xs font-bold rounded-md px-1 shrink-0`}>
+                      {badge.value}
+                    </span>
+                  )}
+                  <span className="text-xs sm:text-sm text-gray-800 truncate">{renderLabel(player)}</span>
+                </div>
+              );
+            })}
+            {homePlayers.length === 0 && <div className="text-xs text-gray-300 text-center py-1">-</div>}
           </div>
-        </CardContent>
-      </Card>
+          <div className="p-2.5 sm:p-4 space-y-1.5">
+            {awayPlayers.map((player) => {
+              const badge = renderBadge(player);
+              return (
+                <div key={player.playerId} className="flex items-center gap-1.5">
+                  {badge && (
+                    <span className={`inline-flex items-center justify-center min-w-[26px] sm:min-w-[30px] h-5 sm:h-6 ${badge.color} text-white text-[10px] sm:text-xs font-bold rounded-md px-1 shrink-0`}>
+                      {badge.value}
+                    </span>
+                  )}
+                  <span className="text-xs sm:text-sm text-gray-800 truncate">{renderLabel(player)}</span>
+                </div>
+              );
+            })}
+            {awayPlayers.length === 0 && <div className="text-xs text-gray-300 text-center py-1">-</div>}
+          </div>
+        </div>
+      </div>
     );
   };
 
@@ -334,62 +322,49 @@ export default function MatchStats() {
   const dateTime = fixture?.kickoff_time ? formatDateTime(fixture.kickoff_time) : null;
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="outline" size="sm" className="hover:bg-blue-50" onClick={() => window.history.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
-        <div className="flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-blue-600" />
-          <h1 className="text-lg sm:text-xl font-bold">Match Statistics</h1>
-        </div>
-      </div>
+    <div className="container mx-auto px-2 sm:px-4 py-3 sm:py-6 space-y-3 sm:space-y-5 max-w-3xl">
+      <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900 -ml-1" onClick={() => window.history.back()}>
+        <ArrowLeft className="h-4 w-4 mr-1.5" />
+        <span className="text-sm">Back to Results</span>
+      </Button>
 
-      <Card className="border-0 shadow-md overflow-hidden">
-        <div className="bg-gray-900 text-white p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
-            <div className="text-center flex-1">
-              <div className="text-lg sm:text-xl md:text-2xl font-bold">{homeTeam?.name}</div>
-              <div className="text-xs text-gray-400 mt-1">{homeTeam?.short_name}</div>
+      <div className="rounded-2xl overflow-hidden shadow-lg">
+        <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white px-3 sm:px-6 py-5 sm:py-8">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-center flex-1 min-w-0">
+              <div className="text-sm sm:text-lg md:text-xl font-bold truncate">{homeTeam?.name}</div>
             </div>
-            <div className="text-center">
-              <div className="text-3xl sm:text-4xl font-bold px-6 py-2 bg-gray-800 rounded-xl">
-                {fixture?.team_h_score ?? '-'} - {fixture?.team_a_score ?? '-'}
+            <div className="text-center shrink-0 px-2">
+              <div className="text-3xl sm:text-5xl font-black tracking-tight tabular-nums">
+                {fixture?.team_h_score ?? '-'} <span className="text-gray-500 mx-1">-</span> {fixture?.team_a_score ?? '-'}
               </div>
-              {dateTime && (
-                <div className="mt-2 flex flex-col items-center gap-1">
-                  <span className="text-xs text-gray-400">{dateTime.date} - {dateTime.time}</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="text-xs border-gray-600 text-gray-300">
-                      GW{fixture?.event}
-                    </Badge>
-                    {isLive && (
-                      <Badge className="bg-red-600 text-white animate-pulse text-xs">
-                        LIVE
-                      </Badge>
-                    )}
-                    {isFinished && (
-                      <Badge className="bg-green-700 text-white text-xs">
-                        FT
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              )}
+              <div className="mt-2 flex items-center justify-center gap-1.5 flex-wrap">
+                {isLive && (
+                  <Badge className="bg-red-600 text-white animate-pulse text-[10px] sm:text-xs px-2">
+                    LIVE
+                  </Badge>
+                )}
+                {isFinished && (
+                  <Badge className="bg-emerald-600 text-white text-[10px] sm:text-xs px-2">
+                    Full Time
+                  </Badge>
+                )}
+                <span className="text-[10px] sm:text-xs text-gray-400">
+                  GW{fixture?.event}{dateTime ? ` \u00B7 ${dateTime.date}` : ''}
+                </span>
+              </div>
             </div>
-            <div className="text-center flex-1">
-              <div className="text-lg sm:text-xl md:text-2xl font-bold">{awayTeam?.name}</div>
-              <div className="text-xs text-gray-400 mt-1">{awayTeam?.short_name}</div>
+            <div className="text-center flex-1 min-w-0">
+              <div className="text-sm sm:text-lg md:text-xl font-bold truncate">{awayTeam?.name}</div>
             </div>
           </div>
         </div>
         {isLive && (
-          <div className="bg-red-50 text-red-700 text-center py-1.5 text-xs font-medium">
-            Auto-updating every 30 seconds
+          <div className="bg-red-500/10 text-red-600 text-center py-1 text-[10px] sm:text-xs font-medium">
+            Auto-updating every 30s
           </div>
         )}
-      </Card>
+      </div>
 
       {!matchData && !isLoading ? (
         <Card>
@@ -505,109 +480,103 @@ export default function MatchStats() {
             );
           })()}
 
-          <Card className="border-0 shadow-sm">
-            <div className="bg-gray-700 text-white text-center py-2.5 px-4 rounded-t-lg font-semibold text-sm sm:text-base">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-gradient-to-r from-gray-800 to-gray-700 text-white text-center py-2 px-3 font-semibold text-sm">
               Full Player Summary
             </div>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="text-xs font-semibold sticky left-0 bg-gray-50 z-10">Player</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">Pos</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">Mins</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">Pts</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">G</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">A</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">CS</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">GC</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">S</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">YC</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">RC</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">B</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">BPS</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">ICT</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <TableRow>
-                      <TableCell colSpan={14} className="bg-gray-800 text-white font-semibold text-xs sm:text-sm py-1.5 sticky left-0">
-                        {homeTeam?.name || 'Home'}
-                      </TableCell>
-                    </TableRow>
-                    {matchData.homeTeamStats
-                      .filter(p => p.minutes > 0)
-                      .sort((a, b) => b.total_points - a.total_points)
-                      .map((player) => (
-                        <TableRow key={player.playerId} className="hover:bg-gray-50">
-                          <TableCell className="text-xs sm:text-sm font-medium sticky left-0 bg-white z-10 whitespace-nowrap">
-                            {player.playerName}
-                          </TableCell>
-                          <TableCell className="text-xs text-center">
-                            <Badge variant="outline" className="text-[10px] px-1 py-0">
-                              {player.position}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-center">{player.minutes}</TableCell>
-                          <TableCell className="text-xs text-center font-bold">
-                            <span className={player.total_points > 0 ? 'text-green-600' : player.total_points < 0 ? 'text-red-600' : ''}>
-                              {player.total_points}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-xs text-center">{player.goals_scored > 0 ? player.goals_scored : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.assists > 0 ? player.assists : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.clean_sheets > 0 ? player.clean_sheets : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.goals_conceded > 0 ? player.goals_conceded : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.saves > 0 ? player.saves : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.yellow_cards > 0 ? <span className="text-yellow-600 font-bold">{player.yellow_cards}</span> : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.red_cards > 0 ? <span className="text-red-600 font-bold">{player.red_cards}</span> : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.bonus > 0 ? <span className="text-green-600 font-bold">{player.bonus}</span> : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.bps}</TableCell>
-                          <TableCell className="text-xs text-center">{player.ict_index.toFixed(1)}</TableCell>
-                        </TableRow>
-                      ))}
-                    <TableRow>
-                      <TableCell colSpan={14} className="bg-gray-800 text-white font-semibold text-xs sm:text-sm py-1.5 sticky left-0">
-                        {awayTeam?.name || 'Away'}
-                      </TableCell>
-                    </TableRow>
-                    {matchData.awayTeamStats
-                      .filter(p => p.minutes > 0)
-                      .sort((a, b) => b.total_points - a.total_points)
-                      .map((player) => (
-                        <TableRow key={player.playerId} className="hover:bg-gray-50">
-                          <TableCell className="text-xs sm:text-sm font-medium sticky left-0 bg-white z-10 whitespace-nowrap">
-                            {player.playerName}
-                          </TableCell>
-                          <TableCell className="text-xs text-center">
-                            <Badge variant="outline" className="text-[10px] px-1 py-0">
-                              {player.position}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs text-center">{player.minutes}</TableCell>
-                          <TableCell className="text-xs text-center font-bold">
-                            <span className={player.total_points > 0 ? 'text-green-600' : player.total_points < 0 ? 'text-red-600' : ''}>
-                              {player.total_points}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-xs text-center">{player.goals_scored > 0 ? player.goals_scored : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.assists > 0 ? player.assists : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.clean_sheets > 0 ? player.clean_sheets : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.goals_conceded > 0 ? player.goals_conceded : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.saves > 0 ? player.saves : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.yellow_cards > 0 ? <span className="text-yellow-600 font-bold">{player.yellow_cards}</span> : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.red_cards > 0 ? <span className="text-red-600 font-bold">{player.red_cards}</span> : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.bonus > 0 ? <span className="text-green-600 font-bold">{player.bonus}</span> : '-'}</TableCell>
-                          <TableCell className="text-xs text-center">{player.bps}</TableCell>
-                          <TableCell className="text-xs text-center">{player.ict_index.toFixed(1)}</TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50/80">
+                    <TableHead className="text-[10px] sm:text-xs font-semibold sticky left-0 bg-gray-50/80 z-10 py-2">Player</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">Pos</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">Min</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">Pts</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">G</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">A</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">CS</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2 hidden sm:table-cell">GC</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2 hidden sm:table-cell">S</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">YC</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2 hidden sm:table-cell">RC</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">B</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">BPS</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2 hidden sm:table-cell">ICT</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell colSpan={14} className="bg-gradient-to-r from-gray-800 to-gray-700 text-white font-semibold text-[10px] sm:text-xs py-1.5 px-3 sticky left-0">
+                      {homeTeam?.name || 'Home'}
+                    </TableCell>
+                  </TableRow>
+                  {matchData.homeTeamStats
+                    .filter(p => p.minutes > 0)
+                    .sort((a, b) => b.total_points - a.total_points)
+                    .map((player) => (
+                      <TableRow key={player.playerId} className="hover:bg-blue-50/50 transition-colors">
+                        <TableCell className="text-[11px] sm:text-sm font-medium sticky left-0 bg-white z-10 whitespace-nowrap py-1.5 sm:py-2">
+                          {player.playerName}
+                        </TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">
+                          <span className="text-gray-500">{player.position}</span>
+                        </TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center text-gray-600 py-1.5">{player.minutes}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center font-bold py-1.5">
+                          <span className={player.total_points > 0 ? 'text-green-600' : player.total_points < 0 ? 'text-red-600' : 'text-gray-400'}>
+                            {player.total_points}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.goals_scored > 0 ? player.goals_scored : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.assists > 0 ? player.assists : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.clean_sheets > 0 ? player.clean_sheets : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.goals_conceded > 0 ? player.goals_conceded : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.saves > 0 ? player.saves : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.yellow_cards > 0 ? <span className="text-yellow-600 font-bold">{player.yellow_cards}</span> : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.red_cards > 0 ? <span className="text-red-600 font-bold">{player.red_cards}</span> : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.bonus > 0 ? <span className="text-green-600 font-bold">{player.bonus}</span> : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.bps}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.ict_index.toFixed(1)}</TableCell>
+                      </TableRow>
+                    ))}
+                  <TableRow>
+                    <TableCell colSpan={14} className="bg-gradient-to-r from-gray-800 to-gray-700 text-white font-semibold text-[10px] sm:text-xs py-1.5 px-3 sticky left-0">
+                      {awayTeam?.name || 'Away'}
+                    </TableCell>
+                  </TableRow>
+                  {matchData.awayTeamStats
+                    .filter(p => p.minutes > 0)
+                    .sort((a, b) => b.total_points - a.total_points)
+                    .map((player) => (
+                      <TableRow key={player.playerId} className="hover:bg-blue-50/50 transition-colors">
+                        <TableCell className="text-[11px] sm:text-sm font-medium sticky left-0 bg-white z-10 whitespace-nowrap py-1.5 sm:py-2">
+                          {player.playerName}
+                        </TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">
+                          <span className="text-gray-500">{player.position}</span>
+                        </TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center text-gray-600 py-1.5">{player.minutes}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center font-bold py-1.5">
+                          <span className={player.total_points > 0 ? 'text-green-600' : player.total_points < 0 ? 'text-red-600' : 'text-gray-400'}>
+                            {player.total_points}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.goals_scored > 0 ? player.goals_scored : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.assists > 0 ? player.assists : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.clean_sheets > 0 ? player.clean_sheets : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.goals_conceded > 0 ? player.goals_conceded : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.saves > 0 ? player.saves : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.yellow_cards > 0 ? <span className="text-yellow-600 font-bold">{player.yellow_cards}</span> : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.red_cards > 0 ? <span className="text-red-600 font-bold">{player.red_cards}</span> : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.bonus > 0 ? <span className="text-green-600 font-bold">{player.bonus}</span> : <span className="text-gray-300">-</span>}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.bps}</TableCell>
+                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.ict_index.toFixed(1)}</TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </div>
       ) : null}
     </div>
