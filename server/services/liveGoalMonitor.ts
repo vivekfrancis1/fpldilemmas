@@ -13,6 +13,14 @@ interface FixtureState {
   tweetedEvents: Set<string>;
 }
 
+interface DCEntry {
+  playerId: number;
+  playerName: string;
+  dc: number;
+  position: string;
+  ownership: number;
+}
+
 interface FinishedFixtureState {
   fixtureId: number;
   homeTeamId: number;
@@ -23,6 +31,7 @@ interface FinishedFixtureState {
   finishedAt: number;
   bonusAllocation: string;
   bonusTweeted: boolean;
+  dcTweeted: boolean;
 }
 
 interface BonusEntry {
@@ -187,6 +196,7 @@ export class LiveGoalMonitor {
         finishedAt: estimatedEndTime,
         bonusAllocation: '',
         bonusTweeted: false,
+        dcTweeted: true,
       });
       console.log(`🌟 Picked up recently finished fixture ${fixture.id} for bonus monitoring`);
     }
@@ -210,25 +220,51 @@ export class LiveGoalMonitor {
       finishedAt: Date.now(),
       bonusAllocation: bonusKey,
       bonusTweeted: false,
+      dcTweeted: false,
     };
 
     this.finishedFixtures.set(fixtureId, finishedState);
 
+    const matchCtx: MatchContext = {
+      homeTeamName: this.bootstrapTeams.get(fixture.team_h)?.name || 'Home',
+      awayTeamName: this.bootstrapTeams.get(fixture.team_a)?.name || 'Away',
+      homeScore,
+      awayScore,
+      minute: 'FT',
+      fixtureId,
+    };
+
+    const dcPlayers = this.extractDCFromState(state, fixture);
+    if (dcPlayers.length > 0) {
+      await this.postEventTweet(this.formatDCSummaryTweet(dcPlayers, matchCtx));
+      finishedState.dcTweeted = true;
+      console.log(`🛡️ DC summary tweet posted for fixture ${fixtureId} (${dcPlayers.length} players)`);
+    }
+
     if (bonusEntries.length > 0) {
-      const matchCtx: MatchContext = {
-        homeTeamName: this.bootstrapTeams.get(fixture.team_h)?.name || 'Home',
-        awayTeamName: this.bootstrapTeams.get(fixture.team_a)?.name || 'Away',
-        homeScore,
-        awayScore,
-        minute: 'FT',
-        fixtureId,
-      };
       await this.postEventTweet(this.formatBonusTweet(bonusEntries, matchCtx, false));
       finishedState.bonusTweeted = true;
       console.log(`🌟 Bonus tweet posted for fixture ${fixtureId}`);
     } else {
       console.log(`🌟 No bonus data yet for fixture ${fixtureId}, will monitor`);
     }
+  }
+
+  private extractDCFromState(state: FixtureState, fixture: any): DCEntry[] {
+    const dcPlayers: DCEntry[] = [];
+    for (const [playerId, dc] of Array.from(state.playerDC.entries())) {
+      const player = this.bootstrapPlayers.get(playerId);
+      if (!player) continue;
+      if (player.team !== fixture.team_h && player.team !== fixture.team_a) continue;
+      const pos = POSITION_MAP[player.element_type] || 'MID';
+      const threshold = (pos === 'DEF' || pos === 'GKP') ? 10 : 12;
+      if (dc < threshold) continue;
+      const ownership = parseFloat(player.selected_by_percent);
+      if (ownership <= this.OWNERSHIP_THRESHOLD) continue;
+      dcPlayers.push({ playerId, playerName: player.web_name, dc, position: pos, ownership });
+    }
+    dcPlayers.sort((a, b) => b.dc - a.dc);
+    return dcPlayers;
   }
 
   private async checkBonusUpdates(fixtures: any[]) {
@@ -449,23 +485,6 @@ export class LiveGoalMonitor {
       }
     }
 
-    const dcEntries = Array.from(currentPlayerDC.entries());
-    for (const [playerId, dc] of dcEntries) {
-      const player = this.bootstrapPlayers.get(playerId);
-      if (!player) continue;
-      const pos = POSITION_MAP[player.element_type] || 'MID';
-      const threshold = (pos === 'DEF' || pos === 'GKP') ? 10 : 12;
-      const prevDC = prevState.playerDC.get(playerId) || 0;
-      const eventKey = `dc_${fixtureId}_${playerId}`;
-      if (dc >= threshold && prevDC < threshold && !prevState.tweetedEvents.has(eventKey)) {
-        const ownership = parseFloat(player.selected_by_percent);
-        if (ownership > this.OWNERSHIP_THRESHOLD) {
-          await this.postEventTweet(this.formatDCTweet(player.web_name, ownership, dc, pos, matchCtx));
-          prevState.tweetedEvents.add(eventKey);
-        }
-      }
-    }
-
     prevState.homeScore = homeScore;
     prevState.awayScore = awayScore;
     prevState.playerGoals = currentPlayerGoals;
@@ -524,9 +543,11 @@ export class LiveGoalMonitor {
     return tweet;
   }
 
-  private formatDCTweet(playerName: string, ownership: number, dc: number, position: string, ctx: MatchContext): string {
-    let tweet = `🛡️ Defensive Contribution Points! ${playerName} - ${dc} DC (${ctx.minute}') [${ownership.toFixed(1)}% owned]`;
-    tweet += `\n\n${this.matchLine(ctx)}`;
+  private formatDCSummaryTweet(dcPlayers: DCEntry[], ctx: MatchContext): string {
+    let tweet = `🛡️ Defensive Contribution Points!\n\n${this.matchLine(ctx)}`;
+    for (const entry of dcPlayers) {
+      tweet += `\n${entry.playerName} - ${entry.dc} DC [${entry.ownership.toFixed(1)}% owned]`;
+    }
     tweet += this.footer(ctx);
     return tweet;
   }
@@ -578,10 +599,15 @@ export class LiveGoalMonitor {
       { playerId: 2, playerName: 'Alexander-Arnold', bonus: 1, ownership: 18.7 },
     ];
 
+    const sampleDCPlayers: DCEntry[] = [
+      { playerId: 5, playerName: 'Saliba', dc: 14, position: 'DEF', ownership: 22.1 },
+      { playerId: 6, playerName: 'Gabriel', dc: 11, position: 'DEF', ownership: 15.8 },
+    ];
+
     const tweets = [
       { type: 'goal', tweet: this.formatGoalTweet('Salah', 42.3, 'Alexander-Arnold', 18.7, sampleCtx) },
       { type: 'red_card', tweet: this.formatRedCardTweet('Rice', 31.2, { ...sampleCtx, minute: 78 }) },
-      { type: 'defensive_contribution', tweet: this.formatDCTweet('Saliba', 22.1, 12, 'DEF', { ...sampleCtx2, minute: 82 }) },
+      { type: 'dc_summary', tweet: this.formatDCSummaryTweet(sampleDCPlayers, { ...sampleCtx2, minute: 'FT' }) },
       { type: 'bonus_confirmed', tweet: this.formatBonusTweet(bonusEntries, sampleCtxFT, false) },
       { type: 'bonus_updated', tweet: this.formatBonusTweet(updatedBonusEntries, sampleCtxFT, true) },
     ];
