@@ -13380,9 +13380,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const creatorData = req.body;
       
-      // Validate required fields
-      if (!creatorData.name || !creatorData.managerId || !creatorData.managerName) {
+      if (!creatorData.name || !creatorData.managerId) {
         return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      if (!creatorData.managerName) {
+        try {
+          const mgrRes = await fetch(`https://fantasy.premierleague.com/api/entry/${creatorData.managerId}/`);
+          if (mgrRes.ok) {
+            const mgrData = await mgrRes.json();
+            creatorData.managerName = `${mgrData.player_first_name} ${mgrData.player_last_name}`;
+          } else {
+            creatorData.managerName = creatorData.name;
+          }
+        } catch {
+          creatorData.managerName = creatorData.name;
+        }
       }
       
       // Add the creator to database
