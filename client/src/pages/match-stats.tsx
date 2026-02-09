@@ -2,11 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Trophy, Calendar, Target, Shield, Star, Zap, User, Clock } from "lucide-react";
+import { ArrowLeft, Trophy, Calendar } from "lucide-react";
 
 interface PlayerStats {
   playerId: number;
@@ -480,103 +479,6 @@ export default function MatchStats() {
             );
           })()}
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="bg-gradient-to-r from-gray-800 to-gray-700 text-white text-center py-2 px-3 font-semibold text-sm">
-              Full Player Summary
-            </div>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50/80">
-                    <TableHead className="text-[10px] sm:text-xs font-semibold sticky left-0 bg-gray-50/80 z-10 py-2">Player</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">Pos</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">Min</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">Pts</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">G</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">A</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">CS</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2 hidden sm:table-cell">GC</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2 hidden sm:table-cell">S</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">YC</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2 hidden sm:table-cell">RC</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">B</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2">BPS</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-semibold text-center py-2 hidden sm:table-cell">ICT</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow>
-                    <TableCell colSpan={14} className="bg-gradient-to-r from-gray-800 to-gray-700 text-white font-semibold text-[10px] sm:text-xs py-1.5 px-3 sticky left-0">
-                      {homeTeam?.name || 'Home'}
-                    </TableCell>
-                  </TableRow>
-                  {matchData.homeTeamStats
-                    .filter(p => p.minutes > 0)
-                    .sort((a, b) => b.total_points - a.total_points)
-                    .map((player) => (
-                      <TableRow key={player.playerId} className="hover:bg-blue-50/50 transition-colors">
-                        <TableCell className="text-[11px] sm:text-sm font-medium sticky left-0 bg-white z-10 whitespace-nowrap py-1.5 sm:py-2">
-                          {player.playerName}
-                        </TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">
-                          <span className="text-gray-500">{player.position}</span>
-                        </TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center text-gray-600 py-1.5">{player.minutes}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center font-bold py-1.5">
-                          <span className={player.total_points > 0 ? 'text-green-600' : player.total_points < 0 ? 'text-red-600' : 'text-gray-400'}>
-                            {player.total_points}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.goals_scored > 0 ? player.goals_scored : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.assists > 0 ? player.assists : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.clean_sheets > 0 ? player.clean_sheets : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.goals_conceded > 0 ? player.goals_conceded : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.saves > 0 ? player.saves : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.yellow_cards > 0 ? <span className="text-yellow-600 font-bold">{player.yellow_cards}</span> : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.red_cards > 0 ? <span className="text-red-600 font-bold">{player.red_cards}</span> : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.bonus > 0 ? <span className="text-green-600 font-bold">{player.bonus}</span> : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.bps}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.ict_index.toFixed(1)}</TableCell>
-                      </TableRow>
-                    ))}
-                  <TableRow>
-                    <TableCell colSpan={14} className="bg-gradient-to-r from-gray-800 to-gray-700 text-white font-semibold text-[10px] sm:text-xs py-1.5 px-3 sticky left-0">
-                      {awayTeam?.name || 'Away'}
-                    </TableCell>
-                  </TableRow>
-                  {matchData.awayTeamStats
-                    .filter(p => p.minutes > 0)
-                    .sort((a, b) => b.total_points - a.total_points)
-                    .map((player) => (
-                      <TableRow key={player.playerId} className="hover:bg-blue-50/50 transition-colors">
-                        <TableCell className="text-[11px] sm:text-sm font-medium sticky left-0 bg-white z-10 whitespace-nowrap py-1.5 sm:py-2">
-                          {player.playerName}
-                        </TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">
-                          <span className="text-gray-500">{player.position}</span>
-                        </TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center text-gray-600 py-1.5">{player.minutes}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center font-bold py-1.5">
-                          <span className={player.total_points > 0 ? 'text-green-600' : player.total_points < 0 ? 'text-red-600' : 'text-gray-400'}>
-                            {player.total_points}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.goals_scored > 0 ? player.goals_scored : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.assists > 0 ? player.assists : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.clean_sheets > 0 ? player.clean_sheets : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.goals_conceded > 0 ? player.goals_conceded : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.saves > 0 ? player.saves : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.yellow_cards > 0 ? <span className="text-yellow-600 font-bold">{player.yellow_cards}</span> : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.red_cards > 0 ? <span className="text-red-600 font-bold">{player.red_cards}</span> : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.bonus > 0 ? <span className="text-green-600 font-bold">{player.bonus}</span> : <span className="text-gray-300">-</span>}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5">{player.bps}</TableCell>
-                        <TableCell className="text-[10px] sm:text-xs text-center py-1.5 hidden sm:table-cell">{player.ict_index.toFixed(1)}</TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
         </div>
       ) : null}
     </div>
