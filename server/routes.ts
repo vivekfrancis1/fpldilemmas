@@ -18866,19 +18866,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/live-goals/preview", async (req, res) => {
     try {
-      const preview = liveGoalMonitor.formatGoalTweetPreview({
-        scorerName: 'Salah',
-        scorerOwnership: 42.3,
-        assistName: 'Alexander-Arnold',
-        assistOwnership: 18.7,
-        homeTeamName: 'Liverpool',
-        awayTeamName: 'Arsenal',
-        homeScore: 2,
-        awayScore: 1,
-        minute: 62,
-        fixtureId: 246,
-      });
-      res.json({ tweet: preview, length: preview.length });
+      const previews = liveGoalMonitor.formatPreviewTweets();
+      res.json({ tweets: previews });
     } catch (error) {
       console.error('Error generating preview:', error);
       res.status(500).json({ error: 'Failed to generate preview' });
