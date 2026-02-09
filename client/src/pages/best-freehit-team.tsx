@@ -851,16 +851,29 @@ export default function BestFreehitTeam() {
       console.log('Sample snapshot:', snapshots[0]);
       console.log('Unlimited budget mode:', unlimitedBudget);
 
-      // Sort players by gameweek points for selected gameweek
+      // Build set of unavailable player IDs from bootstrap data
+      const unavailablePlayerIds = new Set<number>();
+      if (bootstrapData?.elements) {
+        bootstrapData.elements.forEach((el: any) => {
+          const status = el.status;
+          const chance = el.chance_of_playing_next_round;
+          if (status === 'i' || status === 'u' || status === 's' || status === 'n' || chance === 0) {
+            unavailablePlayerIds.add(el.id);
+          }
+        });
+        console.log(`Filtered out ${unavailablePlayerIds.size} unavailable/injured/suspended players`);
+      }
+
+      // Sort players by gameweek points for selected gameweek, excluding unavailable players
       const playersWithPoints = snapshots.map(player => {
         const gameweekPoints = getGameweekPoints(player, selectedGameweek);
         return {
           ...player,
           gameweekPoints
         };
-      }).filter(player => player.gameweekPoints > 0);
+      }).filter(player => player.gameweekPoints > 0 && !unavailablePlayerIds.has(player.playerId));
 
-      console.log('Players with points:', playersWithPoints.length);
+      console.log('Players with points (available only):', playersWithPoints.length);
       
       if (playersWithPoints.length === 0) {
         throw new Error(`No players found with points for gameweek ${selectedGameweek}`);
