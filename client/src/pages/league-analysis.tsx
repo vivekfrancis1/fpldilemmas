@@ -204,7 +204,7 @@ export default function LeagueAnalysisPage() {
       const response = await fetch(`/api/managers/batch-history`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ managerIds: managerIds.slice(0, 50) })
+        body: JSON.stringify({ managerIds: managerIds.slice(0, 100) })
       });
       if (!response.ok) return { managers: [] };
       return response.json();
