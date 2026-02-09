@@ -1000,7 +1000,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db.update(users)
         .set({
           fplManagerId,
-          fplSessionCookies: fplToken, // Reusing the column for Bearer token
+          fplSessionCookies: cleanToken, // Store extracted Bearer token only
           fplCookiesExpiry: tokenExpiry
         })
         .where(eq(users.id, userId));
@@ -1087,11 +1087,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'FPL session expired, please reconnect' });
       }
 
-      // Extract Bearer token from cURL command if it's a full cURL command
+      // Extract Bearer token - handles both clean token storage and legacy cURL format
       let bearerToken = user.fplSessionCookies;
-      const bearerMatch = user.fplSessionCookies.match(/-H\s+'x-api-authorization:\s*Bearer\s+([^']+)'/);
-      if (bearerMatch) {
-        bearerToken = bearerMatch[1];
+      if (bearerToken.includes('curl') || bearerToken.includes('-H')) {
+        const match = bearerToken.match(/(?:-H|--header)\s+['"]?x-api-authorization:\s*Bearer\s+([^'"}\s]+)['"]?/i);
+        if (match) {
+          bearerToken = match[1].trim();
+        }
       }
 
       // Fetch private team data using Bearer token
@@ -1102,7 +1104,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (!myTeamResponse.ok) {
-        return res.status(401).json({ error: 'Failed to fetch FPL team data, session may be expired' });
+        console.error(`❌ FPL my-team API failed: ${myTeamResponse.status} for manager ${user.fplManagerId}`);
+        return res.status(401).json({ error: 'FPL session expired, please reconnect' });
       }
 
       const myTeamData = await myTeamResponse.json();
@@ -1249,11 +1252,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ error: 'FPL session expired, please reconnect' });
       }
 
-      // Extract Bearer token from cURL command if it's a full cURL command
+      // Extract Bearer token - handles both clean token storage and legacy cURL format
       let bearerToken = user.fplSessionCookies;
-      const bearerMatch = user.fplSessionCookies.match(/-H\s+'x-api-authorization:\s*Bearer\s+([^']+)'/);
-      if (bearerMatch) {
-        bearerToken = bearerMatch[1];
+      if (bearerToken.includes('curl') || bearerToken.includes('-H')) {
+        const match = bearerToken.match(/(?:-H|--header)\s+['"]?x-api-authorization:\s*Bearer\s+([^'"}\s]+)['"]?/i);
+        if (match) {
+          bearerToken = match[1].trim();
+        }
       }
 
       // Fetch authenticated my-team data (includes unconfirmed transfers)
