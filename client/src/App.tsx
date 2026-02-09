@@ -46,6 +46,7 @@ const Top50ManagerTeam = lazy(() => import("./pages/top50-manager-team"));
 const LeagueComparison = lazy(() => import("./pages/league-comparison"));
 const PlayerStats = lazy(() => import("./pages/player-stats"));
 const ResultsAndFixtures = lazy(() => import("./pages/results-and-fixtures"));
+const MatchStats = lazy(() => import("./pages/match-stats"));
 const ProjectedGoalsCS = lazy(() => import("./pages/projected-goals-cs"));
 const ProjectedStandings = lazy(() => import("./pages/projected-standings"));
 const PredictedScores = lazy(() => import("./pages/predicted-scores"));
@@ -124,6 +125,7 @@ function Router() {
         <Route path="/current-standings" component={CurrentStandings} />
         <Route path="/predicted-scores" component={PredictedScores} />
         <Route path="/results-and-fixtures" component={ResultsAndFixtures} />
+        <Route path="/match-stats/:fixtureId" component={MatchStats} />
         <Route path="/player-goals-scored-projections" component={PlayerGoalsScoredProjections} />
         <Route path="/player-minutes">
           <ProtectedRoute requireAdmin={true}>
