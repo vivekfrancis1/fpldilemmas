@@ -255,46 +255,58 @@ export default function BestWildcardTeam() {
     }
 
     // 2. Add required defenders
-    const includedDef = playersByPosition.Defender.filter(p => includedPlayerIds.has(p.playerId) && canAddPlayer(p));
-    for (const player of includedDef.slice(0, formation.def)) {
-      addPlayer(player);
+    let addedDef = 0;
+    for (const player of playersByPosition.Defender) {
+      if (addedDef >= formation.def) break;
+      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player)) {
+        addPlayer(player);
+        addedDef++;
+      }
     }
-    const neededDef = formation.def - includedDef.length;
-    const availableDef = playersByPosition.Defender.filter(p => 
-      !startingXI.some(s => s.playerId === p.playerId) && canAddPlayer(p)
-    );
-    for (let i = 0; i < neededDef && i < availableDef.length; i++) {
-      addPlayer(availableDef[i]);
+    for (const player of playersByPosition.Defender) {
+      if (addedDef >= formation.def) break;
+      if (!startingXI.some(s => s.playerId === player.playerId) && canAddPlayer(player)) {
+        addPlayer(player);
+        addedDef++;
+      }
     }
-    if (startingXI.filter(p => normalizePosition(p.position) === 'Defender').length < formation.def) return null;
+    if (addedDef < formation.def) return null;
 
     // 3. Add required midfielders
-    const includedMid = playersByPosition.Midfielder.filter(p => includedPlayerIds.has(p.playerId) && canAddPlayer(p));
-    for (const player of includedMid.slice(0, formation.mid)) {
-      addPlayer(player);
+    let addedMid = 0;
+    for (const player of playersByPosition.Midfielder) {
+      if (addedMid >= formation.mid) break;
+      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player)) {
+        addPlayer(player);
+        addedMid++;
+      }
     }
-    const neededMid = formation.mid - includedMid.length;
-    const availableMid = playersByPosition.Midfielder.filter(p => 
-      !startingXI.some(s => s.playerId === p.playerId) && canAddPlayer(p)
-    );
-    for (let i = 0; i < neededMid && i < availableMid.length; i++) {
-      addPlayer(availableMid[i]);
+    for (const player of playersByPosition.Midfielder) {
+      if (addedMid >= formation.mid) break;
+      if (!startingXI.some(s => s.playerId === player.playerId) && canAddPlayer(player)) {
+        addPlayer(player);
+        addedMid++;
+      }
     }
-    if (startingXI.filter(p => normalizePosition(p.position) === 'Midfielder').length < formation.mid) return null;
+    if (addedMid < formation.mid) return null;
 
     // 4. Add required forwards
-    const includedFwd = playersByPosition.Forward.filter(p => includedPlayerIds.has(p.playerId) && canAddPlayer(p));
-    for (const player of includedFwd.slice(0, formation.fwd)) {
-      addPlayer(player);
+    let addedFwd = 0;
+    for (const player of playersByPosition.Forward) {
+      if (addedFwd >= formation.fwd) break;
+      if (includedPlayerIds.has(player.playerId) && canAddPlayer(player)) {
+        addPlayer(player);
+        addedFwd++;
+      }
     }
-    const neededFwd = formation.fwd - includedFwd.length;
-    const availableFwd = playersByPosition.Forward.filter(p => 
-      !startingXI.some(s => s.playerId === p.playerId) && canAddPlayer(p)
-    );
-    for (let i = 0; i < neededFwd && i < availableFwd.length; i++) {
-      addPlayer(availableFwd[i]);
+    for (const player of playersByPosition.Forward) {
+      if (addedFwd >= formation.fwd) break;
+      if (!startingXI.some(s => s.playerId === player.playerId) && canAddPlayer(player)) {
+        addPlayer(player);
+        addedFwd++;
+      }
     }
-    if (startingXI.filter(p => normalizePosition(p.position) === 'Forward').length < formation.fwd) return null;
+    if (addedFwd < formation.fwd) return null;
 
     return { players: startingXI, totalCost, totalPoints };
   };
@@ -364,34 +376,41 @@ export default function BestWildcardTeam() {
       const needed = benchNeeds[position];
       if (needed <= 0) continue;
 
-      // First, try included players
-      const includedAvailable = playersByPosition[position].filter(p => 
-        includedPlayerIds.has(p.playerId) && canAddToBench(p)
-      );
-      for (const player of includedAvailable.slice(0, needed)) {
-        addToBench(player);
+      let addedForPosition = 0;
+
+      // First, try included players (re-check constraint before each add)
+      for (const player of playersByPosition[position]) {
+        if (addedForPosition >= needed) break;
+        if (includedPlayerIds.has(player.playerId) && canAddToBench(player)) {
+          addToBench(player);
+          addedForPosition++;
+        }
       }
 
-      // Then fill with best affordable players (sorted by total projected points)
-      const remaining = needed - includedAvailable.length;
-      if (remaining > 0) {
-        const available = playersByPosition[position]
-          .filter(canAddToBench)
+      // Then fill with best affordable players (sorted by total projected points, re-check constraint before each add)
+      if (addedForPosition < needed) {
+        const sortedByPoints = playersByPosition[position]
           .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints);
         
-        for (let i = 0; i < remaining && i < available.length; i++) {
-          addToBench(available[i]);
+        for (const player of sortedByPoints) {
+          if (addedForPosition >= needed) break;
+          if (canAddToBench(player)) {
+            addToBench(player);
+            addedForPosition++;
+          }
         }
+      }
 
-        // If still can't afford, try cheapest players
-        if (bench.filter(p => normalizePosition(p.position) === position).length < needed) {
-          const cheapest = playersByPosition[position]
-            .filter(canAddToBench)
-            .sort((a, b) => a.price - b.price);
-          
-          const stillNeeded = needed - bench.filter(p => normalizePosition(p.position) === position).length;
-          for (let i = 0; i < stillNeeded && i < cheapest.length; i++) {
-            addToBench(cheapest[i]);
+      // If still can't afford, try cheapest players
+      if (addedForPosition < needed) {
+        const sortedByPrice = playersByPosition[position]
+          .sort((a, b) => a.price - b.price);
+        
+        for (const player of sortedByPrice) {
+          if (addedForPosition >= needed) break;
+          if (canAddToBench(player)) {
+            addToBench(player);
+            addedForPosition++;
           }
         }
       }
@@ -412,6 +431,67 @@ export default function BestWildcardTeam() {
     
     console.log(`✅ Bench built successfully: £${benchCost.toFixed(1)}m (remaining budget: £${remainingBudget.toFixed(1)}m)`);
     return bench;
+  };
+
+  // Enforce team constraint: max 3 players per team
+  const enforceTeamConstraint = (
+    squad: PlayerSnapshot[],
+    starting11: PlayerSnapshot[],
+    allPlayersByPosition: Record<string, PlayerSnapshot[]>,
+    includedPlayerIds: Set<number>
+  ): { squad: PlayerSnapshot[], starting11: PlayerSnapshot[] } => {
+    const teamCounts: Record<string, number> = {};
+    squad.forEach(p => {
+      const team = p.teamName || '';
+      teamCounts[team] = (teamCounts[team] || 0) + 1;
+    });
+    const violations = Object.entries(teamCounts).filter(([, count]) => count > SQUAD_CONSTRAINTS.maxPlayersPerTeam);
+    if (violations.length === 0) return { squad, starting11 };
+    console.warn(`⚠️ Team constraint violations found, fixing:`, violations);
+    let fixedSquad = [...squad];
+    let fixedStarting11 = [...starting11];
+    for (const [teamName, count] of violations) {
+      let excess = count - SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+      const teamPlayers = fixedSquad
+        .filter(p => (p.teamName || '') === teamName)
+        .sort((a, b) => {
+          if (includedPlayerIds.has(a.playerId) && !includedPlayerIds.has(b.playerId)) return -1;
+          if (!includedPlayerIds.has(a.playerId) && includedPlayerIds.has(b.playerId)) return 1;
+          const aInXI = fixedStarting11.some(s => s.playerId === a.playerId);
+          const bInXI = fixedStarting11.some(s => s.playerId === b.playerId);
+          if (aInXI && !bInXI) return -1;
+          if (!aInXI && bInXI) return 1;
+          return b.totalProjectedPoints - a.totalProjectedPoints;
+        });
+      const toRemove = teamPlayers.slice(SQUAD_CONSTRAINTS.maxPlayersPerTeam);
+      for (const removePlayer of toRemove) {
+        if (excess <= 0) break;
+        const position = normalizePosition(removePlayer.position);
+        const usedIds = new Set(fixedSquad.map(p => p.playerId));
+        const currentTeamCounts: Record<string, number> = {};
+        fixedSquad.forEach(p => {
+          if (p.playerId !== removePlayer.playerId) {
+            const t = p.teamName || '';
+            currentTeamCounts[t] = (currentTeamCounts[t] || 0) + 1;
+          }
+        });
+        const replacement = allPlayersByPosition[position]
+          ?.filter(p => {
+            if (usedIds.has(p.playerId)) return false;
+            const t = p.teamName || '';
+            const tc = currentTeamCounts[t] || 0;
+            return tc < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+          })
+          .sort((a, b) => b.totalProjectedPoints - a.totalProjectedPoints)[0];
+        if (replacement) {
+          fixedSquad = fixedSquad.map(p => p.playerId === removePlayer.playerId ? replacement : p);
+          fixedStarting11 = fixedStarting11.map(p => p.playerId === removePlayer.playerId ? replacement : p);
+          console.log(`🔄 Replaced ${removePlayer.playerName} (${teamName}) with ${replacement.playerName} (${replacement.teamName})`);
+          excess--;
+        }
+      }
+    }
+    return { squad: fixedSquad, starting11: fixedStarting11 };
   };
 
   // Main optimization function with budget awareness (for wildcard - uses total projected points)
@@ -446,9 +526,11 @@ export default function BestWildcardTeam() {
         const bench = buildBenchWithBudget(xi.players, playersByPosition, includedPlayerIds, 999);
         if (bench) {
           console.log(`✅ Built wildcard team with formation ${formation.name}, XI: £${xi.totalCost.toFixed(1)}m, Points: ${xi.totalPoints.toFixed(1)}`);
+          const rawSquad = [...xi.players, ...bench];
+          const { squad, starting11 } = enforceTeamConstraint(rawSquad, xi.players, playersByPosition, includedPlayerIds);
           return {
-            squad: [...xi.players, ...bench],
-            starting11: xi.players,
+            squad,
+            starting11,
             formation: formation.name
           };
         }
@@ -458,9 +540,11 @@ export default function BestWildcardTeam() {
         if (bench) {
           const totalCost = xi.totalCost + bench.reduce((sum, p) => sum + p.price, 0);
           console.log(`✅ Built wildcard team with formation ${formation.name}, Total: £${totalCost.toFixed(1)}m, XI Points: ${xi.totalPoints.toFixed(1)}`);
+          const rawSquad = [...xi.players, ...bench];
+          const { squad, starting11 } = enforceTeamConstraint(rawSquad, xi.players, playersByPosition, includedPlayerIds);
           return {
-            squad: [...xi.players, ...bench],
-            starting11: xi.players,
+            squad,
+            starting11,
             formation: formation.name
           };
         } else {
@@ -927,7 +1011,19 @@ export default function BestWildcardTeam() {
     setIsOptimizing(true);
 
     try {
-      const playersWithPoints = snapshots.filter(player => player.totalProjectedPoints > 0);
+      const unavailablePlayerIds = new Set<number>();
+      if (bootstrapData?.elements) {
+        bootstrapData.elements.forEach((el: any) => {
+          const status = el.status;
+          const chance = el.chance_of_playing_next_round;
+          if (status === 'i' || status === 'u' || status === 's' || status === 'n' || chance === 0) {
+            unavailablePlayerIds.add(el.id);
+          }
+        });
+        console.log(`Filtered out ${unavailablePlayerIds.size} unavailable/injured/suspended players`);
+      }
+
+      const playersWithPoints = snapshots.filter(player => player.totalProjectedPoints > 0 && !unavailablePlayerIds.has(player.playerId));
       console.log('Players with points:', playersWithPoints.length);
 
       if (playersWithPoints.length === 0) {
