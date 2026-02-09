@@ -15,6 +15,25 @@ interface FixtureState {
   tweetedEvents: Set<string>;
 }
 
+interface FinishedFixtureState {
+  fixtureId: number;
+  homeTeamId: number;
+  awayTeamId: number;
+  homeScore: number;
+  awayScore: number;
+  gameweek: number;
+  finishedAt: number;
+  bonusAllocation: string;
+  bonusTweeted: boolean;
+}
+
+interface BonusEntry {
+  playerId: number;
+  playerName: string;
+  bonus: number;
+  ownership: number;
+}
+
 interface BootstrapPlayer {
   id: number;
   web_name: string;
@@ -57,6 +76,7 @@ const POSITION_MAP: Record<number, string> = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 
 export class LiveGoalMonitor {
   private pollInterval: NodeJS.Timeout | null = null;
   private fixtureStates: Map<number, FixtureState> = new Map();
+  private finishedFixtures: Map<number, FinishedFixtureState> = new Map();
   private isPolling = false;
   private bootstrapPlayers: Map<number, BootstrapPlayer> = new Map();
   private bootstrapTeams: Map<number, BootstrapTeam> = new Map();
@@ -65,12 +85,14 @@ export class LiveGoalMonitor {
   private readonly BOOTSTRAP_REFRESH_MS = 10 * 60_000;
   private readonly OWNERSHIP_THRESHOLD = 5.0;
   private readonly SAVES_THRESHOLD = 3;
+  private readonly BONUS_MONITOR_HOURS = 12;
   private readonly SITE_URL = 'https://fpldilemmas.com';
 
   start() {
     console.log('⚽ Live match monitor starting...');
     console.log(`📋 Will tweet events when player has >${this.OWNERSHIP_THRESHOLD}% ownership`);
-    console.log(`📋 Tracking: goals, assists, yellow cards, red cards, saves (${this.SAVES_THRESHOLD}+), defensive contributions`);
+    console.log(`📋 Tracking: goals, assists, yellow/red cards, saves (${this.SAVES_THRESHOLD}+), DC, bonus points`);
+    console.log(`📋 Bonus points monitored for ${this.BONUS_MONITOR_HOURS} hours after match ends`);
 
     this.poll();
     this.pollInterval = setInterval(() => this.poll(), this.POLL_INTERVAL_MS);
@@ -99,14 +121,6 @@ export class LiveGoalMonitor {
 
       const liveFixtures = fixtures.filter((f: any) => f.started && !f.finished_provisional);
 
-      if (liveFixtures.length === 0) {
-        if (this.fixtureStates.size > 0) {
-          console.log('⚽ No live matches, clearing state');
-          this.fixtureStates.clear();
-        }
-        return;
-      }
-
       const fixturesByGw = new Map<number, any[]>();
       for (const f of liveFixtures) {
         const gw = f.event;
@@ -122,15 +136,28 @@ export class LiveGoalMonitor {
         const liveData: any = await liveRes.json();
 
         for (const fixture of gwFixtures) {
-          await this.processFixture(fixture, liveData);
+          await this.processLiveFixture(fixture, liveData);
         }
       }
 
       const liveIds = new Set(liveFixtures.map((f: any) => f.id));
       for (const id of Array.from(this.fixtureStates.keys())) {
         if (!liveIds.has(id)) {
+          const state = this.fixtureStates.get(id)!;
+          const matchingFixture = fixtures.find((f: any) => f.id === id);
+          if (matchingFixture && (matchingFixture.finished_provisional || matchingFixture.finished)) {
+            await this.handleFixtureFinished(matchingFixture, state);
+          }
           this.fixtureStates.delete(id);
         }
+      }
+
+      this.pickUpRecentlyFinishedFixtures(fixtures);
+
+      await this.checkBonusUpdates(fixtures);
+
+      if (liveFixtures.length === 0 && this.fixtureStates.size > 0) {
+        this.fixtureStates.clear();
       }
     } catch (error) {
       console.error('⚽ Live match monitor poll error:', error);
@@ -139,7 +166,176 @@ export class LiveGoalMonitor {
     }
   }
 
-  private async processFixture(fixture: any, liveData: any) {
+  private pickUpRecentlyFinishedFixtures(fixtures: any[]) {
+    const now = Date.now();
+    const monitorWindowMs = this.BONUS_MONITOR_HOURS * 60 * 60 * 1000;
+
+    for (const fixture of fixtures) {
+      if (!fixture.finished_provisional && !fixture.finished) continue;
+      if (this.finishedFixtures.has(fixture.id)) continue;
+      if (!fixture.kickoff_time) continue;
+
+      const kickoffTime = new Date(fixture.kickoff_time).getTime();
+      const estimatedEndTime = kickoffTime + 2 * 60 * 60 * 1000;
+
+      if (now - estimatedEndTime > monitorWindowMs) continue;
+
+      this.finishedFixtures.set(fixture.id, {
+        fixtureId: fixture.id,
+        homeTeamId: fixture.team_h,
+        awayTeamId: fixture.team_a,
+        homeScore: fixture.team_h_score ?? 0,
+        awayScore: fixture.team_a_score ?? 0,
+        gameweek: fixture.event,
+        finishedAt: estimatedEndTime,
+        bonusAllocation: '',
+        bonusTweeted: false,
+      });
+      console.log(`🌟 Picked up recently finished fixture ${fixture.id} for bonus monitoring`);
+    }
+  }
+
+  private async handleFixtureFinished(fixture: any, state: FixtureState) {
+    const fixtureId = fixture.id;
+    const homeScore = fixture.team_h_score ?? 0;
+    const awayScore = fixture.team_a_score ?? 0;
+
+    const bonusEntries = this.extractBonusFromFixture(fixture);
+    const bonusKey = this.bonusAllocationKey(bonusEntries);
+
+    const finishedState: FinishedFixtureState = {
+      fixtureId,
+      homeTeamId: fixture.team_h,
+      awayTeamId: fixture.team_a,
+      homeScore,
+      awayScore,
+      gameweek: fixture.event,
+      finishedAt: Date.now(),
+      bonusAllocation: bonusKey,
+      bonusTweeted: false,
+    };
+
+    this.finishedFixtures.set(fixtureId, finishedState);
+
+    if (bonusEntries.length > 0) {
+      const matchCtx: MatchContext = {
+        homeTeamName: this.bootstrapTeams.get(fixture.team_h)?.name || 'Home',
+        awayTeamName: this.bootstrapTeams.get(fixture.team_a)?.name || 'Away',
+        homeScore,
+        awayScore,
+        minute: 'FT',
+        fixtureId,
+      };
+      await this.postEventTweet(this.formatBonusTweet(bonusEntries, matchCtx, false));
+      finishedState.bonusTweeted = true;
+      console.log(`🌟 Bonus tweet posted for fixture ${fixtureId}`);
+    } else {
+      console.log(`🌟 No bonus data yet for fixture ${fixtureId}, will monitor`);
+    }
+  }
+
+  private async checkBonusUpdates(fixtures: any[]) {
+    const now = Date.now();
+    const expireMs = this.BONUS_MONITOR_HOURS * 60 * 60 * 1000;
+
+    for (const [fixtureId, state] of Array.from(this.finishedFixtures.entries())) {
+      if (now - state.finishedAt > expireMs) {
+        this.finishedFixtures.delete(fixtureId);
+        console.log(`🌟 Stopped monitoring bonus for fixture ${fixtureId} (${this.BONUS_MONITOR_HOURS}h expired)`);
+        continue;
+      }
+
+      const fixture = fixtures.find((f: any) => f.id === fixtureId);
+      if (!fixture) continue;
+
+      const bonusEntries = this.extractBonusFromFixture(fixture);
+      if (bonusEntries.length === 0) continue;
+
+      const newBonusKey = this.bonusAllocationKey(bonusEntries);
+
+      if (!state.bonusTweeted) {
+        const matchCtx: MatchContext = {
+          homeTeamName: this.bootstrapTeams.get(state.homeTeamId)?.name || 'Home',
+          awayTeamName: this.bootstrapTeams.get(state.awayTeamId)?.name || 'Away',
+          homeScore: state.homeScore,
+          awayScore: state.awayScore,
+          minute: 'FT',
+          fixtureId,
+        };
+        await this.postEventTweet(this.formatBonusTweet(bonusEntries, matchCtx, false));
+        state.bonusTweeted = true;
+        state.bonusAllocation = newBonusKey;
+        console.log(`🌟 Initial bonus tweet posted for fixture ${fixtureId}`);
+      } else if (newBonusKey !== state.bonusAllocation) {
+        const matchCtx: MatchContext = {
+          homeTeamName: this.bootstrapTeams.get(state.homeTeamId)?.name || 'Home',
+          awayTeamName: this.bootstrapTeams.get(state.awayTeamId)?.name || 'Away',
+          homeScore: state.homeScore,
+          awayScore: state.awayScore,
+          minute: 'FT',
+          fixtureId,
+        };
+        await this.postEventTweet(this.formatBonusTweet(bonusEntries, matchCtx, true));
+        state.bonusAllocation = newBonusKey;
+        console.log(`🔄 Bonus update tweet posted for fixture ${fixtureId}`);
+      }
+    }
+  }
+
+  private extractBonusFromFixture(fixture: any): BonusEntry[] {
+    const bonusEntries: BonusEntry[] = [];
+    const stats = fixture.stats;
+    if (!stats || !Array.isArray(stats)) return bonusEntries;
+
+    const bonusStat = stats.find((s: any) => s.identifier === 'bonus');
+    if (!bonusStat) return bonusEntries;
+
+    const allBonusPlayers: Array<{ playerId: number; bonus: number }> = [];
+    for (const entry of (bonusStat.h || [])) {
+      if (entry.value > 0) {
+        allBonusPlayers.push({ playerId: entry.element, bonus: entry.value });
+      }
+    }
+    for (const entry of (bonusStat.a || [])) {
+      if (entry.value > 0) {
+        allBonusPlayers.push({ playerId: entry.element, bonus: entry.value });
+      }
+    }
+
+    allBonusPlayers.sort((a, b) => b.bonus - a.bonus);
+
+    for (const bp of allBonusPlayers) {
+      const player = this.bootstrapPlayers.get(bp.playerId);
+      if (!player) continue;
+      bonusEntries.push({
+        playerId: bp.playerId,
+        playerName: player.web_name,
+        bonus: bp.bonus,
+        ownership: parseFloat(player.selected_by_percent),
+      });
+    }
+
+    return bonusEntries;
+  }
+
+  private bonusAllocationKey(entries: BonusEntry[]): string {
+    return entries.map(e => `${e.playerId}:${e.bonus}`).join(',');
+  }
+
+  private formatBonusTweet(entries: BonusEntry[], ctx: MatchContext, isUpdate: boolean): string {
+    const header = isUpdate ? '🔄 Bonus Points Updated!' : '🌟 Bonus Points Confirmed!';
+    let tweet = `${header}\n\n${this.matchLine(ctx)}\n`;
+
+    for (const entry of entries) {
+      const ptLabel = entry.bonus === 1 ? 'pt' : 'pts';
+      tweet += `\n${entry.bonus} ${ptLabel} - ${entry.playerName} [${entry.ownership.toFixed(1)}% owned]`;
+    }
+
+    tweet += this.footer(ctx);
+    return tweet;
+  }
+
+  private async processLiveFixture(fixture: any, liveData: any) {
     const fixtureId = fixture.id;
     const homeScore = fixture.team_h_score ?? 0;
     const awayScore = fixture.team_a_score ?? 0;
@@ -416,6 +612,25 @@ export class LiveGoalMonitor {
       minute: 55,
       fixtureId: 250,
     };
+    const sampleCtxFT: MatchContext = {
+      homeTeamName: 'Liverpool',
+      awayTeamName: 'Arsenal',
+      homeScore: 2,
+      awayScore: 1,
+      minute: 'FT',
+      fixtureId: 246,
+    };
+
+    const bonusEntries: BonusEntry[] = [
+      { playerId: 1, playerName: 'Salah', bonus: 3, ownership: 42.3 },
+      { playerId: 2, playerName: 'Alexander-Arnold', bonus: 2, ownership: 18.7 },
+      { playerId: 3, playerName: 'Saka', bonus: 1, ownership: 28.5 },
+    ];
+    const updatedBonusEntries: BonusEntry[] = [
+      { playerId: 1, playerName: 'Salah', bonus: 3, ownership: 42.3 },
+      { playerId: 4, playerName: 'Van Dijk', bonus: 2, ownership: 15.2 },
+      { playerId: 2, playerName: 'Alexander-Arnold', bonus: 1, ownership: 18.7 },
+    ];
 
     const tweets = [
       { type: 'goal', tweet: this.formatGoalTweet('Salah', 42.3, 'Alexander-Arnold', 18.7, sampleCtx) },
@@ -423,12 +638,14 @@ export class LiveGoalMonitor {
       { type: 'red_card', tweet: this.formatRedCardTweet('Rice', 31.2, { ...sampleCtx, minute: 78 }) },
       { type: 'saves', tweet: this.formatSavesTweet('Raya', 18.5, 3, sampleCtx2) },
       { type: 'defensive_contribution', tweet: this.formatDCTweet('Saliba', 22.1, 12, 'DEF', { ...sampleCtx2, minute: 82 }) },
+      { type: 'bonus_confirmed', tweet: this.formatBonusTweet(bonusEntries, sampleCtxFT, false) },
+      { type: 'bonus_updated', tweet: this.formatBonusTweet(updatedBonusEntries, sampleCtxFT, true) },
     ];
 
     return tweets.map(t => ({ ...t, length: t.tweet.length }));
   }
 
-  getStatus(): { isRunning: boolean; trackedFixtures: number; fixtureDetails: any[] } {
+  getStatus(): { isRunning: boolean; trackedFixtures: number; monitoredBonusFixtures: number; fixtureDetails: any[]; bonusDetails: any[] } {
     const fixtureDetails = Array.from(this.fixtureStates.values()).map(state => {
       const homeTeam = this.bootstrapTeams.get(state.homeTeamId);
       const awayTeam = this.bootstrapTeams.get(state.awayTeamId);
@@ -445,10 +662,25 @@ export class LiveGoalMonitor {
       };
     });
 
+    const bonusDetails = Array.from(this.finishedFixtures.values()).map(state => {
+      const homeTeam = this.bootstrapTeams.get(state.homeTeamId);
+      const awayTeam = this.bootstrapTeams.get(state.awayTeamId);
+      const hoursRemaining = Math.max(0, this.BONUS_MONITOR_HOURS - (Date.now() - state.finishedAt) / (60 * 60 * 1000));
+      return {
+        fixtureId: state.fixtureId,
+        match: `${homeTeam?.short_name || '?'} ${state.homeScore}-${state.awayScore} ${awayTeam?.short_name || '?'}`,
+        bonusTweeted: state.bonusTweeted,
+        bonusAllocation: state.bonusAllocation,
+        hoursRemaining: hoursRemaining.toFixed(1),
+      };
+    });
+
     return {
       isRunning: this.pollInterval !== null,
       trackedFixtures: this.fixtureStates.size,
+      monitoredBonusFixtures: this.finishedFixtures.size,
       fixtureDetails,
+      bonusDetails,
     };
   }
 
