@@ -2522,22 +2522,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leagues-classic/:leagueId/standings", async (req, res) => {
     try {
       const { leagueId } = req.params;
-      const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
       
       if (!leagueId || isNaN(Number(leagueId))) {
         return res.status(400).json({ message: "Invalid league ID" });
       }
       
-      const response = await fetch(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_new_entries=1&page_standings=${page}&phase=1`);
+      const response1 = await fetch(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_new_entries=1&page_standings=1&phase=1`);
       
-      if (!response.ok) {
-        if (response.status === 404) {
+      if (!response1.ok) {
+        if (response1.status === 404) {
           return res.status(404).json({ message: "League not found" });
         }
-        throw new Error(`FPL API responded with status: ${response.status}`);
+        throw new Error(`FPL API responded with status: ${response1.status}`);
       }
       
-      const data = await response.json();
+      const data = await response1.json();
+      
+      if (data.standings?.has_next) {
+        try {
+          const response2 = await fetch(`https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_new_entries=1&page_standings=2&phase=1`);
+          if (response2.ok) {
+            const data2 = await response2.json();
+            if (data2.standings?.results) {
+              data.standings.results = [...data.standings.results, ...data2.standings.results];
+              data.standings.has_next = data2.standings.has_next;
+            }
+          }
+        } catch (e) {
+          console.warn(`Failed to fetch page 2 for league ${leagueId}:`, e);
+        }
+      }
+      
       res.json(data);
     } catch (error) {
       console.error(`Error fetching league standings for ID ${req.params.leagueId}:`, error);
