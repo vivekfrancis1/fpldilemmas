@@ -490,6 +490,76 @@ export default function BestFreehitTeam() {
     return bench;
   };
 
+  // Enforce max 3 players per team constraint on a built squad
+  const enforceTeamConstraint = (
+    squad: PlayerSnapshot[],
+    starting11: PlayerSnapshot[],
+    allPlayersByPosition: Record<string, PlayerSnapshot[]>,
+    includedPlayerIds: Set<number>
+  ): { squad: PlayerSnapshot[], starting11: PlayerSnapshot[] } => {
+    const teamCounts: Record<string, number> = {};
+    squad.forEach(p => {
+      const team = p.teamName || '';
+      teamCounts[team] = (teamCounts[team] || 0) + 1;
+    });
+
+    const violations = Object.entries(teamCounts).filter(([, count]) => count > SQUAD_CONSTRAINTS.maxPlayersPerTeam);
+    if (violations.length === 0) return { squad, starting11 };
+
+    console.warn(`⚠️ Team constraint violations found, fixing:`, violations);
+
+    let fixedSquad = [...squad];
+    let fixedStarting11 = [...starting11];
+
+    for (const [teamName, count] of violations) {
+      let excess = count - SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+      const teamPlayers = fixedSquad
+        .filter(p => (p.teamName || '') === teamName)
+        .sort((a, b) => {
+          if (includedPlayerIds.has(a.playerId) && !includedPlayerIds.has(b.playerId)) return -1;
+          if (!includedPlayerIds.has(a.playerId) && includedPlayerIds.has(b.playerId)) return 1;
+          const aInXI = fixedStarting11.some(s => s.playerId === a.playerId);
+          const bInXI = fixedStarting11.some(s => s.playerId === b.playerId);
+          if (aInXI && !bInXI) return -1;
+          if (!aInXI && bInXI) return 1;
+          return getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek);
+        });
+
+      const toRemove = teamPlayers.slice(SQUAD_CONSTRAINTS.maxPlayersPerTeam);
+
+      for (const removePlayer of toRemove) {
+        if (excess <= 0) break;
+        const position = normalizePosition(removePlayer.position);
+        const usedIds = new Set(fixedSquad.map(p => p.playerId));
+        const currentTeamCounts: Record<string, number> = {};
+        fixedSquad.forEach(p => {
+          if (p.playerId !== removePlayer.playerId) {
+            const t = p.teamName || '';
+            currentTeamCounts[t] = (currentTeamCounts[t] || 0) + 1;
+          }
+        });
+
+        const replacement = allPlayersByPosition[position]
+          ?.filter(p => {
+            if (usedIds.has(p.playerId)) return false;
+            const t = p.teamName || '';
+            const tc = currentTeamCounts[t] || 0;
+            return tc < SQUAD_CONSTRAINTS.maxPlayersPerTeam;
+          })
+          .sort((a, b) => getGameweekPoints(b, selectedGameweek) - getGameweekPoints(a, selectedGameweek))[0];
+
+        if (replacement) {
+          fixedSquad = fixedSquad.map(p => p.playerId === removePlayer.playerId ? replacement : p);
+          fixedStarting11 = fixedStarting11.map(p => p.playerId === removePlayer.playerId ? replacement : p);
+          console.log(`🔄 Replaced ${removePlayer.playerName} (${teamName}) with ${replacement.playerName} (${replacement.teamName})`);
+          excess--;
+        }
+      }
+    }
+
+    return { squad: fixedSquad, starting11: fixedStarting11 };
+  };
+
   // Main optimization function with budget awareness
   const buildOptimalTeamWithBudget = (
     playersByPosition: Record<string, PlayerSnapshot[]>,
@@ -521,24 +591,20 @@ export default function BestFreehitTeam() {
         // Unlimited budget: just build best bench
         const bench = buildBenchWithBudget(xi.players, playersByPosition, includedPlayerIds, 999);
         if (bench) {
+          const rawSquad = [...xi.players, ...bench];
+          const { squad, starting11 } = enforceTeamConstraint(rawSquad, xi.players, playersByPosition, includedPlayerIds);
           console.log(`✅ Built team with formation ${formation.name}, XI: £${xi.totalCost.toFixed(1)}m, Points: ${xi.totalPoints.toFixed(1)}`);
-          return {
-            squad: [...xi.players, ...bench],
-            starting11: xi.players,
-            formation: formation.name
-          };
+          return { squad, starting11, formation: formation.name };
         }
       } else {
         // Budget-constrained: try to build bench with remaining budget
         const bench = buildBenchWithBudget(xi.players, playersByPosition, includedPlayerIds, budget);
         if (bench) {
-          const totalCost = xi.totalCost + bench.reduce((sum, p) => sum + p.price, 0);
+          const rawSquad = [...xi.players, ...bench];
+          const { squad, starting11 } = enforceTeamConstraint(rawSquad, xi.players, playersByPosition, includedPlayerIds);
+          const totalCost = squad.reduce((sum, p) => sum + p.price, 0);
           console.log(`✅ Built team with formation ${formation.name}, Total: £${totalCost.toFixed(1)}m, XI Points: ${xi.totalPoints.toFixed(1)}`);
-          return {
-            squad: [...xi.players, ...bench],
-            starting11: xi.players,
-            formation: formation.name
-          };
+          return { squad, starting11, formation: formation.name };
         } else {
           console.log(`❌ Formation ${formation.name}: Could not build affordable bench (XI cost: £${xi.totalCost.toFixed(1)}m, budget: £${budget}m)`);
         }
