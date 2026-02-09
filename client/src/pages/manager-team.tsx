@@ -551,7 +551,7 @@ export default function ManagerTeam() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={() => navigate('/')}
+            onClick={() => window.history.back()}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
@@ -679,7 +679,7 @@ export default function ManagerTeam() {
             variant="outline" 
             size="sm" 
             className="hover:bg-blue-50"
-            onClick={() => navigate('/')}
+            onClick={() => window.history.back()}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
