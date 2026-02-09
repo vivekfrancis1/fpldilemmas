@@ -516,7 +516,6 @@ export default function MatchStats() {
                     <TableRow className="bg-gray-50">
                       <TableHead className="text-xs font-semibold sticky left-0 bg-gray-50 z-10">Player</TableHead>
                       <TableHead className="text-xs font-semibold text-center">Pos</TableHead>
-                      <TableHead className="text-xs font-semibold text-center">Team</TableHead>
                       <TableHead className="text-xs font-semibold text-center">Mins</TableHead>
                       <TableHead className="text-xs font-semibold text-center">Pts</TableHead>
                       <TableHead className="text-xs font-semibold text-center">G</TableHead>
@@ -532,7 +531,12 @@ export default function MatchStats() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {[...matchData.homeTeamStats, ...matchData.awayTeamStats]
+                    <TableRow>
+                      <TableCell colSpan={14} className="bg-gray-800 text-white font-semibold text-xs sm:text-sm py-1.5 sticky left-0">
+                        {homeTeam?.name || 'Home'}
+                      </TableCell>
+                    </TableRow>
+                    {matchData.homeTeamStats
                       .filter(p => p.minutes > 0)
                       .sort((a, b) => b.total_points - a.total_points)
                       .map((player) => (
@@ -545,7 +549,42 @@ export default function MatchStats() {
                               {player.position}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-xs text-center">{player.teamName}</TableCell>
+                          <TableCell className="text-xs text-center">{player.minutes}</TableCell>
+                          <TableCell className="text-xs text-center font-bold">
+                            <span className={player.total_points > 0 ? 'text-green-600' : player.total_points < 0 ? 'text-red-600' : ''}>
+                              {player.total_points}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs text-center">{player.goals_scored > 0 ? player.goals_scored : '-'}</TableCell>
+                          <TableCell className="text-xs text-center">{player.assists > 0 ? player.assists : '-'}</TableCell>
+                          <TableCell className="text-xs text-center">{player.clean_sheets > 0 ? player.clean_sheets : '-'}</TableCell>
+                          <TableCell className="text-xs text-center">{player.goals_conceded > 0 ? player.goals_conceded : '-'}</TableCell>
+                          <TableCell className="text-xs text-center">{player.saves > 0 ? player.saves : '-'}</TableCell>
+                          <TableCell className="text-xs text-center">{player.yellow_cards > 0 ? <span className="text-yellow-600 font-bold">{player.yellow_cards}</span> : '-'}</TableCell>
+                          <TableCell className="text-xs text-center">{player.red_cards > 0 ? <span className="text-red-600 font-bold">{player.red_cards}</span> : '-'}</TableCell>
+                          <TableCell className="text-xs text-center">{player.bonus > 0 ? <span className="text-green-600 font-bold">{player.bonus}</span> : '-'}</TableCell>
+                          <TableCell className="text-xs text-center">{player.bps}</TableCell>
+                          <TableCell className="text-xs text-center">{player.ict_index.toFixed(1)}</TableCell>
+                        </TableRow>
+                      ))}
+                    <TableRow>
+                      <TableCell colSpan={14} className="bg-gray-800 text-white font-semibold text-xs sm:text-sm py-1.5 sticky left-0">
+                        {awayTeam?.name || 'Away'}
+                      </TableCell>
+                    </TableRow>
+                    {matchData.awayTeamStats
+                      .filter(p => p.minutes > 0)
+                      .sort((a, b) => b.total_points - a.total_points)
+                      .map((player) => (
+                        <TableRow key={player.playerId} className="hover:bg-gray-50">
+                          <TableCell className="text-xs sm:text-sm font-medium sticky left-0 bg-white z-10 whitespace-nowrap">
+                            {player.playerName}
+                          </TableCell>
+                          <TableCell className="text-xs text-center">
+                            <Badge variant="outline" className="text-[10px] px-1 py-0">
+                              {player.position}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-xs text-center">{player.minutes}</TableCell>
                           <TableCell className="text-xs text-center font-bold">
                             <span className={player.total_points > 0 ? 'text-green-600' : player.total_points < 0 ? 'text-red-600' : ''}>
