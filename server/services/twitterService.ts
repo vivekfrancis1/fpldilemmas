@@ -189,6 +189,14 @@ export class TwitterService {
     }
   }
 
+  async postTweet(text: string): Promise<string> {
+    const client = this.getClient();
+    console.log(`📤 Posting tweet (${text.length} chars)...`);
+    const response = await client.v2.tweet(text);
+    console.log('✅ Tweet posted:', response.data.id);
+    return response.data.id;
+  }
+
   async testConnection(): Promise<boolean> {
     try {
       const client = this.getClient();

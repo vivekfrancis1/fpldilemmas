@@ -129,6 +129,14 @@ app.use((req, res, next) => {
       twitterScheduler.start();
       console.log("✓ Twitter scheduler started");
       
+      // Start live goal monitor (tweets goal updates during live matches)
+      import('./services/liveGoalMonitor').then(({ liveGoalMonitor }) => {
+        liveGoalMonitor.start();
+        console.log("✓ Live goal monitor started");
+      }).catch((error) => {
+        console.error("Failed to start live goal monitor:", error);
+      });
+      
       // Start daily projections scheduler (runs at 3 AM daily for ultra-fast performance)
       import('./daily-projections-scheduler').then(({ dailyProjectionsScheduler }) => {
         dailyProjectionsScheduler.start();

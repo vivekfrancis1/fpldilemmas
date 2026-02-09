@@ -18851,7 +18851,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Live Goal Monitor admin endpoints
+  const { liveGoalMonitor } = await import('./services/liveGoalMonitor');
+
+  app.get("/api/admin/live-goals/status", async (req, res) => {
+    try {
+      const status = liveGoalMonitor.getStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Error getting live goal monitor status:', error);
+      res.status(500).json({ error: 'Failed to get status' });
+    }
+  });
+
+  app.get("/api/admin/live-goals/preview", async (req, res) => {
+    try {
+      const preview = liveGoalMonitor.formatGoalTweetPreview({
+        scorerName: 'Salah',
+        scorerOwnership: 42.3,
+        assistName: 'Alexander-Arnold',
+        assistOwnership: 18.7,
+        homeTeamName: 'Liverpool',
+        awayTeamName: 'Arsenal',
+        homeScore: 2,
+        awayScore: 1,
+        minute: 62,
+        fixtureId: 246,
+      });
+      res.json({ tweet: preview, length: preview.length });
+    } catch (error) {
+      console.error('Error generating preview:', error);
+      res.status(500).json({ error: 'Failed to generate preview' });
+    }
+  });
+
   console.log("✓ Twitter API routes registered successfully");
+  console.log("✓ Live goal monitor routes registered successfully");
 
   // Projection Accuracy API endpoints
   app.get("/api/projection-accuracy/summary", async (req, res) => {
