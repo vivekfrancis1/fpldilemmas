@@ -260,7 +260,6 @@ export class LiveGoalMonitor {
       const threshold = (pos === 'DEF' || pos === 'GKP') ? 10 : 12;
       if (dc < threshold) continue;
       const ownership = parseFloat(player.selected_by_percent);
-      if (ownership <= this.OWNERSHIP_THRESHOLD) continue;
       dcPlayers.push({ playerId, playerName: player.web_name, dc, position: pos, ownership });
     }
     dcPlayers.sort((a, b) => b.dc - a.dc);
