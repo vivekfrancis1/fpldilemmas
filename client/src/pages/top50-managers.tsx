@@ -324,12 +324,34 @@ const getTop50ManagerColumns = (currentGameweek?: number, upcomingGameweek?: num
     }
   },
   {
+    key: 'transfersMade',
+    header: 'Transfers',
+    priority: 'optional',
+    align: 'right',
+    mobileLabel: 'TM',
+    cardOrder: 7,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, manager) => {
+      const history = manager.historyData?.current;
+      const chips = manager.historyData?.chips || [];
+      if (!history || history.length === 0) return "N/A";
+      const chipGWs = new Set(
+        chips.filter(c => c.name === 'freehit' || c.name === 'wildcard').map(c => c.event)
+      );
+      const total = history
+        .filter(gw => !chipGWs.has(gw.event))
+        .reduce((sum, gw) => sum + (gw.event_transfers || 0), 0);
+      return total;
+    }
+  },
+  {
     key: 'freeTransfers',
-    header: `FT (GW${upcomingGameweek || 25})`,
+    header: 'FT',
     priority: 'optional',
     align: 'right',
     mobileLabel: 'FT',
-    cardOrder: 6,
+    cardOrder: 8,
     sortable: true,
     className: 'font-mono',
     render: (value, manager) => {
@@ -347,7 +369,7 @@ const getTop50ManagerColumns = (currentGameweek?: number, upcomingGameweek?: num
     priority: 'optional',
     align: 'right',
     mobileLabel: 'Chips',
-    cardOrder: 8,
+    cardOrder: 9,
     sortable: true,
     className: 'font-mono',
     render: (value, manager) => {
@@ -696,11 +718,17 @@ export default function Top50Managers() {
           }
           case 'latestTracking.bank':
             return manager.latestTracking?.bank || 0;
-          case 'freeTransfers':
+          case 'transfersMade': {
+            const histT = manager.historyData?.current || [];
+            const chipsT = new Set((manager.historyData?.chips || []).filter(c => c.name === 'freehit' || c.name === 'wildcard').map(c => c.event));
+            return histT.filter(gw => !chipsT.has(gw.event)).reduce((s, gw) => s + (gw.event_transfers || 0), 0);
+          }
+          case 'freeTransfers': {
             const history = manager.historyData?.current;
             const chips = manager.historyData?.chips;
             if (!history || history.length === 0) return 0;
             return calculateFreeTransfers(history, chips, upcomingGameweek || 25);
+          }
           case 'chipsAvailable':
             // 4 chips in second half - second half chips used
             return 4 - (manager.latestTracking?.secondHalfChipsUsed || 0);

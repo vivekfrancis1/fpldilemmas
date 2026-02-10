@@ -446,12 +446,34 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
     }
   },
   {
+    key: 'transfersMade',
+    header: 'Transfers',
+    priority: 'optional',
+    align: 'right',
+    mobileLabel: 'TM',
+    cardOrder: 8,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, creator) => {
+      const history = creator.historyData?.current;
+      const chips = creator.historyData?.chips || [];
+      if (!history || history.length === 0) return "N/A";
+      const chipGWs = new Set(
+        chips.filter(c => c.name === 'freehit' || c.name === 'wildcard').map(c => c.event)
+      );
+      const total = history
+        .filter(gw => !chipGWs.has(gw.event))
+        .reduce((sum, gw) => sum + (gw.event_transfers || 0), 0);
+      return total;
+    }
+  },
+  {
     key: 'freeTransfers',
-    header: 'FT (GW23)',
+    header: currentGameweek ? `FT` : 'FT',
     priority: 'optional',
     align: 'right',
     mobileLabel: 'FT',
-    cardOrder: 8,
+    cardOrder: 9,
     sortable: true,
     className: 'font-mono',
     render: (value, creator) => {
@@ -459,7 +481,7 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
       const chips = creator.historyData?.chips;
       if (!history || history.length === 0) return "N/A";
       
-      const freeTransfers = calculateFreeTransfers(history, chips, 23);
+      const freeTransfers = calculateFreeTransfers(history, chips, currentGameweek || 1);
       return freeTransfers;
     }
   },
@@ -469,7 +491,7 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
     priority: 'optional',
     align: 'right',
     mobileLabel: 'Chips',
-    cardOrder: 9,
+    cardOrder: 10,
     sortable: true,
     className: 'font-mono',
     render: (value, creator) => {
@@ -882,12 +904,23 @@ export default function ContentCreators() {
         valueB = teamValueB ? (typeof teamValueB === 'string' ? parseFloat(teamValueB) : teamValueB) : 0;
         break;
       }
-      case "freeTransfers":
+      case "transfersMade": {
+        const histAT = a.historyData?.current || [];
+        const histBT = b.historyData?.current || [];
+        const chipsAT = new Set((a.historyData?.chips || []).filter(c => c.name === 'freehit' || c.name === 'wildcard').map(c => c.event));
+        const chipsBT = new Set((b.historyData?.chips || []).filter(c => c.name === 'freehit' || c.name === 'wildcard').map(c => c.event));
+        valueA = histAT.filter(gw => !chipsAT.has(gw.event)).reduce((s, gw) => s + (gw.event_transfers || 0), 0);
+        valueB = histBT.filter(gw => !chipsBT.has(gw.event)).reduce((s, gw) => s + (gw.event_transfers || 0), 0);
+        break;
+      }
+      case "freeTransfers": {
         const historyA = a.historyData?.current;
         const historyB = b.historyData?.current;
-        valueA = historyA && historyA.length > 0 ? calculateFreeTransfers(historyA, a.historyData?.chips, 23) : 0;
-        valueB = historyB && historyB.length > 0 ? calculateFreeTransfers(historyB, b.historyData?.chips, 23) : 0;
+        const cGW = currentGameweek || 1;
+        valueA = historyA && historyA.length > 0 ? calculateFreeTransfers(historyA, a.historyData?.chips, cGW) : 0;
+        valueB = historyB && historyB.length > 0 ? calculateFreeTransfers(historyB, b.historyData?.chips, cGW) : 0;
         break;
+      }
       case "chipsAvailable":
         // Sort by chips available (4 - second half chips used)
         const aChips = a.historyData?.chips || [];
@@ -1014,6 +1047,7 @@ export default function ContentCreators() {
                     'latestTracking.squadValue': 'squad_value',
                     'latestTracking.bank': 'bank',
                     'latestTracking.teamValue': 'team_value',
+                    'transfersMade': 'transfersMade',
                     'freeTransfers': 'freeTransfers',
                     'chipsAvailable': 'chipsAvailable',
                     'name': 'name'
@@ -1031,6 +1065,7 @@ export default function ContentCreators() {
                     'squad_value': 'latestTracking.squadValue',
                     'bank': 'latestTracking.bank',
                     'team_value': 'latestTracking.teamValue',
+                    'transfersMade': 'transfersMade',
                     'freeTransfers': 'freeTransfers',
                     'chipsAvailable': 'chipsAvailable',
                     'name': 'name'

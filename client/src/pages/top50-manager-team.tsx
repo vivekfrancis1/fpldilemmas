@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "wouter";
+import { calculateFreeTransfers } from "@/lib/free-transfers";
 import {
   Card,
   CardContent,
@@ -753,6 +754,31 @@ export default function Top50ManagerTeam() {
         </TabsContent>
 
         <TabsContent value="transfers" className="space-y-6">
+          {(() => {
+            const history = managerHistory?.current;
+            const chips = managerHistory?.chips || [];
+            const currentGW = getCurrentGameweek();
+            if (history && history.length > 0) {
+              const chipGWs = new Set(
+                chips.filter((c: any) => c.name === 'freehit' || c.name === 'wildcard').map((c: any) => c.event)
+              );
+              const totalTransfers = history
+                .filter((gw: HistoryEntry) => !chipGWs.has(gw.event))
+                .reduce((sum: number, gw: HistoryEntry) => sum + (gw.event_transfers || 0), 0);
+              const freeTransfersAvailable = calculateFreeTransfers(history, chips, currentGW);
+              return (
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Badge variant="outline" className="text-sm px-3 py-1 bg-blue-50 text-blue-700 border-blue-300">
+                    Total Transfers: {totalTransfers}
+                  </Badge>
+                  <Badge variant="outline" className="text-sm px-3 py-1 bg-green-50 text-green-700 border-green-300">
+                    Free Transfers Available: {freeTransfersAvailable}
+                  </Badge>
+                </div>
+              );
+            }
+            return null;
+          })()}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
