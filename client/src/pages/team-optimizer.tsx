@@ -1334,6 +1334,9 @@ export default function TeamOptimizer() {
                     team_code: team?.code,
                     custom_badge_text: pick.projectedPoints?.toFixed(1) || '0',
                     custom_badge_color: 'bg-purple-600',
+                    status: player?.status,
+                    chance_of_playing: player?.chance_of_playing_next_round,
+                    news: player?.news,
                   };
                 });
                 
@@ -1351,6 +1354,9 @@ export default function TeamOptimizer() {
                     team_code: team?.code,
                     custom_badge_text: pick.projectedPoints?.toFixed(1) || '0',
                     custom_badge_color: 'bg-gray-500',
+                    status: player?.status,
+                    chance_of_playing: player?.chance_of_playing_next_round,
+                    news: player?.news,
                   };
                 });
                 

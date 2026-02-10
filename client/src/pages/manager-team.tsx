@@ -633,6 +633,9 @@ export default function ManagerTeam() {
       fixture_finished: fixtureStatus.finished,
       fixture_opponent: fixtureStatus.opponent,
       fixture_is_home: fixtureStatus.isHome,
+      status: playerData?.status,
+      chance_of_playing: playerData?.chance_of_playing_next_round,
+      news: playerData?.news,
     };
   });
 
@@ -662,6 +665,9 @@ export default function ManagerTeam() {
       fixture_finished: fixtureStatus.finished,
       fixture_opponent: fixtureStatus.opponent,
       fixture_is_home: fixtureStatus.isHome,
+      status: playerData?.status,
+      chance_of_playing: playerData?.chance_of_playing_next_round,
+      news: playerData?.news,
     };
   });
 

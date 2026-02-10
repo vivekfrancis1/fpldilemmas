@@ -3,6 +3,8 @@ import {
   sortPlayersByPosition,
   filterPlayersByType,
 } from "@/lib/pitch-utils";
+import { Clock, Heart, AlertTriangle, XCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export interface PitchPlayerFixture {
   opponent: string;
@@ -33,6 +35,12 @@ export interface PitchPlayer {
   custom_badge_color?: string;
   fixtures?: PitchPlayerFixture[];
   points_display?: string;
+  status?: string;
+  chance_of_playing?: number | null;
+  news?: string;
+  is_transferred_in?: boolean;
+  is_selected?: boolean;
+  is_empty_slot?: boolean;
 }
 
 export interface PitchFixture {
@@ -54,6 +62,7 @@ export interface PitchViewProps {
   showOpponent?: boolean;
   isBench?: boolean;
   onPlayerClick?: (player: PitchPlayer) => void;
+  renderEmptySlot?: (player: PitchPlayer) => JSX.Element | null;
 }
 
 function getJerseyImageUrl(teamCode: number, isGoalkeeper: boolean = false): string {
@@ -95,6 +104,31 @@ function isDGW(player: PitchPlayer): boolean {
   return (player.fixtures?.length || 0) > 1;
 }
 
+function getAvailabilityInfo(player: PitchPlayer) {
+  const chance = player.chance_of_playing ?? 100;
+  const status = player.status || 'a';
+
+  if (chance >= 100 && status === 'a') return null;
+
+  let color = 'text-yellow-600';
+  let bg = 'bg-yellow-50';
+  let icon = Clock;
+  let text = 'Doubtful';
+  let border = 'border-yellow-200';
+
+  if (status === 's' || status === 'suspended') {
+    color = 'text-red-600'; bg = 'bg-red-50'; icon = XCircle; text = 'Suspended'; border = 'border-red-200';
+  } else if (status === 'i' || status === 'injured') {
+    color = 'text-red-600'; bg = 'bg-red-50'; icon = Heart; text = 'Injured'; border = 'border-red-200';
+  } else if (status === 'd' || status === 'doubtful') {
+    color = 'text-yellow-600'; bg = 'bg-yellow-50'; icon = AlertTriangle; text = 'Doubtful'; border = 'border-yellow-200';
+  } else if (status === 'u' || status === 'unavailable') {
+    color = 'text-gray-600'; bg = 'bg-gray-50'; icon = XCircle; text = 'Unavailable'; border = 'border-gray-200';
+  }
+
+  return { color, bg, icon, text, border, chance };
+}
+
 const FALLBACK_JERSEY_URL = "https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_0-110.webp";
 
 function PlayerCard({ 
@@ -128,6 +162,8 @@ function PlayerCard({
   const fixtureText = getFixtureDisplay(player);
   const hasFixture = fixtureText !== null;
   const dgw = isDGW(player);
+  const availability = getAvailabilityInfo(player);
+  const StatusIcon = availability?.icon;
   
   return (
     <div className={`flex flex-col items-center ${isBench ? 'w-[19.5%]' : 'w-[19%]'} ${isBench ? 'opacity-90' : ''}`}>
@@ -142,13 +178,18 @@ function PlayerCard({
             <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
           </div>
         )}
-        {player.in_dreamteam && (
+        {player.in_dreamteam && !player.is_transferred_in && (
           <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
             <span className="text-[8px] sm:text-[10px] text-white">★</span>
           </div>
         )}
+        {player.is_transferred_in && (
+          <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center border border-white shadow-md">
+            <span className="text-[8px] sm:text-[10px] font-bold text-white">+</span>
+          </div>
+        )}
         <div 
-          className={`w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40 ${onClick ? 'cursor-pointer hover:bg-white/30 transition-colors' : ''}`}
+          className={`w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40 ${onClick ? 'cursor-pointer hover:bg-white/30 transition-colors' : ''} ${player.is_selected ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg' : ''}`}
           onClick={onClick}
         >
           <div className="p-1">
@@ -184,6 +225,36 @@ function PlayerCard({
             )}
           </div>
         </div>
+        {availability && StatusIcon && (
+          <div className="flex justify-center mt-1">
+            <TooltipProvider>
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <div className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold cursor-help ${availability.bg} ${availability.border} border shadow-sm`}>
+                    <StatusIcon className={`h-2.5 w-2.5 ${availability.color}`} />
+                    <span className={availability.color}>{availability.chance}%</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <StatusIcon className={`h-4 w-4 ${availability.color}`} />
+                      <span className="font-semibold text-gray-900">{availability.text}</span>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <span className="font-medium">Chance of playing:</span> {availability.chance}%
+                    </div>
+                    {player.news && (
+                      <div className="text-sm text-gray-700 border-t pt-2">
+                        <span className="font-medium">News:</span> {player.news}
+                      </div>
+                    )}
+                  </div>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -195,9 +266,27 @@ export function PitchView({
   showTeamName = false,
   showOpponent = false,
   onPlayerClick,
+  renderEmptySlot,
 }: PitchViewProps) {
   const sortedPlayers = sortPlayersByPosition(players);
   const sortedBench = benchPlayers;
+
+  const renderPlayer = (player: PitchPlayer, isGoalkeeper: boolean = false, isBench: boolean = false) => {
+    if (player.is_empty_slot && renderEmptySlot) {
+      return renderEmptySlot(player);
+    }
+    return (
+      <PlayerCard 
+        key={player.element} 
+        player={player}
+        isGoalkeeper={isGoalkeeper}
+        isBench={isBench}
+        showTeamName={showTeamName}
+        showOpponent={showOpponent}
+        onClick={onPlayerClick ? () => onPlayerClick(player) : undefined}
+      />
+    );
+  };
   
   return (
     <div className="space-y-0 sm:space-y-4 h-full">
@@ -234,16 +323,7 @@ export function PitchView({
             const gks = filterPlayersByType(sortedPlayers, 1);
             return gks.length > 0 && (
               <div className="flex justify-center gap-0.5">
-                {gks.map(player => (
-                  <PlayerCard 
-                    key={player.element} 
-                    player={player} 
-                    isGoalkeeper={true}
-                    showTeamName={showTeamName}
-                    showOpponent={showOpponent}
-                    onClick={onPlayerClick ? () => onPlayerClick(player) : undefined}
-                  />
-                ))}
+                {gks.map(player => renderPlayer(player, true, false))}
               </div>
             );
           })()}
@@ -254,15 +334,7 @@ export function PitchView({
               <>
                 <div className="w-full border-t border-dotted border-white/30"></div>
                 <div className="flex justify-center gap-0.5">
-                  {defs.map(player => (
-                    <PlayerCard 
-                      key={player.element} 
-                      player={player}
-                      showTeamName={showTeamName}
-                      showOpponent={showOpponent}
-                      onClick={onPlayerClick ? () => onPlayerClick(player) : undefined}
-                    />
-                  ))}
+                  {defs.map(player => renderPlayer(player, false, false))}
                 </div>
               </>
             );
@@ -274,15 +346,7 @@ export function PitchView({
               <>
                 <div className="w-full border-t border-dotted border-white/30"></div>
                 <div className="flex justify-center gap-0.5">
-                  {mids.map(player => (
-                    <PlayerCard 
-                      key={player.element} 
-                      player={player}
-                      showTeamName={showTeamName}
-                      showOpponent={showOpponent}
-                      onClick={onPlayerClick ? () => onPlayerClick(player) : undefined}
-                    />
-                  ))}
+                  {mids.map(player => renderPlayer(player, false, false))}
                 </div>
               </>
             );
@@ -294,15 +358,7 @@ export function PitchView({
               <>
                 <div className="w-full border-t border-dotted border-white/30"></div>
                 <div className="flex justify-center gap-0.5">
-                  {fwds.map(player => (
-                    <PlayerCard 
-                      key={player.element} 
-                      player={player}
-                      showTeamName={showTeamName}
-                      showOpponent={showOpponent}
-                      onClick={onPlayerClick ? () => onPlayerClick(player) : undefined}
-                    />
-                  ))}
+                  {fwds.map(player => renderPlayer(player, false, false))}
                 </div>
               </>
             );
@@ -314,17 +370,7 @@ export function PitchView({
                 <span className="text-white font-bold text-xs sm:text-sm">BENCH</span>
               </div>
               <div className="flex justify-center gap-0.5">
-                {sortedBench.map(player => (
-                  <PlayerCard 
-                    key={player.element} 
-                    player={player}
-                    isGoalkeeper={player.element_type === 1}
-                    isBench={true}
-                    showTeamName={showTeamName}
-                    showOpponent={showOpponent}
-                    onClick={onPlayerClick ? () => onPlayerClick(player) : undefined}
-                  />
-                ))}
+                {sortedBench.map(player => renderPlayer(player, player.element_type === 1, true))}
               </div>
             </div>
           )}

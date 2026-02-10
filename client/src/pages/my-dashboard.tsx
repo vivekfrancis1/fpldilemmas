@@ -1761,6 +1761,9 @@ export default function MyDashboard() {
                         in_dreamteam: player.in_dreamteam,
                         points_display: getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain),
                         fixtures: fxs,
+                        status: player.status,
+                        chance_of_playing: player.chance_of_playing_next_round,
+                        news: player.news,
                       };
                     }).filter(Boolean) as PitchPlayer[];
 
@@ -1784,6 +1787,9 @@ export default function MyDashboard() {
                         in_dreamteam: player.in_dreamteam,
                         points_display: getPlayerDisplayPoints(player, playerTeam?.id || 0, false),
                         fixtures: fxs,
+                        status: player.status,
+                        chance_of_playing: player.chance_of_playing_next_round,
+                        news: player.news,
                       };
                     }).filter(Boolean) as PitchPlayer[];
 

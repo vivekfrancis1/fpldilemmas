@@ -476,6 +476,9 @@ export default function Top50ManagerTeam() {
       event_points: pick.event_points,
       in_dreamteam: playerData?.in_dreamteam || false,
       fixtures: getCurrentGWFixtures(playerData?.team),
+      status: playerData?.status,
+      chance_of_playing: playerData?.chance_of_playing_next_round,
+      news: playerData?.news,
     };
   });
 
@@ -500,6 +503,9 @@ export default function Top50ManagerTeam() {
       event_points: pick.event_points,
       in_dreamteam: playerData?.in_dreamteam || false,
       fixtures: getCurrentGWFixtures(playerData?.team),
+      status: playerData?.status,
+      chance_of_playing: playerData?.chance_of_playing_next_round,
+      news: playerData?.news,
     };
   });
 

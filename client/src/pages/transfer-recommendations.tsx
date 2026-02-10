@@ -1385,6 +1385,9 @@ export default function TransferRecommendations() {
                     team_code: team?.code,
                     custom_badge_text: (pick.projectedPoints || 0).toFixed(1),
                     custom_badge_color: isTransferredIn ? 'bg-green-600' : 'bg-purple-600',
+                    status: player?.status,
+                    chance_of_playing: player?.chance_of_playing_next_round,
+                    news: player?.news,
                   };
                 });
                 
@@ -1404,6 +1407,9 @@ export default function TransferRecommendations() {
                     team_code: team?.code,
                     custom_badge_text: (pick.projectedPoints || 0).toFixed(1),
                     custom_badge_color: isTransferredIn ? 'bg-green-500' : 'bg-gray-500',
+                    status: player?.status,
+                    chance_of_playing: player?.chance_of_playing_next_round,
+                    news: player?.news,
                   };
                 });
                 

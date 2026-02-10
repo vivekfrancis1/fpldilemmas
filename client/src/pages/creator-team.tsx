@@ -532,6 +532,9 @@ export default function CreatorTeam() {
       event_points: playerData?.event_points || 0,
       in_dreamteam: playerData?.in_dreamteam || false,
       fixtures: getCurrentGWFixtures(playerData?.team),
+      status: playerData?.status,
+      chance_of_playing: playerData?.chance_of_playing_next_round,
+      news: playerData?.news,
     };
   });
 
@@ -556,6 +559,9 @@ export default function CreatorTeam() {
       event_points: playerData?.event_points || 0,
       in_dreamteam: playerData?.in_dreamteam || false,
       fixtures: getCurrentGWFixtures(playerData?.team),
+      status: playerData?.status,
+      chance_of_playing: playerData?.chance_of_playing_next_round,
+      news: playerData?.news,
     };
   });
 

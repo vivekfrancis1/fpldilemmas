@@ -17,6 +17,7 @@ import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
 function PlayerAvailabilityBadge({ player }: { player: any }) {
@@ -5361,6 +5362,26 @@ export default function TransferPlanner() {
               Make Vice Captain
             </button>
           )}
+          {isBench && actualIndex > 0 && (
+            <>
+              <button 
+                className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                onClick={() => { moveBenchPlayer(actualIndex, 'up'); setSelectedPlayer(null); }} 
+                disabled={actualIndex === 1} 
+                data-testid={`${isBench ? 'bench' : 'list'}-move-up-${pick.element}`}
+              >
+                Move Up
+              </button>
+              <button 
+                className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                onClick={() => { moveBenchPlayer(actualIndex, 'down'); setSelectedPlayer(null); }} 
+                disabled={actualIndex === 3} 
+                data-testid={`${isBench ? 'bench' : 'list'}-move-down-${pick.element}`}
+              >
+                Move Down
+              </button>
+            </>
+          )}
           <button 
             className="w-full h-14 sm:h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
             onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, (pick.purchase_price || 0) / 10); }} 
@@ -6781,491 +6802,117 @@ export default function TransferPlanner() {
             {/* Pitch View */}
             {teamView === "pitch" && (
               <div className="space-y-4" key={manualLineup.map(p => `${p.position}-${p.element}`).join('_')}>
-                {/* Pitch */}
-                <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-2 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
-                  {/* Pitch Lines and Graphics */}
-                  <div className="absolute inset-0 opacity-30 pointer-events-none">
-                    <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full"></div>
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-t-0 border-white"></div>
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-t-0 border-white"></div>
-                    <div className="absolute top-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
-                    <div className="absolute top-20 left-1/2 -translate-x-1/2 w-20 h-10 border-2 border-b-0 border-l-0 border-r-0 border-white rounded-t-full"></div>
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
-                      <div className="absolute left-0 top-0 w-1 h-4 bg-white"></div>
-                      <div className="absolute right-0 top-0 w-1 h-4 bg-white"></div>
-                    </div>
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-b-0 border-white"></div>
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-b-0 border-white"></div>
-                    <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
-                    <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-20 h-10 border-2 border-t-0 border-l-0 border-r-0 border-white rounded-b-full"></div>
-                    <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
-                      <div className="absolute left-0 bottom-0 w-1 h-4 bg-white"></div>
-                      <div className="absolute right-0 bottom-0 w-1 h-4 bg-white"></div>
-                    </div>
-                    <div className="absolute top-0 left-0 w-4 h-4 border-2 border-t-0 border-l-0 border-white rounded-br-full"></div>
-                    <div className="absolute top-0 right-0 w-4 h-4 border-2 border-t-0 border-r-0 border-white rounded-bl-full"></div>
-                    <div className="absolute bottom-0 left-0 w-4 h-4 border-2 border-b-0 border-l-0 border-white rounded-tr-full"></div>
-                    <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
-                  </div>
-
-                  <div className="relative space-y-2 sm:space-y-6 md:space-y-8 lg:space-y-10">
-                    {/* Formation sections */}
-                    {[1, 2, 3, 4].map((posType) => {
-                      const positionPlayers = manualLineup.slice(0, 11).filter(pick => {
+                <PitchView
+                  players={manualLineup.slice(0, 11).map(pick => {
+                    const player = getPlayerById(pick.element);
+                    if (!player) return null;
+                    const playerTeam = getPlayerTeam(player);
+                    const projectedPoints = getPlayerProjectedPoints(pick.element);
+                    const playerFixtures = getPlayerFixtures(pick.element, selectedGameweek);
+                    const isEmptySlot = pick.is_transferred_out && showTransferOutModal;
+                    return {
+                      element: pick.element,
+                      element_type: player.element_type,
+                      position: pick.position,
+                      is_captain: pick.is_captain,
+                      is_vice_captain: pick.is_vice_captain,
+                      web_name: player.web_name,
+                      team_short_name: playerTeam?.short_name,
+                      team_id: player.team,
+                      team_code: playerTeam?.code || playerTeam?.id || 0,
+                      in_dreamteam: player.in_dreamteam,
+                      is_transferred_in: isPlayerTransferredIn(pick),
+                      is_selected: selectedPlayer === pick.element,
+                      is_empty_slot: isEmptySlot,
+                      points_display: pick.is_captain && projectedPoints !== null
+                        ? `${(projectedPoints * 2).toFixed(1)} (${projectedPoints.toFixed(1)})`
+                        : projectedPoints !== null ? projectedPoints.toFixed(1) : '-',
+                      fixtures: playerFixtures as PitchPlayerFixture[],
+                      status: player.status,
+                      chance_of_playing: player.chance_of_playing_next_round,
+                      news: player.news,
+                    };
+                  }).filter(Boolean) as PitchPlayer[]}
+                  benchPlayers={(() => {
+                    const benchPicks = manualLineup.slice(11, 15);
+                    const gkBench = benchPicks.find(pick => {
+                      const player = getPlayerById(pick.element);
+                      return player?.element_type === 1;
+                    });
+                    const outfieldBench = benchPicks
+                      .filter(pick => {
                         const player = getPlayerById(pick.element);
-                        return player?.element_type === posType;
+                        return player?.element_type !== 1;
+                      })
+                      .sort((a, b) => {
+                        const aPoints = getPlayerProjectedPoints(a.element) || 0;
+                        const bPoints = getPlayerProjectedPoints(b.element) || 0;
+                        return bPoints - aPoints;
                       });
-                      
-                      if (positionPlayers.length === 0) return null;
-                      
-                      return (
-                        <div key={posType} className={`flex justify-center flex-wrap ${positionPlayers.length >= 5 ? 'gap-0.5 sm:gap-1 md:gap-2' : 'gap-1 sm:gap-2 md:gap-4'}`}>
-                          {positionPlayers.map(pick => {
-                            const player = getPlayerById(pick.element);
-                            if (!player) return null;
-                            
-                            const playerTeam = getPlayerTeam(player);
-                            const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
-                            const textColor = getTextColor(jerseyColor);
-                            const projectedPoints = getPlayerProjectedPoints(pick.element);
-                            const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
-                            const playerFixtures = getPlayerFixtures(pick.element, selectedGameweek);
-                            
-                            // Check if player is transferred out
-                            if (pick.is_transferred_out && showTransferOutModal) {
-                              console.log('DEBUG - Showing empty slot for position:', pick.position, 'pick:', pick);
-                              return (
-                                <div key={`empty-${pick.position}`} className="flex flex-col items-center w-[85vw] sm:w-44 md:w-48" data-testid={`pitch-empty-${pick.position}`}>
-                                  <div className="relative w-full max-w-sm">
-                                    <div className="rounded-lg p-4 sm:p-4 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-3">
-                                      <div className="flex justify-between items-start mb-2">
-                                        <div className="flex-1"></div>
-                                        <button
-                                          onClick={() => {
-                                            setTransferredOutPlayers([]);
-                                            setShowTransferOutModal(false);
-                                          }}
-                                          className="text-red-600 hover:text-red-700 transition-colors"
-                                          data-testid={`close-empty-slot-${pick.position}`}
-                                          aria-label="Close"
-                                        >
-                                          <X className="h-5 w-5" />
-                                        </button>
-                                      </div>
-                                      <div className="text-sm sm:text-base font-bold text-red-600">EMPTY SLOT</div>
-                                      <div className="text-xs sm:text-sm text-red-500">{getPositionShortName(player.element_type)}</div>
-                                      <div className="text-3xl font-bold text-red-600">-</div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            }
-                            
-                            return (
-                              <div key={pick.element} className={`flex flex-col items-center w-[17vw] min-w-[52px] sm:w-24 md:w-32 lg:w-36 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-player-${player.id}`}>
-                                <div className="relative w-full">
-                                  {/* Action Buttons Popup */}
-                                  {selectedPlayer === pick.element && (
-                                    <>
-                                      {/* Backdrop */}
-                                      <div 
-                                        className="fixed inset-0 bg-black/50 z-[60]"
-                                        onClick={() => setSelectedPlayer(null)}
-                                        data-testid={`pitch-backdrop-${pick.element}`}
-                                      />
-                                      
-                                      {/* Centered Popup */}
-                                      <div 
-                                        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-300 dark:border-gray-600 overflow-hidden w-[min(90vw,320px)]"
-                                        onClick={(e) => e.stopPropagation()}
-                                        data-testid={`pitch-actions-${pick.element}`}
-                                      >
-                                        {/* Header with player info */}
-                                        <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-700 dark:to-blue-800 px-4 py-3">
-                                          <div className="text-white text-base font-bold text-center mb-1">{player.web_name}</div>
-                                          <div className="flex justify-center items-center gap-3 text-white/90 text-xs mb-2">
-                                            <span>{playerTeam?.short_name || 'UNK'}</span>
-                                            <span>•</span>
-                                            <span>{player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD'}</span>
-                                            <span>•</span>
-                                            <span>{player.selected_by_percent}%</span>
-                                          </div>
-                                          <div className="flex justify-center items-center gap-4 text-white/95 text-[11px] font-medium">
-                                            <span>Buy: £{(pick.purchase_price ? pick.purchase_price / 10 : player.now_cost / 10).toFixed(1)}m</span>
-                                            <span>•</span>
-                                            <span>Current: £{(player.now_cost / 10).toFixed(1)}m</span>
-                                            <span>•</span>
-                                            <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
-                                          </div>
-                                          <button
-                                            className="absolute right-2 top-3 text-white hover:text-gray-200 transition-colors"
-                                            onClick={(e) => { e.stopPropagation(); setSelectedPlayer(null); }}
-                                            data-testid={`pitch-close-${pick.element}`}
-                                            aria-label="Close"
-                                          >
-                                            <X className="h-5 w-5" />
-                                          </button>
-                                        </div>
-                                        
-                                        <Select onValueChange={(value) => { swapPlayers(actualIndex, parseInt(value)); setSelectedPlayer(null); }}>
-                                          <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`pitch-swap-${pick.element}`}>
-                                            <span className="w-full text-center text-base font-semibold">Switch Player</span>
-                                          </SelectTrigger>
-                                          <SelectContent className="z-[200]">
-                                            {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
-                                              const benchPlayer = getPlayerById(benchPick.element);
-                                              const startingPlayer = getPlayerById(pick.element);
-                                              if (startingPlayer?.element_type === 1 && benchPlayer?.element_type !== 1) return null;
-                                              if (startingPlayer?.element_type !== 1 && benchPlayer?.element_type === 1) return null;
-                                              if (startingPlayer?.element_type === 2 && benchPlayer?.element_type !== 2) {
-                                                const starting11 = manualLineup.slice(0, 11);
-                                                const defendersInStarting = starting11.filter(p => { const pl = getPlayerById(p.element); return pl?.element_type === 2; }).length;
-                                                if (defendersInStarting <= 3) return null;
-                                              }
-                                              return (<SelectItem key={benchPick.element} value={benchIndex.toString()}>{benchPlayer?.web_name}</SelectItem>);
-                                            })}
-                                          </SelectContent>
-                                        </Select>
-                                        <button 
-                                          className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
-                                          onClick={() => handleTransferOut(pick)} 
-                                          data-testid={`pitch-transfer-out-${pick.element}`}
-                                        >
-                                          Transfer Out
-                                        </button>
-                                        {!pick.is_captain && (
-                                          <button 
-                                            className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
-                                            onClick={() => handleSetCaptain(pick.element)} 
-                                            data-testid={`pitch-make-captain-${pick.element}`}
-                                          >
-                                            Make Captain
-                                          </button>
-                                        )}
-                                        {!pick.is_vice_captain && (
-                                          <button 
-                                            className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
-                                            onClick={() => handleSetViceCaptain(pick.element)} 
-                                            data-testid={`pitch-make-vice-${pick.element}`}
-                                          >
-                                            Make Vice Captain
-                                          </button>
-                                        )}
-                                        <button 
-                                          className="w-full h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
-                                          onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, (pick.purchase_price || 0) / 10); }} 
-                                          data-testid={`pitch-edit-buy-price-${pick.element}`}
-                                        >
-                                          Edit Buy Price
-                                        </button>
-                                      </div>
-                                    </>
-                                  )}
-                                  
-                                  {/* Jersey Card with Real Image */}
-                                  <div 
-                                    className={`relative flex flex-col items-center cursor-pointer transition-all ${selectedPlayer === pick.element ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg' : ''}`}
-                                    onClick={() => setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element)}
-                                    data-testid={`pitch-jersey-${pick.element}`}
-                                  >
-                                    {/* Captain/VC Badge - Outside card container */}
-                                    {/* Captain Badge - Inside frame, top-left */}
-                                    {pick.is_captain && (
-                                      <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
-                                        <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
-                                      </div>
-                                    )}
-                                    {/* Vice Captain Badge - Inside frame, top-left */}
-                                    {pick.is_vice_captain && !pick.is_captain && (
-                                      <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
-                                        <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
-                                      </div>
-                                    )}
-                                    {/* Dream Team Star - Inside frame, top-right (only show if not transferred in) */}
-                                    {player.in_dreamteam && !isPlayerTransferredIn(pick) && (
-                                      <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
-                                        <span className="text-[8px] sm:text-[10px] text-white">★</span>
-                                      </div>
-                                    )}
-                                    {/* Transfer In Badge - Inside frame, top-right */}
-                                    {isPlayerTransferredIn(pick) && (
-                                      <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center border border-white shadow-md">
-                                        <span className="text-[8px] sm:text-[10px] font-bold text-white">+</span>
-                                      </div>
-                                    )}
-                                    {/* Unified Card Container */}
-                                    <div className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40">
-                                      {/* Jersey Image */}
-                                      <div className="p-1">
-                                        <img 
-                                          src={getJerseyImageUrl(getTeamCode(playerTeam), player.element_type === 1)}
-                                          alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                          className="w-full h-16 sm:h-20 md:h-24 object-contain drop-shadow-lg"
-                                          onError={(e) => {
-                                            (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                          }}
-                                        />
-                                      </div>
-                                      {/* Text Labels - 2 lines only */}
-                                      <div className="flex flex-col">
-                                        <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                          <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">{player.web_name}</div>
-                                        </div>
-                                        <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
-                                          <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                            {pick.is_captain && projectedPoints !== null 
-                                              ? `${(projectedPoints * 2).toFixed(1)} (${projectedPoints.toFixed(1)})` 
-                                              : projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
-                                          </div>
-                                          <div className={`${playerFixtures.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>
-                                            {playerFixtures.length > 0 ? playerFixtures.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  {/* Availability Badge for Pitch View */}
-                                  <div className="flex justify-center mt-1">
-                                    <TooltipProvider>
-                                      <PlayerAvailabilityBadge player={player} />
-                                    </TooltipProvider>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-
-                    {/* Bench */}
-                    <div className="mt-4 sm:mt-8 pt-2 sm:pt-4 border-t border-white/30">
-                      <h4 className="text-xs font-semibold text-white mb-2 sm:mb-3 text-center">Bench</h4>
-                      <div className="flex justify-center gap-0.5 sm:gap-1 md:gap-2">
-                    {(() => {
-                      const benchPlayers = manualLineup.slice(11, 15);
-                      const gkBench = benchPlayers.find(pick => {
-                        const player = getPlayerById(pick.element);
-                        return player?.element_type === 1;
-                      });
-                      const outfieldBench = benchPlayers
-                        .filter(pick => {
-                          const player = getPlayerById(pick.element);
-                          return player?.element_type !== 1;
-                        })
-                        .sort((a, b) => {
-                          const aPoints = getPlayerProjectedPoints(a.element) || 0;
-                          const bPoints = getPlayerProjectedPoints(b.element) || 0;
-                          return bPoints - aPoints; // Descending order by points
-                        });
-                      const reorderedBench = gkBench ? [gkBench, ...outfieldBench] : outfieldBench;
-                      return reorderedBench.map((pick) => {
-                        const benchIndex = manualLineup.indexOf(pick) - 11;
+                    const reorderedBench = gkBench ? [gkBench, ...outfieldBench] : outfieldBench;
+                    return reorderedBench.map(pick => {
                       const player = getPlayerById(pick.element);
                       if (!player) return null;
-                      
                       const playerTeam = getPlayerTeam(player);
-                      const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
-                      const textColor = getTextColor(jerseyColor);
                       const projectedPoints = getPlayerProjectedPoints(pick.element);
                       const benchFixtures = getPlayerFixtures(pick.element, selectedGameweek);
-                      const actualIndex = 11 + benchIndex;
-                      
-                      // Check if bench player is transferred out
-                      if (pick.is_transferred_out && showTransferOutModal) {
-                        return (
-                          <div key={`empty-bench-${pick.position}`} className="flex flex-col items-center w-[85vw] sm:w-44 md:w-48" data-testid={`pitch-bench-empty-${pick.position}`}>
-                            <div className="relative w-full max-w-sm">
-                              <div className="rounded-lg p-4 sm:p-4 text-center shadow-lg border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20 flex flex-col gap-3">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div className="flex-1"></div>
-                                  <button
-                                    onClick={() => {
-                                      setTransferredOutPlayers([]);
-                                      setShowTransferOutModal(false);
-                                    }}
-                                    className="text-red-600 hover:text-red-700 transition-colors"
-                                    data-testid={`close-pitch-bench-empty-${pick.position}`}
-                                    aria-label="Close"
-                                  >
-                                    <X className="h-5 w-5" />
-                                  </button>
-                                </div>
-                                <div className="text-sm sm:text-base font-bold text-red-600">EMPTY SLOT</div>
-                                <div className="text-xs sm:text-sm text-red-500">{getPositionShortName(player.element_type)}</div>
-                                <div className="text-3xl font-bold text-red-600">-</div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      }
-                      
-                      return (
-                        <div key={pick.element} className={`flex flex-col items-center w-[18vw] sm:w-32 md:w-36 lg:w-44 ${selectedPlayer === pick.element ? 'relative z-[100]' : ''}`} data-testid={`pitch-bench-${player.id}`}>
-                          <div className="relative w-full opacity-90">
-                            {/* Action Buttons Popup */}
-                            {selectedPlayer === pick.element && (
-                              <>
-                                {/* Backdrop */}
-                                <div 
-                                  className="fixed inset-0 bg-black/50 z-[60]"
-                                  onClick={() => setSelectedPlayer(null)}
-                                  data-testid={`pitch-bench-backdrop-${pick.element}`}
-                                />
-                                
-                                {/* Centered Popup */}
-                                <div 
-                                  className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[70] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-300 dark:border-gray-600 overflow-hidden w-[320px]"
-                                  onClick={(e) => e.stopPropagation()}
-                                  data-testid={`pitch-bench-actions-${pick.element}`}
-                                >
-                                  {/* Header with player info */}
-                                  <div className="relative bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-700 dark:to-blue-800 px-4 py-3">
-                                    <div className="text-white text-base font-bold text-center mb-1">{player.web_name}</div>
-                                    <div className="flex justify-center items-center gap-3 text-white/90 text-xs mb-2">
-                                      <span>{playerTeam?.short_name || 'UNK'}</span>
-                                      <span>•</span>
-                                      <span>{player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD'}</span>
-                                      <span>•</span>
-                                      <span>{player.selected_by_percent}%</span>
-                                    </div>
-                                    <div className="flex justify-center items-center gap-4 text-white/95 text-[11px] font-medium">
-                                      <span>Buy: £{(pick.purchase_price ? pick.purchase_price / 10 : player.now_cost / 10).toFixed(1)}m</span>
-                                      <span>•</span>
-                                      <span>Current: £{(player.now_cost / 10).toFixed(1)}m</span>
-                                      <span>•</span>
-                                      <span>Sell: £{getSellingPrice(pick).toFixed(1)}m</span>
-                                    </div>
-                                    <button
-                                      className="absolute right-2 top-3 text-white hover:text-gray-200 transition-colors"
-                                      onClick={(e) => { e.stopPropagation(); setSelectedPlayer(null); }}
-                                      data-testid={`pitch-bench-close-${pick.element}`}
-                                      aria-label="Close"
-                                    >
-                                      <X className="h-5 w-5" />
-                                    </button>
-                                  </div>
-                                  
-                                  <Select onValueChange={(value) => { swapPlayers(parseInt(value), benchIndex); setSelectedPlayer(null); }}>
-                                    <SelectTrigger className="w-full h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:font-semibold" data-testid={`pitch-bench-swap-${pick.element}`}>
-                                      <span className="w-full text-center text-base font-semibold">Switch Player</span>
-                                    </SelectTrigger>
-                                    <SelectContent className="z-[200]">
-                                      {manualLineup.slice(0, 11).map((startPick, startIndex) => {
-                                        const startPlayer = getPlayerById(startPick.element);
-                                        const benchPlayer = getPlayerById(pick.element);
-                                        if (benchPlayer?.element_type === 1 && startPlayer?.element_type !== 1) return null;
-                                        if (benchPlayer?.element_type !== 1 && startPlayer?.element_type === 1) return null;
-                                        return (<SelectItem key={startPick.element} value={startIndex.toString()}>{startPlayer?.web_name}</SelectItem>);
-                                      })}
-                                    </SelectContent>
-                                  </Select>
-                                  <button 
-                                    className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
-                                    onClick={() => handleTransferOut(pick)} 
-                                    data-testid={`pitch-bench-transfer-out-${pick.element}`}
-                                  >
-                                    Transfer Out
-                                  </button>
-                                  {benchIndex > 0 && (
-                                    <>
-                                      <button 
-                                        className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-                                        onClick={() => moveBenchPlayer(benchIndex, 'up')} 
-                                        disabled={benchIndex === 1} 
-                                        data-testid={`pitch-bench-move-up-${pick.element}`}
-                                      >
-                                        Move Up
-                                      </button>
-                                      <button 
-                                        className="w-full h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
-                                        onClick={() => moveBenchPlayer(benchIndex, 'down')} 
-                                        disabled={benchIndex === 3} 
-                                        data-testid={`pitch-bench-move-down-${pick.element}`}
-                                      >
-                                        Move Down
-                                      </button>
-                                    </>
-                                  )}
-                                  <button 
-                                    className="w-full h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base text-gray-900 dark:text-white transition-colors" 
-                                    onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, (pick.purchase_price || 0) / 10); }} 
-                                    data-testid={`pitch-bench-edit-buy-price-${pick.element}`}
-                                  >
-                                    Edit Buy Price
-                                  </button>
-                                </div>
-                              </>
-                            )}
-                            
-                            {/* Bench Jersey Card with Real Image */}
-                            <div 
-                              className={`relative flex flex-col items-center cursor-pointer transition-all ${selectedPlayer === pick.element ? 'ring-4 ring-blue-500 ring-offset-2 rounded-lg' : ''}`}
-                              onClick={() => setSelectedPlayer(selectedPlayer === pick.element ? null : pick.element)}
-                              data-testid={`pitch-bench-jersey-${pick.element}`}
-                            >
-                              {/* Captain/VC Badge - Outside card container */}
-                              {/* Captain Badge - Inside frame, top-left */}
-                              {pick.is_captain && (
-                                <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
-                                  <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
-                                </div>
-                              )}
-                              {/* Vice Captain Badge - Inside frame, top-left */}
-                              {pick.is_vice_captain && !pick.is_captain && (
-                                <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
-                                  <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
-                                </div>
-                              )}
-                              {/* Dream Team Star - Inside frame, top-right */}
-                              {player.in_dreamteam && (
-                                <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
-                                  <span className="text-[8px] sm:text-[10px] text-white">★</span>
-                                </div>
-                              )}
-                              {/* Unified Card Container */}
-                              <div className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40">
-                                <div className="p-1">
-                                  <img 
-                                    src={getJerseyImageUrl(getTeamCode(playerTeam), player.element_type === 1)}
-                                    alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                    className="w-full h-16 sm:h-20 md:h-24 object-contain drop-shadow-lg"
-                                    onError={(e) => {
-                                      (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                    }}
-                                  />
-                                </div>
-                                <div className="flex flex-col">
-                                  <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                    <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">{player.web_name}</div>
-                                  </div>
-                                  <div className="w-full px-2 py-0.5 bg-gray-500 text-center">
-                                    <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</div>
-                                    <div className={`${benchFixtures.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>
-                                      {benchFixtures.length > 0 ? benchFixtures.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            {/* Availability Badge for Bench Players */}
-                            <div className="flex justify-center mt-1">
-                              <TooltipProvider>
-                                <PlayerAvailabilityBadge player={player} />
-                              </TooltipProvider>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    });
-                    })()}
+                      const isEmptySlot = pick.is_transferred_out && showTransferOutModal;
+                      return {
+                        element: pick.element,
+                        element_type: player.element_type,
+                        position: pick.position,
+                        is_captain: pick.is_captain,
+                        is_vice_captain: pick.is_vice_captain,
+                        web_name: player.web_name,
+                        team_short_name: playerTeam?.short_name,
+                        team_id: player.team,
+                        team_code: playerTeam?.code || playerTeam?.id || 0,
+                        in_dreamteam: player.in_dreamteam,
+                        is_transferred_in: isPlayerTransferredIn(pick),
+                        is_selected: selectedPlayer === pick.element,
+                        is_empty_slot: isEmptySlot,
+                        points_display: projectedPoints !== null ? projectedPoints.toFixed(1) : '-',
+                        fixtures: benchFixtures as PitchPlayerFixture[],
+                        status: player.status,
+                        chance_of_playing: player.chance_of_playing_next_round,
+                        news: player.news,
+                      };
+                    }).filter(Boolean) as PitchPlayer[];
+                  })()}
+                  onPlayerClick={(pitchPlayer) => {
+                    setSelectedPlayer(selectedPlayer === pitchPlayer.element ? null : pitchPlayer.element);
+                  }}
+                  renderEmptySlot={(pitchPlayer) => (
+                    <div key={`empty-${pitchPlayer.position}`} className="flex flex-col items-center w-[19%]" data-testid={`pitch-empty-${pitchPlayer.position}`}>
+                      <div className="w-18 sm:w-22 md:w-28 rounded-lg p-2 text-center border-2 border-dashed border-red-400 bg-red-50 dark:bg-red-950/20">
+                        <button
+                          onClick={() => {
+                            setTransferredOutPlayers([]);
+                            setShowTransferOutModal(false);
+                          }}
+                          className="text-red-600 hover:text-red-700 transition-colors ml-auto block"
+                          aria-label="Close"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                        <div className="text-[9px] sm:text-xs font-bold text-red-600">EMPTY</div>
+                        <div className="text-[8px] sm:text-[10px] text-red-500">{getPositionShortName(pitchPlayer.element_type)}</div>
+                        <div className="text-lg font-bold text-red-600">-</div>
                       </div>
                     </div>
-                  </div>
-                </div>
+                  )}
+                />
+
+                {selectedPlayer && (() => {
+                  const selectedPick = manualLineup.find(p => p.element === selectedPlayer);
+                  if (!selectedPick) return null;
+                  const player = getPlayerById(selectedPick.element);
+                  if (!player) return null;
+                  const actualIndex = manualLineup.findIndex(p => p.position === selectedPick.position);
+                  const isBench = selectedPick.position > 11;
+                  const benchIndex = isBench ? manualLineup.indexOf(selectedPick) - 11 : 0;
+                  return <PlayerActionPopup pick={selectedPick} player={player} actualIndex={isBench ? benchIndex : actualIndex} isBench={isBench} />;
+                })()}
 
                 {/* Total Projected Points */}
                 <div className="border-t pt-4">
