@@ -1927,6 +1927,21 @@ export default function TransferPlanner() {
     };
   };
 
+  const getPlayerFixtures = (playerId: number, gameweek: number): { opponent: string; isHome: boolean }[] => {
+    const player = getPlayerById(playerId);
+    if (!player || !fixturesData || !bootstrapData) return [];
+    const playerTeamId = player.team;
+    const fixtures = fixturesData.filter(f =>
+      f.event === gameweek && (f.team_h === playerTeamId || f.team_a === playerTeamId)
+    );
+    return fixtures.map(fixture => {
+      const isHome = fixture.team_h === playerTeamId;
+      const opponentId = isHome ? fixture.team_a : fixture.team_h;
+      const opponentTeam = bootstrapData.teams.find(t => t.id === opponentId);
+      return { opponent: opponentTeam?.short_name || 'Unknown', isHome };
+    });
+  };
+
   // Check if a player is transferred in (appears in completed transfers as inPlayerId)
   const isPlayerTransferredIn = (pick: TeamPick): boolean => {
     if (!selectedGameweek) return false;
@@ -6349,9 +6364,9 @@ export default function TransferPlanner() {
                                       <div className="text-[10px] md:text-xs text-gray-700 truncate mt-0.5">
                                         {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
                                         {(() => {
-                                          const fixture = getPlayerFixture(pick.element, selectedGameweek);
-                                          if (fixture) {
-                                            return <> • <span className="text-purple-600 font-medium">vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</span></>;
+                                          const fxs = getPlayerFixtures(pick.element, selectedGameweek);
+                                          if (fxs.length > 0) {
+                                            return <> • <span className="text-purple-600 font-medium">vs {fxs.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ')}</span></>;
                                           }
                                           return null;
                                         })()}
@@ -6465,9 +6480,9 @@ export default function TransferPlanner() {
                               <div className="text-[10px] md:text-xs text-gray-700 truncate mt-0.5">
                                 {getTeamName(player.team)} • {getPositionShortName(player.element_type)}
                                 {(() => {
-                                  const fixture = getPlayerFixture(pick.element, selectedGameweek);
-                                  if (fixture) {
-                                    return <> • <span className="text-purple-600 font-medium">vs {fixture.opponent} {fixture.isHome ? '(H)' : '(A)'}</span></>;
+                                  const fxs = getPlayerFixtures(pick.element, selectedGameweek);
+                                  if (fxs.length > 0) {
+                                    return <> • <span className="text-purple-600 font-medium">vs {fxs.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ')}</span></>;
                                   }
                                   return null;
                                 })()}
@@ -6817,7 +6832,7 @@ export default function TransferPlanner() {
                             const textColor = getTextColor(jerseyColor);
                             const projectedPoints = getPlayerProjectedPoints(pick.element);
                             const actualIndex = manualLineup.findIndex(p => p.position === pick.position);
-                            const fixture = getPlayerFixture(pick.element, selectedGameweek);
+                            const playerFixtures = getPlayerFixtures(pick.element, selectedGameweek);
                             
                             // Check if player is transferred out
                             if (pick.is_transferred_out && showTransferOutModal) {
@@ -7005,8 +7020,8 @@ export default function TransferPlanner() {
                                               ? `${(projectedPoints * 2).toFixed(1)} (${projectedPoints.toFixed(1)})` 
                                               : projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
                                           </div>
-                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-white/90 truncate">
-                                            {fixture ? `${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})` : 'BGW'}
+                                          <div className={`${playerFixtures.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>
+                                            {playerFixtures.length > 0 ? playerFixtures.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}
                                           </div>
                                         </div>
                                       </div>
@@ -7056,7 +7071,7 @@ export default function TransferPlanner() {
                       const jerseyColor = getTeamJerseyColor(playerTeam?.id || 0);
                       const textColor = getTextColor(jerseyColor);
                       const projectedPoints = getPlayerProjectedPoints(pick.element);
-                      const fixture = getPlayerFixture(pick.element, selectedGameweek);
+                      const benchFixtures = getPlayerFixtures(pick.element, selectedGameweek);
                       const actualIndex = 11 + benchIndex;
                       
                       // Check if bench player is transferred out
@@ -7229,8 +7244,8 @@ export default function TransferPlanner() {
                                   </div>
                                   <div className="w-full px-2 py-0.5 bg-gray-500 text-center">
                                     <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</div>
-                                    <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-white/90 truncate">
-                                      {fixture ? `${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})` : 'BGW'}
+                                    <div className={`${benchFixtures.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>
+                                      {benchFixtures.length > 0 ? benchFixtures.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}
                                     </div>
                                   </div>
                                 </div>

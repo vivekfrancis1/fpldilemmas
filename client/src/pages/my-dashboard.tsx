@@ -610,6 +610,19 @@ export default function MyDashboard() {
     return { opponent: opponentTeam?.short_name || 'Unknown', isHome };
   };
 
+  const getPlayerFixtureInfos = (playerId: number, gameweek: number): { opponent: string; isHome: boolean }[] => {
+    const player = getPlayerById(playerId);
+    if (!player || !fixturesData || !Array.isArray(fixturesData) || !bootstrapData) return [];
+    const playerTeamId = player.team;
+    const fixtures = (fixturesData as any[]).filter((f: any) => f.event === gameweek && (f.team_h === playerTeamId || f.team_a === playerTeamId));
+    return fixtures.map((fixture: any) => {
+      const isHome = fixture.team_h === playerTeamId;
+      const opponentId = isHome ? fixture.team_a : fixture.team_h;
+      const opponentTeam = bootstrapData.teams.find((t: any) => t.id === opponentId);
+      return { opponent: opponentTeam?.short_name || 'Unknown', isHome };
+    });
+  };
+
   const getNextFixtures = (teamId: number, count: number = 3) => {
     if (!fixturesData || !Array.isArray(fixturesData)) {
       return [];
@@ -1835,9 +1848,7 @@ export default function MyDashboard() {
                                             <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                               {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                             </div>
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-white/90 truncate">
-                                              {(() => { const fx = getPlayerFixtureInfo(pick.element, currentGameweek); return fx ? `${fx.opponent} (${fx.isHome ? 'H' : 'A'})` : 'BGW'; })()}
-                                            </div>
+                                            {(() => { const fxs = getPlayerFixtureInfos(pick.element, currentGameweek); return <div className={`${fxs.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>{fxs.length > 0 ? fxs.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}</div>; })()}
                                           </div>
                                         </div>
                                       </div>
@@ -1905,9 +1916,7 @@ export default function MyDashboard() {
                                             <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                               {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                             </div>
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-white/90 truncate">
-                                              {(() => { const fx = getPlayerFixtureInfo(pick.element, currentGameweek); return fx ? `${fx.opponent} (${fx.isHome ? 'H' : 'A'})` : 'BGW'; })()}
-                                            </div>
+                                            {(() => { const fxs = getPlayerFixtureInfos(pick.element, currentGameweek); return <div className={`${fxs.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>{fxs.length > 0 ? fxs.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}</div>; })()}
                                           </div>
                                         </div>
                                       </div>
@@ -1974,9 +1983,7 @@ export default function MyDashboard() {
                                             <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                               {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                             </div>
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-white/90 truncate">
-                                              {(() => { const fx = getPlayerFixtureInfo(pick.element, currentGameweek); return fx ? `${fx.opponent} (${fx.isHome ? 'H' : 'A'})` : 'BGW'; })()}
-                                            </div>
+                                            {(() => { const fxs = getPlayerFixtureInfos(pick.element, currentGameweek); return <div className={`${fxs.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>{fxs.length > 0 ? fxs.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}</div>; })()}
                                           </div>
                                         </div>
                                       </div>
@@ -2043,9 +2050,7 @@ export default function MyDashboard() {
                                             <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                               {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
                                             </div>
-                                            <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-white/90 truncate">
-                                              {(() => { const fx = getPlayerFixtureInfo(pick.element, currentGameweek); return fx ? `${fx.opponent} (${fx.isHome ? 'H' : 'A'})` : 'BGW'; })()}
-                                            </div>
+                                            {(() => { const fxs = getPlayerFixtureInfos(pick.element, currentGameweek); return <div className={`${fxs.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>{fxs.length > 0 ? fxs.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}</div>; })()}
                                           </div>
                                         </div>
                                       </div>
@@ -2101,9 +2106,7 @@ export default function MyDashboard() {
                                         <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                                           {getPlayerDisplayPoints(player, playerTeam?.id || 0, false)}
                                         </div>
-                                        <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-white/90 truncate">
-                                          {(() => { const fx = getPlayerFixtureInfo(pick.element, currentGameweek); return fx ? `${fx.opponent} (${fx.isHome ? 'H' : 'A'})` : 'BGW'; })()}
-                                        </div>
+                                        {(() => { const fxs = getPlayerFixtureInfos(pick.element, currentGameweek); return <div className={`${fxs.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>{fxs.length > 0 ? fxs.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}</div>; })()}
                                       </div>
                                     </div>
                                   </div>
