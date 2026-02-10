@@ -332,11 +332,24 @@ export default function ProjectionAccuracy() {
       ? playersWithActuals.reduce((sum, p) => sum + parseFloat(p.absolute_error || '0'), 0) / playersWithActuals.length
       : 0;
 
+    const totalProjGoals = compareSet.reduce((sum, p) => sum + projPtsToGoals(parseFloat(p.projected_goals || '0'), p.position), 0);
+    const totalActGoals = playersWithActuals.reduce((sum, p) => sum + (p.actual_goals || 0), 0);
+    const totalProjAssists = compareSet.reduce((sum, p) => sum + projPtsToAssists(parseFloat(p.projected_assists || '0')), 0);
+    const totalActAssists = playersWithActuals.reduce((sum, p) => sum + (p.actual_assists || 0), 0);
+    const totalProjBonus = compareSet.reduce((sum, p) => sum + parseFloat(p.projected_bonus || '0'), 0);
+    const totalActBonus = playersWithActuals.reduce((sum, p) => sum + (p.actual_bonus || 0), 0);
+    const totalProjSaves = compareSet.reduce((sum, p) => sum + projPtsToSaves(parseFloat(p.projected_saves || '0')), 0);
+    const totalActSaves = playersWithActuals.reduce((sum, p) => sum + (p.actual_saves || 0), 0);
+
     return {
       count: allPlayers.length,
       totalProjected: totalProjected.toFixed(1),
       totalActual: totalActual,
       avgError: avgError.toFixed(2),
+      goals: { proj: totalProjGoals.toFixed(1), act: totalActGoals },
+      assists: { proj: totalProjAssists.toFixed(1), act: totalActAssists },
+      bonus: { proj: totalProjBonus.toFixed(1), act: totalActBonus },
+      saves: { proj: totalProjSaves.toFixed(1), act: totalActSaves },
     };
   }, [accuracyData?.players]);
 
