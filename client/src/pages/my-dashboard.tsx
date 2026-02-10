@@ -917,6 +917,20 @@ export default function MyDashboard() {
     };
   };
 
+  const getNextGameweekFixtures = (teamId: number): { opponent: string; isHome: boolean }[] => {
+    if (!fixturesData || !Array.isArray(fixturesData)) return [];
+    const nextGW = getNextGameweekDashboard();
+    const fixtures = (fixturesData as any[]).filter((f: any) =>
+      (f.team_h === teamId || f.team_a === teamId) && f.event === nextGW
+    );
+    return fixtures.map((fixture: any) => {
+      const isHome = fixture.team_h === teamId;
+      const opponentId = isHome ? fixture.team_a : fixture.team_h;
+      const opponent = getTeamById(opponentId);
+      return { opponent: opponent?.short_name || 'TBD', isHome };
+    });
+  };
+
   const getPlayerDisplayPoints = (player: any, teamId: number, isMultiplied: boolean = false) => {
     const points = player.event_points || 0;
     const displayPoints = points * (isMultiplied ? 2 : 1);
@@ -2270,7 +2284,7 @@ export default function MyDashboard() {
                                       if (!player) return null;
                                       const playerTeam = getPlayerTeam(player);
                                       const isGoalkeeper = player.element_type === 1;
-                                      const fixtureInfo = getNextGameweekFixture(playerTeam?.id || 0);
+                                      const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
 
                                       return (
                                         <div key={pick.element} className="flex flex-col items-center w-[19.5%]">
@@ -2285,7 +2299,6 @@ export default function MyDashboard() {
                                                 <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
                                               </div>
                                             )}
-                                            {/* Unified Card Container */}
                                             <div className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40">
                                               <div className="p-1">
                                                 <img 
@@ -2303,10 +2316,14 @@ export default function MyDashboard() {
                                                     {player.web_name}
                                                   </div>
                                                 </div>
-                                                <div className="w-full px-2 py-1 bg-purple-600 text-center">
-                                                  <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                                    {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
-                                                  </div>
+                                                <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
+                                                  {fixtureInfos.length > 0 ? fixtureInfos.map((fx, i) => (
+                                                    <div key={i} className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
+                                                      {fx.opponent} ({fx.isHome ? 'H' : 'A'})
+                                                    </div>
+                                                  )) : (
+                                                    <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">BGW</div>
+                                                  )}
                                                 </div>
                                               </div>
                                             </div>
@@ -2327,12 +2344,11 @@ export default function MyDashboard() {
                                     if (!player) return null;
                                     const playerTeam = getPlayerTeam(player);
                                     const isGoalkeeper = player.element_type === 1;
-                                    const fixtureInfo = getNextGameweekFixture(playerTeam?.id || 0);
+                                    const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
 
                                     return (
                                       <div key={pick.element} className="flex flex-col items-center w-[19.5%] opacity-90">
                                         <div className="relative flex flex-col items-center">
-                                          {/* Unified Card Container */}
                                           <div className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40">
                                             <div className="p-1">
                                               <img 
@@ -2350,10 +2366,14 @@ export default function MyDashboard() {
                                                   {player.web_name}
                                                 </div>
                                               </div>
-                                              <div className="w-full px-2 py-1 bg-gray-500 text-center">
-                                                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                                  {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
-                                                </div>
+                                              <div className="w-full px-2 py-0.5 bg-gray-500 text-center">
+                                                {fixtureInfos.length > 0 ? fixtureInfos.map((fx, i) => (
+                                                  <div key={i} className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
+                                                    {fx.opponent} ({fx.isHome ? 'H' : 'A'})
+                                                  </div>
+                                                )) : (
+                                                  <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">BGW</div>
+                                                )}
                                               </div>
                                             </div>
                                           </div>
@@ -2797,24 +2817,21 @@ export default function MyDashboard() {
                                     if (!player) return null;
                                     const playerTeam = getPlayerTeam(player);
                                     const isGoalkeeper = player.element_type === 1;
-                                    const fixtureInfo = getNextGameweekFixture(playerTeam?.id || 0);
+                                    const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
 
                                     return (
                                       <div key={pick.element} className="flex flex-col items-center w-[19.5%]">
                                         <div className="relative flex flex-col items-center">
-                                          {/* Captain Badge - Inside frame, top-left */}
                                           {pick.is_captain && (
                                             <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
                                               <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
                                             </div>
                                           )}
-                                          {/* Vice Captain Badge - Inside frame, top-left */}
                                           {pick.is_vice_captain && (
                                             <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
                                               <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
                                             </div>
                                           )}
-                                          {/* Unified Card Container */}
                                           <div className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40">
                                             <div className="p-1">
                                               <img 
@@ -2827,23 +2844,24 @@ export default function MyDashboard() {
                                               />
                                             </div>
                                             <div className="flex flex-col">
-                                              {/* Team Name */}
-                                              <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
+                                              <div className="w-full px-1 py-0.5 bg-white/95 text-center">
+                                                <div className="text-[8px] sm:text-[10px] md:text-xs text-gray-500 truncate">
                                                   {playerTeam?.short_name || 'UNK'}
                                                 </div>
                                               </div>
-                                              {/* Player Name */}
                                               <div className="w-full px-1 py-1 bg-white/95 text-center">
                                                 <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                                   {player.web_name}
                                                 </div>
                                               </div>
-                                              {/* Opponent (H/A) */}
-                                              <div className="w-full px-2 py-1 bg-purple-600 text-center">
-                                                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                                  {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
-                                                </div>
+                                              <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
+                                                {fixtureInfos.length > 0 ? fixtureInfos.map((fx, i) => (
+                                                  <div key={i} className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
+                                                    {fx.opponent} ({fx.isHome ? 'H' : 'A'})
+                                                  </div>
+                                                )) : (
+                                                  <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">BGW</div>
+                                                )}
                                               </div>
                                             </div>
                                           </div>
@@ -2870,12 +2888,11 @@ export default function MyDashboard() {
                                   if (!player) return null;
                                   const playerTeam = getPlayerTeam(player);
                                   const isGoalkeeper = player.element_type === 1;
-                                  const fixtureInfo = getNextGameweekFixture(playerTeam?.id || 0);
+                                  const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
 
                                   return (
                                     <div key={pick.element} className="flex flex-col items-center w-[19.5%] opacity-90">
                                       <div className="relative flex flex-col items-center">
-                                        {/* Unified Card Container */}
                                         <div className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40">
                                           <div className="p-1">
                                             <img 
@@ -2888,23 +2905,24 @@ export default function MyDashboard() {
                                             />
                                           </div>
                                           <div className="flex flex-col">
-                                            {/* Team Name */}
-                                            <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                              <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
+                                            <div className="w-full px-1 py-0.5 bg-white/95 text-center">
+                                              <div className="text-[8px] sm:text-[10px] md:text-xs text-gray-500 truncate">
                                                 {playerTeam?.short_name || 'UNK'}
                                               </div>
                                             </div>
-                                            {/* Player Name */}
                                             <div className="w-full px-1 py-1 bg-white/95 text-center">
                                               <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                                                 {player.web_name}
                                               </div>
                                             </div>
-                                            {/* Opponent (H/A) */}
-                                            <div className="w-full px-2 py-1 bg-gray-500 text-center">
-                                              <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                                {fixtureInfo ? `${fixtureInfo.opponent} (${fixtureInfo.isHome ? 'H' : 'A'})` : 'BGW'}
-                                              </div>
+                                            <div className="w-full px-2 py-0.5 bg-gray-500 text-center">
+                                              {fixtureInfos.length > 0 ? fixtureInfos.map((fx, i) => (
+                                                <div key={i} className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
+                                                  {fx.opponent} ({fx.isHome ? 'H' : 'A'})
+                                                </div>
+                                              )) : (
+                                                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">BGW</div>
+                                              )}
                                             </div>
                                           </div>
                                         </div>
@@ -2924,19 +2942,10 @@ export default function MyDashboard() {
                         startingPlayers={nextTeamData.picks.filter(pick => pick.position <= 11).sort((a, b) => a.position - b.position).map(pick => {
                           const player = getPlayerById(pick.element);
                           const playerTeam = getPlayerTeam(player);
-                          const nextGW = getNextGameweekDashboard();
-                          let opponentInfo = 'BGW';
-                          if (fixturesData && Array.isArray(fixturesData)) {
-                            const fixture = fixturesData.find((f: any) => 
-                              (f.team_h === (playerTeam?.id || 0) || f.team_a === (playerTeam?.id || 0)) && f.event === nextGW
-                            );
-                            if (fixture) {
-                              const isHome = fixture.team_h === (playerTeam?.id || 0);
-                              const opponentId = isHome ? fixture.team_a : fixture.team_h;
-                              const opponent = getTeamById(opponentId);
-                              opponentInfo = `vs ${opponent?.short_name || 'TBD'} (${isHome ? 'H' : 'A'})`;
-                            }
-                          }
+                          const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
+                          const opponentInfo = fixtureInfos.length > 0
+                            ? fixtureInfos.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ')
+                            : 'BGW';
                           return {
                             element: pick.element,
                             element_type: player?.element_type || 1,
@@ -2952,19 +2961,10 @@ export default function MyDashboard() {
                         benchPlayers={nextTeamData.picks.filter(pick => pick.position > 11).sort((a, b) => a.position - b.position).map(pick => {
                           const player = getPlayerById(pick.element);
                           const playerTeam = getPlayerTeam(player);
-                          const nextGW = getNextGameweekDashboard();
-                          let opponentInfo = 'BGW';
-                          if (fixturesData && Array.isArray(fixturesData)) {
-                            const fixture = fixturesData.find((f: any) => 
-                              (f.team_h === (playerTeam?.id || 0) || f.team_a === (playerTeam?.id || 0)) && f.event === nextGW
-                            );
-                            if (fixture) {
-                              const isHome = fixture.team_h === (playerTeam?.id || 0);
-                              const opponentId = isHome ? fixture.team_a : fixture.team_h;
-                              const opponent = getTeamById(opponentId);
-                              opponentInfo = `vs ${opponent?.short_name || 'TBD'} (${isHome ? 'H' : 'A'})`;
-                            }
-                          }
+                          const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
+                          const opponentInfo = fixtureInfos.length > 0
+                            ? fixtureInfos.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ')
+                            : 'BGW';
                           return {
                             element: pick.element,
                             element_type: player?.element_type || 1,
