@@ -435,15 +435,12 @@ export default function ProjectionAccuracy() {
                       <th className="text-center p-3 font-semibold cursor-pointer hover:bg-gray-100" onClick={() => handleSort('difference')}>
                         Diff <SortIcon field="difference" />
                       </th>
-                      <th className="text-center p-3 font-semibold cursor-pointer hover:bg-gray-100 hidden sm:table-cell" onClick={() => handleSort('error')}>
-                        Error <SortIcon field="error" />
-                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredPlayers.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="text-center p-8 text-gray-500">
+                        <td colSpan={6} className="text-center p-8 text-gray-500">
                           No player projections found for GW{selectedGameweek}
                         </td>
                       </tr>
@@ -479,13 +476,6 @@ export default function ProjectionAccuracy() {
                                 {getDifferenceIcon(player.points_difference)}
                                 {player.points_difference !== null ? parseFloat(player.points_difference).toFixed(2) : '-'}
                               </div>
-                            </td>
-                            <td className="text-center p-3 hidden sm:table-cell">
-                              {player.absolute_error !== null ? (
-                                <span className="text-gray-600">{parseFloat(player.absolute_error).toFixed(2)}</span>
-                              ) : (
-                                <span className="text-gray-400">-</span>
-                              )}
                             </td>
                           </tr>
                         );
