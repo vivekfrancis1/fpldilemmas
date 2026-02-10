@@ -1180,8 +1180,11 @@ export default function ManagerTeam() {
                       const currentSeasonData = managerHistory?.current && managerHistory.current.length > 0 
                         ? managerHistory.current[managerHistory.current.length - 1]
                         : null;
+                      const now = new Date();
+                      const year = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+                      const seasonName = `${year}/${String(year + 1).slice(-2)}`;
                       const currentSeason = currentSeasonData ? {
-                        season_name: '2024/25',
+                        season_name: seasonName,
                         total_points: currentSeasonData.total_points,
                         rank: currentSeasonData.overall_rank,
                         isCurrent: true
