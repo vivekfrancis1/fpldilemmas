@@ -100,7 +100,16 @@ const TEAM_SHORT_CODES: Record<string, string> = {
 };
 
 const getTeamShortCode = (teamName: string): string => {
-  return TEAM_SHORT_CODES[teamName] || teamName?.substring(0, 3).toUpperCase() || 'UNK';
+  return TEAM_SHORT_CODES[teamName] || TEAM_SHORT_CODES[normalizeTeamName(teamName)] || teamName?.substring(0, 3).toUpperCase() || 'UNK';
+};
+
+const SHORT_CODE_TO_FULL: Record<string, string> = Object.fromEntries(
+  Object.entries(TEAM_SHORT_CODES).map(([full, short]) => [short, full])
+);
+
+const normalizeTeamName = (teamName: string): string => {
+  if (TEAM_SHORT_CODES[teamName]) return teamName;
+  return SHORT_CODE_TO_FULL[teamName] || teamName;
 };
 
 export default function ProjectionAccuracy() {
@@ -138,7 +147,7 @@ export default function ProjectionAccuracy() {
 
   const uniqueTeams = useMemo(() => {
     if (!accuracyData?.players) return [];
-    const teams = [...new Set(accuracyData.players.map(p => p.team_name))];
+    const teams = [...new Set(accuracyData.players.map(p => normalizeTeamName(p.team_name)))];
     return teams.sort();
   }, [accuracyData?.players]);
 
@@ -147,7 +156,7 @@ export default function ProjectionAccuracy() {
     
     let filtered = accuracyData.players.filter(player => {
       const matchesSearch = player.player_name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesTeam = teamFilter === "all" || player.team_name === teamFilter;
+      const matchesTeam = teamFilter === "all" || normalizeTeamName(player.team_name) === teamFilter;
       const matchesPosition = positionFilter === "all" || player.position === positionFilter;
       return matchesSearch && matchesTeam && matchesPosition;
     });
