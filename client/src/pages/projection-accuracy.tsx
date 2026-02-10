@@ -427,10 +427,10 @@ export default function ProjectionAccuracy() {
                       <th className="text-center p-3 font-semibold hidden sm:table-cell">Team</th>
                       <th className="text-center p-3 font-semibold hidden sm:table-cell">Pos</th>
                       <th className="text-center p-3 font-semibold cursor-pointer hover:bg-gray-100" onClick={() => handleSort('projected')}>
-                        Projected <SortIcon field="projected" />
+                        Projected Pts <SortIcon field="projected" />
                       </th>
                       <th className="text-center p-3 font-semibold cursor-pointer hover:bg-gray-100" onClick={() => handleSort('actual')}>
-                        Actual <SortIcon field="actual" />
+                        Actual Pts <SortIcon field="actual" />
                       </th>
                       <th className="text-center p-3 font-semibold cursor-pointer hover:bg-gray-100" onClick={() => handleSort('difference')}>
                         Diff <SortIcon field="difference" />

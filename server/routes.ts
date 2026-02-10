@@ -18916,7 +18916,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             SELECT * FROM player_projection_records 
             WHERE snapshot_id = ${snapshotId}
             ORDER BY CAST(projected_points AS DECIMAL) DESC
-            LIMIT 100
           `),
           db.execute(sql`
             SELECT * FROM team_projection_records 
