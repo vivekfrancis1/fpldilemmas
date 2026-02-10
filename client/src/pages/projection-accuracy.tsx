@@ -468,7 +468,7 @@ export default function ProjectionAccuracy() {
                       </p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     <div className="bg-blue-50 rounded-lg p-2 text-center">
                       <p className="text-xs text-blue-600 font-medium">Goals</p>
                       <p className="text-xs font-bold text-blue-800">{playerStats.goals.proj} / {playerStats.goals.act}</p>
@@ -478,11 +478,6 @@ export default function ProjectionAccuracy() {
                       <p className="text-xs text-green-600 font-medium">Assists</p>
                       <p className="text-xs font-bold text-green-800">{playerStats.assists.proj} / {playerStats.assists.act}</p>
                       <p className="text-[10px] text-green-500">proj / act</p>
-                    </div>
-                    <div className="bg-yellow-50 rounded-lg p-2 text-center">
-                      <p className="text-xs text-yellow-600 font-medium">Clean Sheets</p>
-                      <p className="text-xs font-bold text-yellow-800">{playerStats.cleanSheets.proj} / {playerStats.cleanSheets.act}</p>
-                      <p className="text-[10px] text-yellow-500">proj / act</p>
                     </div>
                     <div className="bg-orange-50 rounded-lg p-2 text-center">
                       <p className="text-xs text-orange-600 font-medium">Bonus</p>
@@ -545,7 +540,6 @@ export default function ProjectionAccuracy() {
                       <th colSpan={3} className="text-center p-1 font-semibold border-b border-gray-300 bg-purple-50 text-purple-800">Total Pts</th>
                       <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-blue-50 text-blue-800">Goals</th>
                       <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-green-50 text-green-800">Assists</th>
-                      <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-yellow-50 text-yellow-800">Clean Sheets</th>
                       <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-orange-50 text-orange-800">Bonus</th>
                       <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-teal-50 text-teal-800">Saves</th>
                     </tr>
@@ -557,8 +551,6 @@ export default function ProjectionAccuracy() {
                       <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-blue-50/50" onClick={() => handleSort('act_goals')}>Act <SortIcon field="act_goals" /></th>
                       <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-green-50/50" onClick={() => handleSort('proj_assists')}>Proj <SortIcon field="proj_assists" /></th>
                       <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-green-50/50" onClick={() => handleSort('act_assists')}>Act <SortIcon field="act_assists" /></th>
-                      <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-yellow-50/50" onClick={() => handleSort('proj_cs')}>Proj <SortIcon field="proj_cs" /></th>
-                      <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-yellow-50/50" onClick={() => handleSort('act_cs')}>Act <SortIcon field="act_cs" /></th>
                       <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-orange-50/50" onClick={() => handleSort('proj_bonus')}>Proj <SortIcon field="proj_bonus" /></th>
                       <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-orange-50/50" onClick={() => handleSort('act_bonus')}>Act <SortIcon field="act_bonus" /></th>
                       <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-teal-50/50" onClick={() => handleSort('proj_saves')}>Proj <SortIcon field="proj_saves" /></th>
@@ -568,7 +560,7 @@ export default function ProjectionAccuracy() {
                   <tbody>
                     {filteredPlayers.length === 0 ? (
                       <tr>
-                        <td colSpan={16} className="text-center p-8 text-gray-500">
+                        <td colSpan={14} className="text-center p-8 text-gray-500">
                           No player projections found for GW{selectedGameweek}
                         </td>
                       </tr>
@@ -579,7 +571,6 @@ export default function ProjectionAccuracy() {
                         const posShort = (player.position?.substring(0, 3) || player.position)?.toUpperCase();
                         const projGoals = projPtsToGoals(parseFloat(player.projected_goals || '0'), player.position);
                         const projAssists = projPtsToAssists(parseFloat(player.projected_assists || '0'));
-                        const projCS = projPtsToCS(parseFloat(player.projected_clean_sheet || '0'), player.position);
                         const projBonus = parseFloat(player.projected_bonus || '0');
                         const projSaves = projPtsToSaves(parseFloat(player.projected_saves || '0'));
                         return (
@@ -614,8 +605,6 @@ export default function ProjectionAccuracy() {
                             <td className="text-center p-2 bg-blue-50/20">{player.actual_goals !== null ? player.actual_goals : <span className="text-gray-400">-</span>}</td>
                             <td className="text-center p-2 text-green-700 bg-green-50/20">{projAssists > 0 ? projAssists.toFixed(2) : <span className="text-gray-400">-</span>}</td>
                             <td className="text-center p-2 bg-green-50/20">{player.actual_assists !== null ? player.actual_assists : <span className="text-gray-400">-</span>}</td>
-                            <td className="text-center p-2 text-yellow-700 bg-yellow-50/20">{projCS > 0 ? projCS.toFixed(2) : <span className="text-gray-400">-</span>}</td>
-                            <td className="text-center p-2 bg-yellow-50/20">{player.actual_clean_sheet !== null ? player.actual_clean_sheet : <span className="text-gray-400">-</span>}</td>
                             <td className="text-center p-2 text-orange-700 bg-orange-50/20">{projBonus > 0 ? projBonus.toFixed(2) : <span className="text-gray-400">-</span>}</td>
                             <td className="text-center p-2 bg-orange-50/20">{player.actual_bonus !== null ? player.actual_bonus : <span className="text-gray-400">-</span>}</td>
                             <td className="text-center p-2 text-teal-700 bg-teal-50/20">{projSaves > 0 ? projSaves.toFixed(2) : <span className="text-gray-400">-</span>}</td>
