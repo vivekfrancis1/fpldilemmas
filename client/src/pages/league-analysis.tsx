@@ -302,6 +302,15 @@ export default function LeagueAnalysisPage() {
           case 'freeTransfers':
             if (!entry.historyData?.current) return 0;
             return calculateFreeTransfers(entry.historyData.current, entry.historyData.chips, upcomingGameweek);
+          case 'transfersMade': {
+            if (!entry.historyData?.current) return 0;
+            const chipGWs = new Set(
+              (entry.historyData.chips || []).filter((c: ChipUsage) => c.name === 'freehit' || c.name === 'wildcard').map((c: ChipUsage) => c.event)
+            );
+            return entry.historyData.current
+              .filter((gw: GWHistory) => !chipGWs.has(gw.event))
+              .reduce((sum: number, gw: GWHistory) => sum + (gw.event_transfers || 0), 0);
+          }
           case 'chipsAvailable':
             return entry.chipsAvailable;
           case 'player_name':
@@ -484,12 +493,31 @@ export default function LeagueAnalysisPage() {
       }
     },
     {
+      key: 'transfersMade',
+      header: <span className="text-center">Transfers<br/>Made</span>,
+      priority: 'optional',
+      align: 'right',
+      mobileLabel: 'Transfers',
+      cardOrder: 10,
+      sortable: true,
+      className: 'font-mono text-xs',
+      render: (value, entry) => {
+        if (!entry.historyData?.current) return 'N/A';
+        const chipGWs = new Set(
+          (entry.historyData.chips || []).filter((c: ChipUsage) => c.name === 'freehit' || c.name === 'wildcard').map((c: ChipUsage) => c.event)
+        );
+        return entry.historyData.current
+          .filter((gw: GWHistory) => !chipGWs.has(gw.event))
+          .reduce((sum: number, gw: GWHistory) => sum + (gw.event_transfers || 0), 0);
+      }
+    },
+    {
       key: 'chipsAvailable',
       header: <span className="text-center">Chips<br/>Available</span>,
       priority: 'optional',
       align: 'right',
       mobileLabel: 'Chips',
-      cardOrder: 10,
+      cardOrder: 11,
       sortable: true,
       className: 'font-mono text-xs',
       render: (value, entry) => entry.chipsAvailable
@@ -685,12 +713,31 @@ export default function LeagueAnalysisPage() {
       }
     },
     {
+      key: 'transfersMade',
+      header: <span className="text-center">Transfers<br/>Made</span>,
+      priority: 'optional',
+      align: 'right',
+      mobileLabel: 'Transfers',
+      cardOrder: 10,
+      sortable: true,
+      className: 'font-mono text-xs',
+      render: (value, entry) => {
+        if (!entry.historyData?.current) return 'N/A';
+        const chipGWs = new Set(
+          (entry.historyData.chips || []).filter((c: ChipUsage) => c.name === 'freehit' || c.name === 'wildcard').map((c: ChipUsage) => c.event)
+        );
+        return entry.historyData.current
+          .filter((gw: GWHistory) => !chipGWs.has(gw.event))
+          .reduce((sum: number, gw: GWHistory) => sum + (gw.event_transfers || 0), 0);
+      }
+    },
+    {
       key: 'chipsAvailable',
       header: <span className="text-center">Chips<br/>Available</span>,
       priority: 'optional',
       align: 'right',
       mobileLabel: 'Chips',
-      cardOrder: 10,
+      cardOrder: 11,
       sortable: true,
       className: 'font-mono text-xs',
       render: (value, entry) => entry.chipsAvailable
