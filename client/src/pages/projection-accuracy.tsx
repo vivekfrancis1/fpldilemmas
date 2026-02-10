@@ -88,8 +88,38 @@ interface AggregateAccuracyData {
   teams: AggregateTeamData[];
 }
 
-type SortField = 'name' | 'projected' | 'actual' | 'difference' | 'error';
+type SortField = 'name' | 'projected' | 'actual' | 'difference' | 'error' | 'proj_goals' | 'act_goals' | 'proj_assists' | 'act_assists' | 'proj_cs' | 'act_cs' | 'proj_bonus' | 'act_bonus' | 'proj_saves' | 'act_saves';
 type SortDirection = 'asc' | 'desc';
+
+const getActualGoalPts = (goals: number | null, position: string): number => {
+  if (goals === null) return 0;
+  const pos = position?.toUpperCase() || '';
+  if (pos === 'GKP' || pos === 'GK' || pos === 'DEF') return goals * 6;
+  if (pos === 'MID') return goals * 5;
+  return goals * 4;
+};
+
+const getActualAssistPts = (assists: number | null): number => {
+  if (assists === null) return 0;
+  return assists * 3;
+};
+
+const getActualCSPts = (cs: number | null, position: string): number => {
+  if (cs === null) return 0;
+  const pos = position?.toUpperCase() || '';
+  if (pos === 'GKP' || pos === 'GK' || pos === 'DEF') return cs * 4;
+  if (pos === 'MID') return cs * 1;
+  return 0;
+};
+
+const getActualBonusPts = (bonus: number | null): number => {
+  return bonus || 0;
+};
+
+const getActualSavePts = (saves: number | null): number => {
+  if (saves === null) return 0;
+  return Math.floor(saves / 3);
+};
 
 const TEAM_SHORT_CODES: Record<string, string> = {
   'Arsenal': 'ARS', 'Aston Villa': 'AVL', 'Bournemouth': 'BOU', 'Brentford': 'BRE',
@@ -178,6 +208,36 @@ export default function ProjectionAccuracy() {
           break;
         case 'error':
           comparison = parseFloat(a.absolute_error || '0') - parseFloat(b.absolute_error || '0');
+          break;
+        case 'proj_goals':
+          comparison = parseFloat(a.projected_goals || '0') - parseFloat(b.projected_goals || '0');
+          break;
+        case 'act_goals':
+          comparison = getActualGoalPts(a.actual_goals, a.position) - getActualGoalPts(b.actual_goals, b.position);
+          break;
+        case 'proj_assists':
+          comparison = parseFloat(a.projected_assists || '0') - parseFloat(b.projected_assists || '0');
+          break;
+        case 'act_assists':
+          comparison = getActualAssistPts(a.actual_assists) - getActualAssistPts(b.actual_assists);
+          break;
+        case 'proj_cs':
+          comparison = parseFloat(a.projected_clean_sheet || '0') - parseFloat(b.projected_clean_sheet || '0');
+          break;
+        case 'act_cs':
+          comparison = getActualCSPts(a.actual_clean_sheet, a.position) - getActualCSPts(b.actual_clean_sheet, b.position);
+          break;
+        case 'proj_bonus':
+          comparison = parseFloat(a.projected_bonus || '0') - parseFloat(b.projected_bonus || '0');
+          break;
+        case 'act_bonus':
+          comparison = getActualBonusPts(a.actual_bonus) - getActualBonusPts(b.actual_bonus);
+          break;
+        case 'proj_saves':
+          comparison = parseFloat(a.projected_saves || '0') - parseFloat(b.projected_saves || '0');
+          break;
+        case 'act_saves':
+          comparison = getActualSavePts(a.actual_saves) - getActualSavePts(b.actual_saves);
           break;
       }
       return sortDirection === 'asc' ? comparison : -comparison;
@@ -268,15 +328,15 @@ export default function ProjectionAccuracy() {
       : 0;
 
     const totalProjGoals = compareSet.reduce((sum, p) => sum + parseFloat(p.projected_goals || '0'), 0);
-    const totalActGoals = playersWithActuals.reduce((sum, p) => sum + (p.actual_goals || 0), 0);
+    const totalActGoals = playersWithActuals.reduce((sum, p) => sum + getActualGoalPts(p.actual_goals, p.position), 0);
     const totalProjAssists = compareSet.reduce((sum, p) => sum + parseFloat(p.projected_assists || '0'), 0);
-    const totalActAssists = playersWithActuals.reduce((sum, p) => sum + (p.actual_assists || 0), 0);
+    const totalActAssists = playersWithActuals.reduce((sum, p) => sum + getActualAssistPts(p.actual_assists), 0);
     const totalProjCS = compareSet.reduce((sum, p) => sum + parseFloat(p.projected_clean_sheet || '0'), 0);
-    const totalActCS = playersWithActuals.reduce((sum, p) => sum + (p.actual_clean_sheet || 0), 0);
+    const totalActCS = playersWithActuals.reduce((sum, p) => sum + getActualCSPts(p.actual_clean_sheet, p.position), 0);
     const totalProjBonus = compareSet.reduce((sum, p) => sum + parseFloat(p.projected_bonus || '0'), 0);
-    const totalActBonus = playersWithActuals.reduce((sum, p) => sum + (p.actual_bonus || 0), 0);
+    const totalActBonus = playersWithActuals.reduce((sum, p) => sum + getActualBonusPts(p.actual_bonus), 0);
     const totalProjSaves = compareSet.reduce((sum, p) => sum + parseFloat(p.projected_saves || '0'), 0);
-    const totalActSaves = playersWithActuals.reduce((sum, p) => sum + (p.actual_saves || 0), 0);
+    const totalActSaves = playersWithActuals.reduce((sum, p) => sum + getActualSavePts(p.actual_saves), 0);
 
     return {
       count: allPlayers.length,
@@ -405,27 +465,27 @@ export default function ProjectionAccuracy() {
                   </div>
                   <div className="grid grid-cols-5 gap-2">
                     <div className="bg-blue-50 rounded-lg p-2 text-center">
-                      <p className="text-xs text-blue-600 font-medium">Goals</p>
+                      <p className="text-xs text-blue-600 font-medium">Goal Pts</p>
                       <p className="text-xs font-bold text-blue-800">{playerStats.goals.proj} / {playerStats.goals.act}</p>
                       <p className="text-[10px] text-blue-500">proj / act</p>
                     </div>
                     <div className="bg-green-50 rounded-lg p-2 text-center">
-                      <p className="text-xs text-green-600 font-medium">Assists</p>
+                      <p className="text-xs text-green-600 font-medium">Assist Pts</p>
                       <p className="text-xs font-bold text-green-800">{playerStats.assists.proj} / {playerStats.assists.act}</p>
                       <p className="text-[10px] text-green-500">proj / act</p>
                     </div>
                     <div className="bg-yellow-50 rounded-lg p-2 text-center">
-                      <p className="text-xs text-yellow-600 font-medium">Clean Sheets</p>
+                      <p className="text-xs text-yellow-600 font-medium">CS Pts</p>
                       <p className="text-xs font-bold text-yellow-800">{playerStats.cleanSheets.proj} / {playerStats.cleanSheets.act}</p>
                       <p className="text-[10px] text-yellow-500">proj / act</p>
                     </div>
                     <div className="bg-orange-50 rounded-lg p-2 text-center">
-                      <p className="text-xs text-orange-600 font-medium">Bonus</p>
+                      <p className="text-xs text-orange-600 font-medium">Bonus Pts</p>
                       <p className="text-xs font-bold text-orange-800">{playerStats.bonus.proj} / {playerStats.bonus.act}</p>
                       <p className="text-[10px] text-orange-500">proj / act</p>
                     </div>
                     <div className="bg-teal-50 rounded-lg p-2 text-center">
-                      <p className="text-xs text-teal-600 font-medium">Saves</p>
+                      <p className="text-xs text-teal-600 font-medium">Save Pts</p>
                       <p className="text-xs font-bold text-teal-800">{playerStats.saves.proj} / {playerStats.saves.act}</p>
                       <p className="text-[10px] text-teal-500">proj / act</p>
                     </div>
@@ -477,27 +537,27 @@ export default function ProjectionAccuracy() {
                       </th>
                       <th rowSpan={2} className="text-center p-2 font-semibold hidden sm:table-cell min-w-[50px]">Team</th>
                       <th rowSpan={2} className="text-center p-2 font-semibold hidden sm:table-cell min-w-[40px]">Pos</th>
-                      <th colSpan={3} className="text-center p-1 font-semibold border-b border-gray-300 bg-purple-50 text-purple-800">Total Points</th>
-                      <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-blue-50 text-blue-800">Goals</th>
-                      <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-green-50 text-green-800">Assists</th>
-                      <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-yellow-50 text-yellow-800">Clean Sheets</th>
-                      <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-orange-50 text-orange-800">Bonus</th>
-                      <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-teal-50 text-teal-800">Saves</th>
+                      <th colSpan={3} className="text-center p-1 font-semibold border-b border-gray-300 bg-purple-50 text-purple-800">Total Pts</th>
+                      <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-blue-50 text-blue-800">Goal Pts</th>
+                      <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-green-50 text-green-800">Assist Pts</th>
+                      <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-yellow-50 text-yellow-800">CS Pts</th>
+                      <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-orange-50 text-orange-800">Bonus Pts</th>
+                      <th colSpan={2} className="text-center p-1 font-semibold border-b border-gray-300 bg-teal-50 text-teal-800">Save Pts</th>
                     </tr>
                     <tr className="border-b border-gray-200 bg-gray-50 text-xs">
                       <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-purple-50/50" onClick={() => handleSort('projected')}>Proj <SortIcon field="projected" /></th>
                       <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-purple-50/50" onClick={() => handleSort('actual')}>Act <SortIcon field="actual" /></th>
                       <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-purple-50/50" onClick={() => handleSort('difference')}>Diff <SortIcon field="difference" /></th>
-                      <th className="text-center p-1 bg-blue-50/50">Proj</th>
-                      <th className="text-center p-1 bg-blue-50/50">Act</th>
-                      <th className="text-center p-1 bg-green-50/50">Proj</th>
-                      <th className="text-center p-1 bg-green-50/50">Act</th>
-                      <th className="text-center p-1 bg-yellow-50/50">Proj</th>
-                      <th className="text-center p-1 bg-yellow-50/50">Act</th>
-                      <th className="text-center p-1 bg-orange-50/50">Proj</th>
-                      <th className="text-center p-1 bg-orange-50/50">Act</th>
-                      <th className="text-center p-1 bg-teal-50/50">Proj</th>
-                      <th className="text-center p-1 bg-teal-50/50">Act</th>
+                      <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-blue-50/50" onClick={() => handleSort('proj_goals')}>Proj <SortIcon field="proj_goals" /></th>
+                      <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-blue-50/50" onClick={() => handleSort('act_goals')}>Act <SortIcon field="act_goals" /></th>
+                      <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-green-50/50" onClick={() => handleSort('proj_assists')}>Proj <SortIcon field="proj_assists" /></th>
+                      <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-green-50/50" onClick={() => handleSort('act_assists')}>Act <SortIcon field="act_assists" /></th>
+                      <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-yellow-50/50" onClick={() => handleSort('proj_cs')}>Proj <SortIcon field="proj_cs" /></th>
+                      <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-yellow-50/50" onClick={() => handleSort('act_cs')}>Act <SortIcon field="act_cs" /></th>
+                      <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-orange-50/50" onClick={() => handleSort('proj_bonus')}>Proj <SortIcon field="proj_bonus" /></th>
+                      <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-orange-50/50" onClick={() => handleSort('act_bonus')}>Act <SortIcon field="act_bonus" /></th>
+                      <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-teal-50/50" onClick={() => handleSort('proj_saves')}>Proj <SortIcon field="proj_saves" /></th>
+                      <th className="text-center p-1 cursor-pointer hover:bg-gray-100 bg-teal-50/50" onClick={() => handleSort('act_saves')}>Act <SortIcon field="act_saves" /></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -546,15 +606,15 @@ export default function ProjectionAccuracy() {
                               </div>
                             </td>
                             <td className="text-center p-2 text-blue-700 bg-blue-50/20">{projGoals > 0 ? projGoals.toFixed(2) : <span className="text-gray-400">-</span>}</td>
-                            <td className="text-center p-2 bg-blue-50/20">{player.actual_goals !== null ? player.actual_goals : <span className="text-gray-400">-</span>}</td>
+                            <td className="text-center p-2 bg-blue-50/20">{player.actual_goals !== null ? getActualGoalPts(player.actual_goals, player.position) : <span className="text-gray-400">-</span>}</td>
                             <td className="text-center p-2 text-green-700 bg-green-50/20">{projAssists > 0 ? projAssists.toFixed(2) : <span className="text-gray-400">-</span>}</td>
-                            <td className="text-center p-2 bg-green-50/20">{player.actual_assists !== null ? player.actual_assists : <span className="text-gray-400">-</span>}</td>
+                            <td className="text-center p-2 bg-green-50/20">{player.actual_assists !== null ? getActualAssistPts(player.actual_assists) : <span className="text-gray-400">-</span>}</td>
                             <td className="text-center p-2 text-yellow-700 bg-yellow-50/20">{projCS > 0 ? projCS.toFixed(2) : <span className="text-gray-400">-</span>}</td>
-                            <td className="text-center p-2 bg-yellow-50/20">{player.actual_clean_sheet !== null ? player.actual_clean_sheet : <span className="text-gray-400">-</span>}</td>
+                            <td className="text-center p-2 bg-yellow-50/20">{player.actual_clean_sheet !== null ? getActualCSPts(player.actual_clean_sheet, player.position) : <span className="text-gray-400">-</span>}</td>
                             <td className="text-center p-2 text-orange-700 bg-orange-50/20">{projBonus > 0 ? projBonus.toFixed(2) : <span className="text-gray-400">-</span>}</td>
-                            <td className="text-center p-2 bg-orange-50/20">{player.actual_bonus !== null ? player.actual_bonus : <span className="text-gray-400">-</span>}</td>
+                            <td className="text-center p-2 bg-orange-50/20">{player.actual_bonus !== null ? getActualBonusPts(player.actual_bonus) : <span className="text-gray-400">-</span>}</td>
                             <td className="text-center p-2 text-teal-700 bg-teal-50/20">{projSaves > 0 ? projSaves.toFixed(2) : <span className="text-gray-400">-</span>}</td>
-                            <td className="text-center p-2 bg-teal-50/20">{player.actual_saves !== null ? player.actual_saves : <span className="text-gray-400">-</span>}</td>
+                            <td className="text-center p-2 bg-teal-50/20">{player.actual_saves !== null ? getActualSavePts(player.actual_saves) : <span className="text-gray-400">-</span>}</td>
                           </tr>
                         );
                       })
