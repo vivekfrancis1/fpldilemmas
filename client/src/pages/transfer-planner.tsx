@@ -7001,12 +7001,12 @@ export default function TransferPlanner() {
                                         </div>
                                         <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
                                           <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                            {fixture ? `${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})` : 'BGW'}
-                                          </div>
-                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-white/90 truncate">
                                             {pick.is_captain && projectedPoints !== null 
                                               ? `${(projectedPoints * 2).toFixed(1)} (${projectedPoints.toFixed(1)})` 
                                               : projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}
+                                          </div>
+                                          <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-white/90 truncate">
+                                            {fixture ? `${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})` : 'BGW'}
                                           </div>
                                         </div>
                                       </div>
@@ -7228,10 +7228,10 @@ export default function TransferPlanner() {
                                     <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">{player.web_name}</div>
                                   </div>
                                   <div className="w-full px-2 py-0.5 bg-gray-500 text-center">
-                                    <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
+                                    <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</div>
+                                    <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-white/90 truncate">
                                       {fixture ? `${fixture.opponent} (${fixture.isHome ? 'H' : 'A'})` : 'BGW'}
                                     </div>
-                                    <div className="text-[8px] sm:text-[10px] md:text-xs font-semibold text-white/90 truncate">{projectedPoints !== null ? projectedPoints.toFixed(1) : '-'}</div>
                                   </div>
                                 </div>
                               </div>
