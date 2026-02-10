@@ -614,7 +614,7 @@ export default function ProjectionAccuracy() {
                         </tr>
                       </thead>
                       <tbody>
-                        {aggregateData.players.slice(0, 100).map((player) => {
+                        {aggregateData.players.map((player) => {
                           const webName = playerIdToWebName.get(player.player_id) || player.player_name.split(' ').pop() || player.player_name;
                           return (
                             <tr key={player.player_id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -631,7 +631,7 @@ export default function ProjectionAccuracy() {
                     </table>
                   </div>
                   <p className="text-xs text-gray-500 mt-2 text-right">
-                    Showing top {Math.min(100, aggregateData.players.length)} of {aggregateData.players.length} players
+                    Showing all {aggregateData.players.length} players
                   </p>
                 </>
               ) : (
