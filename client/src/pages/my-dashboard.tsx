@@ -1947,6 +1947,9 @@ export default function MyDashboard() {
                               team_code: playerTeam?.code || playerTeam?.id || 0,
                               points_display: projected > 0 ? projected.toFixed(1) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
+                              status: player.status,
+                              chance_of_playing: player.chance_of_playing_next_round,
+                              news: player.news,
                             };
                           }).filter(Boolean) as PitchPlayer[]}
                           benchPlayers={teamData.picks.filter(pick => pick.position > 11).map(pick => {
@@ -1968,6 +1971,9 @@ export default function MyDashboard() {
                               team_code: playerTeam?.code || playerTeam?.id || 0,
                               points_display: projected > 0 ? projected.toFixed(1) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
+                              status: player.status,
+                              chance_of_playing: player.chance_of_playing_next_round,
+                              news: player.news,
                             };
                           }).filter(Boolean) as PitchPlayer[]}
                         />
@@ -2377,6 +2383,9 @@ export default function MyDashboard() {
                               team_code: playerTeam?.code || playerTeam?.id || 0,
                               points_display: projected > 0 ? projected.toFixed(1) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
+                              status: player.status,
+                              chance_of_playing: player.chance_of_playing_next_round,
+                              news: player.news,
                             };
                           }).filter(Boolean) as PitchPlayer[]}
                           benchPlayers={nextTeamData.picks.filter(pick => pick.position > 11).sort((a, b) => a.position - b.position).map(pick => {
@@ -2398,6 +2407,9 @@ export default function MyDashboard() {
                               team_code: playerTeam?.code || playerTeam?.id || 0,
                               points_display: projected > 0 ? projected.toFixed(1) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
+                              status: player.status,
+                              chance_of_playing: player.chance_of_playing_next_round,
+                              news: player.news,
                             };
                           }).filter(Boolean) as PitchPlayer[]}
                         />
