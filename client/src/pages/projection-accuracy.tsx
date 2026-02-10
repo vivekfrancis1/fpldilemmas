@@ -91,10 +91,19 @@ interface AggregateAccuracyData {
 type SortField = 'name' | 'projected' | 'actual' | 'difference' | 'error' | 'proj_goals' | 'act_goals' | 'proj_assists' | 'act_assists' | 'proj_cs' | 'act_cs' | 'proj_bonus' | 'act_bonus' | 'proj_saves' | 'act_saves';
 type SortDirection = 'asc' | 'desc';
 
+const normalizePosition = (position: string): string => {
+  const pos = position?.toUpperCase() || '';
+  if (pos === 'GKP' || pos === 'GK' || pos === 'GOALKEEPER') return 'GKP';
+  if (pos === 'DEF' || pos === 'DEFENDER') return 'DEF';
+  if (pos === 'MID' || pos === 'MIDFIELDER') return 'MID';
+  if (pos === 'FWD' || pos === 'FORWARD') return 'FWD';
+  return pos;
+};
+
 const projPtsToGoals = (pts: number, position: string): number => {
   if (pts === 0) return 0;
-  const pos = position?.toUpperCase() || '';
-  if (pos === 'GKP' || pos === 'GK' || pos === 'DEF') return pts / 6;
+  const pos = normalizePosition(position);
+  if (pos === 'GKP' || pos === 'DEF') return pts / 6;
   if (pos === 'MID') return pts / 5;
   return pts / 4;
 };
@@ -106,8 +115,8 @@ const projPtsToAssists = (pts: number): number => {
 
 const projPtsToCS = (pts: number, position: string): number => {
   if (pts === 0) return 0;
-  const pos = position?.toUpperCase() || '';
-  if (pos === 'GKP' || pos === 'GK' || pos === 'DEF') return pts / 4;
+  const pos = normalizePosition(position);
+  if (pos === 'GKP' || pos === 'DEF') return pts / 4;
   if (pos === 'MID') return pts / 1;
   return 0;
 };
