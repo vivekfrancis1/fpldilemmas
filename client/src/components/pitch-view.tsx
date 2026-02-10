@@ -1,11 +1,14 @@
-// Shared pitch view component for FPL team visualization with real jersey images
 import { useState } from "react";
 import {
   sortPlayersByPosition,
   filterPlayersByType,
 } from "@/lib/pitch-utils";
 
-// Types
+export interface PitchPlayerFixture {
+  opponent: string;
+  isHome: boolean;
+}
+
 export interface PitchPlayer {
   element: number;
   element_type: number;
@@ -18,7 +21,7 @@ export interface PitchPlayer {
   team_name?: string;
   team_short_name?: string;
   team_id?: number;
-  team_code?: number; // Required for jersey images
+  team_code?: number;
   event_points?: number;
   live_minutes?: number;
   in_dreamteam?: boolean;
@@ -26,8 +29,10 @@ export interface PitchPlayer {
   fixture_finished?: boolean;
   fixture_opponent?: string;
   fixture_is_home?: boolean;
-  custom_badge_text?: string; // For custom display (e.g., projected points)
-  custom_badge_color?: string; // Badge background color
+  custom_badge_text?: string;
+  custom_badge_color?: string;
+  fixtures?: PitchPlayerFixture[];
+  points_display?: string;
 }
 
 export interface PitchFixture {
@@ -51,19 +56,17 @@ export interface PitchViewProps {
   onPlayerClick?: (player: PitchPlayer) => void;
 }
 
-// Get jersey image URL from FPL API
 function getJerseyImageUrl(teamCode: number, isGoalkeeper: boolean = false): string {
   const suffix = isGoalkeeper ? '_1' : '';
   return `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${teamCode}${suffix}-110.webp`;
 }
 
-// Helper function to get display text for points/fixture
 function getPointsDisplay(player: PitchPlayer): string {
+  if (player.points_display !== undefined) {
+    return player.points_display;
+  }
   if (player.custom_badge_text !== undefined) {
     return player.custom_badge_text;
-  }
-  if (!player.fixture_started && player.fixture_opponent) {
-    return `${player.fixture_opponent} (${player.fixture_is_home ? 'H' : 'A'})`;
   }
   if (player.fixture_finished && (player.event_points || 0) === 0) {
     if (player.live_minutes && player.live_minutes > 0) {
@@ -75,21 +78,25 @@ function getPointsDisplay(player: PitchPlayer): string {
   return points.toString();
 }
 
-// Get badge color based on content or custom color
-function getBadgeColor(player: PitchPlayer, isBench: boolean): string {
-  if (player.custom_badge_color) {
-    return player.custom_badge_color;
+function getFixtureDisplay(player: PitchPlayer): string | null {
+  if (player.fixtures && player.fixtures.length > 0) {
+    return player.fixtures.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ');
   }
-  if (!player.fixture_started && player.fixture_opponent) {
-    return isBench ? 'bg-gray-500' : 'bg-purple-600';
+  if (player.fixtures && player.fixtures.length === 0) {
+    return 'BGW';
   }
-  return isBench ? 'bg-gray-500' : 'bg-green-600';
+  if (player.fixture_opponent) {
+    return `${player.fixture_opponent} (${player.fixture_is_home ? 'H' : 'A'})`;
+  }
+  return null;
 }
 
-// Default jersey placeholder (fallback when no team_code or image fails)
+function isDGW(player: PitchPlayer): boolean {
+  return (player.fixtures?.length || 0) > 1;
+}
+
 const FALLBACK_JERSEY_URL = "https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_0-110.webp";
 
-// Single player card component for consistency
 function PlayerCard({ 
   player, 
   isGoalkeeper = false,
@@ -105,7 +112,7 @@ function PlayerCard({
   showOpponent?: boolean;
   onClick?: () => void;
 }) {
-  const [imgError, setImgError] = useState(0); // 0: initial, 1: first error (try non-GK), 2: all failed (use fallback)
+  const [imgError, setImgError] = useState(0);
   const teamCode = player.team_code || 0;
   
   const getImageSrc = (): string => {
@@ -113,38 +120,37 @@ function PlayerCard({
       return FALLBACK_JERSEY_URL;
     }
     if (imgError === 1) {
-      return getJerseyImageUrl(teamCode, false); // Try non-GK version
+      return getJerseyImageUrl(teamCode, false);
     }
     return getJerseyImageUrl(teamCode, isGoalkeeper);
   };
+
+  const fixtureText = getFixtureDisplay(player);
+  const hasFixture = fixtureText !== null;
+  const dgw = isDGW(player);
   
   return (
     <div className={`flex flex-col items-center ${isBench ? 'w-[19.5%]' : 'w-[19%]'} ${isBench ? 'opacity-90' : ''}`}>
       <div className="relative flex flex-col items-center">
-        {/* Captain Badge - Inside frame, top-left */}
         {player.is_captain && (
           <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
             <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
           </div>
         )}
-        {/* Vice Captain Badge - Inside frame, top-left */}
         {player.is_vice_captain && !player.is_captain && (
           <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
             <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
           </div>
         )}
-        {/* Dream Team Star - Inside frame, top-right */}
         {player.in_dreamteam && (
           <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
             <span className="text-[8px] sm:text-[10px] text-white">★</span>
           </div>
         )}
-        {/* Unified Card Container - Square borders */}
         <div 
           className={`w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40 ${onClick ? 'cursor-pointer hover:bg-white/30 transition-colors' : ''}`}
           onClick={onClick}
         >
-          {/* Jersey Image */}
           <div className="p-1">
             <img 
               src={getImageSrc()}
@@ -156,24 +162,26 @@ function PlayerCard({
             />
           </div>
           
-          {/* Text Labels - 2 lines only */}
           <div className="flex flex-col">
-            {/* Player Name */}
-            <div className="w-full px-1 py-1 bg-white/95 text-center">
+            <div className="w-full px-1 py-0.5 bg-white/95 text-center">
               <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
                 {player.web_name || player.player_name || 'Unknown'}
               </div>
             </div>
             
-            {/* Points/Opponent Badge */}
-            <div className={`w-full px-2 py-1 ${getBadgeColor(player, isBench)} text-center`}>
+            <div className={`w-full px-2 py-0.5 ${isBench ? 'bg-purple-500' : 'bg-purple-600'} text-center`}>
               <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                {showOpponent && player.fixture_opponent 
-                  ? `${player.fixture_opponent} (${player.fixture_is_home ? 'H' : 'A'})`
-                  : getPointsDisplay(player)
-                }
+                {getPointsDisplay(player)}
               </div>
             </div>
+
+            {hasFixture && (
+              <div className={`w-full px-1 py-0.5 ${isBench ? 'bg-gray-600' : 'bg-gray-700'} text-center`}>
+                <div className={`${dgw ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>
+                  {fixtureText}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -189,15 +197,11 @@ export function PitchView({
   onPlayerClick,
 }: PitchViewProps) {
   const sortedPlayers = sortPlayersByPosition(players);
-  // Bench players come pre-sorted from the backend (GK first, then outfield by projected points)
-  // Don't re-sort them here
   const sortedBench = benchPlayers;
   
   return (
     <div className="space-y-0 sm:space-y-4 h-full">
-      {/* Pitch */}
       <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-3 sm:p-4 md:p-6 overflow-hidden h-full flex flex-col justify-center">
-        {/* Pitch Lines and Graphics */}
         <div className="absolute inset-0 opacity-30 pointer-events-none">
           <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
@@ -226,7 +230,6 @@ export function PitchView({
         </div>
 
         <div className="relative space-y-4 sm:space-y-6 md:space-y-8">
-          {/* Goalkeepers */}
           {(() => {
             const gks = filterPlayersByType(sortedPlayers, 1);
             return gks.length > 0 && (
@@ -245,7 +248,6 @@ export function PitchView({
             );
           })()}
 
-          {/* Defenders */}
           {(() => {
             const defs = filterPlayersByType(sortedPlayers, 2);
             return defs.length > 0 && (
@@ -266,7 +268,6 @@ export function PitchView({
             );
           })()}
 
-          {/* Midfielders */}
           {(() => {
             const mids = filterPlayersByType(sortedPlayers, 3);
             return mids.length > 0 && (
@@ -287,7 +288,6 @@ export function PitchView({
             );
           })()}
 
-          {/* Forwards */}
           {(() => {
             const fwds = filterPlayersByType(sortedPlayers, 4);
             return fwds.length > 0 && (
@@ -308,7 +308,6 @@ export function PitchView({
             );
           })()}
 
-          {/* Bench Section */}
           {sortedBench.length > 0 && (
             <div className="relative mt-4 sm:mt-6 md:mt-8 pt-4 border-t-2 border-white/30">
               <div className="text-center mb-2">

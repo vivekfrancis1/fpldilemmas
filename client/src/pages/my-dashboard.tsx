@@ -52,6 +52,7 @@ import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { useAuth } from "@/hooks/useAuth";
 import { ListView, type ListPlayer } from "@/components/list-view";
+import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
 
 
 
@@ -377,6 +378,16 @@ export default function MyDashboard() {
     enabled: !!searchedId && !!teamData && !!bootstrapData, // Only fetch if we have current team data and bootstrap data
     retry: false, // Don't auto-retry if FPL session expired
   });
+
+  const { data: cachedPlayerProjections } = useQuery<any[]>({
+    queryKey: ["/api/cached/player-total-points"],
+    staleTime: 60 * 60 * 1000,
+  });
+
+  const getProjectedPoints = (playerId: number, gameweek: number): number => {
+    const playerData = cachedPlayerProjections?.find((p: any) => p.playerId === playerId);
+    return playerData?.gameweekProjections?.[gameweek.toString()] || 0;
+  };
 
   // Determine pre-chip baseline gameweek (for Free Hit/Wildcard comparison)
   // If Free Hit was used in GW13, we need GW12 team as the baseline
@@ -1729,396 +1740,64 @@ export default function MyDashboard() {
                   </div>
 
                   {/* Pitch View */}
-                  {teamView === "pitch" && (
-                    <div className="space-y-4">
-                      {/* Pitch */}
-                      <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
-                        {/* Pitch Lines and Graphics */}
-                        <div className="absolute inset-0 opacity-30 pointer-events-none">
-                          {/* Center Line - Horizontal */}
-                          <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
-                          
-                          {/* Center Line - Vertical */}
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
-                          
-                          {/* Center Circle - centered in middle of pitch */}
-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
-                          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full"></div>
-                          
-                          {/* Top Goal Area (near goalkeeper) */}
-                          {/* Penalty Box - 18 yard box */}
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-t-0 border-white"></div>
-                          {/* 6-yard Box */}
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-t-0 border-white"></div>
-                          {/* Penalty Spot */}
-                          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
-                          {/* Penalty Arc */}
-                          <div className="absolute top-20 left-1/2 -translate-x-1/2 w-20 h-10 border-2 border-b-0 border-l-0 border-r-0 border-white rounded-t-full"></div>
-                          
-                          {/* Goal Post */}
-                          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
-                            {/* Goal Posts */}
-                            <div className="absolute left-0 top-0 w-1 h-4 bg-white"></div>
-                            <div className="absolute right-0 top-0 w-1 h-4 bg-white"></div>
-                          </div>
-                          
-                          {/* Bottom Goal Area (near forwards) - Mirror of top */}
-                          {/* Penalty Box - 18 yard box */}
-                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-b-0 border-white"></div>
-                          {/* 6-yard Box */}
-                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-b-0 border-white"></div>
-                          {/* Penalty Spot */}
-                          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
-                          {/* Penalty Arc */}
-                          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-20 h-10 border-2 border-t-0 border-l-0 border-r-0 border-white rounded-b-full"></div>
-                          
-                          {/* Bottom Goal Post */}
-                          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
-                            {/* Goal Posts */}
-                            <div className="absolute left-0 bottom-0 w-1 h-4 bg-white"></div>
-                            <div className="absolute right-0 bottom-0 w-1 h-4 bg-white"></div>
-                          </div>
-                          
-                          {/* Corner Arcs */}
-                          <div className="absolute top-0 left-0 w-4 h-4 border-2 border-t-0 border-l-0 border-white rounded-br-full"></div>
-                          <div className="absolute top-0 right-0 w-4 h-4 border-2 border-t-0 border-r-0 border-white rounded-bl-full"></div>
-                          <div className="absolute bottom-0 left-0 w-4 h-4 border-2 border-b-0 border-l-0 border-white rounded-tr-full"></div>
-                          <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
-                        </div>
+                  {teamView === "pitch" && (() => {
+                    const gwPointsPitchPlayers: PitchPlayer[] = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11)).map(pick => {
+                      const player = getPlayerById(pick.element);
+                      if (!player) return null;
+                      const playerTeam = getPlayerTeam(player);
+                      const fxs = getPlayerFixtureInfos(pick.element, currentGameweek);
+                      return {
+                        element: pick.element,
+                        element_type: player.element_type,
+                        position: pick.position,
+                        is_captain: pick.is_captain,
+                        is_vice_captain: pick.is_vice_captain,
+                        multiplier: pick.multiplier,
+                        web_name: player.web_name,
+                        team_short_name: playerTeam?.short_name,
+                        team_id: player.team,
+                        team_code: getTeamCode(playerTeam),
+                        event_points: player.event_points,
+                        in_dreamteam: player.in_dreamteam,
+                        points_display: getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain),
+                        fixtures: fxs,
+                      };
+                    }).filter(Boolean) as PitchPlayer[];
 
-                      <div className="relative space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-10">
-                        {/* Goalkeepers */}
-                        {(() => {
-                          const gks = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
-                            .filter(pick => {
-                              const player = getPlayerById(pick.element);
-                              return player?.element_type === 1;
-                            });
-                          
-                          return gks.length > 0 && (
-                            <div className="flex justify-center gap-0.5">
-                              {gks.map(pick => {
-                                const player = getPlayerById(pick.element);
-                                if (!player) return null;
-                                const playerTeam = getPlayerTeam(player);
-                                const isGoalkeeper = player.element_type === 1;
-                                
-                                return (
-                                  <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
-                                    <div className="relative flex flex-col items-center">
-                                      {/* Badges - Outside container */}
-                                      {pick.is_captain && (
-                                        <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
-                                          <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
-                                        </div>
-                                      )}
-                                      {pick.is_vice_captain && !pick.is_captain && (
-                                        <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
-                                          <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
-                                        </div>
-                                      )}
-                                      {player.in_dreamteam && (
-                                        <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
-                                          <Star className="w-3 h-3 text-white fill-white" />
-                                        </div>
-                                      )}
-                                      {/* Unified Card Container */}
-                                      <div 
-                                        className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40 cursor-pointer hover:bg-white/30 transition-colors"
-                                        onClick={() => handlePlayerCardClick(player, pick.is_captain)}
-                                      >
-                                        <div className="p-1">
-                                          <img 
-                                            src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                            alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                            className="w-full h-16 sm:h-20 md:h-24 object-contain drop-shadow-lg"
-                                            onError={(e) => {
-                                              (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                            }}
-                                          />
-                                        </div>
-                                        {/* Text Labels */}
-                                        <div className="flex flex-col">
-                                          <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
-                                              {player.web_name}
-                                            </div>
-                                          </div>
-                                          <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
-                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                              {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
-                                            </div>
-                                            {(() => { const fxs = getPlayerFixtureInfos(pick.element, currentGameweek); return <div className={`${fxs.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>{fxs.length > 0 ? fxs.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}</div>; })()}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        })()}
+                    const gwPointsBenchPlayers: PitchPlayer[] = sortBenchPlayers(teamData.picks.filter(pick => pick.position > 11)).map(pick => {
+                      const player = getPlayerById(pick.element);
+                      if (!player) return null;
+                      const playerTeam = getPlayerTeam(player);
+                      const fxs = getPlayerFixtureInfos(pick.element, currentGameweek);
+                      return {
+                        element: pick.element,
+                        element_type: player.element_type,
+                        position: pick.position,
+                        is_captain: false,
+                        is_vice_captain: false,
+                        multiplier: pick.multiplier,
+                        web_name: player.web_name,
+                        team_short_name: playerTeam?.short_name,
+                        team_id: player.team,
+                        team_code: getTeamCode(playerTeam),
+                        event_points: player.event_points,
+                        in_dreamteam: player.in_dreamteam,
+                        points_display: getPlayerDisplayPoints(player, playerTeam?.id || 0, false),
+                        fixtures: fxs,
+                      };
+                    }).filter(Boolean) as PitchPlayer[];
 
-                        {/* Defenders */}
-                        {(() => {
-                          const defs = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
-                            .filter(pick => {
-                              const player = getPlayerById(pick.element);
-                              return player?.element_type === 2;
-                            });
-                          
-                          return defs.length > 0 && (
-                            <div className="flex justify-center gap-0.5">
-                              {defs.map(pick => {
-                                const player = getPlayerById(pick.element);
-                                if (!player) return null;
-                                const playerTeam = getPlayerTeam(player);
-                                
-                                return (
-                                  <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
-                                    <div className="relative flex flex-col items-center">
-                                      {/* Badges - Outside container */}
-                                      {pick.is_captain && (
-                                        <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
-                                          <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
-                                        </div>
-                                      )}
-                                      {pick.is_vice_captain && !pick.is_captain && (
-                                        <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
-                                          <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
-                                        </div>
-                                      )}
-                                      {player.in_dreamteam && (
-                                        <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
-                                          <Star className="w-3 h-3 text-white fill-white" />
-                                        </div>
-                                      )}
-                                      {/* Unified Card Container */}
-                                      <div 
-                                        className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40 cursor-pointer hover:bg-white/30 transition-colors"
-                                        onClick={() => handlePlayerCardClick(player, pick.is_captain)}
-                                      >
-                                        <div className="p-1">
-                                          <img 
-                                            src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
-                                            alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                            className="w-full h-16 sm:h-20 md:h-24 object-contain drop-shadow-lg"
-                                          />
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
-                                              {player.web_name}
-                                            </div>
-                                          </div>
-                                          <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
-                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                              {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
-                                            </div>
-                                            {(() => { const fxs = getPlayerFixtureInfos(pick.element, currentGameweek); return <div className={`${fxs.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>{fxs.length > 0 ? fxs.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}</div>; })()}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        })()}
-
-                        {/* Midfielders */}
-                        {(() => {
-                          const mids = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
-                            .filter(pick => {
-                              const player = getPlayerById(pick.element);
-                              return player?.element_type === 3;
-                            });
-                          
-                          return mids.length > 0 && (
-                            <div className="flex justify-center gap-0.5">
-                              {mids.map(pick => {
-                                const player = getPlayerById(pick.element);
-                                if (!player) return null;
-                                const playerTeam = getPlayerTeam(player);
-                                
-                                return (
-                                  <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
-                                    <div className="relative flex flex-col items-center">
-                                      {pick.is_captain && (
-                                        <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
-                                          <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
-                                        </div>
-                                      )}
-                                      {pick.is_vice_captain && (
-                                        <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
-                                          <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
-                                        </div>
-                                      )}
-                                      {player.in_dreamteam && (
-                                        <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
-                                          <Star className="w-3 h-3 text-white fill-white" />
-                                        </div>
-                                      )}
-                                      {/* Unified Card Container */}
-                                      <div 
-                                        className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40 cursor-pointer hover:bg-white/30 transition-colors"
-                                        onClick={() => handlePlayerCardClick(player, pick.is_captain)}
-                                      >
-                                        <div className="p-1">
-                                          <img 
-                                            src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
-                                            alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                            className="w-full h-16 sm:h-20 md:h-24 object-contain drop-shadow-lg"
-                                          />
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
-                                              {player.web_name}
-                                            </div>
-                                          </div>
-                                          <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
-                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                              {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
-                                            </div>
-                                            {(() => { const fxs = getPlayerFixtureInfos(pick.element, currentGameweek); return <div className={`${fxs.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>{fxs.length > 0 ? fxs.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}</div>; })()}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        })()}
-
-                        {/* Forwards */}
-                        {(() => {
-                          const fwds = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11))
-                            .filter(pick => {
-                              const player = getPlayerById(pick.element);
-                              return player?.element_type === 4;
-                            });
-                          
-                          return fwds.length > 0 && (
-                            <div className="flex justify-center gap-0.5">
-                              {fwds.map(pick => {
-                                const player = getPlayerById(pick.element);
-                                if (!player) return null;
-                                const playerTeam = getPlayerTeam(player);
-                                
-                                return (
-                                  <div key={pick.element} className="flex flex-col items-center w-[19.5%]" data-testid={`pitch-player-${player.id}`}>
-                                    <div className="relative flex flex-col items-center">
-                                      {pick.is_captain && (
-                                        <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
-                                          <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
-                                        </div>
-                                      )}
-                                      {pick.is_vice_captain && (
-                                        <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
-                                          <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
-                                        </div>
-                                      )}
-                                      {player.in_dreamteam && (
-                                        <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
-                                          <Star className="w-3 h-3 text-white fill-white" />
-                                        </div>
-                                      )}
-                                      {/* Unified Card Container */}
-                                      <div 
-                                        className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40 cursor-pointer hover:bg-white/30 transition-colors"
-                                        onClick={() => handlePlayerCardClick(player, pick.is_captain)}
-                                      >
-                                        <div className="p-1">
-                                          <img 
-                                            src={getJerseyImageUrl(getTeamCode(playerTeam), false)} 
-                                            alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                            className="w-full h-16 sm:h-20 md:h-24 object-contain drop-shadow-lg"
-                                          />
-                                        </div>
-                                        <div className="flex flex-col">
-                                          <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
-                                              {player.web_name}
-                                            </div>
-                                          </div>
-                                          <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
-                                            <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                              {getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain)}
-                                            </div>
-                                            {(() => { const fxs = getPlayerFixtureInfos(pick.element, currentGameweek); return <div className={`${fxs.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>{fxs.length > 0 ? fxs.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}</div>; })()}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          );
-                        })()}
-                      </div>
-
-                      {/* Bench Display */}
-                      <div className="mt-6 pt-6 border-t-2 border-white/30">
-                        <h3 className="text-white font-bold text-center mb-4">BENCH</h3>
-                        <div className="flex justify-center gap-0.5">
-                          {sortBenchPlayers(teamData.picks.filter(pick => pick.position > 11)).map((pick, index) => {
-                            const player = getPlayerById(pick.element);
-                            if (!player) return null;
-                            const playerTeam = getPlayerTeam(player);
-                            const isGoalkeeper = player.element_type === 1;
-                            
-                            return (
-                              <div key={pick.element} className="flex flex-col items-center w-[19.5%] opacity-90" data-testid={`pitch-bench-${player.id}`}>
-                                <div className="relative flex flex-col items-center">
-                                  {player.in_dreamteam && (
-                                    <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
-                                      <Star className="w-3 h-3 text-white fill-white" />
-                                    </div>
-                                  )}
-                                  {/* Unified Card Container */}
-                                  <div 
-                                    className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40 cursor-pointer hover:bg-white/30 transition-colors"
-                                    onClick={() => handlePlayerCardClick(player, false)}
-                                  >
-                                    <div className="p-1">
-                                      <img 
-                                        src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                        alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                        className="w-full h-16 sm:h-20 md:h-24 object-contain drop-shadow-lg"
-                                        onError={(e) => {
-                                          (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                        }}
-                                      />
-                                    </div>
-                                    <div className="flex flex-col">
-                                      <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                        <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
-                                          {player.web_name}
-                                        </div>
-                                      </div>
-                                      <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
-                                        <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                          {getPlayerDisplayPoints(player, playerTeam?.id || 0, false)}
-                                        </div>
-                                        {(() => { const fxs = getPlayerFixtureInfos(pick.element, currentGameweek); return <div className={`${fxs.length > 1 ? 'text-[7px] sm:text-[8px] md:text-[10px]' : 'text-[8px] sm:text-[10px] md:text-xs'} font-semibold text-white/90 truncate`}>{fxs.length > 0 ? fxs.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}</div>; })()}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                    </div>
-                  )}
+                    return (
+                      <PitchView 
+                        players={gwPointsPitchPlayers}
+                        benchPlayers={gwPointsBenchPlayers}
+                        onPlayerClick={(player) => {
+                          const fullPlayer = getPlayerById(player.element);
+                          if (fullPlayer) handlePlayerCardClick(fullPlayer, player.is_captain);
+                        }}
+                      />
+                    );
+                  })()}
 
                   {/* List View - Starting XI and Bench - Mobile Optimized */}
                   {teamView === "list" && (
@@ -2240,147 +1919,52 @@ export default function MyDashboard() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
-                      {/* Pitch View */}
                       {nextTeamView === "pitch" && (
-                        <div className="space-y-4">
-                          <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
-                            {/* Pitch Lines */}
-                            <div className="absolute inset-0 opacity-30 pointer-events-none">
-                              <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
-                              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
-                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
-                              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full"></div>
-                              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-t-0 border-white"></div>
-                              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-t-0 border-white"></div>
-                              <div className="absolute top-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
-                              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
-                                <div className="absolute left-0 top-0 w-1 h-4 bg-white"></div>
-                                <div className="absolute right-0 top-0 w-1 h-4 bg-white"></div>
-                              </div>
-                              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-b-0 border-white"></div>
-                              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-b-0 border-white"></div>
-                              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
-                              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
-                                <div className="absolute left-0 bottom-0 w-1 h-4 bg-white"></div>
-                                <div className="absolute right-0 bottom-0 w-1 h-4 bg-white"></div>
-                              </div>
-                              <div className="absolute top-0 left-0 w-4 h-4 border-2 border-t-0 border-l-0 border-white rounded-br-full"></div>
-                              <div className="absolute top-0 right-0 w-4 h-4 border-2 border-t-0 border-r-0 border-white rounded-bl-full"></div>
-                              <div className="absolute bottom-0 left-0 w-4 h-4 border-2 border-b-0 border-l-0 border-white rounded-tr-full"></div>
-                              <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
-                            </div>
-
-                            <div className="relative space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-10">
-                              {/* Starting XI by position */}
-                              {[1, 2, 3, 4].map(positionType => {
-                                const positionPlayers = teamData.picks
-                                  .filter(pick => pick.position <= 11)
-                                  .filter(pick => {
-                                    const player = getPlayerById(pick.element);
-                                    return player?.element_type === positionType;
-                                  });
-
-                                return positionPlayers.length > 0 && (
-                                  <div key={positionType} className="flex justify-center gap-0.5">
-                                    {positionPlayers.map(pick => {
-                                      const player = getPlayerById(pick.element);
-                                      if (!player) return null;
-                                      const playerTeam = getPlayerTeam(player);
-                                      const isGoalkeeper = player.element_type === 1;
-                                      const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
-
-                                      return (
-                                        <div key={pick.element} className="flex flex-col items-center w-[19.5%]">
-                                          <div className="relative flex flex-col items-center">
-                                            {pick.is_captain && (
-                                              <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
-                                                <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
-                                              </div>
-                                            )}
-                                            {pick.is_vice_captain && (
-                                              <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
-                                                <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
-                                              </div>
-                                            )}
-                                            <div className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40">
-                                              <div className="p-1">
-                                                <img 
-                                                  src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                                  alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                                  className="w-full h-16 sm:h-20 md:h-24 object-contain drop-shadow-lg"
-                                                  onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                                  }}
-                                                />
-                                              </div>
-                                              <div className="flex flex-col">
-                                                <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                                  <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
-                                                    {player.web_name}
-                                                  </div>
-                                                </div>
-                                                <div className="w-full px-1 py-0.5 bg-purple-600 text-center">
-                                                  <div className={`${fixtureInfos.length > 1 ? 'text-[7px] sm:text-[9px] md:text-xs' : 'text-[9px] sm:text-[11px] md:text-sm'} font-bold text-white truncate`}>
-                                                    {fixtureInfos.length > 0 ? fixtureInfos.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                );
-                              })}
-
-                              {/* Bench Display - Inside Pitch */}
-                              <div className="mt-6 pt-6 border-t-2 border-white/30">
-                                <h3 className="text-white font-bold text-center mb-4">BENCH</h3>
-                                <div className="flex justify-center gap-0.5">
-                                  {teamData.picks.filter(pick => pick.position > 11).map(pick => {
-                                    const player = getPlayerById(pick.element);
-                                    if (!player) return null;
-                                    const playerTeam = getPlayerTeam(player);
-                                    const isGoalkeeper = player.element_type === 1;
-                                    const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
-
-                                    return (
-                                      <div key={pick.element} className="flex flex-col items-center w-[19.5%] opacity-90">
-                                        <div className="relative flex flex-col items-center">
-                                          <div className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40">
-                                            <div className="p-1">
-                                              <img 
-                                                src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                                alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                                className="w-full h-16 sm:h-20 md:h-24 object-contain drop-shadow-lg"
-                                                onError={(e) => {
-                                                  (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                                }}
-                                              />
-                                            </div>
-                                            <div className="flex flex-col">
-                                              <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
-                                                  {player.web_name}
-                                                </div>
-                                              </div>
-                                              <div className="w-full px-1 py-0.5 bg-gray-500 text-center">
-                                                <div className={`${fixtureInfos.length > 1 ? 'text-[7px] sm:text-[9px] md:text-xs' : 'text-[9px] sm:text-[11px] md:text-sm'} font-bold text-white truncate`}>
-                                                  {fixtureInfos.length > 0 ? fixtureInfos.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
+                        <PitchView
+                          players={teamData.picks.filter(pick => pick.position <= 11).map(pick => {
+                            const player = getPlayerById(pick.element);
+                            if (!player) return null;
+                            const playerTeam = getPlayerTeam(player);
+                            const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
+                            const nextGW = getNextGameweekDashboard();
+                            const projected = getProjectedPoints(pick.element, nextGW);
+                            return {
+                              element: pick.element,
+                              element_type: player.element_type,
+                              position: pick.position,
+                              is_captain: pick.is_captain,
+                              is_vice_captain: pick.is_vice_captain,
+                              multiplier: pick.multiplier,
+                              web_name: player.web_name,
+                              team_short_name: playerTeam?.short_name,
+                              team_id: player.team,
+                              team_code: playerTeam?.code || playerTeam?.id || 0,
+                              points_display: projected > 0 ? projected.toFixed(1) : '-',
+                              fixtures: fixtureInfos as PitchPlayerFixture[],
+                            };
+                          }).filter(Boolean) as PitchPlayer[]}
+                          benchPlayers={teamData.picks.filter(pick => pick.position > 11).map(pick => {
+                            const player = getPlayerById(pick.element);
+                            if (!player) return null;
+                            const playerTeam = getPlayerTeam(player);
+                            const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
+                            const nextGW = getNextGameweekDashboard();
+                            const projected = getProjectedPoints(pick.element, nextGW);
+                            return {
+                              element: pick.element,
+                              element_type: player.element_type,
+                              position: pick.position,
+                              is_captain: false,
+                              is_vice_captain: false,
+                              web_name: player.web_name,
+                              team_short_name: playerTeam?.short_name,
+                              team_id: player.team,
+                              team_code: playerTeam?.code || playerTeam?.id || 0,
+                              points_display: projected > 0 ? projected.toFixed(1) : '-',
+                              fixtures: fixtureInfos as PitchPlayerFixture[],
+                            };
+                          }).filter(Boolean) as PitchPlayer[]}
+                        />
                       )}
 
                       {/* List View */}
@@ -2764,162 +2348,53 @@ export default function MyDashboard() {
                       </Button>
                     </div>
 
-                    {/* Pitch View */}
                     {nextTeamView === "pitch" && (
-                      <div className="space-y-4 mt-6">
-                        {/* Pitch with players */}
-                        <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden">
-                          {/* Pitch Lines */}
-                          <div className="absolute inset-0 opacity-30 pointer-events-none">
-                            <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full"></div>
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-t-0 border-white"></div>
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-t-0 border-white"></div>
-                            <div className="absolute top-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
-                            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
-                              <div className="absolute left-0 top-0 w-1 h-4 bg-white"></div>
-                              <div className="absolute right-0 top-0 w-1 h-4 bg-white"></div>
-                            </div>
-                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-64 h-28 border-2 border-b-0 border-white"></div>
-                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-14 border-2 border-b-0 border-white"></div>
-                            <div className="absolute bottom-20 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full"></div>
-                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-2 border-2 border-white bg-white/10">
-                              <div className="absolute left-0 bottom-0 w-1 h-4 bg-white"></div>
-                              <div className="absolute right-0 bottom-0 w-1 h-4 bg-white"></div>
-                            </div>
-                            <div className="absolute top-0 left-0 w-4 h-4 border-2 border-t-0 border-l-0 border-white rounded-br-full"></div>
-                            <div className="absolute top-0 right-0 w-4 h-4 border-2 border-t-0 border-r-0 border-white rounded-bl-full"></div>
-                            <div className="absolute bottom-0 left-0 w-4 h-4 border-2 border-b-0 border-l-0 border-white rounded-tr-full"></div>
-                            <div className="absolute bottom-0 right-0 w-4 h-4 border-2 border-b-0 border-r-0 border-white rounded-tl-full"></div>
-                          </div>
-
-                          <div className="relative space-y-4 sm:space-y-6 md:space-y-8 lg:space-y-10">
-                            {/* Starting XI by position */}
-                            {[1, 2, 3, 4].map(positionType => {
-                              const positionPlayers = nextTeamData.picks
-                                .filter(pick => pick.position <= 11)
-                                .filter(pick => {
-                                  const player = getPlayerById(pick.element);
-                                  return player?.element_type === positionType;
-                                });
-
-                              return positionPlayers.length > 0 && (
-                                <div key={positionType} className="flex justify-center gap-0.5">
-                                  {positionPlayers.map(pick => {
-                                    const player = getPlayerById(pick.element);
-                                    if (!player) return null;
-                                    const playerTeam = getPlayerTeam(player);
-                                    const isGoalkeeper = player.element_type === 1;
-                                    const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
-
-                                    return (
-                                      <div key={pick.element} className="flex flex-col items-center w-[19.5%]">
-                                        <div className="relative flex flex-col items-center">
-                                          {pick.is_captain && (
-                                            <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
-                                              <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
-                                            </div>
-                                          )}
-                                          {pick.is_vice_captain && (
-                                            <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
-                                              <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
-                                            </div>
-                                          )}
-                                          <div className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40">
-                                            <div className="p-1">
-                                              <img 
-                                                src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                                alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                                className="w-full h-16 sm:h-20 md:h-24 object-contain drop-shadow-lg"
-                                                onError={(e) => {
-                                                  (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                                }}
-                                              />
-                                            </div>
-                                            <div className="flex flex-col">
-                                              <div className="w-full px-1 py-0.5 bg-white/95 text-center">
-                                                <div className="text-[8px] sm:text-[10px] md:text-xs text-gray-500 truncate">
-                                                  {playerTeam?.short_name || 'UNK'}
-                                                </div>
-                                              </div>
-                                              <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
-                                                  {player.web_name}
-                                                </div>
-                                              </div>
-                                              <div className="w-full px-1 py-0.5 bg-purple-600 text-center">
-                                                <div className={`${fixtureInfos.length > 1 ? 'text-[7px] sm:text-[9px] md:text-xs' : 'text-[9px] sm:text-[11px] md:text-sm'} font-bold text-white truncate`}>
-                                                  {fixtureInfos.length > 0 ? fixtureInfos.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* Bench - Inside pitch area */}
-                          <div className="relative mt-4 sm:mt-6 md:mt-8 pt-4 border-t-2 border-white/30">
-                            <div className="text-center mb-2">
-                              <span className="text-white font-bold text-xs sm:text-sm">BENCH</span>
-                            </div>
-                            <div className="flex justify-center gap-0.5">
-                              {nextTeamData.picks
-                                .filter(pick => pick.position > 11)
-                                .sort((a, b) => a.position - b.position)
-                                .map(pick => {
-                                  const player = getPlayerById(pick.element);
-                                  if (!player) return null;
-                                  const playerTeam = getPlayerTeam(player);
-                                  const isGoalkeeper = player.element_type === 1;
-                                  const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
-
-                                  return (
-                                    <div key={pick.element} className="flex flex-col items-center w-[19.5%] opacity-90">
-                                      <div className="relative flex flex-col items-center">
-                                        <div className="w-18 sm:w-22 md:w-28 bg-white/20 border-2 border-white/40">
-                                          <div className="p-1">
-                                            <img 
-                                              src={getJerseyImageUrl(getTeamCode(playerTeam), isGoalkeeper)} 
-                                              alt={`${playerTeam?.short_name || 'Team'} jersey`}
-                                              className="w-full h-16 sm:h-20 md:h-24 object-contain drop-shadow-lg"
-                                              onError={(e) => {
-                                                (e.target as HTMLImageElement).src = getJerseyImageUrl(getTeamCode(playerTeam), false);
-                                              }}
-                                            />
-                                          </div>
-                                          <div className="flex flex-col">
-                                            <div className="w-full px-1 py-0.5 bg-white/95 text-center">
-                                              <div className="text-[8px] sm:text-[10px] md:text-xs text-gray-500 truncate">
-                                                {playerTeam?.short_name || 'UNK'}
-                                              </div>
-                                            </div>
-                                            <div className="w-full px-1 py-1 bg-white/95 text-center">
-                                              <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-gray-900 truncate">
-                                                {player.web_name}
-                                              </div>
-                                            </div>
-                                            <div className="w-full px-1 py-0.5 bg-gray-500 text-center">
-                                              <div className={`${fixtureInfos.length > 1 ? 'text-[7px] sm:text-[9px] md:text-xs' : 'text-[9px] sm:text-[11px] md:text-sm'} font-bold text-white truncate`}>
-                                                {fixtureInfos.length > 0 ? fixtureInfos.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                            </div>
-                          </div>
-                        </div>
+                      <div className="mt-6">
+                        <PitchView
+                          players={nextTeamData.picks.filter(pick => pick.position <= 11).map(pick => {
+                            const player = getPlayerById(pick.element);
+                            if (!player) return null;
+                            const playerTeam = getPlayerTeam(player);
+                            const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
+                            const nextGW = getNextGameweekDashboard();
+                            const projected = getProjectedPoints(pick.element, nextGW);
+                            return {
+                              element: pick.element,
+                              element_type: player.element_type,
+                              position: pick.position,
+                              is_captain: pick.is_captain,
+                              is_vice_captain: pick.is_vice_captain,
+                              multiplier: pick.multiplier,
+                              web_name: player.web_name,
+                              team_short_name: playerTeam?.short_name,
+                              team_id: player.team,
+                              team_code: playerTeam?.code || playerTeam?.id || 0,
+                              points_display: projected > 0 ? projected.toFixed(1) : '-',
+                              fixtures: fixtureInfos as PitchPlayerFixture[],
+                            };
+                          }).filter(Boolean) as PitchPlayer[]}
+                          benchPlayers={nextTeamData.picks.filter(pick => pick.position > 11).sort((a, b) => a.position - b.position).map(pick => {
+                            const player = getPlayerById(pick.element);
+                            if (!player) return null;
+                            const playerTeam = getPlayerTeam(player);
+                            const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
+                            const nextGW = getNextGameweekDashboard();
+                            const projected = getProjectedPoints(pick.element, nextGW);
+                            return {
+                              element: pick.element,
+                              element_type: player.element_type,
+                              position: pick.position,
+                              is_captain: false,
+                              is_vice_captain: false,
+                              web_name: player.web_name,
+                              team_short_name: playerTeam?.short_name,
+                              team_id: player.team,
+                              team_code: playerTeam?.code || playerTeam?.id || 0,
+                              points_display: projected > 0 ? projected.toFixed(1) : '-',
+                              fixtures: fixtureInfos as PitchPlayerFixture[],
+                            };
+                          }).filter(Boolean) as PitchPlayer[]}
+                        />
                       </div>
                     )}
 

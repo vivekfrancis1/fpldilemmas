@@ -37,7 +37,7 @@ import {
   BarChart3,
   ArrowLeftRight
 } from "lucide-react";
-import { PitchView, PitchPlayer, PitchFixture } from "@/components/pitch-view";
+import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
 import { ListView, type ListPlayer } from "@/components/list-view";
 
 type TeamPick = {
@@ -353,6 +353,32 @@ export default function Top25ManagerTeam() {
   const captain = enrichedPicks.find(p => p.is_captain);
   const viceCaptain = enrichedPicks.find(p => p.is_vice_captain);
 
+  const getTeamById = (teamId: number) => {
+    return bootstrapData?.teams.find(t => t.id === teamId);
+  };
+
+  const getCurrentGameweek = (): number => {
+    const currentEvent = bootstrapData?.events.find(e => e.is_current);
+    return currentEvent?.id || 1;
+  };
+
+  const getCurrentGWFixtures = (teamId: number): PitchPlayerFixture[] => {
+    if (!fixturesData || !Array.isArray(fixturesData) || !teamId) return [];
+    const currentGW = getCurrentGameweek();
+    const teamFixtures = fixturesData.filter((f: any) => 
+      (f.team_h === teamId || f.team_a === teamId) && f.event === currentGW
+    );
+    return teamFixtures.map((fixture: any) => {
+      const isHome = fixture.team_h === teamId;
+      const opponentId = isHome ? fixture.team_a : fixture.team_h;
+      const opponent = getTeamById(opponentId);
+      return {
+        opponent: opponent?.short_name || 'TBD',
+        isHome,
+      };
+    });
+  };
+
   // Map starting eleven to PitchPlayer format for pitch view
   const pitchPlayers: PitchPlayer[] = startingEleven.map(pick => {
     const playerData = getPlayerData(pick.element);
@@ -373,6 +399,7 @@ export default function Top25ManagerTeam() {
       team_code: teamData?.code,
       event_points: pick.event_points,
       in_dreamteam: playerData?.in_dreamteam || false,
+      fixtures: getCurrentGWFixtures(playerData?.team),
     };
   });
 
@@ -396,17 +423,9 @@ export default function Top25ManagerTeam() {
       team_code: teamData?.code,
       event_points: pick.event_points,
       in_dreamteam: playerData?.in_dreamteam || false,
+      fixtures: getCurrentGWFixtures(playerData?.team),
     };
   });
-
-  const getTeamById = (teamId: number) => {
-    return bootstrapData?.teams.find(t => t.id === teamId);
-  };
-
-  const getCurrentGameweek = (): number => {
-    const currentEvent = bootstrapData?.events.find(e => e.is_current);
-    return currentEvent?.id || 1;
-  };
 
   const getCurrentGameweekFixture = (teamId: number) => {
     if (!fixturesData || !Array.isArray(fixturesData)) return null;
