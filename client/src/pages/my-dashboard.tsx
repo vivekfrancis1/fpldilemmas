@@ -2316,14 +2316,10 @@ export default function MyDashboard() {
                                                     {player.web_name}
                                                   </div>
                                                 </div>
-                                                <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
-                                                  {fixtureInfos.length > 0 ? fixtureInfos.map((fx, i) => (
-                                                    <div key={i} className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                                      {fx.opponent} ({fx.isHome ? 'H' : 'A'})
-                                                    </div>
-                                                  )) : (
-                                                    <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">BGW</div>
-                                                  )}
+                                                <div className="w-full px-1 py-0.5 bg-purple-600 text-center">
+                                                  <div className={`${fixtureInfos.length > 1 ? 'text-[7px] sm:text-[9px] md:text-xs' : 'text-[9px] sm:text-[11px] md:text-sm'} font-bold text-white truncate`}>
+                                                    {fixtureInfos.length > 0 ? fixtureInfos.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}
+                                                  </div>
                                                 </div>
                                               </div>
                                             </div>
@@ -2366,14 +2362,10 @@ export default function MyDashboard() {
                                                   {player.web_name}
                                                 </div>
                                               </div>
-                                              <div className="w-full px-2 py-0.5 bg-gray-500 text-center">
-                                                {fixtureInfos.length > 0 ? fixtureInfos.map((fx, i) => (
-                                                  <div key={i} className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                                    {fx.opponent} ({fx.isHome ? 'H' : 'A'})
-                                                  </div>
-                                                )) : (
-                                                  <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">BGW</div>
-                                                )}
+                                              <div className="w-full px-1 py-0.5 bg-gray-500 text-center">
+                                                <div className={`${fixtureInfos.length > 1 ? 'text-[7px] sm:text-[9px] md:text-xs' : 'text-[9px] sm:text-[11px] md:text-sm'} font-bold text-white truncate`}>
+                                                  {fixtureInfos.length > 0 ? fixtureInfos.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}
+                                                </div>
                                               </div>
                                             </div>
                                           </div>
@@ -2854,14 +2846,10 @@ export default function MyDashboard() {
                                                   {player.web_name}
                                                 </div>
                                               </div>
-                                              <div className="w-full px-2 py-0.5 bg-purple-600 text-center">
-                                                {fixtureInfos.length > 0 ? fixtureInfos.map((fx, i) => (
-                                                  <div key={i} className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                                    {fx.opponent} ({fx.isHome ? 'H' : 'A'})
-                                                  </div>
-                                                )) : (
-                                                  <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">BGW</div>
-                                                )}
+                                              <div className="w-full px-1 py-0.5 bg-purple-600 text-center">
+                                                <div className={`${fixtureInfos.length > 1 ? 'text-[7px] sm:text-[9px] md:text-xs' : 'text-[9px] sm:text-[11px] md:text-sm'} font-bold text-white truncate`}>
+                                                  {fixtureInfos.length > 0 ? fixtureInfos.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}
+                                                </div>
                                               </div>
                                             </div>
                                           </div>
@@ -2915,14 +2903,10 @@ export default function MyDashboard() {
                                                 {player.web_name}
                                               </div>
                                             </div>
-                                            <div className="w-full px-2 py-0.5 bg-gray-500 text-center">
-                                              {fixtureInfos.length > 0 ? fixtureInfos.map((fx, i) => (
-                                                <div key={i} className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
-                                                  {fx.opponent} ({fx.isHome ? 'H' : 'A'})
-                                                </div>
-                                              )) : (
-                                                <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">BGW</div>
-                                              )}
+                                            <div className="w-full px-1 py-0.5 bg-gray-500 text-center">
+                                              <div className={`${fixtureInfos.length > 1 ? 'text-[7px] sm:text-[9px] md:text-xs' : 'text-[9px] sm:text-[11px] md:text-sm'} font-bold text-white truncate`}>
+                                                {fixtureInfos.length > 0 ? fixtureInfos.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ') : 'BGW'}
+                                              </div>
                                             </div>
                                           </div>
                                         </div>
