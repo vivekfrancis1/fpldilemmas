@@ -48,6 +48,7 @@ import {
 import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 import { ListView, type ListPlayer } from "@/components/list-view";
 import { getPositionFromElementType } from "@/lib/pitch-utils";
+import { calculateFreeTransfers } from "@/lib/free-transfers";
 
 type TeamPick = {
   element: number;
@@ -885,11 +886,34 @@ export default function CreatorTeam() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {(() => {
+                  const chipGWs = new Set(
+                    (managerHistory?.chips || [])
+                      .filter((c: any) => c.name === 'freehit' || c.name === 'wildcard')
+                      .map((c: any) => c.event)
+                  );
+                  const totalTransfers = transfersData.filter(t => !chipGWs.has(t.event)).length;
+                  const currentGW = getCurrentGameweek();
+                  const freeTransfersAvailable = calculateFreeTransfers(
+                    managerHistory?.current,
+                    managerHistory?.chips,
+                    currentGW
+                  );
+                  return (
+                    <div className="flex flex-wrap gap-3 mb-4">
+                      <Badge variant="outline" className="text-sm px-3 py-1">
+                        Total Transfers: {totalTransfers}
+                      </Badge>
+                      <Badge variant="outline" className="text-sm px-3 py-1 bg-green-50 text-green-700 border-green-300">
+                        Free Transfers Available: {freeTransfersAvailable}
+                      </Badge>
+                    </div>
+                  );
+                })()}
                 <div className="space-y-3">
                   {transfersData
                     .slice()
                     .sort((a, b) => {
-                      // Sort by timestamp (most recent first), then by gameweek (descending)
                       const timeA = new Date(a.time).getTime();
                       const timeB = new Date(b.time).getTime();
                       if (timeB !== timeA) return timeB - timeA;
