@@ -1321,23 +1321,6 @@ export default function TransferRecommendations() {
                   <Badge className="bg-green-100 text-green-800 border-green-300">
                     Optimized Lineup
                   </Badge>
-                  {/* View Toggle */}
-                  <div className="flex items-center border rounded-lg overflow-hidden">
-                    <button
-                      onClick={() => setTeamView("pitch")}
-                      className={`p-1.5 ${teamView === "pitch" ? "bg-green-100 text-green-700" : "bg-white text-gray-500 hover:bg-gray-50"}`}
-                      title="Pitch View"
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => setTeamView("list")}
-                      className={`p-1.5 ${teamView === "list" ? "bg-green-100 text-green-700" : "bg-white text-gray-500 hover:bg-gray-50"}`}
-                      title="List View"
-                    >
-                      <List className="h-4 w-4" />
-                    </button>
-                  </div>
                 </div>
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm">
@@ -1368,7 +1351,7 @@ export default function TransferRecommendations() {
               </div>
 
               {/* Pitch View */}
-              {teamView === "pitch" && (() => {
+              {(() => {
                 // Transform to PitchPlayer format for starting 11
                 const pitchPlayers: PitchPlayer[] = optimizedTeam.lineup.slice(0, 11).map((pick: TeamPick) => {
                   const player = getPlayerById(pick.element);
@@ -1421,129 +1404,6 @@ export default function TransferRecommendations() {
                 );
               })()}
 
-              {/* List View */}
-              {teamView === "list" && (
-                <>
-                  {/* Starting 11 */}
-                  <div className="mb-6">
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                      <Target className="h-4 w-4 text-green-600" />
-                      Starting XI
-                    </h3>
-                    <div className="space-y-2">
-                      {optimizedTeam.lineup.slice(0, 11).map((pick: TeamPick, idx: number) => {
-                        const player = getPlayerById(pick.element);
-                        if (!player) return null;
-                        const position = player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD';
-                        const isTransferredIn = transferredInPlayers.has(pick.element);
-                        const opponentInfo = getOpponentInfo(player.team, parseInt(selectedGameweek!));
-                        
-                        return (
-                          <div 
-                            key={pick.element} 
-                            className={`p-3 sm:p-4 rounded-lg border-2 transition-all ${
-                              pick.is_captain 
-                                ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-400' 
-                                : pick.is_vice_captain
-                                ? 'bg-gradient-to-r from-orange-50 to-red-50 border-orange-300'
-                                : isTransferredIn
-                                ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400'
-                                : 'bg-white border-gray-200 hover:border-green-300'
-                            }`}
-                            data-testid={`starting-player-${idx}`}
-                          >
-                            <div className="flex items-center justify-between flex-wrap gap-2">
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-xs shrink-0">
-                                      {position}
-                                    </Badge>
-                                    {pick.is_captain && <Badge className="bg-yellow-400 text-yellow-900 text-xs shrink-0">C</Badge>}
-                                    {pick.is_vice_captain && <Badge className="bg-orange-400 text-orange-900 text-xs shrink-0">VC</Badge>}
-                                    {isTransferredIn && <Badge className="bg-green-500 text-white text-xs shrink-0">NEW</Badge>}
-                                  </div>
-                                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-                                    <span className="text-sm sm:text-base font-medium text-gray-900 truncate">
-                                      {player.web_name}
-                                    </span>
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                                      <span>{bootstrapData?.teams?.find((t: any) => t.id === player.team)?.short_name || ''}</span>
-                                      {opponentInfo && <span className="font-medium">{opponentInfo}</span>}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <div className="text-right">
-                                  <div className="text-xs text-gray-500">Projected</div>
-                                  <div className="text-sm sm:text-base font-bold text-green-600">
-                                    {(pick.projectedPoints || 0).toFixed(1)} pts
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Bench */}
-                  <div>
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-700 mb-3">Bench</h3>
-                    <div className="space-y-2">
-                      {optimizedTeam.lineup.slice(11, 15).map((pick: TeamPick, idx: number) => {
-                        const player = getPlayerById(pick.element);
-                        if (!player) return null;
-                        const position = player.element_type === 1 ? 'GKP' : player.element_type === 2 ? 'DEF' : player.element_type === 3 ? 'MID' : 'FWD';
-                        const isTransferredIn = transferredInPlayers.has(pick.element);
-                        const opponentInfo = getOpponentInfo(player.team, parseInt(selectedGameweek!));
-                        
-                        return (
-                          <div 
-                            key={pick.element} 
-                            className={`p-3 sm:p-4 rounded-lg border ${
-                              isTransferredIn 
-                                ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-300' 
-                                : 'bg-gray-50 border-gray-200'
-                            }`}
-                            data-testid={`bench-player-${idx}`}
-                          >
-                            <div className="flex items-center justify-between flex-wrap gap-2">
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <Badge variant="outline" className="text-xs w-fit">
-                                      {position}
-                                    </Badge>
-                                    {isTransferredIn && <Badge className="bg-green-500 text-white text-xs shrink-0">NEW</Badge>}
-                                  </div>
-                                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
-                                    <span className="text-sm sm:text-base font-medium text-gray-700 truncate">
-                                      {player.web_name}
-                                    </span>
-                                    <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                                      <span>{bootstrapData?.teams?.find((t: any) => t.id === player.team)?.short_name || ''}</span>
-                                      {opponentInfo && <span className="font-medium">{opponentInfo}</span>}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-xs text-gray-500">Projected</div>
-                                <div className="text-sm sm:text-base font-semibold text-gray-600">
-                                  {(pick.projectedPoints || 0).toFixed(1)} pts
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </>
-              )}
             </CardContent>
           </Card>
         )}

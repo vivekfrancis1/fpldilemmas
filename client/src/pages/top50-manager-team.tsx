@@ -701,33 +701,9 @@ export default function Top50ManagerTeam() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold">Team Squad</h2>
                   
-                  {/* View Toggle */}
-                  <div className="flex gap-2">
-                    <Button
-                      variant={teamView === "pitch" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setTeamView("pitch")}
-                      className="flex items-center gap-2"
-                      data-testid="button-view-pitch"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Pitch View
-                    </Button>
-                    <Button
-                      variant={teamView === "list" ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setTeamView("list")}
-                      className="flex items-center gap-2"
-                      data-testid="button-view-list"
-                    >
-                      <List className="h-4 w-4" />
-                      List View
-                    </Button>
-                  </div>
                 </div>
                 
                 {/* Pitch View */}
-                {teamView === "pitch" && (
                   <div className="-mx-2 sm:mx-0">
                     <Card className="bg-white shadow-none sm:shadow-lg border-0 sm:border border-gray-200 overflow-hidden">
                       <CardContent className="p-2 sm:p-6">
@@ -740,39 +716,6 @@ export default function Top50ManagerTeam() {
                       </CardContent>
                     </Card>
                   </div>
-                )}
-                
-                {/* List View - Team Formation Display */}
-                {teamView === "list" && (
-                  <ListView
-                    startingPlayers={pitchPlayers.map(p => ({
-                      ...p,
-                      now_cost: getPlayerData(p.element)?.now_cost,
-                      form: getPlayerData(p.element)?.form,
-                      selected_by_percent: getPlayerData(p.element)?.selected_by_percent,
-                    }))}
-                    benchPlayers={benchPlayers.map(p => ({
-                      ...p,
-                      now_cost: getPlayerData(p.element)?.now_cost,
-                      form: getPlayerData(p.element)?.form,
-                      selected_by_percent: getPlayerData(p.element)?.selected_by_percent,
-                    }))}
-                    title="Starting XI"
-                    subtitle="Current team formation"
-                    benchTitle="Substitutes"
-                    benchSubtitle="Bench players"
-                    formatPrice={formatPrice}
-                    getPositionName={(type) => getPositionFromElementType(type)}
-                    getPlayerDisplay={(player) => {
-                      const playerData = getPlayerData(player.element);
-                      if (!playerData) return "0 pts";
-                      return getPlayerDisplayPoints(playerData, playerData.team, player.is_captain);
-                    }}
-                    showForm={true}
-                    showOwnership={true}
-                    showPrice={true}
-                  />
-                )}
               </div>
             </>
           )}

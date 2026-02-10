@@ -6132,27 +6132,6 @@ export default function TransferPlanner() {
             <div className="flex flex-col gap-3 mb-4">
               {/* All buttons in one row */}
               <div className="flex flex-wrap justify-center items-center gap-2">
-                {/* View Toggle */}
-                <div className="flex gap-2">
-                  <Button
-                    variant={teamView === "pitch" ? "default" : "outline"}
-                    onClick={() => setTeamView("pitch")}
-                    className="flex items-center gap-2"
-                    data-testid="button-team-pitch-view"
-                  >
-                    <Target className="h-4 w-4" />
-                    Pitch View
-                  </Button>
-                  <Button
-                    variant={teamView === "list" ? "default" : "outline"}
-                    onClick={() => setTeamView("list")}
-                    className="flex items-center gap-2"
-                    data-testid="button-team-list-view"
-                  >
-                    <Users className="h-4 w-4" />
-                    List View
-                  </Button>
-                </div>
 
                 {/* Apply Recommended Transfers Button */}
                 {selectedGameweek && activeDraft !== "Base" && recommendedTransfers?.gameweeks?.[selectedGameweek]?.recommendations?.length > 0 && (() => {
@@ -6265,8 +6244,26 @@ export default function TransferPlanner() {
               })()}
             </div>
 
+            <div className="flex justify-center gap-2 mb-4">
+              <Button
+                size="sm"
+                variant={teamView === "pitch" ? "default" : "outline"}
+                onClick={() => setTeamView("pitch")}
+                className={teamView === "pitch" ? "bg-purple-600 hover:bg-purple-700" : ""}
+              >
+                Pitch View
+              </Button>
+              <Button
+                size="sm"
+                variant={teamView === "list" ? "default" : "outline"}
+                onClick={() => setTeamView("list")}
+                className={teamView === "list" ? "bg-purple-600 hover:bg-purple-700" : ""}
+              >
+                List View
+              </Button>
+            </div>
+
             <div>
-            {/* List View */}
             {teamView === "list" && (
             <div>
               {/* Desktop Layout - Hidden on mobile */}

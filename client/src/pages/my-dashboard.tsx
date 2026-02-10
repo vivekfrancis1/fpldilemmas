@@ -1717,30 +1717,8 @@ export default function MyDashboard() {
                     </Card>
                   </div>
 
-                  {/* View Toggle */}
-                  <div className="flex justify-center gap-2">
-                    <Button
-                      variant={teamView === "pitch" ? "default" : "outline"}
-                      onClick={() => setTeamView("pitch")}
-                      className="flex items-center gap-2"
-                      data-testid="button-team-pitch-view"
-                    >
-                      <Target className="h-4 w-4" />
-                      Pitch View
-                    </Button>
-                    <Button
-                      variant={teamView === "list" ? "default" : "outline"}
-                      onClick={() => setTeamView("list")}
-                      className="flex items-center gap-2"
-                      data-testid="button-team-list-view"
-                    >
-                      <Users className="h-4 w-4" />
-                      List View
-                    </Button>
-                  </div>
-
                   {/* Pitch View */}
-                  {teamView === "pitch" && (() => {
+                  {(() => {
                     const gwPointsPitchPlayers: PitchPlayer[] = sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11)).map(pick => {
                       const player = getPlayerById(pick.element);
                       if (!player) return null;
@@ -1805,58 +1783,6 @@ export default function MyDashboard() {
                     );
                   })()}
 
-                  {/* List View - Starting XI and Bench - Mobile Optimized */}
-                  {teamView === "list" && (
-                    <ListView
-                      startingPlayers={sortPlayersByPosition(teamData.picks.filter(pick => pick.position <= 11)).map(pick => {
-                        const player = getPlayerById(pick.element);
-                        return {
-                          element: pick.element,
-                          element_type: player?.element_type || 1,
-                          position: pick.position,
-                          is_captain: pick.is_captain,
-                          is_vice_captain: pick.is_vice_captain,
-                          web_name: player?.web_name,
-                          team_short_name: getTeamName(player),
-                          now_cost: player?.now_cost,
-                          event_points: player?.event_points,
-                          form: player?.form,
-                          selected_by_percent: player?.selected_by_percent,
-                        };
-                      })}
-                      benchPlayers={sortBenchPlayers(teamData.picks.filter(pick => pick.position > 11)).map(pick => {
-                        const player = getPlayerById(pick.element);
-                        return {
-                          element: pick.element,
-                          element_type: player?.element_type || 1,
-                          position: pick.position,
-                          is_captain: false,
-                          is_vice_captain: false,
-                          web_name: player?.web_name,
-                          team_short_name: getTeamName(player),
-                          now_cost: player?.now_cost,
-                          event_points: player?.event_points,
-                          total_points: player?.total_points,
-                          form: player?.form,
-                          selected_by_percent: player?.selected_by_percent,
-                        };
-                      })}
-                      title="Starting XI"
-                      subtitle={`Your team for Gameweek ${getCurrentGameweekDashboard()}`}
-                      benchTitle="Bench"
-                      benchSubtitle="Substitute players"
-                      formatPrice={formatPrice}
-                      getPositionName={getPositionName}
-                      displayMode="points"
-                      showForm={true}
-                      showOwnership={true}
-                      showPrice={true}
-                      onPlayerClick={(listPlayer) => {
-                        const player = getPlayerById(listPlayer.element);
-                        if (player) handlePlayerCardClick(player, listPlayer.is_captain);
-                      }}
-                    />
-                  )}
                 </>
               )}
               
@@ -1893,28 +1819,6 @@ export default function MyDashboard() {
                     </AlertDescription>
                   </Alert>
                   
-                  {/* View Toggle */}
-                  <div className="flex justify-center gap-2 mb-4">
-                    <Button
-                      variant={nextTeamView === "pitch" ? "default" : "outline"}
-                      onClick={() => setNextTeamView("pitch")}
-                      className="flex items-center gap-2"
-                      data-testid="button-nextteam-pitch-view-disconnected"
-                    >
-                      <Target className="h-4 w-4" />
-                      Pitch View
-                    </Button>
-                    <Button
-                      variant={nextTeamView === "list" ? "default" : "outline"}
-                      onClick={() => setNextTeamView("list")}
-                      className="flex items-center gap-2"
-                      data-testid="button-nextteam-list-view-disconnected"
-                    >
-                      <Users className="h-4 w-4" />
-                      List View
-                    </Button>
-                  </div>
-
                   <Card className="border-0 bg-gradient-to-br from-amber-50 to-orange-50 shadow-lg">
                     <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
                       <CardTitle className="text-lg sm:text-xl text-amber-900">
@@ -1925,7 +1829,6 @@ export default function MyDashboard() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
-                      {nextTeamView === "pitch" && (
                         <PitchView
                           players={teamData.picks.filter(pick => pick.position <= 11).map(pick => {
                             const player = getPlayerById(pick.element);
@@ -1977,57 +1880,6 @@ export default function MyDashboard() {
                             };
                           }).filter(Boolean) as PitchPlayer[]}
                         />
-                      )}
-
-                      {/* List View */}
-                      {nextTeamView === "list" && (
-                      <ListView
-                        startingPlayers={teamData.picks.filter(p => p.position <= 11).map(pick => {
-                          const player = getPlayerById(pick.element);
-                          const playerTeam = bootstrapData?.teams.find(t => t.id === player?.team);
-                          return {
-                            element: pick.element,
-                            element_type: player?.element_type || 1,
-                            position: pick.position,
-                            is_captain: pick.is_captain,
-                            is_vice_captain: pick.is_vice_captain,
-                            web_name: player?.web_name,
-                            team_short_name: playerTeam?.short_name,
-                            now_cost: player?.now_cost,
-                            event_points: player?.event_points,
-                            form: player?.form,
-                            selected_by_percent: player?.selected_by_percent,
-                          };
-                        })}
-                        benchPlayers={teamData.picks.filter(p => p.position > 11).map(pick => {
-                          const player = getPlayerById(pick.element);
-                          const playerTeam = bootstrapData?.teams.find(t => t.id === player?.team);
-                          return {
-                            element: pick.element,
-                            element_type: player?.element_type || 1,
-                            position: pick.position,
-                            is_captain: pick.is_captain,
-                            is_vice_captain: pick.is_vice_captain,
-                            web_name: player?.web_name,
-                            team_short_name: playerTeam?.short_name,
-                            now_cost: player?.now_cost,
-                            event_points: player?.event_points,
-                            form: player?.form,
-                            selected_by_percent: player?.selected_by_percent,
-                          };
-                        })}
-                        title="Starting XI"
-                        subtitle={`Your team for Gameweek ${getCurrentGameweekDashboard()}`}
-                        benchTitle="Bench"
-                        benchSubtitle="Substitute players"
-                        formatPrice={formatPrice}
-                        getPositionName={getPositionName}
-                        displayMode="points"
-                        showForm={true}
-                        showOwnership={true}
-                        showPrice={true}
-                      />
-                      )}
                     </CardContent>
                   </Card>
                 </>
@@ -2338,29 +2190,6 @@ export default function MyDashboard() {
                       );
                     })()}
 
-                    {/* View Toggle */}
-                    <div className="flex justify-center gap-2 mb-2">
-                      <Button
-                        variant={nextTeamView === "pitch" ? "default" : "outline"}
-                        onClick={() => setNextTeamView("pitch")}
-                        className="flex items-center gap-2"
-                        data-testid="button-nextteam-pitch-view"
-                      >
-                        <Target className="h-4 w-4" />
-                        Pitch View
-                      </Button>
-                      <Button
-                        variant={nextTeamView === "list" ? "default" : "outline"}
-                        onClick={() => setNextTeamView("list")}
-                        className="flex items-center gap-2"
-                        data-testid="button-nextteam-list-view"
-                      >
-                        <Users className="h-4 w-4" />
-                        List View
-                      </Button>
-                    </div>
-
-                    {nextTeamView === "pitch" && (
                       <div className="mt-6">
                         <PitchView
                           players={nextTeamData.picks.filter(pick => pick.position <= 11).map(pick => {
@@ -2414,61 +2243,6 @@ export default function MyDashboard() {
                           }).filter(Boolean) as PitchPlayer[]}
                         />
                       </div>
-                    )}
-
-                    {/* List View - Grouped by position */}
-                    {nextTeamView === "list" && (
-                      <ListView
-                        startingPlayers={nextTeamData.picks.filter(pick => pick.position <= 11).sort((a, b) => a.position - b.position).map(pick => {
-                          const player = getPlayerById(pick.element);
-                          const playerTeam = getPlayerTeam(player);
-                          const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
-                          const opponentInfo = fixtureInfos.length > 0
-                            ? fixtureInfos.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ')
-                            : 'BGW';
-                          return {
-                            element: pick.element,
-                            element_type: player?.element_type || 1,
-                            position: pick.position,
-                            is_captain: pick.is_captain,
-                            is_vice_captain: pick.is_vice_captain,
-                            web_name: player?.web_name,
-                            team_short_name: playerTeam?.short_name,
-                            now_cost: player?.now_cost,
-                            custom_display: opponentInfo,
-                          };
-                        })}
-                        benchPlayers={nextTeamData.picks.filter(pick => pick.position > 11).sort((a, b) => a.position - b.position).map(pick => {
-                          const player = getPlayerById(pick.element);
-                          const playerTeam = getPlayerTeam(player);
-                          const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
-                          const opponentInfo = fixtureInfos.length > 0
-                            ? fixtureInfos.map(fx => `${fx.opponent} (${fx.isHome ? 'H' : 'A'})`).join(', ')
-                            : 'BGW';
-                          return {
-                            element: pick.element,
-                            element_type: player?.element_type || 1,
-                            position: pick.position,
-                            is_captain: false,
-                            is_vice_captain: false,
-                            web_name: player?.web_name,
-                            team_short_name: playerTeam?.short_name,
-                            now_cost: player?.now_cost,
-                            custom_display: opponentInfo,
-                          };
-                        })}
-                        title="Starting XI"
-                        subtitle={`Your team for Gameweek ${getNextGameweekDashboard()}`}
-                        benchTitle="Bench"
-                        benchSubtitle="Substitute players"
-                        formatPrice={formatPrice}
-                        getPositionName={getPositionName}
-                        displayMode="projected"
-                        showForm={false}
-                        showOwnership={false}
-                        showPrice={true}
-                      />
-                    )}
                   </CardContent>
                 </Card>
               )}

@@ -1291,30 +1291,12 @@ export default function TeamOptimizer() {
                     }
                     return null;
                   })()}
-                  <div className="flex gap-1 ml-2">
-                    <Button
-                      size="sm"
-                      variant={teamView === "pitch" ? "secondary" : "ghost"}
-                      onClick={() => setTeamView("pitch")}
-                      className={`h-7 px-2 ${teamView === "pitch" ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
-                    >
-                      <LayoutGrid className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={teamView === "list" ? "secondary" : "ghost"}
-                      onClick={() => setTeamView("list")}
-                      className={`h-7 px-2 ${teamView === "list" ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
-                    >
-                      <List className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               {/* Pitch View */}
-              {teamView === "pitch" && (() => {
+              {(() => {
                 const gwLineup = optimizedLineups.get(selectedGameweek)!;
                 const starting = gwLineup.starting11 || [];
                 const bench = gwLineup.bench || [];
@@ -1370,51 +1352,6 @@ export default function TeamOptimizer() {
                 );
               })()}
               
-              {/* List View */}
-              {teamView === "list" && (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-gray-100 dark:bg-gray-800 border-b-2 border-purple-200 dark:border-purple-800">
-                        <TableHead className="sticky left-0 z-10 bg-gray-100 dark:bg-gray-800 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 min-w-[180px] sm:min-w-[220px] py-3">
-                          Player
-                        </TableHead>
-                        <TableHead className="hidden lg:table-cell text-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 py-3">
-                          Price
-                        </TableHead>
-                        <TableHead className="text-center text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 py-3 min-w-[70px]">
-                          Pts
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(() => {
-                        const gwLineup = optimizedLineups.get(selectedGameweek)!;
-                        const starting = gwLineup.starting11 || [];
-                        const bench = gwLineup.bench || [];
-                        const gw = nextGameweeks.find(g => g.id === selectedGameweek)!;
-
-                        return (
-                          <>
-                            {starting.map((pick, idx) => renderPlayerRow(pick, gw, idx, false))}
-                            {bench.length > 0 && (
-                              <TableRow className="border-t-2 border-gray-300 dark:border-gray-600">
-                                <TableCell colSpan={3} className="bg-gray-200 dark:bg-gray-700 py-2">
-                                  <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-gray-600 dark:text-gray-300">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-                                    Bench
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            )}
-                            {bench.map((pick, idx) => renderPlayerRow(pick, gw, idx, true))}
-                          </>
-                        );
-                      })()}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
             </CardContent>
           </Card>
         )}
