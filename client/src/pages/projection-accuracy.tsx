@@ -255,21 +255,24 @@ export default function ProjectionAccuracy() {
   }, [accuracyData, activeTab]);
 
   const playerStats = useMemo(() => {
-    if (!accuracyData?.players || !hasActuals) return null;
-    const playersWithActuals = accuracyData.players.filter(p => p.actual_points !== null);
-    if (playersWithActuals.length === 0) return null;
+    if (!accuracyData?.players) return null;
+    const allPlayers = accuracyData.players;
+    if (allPlayers.length === 0) return null;
 
-    const totalProjected = playersWithActuals.reduce((sum, p) => sum + parseFloat(p.projected_points), 0);
+    const playersWithActuals = allPlayers.filter(p => p.actual_points !== null);
+    const totalProjected = allPlayers.reduce((sum, p) => sum + parseFloat(p.projected_points || '0'), 0);
     const totalActual = playersWithActuals.reduce((sum, p) => sum + (p.actual_points || 0), 0);
-    const avgError = playersWithActuals.reduce((sum, p) => sum + parseFloat(p.absolute_error || '0'), 0) / playersWithActuals.length;
+    const avgError = playersWithActuals.length > 0 
+      ? playersWithActuals.reduce((sum, p) => sum + parseFloat(p.absolute_error || '0'), 0) / playersWithActuals.length
+      : 0;
 
     return {
-      count: playersWithActuals.length,
+      count: allPlayers.length,
       totalProjected: totalProjected.toFixed(1),
       totalActual: totalActual,
       avgError: avgError.toFixed(2)
     };
-  }, [accuracyData?.players, hasActuals]);
+  }, [accuracyData?.players]);
 
   const teamStats = useMemo(() => {
     if (!accuracyData?.teams || !hasActuals) return null;
