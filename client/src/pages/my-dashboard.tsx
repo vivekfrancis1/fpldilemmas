@@ -1241,7 +1241,7 @@ export default function MyDashboard() {
                     className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-lg py-2.5 sm:py-3 font-medium transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
                     data-testid="tab-nextteam"
                   >
-                    GW {getNextGameweekDashboard()} Team
+                    GW {getNextGameweekDashboard()} Projections
                   </TabsTrigger>
                 )}
                 <TabsTrigger 
@@ -1871,7 +1871,7 @@ export default function MyDashboard() {
             <TabsContent value="nextteam" className="space-y-6 mt-3 sm:mt-4">
               {isLoadingNextTeam && fplStatus?.connected && (
                 <div className="text-center py-8">
-                  <div className="text-lg">Loading GW {getNextGameweekDashboard()} team data...</div>
+                  <div className="text-lg">Loading GW {getNextGameweekDashboard()} projections...</div>
                 </div>
               )}
               
@@ -1884,7 +1884,7 @@ export default function MyDashboard() {
                     <AlertDescription className="text-sm text-blue-800">
                       <div className="flex flex-col gap-2">
                         <div>
-                          <strong>Showing GW {getCurrentGameweekDashboard()} final team.</strong> Connect your FPL account to see your latest GW {getNextGameweekDashboard()} team with any pending transfers.
+                          <strong>Showing GW {getNextGameweekDashboard()} fixtures and projections based on your GW {getCurrentGameweekDashboard()} team.</strong> Connect your FPL account to sync your latest GW {getNextGameweekDashboard()} team with any pending transfers.
                         </div>
                         <div className="mt-1">
                           <FplConnectDialog />
@@ -1918,10 +1918,10 @@ export default function MyDashboard() {
                   <Card className="border-0 bg-gradient-to-br from-amber-50 to-orange-50 shadow-lg">
                     <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
                       <CardTitle className="text-lg sm:text-xl text-amber-900">
-                        GW {getCurrentGameweekDashboard()} Final Team
+                        GW {getNextGameweekDashboard()} Fixtures & Projections
                       </CardTitle>
                       <CardDescription className="text-amber-700 mt-1">
-                        Your confirmed team from the completed gameweek.
+                        Showing GW {getNextGameweekDashboard()} fixtures and projected points for your GW {getCurrentGameweekDashboard()} team.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
@@ -2035,14 +2035,14 @@ export default function MyDashboard() {
                       <CardContent className="p-6 sm:p-8 text-center">
                         <div className="max-w-md mx-auto space-y-4">
                           <div className="text-lg font-semibold text-blue-900">
-                            GW {getNextGameweekDashboard()} Team Not Available
+                            GW {getNextGameweekDashboard()} Projections Not Available
                           </div>
                           {nextTeamError ? (
                             <>
                               <p className="text-sm text-red-700">
                                 {isOwnTeam 
-                                  ? `FPL session expired. Please reconnect to sync your latest GW ${getNextGameweekDashboard()} team.`
-                                  : "Team data for the upcoming gameweek is not available yet."}
+                                  ? `FPL session expired. Please reconnect to sync your latest GW ${getNextGameweekDashboard()} team for accurate projections.`
+                                  : "Projections for the upcoming gameweek are not available yet."}
                               </p>
                               {isOwnTeam && (
                                 <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-4">
@@ -2063,8 +2063,8 @@ export default function MyDashboard() {
                             <>
                               <p className="text-sm text-blue-700">
                                 {isOwnTeam 
-                                  ? "Your upcoming team will show here once you make changes in FPL."
-                                  : "Team data for the upcoming gameweek will be available once confirmed in FPL."}
+                                  ? "Projections will show here once your team data is available. Connect your FPL account to sync your latest team."
+                                  : "Projections for the upcoming gameweek will be available once team data is confirmed in FPL."}
                               </p>
                               {isOwnTeam && (
                                 <Button
@@ -2091,10 +2091,10 @@ export default function MyDashboard() {
                 <Card className="border-0 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg">
                   <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
                     <CardTitle className="text-lg sm:text-xl text-green-900">
-                      Your GW {getNextGameweekDashboard()} Team Preview
+                      GW {getNextGameweekDashboard()} Fixtures & Projections
                     </CardTitle>
                     <CardDescription className="text-green-700 mt-1">
-                      Your team for the upcoming gameweek.
+                      Showing GW {getNextGameweekDashboard()} fixtures and projected points for your synced team.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="p-4 sm:p-6">
