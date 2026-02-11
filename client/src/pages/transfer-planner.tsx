@@ -1129,39 +1129,6 @@ export default function TransferPlanner() {
     }
   }, [isOwnTeam, teamData]);
 
-  // Auto-detect and apply active chip from FPL API for the current gameweek
-  // The active_chip field indicates which chip was used in the current GW
-  useEffect(() => {
-    if (!isOwnTeam || !teamData || !bootstrapData) return;
-    
-    const activeChip = teamData.active_chip;
-    if (!activeChip) return;
-    
-    // Get the current gameweek (where the chip is active)
-    const currentEvent = bootstrapData.events.find(e => e.is_current);
-    const nextGW = currentEvent?.id;
-    if (!nextGW) return;
-    
-    // Map FPL API chip names to our internal names
-    const chipMapping: Record<string, string> = {
-      'wildcard': 'wildcard',
-      'freehit': 'freehit',
-      'bboost': 'bboost',
-      '3xc': '3xc'
-    };
-    
-    const mappedChip = chipMapping[activeChip.toLowerCase()];
-    if (!mappedChip) return;
-    
-    // Only apply if this chip isn't already set for this gameweek
-    if (plannedChips[nextGW] !== mappedChip) {
-      console.log(`🎯 Auto-detected active chip from FPL: ${activeChip.toUpperCase()} for GW${nextGW}`);
-      setPlannedChips(prev => ({
-        ...prev,
-        [nextGW]: mappedChip as 'wildcard' | 'freehit' | 'bboost' | '3xc'
-      }));
-    }
-  }, [isOwnTeam, teamData, bootstrapData, plannedChips]);
 
   // Fetch manager history to get used chips
   const { data: historyData } = useQuery<ManagerHistory>({
