@@ -228,9 +228,8 @@ export const totalPointsCache = new EnhancedCache(1000, 30 * 60 * 1000); // 1000
 // Recommended Transfers Cache - Short TTL for fresh recommendations
 const recommendedTransfersCache = new EnhancedCache(100, 3 * 60 * 1000); // 100 entries, 3min TTL
 
-// Manager Data Caches - 30 minute TTL for Top 25, Top 50, and Content Creators
+// Manager Data Caches - 30 minute TTL for Top 25 and Content Creators
 const top25ManagersCache = new EnhancedCache(1, 30 * 60 * 1000); // Single entry, 30min TTL
-const top50ManagersCache = new EnhancedCache(1, 30 * 60 * 1000); // Single entry, 30min TTL
 const contentCreatorsCache = new EnhancedCache(1, 30 * 60 * 1000); // Single entry, 30min TTL
 
 // ========== INITIALIZATION ORCHESTRATOR FOR DEPENDENCY MANAGEMENT ==========
@@ -2927,99 +2926,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Top 50 Managers Overall League endpoint with rank change tracking
-  app.get("/api/top50-managers", async (req, res) => {
-    try {
-      // Fetch the current top 50 managers from the FPL Overall league (ID: 314)
-      // This league contains all 11+ million FPL managers ranked by total points
-      const response = await fetch("https://fantasy.premierleague.com/api/leagues-classic/314/standings/?page_standings=1");
-      
-      if (!response.ok) {
-        throw new Error(`FPL API responded with status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      // Extract the top 50 managers from the results
-      const current50Managers = data.standings.results.slice(0, 50);
-      
-      // Get current gameweek for tracking purposes
-      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      const bootstrapData = await bootstrapResponse.json();
-      const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
-      
-      // Process each manager with rank change calculation
-      const managersWithRankChanges = await Promise.all(
-        current50Managers.map(async (manager: any, index: number) => {
-          const currentRank = index + 1;
-          const managerId = manager.entry;
-          const managerName = manager.player_name;
-          
-          try {
-            // Get existing manager record or create new one
-            let existingManager = await storage.getTopManagerById(managerId);
-            if (!existingManager) {
-              // Create new manager record
-              await storage.addTopManager({
-                managerId,
-                name: managerName,
-                category: 'top50',
-                staticRank: currentRank,
-                lastUpdated: new Date()
-              });
-            }
-            
-            // Get latest tracking record for rank change calculation
-            const latestTracking = await storage.getLatestTopManagerTracking(managerId);
-            
-            // Add new tracking record
-            await storage.addTopManagerTracking({
-              managerId,
-              gameweek: currentGameweek,
-              overallRank: currentRank,
-              overallPoints: manager.total || 0,
-              gameweekPoints: null,
-              gameweekRank: null,
-              teamValue: null,
-              totalTransfers: null,
-              recordedAt: new Date()
-            });
-            
-            // Calculate rank change compared to a different rank (not gameweek)
-            let rankChange = null;
-            if (latestTracking && latestTracking.overallRank !== null && latestTracking.overallRank !== currentRank) {
-              rankChange = latestTracking.overallRank - currentRank; // Positive = improvement, negative = decline
-            }
-            
-            return {
-              rank: currentRank,
-              name: managerName,
-              managerId,
-              rankChange
-            };
-          } catch (error) {
-            console.error(`Error processing manager ${managerId}:`, error);
-            // Return basic data without rank change on error
-            return {
-              rank: currentRank,
-              name: managerName,
-              managerId,
-              rankChange: null
-            };
-          }
-        })
-      );
-
-      res.json(managersWithRankChanges);
-    } catch (error) {
-      console.error("Error fetching top 50 managers from Overall league:", error);
-      res.status(500).json({
-        error: "Failed to fetch top 50 managers from Overall league",
-        message: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
-  });
-
   // Watchlist routes
   app.get("/api/watchlist", async (req, res) => {
     try {
@@ -4874,64 +4780,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Cached Top 50 Managers Data Endpoint (uses overall league)
-  app.get("/api/cached/top50-managers-data", async (req, res) => {
-    const cacheKey = 'top50-managers-data';
-    
-    // Check cache first
-    if (top50ManagersCache.has(cacheKey)) {
-      const cached = top50ManagersCache.get(cacheKey);
-      console.log("🔄 Serving Top 50 managers data from cache");
-      return res.json({ ...cached, fromCache: true });
-    }
-    
-    try {
-      console.log("🚀 Fetching fresh Top 50 managers data (will cache for 30 mins)...");
-      
-      // Get top 50 from overall league
-      const leagueResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/leagues-classic/314/standings/?page_standings=1");
-      if (!leagueResponse?.ok) {
-        throw new Error("Failed to fetch overall league standings");
-      }
-      
-      const leagueData = await leagueResponse.json();
-      const top50Standings = leagueData.standings.results.slice(0, 50);
-      
-      // Fetch detailed data for each manager
-      const managerPromises = top50Standings.map((standing: any, index: number) => 
-        fetchManagerDataWithHistory(standing.entry).then(data => ({
-          rank: index + 1,
-          name: standing.player_name,
-          managerId: standing.entry,
-          entryName: standing.entry_name,
-          total: standing.total,
-          ...data
-        }))
-      );
-      
-      const managersWithData = await Promise.all(managerPromises);
-      
-      const responseData = {
-        managers: managersWithData,
-        metadata: {
-          totalManagers: 50,
-          successfulFetches: managersWithData.filter(m => m.success).length,
-          fetchedAt: new Date().toISOString(),
-          cacheExpiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
-        }
-      };
-      
-      // Cache the result
-      top50ManagersCache.set(cacheKey, responseData);
-      console.log(`✅ Top 50 managers data cached: ${responseData.metadata.successfulFetches}/50 successful`);
-      
-      res.json({ ...responseData, fromCache: false });
-    } catch (error) {
-      console.error("❌ Error fetching Top 50 managers data:", error);
-      res.status(500).json({ error: "Failed to fetch Top 50 managers data" });
-    }
-  });
-
   // Cached Content Creators Data Endpoint
   app.get("/api/cached/content-creators-data", async (req, res) => {
     const cacheKey = 'content-creators-data';
@@ -4999,12 +4847,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ success: true, message: "Top 25 managers cache cleared" });
   });
   
-  app.post("/api/cached/top50-managers-data/refresh", async (req, res) => {
-    top50ManagersCache.clear();
-    console.log("🔄 Top 50 managers cache cleared - next request will fetch fresh data");
-    res.json({ success: true, message: "Top 50 managers cache cleared" });
-  });
-  
   app.post("/api/cached/content-creators-data/refresh", async (req, res) => {
     contentCreatorsCache.clear();
     console.log("🔄 Content Creators cache cleared - next request will fetch fresh data");
@@ -5032,12 +4874,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Server-side cache for team analysis (2-minute cache)
   let top25TeamsCache: { 
-    data: any; 
-    timestamp: number; 
-    gameweek: number;
-  } | null = null;
-  
-  let top50TeamsCache: { 
     data: any; 
     timestamp: number; 
     gameweek: number;
@@ -5160,134 +4996,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("❌ Error in Top 25 batch endpoint:", error);
       res.status(500).json({
         error: "Failed to fetch Top 25 managers' teams",
-        message: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
-
-  // Batch endpoint to fetch all Top 50 managers' team data
-  app.get("/api/top50/teams", async (req, res) => {
-    try {
-      console.log("🚀 Fetching Top 50 managers' team data...");
-      
-      // Get current gameweek
-      const bootstrapResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-      let currentGameweek = 1; // fallback
-      
-      if (bootstrapResponse.ok) {
-        const bootstrapData = await bootstrapResponse.json();
-        currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
-      }
-      
-      // Check cache first
-      const now = Date.now();
-      if (top50TeamsCache && 
-          (now - top50TeamsCache.timestamp) < TEAMS_CACHE_DURATION &&
-          top50TeamsCache.gameweek === currentGameweek) {
-        console.log("🔄 Serving Top 50 teams from cache");
-        return res.json(top50TeamsCache.data);
-      }
-
-      // First fetch the Top 50 managers from the overall league
-      const leagueResponse = await fetch("https://fantasy.premierleague.com/api/leagues-classic/314/standings/?page_standings=1");
-      
-      if (!leagueResponse.ok) {
-        throw new Error(`FPL API responded with status: ${leagueResponse.status}`);
-      }
-      
-      const leagueData = await leagueResponse.json();
-      const top50Managers = leagueData.standings.results.slice(0, 50).map((result: any, index: number) => ({
-        rank: index + 1,
-        name: result.entry_name,
-        managerId: result.entry
-      }));
-
-      // Fetch all team data in parallel using Promise.allSettled
-      const teamPromises = top50Managers.map(async (manager: any) => {
-        try {
-          const response = await fetch(
-            `https://fantasy.premierleague.com/api/entry/${manager.managerId}/event/${currentGameweek}/picks/`
-          );
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          
-          const teamData = await response.json();
-          return {
-            managerId: manager.managerId,
-            name: manager.name,
-            rank: manager.rank,
-            teamData,
-            success: true,
-            error: null
-          };
-        } catch (error) {
-          console.warn(`Failed to fetch team for manager ${manager.managerId} (${manager.name}):`, 
-                      error instanceof Error ? error.message : error);
-          return {
-            managerId: manager.managerId,
-            name: manager.name,
-            rank: manager.rank,
-            teamData: null,
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error"
-          };
-        }
-      });
-
-      // Wait for all requests to complete
-      const results = await Promise.allSettled(teamPromises);
-      
-      // Process results - extract fulfilled values, handle rejected promises
-      const teams = results.map((result, index) => {
-        if (result.status === 'fulfilled') {
-          return result.value;
-        } else {
-          // Handle rejected promise (should rarely happen due to internal try-catch)
-          const manager = top50Managers[index];
-          return {
-            managerId: manager.managerId,
-            name: manager.name,
-            rank: manager.rank,
-            teamData: null,
-            success: false,
-            error: "Request failed"
-          };
-        }
-      });
-
-      // Calculate statistics
-      const successful = teams.filter(team => team.success);
-      const failed = teams.filter(team => !team.success);
-
-      const responseData = {
-        teams,
-        metadata: {
-          totalRequested: top50Managers.length,
-          totalSuccessful: successful.length,
-          totalFailed: failed.length,
-          gameweek: currentGameweek,
-          fetchedAt: new Date().toISOString(),
-          cacheExpiresAt: new Date(now + TEAMS_CACHE_DURATION).toISOString()
-        }
-      };
-
-      // Cache the result
-      top50TeamsCache = {
-        data: responseData,
-        timestamp: now,
-        gameweek: currentGameweek
-      };
-
-      console.log(`✅ Top 50 batch fetch complete: ${successful.length}/${top50Managers.length} successful`);
-      
-      res.json(responseData);
-      
-    } catch (error) {
-      console.error("❌ Error in Top 50 batch endpoint:", error);
-      res.status(500).json({
-        error: "Failed to fetch Top 50 managers' teams",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }

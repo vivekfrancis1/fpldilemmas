@@ -41,8 +41,6 @@ const Top25Managers = lazy(() => import("./pages/top25-managers"));
 const Top25ManagerTeam = lazy(() => import("./pages/top25-manager-team"));
 const Top25TeamAnalysis = lazy(() => import("./pages/top25-team-analysis"));
 const ManagerTeam = lazy(() => import("./pages/manager-team"));
-const Top50Managers = lazy(() => import("./pages/top50-managers"));
-const Top50ManagerTeam = lazy(() => import("./pages/top50-manager-team"));
 const LeagueComparison = lazy(() => import("./pages/league-comparison"));
 const PlayerStats = lazy(() => import("./pages/player-stats"));
 const ResultsAndFixtures = lazy(() => import("./pages/results-and-fixtures"));
@@ -197,8 +195,6 @@ function Router() {
         <Route path="/top25-managers" component={Top25Managers} />
         <Route path="/top25-managers/:rank/team" component={Top25ManagerTeam} />
         <Route path="/top25-team-analysis" component={Top25TeamAnalysis} />
-        <Route path="/top50-managers" component={Top50Managers} />
-        <Route path="/top50-managers/:rank/team" component={Top50ManagerTeam} />
         <Route path="/manager-team/:managerId" component={ManagerTeam} />
         <Route path="/projection-documentation" component={ProjectionDocumentation} />
         <Route path="/login" component={Login} />
