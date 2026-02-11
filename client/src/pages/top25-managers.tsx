@@ -193,12 +193,6 @@ export default function Top25Managers() {
     refetchOnWindowFocus: false,
   });
 
-  // Fetch top 50 managers with rank change data
-  const { data: top50Data, isLoading: isLoadingTop50 } = useQuery({
-    queryKey: ['/api/top50-managers'],
-    refetchInterval: 30000,
-  });
-
   const managerIds = TOP_25_MANAGERS.map(m => m.managerId);
   const { data: gwTransfersData } = useQuery<{ transfers: Record<number, GWTransferDetail[]>; gameweek: number }>({
     queryKey: ['/api/managers/gw-transfers', managerIds.join(',')],
@@ -236,26 +230,22 @@ export default function Top25Managers() {
             current: m.historyData.current || [],
             chips: m.historyData.chips || [],
           } : undefined,
-          rankChange: null
+          rankChange: (() => {
+            const current = m.historyData?.current;
+            if (current && current.length >= 2) {
+              const latest = current[current.length - 1];
+              const previous = current[current.length - 2];
+              if (latest?.overall_rank && previous?.overall_rank) {
+                return previous.overall_rank - latest.overall_rank;
+              }
+            }
+            return null;
+          })()
         };
       });
       setManagersWithData(transformedManagers);
     }
   }, [cachedData]);
-
-  // Update managers with rank change data when top50Data is available
-  useEffect(() => {
-    if (top50Data && Array.isArray(top50Data) && managersWithData.length > 0) {
-      const updatedManagers = managersWithData.map(manager => {
-        const top50Manager = (top50Data as any[]).find((m: any) => m.managerId === manager.managerId);
-        return {
-          ...manager,
-          rankChange: top50Manager?.rankChange || null
-        };
-      });
-      setManagersWithData(updatedManagers);
-    }
-  }, [top50Data]);
 
   // Force refresh function (clears cache and refetches)
   const forceRefresh = async () => {
