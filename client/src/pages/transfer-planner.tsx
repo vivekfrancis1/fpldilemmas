@@ -2839,13 +2839,10 @@ export default function TransferPlanner() {
       description: `${newStartingPlayer} has been moved to Starting 11, instead of ${newBenchPlayer} who is now in bench position ${benchPriority}.${extraInfo}`
     });
     
-    // If we were in Base, finalize the new draft
     if (wasInBase) {
       setTimeout(() => finalizeNewDraft(targetDraft), 100);
     } else {
-      // Save changes immediately to database
       setHasUnsavedChanges(true);
-      setTimeout(() => saveCurrentDraft(), 100);
     }
   };
 
@@ -2912,13 +2909,10 @@ export default function TransferPlanner() {
       description: `Bench priority of ${movedPlayerName} has been moved ${direction === 'up' ? 'up' : 'down'} to ${movedPlayerNewPriority}, and bench priority of ${swappedPlayerName} has been moved ${direction === 'up' ? 'down' : 'up'} to ${swappedPlayerNewPriority}`
     });
     
-    // If we were in Base, finalize the new draft
     if (wasInBase) {
       setTimeout(() => finalizeNewDraft(targetDraft), 100);
     } else {
-      // Save changes immediately to database
       setHasUnsavedChanges(true);
-      setTimeout(() => saveCurrentDraft(), 100);
     }
   };
 
@@ -3505,9 +3499,7 @@ export default function TransferPlanner() {
         setCaptainConfirmation(null);
         setSelectedPlayer(null);
         
-        // Step 6: Save the draft again with the updated captain info
         setHasUnsavedChanges(true);
-        setTimeout(() => saveCurrentDraft(), 100);
       } catch (error) {
         console.error("Error creating draft with captain change:", error);
         toast({
@@ -3554,9 +3546,7 @@ export default function TransferPlanner() {
       setCaptainConfirmation(null);
       setSelectedPlayer(null);
       
-      // Save the changes
       setHasUnsavedChanges(true);
-      setTimeout(() => saveCurrentDraft(), 100);
     }
   };
 
@@ -3620,9 +3610,7 @@ export default function TransferPlanner() {
         setViceCaptainConfirmation(null);
         setSelectedPlayer(null);
         
-        // Step 6: Save the draft again with the updated vice captain info
         setHasUnsavedChanges(true);
-        setTimeout(() => saveCurrentDraft(), 100);
       } catch (error) {
         console.error("Error creating draft with vice captain change:", error);
         toast({
@@ -3669,9 +3657,7 @@ export default function TransferPlanner() {
       setViceCaptainConfirmation(null);
       setSelectedPlayer(null);
       
-      // Save the changes
       setHasUnsavedChanges(true);
-      setTimeout(() => saveCurrentDraft(), 100);
     }
   };
 
@@ -5231,6 +5217,9 @@ export default function TransferPlanner() {
   };
 
   const PlayerActionPopup = ({ pick, player, actualIndex, isBench = false }: { pick: TeamPick, player: any, actualIndex: number, isBench?: boolean }) => {
+    if (isBench) {
+      console.log(`🔧 POPUP DEBUG: ${player.web_name} - isBench=${isBench}, actualIndex=${actualIndex}, position=${pick.position}, showBenchButtons=${isBench && actualIndex > 0}`);
+    }
     return (
       <>
         {/* Backdrop */}
@@ -6777,7 +6766,7 @@ export default function TransferPlanner() {
 
             {/* Pitch View */}
             {teamView === "pitch" && (
-              <div className="space-y-4" key={manualLineup.map(p => `${p.position}-${p.element}`).join('_')}>
+              <div className="space-y-4">
                 <PitchView
                   players={manualLineup.slice(0, 11).map(pick => {
                     const player = getPlayerById(pick.element);
@@ -6881,7 +6870,11 @@ export default function TransferPlanner() {
                   if (!player) return null;
                   const actualIndex = manualLineup.findIndex(p => p.position === selectedPick.position);
                   const isBench = selectedPick.position > 11;
-                  const benchIndex = isBench ? manualLineup.indexOf(selectedPick) - 11 : 0;
+                  const indexOfResult = manualLineup.indexOf(selectedPick);
+                  const benchIndex = isBench ? indexOfResult - 11 : 0;
+                  if (isBench) {
+                    console.log(`🔧 PITCH POPUP: ${player.web_name} - position=${selectedPick.position}, indexOf=${indexOfResult}, benchIndex=${benchIndex}, isBench=${isBench}`);
+                  }
                   return <PlayerActionPopup pick={selectedPick} player={player} actualIndex={isBench ? benchIndex : actualIndex} isBench={isBench} />;
                 })()}
 
