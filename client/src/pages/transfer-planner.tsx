@@ -6432,7 +6432,8 @@ export default function TransferPlanner() {
                       );
                     }
                     
-                    const benchIndex = manualLineup.findIndex(p => p.position === pick.position);
+                    const benchArrayIndex = manualLineup.findIndex(p => p.position === pick.position);
+                    const benchIndex = benchArrayIndex >= 11 ? benchArrayIndex - 11 : benchArrayIndex;
                     
                     return (
                       <div key={pick.element} className={`relative ${selectedPlayer === pick.element ? 'z-[100]' : ''}`}>
