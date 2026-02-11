@@ -50,8 +50,6 @@ import {
   Star,
   Target,
   Trophy,
-  TrendingDown,
-  TrendingUp,
   Users,
   Youtube,
   Zap,
@@ -60,7 +58,7 @@ import {
   PieChart,
 } from "lucide-react";
 import { SiInstagram, SiTiktok, SiX, SiYoutube } from "react-icons/si";
-import { calculateFreeTransfers } from "@/lib/free-transfers";
+import { getSharedColumns, sortManagerData, GWTransferDetail as SharedGWTransferDetail, ManagerColumnsConfig } from "@/lib/manager-standings-columns";
 
 interface GWHistory {
   event: number;
@@ -248,35 +246,9 @@ function getRankBadgeVariant(rank?: number): "default" | "secondary" | "destruct
   return "destructive";
 }
 
-function getRankChangeDisplay(change: number | undefined) {
-  if (!change || change === 0) return null;
-  if (change > 0) {
-    return (
-      <div className="flex items-center text-green-600 text-xs">
-        <TrendingUp className="h-3 w-3 mr-1" />
-        +{change.toLocaleString()}
-      </div>
-    );
-  } else {
-    return (
-      <div className="flex items-center text-red-600 text-xs">
-        <TrendingDown className="h-3 w-3 mr-1" />
-        {change.toLocaleString()}
-      </div>
-    );
-  }
-}
 
-interface GWTransferDetail {
-  playerIn: string;
-  playerOut: string;
-  teamIn: string;
-  teamOut: string;
-}
-
-// Column configuration for ResponsiveTable
-const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, GWTransferDetail[]>): ResponsiveTableColumn<CreatorWithLatestData>[] => [
-  {
+const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, SharedGWTransferDetail[]>): ResponsiveTableColumn<CreatorWithLatestData>[] => {
+  const nameColumn: ResponsiveTableColumn<CreatorWithLatestData> = {
     key: 'name',
     header: 'Creator',
     priority: 'essential',
@@ -319,240 +291,17 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
         </div>
       </div>
     )
-  },
-  {
-    key: 'latestTracking.overallRank',
-    header: 'Overall Rank',
-    priority: 'important',
-    align: 'right',
-    mobileLabel: 'Rank',
-    cardOrder: 2,
-    sortable: true,
-    render: (value, creator) => {
-      const latest = creator.latestTracking;
-      return (
-        <span className="font-medium">
-          {latest?.overallRank ? latest.overallRank.toLocaleString() : "N/A"}
-        </span>
-      );
-    }
-  },
-  {
-    key: 'rankChange',
-    header: 'Rank Gain',
-    priority: 'important',
-    align: 'right',
-    mobileLabel: 'Gain',
-    cardOrder: 3,
-    sortable: true,
-    render: (value, creator) => {
-      const change = creator.rankChange;
-      if (!change || change === 0) return <span className="text-gray-400">-</span>;
-      if (change > 0) {
-        return (
-          <div className="flex items-center justify-end text-green-600 font-medium">
-            <TrendingUp className="h-3 w-3 mr-1" />
-            {change.toLocaleString()}
-          </div>
-        );
-      } else {
-        return (
-          <div className="flex items-center justify-end text-red-600 font-medium">
-            <TrendingDown className="h-3 w-3 mr-1" />
-            {Math.abs(change).toLocaleString()}
-          </div>
-        );
-      }
-    }
-  },
-  {
-    key: 'latestTracking.overallPoints',
-    header: 'Total Pts',
-    priority: 'important',
-    align: 'right',
-    mobileLabel: 'Points',
-    cardOrder: 3,
-    className: 'font-mono',
-    sortable: true,
-    render: (value, creator) => {
-      const points = creator.latestTracking?.overallPoints;
-      return points !== undefined && points !== null ? points : "N/A";
-    }
-  },
-  {
-    key: 'latestTracking.gameweekPoints',
-    header: currentGameweek ? `GW ${currentGameweek} Pts` : 'GW Pts',
-    priority: 'secondary',
-    align: 'right',
-    mobileLabel: currentGameweek ? `GW ${currentGameweek}` : 'GW Pts',
-    cardOrder: 4,
-    sortable: true,
-    render: (value, creator) => {
-      const gwPoints = creator.latestTracking?.gameweekPoints;
-      return (
-        <span className="font-mono font-bold">
-          {gwPoints !== undefined && gwPoints !== null ? gwPoints : "N/A"}
-        </span>
-      );
-    }
-  },
-  {
-    key: 'latestTracking.squadValue',
-    header: 'Squad Value',
-    priority: 'secondary',
-    align: 'right',
-    mobileLabel: 'Squad',
-    cardOrder: 5,
-    sortable: true,
-    className: 'font-mono',
-    render: (_, creator) => {
-      const teamValue = creator.latestTracking?.teamValue;
-      const bank = creator.latestTracking?.bank;
-      if (teamValue === undefined || teamValue === null) return "N/A";
-      
-      // Handle both string and number formats
-      const parsedValue = typeof teamValue === 'string' ? parseFloat(teamValue) : teamValue;
-      const parsedBank = bank ? (typeof bank === 'string' ? parseFloat(bank) : bank) : 0;
-      return `£${(parsedValue - parsedBank).toFixed(1)}m`;
-    }
-  },
-  {
-    key: 'latestTracking.bank',
-    header: 'Bank',
-    priority: 'optional',
-    align: 'right',
-    mobileLabel: 'Bank',
-    cardOrder: 6,
-    sortable: true,
-    className: 'font-mono',
-    render: (_, creator) => {
-      const bank = creator.latestTracking?.bank;
-      if (bank === undefined || bank === null) return "£0.0m";
-      
-      // Handle both string and number formats
-      const parsedBank = typeof bank === 'string' ? parseFloat(bank) : bank;
-      return `£${parsedBank.toFixed(1)}m`;
-    }
-  },
-  {
-    key: 'latestTracking.teamValue',
-    header: 'Team Value',
-    priority: 'optional',
-    align: 'right',
-    mobileLabel: 'Team Value',
-    cardOrder: 7,
-    sortable: true,
-    className: 'font-mono',
-    render: (_, creator) => {
-      const teamValue = creator.latestTracking?.teamValue;
-      if (teamValue === undefined || teamValue === null) return "N/A";
-      
-      // Handle both string and number formats (Team Value = Squad Value + Bank)
-      const parsedValue = typeof teamValue === 'string' ? parseFloat(teamValue) : teamValue;
-      return `£${parsedValue.toFixed(1)}m`;
-    }
-  },
-  {
-    key: 'transfersMade',
-    header: 'Transfers',
-    priority: 'optional',
-    align: 'right',
-    mobileLabel: 'TM',
-    cardOrder: 8,
-    sortable: true,
-    className: 'font-mono',
-    render: (value, creator) => {
-      const history = creator.historyData?.current;
-      const chips = creator.historyData?.chips || [];
-      if (!history || history.length === 0) return "N/A";
-      const chipGWs = new Set(
-        chips.filter(c => c.name === 'freehit' || c.name === 'wildcard').map(c => c.event)
-      );
-      const total = history
-        .filter(gw => !chipGWs.has(gw.event))
-        .reduce((sum, gw) => sum + (gw.event_transfers || 0), 0);
-      return total;
-    }
-  },
-  {
-    key: 'gwTransfers',
-    header: currentGameweek ? `GW${currentGameweek} Transfers` : 'GW Transfers',
-    priority: 'secondary',
-    align: 'left',
-    mobileLabel: currentGameweek ? `GW${currentGameweek}` : 'GW TM',
-    cardOrder: 9,
-    sortable: true,
-    width: '220px',
-    render: (value, creator) => {
-      const history = creator.historyData?.current;
-      if (!history || history.length === 0) return "N/A";
-      const gwData = history.find(gw => gw.event === (currentGameweek || 0));
-      if (!gwData) return "-";
-      const transferCount = gwData.event_transfers || 0;
-      const cost = gwData.event_transfers_cost || 0;
-      const details = gwTransfersMap?.[creator.id];
+  };
 
-      if (transferCount === 0) return <span className="text-gray-400">-</span>;
+  const sharedCols = getSharedColumns<CreatorWithLatestData>({
+    currentGameweek,
+    valueScale: 'millions',
+    gwTransfersMap: gwTransfersMap as Record<number | string, SharedGWTransferDetail[]>,
+    gwTransfersKeyField: 'id',
+  });
 
-      return (
-        <div className="space-y-0.5">
-          {details && details.length > 0 ? (
-            details.map((t, i) => (
-              <div key={i} className="flex items-center gap-1 text-xs whitespace-nowrap">
-                <span className="text-green-600 font-medium">{t.playerIn}</span>
-                <span className="text-gray-400 text-[10px]">({t.teamIn})</span>
-                <span className="text-gray-400 mx-0.5">←</span>
-                <span className="text-red-500">{t.playerOut}</span>
-                <span className="text-gray-400 text-[10px]">({t.teamOut})</span>
-              </div>
-            ))
-          ) : (
-            <span className="text-xs">{transferCount} transfer{transferCount !== 1 ? 's' : ''}</span>
-          )}
-          {cost > 0 && (
-            <div className="text-red-500 text-[10px] font-medium">-{cost} pts hit</div>
-          )}
-        </div>
-      );
-    }
-  },
-  {
-    key: 'freeTransfers',
-    header: currentGameweek ? `FT` : 'FT',
-    priority: 'optional',
-    align: 'right',
-    mobileLabel: 'FT',
-    cardOrder: 9,
-    sortable: true,
-    className: 'font-mono',
-    render: (value, creator) => {
-      const history = creator.historyData?.current;
-      const chips = creator.historyData?.chips;
-      if (!history || history.length === 0) return "N/A";
-      
-      const freeTransfers = calculateFreeTransfers(history, chips, currentGameweek || 1);
-      return freeTransfers;
-    }
-  },
-  {
-    key: 'chipsAvailable',
-    header: 'Chips Available',
-    priority: 'optional',
-    align: 'right',
-    mobileLabel: 'Chips',
-    cardOrder: 10,
-    sortable: true,
-    className: 'font-mono',
-    render: (value, creator) => {
-      // 4 chips available in second half of season (GW 20+)
-      // Count chips used on or after GW 20
-      const chips = creator.historyData?.chips || [];
-      const secondHalfChipsUsed = chips.filter(c => c.event >= 20).length;
-      const chipsAvailable = Math.max(0, 4 - secondHalfChipsUsed);
-      return chipsAvailable;
-    }
-  }
-];
+  return [nameColumn, ...sharedCols];
+};
 
 // Main Content Creators Component
 export default function ContentCreators() {
@@ -560,7 +309,7 @@ export default function ContentCreators() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
 
-  const [sortBy, setSortBy] = useState<string>("rank");
+  const [sortBy, setSortBy] = useState<string>("latestTracking.overallRank");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // Cached Content Creators data response type
@@ -617,7 +366,7 @@ export default function ContentCreators() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
-  const { data: gwTransfersData } = useQuery<{ transfers: Record<number, GWTransferDetail[]>; gameweek: number }>({
+  const { data: gwTransfersData } = useQuery<{ transfers: Record<number, SharedGWTransferDetail[]>; gameweek: number }>({
     queryKey: ["/api/content-creators/gw-transfers"],
     staleTime: 10 * 60 * 1000,
   });
@@ -905,101 +654,10 @@ export default function ContentCreators() {
     },
   });
 
-  // Sort creators - use enriched creators with history data when available
-  const sortedCreators = [...(creatorsWithHistory.length > 0 ? creatorsWithHistory : (creators || []) as FPLCreator[])].sort((a, b) => {
-    let valueA, valueB;
-    
-    switch (sortBy) {
-      case "rank":
-        valueA = a.latestTracking?.overallRank || 999999999;
-        valueB = b.latestTracking?.overallRank || 999999999;
-        break;
-      case "rank_change":
-        valueA = a.rankChange || 0;
-        valueB = b.rankChange || 0;
-        break;
-      case "points":
-        valueA = a.latestTracking?.overallPoints || 0;
-        valueB = b.latestTracking?.overallPoints || 0;
-        break;
-      case "gw_points":
-        valueA = a.latestTracking?.gameweekPoints || 0;
-        valueB = b.latestTracking?.gameweekPoints || 0;
-        break;
-      case "name":
-        valueA = a.name.toLowerCase();
-        valueB = b.name.toLowerCase();
-        break;
-      case "squad_value": {
-        const teamValueA = a.latestTracking?.teamValue;
-        const bankA = a.latestTracking?.bank;
-        const parsedValueA = teamValueA ? (typeof teamValueA === 'string' ? parseFloat(teamValueA) : teamValueA) : 0;
-        const parsedBankA = bankA ? (typeof bankA === 'string' ? parseFloat(bankA) : bankA) : 0;
-        valueA = parsedValueA - parsedBankA;
-        
-        const teamValueB = b.latestTracking?.teamValue;
-        const bankB = b.latestTracking?.bank;
-        const parsedValueB = teamValueB ? (typeof teamValueB === 'string' ? parseFloat(teamValueB) : teamValueB) : 0;
-        const parsedBankB = bankB ? (typeof bankB === 'string' ? parseFloat(bankB) : bankB) : 0;
-        valueB = parsedValueB - parsedBankB;
-        break;
-      }
-      case "bank": {
-        const bankA = a.latestTracking?.bank;
-        const bankB = b.latestTracking?.bank;
-        valueA = bankA ? (typeof bankA === 'string' ? parseFloat(bankA) : bankA) : 0;
-        valueB = bankB ? (typeof bankB === 'string' ? parseFloat(bankB) : bankB) : 0;
-        break;
-      }
-      case "team_value": {
-        const teamValueA = a.latestTracking?.teamValue;
-        const teamValueB = b.latestTracking?.teamValue;
-        valueA = teamValueA ? (typeof teamValueA === 'string' ? parseFloat(teamValueA) : teamValueA) : 0;
-        valueB = teamValueB ? (typeof teamValueB === 'string' ? parseFloat(teamValueB) : teamValueB) : 0;
-        break;
-      }
-      case "transfersMade": {
-        const histAT = a.historyData?.current || [];
-        const histBT = b.historyData?.current || [];
-        const chipsAT = new Set((a.historyData?.chips || []).filter(c => c.name === 'freehit' || c.name === 'wildcard').map(c => c.event));
-        const chipsBT = new Set((b.historyData?.chips || []).filter(c => c.name === 'freehit' || c.name === 'wildcard').map(c => c.event));
-        valueA = histAT.filter(gw => !chipsAT.has(gw.event)).reduce((s, gw) => s + (gw.event_transfers || 0), 0);
-        valueB = histBT.filter(gw => !chipsBT.has(gw.event)).reduce((s, gw) => s + (gw.event_transfers || 0), 0);
-        break;
-      }
-      case "gwTransfers": {
-        const cGW2 = currentGameweek || 0;
-        const gwDataA = (a.historyData?.current || []).find(gw => gw.event === cGW2);
-        const gwDataB = (b.historyData?.current || []).find(gw => gw.event === cGW2);
-        valueA = gwDataA?.event_transfers || 0;
-        valueB = gwDataB?.event_transfers || 0;
-        break;
-      }
-      case "freeTransfers": {
-        const historyA = a.historyData?.current;
-        const historyB = b.historyData?.current;
-        const cGW = currentGameweek || 1;
-        valueA = historyA && historyA.length > 0 ? calculateFreeTransfers(historyA, a.historyData?.chips, cGW) : 0;
-        valueB = historyB && historyB.length > 0 ? calculateFreeTransfers(historyB, b.historyData?.chips, cGW) : 0;
-        break;
-      }
-      case "chipsAvailable":
-        // Sort by chips available (4 - second half chips used)
-        const aChips = a.historyData?.chips || [];
-        const bChips = b.historyData?.chips || [];
-        valueA = 4 - aChips.filter(c => c.event >= 20).length;
-        valueB = 4 - bChips.filter(c => c.event >= 20).length;
-        break;
-      default:
-        return 0;
-    }
-
-    if (sortOrder === "asc") {
-      return valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
-    } else {
-      return valueA > valueB ? -1 : valueA < valueB ? 1 : 0;
-    }
-  });
+  const sortedCreators = useMemo(() => {
+    const data = creatorsWithHistory.length > 0 ? creatorsWithHistory : (creators || []) as FPLCreator[];
+    return sortManagerData(data, sortBy, sortOrder, currentGameweek, 'millions');
+  }, [creatorsWithHistory, creators, sortBy, sortOrder, currentGameweek]);
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -1099,43 +757,8 @@ export default function ContentCreators() {
                 onRowClick={(creator) => {
                   navigate(`/content-creators/${creator.id}/team`);
                 }}
-                onSort={(field) => {
-                  // Map ResponsiveTable field names to our sort keys
-                  const sortKeyMap: Record<string, string> = {
-                    'latestTracking.overallRank': 'rank',
-                    'rankChange': 'rank_change',
-                    'latestTracking.overallPoints': 'points',
-                    'latestTracking.gameweekPoints': 'gw_points',
-                    'latestTracking.squadValue': 'squad_value',
-                    'latestTracking.bank': 'bank',
-                    'latestTracking.teamValue': 'team_value',
-                    'transfersMade': 'transfersMade',
-                    'gwTransfers': 'gwTransfers',
-                    'freeTransfers': 'freeTransfers',
-                    'chipsAvailable': 'chipsAvailable',
-                    'name': 'name'
-                  };
-                  const mappedField = sortKeyMap[field] || field;
-                  handleSort(mappedField);
-                }}
-                sortField={(() => {
-                  // Map our sort keys back to ResponsiveTable field names
-                  const fieldMap: Record<string, string> = {
-                    'rank': 'latestTracking.overallRank',
-                    'rank_change': 'rankChange',
-                    'points': 'latestTracking.overallPoints',
-                    'gw_points': 'latestTracking.gameweekPoints',
-                    'squad_value': 'latestTracking.squadValue',
-                    'bank': 'latestTracking.bank',
-                    'team_value': 'latestTracking.teamValue',
-                    'transfersMade': 'transfersMade',
-                    'gwTransfers': 'gwTransfers',
-                    'freeTransfers': 'freeTransfers',
-                    'chipsAvailable': 'chipsAvailable',
-                    'name': 'name'
-                  };
-                  return fieldMap[sortBy] || sortBy;
-                })()}
+                onSort={handleSort}
+                sortField={sortBy}
                 sortDirection={sortOrder}
                 className="hover:shadow-sm"
                 stickyHeader={true}

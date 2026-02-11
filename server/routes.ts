@@ -77,6 +77,46 @@ const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
   }
 };
 
+async function fetchGWTransfersForManagers(
+  entries: Array<{ key: number | string; managerId: number }>
+): Promise<{ transfers: Record<number | string, Array<{ playerIn: string; playerOut: string; teamIn: string; teamOut: string }>>; gameweek: number }> {
+  const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
+  const bootstrapData = await bootstrapResponse.json();
+  const playerMap = new Map<number, { web_name: string; team: number }>();
+  for (const p of bootstrapData.elements) {
+    playerMap.set(p.id, { web_name: p.web_name, team: p.team });
+  }
+  const teamMap = new Map<number, string>();
+  for (const t of bootstrapData.teams) {
+    teamMap.set(t.id, t.short_name);
+  }
+  const currentEvent = bootstrapData.events.find((e: any) => e.is_current);
+  const currentGameweek = currentEvent?.id || 1;
+
+  const transfersByKey: Record<number | string, Array<{ playerIn: string; playerOut: string; teamIn: string; teamOut: string }>> = {};
+
+  await Promise.all(entries.map(async ({ key, managerId }) => {
+    try {
+      const resp = await fetch(`https://fantasy.premierleague.com/api/entry/${managerId}/transfers/`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const gwTransfers = data.filter((t: any) => t.event === currentGameweek);
+      if (gwTransfers.length > 0) {
+        transfersByKey[key] = gwTransfers.map((t: any) => ({
+          playerIn: playerMap.get(t.element_in)?.web_name || 'Unknown',
+          playerOut: playerMap.get(t.element_out)?.web_name || 'Unknown',
+          teamIn: teamMap.get(playerMap.get(t.element_in)?.team || 0) || '',
+          teamOut: teamMap.get(playerMap.get(t.element_out)?.team || 0) || '',
+        }));
+      }
+    } catch (err) {
+      // skip failed fetches
+    }
+  }));
+
+  return { transfers: transfersByKey, gameweek: currentGameweek };
+}
+
 // Pre-calculated team multipliers for ultra-fast lookups (no parsing needed)
 
 // REMOVED: calculateComprehensiveGoals function - now using TeamGoalsService
@@ -4969,6 +5009,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     contentCreatorsCache.clear();
     console.log("🔄 Content Creators cache cleared - next request will fetch fresh data");
     res.json({ success: true, message: "Content Creators cache cleared" });
+  });
+
+  app.get("/api/managers/gw-transfers", async (req, res) => {
+    try {
+      const managerIdsParam = req.query.managerIds as string;
+      if (!managerIdsParam) {
+        return res.json({ transfers: {}, gameweek: 0 });
+      }
+      const managerIds = managerIdsParam.split(',').map(Number).filter(id => !isNaN(id) && id > 0);
+      if (managerIds.length === 0) {
+        return res.json({ transfers: {}, gameweek: 0 });
+      }
+      const entries = managerIds.map(id => ({ key: id, managerId: id }));
+      const result = await fetchGWTransfersForManagers(entries);
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching manager GW transfers:", error);
+      res.status(500).json({ error: "Failed to fetch manager GW transfers" });
+    }
   });
 
   // Server-side cache for team analysis (2-minute cache)
@@ -13433,43 +13492,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!creators || creators.length === 0) {
         return res.json({ transfers: {}, gameweek: 0 });
       }
-
-      const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
-      const bootstrapData = await bootstrapResponse.json();
-      const playerMap = new Map<number, { web_name: string; team: number }>();
-      for (const p of bootstrapData.elements) {
-        playerMap.set(p.id, { web_name: p.web_name, team: p.team });
-      }
-      const teamMap = new Map<number, string>();
-      for (const t of bootstrapData.teams) {
-        teamMap.set(t.id, t.short_name);
-      }
-
-      const currentEvent = bootstrapData.events.find((e: any) => e.is_current);
-      const currentGameweek = currentEvent?.id || 1;
-
-      const transfersByCreator: Record<number, Array<{ playerIn: string; playerOut: string; teamIn: string; teamOut: string }>> = {};
-
-      await Promise.all(creators.map(async (creator) => {
-        try {
-          const resp = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/transfers/`);
-          if (!resp.ok) return;
-          const data = await resp.json();
-          const gwTransfers = data.filter((t: any) => t.event === currentGameweek);
-          if (gwTransfers.length > 0) {
-            transfersByCreator[creator.id] = gwTransfers.map((t: any) => ({
-              playerIn: playerMap.get(t.element_in)?.web_name || `Unknown`,
-              playerOut: playerMap.get(t.element_out)?.web_name || `Unknown`,
-              teamIn: teamMap.get(playerMap.get(t.element_in)?.team || 0) || '',
-              teamOut: teamMap.get(playerMap.get(t.element_out)?.team || 0) || '',
-            }));
-          }
-        } catch (err) {
-          // skip failed fetches
-        }
-      }));
-
-      res.json({ transfers: transfersByCreator, gameweek: currentGameweek });
+      const managerEntries = creators.map(c => ({ key: c.id, managerId: c.managerId }));
+      const result = await fetchGWTransfersForManagers(managerEntries);
+      res.json(result);
     } catch (error) {
       console.error("Error fetching creator GW transfers:", error);
       res.status(500).json({ error: "Failed to fetch creator GW transfers" });

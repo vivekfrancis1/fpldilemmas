@@ -24,26 +24,12 @@ import {
   Home,
   RefreshCw,
   Trophy,
-  TrendingDown,
-  TrendingUp,
   Users,
-  ArrowUpDown,
   BarChart3,
 } from "lucide-react";
 import Top25TeamAnalysis from "./top25-team-analysis";
 import { LoadingExperience } from "@/components/loading-experience";
-import { calculateFreeTransfers } from "@/lib/free-transfers";
-
-interface GWHistory {
-  event: number;
-  event_transfers: number;
-  event_transfers_cost: number;
-}
-
-interface ChipUsage {
-  event: number;
-  name: string;
-}
+import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage } from "@/lib/manager-standings-columns";
 
 type Top25Manager = {
   rank: number;
@@ -96,35 +82,8 @@ const TOP_25_MANAGERS: Top25Manager[] = [
   { rank: 25, name: "Louis Reddington", managerId: 121680 },
 ];
 
-function getRankBadgeVariant(rank?: number): "default" | "secondary" | "destructive" | "outline" {
-  if (!rank) return "outline";
-  if (rank <= 1000000) return "default";
-  if (rank <= 3000000) return "secondary";
-  return "destructive";
-}
-
-function getRankChangeDisplay(change: number | undefined) {
-  if (!change || change === 0) return null;
-  if (change > 0) {
-    return (
-      <div className="flex items-center text-green-600 text-xs">
-        <TrendingUp className="h-3 w-3 mr-1" />
-        +{change.toLocaleString()}
-      </div>
-    );
-  } else {
-    return (
-      <div className="flex items-center text-red-600 text-xs">
-        <TrendingDown className="h-3 w-3 mr-1" />
-        {change.toLocaleString()}
-      </div>
-    );
-  }
-}
-
-// Column configuration for ResponsiveTable
-const getTop25ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn<Top25Manager>[] => [
-  {
+const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, GWTransferDetail[]>): ResponsiveTableColumn<Top25Manager>[] => {
+  const allTimeRankCol: ResponsiveTableColumn<Top25Manager> = {
     key: 'rank',
     header: 'Rank',
     priority: 'essential',
@@ -137,8 +96,9 @@ const getTop25ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn
         <span className="text-white font-bold text-sm">#{manager.rank}</span>
       </div>
     )
-  },
-  {
+  };
+
+  const nameCol: ResponsiveTableColumn<Top25Manager> = {
     key: 'name',
     header: 'Manager',
     priority: 'essential',
@@ -149,150 +109,17 @@ const getTop25ManagerColumns = (currentGameweek?: number): ResponsiveTableColumn
     render: (value, manager) => (
       <div className="font-medium">{manager.name}</div>
     )
-  },
-  {
-    key: 'latestTracking.overallRank',
-    header: 'Current Rank',
-    priority: 'important',
-    align: 'left',
-    mobileLabel: 'Current Rank',
-    cardOrder: 3,
-    sortable: true,
-    render: (value, manager) => {
-      const rank = manager.latestTracking?.overallRank;
-      if (rank !== undefined && rank !== null) {
-        return (
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <span className="font-mono font-medium">
-                {rank.toLocaleString()}
-              </span>
-              {getRankChangeDisplay(manager.rankChange ?? undefined)}
-            </div>
-          </div>
-        );
-      }
-      return <span className="text-muted-foreground text-sm">Loading...</span>;
-    }
-  },
-  {
-    key: 'latestTracking.overallPoints',
-    header: 'Total Points',
-    priority: 'important',
-    align: 'right',
-    mobileLabel: 'Points',
-    cardOrder: 4,
-    sortable: true,
-    className: 'font-mono',
-    render: (value, manager) => {
-      const points = manager.latestTracking?.overallPoints;
-      return points !== undefined && points !== null ? points : "N/A";
-    }
-  },
-  {
-    key: 'latestTracking.gameweekPoints',
-    header: currentGameweek ? `GW ${currentGameweek} Points` : 'GW Points',
-    priority: 'secondary',
-    align: 'right',
-    mobileLabel: currentGameweek ? `GW ${currentGameweek}` : 'GW Points',
-    cardOrder: 5,
-    sortable: true,
-    className: 'font-mono',
-    render: (value, manager) => {
-      const gwPoints = manager.latestTracking?.gameweekPoints;
-      return gwPoints !== undefined && gwPoints !== null ? gwPoints : "N/A";
-    }
-  },
-  {
-    key: 'latestTracking.squadValue',
-    header: 'Squad Value',
-    priority: 'secondary',
-    align: 'right',
-    mobileLabel: 'Squad',
-    cardOrder: 6,
-    sortable: true,
-    className: 'font-mono',
-    render: (value, manager) => {
-      const teamValue = manager.latestTracking?.teamValue;
-      const bank = manager.latestTracking?.bank;
-      if (teamValue === undefined || teamValue === null) return "N/A";
-      const bankValue = bank !== undefined && bank !== null ? bank : 0;
-      return `£${((teamValue - bankValue) / 10).toFixed(1)}m`;
-    }
-  },
-  {
-    key: 'latestTracking.bank',
-    header: 'Bank',
-    priority: 'optional',
-    align: 'right',
-    mobileLabel: 'Bank',
-    cardOrder: 7,
-    sortable: true,
-    className: 'font-mono',
-    render: (value, manager) => {
-      const bank = manager.latestTracking?.bank;
-      return bank !== undefined && bank !== null 
-        ? `£${(bank / 10).toFixed(1)}m` 
-        : "£0.0m";
-    }
-  },
-  {
-    key: 'transfersMade',
-    header: 'Transfers',
-    priority: 'optional',
-    align: 'right',
-    mobileLabel: 'TM',
-    cardOrder: 7,
-    sortable: true,
-    className: 'font-mono',
-    render: (value, manager) => {
-      const history = manager.historyData?.current;
-      const chips = manager.historyData?.chips || [];
-      if (!history || history.length === 0) return "N/A";
-      const chipGWs = new Set(
-        chips.filter(c => c.name === 'freehit' || c.name === 'wildcard').map(c => c.event)
-      );
-      const total = history
-        .filter(gw => !chipGWs.has(gw.event))
-        .reduce((sum, gw) => sum + (gw.event_transfers || 0), 0);
-      return total;
-    }
-  },
-  {
-    key: 'freeTransfers',
-    header: 'FT',
-    priority: 'optional',
-    align: 'right',
-    mobileLabel: 'FT',
-    cardOrder: 8,
-    sortable: true,
-    className: 'font-mono',
-    render: (value, manager) => {
-      const history = manager.historyData?.current;
-      const chips = manager.historyData?.chips;
-      if (!history || history.length === 0) return "N/A";
-      
-      const freeTransfers = calculateFreeTransfers(history, chips, currentGameweek || 1);
-      return freeTransfers;
-    }
-  },
-  {
-    key: 'chipsAvailable',
-    header: 'Chips Available',
-    priority: 'optional',
-    align: 'right',
-    mobileLabel: 'Chips',
-    cardOrder: 9,
-    sortable: true,
-    className: 'font-mono',
-    render: (value, manager) => {
-      // 4 chips available in second half of season (GW 20+)
-      const secondHalfChipsUsed = manager.latestTracking?.secondHalfChipsUsed || 0;
-      const chipsAvailable = Math.max(0, 4 - secondHalfChipsUsed);
-      return chipsAvailable;
-    }
-  }
-];
+  };
+
+  const sharedCols = getSharedColumns<Top25Manager>({
+    currentGameweek,
+    valueScale: 'raw',
+    gwTransfersMap: gwTransfersMap as Record<number | string, GWTransferDetail[]>,
+    gwTransfersKeyField: 'managerId',
+  });
+
+  return [allTimeRankCol, nameCol, ...sharedCols];
+};
 
 interface BootstrapData {
   events: Array<{
@@ -365,6 +192,17 @@ export default function Top25Managers() {
     refetchInterval: 30000,
   });
 
+  const managerIds = TOP_25_MANAGERS.map(m => m.managerId);
+  const { data: gwTransfersData } = useQuery<{ transfers: Record<number, GWTransferDetail[]>; gameweek: number }>({
+    queryKey: ['/api/managers/gw-transfers', managerIds.join(',')],
+    queryFn: async () => {
+      const res = await fetch(`/api/managers/gw-transfers?managerIds=${managerIds.join(',')}`);
+      if (!res.ok) throw new Error('Failed to fetch GW transfers');
+      return res.json();
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
   // Transform cached data to match component state
   useEffect(() => {
     if (cachedData?.managers) {
@@ -434,63 +272,14 @@ export default function Top25Managers() {
 
   // Sort the managers data
   const sortedManagersData = useMemo(() => {
-    const sorted = [...managersWithData].sort((a, b) => {
-      const getValue = (manager: Top25Manager, field: string) => {
-        switch (field) {
-          case 'rank':
-            return manager.rank;
-          case 'latestTracking.overallRank':
-            return manager.latestTracking?.overallRank || Number.MAX_SAFE_INTEGER;
-          case 'latestTracking.overallPoints':
-            return manager.latestTracking?.overallPoints || 0;
-          case 'latestTracking.gameweekPoints':
-            return manager.latestTracking?.gameweekPoints || 0;
-          case 'latestTracking.teamValue':
-            return manager.latestTracking?.teamValue || 0;
-          case 'latestTracking.squadValue': {
-            const teamValue = manager.latestTracking?.teamValue || 0;
-            const bank = manager.latestTracking?.bank || 0;
-            return teamValue - bank;
-          }
-          case 'latestTracking.bank':
-            return manager.latestTracking?.bank || 0;
-          case 'transfersMade': {
-            const histT = manager.historyData?.current || [];
-            const chipsT = new Set((manager.historyData?.chips || []).filter(c => c.name === 'freehit' || c.name === 'wildcard').map(c => c.event));
-            return histT.filter(gw => !chipsT.has(gw.event)).reduce((s, gw) => s + (gw.event_transfers || 0), 0);
-          }
-          case 'freeTransfers': {
-            const history = manager.historyData?.current;
-            const chips = manager.historyData?.chips;
-            if (!history || history.length === 0) return 0;
-            return calculateFreeTransfers(history, chips, currentGameweek || 1);
-          }
-          case 'chipsAvailable':
-            // 4 chips in second half - second half chips used
-            return 4 - (manager.latestTracking?.secondHalfChipsUsed || 0);
-          case 'name':
-            return manager.name;
-          default:
-            return 0;
-        }
-      };
-
-      const aVal = getValue(a, sortField);
-      const bVal = getValue(b, sortField);
-      
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        return sortDirection === 'asc' 
-          ? aVal.localeCompare(bVal)
-          : bVal.localeCompare(aVal);
-      }
-      
-      return sortDirection === 'asc' 
-        ? (aVal as number) - (bVal as number)
-        : (bVal as number) - (aVal as number);
-    });
-
-    return sorted;
-  }, [managersWithData, sortField, sortDirection]);
+    if (sortField === 'rank') {
+      const sorted = [...managersWithData].sort((a, b) => {
+        return sortDirection === 'asc' ? a.rank - b.rank : b.rank - a.rank;
+      });
+      return sorted;
+    }
+    return sortManagerData(managersWithData, sortField, sortDirection, currentGameweek, 'raw');
+  }, [managersWithData, sortField, sortDirection, currentGameweek]);
 
   // Show loading screen on initial load
   const hasNoTrackingData = managersWithData.every(m => !m.latestTracking);
@@ -559,7 +348,7 @@ export default function Top25Managers() {
               <CardContent className="p-0">
                 <ResponsiveTable
                   data={sortedManagersData}
-                  columns={getTop25ManagerColumns(currentGameweek)}
+                  columns={getTop25ManagerColumns(currentGameweek, gwTransfersData?.transfers)}
                   enableMobileCards={true}
                   mobileCardTitle={(manager) => manager.name}
                   loading={isRefreshing}
