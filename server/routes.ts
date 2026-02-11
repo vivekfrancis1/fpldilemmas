@@ -13427,6 +13427,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/content-creators/gw-transfers", async (req, res) => {
+    try {
+      const creators = await storage.getContentCreators();
+      if (!creators || creators.length === 0) {
+        return res.json({ transfers: {}, gameweek: 0 });
+      }
+
+      const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
+      const bootstrapData = await bootstrapResponse.json();
+      const playerMap = new Map<number, { web_name: string; team: number }>();
+      for (const p of bootstrapData.elements) {
+        playerMap.set(p.id, { web_name: p.web_name, team: p.team });
+      }
+      const teamMap = new Map<number, string>();
+      for (const t of bootstrapData.teams) {
+        teamMap.set(t.id, t.short_name);
+      }
+
+      const currentEvent = bootstrapData.events.find((e: any) => e.is_current);
+      const currentGameweek = currentEvent?.id || 1;
+
+      const transfersByCreator: Record<number, Array<{ playerIn: string; playerOut: string; teamIn: string; teamOut: string }>> = {};
+
+      await Promise.all(creators.map(async (creator) => {
+        try {
+          const resp = await fetch(`https://fantasy.premierleague.com/api/entry/${creator.managerId}/transfers/`);
+          if (!resp.ok) return;
+          const data = await resp.json();
+          const gwTransfers = data.filter((t: any) => t.event === currentGameweek);
+          if (gwTransfers.length > 0) {
+            transfersByCreator[creator.id] = gwTransfers.map((t: any) => ({
+              playerIn: playerMap.get(t.element_in)?.web_name || `Unknown`,
+              playerOut: playerMap.get(t.element_out)?.web_name || `Unknown`,
+              teamIn: teamMap.get(playerMap.get(t.element_in)?.team || 0) || '',
+              teamOut: teamMap.get(playerMap.get(t.element_out)?.team || 0) || '',
+            }));
+          }
+        } catch (err) {
+          // skip failed fetches
+        }
+      }));
+
+      res.json({ transfers: transfersByCreator, gameweek: currentGameweek });
+    } catch (error) {
+      console.error("Error fetching creator GW transfers:", error);
+      res.status(500).json({ error: "Failed to fetch creator GW transfers" });
+    }
+  });
+
   app.get("/api/content-creators/:id", async (req, res) => {
     try {
       const { id } = req.params;

@@ -267,8 +267,15 @@ function getRankChangeDisplay(change: number | undefined) {
   }
 }
 
+interface GWTransferDetail {
+  playerIn: string;
+  playerOut: string;
+  teamIn: string;
+  teamOut: string;
+}
+
 // Column configuration for ResponsiveTable
-const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColumn<CreatorWithLatestData>[] => [
+const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, GWTransferDetail[]>): ResponsiveTableColumn<CreatorWithLatestData>[] => [
   {
     key: 'name',
     header: 'Creator',
@@ -469,25 +476,41 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
   },
   {
     key: 'gwTransfers',
-    header: currentGameweek ? `GW${currentGameweek} TM` : 'GW TM',
+    header: currentGameweek ? `GW${currentGameweek} Transfers` : 'GW Transfers',
     priority: 'secondary',
-    align: 'right',
-    mobileLabel: currentGameweek ? `GW${currentGameweek} TM` : 'GW TM',
+    align: 'left',
+    mobileLabel: currentGameweek ? `GW${currentGameweek}` : 'GW TM',
     cardOrder: 9,
     sortable: true,
-    className: 'font-mono',
+    width: '220px',
     render: (value, creator) => {
       const history = creator.historyData?.current;
       if (!history || history.length === 0) return "N/A";
       const gwData = history.find(gw => gw.event === (currentGameweek || 0));
       if (!gwData) return "-";
-      const transfers = gwData.event_transfers || 0;
+      const transferCount = gwData.event_transfers || 0;
       const cost = gwData.event_transfers_cost || 0;
+      const details = gwTransfersMap?.[creator.id];
+
+      if (transferCount === 0) return <span className="text-gray-400">-</span>;
+
       return (
-        <div className="flex items-center justify-end gap-1">
-          <span>{transfers}</span>
+        <div className="space-y-0.5">
+          {details && details.length > 0 ? (
+            details.map((t, i) => (
+              <div key={i} className="flex items-center gap-1 text-xs whitespace-nowrap">
+                <span className="text-green-600 font-medium">{t.playerIn}</span>
+                <span className="text-gray-400 text-[10px]">({t.teamIn})</span>
+                <span className="text-gray-400 mx-0.5">←</span>
+                <span className="text-red-500">{t.playerOut}</span>
+                <span className="text-gray-400 text-[10px]">({t.teamOut})</span>
+              </div>
+            ))
+          ) : (
+            <span className="text-xs">{transferCount} transfer{transferCount !== 1 ? 's' : ''}</span>
+          )}
           {cost > 0 && (
-            <span className="text-red-500 text-[10px]">(-{cost})</span>
+            <div className="text-red-500 text-[10px] font-medium">-{cost} pts hit</div>
           )}
         </div>
       );
@@ -592,6 +615,11 @@ export default function ContentCreators() {
   const { data: bootstrapData, isLoading: bootstrapLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const { data: gwTransfersData } = useQuery<{ transfers: Record<number, GWTransferDetail[]>; gameweek: number }>({
+    queryKey: ["/api/content-creators/gw-transfers"],
+    staleTime: 10 * 60 * 1000,
   });
 
   // Get current gameweek from bootstrap data
@@ -1063,7 +1091,7 @@ export default function ContentCreators() {
             <div className="fpl-table-container">
               <ResponsiveTable
                 data={sortedCreators || []}
-                columns={getContentCreatorColumns(currentGameweek)}
+                columns={getContentCreatorColumns(currentGameweek, gwTransfersData?.transfers)}
                 enableMobileCards={true}
                 mobileCardTitle={(creator) => creator.name}
                 loading={isLoading}
