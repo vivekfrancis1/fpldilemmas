@@ -317,8 +317,8 @@ export default function LeagueAnalysisPage() {
         return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
       });
     }
-    return sortManagerData(enrichedEntries, sortField, sortDirection, currentGameweek, 'raw');
-  }, [enrichedEntries, sortField, sortDirection, currentGameweek]);
+    return sortManagerData(enrichedEntries, sortField, sortDirection, currentGameweek, 'raw', upcomingGameweek);
+  }, [enrichedEntries, sortField, sortDirection, currentGameweek, upcomingGameweek]);
 
   const getColumns = (): ResponsiveTableColumn<EnrichedLeagueEntry>[] => {
     const managerCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
@@ -400,6 +400,7 @@ export default function LeagueAnalysisPage() {
 
     const sharedCols = getSharedColumns<EnrichedLeagueEntry>({
       currentGameweek,
+      upcomingGameweek,
       valueScale: 'raw',
       gwTransfersMap: gwTransfersData?.transfers as Record<number | string, GWTransferDetail[]>,
       gwTransfersKeyField: 'managerId',
@@ -543,6 +544,7 @@ export default function LeagueAnalysisPage() {
 
     const sharedCols = getSharedColumns<EnrichedLiveEntry>({
       currentGameweek,
+      upcomingGameweek,
       valueScale: 'raw',
       gwTransfersMap: gwTransfersData?.transfers as Record<number | string, GWTransferDetail[]>,
       gwTransfersKeyField: 'managerId',

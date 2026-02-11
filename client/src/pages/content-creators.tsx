@@ -247,7 +247,7 @@ function getRankBadgeVariant(rank?: number): "default" | "secondary" | "destruct
 }
 
 
-const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, SharedGWTransferDetail[]>): ResponsiveTableColumn<CreatorWithLatestData>[] => {
+const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, SharedGWTransferDetail[]>, upcomingGameweek?: number): ResponsiveTableColumn<CreatorWithLatestData>[] => {
   const nameColumn: ResponsiveTableColumn<CreatorWithLatestData> = {
     key: 'name',
     header: 'Creator',
@@ -295,6 +295,7 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
 
   const sharedCols = getSharedColumns<CreatorWithLatestData>({
     currentGameweek,
+    upcomingGameweek,
     valueScale: 'millions',
     gwTransfersMap: gwTransfersMap as Record<number | string, SharedGWTransferDetail[]>,
     gwTransfersKeyField: 'id',
@@ -377,6 +378,12 @@ export default function ContentCreators() {
     const currentEvent = bootstrapData.events.find(e => e.is_current);
     return currentEvent?.id;
   }, [bootstrapData]);
+
+  const upcomingGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return currentGameweek ? currentGameweek + 1 : undefined;
+    const nextEvent = bootstrapData.events.find(e => e.is_next);
+    return nextEvent?.id || (currentGameweek ? currentGameweek + 1 : undefined);
+  }, [bootstrapData, currentGameweek]);
 
   // Fetch Content Creators teams data using batch endpoint with React Query
   const { 
@@ -656,8 +663,8 @@ export default function ContentCreators() {
 
   const sortedCreators = useMemo(() => {
     const data = creatorsWithHistory.length > 0 ? creatorsWithHistory : (creators || []) as FPLCreator[];
-    return sortManagerData(data, sortBy, sortOrder, currentGameweek, 'millions');
-  }, [creatorsWithHistory, creators, sortBy, sortOrder, currentGameweek]);
+    return sortManagerData(data, sortBy, sortOrder, currentGameweek, 'millions', upcomingGameweek);
+  }, [creatorsWithHistory, creators, sortBy, sortOrder, currentGameweek, upcomingGameweek]);
 
   const handleSort = (column: string) => {
     if (sortBy === column) {
@@ -749,7 +756,7 @@ export default function ContentCreators() {
             <div className="fpl-table-container">
               <ResponsiveTable
                 data={sortedCreators || []}
-                columns={getContentCreatorColumns(currentGameweek, gwTransfersData?.transfers)}
+                columns={getContentCreatorColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek)}
                 enableMobileCards={true}
                 mobileCardTitle={(creator) => creator.name}
                 loading={isLoading}

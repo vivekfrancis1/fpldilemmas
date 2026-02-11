@@ -545,8 +545,8 @@ export default function Top50Managers() {
 
   // Sort the managers data
   const sortedManagersData = useMemo(() => {
-    return sortManagerData(managersWithData, sortField, sortDirection, currentGameweek, 'raw');
-  }, [managersWithData, sortField, sortDirection, currentGameweek]);
+    return sortManagerData(managersWithData, sortField, sortDirection, currentGameweek, 'raw', upcomingGameweek);
+  }, [managersWithData, sortField, sortDirection, currentGameweek, upcomingGameweek]);
 
   // Show loading screen when bootstrap data is loading
   if (bootstrapLoading) {

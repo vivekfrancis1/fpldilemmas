@@ -82,7 +82,7 @@ const TOP_25_MANAGERS: Top25Manager[] = [
   { rank: 25, name: "Louis Reddington", managerId: 121680 },
 ];
 
-const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, GWTransferDetail[]>): ResponsiveTableColumn<Top25Manager>[] => {
+const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, GWTransferDetail[]>, upcomingGameweek?: number): ResponsiveTableColumn<Top25Manager>[] => {
   const allTimeRankCol: ResponsiveTableColumn<Top25Manager> = {
     key: 'rank',
     header: 'Rank',
@@ -113,6 +113,7 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
 
   const sharedCols = getSharedColumns<Top25Manager>({
     currentGameweek,
+    upcomingGameweek,
     valueScale: 'raw',
     gwTransfersMap: gwTransfersMap as Record<number | string, GWTransferDetail[]>,
     gwTransfersKeyField: 'managerId',
@@ -177,6 +178,12 @@ export default function Top25Managers() {
     const currentEvent = bootstrapData.events.find(e => e.is_current);
     return currentEvent?.id;
   }, [bootstrapData]);
+
+  const upcomingGameweek = useMemo(() => {
+    if (!bootstrapData?.events) return currentGameweek ? currentGameweek + 1 : undefined;
+    const nextEvent = bootstrapData.events.find(e => e.is_next);
+    return nextEvent?.id || (currentGameweek ? currentGameweek + 1 : undefined);
+  }, [bootstrapData, currentGameweek]);
 
   // Fetch cached Top 25 managers data (30-minute cache)
   const { data: cachedData, isLoading: isLoadingCached, refetch: refetchCached, isFetching: isRefreshing } = useQuery<CachedManagersResponse>({
@@ -278,8 +285,8 @@ export default function Top25Managers() {
       });
       return sorted;
     }
-    return sortManagerData(managersWithData, sortField, sortDirection, currentGameweek, 'raw');
-  }, [managersWithData, sortField, sortDirection, currentGameweek]);
+    return sortManagerData(managersWithData, sortField, sortDirection, currentGameweek, 'raw', upcomingGameweek);
+  }, [managersWithData, sortField, sortDirection, currentGameweek, upcomingGameweek]);
 
   // Show loading screen on initial load
   const hasNoTrackingData = managersWithData.every(m => !m.latestTracking);
@@ -348,7 +355,7 @@ export default function Top25Managers() {
               <CardContent className="p-0">
                 <ResponsiveTable
                   data={sortedManagersData}
-                  columns={getTop25ManagerColumns(currentGameweek, gwTransfersData?.transfers)}
+                  columns={getTop25ManagerColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek)}
                   enableMobileCards={true}
                   mobileCardTitle={(manager) => manager.name}
                   loading={isRefreshing}

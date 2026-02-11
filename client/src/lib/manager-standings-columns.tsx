@@ -82,10 +82,12 @@ export function getSharedColumns<T extends ManagerStandingsData>(
 ): ResponsiveTableColumn<T>[] {
   const {
     currentGameweek,
+    upcomingGameweek,
     valueScale = 'millions',
     gwTransfersMap,
     gwTransfersKeyField = 'id',
   } = config;
+  const ftGameweek = upcomingGameweek || (currentGameweek ? currentGameweek + 1 : 1);
 
   return [
     {
@@ -271,7 +273,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
         const history = item.historyData?.current;
         const chips = item.historyData?.chips;
         if (!history || history.length === 0) return "N/A";
-        return calculateFreeTransfers(history, chips, currentGameweek || 1);
+        return calculateFreeTransfers(history, chips, ftGameweek);
       }
     },
     {
@@ -297,7 +299,8 @@ export function getSharedSortValue<T extends ManagerStandingsData>(
   item: T,
   field: string,
   currentGameweek?: number,
-  valueScale: ValueScale = 'millions'
+  valueScale: ValueScale = 'millions',
+  upcomingGameweek?: number
 ): string | number {
   switch (field) {
     case 'latestTracking.overallRank':
@@ -334,7 +337,8 @@ export function getSharedSortValue<T extends ManagerStandingsData>(
       const history = item.historyData?.current;
       const chips = item.historyData?.chips;
       if (!history || history.length === 0) return 0;
-      return calculateFreeTransfers(history, chips, currentGameweek || 1);
+      const ftGw = upcomingGameweek || (currentGameweek ? currentGameweek + 1 : 1);
+      return calculateFreeTransfers(history, chips, ftGw);
     }
     case 'chipsAvailable': {
       const chips = item.historyData?.chips || [];
@@ -369,11 +373,12 @@ export function sortManagerData<T extends ManagerStandingsData>(
   sortField: string,
   sortDirection: 'asc' | 'desc',
   currentGameweek?: number,
-  valueScale: ValueScale = 'millions'
+  valueScale: ValueScale = 'millions',
+  upcomingGameweek?: number
 ): T[] {
   return [...data].sort((a, b) => {
-    const aVal = getSharedSortValue(a, sortField, currentGameweek, valueScale);
-    const bVal = getSharedSortValue(b, sortField, currentGameweek, valueScale);
+    const aVal = getSharedSortValue(a, sortField, currentGameweek, valueScale, upcomingGameweek);
+    const bVal = getSharedSortValue(b, sortField, currentGameweek, valueScale, upcomingGameweek);
 
     if (typeof aVal === 'string' && typeof bVal === 'string') {
       return sortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
