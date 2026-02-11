@@ -5271,11 +5271,11 @@ export default function TransferPlanner() {
             </button>
           </div>
           
-          {/* Switch Player Option */}
+          {/* Swap Player Option */}
           {!isBench ? (
             <Select onValueChange={(value) => { swapPlayers(actualIndex, parseInt(value)); setSelectedPlayer(null); }}>
               <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`${isBench ? 'bench' : 'list'}-swap-${pick.element}`}>
-                <span className="w-full text-center text-base sm:text-lg font-semibold">Switch Player</span>
+                <span className="w-full text-center text-base sm:text-lg font-semibold">Swap Player</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
                 {manualLineup.slice(11, 15).map((benchPick, benchIndex) => {
@@ -5295,7 +5295,7 @@ export default function TransferPlanner() {
           ) : (
             <Select onValueChange={(value) => { swapPlayers(parseInt(value), actualIndex); setSelectedPlayer(null); }}>
               <SelectTrigger className="w-full h-14 sm:h-12 rounded-none border-0 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 text-base sm:text-lg font-semibold text-gray-900 dark:text-white [&>svg]:hidden [&_span]:text-base [&_span]:sm:text-lg [&_span]:font-semibold" data-testid={`bench-swap-${pick.element}`}>
-                <span className="w-full text-center text-base sm:text-lg font-semibold">Switch Player</span>
+                <span className="w-full text-center text-base sm:text-lg font-semibold">Swap Player</span>
               </SelectTrigger>
               <SelectContent className="z-[200]">
                 {manualLineup.slice(0, 11).map((startingPick) => {
@@ -5348,7 +5348,7 @@ export default function TransferPlanner() {
                 disabled={actualIndex === 1} 
                 data-testid={`${isBench ? 'bench' : 'list'}-move-up-${pick.element}`}
               >
-                Move Up
+                Increase Bench Priority
               </button>
               <button 
                 className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
@@ -5356,7 +5356,7 @@ export default function TransferPlanner() {
                 disabled={actualIndex === 3} 
                 data-testid={`${isBench ? 'bench' : 'list'}-move-down-${pick.element}`}
               >
-                Move Down
+                Decrease Bench Priority
               </button>
             </>
           )}
