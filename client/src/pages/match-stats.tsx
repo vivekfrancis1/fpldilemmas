@@ -86,93 +86,98 @@ export default function MatchStats() {
     }
 
     try {
+      const gameweek = fixture.event;
+      const response = await fetch(`/api/event/${gameweek}/live`);
+      if (!response.ok) throw new Error('Failed to fetch live data');
+      const liveData = await response.json();
+
+      const liveElements = liveData.elements || [];
+
+      const fixtureId = fixture.id;
+
       const homeTeamPlayers = bootstrapData.elements.filter((p: any) => p.team === fixture.team_h) || [];
       const awayTeamPlayers = bootstrapData.elements.filter((p: any) => p.team === fixture.team_a) || [];
 
-      const [homeStats, awayStats] = await Promise.all([
-        Promise.all(homeTeamPlayers.map(async (player: any) => {
-          try {
-            const response = await fetch(`/api/element-summary/${player.id}`);
-            if (!response.ok) throw new Error('Failed to fetch player data');
-            const data = await response.json();
-            const gameweekData = data.history?.find((h: any) => h.round === fixture.event);
-            if (!gameweekData) return null;
+      const getExplainValue = (explainStats: any[], identifier: string): number => {
+        const stat = explainStats.find((s: any) => s.identifier === identifier);
+        return stat ? (stat.value || 0) : 0;
+      };
 
+      const buildPlayerStats = (players: any[], teamName: string): PlayerStats[] => {
+        return players.map((player: any) => {
+          const liveElement = liveElements.find((e: any) => e.id === player.id);
+          if (!liveElement) return null;
+
+          const explainData = liveElement.explain || [];
+          const fixtureExplain = explainData.find((e: any) => e.fixture === fixtureId);
+
+          if (!fixtureExplain) return null;
+
+          const fxStats = fixtureExplain.stats || [];
+          const isDGW = explainData.length > 1;
+
+          const minutes = getExplainValue(fxStats, 'minutes');
+
+          if (isDGW) {
+            const totalFixturePoints = fxStats.reduce((sum: number, s: any) => sum + (s.points || 0) + (s.points_modification || 0), 0);
             return {
               playerId: player.id,
               playerName: player.web_name,
-              teamName: homeTeam?.short_name || 'Home',
+              teamName,
               position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'Unknown',
-              minutes: gameweekData.minutes || 0,
-              goals_scored: gameweekData.goals_scored || 0,
-              assists: gameweekData.assists || 0,
-              clean_sheets: gameweekData.clean_sheets || 0,
-              goals_conceded: gameweekData.goals_conceded || 0,
-              own_goals: gameweekData.own_goals || 0,
-              penalties_saved: gameweekData.penalties_saved || 0,
-              penalties_missed: gameweekData.penalties_missed || 0,
-              yellow_cards: gameweekData.yellow_cards || 0,
-              red_cards: gameweekData.red_cards || 0,
-              saves: gameweekData.saves || 0,
-              bonus: gameweekData.bonus || 0,
-              bps: gameweekData.bps || 0,
-              influence: parseFloat(gameweekData.influence) || 0,
-              creativity: parseFloat(gameweekData.creativity) || 0,
-              threat: parseFloat(gameweekData.threat) || 0,
-              ict_index: parseFloat(gameweekData.ict_index) || 0,
-              total_points: gameweekData.total_points || 0,
-              defensive_contribution: gameweekData.expected_goals_conceded !== undefined
-                ? Math.round((gameweekData.tackles || 0) + (gameweekData.interceptions || 0) + (gameweekData.clearances || 0) + (gameweekData.blocks || 0))
-                : 0
+              minutes,
+              goals_scored: getExplainValue(fxStats, 'goals_scored'),
+              assists: getExplainValue(fxStats, 'assists'),
+              clean_sheets: getExplainValue(fxStats, 'clean_sheets'),
+              goals_conceded: getExplainValue(fxStats, 'goals_conceded'),
+              own_goals: getExplainValue(fxStats, 'own_goals'),
+              penalties_saved: getExplainValue(fxStats, 'penalties_saved'),
+              penalties_missed: getExplainValue(fxStats, 'penalties_missed'),
+              yellow_cards: getExplainValue(fxStats, 'yellow_cards'),
+              red_cards: getExplainValue(fxStats, 'red_cards'),
+              saves: getExplainValue(fxStats, 'saves'),
+              bonus: getExplainValue(fxStats, 'bonus'),
+              bps: (liveElement.stats || {}).bps || 0,
+              influence: parseFloat((liveElement.stats || {}).influence) || 0,
+              creativity: parseFloat((liveElement.stats || {}).creativity) || 0,
+              threat: parseFloat((liveElement.stats || {}).threat) || 0,
+              ict_index: parseFloat((liveElement.stats || {}).ict_index) || 0,
+              total_points: totalFixturePoints,
+              defensive_contribution: getExplainValue(fxStats, 'defensive_contribution')
             } as PlayerStats;
-          } catch {
-            return null;
           }
-        })),
-        Promise.all(awayTeamPlayers.map(async (player: any) => {
-          try {
-            const response = await fetch(`/api/element-summary/${player.id}`);
-            if (!response.ok) throw new Error('Failed to fetch player data');
-            const data = await response.json();
-            const gameweekData = data.history?.find((h: any) => h.round === fixture.event);
-            if (!gameweekData) return null;
 
-            return {
-              playerId: player.id,
-              playerName: player.web_name,
-              teamName: awayTeam?.short_name || 'Away',
-              position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'Unknown',
-              minutes: gameweekData.minutes || 0,
-              goals_scored: gameweekData.goals_scored || 0,
-              assists: gameweekData.assists || 0,
-              clean_sheets: gameweekData.clean_sheets || 0,
-              goals_conceded: gameweekData.goals_conceded || 0,
-              own_goals: gameweekData.own_goals || 0,
-              penalties_saved: gameweekData.penalties_saved || 0,
-              penalties_missed: gameweekData.penalties_missed || 0,
-              yellow_cards: gameweekData.yellow_cards || 0,
-              red_cards: gameweekData.red_cards || 0,
-              saves: gameweekData.saves || 0,
-              bonus: gameweekData.bonus || 0,
-              bps: gameweekData.bps || 0,
-              influence: parseFloat(gameweekData.influence) || 0,
-              creativity: parseFloat(gameweekData.creativity) || 0,
-              threat: parseFloat(gameweekData.threat) || 0,
-              ict_index: parseFloat(gameweekData.ict_index) || 0,
-              total_points: gameweekData.total_points || 0,
-              defensive_contribution: gameweekData.expected_goals_conceded !== undefined
-                ? Math.round((gameweekData.tackles || 0) + (gameweekData.interceptions || 0) + (gameweekData.clearances || 0) + (gameweekData.blocks || 0))
-                : 0
-            } as PlayerStats;
-          } catch {
-            return null;
-          }
-        }))
-      ]);
+          const stats = liveElement.stats || {};
+          return {
+            playerId: player.id,
+            playerName: player.web_name,
+            teamName,
+            position: ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'Unknown',
+            minutes: stats.minutes || 0,
+            goals_scored: stats.goals_scored || 0,
+            assists: stats.assists || 0,
+            clean_sheets: stats.clean_sheets || 0,
+            goals_conceded: stats.goals_conceded || 0,
+            own_goals: stats.own_goals || 0,
+            penalties_saved: stats.penalties_saved || 0,
+            penalties_missed: stats.penalties_missed || 0,
+            yellow_cards: stats.yellow_cards || 0,
+            red_cards: stats.red_cards || 0,
+            saves: stats.saves || 0,
+            bonus: stats.bonus || 0,
+            bps: stats.bps || 0,
+            influence: parseFloat(stats.influence) || 0,
+            creativity: parseFloat(stats.creativity) || 0,
+            threat: parseFloat(stats.threat) || 0,
+            ict_index: parseFloat(stats.ict_index) || 0,
+            total_points: stats.total_points || 0,
+            defensive_contribution: stats.defensive_contribution || 0
+          } as PlayerStats;
+        }).filter((s: PlayerStats | null): s is PlayerStats => s !== null);
+      };
 
-      const isPlayerStats = (stat: PlayerStats | null): stat is PlayerStats => stat !== null;
-      const homeTeamStats = homeStats.filter(isPlayerStats).sort((a, b) => b.total_points - a.total_points);
-      const awayTeamStats = awayStats.filter(isPlayerStats).sort((a, b) => b.total_points - a.total_points);
+      const homeTeamStats = buildPlayerStats(homeTeamPlayers, homeTeam?.short_name || 'Home').sort((a, b) => b.total_points - a.total_points);
+      const awayTeamStats = buildPlayerStats(awayTeamPlayers, awayTeam?.short_name || 'Away').sort((a, b) => b.total_points - a.total_points);
 
       setMatchData({
         fixture,
