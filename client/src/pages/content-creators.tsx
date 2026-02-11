@@ -468,6 +468,32 @@ const getContentCreatorColumns = (currentGameweek?: number): ResponsiveTableColu
     }
   },
   {
+    key: 'gwTransfers',
+    header: currentGameweek ? `GW${currentGameweek} TM` : 'GW TM',
+    priority: 'secondary',
+    align: 'right',
+    mobileLabel: currentGameweek ? `GW${currentGameweek} TM` : 'GW TM',
+    cardOrder: 9,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, creator) => {
+      const history = creator.historyData?.current;
+      if (!history || history.length === 0) return "N/A";
+      const gwData = history.find(gw => gw.event === (currentGameweek || 0));
+      if (!gwData) return "-";
+      const transfers = gwData.event_transfers || 0;
+      const cost = gwData.event_transfers_cost || 0;
+      return (
+        <div className="flex items-center justify-end gap-1">
+          <span>{transfers}</span>
+          {cost > 0 && (
+            <span className="text-red-500 text-[10px]">(-{cost})</span>
+          )}
+        </div>
+      );
+    }
+  },
+  {
     key: 'freeTransfers',
     header: currentGameweek ? `FT` : 'FT',
     priority: 'optional',
@@ -913,6 +939,14 @@ export default function ContentCreators() {
         valueB = histBT.filter(gw => !chipsBT.has(gw.event)).reduce((s, gw) => s + (gw.event_transfers || 0), 0);
         break;
       }
+      case "gwTransfers": {
+        const cGW2 = currentGameweek || 0;
+        const gwDataA = (a.historyData?.current || []).find(gw => gw.event === cGW2);
+        const gwDataB = (b.historyData?.current || []).find(gw => gw.event === cGW2);
+        valueA = gwDataA?.event_transfers || 0;
+        valueB = gwDataB?.event_transfers || 0;
+        break;
+      }
       case "freeTransfers": {
         const historyA = a.historyData?.current;
         const historyB = b.historyData?.current;
@@ -1048,6 +1082,7 @@ export default function ContentCreators() {
                     'latestTracking.bank': 'bank',
                     'latestTracking.teamValue': 'team_value',
                     'transfersMade': 'transfersMade',
+                    'gwTransfers': 'gwTransfers',
                     'freeTransfers': 'freeTransfers',
                     'chipsAvailable': 'chipsAvailable',
                     'name': 'name'
@@ -1066,6 +1101,7 @@ export default function ContentCreators() {
                     'bank': 'latestTracking.bank',
                     'team_value': 'latestTracking.teamValue',
                     'transfersMade': 'transfersMade',
+                    'gwTransfers': 'gwTransfers',
                     'freeTransfers': 'freeTransfers',
                     'chipsAvailable': 'chipsAvailable',
                     'name': 'name'
