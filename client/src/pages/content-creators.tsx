@@ -307,7 +307,7 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     className: 'font-mono',
     render: (value, creator) => (
       <div className="text-purple-600">
-        <span>{creator.projected_points ? creator.projected_points.toFixed(1) : '-'}</span>
+        <span>{creator.projected_points != null ? creator.projected_points.toFixed(1) : '-'}</span>
         {creator.active_chip && getChipLabel(creator.active_chip) && (
           <span className="text-xs ml-1">({getChipLabel(creator.active_chip)})</span>
         )}

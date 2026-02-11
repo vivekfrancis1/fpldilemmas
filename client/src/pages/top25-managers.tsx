@@ -58,31 +58,31 @@ type Top25Manager = {
 };
 
 const TOP_25_MANAGERS: Top25Manager[] = [
-  { rank: 1, name: "Tom Dollimore", managerId: 497000 },
-  { rank: 2, name: "Ben Crellin", managerId: 6586 },
-  { rank: 3, name: "Fábio Borges", managerId: 4783108 },
-  { rank: 4, name: "John Walsh", managerId: 1277598 },
-  { rank: 5, name: "Abhinav C", managerId: 175376 },
-  { rank: 6, name: "Harry Daniels", managerId: 1320 },
-  { rank: 7, name: "» elevenify.com", managerId: 9325733 },
-  { rank: 8, name: "Cameron Scott", managerId: 43164 },
-  { rank: 9, name: "Huss E", managerId: 10421 },
-  { rank: 10, name: "Khaled Zaki", managerId: 202269 },
-  { rank: 11, name: "Rob Mayes", managerId: 294590 },
-  { rank: 12, name: "Mark Hurst", managerId: 62110 },
-  { rank: 13, name: "Jesper Øiestad", managerId: 4455 },
-  { rank: 14, name: "Even Skärholen", managerId: 227102 },
-  { rank: 15, name: "Tom N", managerId: 386057 },
-  { rank: 16, name: "Anthony Moylette", managerId: 78351 },
-  { rank: 17, name: "Lukasz Woźniak", managerId: 859923 },
-  { rank: 18, name: "Michael Giovanni", managerId: 69716 },
-  { rank: 19, name: "Tommy Shinton", managerId: 155602 },
-  { rank: 20, name: "Sean Connors", managerId: 207939 },
-  { rank: 21, name: "Raphael Crettol", managerId: 1559332 },
-  { rank: 22, name: "Simon MacNair", managerId: 742000 },
-  { rank: 23, name: "Jovan Popović", managerId: 226819 },
-  { rank: 24, name: "William Johansson", managerId: 3676 },
-  { rank: 25, name: "Louis Reddington", managerId: 121680 },
+  { rank: 1, name: "Cameron Scott", managerId: 43164 },
+  { rank: 2, name: "Tom Dollimore", managerId: 497000 },
+  { rank: 3, name: "- elevenify.com", managerId: 9325733 },
+  { rank: 4, name: "Ben Crellin", managerId: 6586 },
+  { rank: 5, name: "Fábio Borges", managerId: 4783108 },
+  { rank: 6, name: "John Walsh", managerId: 1277598 },
+  { rank: 7, name: "Michael Giovanni", managerId: 69716 },
+  { rank: 8, name: "Abinav C", managerId: 175376 },
+  { rank: 9, name: "Harry Daniels", managerId: 1320 },
+  { rank: 10, name: "Uzair Rizwan", managerId: 642254 },
+  { rank: 11, name: "Huss E", managerId: 10421 },
+  { rank: 12, name: "Simon MacNair", managerId: 742000 },
+  { rank: 13, name: "Sam Hackett", managerId: 143684 },
+  { rank: 14, name: "Mark Hurst", managerId: 62110 },
+  { rank: 15, name: "Dan Wright", managerId: 13498 },
+  { rank: 16, name: "Rob Mayes", managerId: 294590 },
+  { rank: 17, name: "Sam McKenzie", managerId: 256195 },
+  { rank: 18, name: "-Calm -", managerId: 18383 },
+  { rank: 19, name: "Calum Miller", managerId: 10285 },
+  { rank: 20, name: "Ahmed Mohamed", managerId: 481452 },
+  { rank: 21, name: "Tom N", managerId: 386057 },
+  { rank: 22, name: "Elaine Ridgewell", managerId: 182534 },
+  { rank: 23, name: "Jesper Øiestad", managerId: 4455 },
+  { rank: 24, name: "Jonas Fougner", managerId: 12555 },
+  { rank: 25, name: "Jovan Popović", managerId: 226819 },
 ];
 
 const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, GWTransferDetail[]>, upcomingGameweek?: number): ResponsiveTableColumn<Top25Manager>[] => {
@@ -125,7 +125,7 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     className: 'font-mono',
     render: (value, manager) => (
       <div className="text-purple-600">
-        <span>{manager.projected_points ? manager.projected_points.toFixed(1) : '-'}</span>
+        <span>{manager.projected_points != null ? manager.projected_points.toFixed(1) : '-'}</span>
         {manager.active_chip && getChipLabel(manager.active_chip) && (
           <span className="text-xs ml-1">({getChipLabel(manager.active_chip)})</span>
         )}
@@ -215,7 +215,13 @@ export default function Top25Managers() {
     refetchOnWindowFocus: false,
   });
 
-  const managerIds = TOP_25_MANAGERS.map(m => m.managerId);
+  const managerIds = useMemo(() => {
+    if (cachedData?.managers) {
+      return cachedData.managers.map(m => m.managerId);
+    }
+    return TOP_25_MANAGERS.map(m => m.managerId);
+  }, [cachedData]);
+
   const { data: gwTransfersData } = useQuery<{ transfers: Record<number, GWTransferDetail[]>; gameweek: number }>({
     queryKey: ['/api/managers/gw-transfers', managerIds.join(',')],
     queryFn: async () => {
@@ -244,6 +250,7 @@ export default function Top25Managers() {
       if (!res.ok) throw new Error('Failed to fetch projected points');
       return res.json();
     },
+    enabled: managerIds.length > 0,
     staleTime: 10 * 60 * 1000,
   });
 
