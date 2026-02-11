@@ -1129,17 +1129,17 @@ export default function TransferPlanner() {
     }
   }, [isOwnTeam, teamData]);
 
-  // Auto-detect and apply active chip from FPL API for the next gameweek
-  // This syncs the user's FPL website chip activation with Transfer Planner
+  // Auto-detect and apply active chip from FPL API for the current gameweek
+  // The active_chip field indicates which chip was used in the current GW
   useEffect(() => {
     if (!isOwnTeam || !teamData || !bootstrapData) return;
     
     const activeChip = teamData.active_chip;
     if (!activeChip) return;
     
-    // Get the next gameweek (where the chip is active)
-    const nextEvent = bootstrapData.events.find(e => e.is_next);
-    const nextGW = nextEvent?.id;
+    // Get the current gameweek (where the chip is active)
+    const currentEvent = bootstrapData.events.find(e => e.is_current);
+    const nextGW = currentEvent?.id;
     if (!nextGW) return;
     
     // Map FPL API chip names to our internal names
