@@ -2851,19 +2851,30 @@ export default function TransferPlanner() {
 
   // Move bench player up or down (excluding GK)
   const moveBenchPlayer = (benchIndex: number, direction: 'up' | 'down') => {
-    // Check if we can create a draft
+    console.log(`🔄 moveBenchPlayer called: benchIndex=${benchIndex}, direction=${direction}`);
+    
     const targetDraft = getTargetDraftForChanges();
-    if (!targetDraft) return;
+    if (!targetDraft) {
+      console.log('❌ moveBenchPlayer: No target draft available');
+      return;
+    }
     
     const wasInBase = activeDraft === "Base";
     
-    if (benchIndex === 0) return; // Can't move GK
+    if (benchIndex === 0) {
+      console.log('❌ moveBenchPlayer: Cannot move GK (benchIndex=0)');
+      return;
+    }
     
     const actualIndex = 11 + benchIndex;
     const swapIndex = direction === 'up' ? actualIndex - 1 : actualIndex + 1;
     
-    // Don't allow moving past GK or past last bench player
-    if (swapIndex === 11 || swapIndex > 14) return;
+    console.log(`🔄 moveBenchPlayer: actualIndex=${actualIndex}, swapIndex=${swapIndex}`);
+    
+    if (swapIndex === 11 || swapIndex > 14) {
+      console.log(`❌ moveBenchPlayer: swapIndex ${swapIndex} out of range`);
+      return;
+    }
     
     const newLineup = [...manualLineup];
     const movedPlayer = newLineup[actualIndex];
@@ -6808,11 +6819,6 @@ export default function TransferPlanner() {
                       .filter(pick => {
                         const player = getPlayerById(pick.element);
                         return player?.element_type !== 1;
-                      })
-                      .sort((a, b) => {
-                        const aPoints = getPlayerProjectedPoints(a.element) || 0;
-                        const bPoints = getPlayerProjectedPoints(b.element) || 0;
-                        return bPoints - aPoints;
                       });
                     const reorderedBench = gkBench ? [gkBench, ...outfieldBench] : outfieldBench;
                     return reorderedBench.map(pick => {
