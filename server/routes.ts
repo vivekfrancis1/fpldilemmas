@@ -3238,6 +3238,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/managers/batch-projected-points", async (req, res) => {
+    try {
+      const { managerIds } = req.body;
+
+      if (!Array.isArray(managerIds) || managerIds.length === 0) {
+        return res.status(400).json({ message: "managerIds array is required" });
+      }
+
+      const idsToFetch = managerIds.slice(0, 50);
+
+      const bootstrapResponse = await fetchWithRetry("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapResponse || !bootstrapResponse.ok) {
+        throw new Error("Failed to fetch bootstrap data");
+      }
+      const bootstrapData = await bootstrapResponse.json();
+      const currentGW = bootstrapData.events.find((event: any) => event.is_current);
+      const currentGameweek = currentGW?.id || 1;
+
+      let playerProjectionsMap = new Map<number, number>();
+      try {
+        const projectionsResponse = await internalFetch(`/api/projection-accuracy/gameweek/${currentGameweek}`);
+        if (projectionsResponse && projectionsResponse.ok) {
+          const projectionsData = await projectionsResponse.json();
+          if (projectionsData.players && Array.isArray(projectionsData.players)) {
+            for (const player of projectionsData.players) {
+              playerProjectionsMap.set(player.player_id, parseFloat(player.projected_points) || 0);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch player projections for batch projected points:", err);
+      }
+
+      const results = await Promise.all(
+        idsToFetch.map(async (managerId: number) => {
+          try {
+            const picksResponse = await fetchWithRetry(
+              `https://fantasy.premierleague.com/api/entry/${managerId}/event/${currentGameweek}/picks/`
+            );
+            if (!picksResponse || !picksResponse.ok) {
+              return { managerId, projected_points: 0, projected_bench_points: 0, active_chip: null };
+            }
+            const picksData = await picksResponse.json();
+            const picks = picksData.picks || [];
+            const activeChip = picksData.active_chip || null;
+
+            const starting11 = picks.filter((p: any) => p.position <= 11);
+            const bench = picks.filter((p: any) => p.position > 11);
+
+            let projectedPoints = 0;
+            let projectedBenchPoints = 0;
+
+            for (const pick of starting11) {
+              const playerProjected = playerProjectionsMap.get(pick.element) || 0;
+              projectedPoints += playerProjected * (pick.multiplier || 1);
+            }
+            for (const pick of bench) {
+              projectedBenchPoints += playerProjectionsMap.get(pick.element) || 0;
+            }
+            if (activeChip === 'bboost') {
+              projectedPoints += projectedBenchPoints;
+            }
+
+            return {
+              managerId,
+              projected_points: Math.round(projectedPoints * 10) / 10,
+              projected_bench_points: Math.round(projectedBenchPoints * 10) / 10,
+              active_chip: activeChip
+            };
+          } catch (error) {
+            return { managerId, projected_points: 0, projected_bench_points: 0, active_chip: null };
+          }
+        })
+      );
+
+      res.json({ managers: results, gameweek: currentGameweek });
+    } catch (error) {
+      console.error("Error in batch projected points:", error);
+      res.status(500).json({ error: "Failed to fetch batch projected points" });
+    }
+  });
+
   // Get manager team picks for current gameweek
   app.get("/api/manager/:managerId/team", async (req, res) => {
     try {

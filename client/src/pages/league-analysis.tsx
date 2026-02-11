@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ResponsiveTable, ResponsiveTableColumn } from "@/components/ui/responsive-table";
 import { BarChart3, ArrowLeft, Trophy, Activity, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, renderRankChange } from "@/lib/manager-standings-columns";
+import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, renderRankChange, getChipLabel } from "@/lib/manager-standings-columns";
 
 interface LiveLeagueEntry {
   id: number;
@@ -376,8 +376,8 @@ export default function LeagueAnalysisPage() {
       render: (value, entry) => (
         <div className="text-purple-600">
           <span>{entry.projected_points !== undefined ? entry.projected_points.toFixed(1) : '-'}</span>
-          {entry.active_chip === 'bboost' && entry.projected_bench_points && entry.projected_bench_points > 0 && (
-            <span className="text-xs ml-1">(BB)</span>
+          {entry.active_chip && getChipLabel(entry.active_chip) && (
+            <span className="text-xs ml-1">({getChipLabel(entry.active_chip)})</span>
           )}
         </div>
       )
@@ -442,9 +442,9 @@ export default function LeagueAnalysisPage() {
                 </div>
               )}
               {isCurrentManager && <Badge className="bg-blue-600 text-xs">You</Badge>}
-              {entry.active_chip && (
+              {entry.active_chip && getChipLabel(entry.active_chip) && (
                 <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                  {entry.active_chip}
+                  {getChipLabel(entry.active_chip)}
                 </Badge>
               )}
             </div>
@@ -520,8 +520,8 @@ export default function LeagueAnalysisPage() {
       render: (value, entry) => (
         <div className="text-purple-600">
           <span>{entry.projected_points?.toFixed(1) || '-'}</span>
-          {entry.active_chip === 'bboost' && entry.projected_bench_points > 0 && (
-            <span className="text-xs ml-1">(BB)</span>
+          {entry.active_chip && getChipLabel(entry.active_chip) && (
+            <span className="text-xs ml-1">({getChipLabel(entry.active_chip)})</span>
           )}
         </div>
       )

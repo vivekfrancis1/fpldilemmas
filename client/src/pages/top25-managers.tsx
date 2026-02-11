@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import Top25TeamAnalysis from "./top25-team-analysis";
 import { LoadingExperience } from "@/components/loading-experience";
-import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage } from "@/lib/manager-standings-columns";
+import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, getChipLabel } from "@/lib/manager-standings-columns";
 
 type Top25Manager = {
   rank: number;
@@ -52,6 +52,9 @@ type Top25Manager = {
     chipsUsed?: number;
     secondHalfChipsUsed?: number;
   };
+  projected_points?: number;
+  projected_bench_points?: number;
+  active_chip?: string | null;
 };
 
 const TOP_25_MANAGERS: Top25Manager[] = [
@@ -111,6 +114,25 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     )
   };
 
+  const xPtsCol: ResponsiveTableColumn<Top25Manager> = {
+    key: 'projected_points',
+    header: 'xPts',
+    priority: 'secondary',
+    align: 'right',
+    mobileLabel: 'xPts',
+    cardOrder: 3,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, manager) => (
+      <div className="text-purple-600">
+        <span>{manager.projected_points ? manager.projected_points.toFixed(1) : '-'}</span>
+        {manager.active_chip && getChipLabel(manager.active_chip) && (
+          <span className="text-xs ml-1">({getChipLabel(manager.active_chip)})</span>
+        )}
+      </div>
+    )
+  };
+
   const sharedCols = getSharedColumns<Top25Manager>({
     currentGameweek,
     upcomingGameweek,
@@ -119,7 +141,7 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     gwTransfersKeyField: 'managerId',
   });
 
-  return [allTimeRankCol, nameCol, ...sharedCols];
+  return [allTimeRankCol, nameCol, xPtsCol, ...sharedCols];
 };
 
 interface BootstrapData {
@@ -204,12 +226,44 @@ export default function Top25Managers() {
     staleTime: 10 * 60 * 1000,
   });
 
+  interface BatchProjectedResult {
+    managerId: number;
+    projected_points: number;
+    projected_bench_points: number;
+    active_chip: string | null;
+  }
+
+  const { data: projectedData } = useQuery<{ managers: BatchProjectedResult[]; gameweek: number }>({
+    queryKey: ['/api/managers/batch-projected-points', managerIds],
+    queryFn: async () => {
+      const res = await fetch('/api/managers/batch-projected-points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ managerIds })
+      });
+      if (!res.ok) throw new Error('Failed to fetch projected points');
+      return res.json();
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const projectedPointsMap = useMemo(() => {
+    const map = new Map<number, BatchProjectedResult>();
+    if (projectedData?.managers) {
+      for (const m of projectedData.managers) {
+        map.set(m.managerId, m);
+      }
+    }
+    return map;
+  }, [projectedData]);
+
   // Transform cached data to match component state
   useEffect(() => {
     if (cachedData?.managers) {
       const transformedManagers = cachedData.managers.map(m => {
         const chips = m.historyData?.chips || [];
         const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
+        const projData = projectedPointsMap.get(m.managerId);
         
         return {
           rank: m.rank,
@@ -240,12 +294,15 @@ export default function Top25Managers() {
               }
             }
             return null;
-          })()
+          })(),
+          projected_points: projData?.projected_points,
+          projected_bench_points: projData?.projected_bench_points,
+          active_chip: projData?.active_chip,
         };
       });
       setManagersWithData(transformedManagers);
     }
-  }, [cachedData]);
+  }, [cachedData, projectedPointsMap]);
 
   // Force refresh function (clears cache and refetches)
   const forceRefresh = async () => {

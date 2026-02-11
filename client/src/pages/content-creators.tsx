@@ -58,7 +58,7 @@ import {
   PieChart,
 } from "lucide-react";
 import { SiInstagram, SiTiktok, SiX, SiYoutube } from "react-icons/si";
-import { getSharedColumns, sortManagerData, GWTransferDetail as SharedGWTransferDetail, ManagerColumnsConfig } from "@/lib/manager-standings-columns";
+import { getSharedColumns, sortManagerData, GWTransferDetail as SharedGWTransferDetail, ManagerColumnsConfig, getChipLabel } from "@/lib/manager-standings-columns";
 
 interface GWHistory {
   event: number;
@@ -90,6 +90,9 @@ type FPLCreator = {
     current: GWHistory[];
     chips: ChipUsage[];
   };
+  projected_points?: number;
+  projected_bench_points?: number;
+  active_chip?: string | null;
 };
 
 type FPLCreatorTracking = {
@@ -293,6 +296,25 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     )
   };
 
+  const xPtsCol: ResponsiveTableColumn<CreatorWithLatestData> = {
+    key: 'projected_points',
+    header: 'xPts',
+    priority: 'secondary',
+    align: 'right',
+    mobileLabel: 'xPts',
+    cardOrder: 2,
+    sortable: true,
+    className: 'font-mono',
+    render: (value, creator) => (
+      <div className="text-purple-600">
+        <span>{creator.projected_points ? creator.projected_points.toFixed(1) : '-'}</span>
+        {creator.active_chip && getChipLabel(creator.active_chip) && (
+          <span className="text-xs ml-1">({getChipLabel(creator.active_chip)})</span>
+        )}
+      </div>
+    )
+  };
+
   const sharedCols = getSharedColumns<CreatorWithLatestData>({
     currentGameweek,
     upcomingGameweek,
@@ -301,7 +323,7 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     gwTransfersKeyField: 'id',
   });
 
-  return [nameColumn, ...sharedCols];
+  return [nameColumn, xPtsCol, ...sharedCols];
 };
 
 // Main Content Creators Component
@@ -371,6 +393,40 @@ export default function ContentCreators() {
     queryKey: ["/api/content-creators/gw-transfers"],
     staleTime: 10 * 60 * 1000,
   });
+
+  interface BatchProjectedResult {
+    managerId: number;
+    projected_points: number;
+    projected_bench_points: number;
+    active_chip: string | null;
+  }
+
+  const creatorManagerIds = useMemo(() => (creators || []).map(c => c.managerId), [creators]);
+
+  const { data: projectedData } = useQuery<{ managers: BatchProjectedResult[]; gameweek: number }>({
+    queryKey: ['/api/managers/batch-projected-points', creatorManagerIds],
+    queryFn: async () => {
+      const res = await fetch('/api/managers/batch-projected-points', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ managerIds: creatorManagerIds })
+      });
+      if (!res.ok) throw new Error('Failed to fetch projected points');
+      return res.json();
+    },
+    enabled: creatorManagerIds.length > 0,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const projectedPointsMap = useMemo(() => {
+    const map = new Map<number, BatchProjectedResult>();
+    if (projectedData?.managers) {
+      for (const m of projectedData.managers) {
+        map.set(m.managerId, m);
+      }
+    }
+    return map;
+  }, [projectedData]);
 
   // Get current gameweek from bootstrap data
   const currentGameweek = useMemo(() => {
@@ -591,6 +647,7 @@ export default function ContentCreators() {
     if (cachedCreatorsData?.creators && creators) {
       const enrichedCreators = creators.map(creator => {
         const cachedCreator = cachedCreatorsData.creators.find(c => c.managerId === creator.managerId);
+        const projData = projectedPointsMap.get(creator.managerId);
         if (cachedCreator) {
           const chips = cachedCreator.historyData?.chips || [];
           const secondHalfChipsUsed = chips.filter((c: { event: number }) => c.event >= 20).length;
@@ -610,16 +667,32 @@ export default function ContentCreators() {
               current: cachedCreator.historyData.current || [],
               chips: cachedCreator.historyData.chips || [],
             } : undefined,
+            projected_points: projData?.projected_points,
+            projected_bench_points: projData?.projected_bench_points,
+            active_chip: projData?.active_chip,
           };
         }
-        return creator;
+        return {
+          ...creator,
+          projected_points: projData?.projected_points,
+          projected_bench_points: projData?.projected_bench_points,
+          active_chip: projData?.active_chip,
+        };
       });
       setCreatorsWithHistory(enrichedCreators);
     } else if (creators) {
-      // Fallback: use original creators if no cached data
-      setCreatorsWithHistory(creators);
+      const enrichedCreators = creators.map(creator => {
+        const projData = projectedPointsMap.get(creator.managerId);
+        return {
+          ...creator,
+          projected_points: projData?.projected_points,
+          projected_bench_points: projData?.projected_bench_points,
+          active_chip: projData?.active_chip,
+        };
+      });
+      setCreatorsWithHistory(enrichedCreators);
     }
-  }, [cachedCreatorsData, creators]);
+  }, [cachedCreatorsData, creators, projectedPointsMap]);
 
   // Force refresh function for Content Creators
   const forceRefreshCreatorsCache = async () => {
@@ -929,7 +1002,7 @@ export default function ContentCreators() {
                           {getChipAnalysis.activeChips.length > 0 ? (
                             getChipAnalysis.activeChips.map((chip: { chip: string; count: number; percentage: number }) => (
                               <div key={chip.chip} className="flex justify-between items-center">
-                                <span className="font-medium capitalize">{chip.chip.replace('_', ' ')}</span>
+                                <span className="font-medium">{getChipLabel(chip.chip) || chip.chip}</span>
                                 <div className="text-right">
                                   <div className="font-semibold">{chip.count} creators</div>
                                   <div className="text-xs text-gray-600">{chip.percentage}%</div>

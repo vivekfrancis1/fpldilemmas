@@ -53,6 +53,17 @@ export interface ManagerColumnsConfig {
   gwTransfersKeyField?: 'id' | 'managerId';
 }
 
+export function getChipLabel(chip: string | null | undefined): string | null {
+  if (!chip) return null;
+  switch (chip) {
+    case 'bboost': return 'BB';
+    case '3xc': return '3xC';
+    case 'freehit': return 'FH';
+    case 'wildcard': return 'WC';
+    default: return chip.toUpperCase();
+  }
+}
+
 function parseValue(val: number | string | undefined | null, scale: ValueScale): number {
   if (val === undefined || val === null) return 0;
   const num = typeof val === 'string' ? parseFloat(val) : val;
@@ -346,6 +357,8 @@ export function getSharedSortValue<T extends ManagerStandingsData>(
         chips.filter(c => c.event >= 20).length;
       return Math.max(0, 4 - secondHalfUsed);
     }
+    case 'projected_points':
+      return (item as any).projected_points || 0;
     case 'name':
       return item.name?.toLowerCase() || '';
     default:
