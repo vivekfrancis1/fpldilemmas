@@ -186,6 +186,9 @@ export class LiveGoalMonitor {
 
       if (now - estimatedEndTime > monitorWindowMs) continue;
 
+      const existingBonus = this.extractBonusFromFixture(fixture);
+      const existingBonusKey = this.bonusAllocationKey(existingBonus);
+
       this.finishedFixtures.set(fixture.id, {
         fixtureId: fixture.id,
         homeTeamId: fixture.team_h,
@@ -194,11 +197,11 @@ export class LiveGoalMonitor {
         awayScore: fixture.team_a_score ?? 0,
         gameweek: fixture.event,
         finishedAt: estimatedEndTime,
-        bonusAllocation: '',
-        bonusTweeted: false,
+        bonusAllocation: existingBonusKey,
+        bonusTweeted: true,
         dcTweeted: true,
       });
-      console.log(`🌟 Picked up recently finished fixture ${fixture.id} for bonus monitoring`);
+      console.log(`🌟 Picked up recently finished fixture ${fixture.id} for bonus change monitoring (existing bonus: ${existingBonusKey || 'none'})`);
     }
   }
 
