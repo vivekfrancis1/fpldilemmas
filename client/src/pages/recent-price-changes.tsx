@@ -105,7 +105,19 @@ export default function RecentPriceChanges() {
     }));
   };
 
+  const resolveTeamName = (change: PriceChange): string => {
+    if (!bootstrapData) return change.team_name;
+    const player = bootstrapData.elements?.find((p: any) => p.id === change.player_id);
+    if (!player) return change.team_name;
+    const team = bootstrapData.teams?.find((t: any) => t.id === player.team);
+    return team?.short_name || change.team_name;
+  };
+
   const filteredAndSortedChanges = Array.isArray(priceChanges) ? priceChanges
+    .map((change: PriceChange) => ({
+      ...change,
+      team_name: resolveTeamName(change),
+    }))
     .filter((change: PriceChange) => {
       const matchesSearch = change.player_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            change.team_name.toLowerCase().includes(searchTerm.toLowerCase());
