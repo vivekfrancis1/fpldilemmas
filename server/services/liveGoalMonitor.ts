@@ -360,7 +360,7 @@ export class LiveGoalMonitor {
 
     for (const entry of entries) {
       const ptLabel = entry.bonus === 1 ? 'pt' : 'pts';
-      tweet += `\n${entry.bonus} ${ptLabel} - ${entry.playerName} [${entry.ownership.toFixed(1)}% owned]`;
+      tweet += `\n${entry.bonus} ${ptLabel} - ${entry.playerName}`;
     }
 
     tweet += this.footer(ctx);
@@ -545,7 +545,7 @@ export class LiveGoalMonitor {
   private formatDCSummaryTweet(dcPlayers: DCEntry[], ctx: MatchContext): string {
     let tweet = `🛡️ Defensive Contribution Points!\n\n${this.matchLine(ctx)}`;
     for (const entry of dcPlayers) {
-      tweet += `\n${entry.playerName} - ${entry.dc} DC [${entry.ownership.toFixed(1)}% owned]`;
+      tweet += `\n${entry.playerName} - ${entry.dc} DC`;
     }
     tweet += this.footer(ctx);
     return tweet;
