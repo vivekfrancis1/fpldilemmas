@@ -445,12 +445,10 @@ export class LiveGoalMonitor {
       fixtureId,
     };
 
-    const totalScoreBefore = prevState.homeScore + prevState.awayScore;
-    const totalScoreNow = homeScore + awayScore;
+    const newGoalScorers = this.findNewEntries(prevState.playerGoals, currentPlayerGoals);
+    const newAssistProviders = this.findNewEntries(prevState.playerAssists, currentPlayerAssists);
 
-    if (totalScoreNow > totalScoreBefore) {
-      const newGoalScorers = this.findNewEntries(prevState.playerGoals, currentPlayerGoals);
-      const newAssistProviders = this.findNewEntries(prevState.playerAssists, currentPlayerAssists);
+    if (newGoalScorers.length > 0) {
       const safeAssistAttribution = newGoalScorers.length === 1 && newAssistProviders.length === 1;
 
       for (const scorerId of newGoalScorers) {
