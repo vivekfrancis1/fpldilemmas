@@ -5,20 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ResponsiveTable, ResponsiveTableColumn } from "@/components/ui/responsive-table";
-import { BarChart3, ArrowLeft, Trophy, Activity, RefreshCw, ChevronUp, ChevronDown, TrendingUp, TrendingDown } from "lucide-react";
+import { BarChart3, ArrowLeft, Trophy, Activity, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { calculateFreeTransfers } from "@/lib/free-transfers";
-
-interface GWHistory {
-  event: number;
-  event_transfers: number;
-  event_transfers_cost: number;
-}
-
-interface ChipUsage {
-  event: number;
-  name: string;
-}
+import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, renderRankChange } from "@/lib/manager-standings-columns";
 
 interface LiveLeagueEntry {
   id: number;
@@ -89,6 +78,8 @@ interface ManagerBatchData {
 }
 
 interface EnrichedLeagueEntry extends LeagueEntry {
+  managerId: number;
+  name: string;
   historyData?: {
     current: GWHistory[];
     chips: ChipUsage[];
@@ -100,6 +91,15 @@ interface EnrichedLeagueEntry extends LeagueEntry {
     overallRank: number;
     gameweekRank: number;
     gameweekPoints: number;
+  };
+  latestTracking?: {
+    overallRank?: number;
+    overallPoints?: number;
+    gameweekPoints?: number;
+    gameweekRank?: number;
+    teamValue?: number | string;
+    bank?: number | string;
+    totalTransfers?: number;
   };
   chipsAvailable: number;
   rankChange: number;
@@ -109,6 +109,8 @@ interface EnrichedLeagueEntry extends LeagueEntry {
 }
 
 interface EnrichedLiveEntry extends LiveLeagueEntry {
+  managerId: number;
+  name: string;
   historyData?: {
     current: GWHistory[];
     chips: ChipUsage[];
@@ -121,26 +123,16 @@ interface EnrichedLiveEntry extends LiveLeagueEntry {
     gameweekRank: number;
     gameweekPoints: number;
   };
+  latestTracking?: {
+    overallRank?: number;
+    overallPoints?: number;
+    gameweekPoints?: number;
+    gameweekRank?: number;
+    teamValue?: number | string;
+    bank?: number | string;
+    totalTransfers?: number;
+  };
   chipsAvailable: number;
-}
-
-function getRankChangeDisplay(change: number | undefined | null) {
-  if (!change || change === 0) return null;
-  if (change > 0) {
-    return (
-      <div className="flex items-center text-green-600 text-xs">
-        <TrendingUp className="h-3 w-3 mr-1" />
-        +{change}
-      </div>
-    );
-  } else {
-    return (
-      <div className="flex items-center text-red-600 text-xs">
-        <TrendingDown className="h-3 w-3 mr-1" />
-        {change}
-      </div>
-    );
-  }
 }
 
 export default function LeagueAnalysisPage() {
@@ -186,7 +178,7 @@ export default function LeagueAnalysisPage() {
 
   const { data: liveStandingsData, isLoading: isLoadingLive, refetch: refetchLive } = useQuery<LiveLeagueStandings>({
     queryKey: [`/api/leagues-classic/${leagueId}/live-standings`],
-    enabled: !!leagueId, // Always fetch for projected points data
+    enabled: !!leagueId,
     refetchInterval: showLiveStandings ? 30000 : false,
     staleTime: 15000,
   });
@@ -196,7 +188,6 @@ export default function LeagueAnalysisPage() {
 
   const managerIds = useMemo(() => topEntries.map(e => e.entry), [topEntries]);
 
-  // Always fetch batch data (needed for both regular and live views)
   const { data: batchDataResponse } = useQuery<{ managers: ManagerBatchData[] }>({
     queryKey: [`/api/leagues/${leagueId}/manager-batch-data`, managerIds.join(',')],
     queryFn: async () => {
@@ -213,7 +204,6 @@ export default function LeagueAnalysisPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Create a map from batch data for easy lookup
   const batchDataMap = useMemo(() => {
     const map = new Map<number, ManagerBatchData>();
     if (batchDataResponse?.managers) {
@@ -224,7 +214,18 @@ export default function LeagueAnalysisPage() {
     return map;
   }, [batchDataResponse]);
 
-  // Create map of projected points from live standings data
+  const { data: gwTransfersData } = useQuery<{ transfers: Record<number, GWTransferDetail[]>; gameweek: number }>({
+    queryKey: ['/api/managers/gw-transfers', managerIds.join(',')],
+    queryFn: async () => {
+      if (managerIds.length === 0) return { transfers: {}, gameweek: 0 };
+      const res = await fetch(`/api/managers/gw-transfers?managerIds=${managerIds.join(',')}`);
+      if (!res.ok) throw new Error('Failed to fetch GW transfers');
+      return res.json();
+    },
+    enabled: managerIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const projectedPointsMap = useMemo(() => {
     const map = new Map<number, { projected_points: number; projected_bench_points: number; active_chip: string | null }>();
     if (liveStandingsData?.standings?.results) {
@@ -245,8 +246,19 @@ export default function LeagueAnalysisPage() {
       const projData = projectedPointsMap.get(entry.entry);
       return {
         ...entry,
+        managerId: entry.entry,
+        name: entry.player_name,
         historyData: batchData?.historyData || undefined,
         managerData: batchData?.managerData || undefined,
+        latestTracking: {
+          overallRank: batchData?.managerData?.overallRank,
+          overallPoints: entry.total,
+          gameweekPoints: entry.event_total,
+          gameweekRank: batchData?.managerData?.gameweekRank,
+          teamValue: batchData?.managerData?.teamValue,
+          bank: batchData?.managerData?.bank,
+          totalTransfers: batchData?.managerData?.totalTransfers,
+        },
         chipsAvailable: batchData?.chipsAvailable || 0,
         rankChange: entry.last_rank && entry.last_rank > 0 ? entry.last_rank - entry.rank : 0,
         projected_points: projData?.projected_points,
@@ -256,15 +268,25 @@ export default function LeagueAnalysisPage() {
     });
   }, [topEntries, batchDataMap, projectedPointsMap]);
 
-  // Enrich live entries with batch data
   const enrichedLiveEntries: EnrichedLiveEntry[] = useMemo(() => {
     if (!liveStandingsData?.standings?.results) return [];
     return liveStandingsData.standings.results.map(entry => {
       const batchData = batchDataMap.get(entry.entry);
       return {
         ...entry,
+        managerId: entry.entry,
+        name: entry.player_name,
         historyData: batchData?.historyData || undefined,
         managerData: batchData?.managerData || undefined,
+        latestTracking: {
+          overallRank: batchData?.managerData?.overallRank,
+          overallPoints: entry.live_total || entry.total,
+          gameweekPoints: entry.live_points || entry.event_total,
+          gameweekRank: batchData?.managerData?.gameweekRank,
+          teamValue: batchData?.managerData?.teamValue,
+          bank: batchData?.managerData?.bank,
+          totalTransfers: batchData?.managerData?.totalTransfers,
+        },
         chipsAvailable: batchData?.chipsAvailable || 0
       };
     });
@@ -280,63 +302,26 @@ export default function LeagueAnalysisPage() {
   };
 
   const sortedEntries = useMemo(() => {
-    return [...enrichedEntries].sort((a, b) => {
-      const getValue = (entry: EnrichedLeagueEntry, field: string) => {
-        switch (field) {
-          case 'rank':
-            return entry.rank;
-          case 'total':
-            return entry.total || 0;
-          case 'event_total':
-            return entry.event_total || 0;
-          case 'overallRank':
-            return entry.managerData?.overallRank || 0;
-          case 'gameweekRank':
-            return entry.managerData?.gameweekRank || 0;
-          case 'squadValue':
-            const teamValue = entry.managerData?.teamValue || 0;
-            const bank = entry.managerData?.bank || 0;
-            return teamValue - bank;
-          case 'bank':
-            return entry.managerData?.bank || 0;
-          case 'freeTransfers':
-            if (!entry.historyData?.current) return 0;
-            return calculateFreeTransfers(entry.historyData.current, entry.historyData.chips, upcomingGameweek);
-          case 'transfersMade': {
-            if (!entry.historyData?.current) return 0;
-            const chipGWs = new Set(
-              (entry.historyData.chips || []).filter((c: ChipUsage) => c.name === 'freehit' || c.name === 'wildcard').map((c: ChipUsage) => c.event)
-            );
-            return entry.historyData.current
-              .filter((gw: GWHistory) => !chipGWs.has(gw.event))
-              .reduce((sum: number, gw: GWHistory) => sum + (gw.event_transfers || 0), 0);
-          }
-          case 'chipsAvailable':
-            return entry.chipsAvailable;
-          case 'player_name':
-            return entry.player_name;
-          default:
-            return 0;
+    const pageFields = ['rank', 'player_name', 'projected_points', 'gameweekRank'];
+    if (pageFields.includes(sortField)) {
+      return [...enrichedEntries].sort((a, b) => {
+        let aVal: any, bVal: any;
+        switch (sortField) {
+          case 'rank': aVal = a.rank; bVal = b.rank; break;
+          case 'player_name': aVal = a.player_name.toLowerCase(); bVal = b.player_name.toLowerCase(); break;
+          case 'projected_points': aVal = a.projected_points || 0; bVal = b.projected_points || 0; break;
+          case 'gameweekRank': aVal = a.managerData?.gameweekRank || 0; bVal = b.managerData?.gameweekRank || 0; break;
+          default: aVal = 0; bVal = 0;
         }
-      };
+        if (typeof aVal === 'string') return sortDirection === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal;
+      });
+    }
+    return sortManagerData(enrichedEntries, sortField, sortDirection, currentGameweek, 'raw');
+  }, [enrichedEntries, sortField, sortDirection, currentGameweek]);
 
-      const aVal = getValue(a, sortField);
-      const bVal = getValue(b, sortField);
-      
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        return sortDirection === 'asc' 
-          ? aVal.localeCompare(bVal)
-          : bVal.localeCompare(aVal);
-      }
-      
-      return sortDirection === 'asc' 
-        ? (aVal as number) - (bVal as number)
-        : (bVal as number) - (aVal as number);
-    });
-  }, [enrichedEntries, sortField, sortDirection, upcomingGameweek]);
-
-  const getColumns = (): ResponsiveTableColumn<EnrichedLeagueEntry>[] => [
-    {
+  const getColumns = (): ResponsiveTableColumn<EnrichedLeagueEntry>[] => {
+    const managerCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
       key: 'player_name',
       header: 'Manager',
       priority: 'essential',
@@ -350,15 +335,16 @@ export default function LeagueAnalysisPage() {
           <div>
             <div className="font-medium flex items-center gap-2">
               {entry.player_name}
-              {entry.rankChange !== 0 && getRankChangeDisplay(entry.rankChange)}
+              {entry.rankChange !== 0 && renderRankChange(entry.rankChange)}
               {isCurrentManager && <Badge className="bg-blue-600 text-xs">You</Badge>}
             </div>
             <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
           </div>
         );
       }
-    },
-    {
+    };
+
+    const leagueRankCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
       key: 'rank',
       header: 'Rank',
       priority: 'important',
@@ -376,30 +362,9 @@ export default function LeagueAnalysisPage() {
           {entry.rank}
         </div>
       )
-    },
-    {
-      key: 'total',
-      header: <span className="whitespace-nowrap">Total Pts</span>,
-      priority: 'important',
-      align: 'right',
-      mobileLabel: 'Points',
-      cardOrder: 3,
-      sortable: true,
-      className: 'font-mono',
-      render: (value, entry) => entry.total?.toLocaleString() || 'N/A'
-    },
-    {
-      key: 'event_total',
-      header: <span className="text-center">GW{currentGameweek}<br/>Pts</span>,
-      priority: 'secondary',
-      align: 'right',
-      mobileLabel: `GW ${currentGameweek}`,
-      cardOrder: 4,
-      sortable: true,
-      className: 'font-mono',
-      render: (value, entry) => entry.event_total || 0
-    },
-    {
+    };
+
+    const xPtsCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
       key: 'projected_points',
       header: <span className="text-center">GW{currentGameweek}<br/>xPts</span>,
       priority: 'secondary',
@@ -416,22 +381,9 @@ export default function LeagueAnalysisPage() {
           )}
         </div>
       )
-    },
-    {
-      key: 'overallRank',
-      header: <span className="text-center">Overall<br/>Rank</span>,
-      priority: 'secondary',
-      align: 'right',
-      mobileLabel: 'OR',
-      cardOrder: 6,
-      sortable: true,
-      className: 'font-mono text-xs',
-      render: (value, entry) => {
-        const rank = entry.managerData?.overallRank;
-        return rank ? rank.toLocaleString() : 'N/A';
-      }
-    },
-    {
+    };
+
+    const gwRankCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
       key: 'gameweekRank',
       header: <span className="text-center">GW<br/>Rank</span>,
       priority: 'secondary',
@@ -444,88 +396,20 @@ export default function LeagueAnalysisPage() {
         const rank = entry.managerData?.gameweekRank;
         return rank ? rank.toLocaleString() : 'N/A';
       }
-    },
-    {
-      key: 'squadValue',
-      header: <span className="text-center">Squad<br/>Value</span>,
-      priority: 'secondary',
-      align: 'right',
-      mobileLabel: 'Squad',
-      cardOrder: 7,
-      sortable: true,
-      className: 'font-mono text-xs',
-      render: (value, entry) => {
-        const teamValue = entry.managerData?.teamValue;
-        const bank = entry.managerData?.bank;
-        if (teamValue === undefined || teamValue === null) return 'N/A';
-        const bankValue = bank !== undefined && bank !== null ? bank : 0;
-        return `£${((teamValue - bankValue) / 10).toFixed(1)}m`;
-      }
-    },
-    {
-      key: 'bank',
-      header: 'Bank',
-      priority: 'optional',
-      align: 'right',
-      mobileLabel: 'Bank',
-      cardOrder: 8,
-      sortable: true,
-      className: 'font-mono text-xs',
-      render: (value, entry) => {
-        const bank = entry.managerData?.bank;
-        return bank !== undefined && bank !== null 
-          ? `£${(bank / 10).toFixed(1)}m` 
-          : '£0.0m';
-      }
-    },
-    {
-      key: 'freeTransfers',
-      header: <span className="text-center">Free<br/>Transfers</span>,
-      priority: 'optional',
-      align: 'right',
-      mobileLabel: 'FT',
-      cardOrder: 9,
-      sortable: true,
-      className: 'font-mono text-xs',
-      render: (value, entry) => {
-        if (!entry.historyData?.current) return 'N/A';
-        return calculateFreeTransfers(entry.historyData.current, entry.historyData.chips, upcomingGameweek);
-      }
-    },
-    {
-      key: 'transfersMade',
-      header: <span className="text-center">Transfers<br/>Made</span>,
-      priority: 'optional',
-      align: 'right',
-      mobileLabel: 'Transfers',
-      cardOrder: 10,
-      sortable: true,
-      className: 'font-mono text-xs',
-      render: (value, entry) => {
-        if (!entry.historyData?.current) return 'N/A';
-        const chipGWs = new Set(
-          (entry.historyData.chips || []).filter((c: ChipUsage) => c.name === 'freehit' || c.name === 'wildcard').map((c: ChipUsage) => c.event)
-        );
-        return entry.historyData.current
-          .filter((gw: GWHistory) => !chipGWs.has(gw.event))
-          .reduce((sum: number, gw: GWHistory) => sum + (gw.event_transfers || 0), 0);
-      }
-    },
-    {
-      key: 'chipsAvailable',
-      header: <span className="text-center">Chips<br/>Available</span>,
-      priority: 'optional',
-      align: 'right',
-      mobileLabel: 'Chips',
-      cardOrder: 11,
-      sortable: true,
-      className: 'font-mono text-xs',
-      render: (value, entry) => entry.chipsAvailable
-    }
-  ];
+    };
 
-  const getLiveColumns = (): ResponsiveTableColumn<EnrichedLiveEntry>[] => [
-    {
+    const sharedCols = getSharedColumns<EnrichedLeagueEntry>({
+      currentGameweek,
+      valueScale: 'raw',
+      gwTransfersMap: gwTransfersData?.transfers as Record<number | string, GWTransferDetail[]>,
+      gwTransfersKeyField: 'managerId',
+    });
+
+    return [managerCol, leagueRankCol, xPtsCol, gwRankCol, ...sharedCols];
+  };
+
+  const getLiveColumns = (): ResponsiveTableColumn<EnrichedLiveEntry>[] => {
+    const managerCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
       key: 'player_name',
       header: 'Manager',
       priority: 'essential',
@@ -567,8 +451,9 @@ export default function LeagueAnalysisPage() {
           </div>
         );
       }
-    },
-    {
+    };
+
+    const liveRankCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
       key: 'live_rank',
       header: 'Rank',
       priority: 'important',
@@ -586,8 +471,9 @@ export default function LeagueAnalysisPage() {
           {entry.live_rank}
         </div>
       )
-    },
-    {
+    };
+
+    const liveTotalCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
       key: 'live_total',
       header: <span className="whitespace-nowrap">Total Pts</span>,
       priority: 'important',
@@ -597,8 +483,9 @@ export default function LeagueAnalysisPage() {
       sortable: true,
       className: 'font-mono',
       render: (value, entry) => entry.live_total?.toLocaleString() || 'N/A'
-    },
-    {
+    };
+
+    const livePointsCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
       key: 'live_points',
       header: <span className="text-center">GW{liveStandingsData?.current_gameweek || currentGameweek}<br/>Pts</span>,
       priority: 'secondary',
@@ -618,8 +505,9 @@ export default function LeagueAnalysisPage() {
           )}
         </div>
       )
-    },
-    {
+    };
+
+    const xPtsCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
       key: 'projected_points',
       header: <span className="text-center">GW{liveStandingsData?.current_gameweek || currentGameweek}<br/>xPts</span>,
       priority: 'secondary',
@@ -636,22 +524,9 @@ export default function LeagueAnalysisPage() {
           )}
         </div>
       )
-    },
-    {
-      key: 'overallRank',
-      header: <span className="text-center">Overall<br/>Rank</span>,
-      priority: 'secondary',
-      align: 'right',
-      mobileLabel: 'OR',
-      cardOrder: 5,
-      sortable: true,
-      className: 'font-mono text-xs',
-      render: (value, entry) => {
-        const rank = entry.managerData?.overallRank;
-        return rank ? rank.toLocaleString() : 'N/A';
-      }
-    },
-    {
+    };
+
+    const gwRankCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
       key: 'gameweekRank',
       header: <span className="text-center">GW<br/>Rank</span>,
       priority: 'secondary',
@@ -664,85 +539,17 @@ export default function LeagueAnalysisPage() {
         const rank = entry.managerData?.gameweekRank;
         return rank ? rank.toLocaleString() : 'N/A';
       }
-    },
-    {
-      key: 'squadValue',
-      header: <span className="text-center">Squad<br/>Value</span>,
-      priority: 'secondary',
-      align: 'right',
-      mobileLabel: 'Squad',
-      cardOrder: 7,
-      sortable: true,
-      className: 'font-mono text-xs',
-      render: (value, entry) => {
-        const teamValue = entry.managerData?.teamValue;
-        const bank = entry.managerData?.bank;
-        if (teamValue === undefined || teamValue === null) return 'N/A';
-        const bankValue = bank !== undefined && bank !== null ? bank : 0;
-        return `£${((teamValue - bankValue) / 10).toFixed(1)}m`;
-      }
-    },
-    {
-      key: 'bank',
-      header: 'Bank',
-      priority: 'optional',
-      align: 'right',
-      mobileLabel: 'Bank',
-      cardOrder: 8,
-      sortable: true,
-      className: 'font-mono text-xs',
-      render: (value, entry) => {
-        const bank = entry.managerData?.bank;
-        return bank !== undefined && bank !== null 
-          ? `£${(bank / 10).toFixed(1)}m` 
-          : '£0.0m';
-      }
-    },
-    {
-      key: 'freeTransfers',
-      header: <span className="text-center">Free<br/>Transfers</span>,
-      priority: 'optional',
-      align: 'right',
-      mobileLabel: 'FT',
-      cardOrder: 9,
-      sortable: true,
-      className: 'font-mono text-xs',
-      render: (value, entry) => {
-        if (!entry.historyData?.current) return 'N/A';
-        return calculateFreeTransfers(entry.historyData.current, entry.historyData.chips, upcomingGameweek);
-      }
-    },
-    {
-      key: 'transfersMade',
-      header: <span className="text-center">Transfers<br/>Made</span>,
-      priority: 'optional',
-      align: 'right',
-      mobileLabel: 'Transfers',
-      cardOrder: 10,
-      sortable: true,
-      className: 'font-mono text-xs',
-      render: (value, entry) => {
-        if (!entry.historyData?.current) return 'N/A';
-        const chipGWs = new Set(
-          (entry.historyData.chips || []).filter((c: ChipUsage) => c.name === 'freehit' || c.name === 'wildcard').map((c: ChipUsage) => c.event)
-        );
-        return entry.historyData.current
-          .filter((gw: GWHistory) => !chipGWs.has(gw.event))
-          .reduce((sum: number, gw: GWHistory) => sum + (gw.event_transfers || 0), 0);
-      }
-    },
-    {
-      key: 'chipsAvailable',
-      header: <span className="text-center">Chips<br/>Available</span>,
-      priority: 'optional',
-      align: 'right',
-      mobileLabel: 'Chips',
-      cardOrder: 11,
-      sortable: true,
-      className: 'font-mono text-xs',
-      render: (value, entry) => entry.chipsAvailable
-    }
-  ];
+    };
+
+    const sharedCols = getSharedColumns<EnrichedLiveEntry>({
+      currentGameweek,
+      valueScale: 'raw',
+      gwTransfersMap: gwTransfersData?.transfers as Record<number | string, GWTransferDetail[]>,
+      gwTransfersKeyField: 'managerId',
+    });
+
+    return [managerCol, liveRankCol, liveTotalCol, livePointsCol, xPtsCol, gwRankCol, ...sharedCols];
+  };
 
   if (isLoading) {
     return (
