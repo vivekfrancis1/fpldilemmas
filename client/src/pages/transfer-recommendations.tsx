@@ -16,6 +16,7 @@ import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
 
 interface TeamPick {
   element: number;
@@ -127,6 +128,15 @@ export default function TransferRecommendations() {
       return Array.isArray(data) ? data : [];
     }
   });
+
+  // Apply availability adjustments to player projections for consistency
+  const adjustedPlayerProjections = useMemo(() => {
+    if (!playerProjections || !bootstrapData) return playerProjections;
+    const currentGW = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 1;
+    return playerProjections.map((player: any) =>
+      applyAvailabilityAdjustments(player, bootstrapData, currentGW)
+    );
+  }, [playerProjections, bootstrapData]);
 
   // Fetch fixtures
   const { data: fixturesData } = useQuery<any[]>({
@@ -517,13 +527,13 @@ export default function TransferRecommendations() {
     formation: { def: number; mid: number; fwd: number; name: string } | null;
     totalPoints: number;
   } | null => {
-    if (!applyRecommendedTransfers || !playerProjections || !bootstrapData || !selectedGameweek) {
+    if (!applyRecommendedTransfers || !adjustedPlayerProjections || !bootstrapData || !selectedGameweek) {
       return null;
     }
 
     // Get projected points for a player
     const getProjectedPoints = (playerId: number): number => {
-      const projection = playerProjections.find((p: any) => p.playerId === playerId);
+      const projection = adjustedPlayerProjections.find((p: any) => p.playerId === playerId);
       if (!projection) return 0;
       
       // The API returns gameweekProjections as an object with gameweek keys
@@ -667,7 +677,7 @@ export default function TransferRecommendations() {
       formation: bestFormation,
       totalPoints: bestPoints + (captainPick.projectedPoints || 0) // Add captain bonus
     };
-  }, [applyRecommendedTransfers, playerProjections, bootstrapData, selectedGameweek]);
+  }, [applyRecommendedTransfers, adjustedPlayerProjections, bootstrapData, selectedGameweek]);
 
   // Handle search
   const handleSearch = () => {
@@ -705,13 +715,13 @@ export default function TransferRecommendations() {
       hasGameweekData: !!adjustedRecommendations?.gameweeks?.[selectedGameweek || ''],
       hasApplyRecommendedTransfers: !!applyRecommendedTransfers,
       applyRecommendedTransfersLength: applyRecommendedTransfers?.length,
-      hasPlayerProjections: !!playerProjections,
-      playerProjectionsLength: playerProjections?.length,
+      hasPlayerProjections: !!adjustedPlayerProjections,
+      playerProjectionsLength: adjustedPlayerProjections?.length,
       hasBootstrapData: !!bootstrapData,
       hasOptimizedTeam: !!optimizedTeam,
       optimizedTeam
     });
-  }, [selectedGameweek, teamData, adjustedRecommendations, applyRecommendedTransfers, playerProjections, bootstrapData, optimizedTeam]);
+  }, [selectedGameweek, teamData, adjustedRecommendations, applyRecommendedTransfers, adjustedPlayerProjections, bootstrapData, optimizedTeam]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">

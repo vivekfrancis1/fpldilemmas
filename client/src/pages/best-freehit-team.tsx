@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LoadingExperience } from "@/components/loading-experience";
+import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -116,13 +117,21 @@ export default function BestFreehitTeam() {
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
+  // Apply availability adjustments to cached data for consistency with other pages
+  const adjustedCachedData = useMemo(() => {
+    if (!allCachedData || !Array.isArray(allCachedData) || !bootstrapData) return allCachedData;
+    return (allCachedData as any[]).map((player: any) =>
+      applyAvailabilityAdjustments(player, bootstrapData, currentGameweek)
+    );
+  }, [allCachedData, bootstrapData, currentGameweek]);
+
   // Filter cached data to selected gameweek (instant filtering, no need to refetch!)
   const liveData = useMemo(() => {
-    if (!allCachedData || !Array.isArray(allCachedData)) return allCachedData;
+    if (!adjustedCachedData || !Array.isArray(adjustedCachedData)) return [];
     
     // Filter each player's gameweek projections to only the selected gameweek
     // Handle both key formats: "25" (numeric) and "gw25" (prefixed)
-    return (allCachedData as any[]).map((player: any) => {
+    return (adjustedCachedData as any[]).map((player: any) => {
       const originalProjections = player.gameweekProjections || {};
       const numericKey = selectedGameweek.toString();
       const prefixedKey = `gw${selectedGameweek}`;
@@ -135,7 +144,7 @@ export default function BestFreehitTeam() {
         totalExpectedPoints: points
       };
     });
-  }, [allCachedData, selectedGameweek]);
+  }, [adjustedCachedData, selectedGameweek]);
 
   const snapshots: PlayerSnapshot[] = liveData ? liveData.map((player: any) => ({
     playerId: player.playerId || 0,

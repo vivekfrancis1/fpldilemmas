@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LoadingExperience } from "@/components/loading-experience";
+import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -130,12 +131,20 @@ export default function BestWildcardTeam() {
     staleTime: 5 * 60 * 1000, // 5 minutes cache
   });
 
+  // Apply availability adjustments to cached data
+  const adjustedCachedData = useMemo(() => {
+    if (!allCachedData || !Array.isArray(allCachedData) || !bootstrapData) return allCachedData;
+    return (allCachedData as any[]).map((player: any) =>
+      applyAvailabilityAdjustments(player, bootstrapData, currentGameweek)
+    );
+  }, [allCachedData, bootstrapData, currentGameweek]);
+
   // Filter cached data to selected gameweek horizon (client-side filtering is instant)
   const liveData = useMemo(() => {
-    if (!allCachedData || !Array.isArray(allCachedData)) return allCachedData;
+    if (!adjustedCachedData || !Array.isArray(adjustedCachedData)) return adjustedCachedData;
     
     // Filter each player's gameweek projections to only include selected range
-    return (allCachedData as any[]).map((player: any) => {
+    return (adjustedCachedData as any[]).map((player: any) => {
       const filteredProjections: Record<string, number> = {};
       const originalProjections = player.gameweekProjections || {};
       
@@ -157,7 +166,7 @@ export default function BestWildcardTeam() {
         totalExpectedPoints: totalPoints
       };
     });
-  }, [allCachedData, startGameweek, endGameweek]);
+  }, [adjustedCachedData, startGameweek, endGameweek]);
 
   const snapshots: PlayerSnapshot[] = liveData ? liveData.map((player: any) => ({
     playerId: player.playerId || 0,
