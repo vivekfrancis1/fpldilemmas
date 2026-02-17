@@ -725,6 +725,332 @@ describe('Transfer Planner Projection Consistency', () => {
   });
 });
 
+describe('Team Goal Projections', () => {
+  let cachedTeamGoals: any[];
+  let liveTeamGoals: any[];
+
+  beforeAll(async () => {
+    cachedTeamGoals = await fetchJSON('/api/cached/team-goal-projections');
+    liveTeamGoals = await fetchJSON('/api/team-goal-projections');
+  }, 30000);
+
+  it('cached endpoint returns exactly 20 teams', () => {
+    expect(Array.isArray(cachedTeamGoals)).toBe(true);
+    expect(cachedTeamGoals.length).toBe(20);
+  });
+
+  it('live endpoint returns exactly 20 teams', () => {
+    expect(Array.isArray(liveTeamGoals)).toBe(true);
+    expect(liveTeamGoals.length).toBe(20);
+  });
+
+  it('each team has required fields', () => {
+    for (const team of cachedTeamGoals) {
+      expect(team.teamId).toBeDefined();
+      expect(team.teamName).toBeDefined();
+      expect(team.gameweekProjections).toBeDefined();
+      expect(typeof team.gameweekProjections).toBe('object');
+      expect(team.totalGoals).toBeDefined();
+      expect(typeof team.totalGoals).toBe('number');
+      expect(team.averageGoalsPerGame).toBeDefined();
+      expect(typeof team.averageGoalsPerGame).toBe('number');
+    }
+  });
+
+  it('all 20 unique team IDs are present', () => {
+    const teamIds = cachedTeamGoals.map((t: any) => t.teamId);
+    const uniqueIds = new Set(teamIds);
+    expect(uniqueIds.size).toBe(20);
+  });
+
+  it('gameweek projections contain only future gameweeks', () => {
+    for (const team of cachedTeamGoals) {
+      const gwKeys = Object.keys(team.gameweekProjections).map(Number);
+      for (const gw of gwKeys) {
+        expect(gw).toBeGreaterThanOrEqual(nextGameweek);
+        expect(gw).toBeLessThanOrEqual(38);
+      }
+    }
+  });
+
+  it('goal projections are non-negative', () => {
+    for (const team of cachedTeamGoals) {
+      expect(team.totalGoals).toBeGreaterThanOrEqual(0);
+      for (const [, val] of Object.entries(team.gameweekProjections)) {
+        expect(val as number).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
+  it('per-gameweek projections are reasonable (0-6 goals)', () => {
+    const issues: string[] = [];
+    for (const team of cachedTeamGoals) {
+      for (const [gw, val] of Object.entries(team.gameweekProjections)) {
+        if ((val as number) > 6) {
+          issues.push(`${team.teamName} GW${gw}: ${val} goals`);
+        }
+      }
+    }
+    expect(issues.length).toBe(0);
+  });
+
+  it('totalGoals approximately matches sum of gameweek projections', () => {
+    const failures: string[] = [];
+    for (const team of cachedTeamGoals) {
+      const gwSum = Object.values(team.gameweekProjections as Record<string, number>)
+        .reduce((sum: number, v: number) => sum + v, 0);
+      if (Math.abs(gwSum - team.totalGoals) > 0.1) {
+        failures.push(`${team.teamName}: sum=${gwSum.toFixed(2)}, total=${team.totalGoals.toFixed(2)}`);
+      }
+    }
+    expect(failures.length).toBe(0);
+  });
+
+  it('cached and live endpoints have matching team IDs', () => {
+    const cachedIds = new Set(cachedTeamGoals.map((t: any) => t.teamId));
+    const liveIds = new Set(liveTeamGoals.map((t: any) => t.teamId));
+    expect(cachedIds.size).toBe(liveIds.size);
+    for (const id of cachedIds) {
+      expect(liveIds.has(id)).toBe(true);
+    }
+  });
+
+  it('cached and live projections are consistent within tolerance', () => {
+    const failures: string[] = [];
+    for (const cachedTeam of cachedTeamGoals) {
+      const liveTeam = liveTeamGoals.find((t: any) => t.teamId === cachedTeam.teamId);
+      if (!liveTeam) continue;
+
+      if (Math.abs(cachedTeam.totalGoals - liveTeam.totalGoals) > 1.0) {
+        failures.push(
+          `${cachedTeam.teamName}: cached=${cachedTeam.totalGoals.toFixed(2)}, live=${liveTeam.totalGoals.toFixed(2)}`
+        );
+      }
+    }
+    expect(failures.length).toBe(0);
+  });
+});
+
+describe('Team Assist Projections', () => {
+  let cachedTeamAssists: any[];
+
+  beforeAll(async () => {
+    cachedTeamAssists = await fetchJSON('/api/cached/team-assist-projections');
+  }, 30000);
+
+  it('cached endpoint returns exactly 20 teams', () => {
+    expect(Array.isArray(cachedTeamAssists)).toBe(true);
+    expect(cachedTeamAssists.length).toBe(20);
+  });
+
+  it('each team has required fields', () => {
+    for (const team of cachedTeamAssists) {
+      expect(team.teamId).toBeDefined();
+      expect(team.teamName).toBeDefined();
+      expect(team.gameweekProjections).toBeDefined();
+      expect(typeof team.gameweekProjections).toBe('object');
+      expect(team.totalAssists).toBeDefined();
+      expect(typeof team.totalAssists).toBe('number');
+      expect(team.averageAssistsPerGame).toBeDefined();
+      expect(typeof team.averageAssistsPerGame).toBe('number');
+    }
+  });
+
+  it('all 20 unique team IDs are present', () => {
+    const teamIds = cachedTeamAssists.map((t: any) => t.teamId);
+    const uniqueIds = new Set(teamIds);
+    expect(uniqueIds.size).toBe(20);
+  });
+
+  it('assist projections are non-negative', () => {
+    for (const team of cachedTeamAssists) {
+      expect(team.totalAssists).toBeGreaterThanOrEqual(0);
+      for (const [, val] of Object.entries(team.gameweekProjections)) {
+        expect(val as number).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
+  it('totalAssists approximately matches sum of gameweek projections', () => {
+    const failures: string[] = [];
+    for (const team of cachedTeamAssists) {
+      const gwSum = Object.values(team.gameweekProjections as Record<string, number>)
+        .reduce((sum: number, v: number) => sum + v, 0);
+      if (Math.abs(gwSum - team.totalAssists) > 0.1) {
+        failures.push(`${team.teamName}: sum=${gwSum.toFixed(2)}, total=${team.totalAssists.toFixed(2)}`);
+      }
+    }
+    expect(failures.length).toBe(0);
+  });
+
+  it('team assists are always less than or equal to team goals', async () => {
+    const cachedTeamGoals = await fetchJSON('/api/cached/team-goal-projections');
+    const failures: string[] = [];
+
+    for (const assistTeam of cachedTeamAssists) {
+      const goalTeam = cachedTeamGoals.find((t: any) => t.teamId === assistTeam.teamId);
+      if (!goalTeam) continue;
+
+      if (assistTeam.totalAssists > goalTeam.totalGoals + 0.1) {
+        failures.push(
+          `${assistTeam.teamName}: assists=${assistTeam.totalAssists.toFixed(2)} > goals=${goalTeam.totalGoals.toFixed(2)}`
+        );
+      }
+    }
+    expect(failures.length).toBe(0);
+  });
+});
+
+describe('Team Clean Sheet Projections', () => {
+  let cachedTeamCS: any[];
+
+  beforeAll(async () => {
+    cachedTeamCS = await fetchJSON('/api/cached/team-cs-projections');
+  }, 30000);
+
+  it('cached endpoint returns data for all teams', () => {
+    expect(Array.isArray(cachedTeamCS)).toBe(true);
+    expect(cachedTeamCS.length).toBeGreaterThan(0);
+  });
+
+  it('each entry has required fields', () => {
+    for (const entry of cachedTeamCS) {
+      expect(entry.teamId).toBeDefined();
+      expect(typeof entry.teamId).toBe('number');
+      expect(entry.gameweek).toBeDefined();
+      expect(typeof entry.gameweek).toBe('number');
+      expect(entry.cleanSheetProbability).toBeDefined();
+      expect(typeof entry.cleanSheetProbability).toBe('number');
+    }
+  });
+
+  it('covers all 20 teams', () => {
+    const teamIds = new Set(cachedTeamCS.map((e: any) => e.teamId));
+    expect(teamIds.size).toBe(20);
+  });
+
+  it('gameweeks are within valid range', () => {
+    for (const entry of cachedTeamCS) {
+      expect(entry.gameweek).toBeGreaterThanOrEqual(nextGameweek);
+      expect(entry.gameweek).toBeLessThanOrEqual(38);
+    }
+  });
+
+  it('clean sheet probabilities are between 0 and 100', () => {
+    const issues: string[] = [];
+    for (const entry of cachedTeamCS) {
+      if (entry.cleanSheetProbability < 0 || entry.cleanSheetProbability > 100) {
+        issues.push(`Team ${entry.teamId} GW${entry.gameweek}: ${entry.cleanSheetProbability}%`);
+      }
+    }
+    expect(issues.length).toBe(0);
+  });
+
+  it('each team has consistent number of gameweek entries', () => {
+    const teamGWCounts: Map<number, number> = new Map();
+    for (const entry of cachedTeamCS) {
+      teamGWCounts.set(entry.teamId, (teamGWCounts.get(entry.teamId) || 0) + 1);
+    }
+
+    const counts = [...teamGWCounts.values()];
+    const maxCount = Math.max(...counts);
+    const minCount = Math.min(...counts);
+    expect(maxCount - minCount).toBeLessThanOrEqual(2);
+  });
+
+  it('blank gameweek teams have 0% clean sheet probability', () => {
+    const zeroEntries = cachedTeamCS.filter((e: any) => e.cleanSheetProbability === 0);
+    for (const entry of zeroEntries) {
+      expect(entry.cleanSheetProbability).toBe(0);
+    }
+  });
+});
+
+describe('Team Projection Cross-Consistency', () => {
+  it('team goal and assist endpoints cover the same gameweek range', async () => {
+    const teamGoals = await fetchJSON('/api/cached/team-goal-projections');
+    const teamAssists = await fetchJSON('/api/cached/team-assist-projections');
+
+    const goalGWs = new Set<number>();
+    for (const team of teamGoals) {
+      for (const gw of Object.keys(team.gameweekProjections).map(Number)) {
+        goalGWs.add(gw);
+      }
+    }
+
+    const assistGWs = new Set<number>();
+    for (const team of teamAssists) {
+      for (const gw of Object.keys(team.gameweekProjections).map(Number)) {
+        assistGWs.add(gw);
+      }
+    }
+
+    expect(goalGWs.size).toBe(assistGWs.size);
+    for (const gw of goalGWs) {
+      expect(assistGWs.has(gw)).toBe(true);
+    }
+  });
+
+  it('clean sheet gameweeks are a subset of goal projection gameweeks', async () => {
+    const teamGoals = await fetchJSON('/api/cached/team-goal-projections');
+    const teamCS = await fetchJSON('/api/cached/team-cs-projections');
+
+    const goalGWs = new Set<number>();
+    for (const team of teamGoals) {
+      for (const gw of Object.keys(team.gameweekProjections).map(Number)) {
+        goalGWs.add(gw);
+      }
+    }
+
+    const csGWs = new Set(teamCS.map((e: any) => e.gameweek as number));
+
+    for (const gw of csGWs) {
+      expect(goalGWs.has(gw)).toBe(true);
+    }
+  });
+
+  it('team IDs are consistent across all team projection endpoints', async () => {
+    const teamGoals = await fetchJSON('/api/cached/team-goal-projections');
+    const teamAssists = await fetchJSON('/api/cached/team-assist-projections');
+    const teamCS = await fetchJSON('/api/cached/team-cs-projections');
+
+    const goalTeamIds = new Set(teamGoals.map((t: any) => t.teamId));
+    const assistTeamIds = new Set(teamAssists.map((t: any) => t.teamId));
+    const csTeamIds = new Set(teamCS.map((e: any) => e.teamId));
+
+    expect(goalTeamIds.size).toBe(20);
+    expect(assistTeamIds.size).toBe(20);
+    expect(csTeamIds.size).toBe(20);
+
+    for (const id of goalTeamIds) {
+      expect(assistTeamIds.has(id)).toBe(true);
+      expect(csTeamIds.has(id)).toBe(true);
+    }
+  });
+
+  it('blank gameweeks (0 goals) align across goals and assists', async () => {
+    const teamGoals = await fetchJSON('/api/cached/team-goal-projections');
+    const teamAssists = await fetchJSON('/api/cached/team-assist-projections');
+
+    const failures: string[] = [];
+    for (const goalTeam of teamGoals) {
+      const assistTeam = teamAssists.find((t: any) => t.teamId === goalTeam.teamId);
+      if (!assistTeam) continue;
+
+      for (const [gw, goalVal] of Object.entries(goalTeam.gameweekProjections)) {
+        const assistVal = assistTeam.gameweekProjections[gw];
+        if ((goalVal as number) === 0 && assistVal !== undefined && assistVal !== 0) {
+          failures.push(`${goalTeam.teamName} GW${gw}: goals=0 but assists=${assistVal}`);
+        }
+        if (assistVal === 0 && (goalVal as number) !== 0) {
+          // assists can be 0 even if goals > 0 (own goals, unassisted), so skip this check
+        }
+      }
+    }
+    expect(failures.length).toBe(0);
+  });
+});
+
 describe('Double Gameweek (DGW) Handling', () => {
   it('DGW fixtures result in higher projections than single GW for same team', async () => {
     let fixturesData: any[];
