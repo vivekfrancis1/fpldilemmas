@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,7 @@ import { extractManagerId } from "@/lib/manager-id-utils";
 import { useAuth } from "@/hooks/useAuth";
 import { ListView, type ListPlayer } from "@/components/list-view";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
+import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
 
 
 
@@ -385,8 +386,16 @@ export default function MyDashboard() {
     staleTime: 60 * 60 * 1000,
   });
 
+  const adjustedPlayerProjections = useMemo(() => {
+    if (!cachedPlayerProjections || !bootstrapData) return cachedPlayerProjections;
+    const currentGW = bootstrapData.events?.find((e: any) => e.is_current)?.id || 1;
+    return cachedPlayerProjections.map((player: any) =>
+      applyAvailabilityAdjustments(player, bootstrapData, currentGW)
+    );
+  }, [cachedPlayerProjections, bootstrapData]);
+
   const getProjectedPoints = (playerId: number, gameweek: number): number => {
-    const playerData = cachedPlayerProjections?.find((p: any) => p.playerId === playerId);
+    const playerData = adjustedPlayerProjections?.find((p: any) => p.playerId === playerId);
     return playerData?.gameweekProjections?.[gameweek.toString()] || 0;
   };
 
