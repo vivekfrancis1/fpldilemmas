@@ -264,12 +264,8 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
               )}
               <div className="grid grid-cols-2 gap-3 text-sm">
               {(() => {
-                const originalCompProjs = (player as any).originalComponentProjections as { [comp: string]: { [gw: string]: number } } | undefined;
-                
                 return componentDefs.map(comp => {
                   const currentValue = (player as any)[comp.key]?.[gwKey] || 0;
-                  const originalValue = originalCompProjs?.[comp.key]?.[gwKey] ?? currentValue;
-                  const hasCompAdjustment = hasAdjustment && Math.abs(currentValue - originalValue) > 0.001;
                   const isExcluded = excludedComponents.has(comp.excludeKey);
                   
                   return (
@@ -280,15 +276,6 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
                           <>
                             <span className="text-gray-400 font-medium">0.00</span>
                             <span className="text-xs text-red-500">✕</span>
-                          </>
-                        ) : hasCompAdjustment ? (
-                          <>
-                            <span className="text-gray-400 text-xs line-through">
-                              {originalValue.toFixed(2)}
-                            </span>
-                            <span className={`${comp.color} font-medium`}>
-                              {currentValue.toFixed(2)}
-                            </span>
                           </>
                         ) : (
                           <ValueCell 
@@ -305,6 +292,9 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
                 });
               })()}
               </div>
+              {hasAdjustment && (
+                <p className="text-xs text-gray-500 italic mt-2">Component values show raw projections (unadjusted). Availability adjustment is applied only to the total.</p>
+              )}
             </div>
           )}
           
@@ -546,12 +536,6 @@ function RangeTotalBreakdownTooltip({
               const isExcluded = excludedComponents.has(comp.key);
               const currentValue = (player as any)[comp.totalKey] || 0;
               
-              // Use originalComponentTotals from availability adjustments if available
-              const originalComponentTotals = (player as any).originalComponentTotals as { [key: string]: number } | undefined;
-              const originalValue = originalComponentTotals?.[comp.totalKey] ?? 
-                (originalPlayer ? (originalPlayer as any)[comp.totalKey] || 0 : currentValue);
-              const hasAdjustment = applyAvailability && originalComponentTotals && Math.abs(currentValue - originalValue) > 0.001;
-              
               return (
                 <div 
                   key={comp.key} 
@@ -561,24 +545,13 @@ function RangeTotalBreakdownTooltip({
                     {comp.label}:
                   </span>
                   <div className="flex items-center gap-1.5">
-                    {hasAdjustment && !isExcluded ? (
-                      <>
-                        <span className="text-gray-400 text-xs line-through">
-                          {originalValue.toFixed(2)}
-                        </span>
-                        <span className="text-purple-600 font-medium">
-                          {currentValue.toFixed(2)}
-                        </span>
-                      </>
-                    ) : (
-                      <ValueCell 
-                        value={isExcluded ? 0 : currentValue} 
-                        format="points" 
-                        decimals={2} 
-                        className={isExcluded ? 'text-gray-400' : comp.color}
-                        fontWeight="medium"
-                      />
-                    )}
+                    <ValueCell 
+                      value={isExcluded ? 0 : currentValue} 
+                      format="points" 
+                      decimals={2} 
+                      className={isExcluded ? 'text-gray-400' : comp.color}
+                      fontWeight="medium"
+                    />
                     {isExcluded && (
                       <span className="text-xs text-red-500">✕</span>
                     )}
@@ -587,6 +560,9 @@ function RangeTotalBreakdownTooltip({
               );
             })}
           </div>
+          {hasAvailabilityAdjustments && (
+            <p className="text-xs text-gray-500 italic mt-2">Component values show raw projections (unadjusted). Availability adjustment is applied only to the total.</p>
+          )}
 
           <div className="border-t pt-2 mt-3">
             <div className="flex justify-between items-center font-semibold">

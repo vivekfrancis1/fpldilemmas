@@ -215,58 +215,13 @@ export function applyAvailabilityAdjustmentsToPlayer(
   const newAveragePerGameweek = gameweekCount > 0 ? newTotalExpectedPoints / gameweekCount : 0;
   const newAverageValue = player.price && player.price > 0 ? newTotalExpectedPoints / player.price : 0;
   
-  // Calculate overall availability factor based on total change
-  const originalTotal = Object.values(originalProjections).reduce((sum: number, points: any) => sum + (points as number), 0);
-  const availabilityFactor = originalTotal > 0 ? newTotalExpectedPoints / originalTotal : 1;
-  
-  // Apply availability factor to component totals (proportional reduction)
-  const componentTotalKeys = [
-    'totalPointsFromGoals', 'totalPointsFromAssists', 'totalPointsFromCleanSheets',
-    'totalPointsFromDefensiveContributions', 'totalPointsFromMinutes', 'totalPointsFromBonus',
-    'totalPointsFromSaves', 'totalPointsFromGoalsConceded', 'totalPointsFromYellowCards', 'totalPointsFromRedCards'
-  ];
-  
-  // Per-gameweek component keys
-  const componentGwKeys = [
-    'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
-    'pointsFromDefensiveContributions', 'pointsFromMinutes', 'pointsFromBonus',
-    'pointsFromSaves', 'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards'
-  ];
-  
-  const originalComponentTotals: { [key: string]: number } = {};
-  componentTotalKeys.forEach(key => {
-    const originalValue = player[key];
-    if (originalValue !== undefined) {
-      originalComponentTotals[key] = originalValue;
-      adjustedPlayer[key] = Math.round(originalValue * availabilityFactor * 100) / 100;
-    }
-  });
-  
-  const originalComponentProjections: { [component: string]: { [gameweek: string]: number } } = {};
-  componentGwKeys.forEach(compKey => {
-    const compData = player[compKey];
-    if (compData && typeof compData === 'object') {
-      originalComponentProjections[compKey] = { ...compData };
-      
-      const adjustedCompData: { [gameweek: string]: number } = {};
-      Object.keys(compData).forEach(gwKey => {
-        const gwAdjustment = availabilityAdjustments[gwKey];
-        if (gwAdjustment) {
-          const multiplier = gwAdjustment.original > 0 ? gwAdjustment.adjusted / gwAdjustment.original : 0;
-          adjustedCompData[gwKey] = Math.round(compData[gwKey] * multiplier * 100) / 100;
-        } else {
-          adjustedCompData[gwKey] = compData[gwKey];
-        }
-      });
-      adjustedPlayer[compKey] = adjustedCompData;
-    }
-  });
+  // Individual scoring components (pointsFromGoals, pointsFromAssists, etc.) are intentionally
+  // NOT adjusted. Availability adjustments are applied ONLY to total points (gameweekProjections
+  // and totalExpectedPoints) to prevent double-application when components are summed.
   
   adjustedPlayer.gameweekProjections = adjustedProjections;
   adjustedPlayer.originalGameweekProjections = originalProjections;
   adjustedPlayer.availabilityAdjustments = availabilityAdjustments;
-  adjustedPlayer.originalComponentTotals = originalComponentTotals;
-  adjustedPlayer.originalComponentProjections = originalComponentProjections;
   adjustedPlayer.totalExpectedPoints = Math.round(newTotalExpectedPoints * 100) / 100;
   adjustedPlayer.totalPoints = Math.round(newTotalExpectedPoints * 100) / 100;
   adjustedPlayer.averagePerGameweek = Math.round(newAveragePerGameweek * 100) / 100;

@@ -189,7 +189,7 @@ describe('Component Breakdown Consistency', () => {
     }
   });
 
-  it('sum of components approximately equals total for each gameweek', () => {
+  it('sum of components approximately equals total for each gameweek (using raw data)', () => {
     const componentKeys = [
       'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
       'pointsFromMinutes', 'pointsFromBonus', 'pointsFromSaves',
@@ -198,7 +198,7 @@ describe('Component Breakdown Consistency', () => {
     ];
 
     const failures: string[] = [];
-    const sample = cachedPlayerTotalPoints.slice(0, 30);
+    const sample = rawCachedPlayerTotalPoints.slice(0, 30);
 
     for (const player of sample) {
       const gwKeys = Object.keys(player.gameweekProjections || {});
@@ -406,6 +406,87 @@ describe('Server-Side Availability Adjustments', () => {
     }
 
     expect(hasOriginals).toBeGreaterThan(0);
+  });
+
+  it('individual scoring components are NOT adjusted (only totals are adjusted)', () => {
+    const injuredPlayers = bootstrapData.elements.filter(
+      (el: any) => el.chance_of_playing_next_round === 0
+    );
+
+    const nextGWKey = nextGameweek.toString();
+    const failures: string[] = [];
+
+    for (const injured of injuredPlayers.slice(0, 10)) {
+      const adjustedPlayer = cachedPlayerTotalPoints.find((p: any) => p.playerId === injured.id);
+      const rawPlayer = rawCachedPlayerTotalPoints.find((p: any) => p.playerId === injured.id);
+
+      if (!adjustedPlayer || !rawPlayer) continue;
+
+      const componentKeys = [
+        'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
+        'pointsFromMinutes', 'pointsFromBonus', 'pointsFromSaves',
+        'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards',
+        'pointsFromDefensiveContributions'
+      ];
+
+      for (const compKey of componentKeys) {
+        const rawComp = rawPlayer[compKey]?.[nextGWKey];
+        const adjComp = adjustedPlayer[compKey]?.[nextGWKey];
+
+        if (rawComp === undefined || rawComp === 0) continue;
+
+        if (adjComp !== rawComp) {
+          failures.push(
+            `${injured.web_name} GW${nextGWKey} ${compKey}: raw=${rawComp}, adjusted=${adjComp} (should be identical)`
+          );
+        }
+      }
+    }
+
+    if (failures.length > 0) {
+      console.log('Component double-adjustment detected:', failures);
+    }
+    expect(failures.length).toBe(0);
+  });
+
+  it('component totals are NOT adjusted (only totalExpectedPoints is adjusted)', () => {
+    const injuredPlayers = bootstrapData.elements.filter(
+      (el: any) => el.chance_of_playing_next_round === 0
+    );
+
+    const failures: string[] = [];
+
+    for (const injured of injuredPlayers.slice(0, 10)) {
+      const adjustedPlayer = cachedPlayerTotalPoints.find((p: any) => p.playerId === injured.id);
+      const rawPlayer = rawCachedPlayerTotalPoints.find((p: any) => p.playerId === injured.id);
+
+      if (!adjustedPlayer || !rawPlayer) continue;
+
+      const totalKeys = [
+        'totalPointsFromGoals', 'totalPointsFromAssists', 'totalPointsFromCleanSheets',
+        'totalPointsFromMinutes', 'totalPointsFromBonus', 'totalPointsFromSaves',
+        'totalPointsFromGoalsConceded', 'totalPointsFromYellowCards', 'totalPointsFromRedCards',
+        'totalPointsFromDefensiveContributions'
+      ];
+
+      for (const totalKey of totalKeys) {
+        const rawTotal = rawPlayer[totalKey];
+        const adjTotal = adjustedPlayer[totalKey];
+
+        if (rawTotal === undefined || rawTotal === 0) continue;
+
+        if (Math.abs((adjTotal || 0) - rawTotal) > 0.01) {
+          failures.push(
+            `${injured.web_name} ${totalKey}: raw=${rawTotal?.toFixed(2)}, adjusted=${adjTotal?.toFixed(2)} (should be identical)`
+          );
+        }
+      }
+    }
+
+    if (failures.length > 0) {
+      console.log('Component total adjustment detected:', failures);
+    }
+    expect(failures.length).toBe(0);
   });
 });
 
