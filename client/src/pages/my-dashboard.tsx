@@ -306,6 +306,7 @@ export default function MyDashboard() {
   // Player points breakdown modal state
   const [selectedPlayerForBreakdown, setSelectedPlayerForBreakdown] = useState<any | null>(null);
   const [showPointsBreakdown, setShowPointsBreakdown] = useState(false);
+  const [optimisedPicks, setOptimisedPicks] = useState<TeamPick[] | null>(null);
 
 
   // Cache manager ID functionality
@@ -387,6 +388,91 @@ export default function MyDashboard() {
   const getProjectedPoints = (playerId: number, gameweek: number): number => {
     const playerData = cachedPlayerProjections?.find((p: any) => p.playerId === playerId);
     return playerData?.gameweekProjections?.[gameweek.toString()] || 0;
+  };
+
+  const optimizeLineup = (picks: TeamPick[], gameweek: number, activeChip?: string | null) => {
+    const allPlayers = picks.map(pick => {
+      const player = getPlayerById(pick.element);
+      return {
+        ...pick,
+        element_type: player?.element_type || 0,
+        proj: getProjectedPoints(pick.element, gameweek),
+      };
+    });
+
+    const gks = allPlayers.filter(p => p.element_type === 1);
+    const defs = allPlayers.filter(p => p.element_type === 2);
+    const mids = allPlayers.filter(p => p.element_type === 3);
+    const fwds = allPlayers.filter(p => p.element_type === 4);
+
+    gks.sort((a, b) => b.proj - a.proj);
+    defs.sort((a, b) => b.proj - a.proj);
+    mids.sort((a, b) => b.proj - a.proj);
+    fwds.sort((a, b) => b.proj - a.proj);
+
+    let bestTotal = -1;
+    let bestStarting: typeof allPlayers = [];
+    let bestBench: typeof allPlayers = [];
+
+    const defRange = [3, 4, 5];
+    const midRange = [2, 3, 4, 5];
+    const fwdRange = [1, 2, 3];
+
+    for (const numDef of defRange) {
+      for (const numMid of midRange) {
+        for (const numFwd of fwdRange) {
+          if (numDef + numMid + numFwd !== 10) continue;
+          if (numDef > defs.length || numMid > mids.length || numFwd > fwds.length) continue;
+
+          const startGks = gks.slice(0, 1);
+          const startDefs = defs.slice(0, numDef);
+          const startMids = mids.slice(0, numMid);
+          const startFwds = fwds.slice(0, numFwd);
+          const starting = [...startGks, ...startDefs, ...startMids, ...startFwds];
+          const total = starting.reduce((sum, p) => sum + p.proj, 0);
+
+          if (total > bestTotal) {
+            bestTotal = total;
+            bestStarting = starting;
+            const benchGks = gks.slice(1);
+            const benchDefs = defs.slice(numDef);
+            const benchMids = mids.slice(numMid);
+            const benchFwds = fwds.slice(numFwd);
+            bestBench = [...benchGks, ...benchDefs, ...benchMids, ...benchFwds];
+            bestBench.sort((a, b) => b.proj - a.proj);
+          }
+        }
+      }
+    }
+
+    const sorted = [...bestStarting].sort((a, b) => b.proj - a.proj);
+    const captainId = sorted[0]?.element;
+    const viceCaptainId = sorted[1]?.element;
+
+    const newPicks: TeamPick[] = [];
+    let pos = 1;
+    for (const p of bestStarting) {
+      const isCaptain = p.element === captainId;
+      const isViceCaptain = p.element === viceCaptainId;
+      newPicks.push({
+        element: p.element,
+        position: pos++,
+        multiplier: isCaptain ? (activeChip === '3xc' ? 3 : 2) : 1,
+        is_captain: isCaptain,
+        is_vice_captain: isViceCaptain,
+      });
+    }
+    for (const p of bestBench) {
+      newPicks.push({
+        element: p.element,
+        position: pos++,
+        multiplier: 0,
+        is_captain: false,
+        is_vice_captain: false,
+      });
+    }
+
+    setOptimisedPicks(newPicks);
   };
 
   // Determine pre-chip baseline gameweek (for Free Hit/Wildcard comparison)
@@ -1821,8 +1907,10 @@ export default function MyDashboard() {
                   
                   {(() => {
                     const nextGW = getNextGameweekDashboard();
-                    const starting11 = teamData.picks.filter(pick => pick.position <= 11);
-                    const bench = teamData.picks.filter(pick => pick.position > 11);
+                    const activeChipVal = teamData.active_chip || null;
+                    const activePicks = optimisedPicks || teamData.picks;
+                    const starting11 = activePicks.filter(pick => pick.position <= 11);
+                    const bench = activePicks.filter(pick => pick.position > 11);
                     let totalStartingXPts = 0;
                     let totalBenchXPts = 0;
                     for (const pick of starting11) {
@@ -1831,6 +1919,9 @@ export default function MyDashboard() {
                     }
                     for (const pick of bench) {
                       totalBenchXPts += getProjectedPoints(pick.element, nextGW);
+                    }
+                    if (activeChipVal === 'bboost') {
+                      totalStartingXPts += totalBenchXPts;
                     }
                     return (
                       <Card className="border-0 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg mb-4">
@@ -1841,12 +1932,38 @@ export default function MyDashboard() {
                                 <Target className="h-6 w-6 text-purple-700" />
                               </div>
                               <div>
-                                <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points</p>
+                                <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points{optimisedPicks ? ' (Optimised)' : ''}</p>
                                 <p className="text-2xl sm:text-3xl font-bold text-purple-900">{totalStartingXPts.toFixed(1)}</p>
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-xs text-purple-600">Bench: {totalBenchXPts.toFixed(1)}</p>
+                            <div className="text-right space-y-1.5">
+                              {activeChipVal === 'bboost' ? (
+                                <p className="text-xs text-purple-600">Incl. bench (BB)</p>
+                              ) : (
+                                <p className="text-xs text-purple-600">Bench: {totalBenchXPts.toFixed(1)}</p>
+                              )}
+                              <div className="flex gap-1.5 justify-end">
+                                {optimisedPicks ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 text-xs border-purple-300 text-purple-700 hover:bg-purple-100"
+                                    onClick={() => setOptimisedPicks(null)}
+                                  >
+                                    <RefreshCw className="h-3 w-3 mr-1" />
+                                    Reset
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    className="h-7 text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                                    onClick={() => optimizeLineup(teamData.picks, nextGW, activeChipVal)}
+                                  >
+                                    <Sparkles className="h-3 w-3 mr-1" />
+                                    Optimise Lineup
+                                  </Button>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </CardContent>
@@ -1860,12 +1977,12 @@ export default function MyDashboard() {
                         GW {getNextGameweekDashboard()} Fixtures & Projections
                       </CardTitle>
                       <CardDescription className="text-amber-700 mt-1">
-                        Showing GW {getNextGameweekDashboard()} fixtures and projected points for your GW {getCurrentGameweekDashboard()} team.
+                        Showing GW {getNextGameweekDashboard()} fixtures and projected points for your {optimisedPicks ? 'optimised' : `GW ${getCurrentGameweekDashboard()}`} team.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6">
                         <PitchView
-                          players={teamData.picks.filter(pick => pick.position <= 11).map(pick => {
+                          players={(optimisedPicks || teamData.picks).filter(pick => pick.position <= 11).map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
                             const playerTeam = getPlayerTeam(player);
@@ -1890,7 +2007,7 @@ export default function MyDashboard() {
                               news: player.news,
                             };
                           }).filter(Boolean) as PitchPlayer[]}
-                          benchPlayers={teamData.picks.filter(pick => pick.position > 11).map(pick => {
+                          benchPlayers={(optimisedPicks || teamData.picks).filter(pick => pick.position > 11).map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
                             const playerTeam = getPlayerTeam(player);
@@ -2043,15 +2160,15 @@ export default function MyDashboard() {
 
                     {(() => {
                       const nextGW = getNextGameweekDashboard();
-                      const starting11 = nextTeamData.picks.filter((p: any) => p.position <= 11);
-                      const bench = nextTeamData.picks.filter((p: any) => p.position > 11);
                       const activeChipVal = nextTeamData.active_chip || getUpcomingActiveChip();
+                      const activePicks = optimisedPicks || nextTeamData.picks;
+                      const starting11 = activePicks.filter((p: any) => p.position <= 11);
+                      const bench = activePicks.filter((p: any) => p.position > 11);
                       let totalStartingXPts = 0;
                       let totalBenchXPts = 0;
                       for (const pick of starting11) {
                         const proj = getProjectedPoints(pick.element, nextGW);
-                        const multiplier = activeChipVal === '3xc' && pick.is_captain ? 3 : (pick.multiplier || 1);
-                        totalStartingXPts += proj * multiplier;
+                        totalStartingXPts += proj * (pick.multiplier || 1);
                       }
                       for (const pick of bench) {
                         totalBenchXPts += getProjectedPoints(pick.element, nextGW);
@@ -2074,7 +2191,7 @@ export default function MyDashboard() {
                                   <Target className="h-6 w-6 text-purple-700" />
                                 </div>
                                 <div>
-                                  <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points</p>
+                                  <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points{optimisedPicks ? ' (Optimised)' : ''}</p>
                                   <div className="flex items-baseline gap-2">
                                     <p className="text-2xl sm:text-3xl font-bold text-purple-900">{netXPts.toFixed(1)}</p>
                                     {hitCost > 0 && (
@@ -2083,17 +2200,39 @@ export default function MyDashboard() {
                                   </div>
                                 </div>
                               </div>
-                              <div className="text-right space-y-0.5">
+                              <div className="text-right space-y-1.5">
                                 {activeChipVal === 'bboost' ? (
                                   <p className="text-xs text-purple-600">Incl. bench (BB)</p>
                                 ) : (
                                   <p className="text-xs text-purple-600">Bench: {totalBenchXPts.toFixed(1)}</p>
                                 )}
-                                {activeChipVal && activeChipVal !== 'bboost' && (
-                                  <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-100">
-                                    {activeChipVal === '3xc' ? '3xC' : activeChipVal === 'freehit' ? 'FH' : activeChipVal === 'wildcard' ? 'WC' : activeChipVal}
-                                  </Badge>
-                                )}
+                                <div className="flex gap-1.5 justify-end items-center">
+                                  {activeChipVal && activeChipVal !== 'bboost' && (
+                                    <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-100">
+                                      {activeChipVal === '3xc' ? '3xC' : activeChipVal === 'freehit' ? 'FH' : activeChipVal === 'wildcard' ? 'WC' : activeChipVal}
+                                    </Badge>
+                                  )}
+                                  {optimisedPicks ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs border-purple-300 text-purple-700 hover:bg-purple-100"
+                                      onClick={() => setOptimisedPicks(null)}
+                                    >
+                                      <RefreshCw className="h-3 w-3 mr-1" />
+                                      Reset
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      className="h-7 text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
+                                      onClick={() => optimizeLineup(nextTeamData.picks, nextGW, activeChipVal)}
+                                    >
+                                      <Sparkles className="h-3 w-3 mr-1" />
+                                      Optimise Lineup
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </CardContent>
@@ -2110,11 +2249,7 @@ export default function MyDashboard() {
                               <p className="text-xs sm:text-sm font-medium text-emerald-700 mb-1">Formation</p>
                               <p className="text-xl sm:text-2xl font-bold text-emerald-900">
                                 {(() => {
-                                  const starting = nextTeamData.picks.filter(p => p.position <= 11);
-                                  const gks = starting.filter(p => {
-                                    const player = getPlayerById(p.element);
-                                    return player?.element_type === 1;
-                                  }).length;
+                                  const starting = (optimisedPicks || nextTeamData.picks).filter(p => p.position <= 11);
                                   const defs = starting.filter(p => {
                                     const player = getPlayerById(p.element);
                                     return player?.element_type === 2;
@@ -2287,7 +2422,7 @@ export default function MyDashboard() {
 
                       <div className="mt-6">
                         <PitchView
-                          players={nextTeamData.picks.filter(pick => pick.position <= 11).map(pick => {
+                          players={(optimisedPicks || nextTeamData.picks).filter(pick => pick.position <= 11).map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
                             const playerTeam = getPlayerTeam(player);
@@ -2312,7 +2447,7 @@ export default function MyDashboard() {
                               news: player.news,
                             };
                           }).filter(Boolean) as PitchPlayer[]}
-                          benchPlayers={nextTeamData.picks.filter(pick => pick.position > 11).sort((a, b) => a.position - b.position).map(pick => {
+                          benchPlayers={(optimisedPicks || nextTeamData.picks).filter(pick => pick.position > 11).sort((a, b) => a.position - b.position).map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
                             const playerTeam = getPlayerTeam(player);
