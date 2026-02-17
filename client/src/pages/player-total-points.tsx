@@ -13,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LoadingExperience } from "@/components/loading-experience";
-import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
+import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
+import { AvailabilityToggle } from "@/components/availability-toggle";
 import { useAuth } from "@/hooks/useAuth";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
@@ -835,6 +836,7 @@ function createPlayerTotalPointsColumns(
 export default function PlayerTotalPoints() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
   
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery<BootstrapData>({
@@ -964,8 +966,7 @@ export default function PlayerTotalPoints() {
   const includeAllComponents = () => setExcludedComponents(new Set());
   const excludeAllComponents = () => setExcludedComponents(new Set(POINT_COMPONENTS.map(c => c.key)));
   
-  // Availability adjustments toggle (default ON)
-  const [applyAvailability, setApplyAvailability] = useState(true);
+  const applyAvailability = isAdjusted;
 
   // Get last finished gameweek
   const lastFinishedGW = useMemo(() => {
@@ -1118,7 +1119,13 @@ export default function PlayerTotalPoints() {
 
   // ALL useQuery hooks - cached and live data sources
   const { data: cachedTotalPointsData, isLoading: cachedLoading, error: cachedError, refetch: refetchCached } = useQuery<PlayerTotalPointsData[]>({
-    queryKey: ["/api/cached/player-total-points"],
+    queryKey: ["/api/cached/player-total-points", { availabilityAdjusted: isAdjusted }],
+    queryFn: async () => {
+      const url = isAdjusted ? '/api/cached/player-total-points' : '/api/cached/player-total-points?availabilityAdjusted=false';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch');
+      return res.json();
+    },
     staleTime: 60 * 60 * 1000, // 1 hour cache
     enabled: viewMode === "future",
   });
@@ -1221,15 +1228,8 @@ export default function PlayerTotalPoints() {
       return null;
     }
     
-    // Conditionally apply availability adjustments based on toggle
-    if (applyAvailability && bootstrapData && currentGameweek) {
-      return selectedData.map(player => 
-        applyAvailabilityAdjustments(player as any, bootstrapData, currentGameweek)
-      ) as unknown as PlayerTotalPointsData[];
-    }
-    
     return selectedData;
-  }, [liveTotalPointsData, liveError, cachedTotalPointsData, isDefaultRange, bootstrapData, currentGameweek, applyAvailability]);
+  }, [liveTotalPointsData, liveError, cachedTotalPointsData, isDefaultRange]);
 
   // Recalculate player data based on excluded point components
   const adjustedPlayerData = useMemo((): PlayerTotalPointsData[] | null => {
@@ -1883,20 +1883,7 @@ export default function PlayerTotalPoints() {
                       <span className="hidden sm:inline">{showOpponent ? 'Hide Opponent' : 'Show Opponent'}</span>
                       <span className="sm:hidden">{showOpponent ? 'Hide' : 'Show'}</span>
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setApplyAvailability(!applyAvailability)}
-                      className={`flex items-center gap-1.5 text-xs px-2 py-1 ${
-                        applyAvailability 
-                          ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
-                      }`}
-                      data-testid="button-toggle-availability"
-                    >
-                      <span className="hidden sm:inline">{applyAvailability ? 'Avail. Adj: ON' : 'Avail. Adj: OFF'}</span>
-                      <span className="sm:hidden">{applyAvailability ? 'Adj: ON' : 'Adj: OFF'}</span>
-                    </Button>
+                    <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} compact />
                     {excludedGameweeks.size > 0 && (
                       <Button 
                         variant="ghost" 

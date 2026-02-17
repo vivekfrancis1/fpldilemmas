@@ -10,7 +10,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { applyAvailabilityAdjustments, type BootstrapData as AvailabilityBootstrapData } from "@/lib/availability-adjustments";
+import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
+import { AvailabilityToggle } from "@/components/availability-toggle";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -191,6 +192,7 @@ export default function TeamOptimizer() {
   
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
 
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
@@ -280,49 +282,46 @@ export default function TeamOptimizer() {
 
   // Fetch projections using cached endpoint for faster loading (always gets next 12 GWs)
   const { data: playerProjections12GW, refetch: refetchProjections, isRefetching } = useQuery<any[]>({
-    queryKey: ["/api/cached/player-total-points"],
+    queryKey: ['/api/cached/player-total-points', { availabilityAdjusted: isAdjusted }],
+    queryFn: async () => {
+      const url = !isAdjusted ? '/api/cached/player-total-points?availabilityAdjusted=false' : '/api/cached/player-total-points';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch projections');
+      return res.json();
+    },
     enabled: !!bootstrapData,
     staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
-  // Apply availability adjustments and filter by selected horizon
+  // Filter projections by selected horizon
   const adjustedPlayerProjections = useMemo(() => {
     if (!playerProjections12GW || !bootstrapData) return playerProjections12GW;
 
-    const currentGameweek = bootstrapData.events.find((e: any) => e.is_current)?.id || 
-                           bootstrapData.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
-
     return playerProjections12GW.map(player => {
-      // Find matching player in bootstrap data for availability info
       const bootstrapPlayer = bootstrapData.elements?.find((p: any) => p.id === player.playerId);
-      if (!bootstrapPlayer) return player;
-
-      // Create player object with required fields for availability adjustment
-      const playerWithAvailability = {
+      
+      const playerWithInfo = {
         ...player,
-        chanceOfPlayingNextRound: bootstrapPlayer.chance_of_playing_next_round,
-        status: bootstrapPlayer.status,
-        news: bootstrapPlayer.news
+        chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round,
+        status: bootstrapPlayer?.status,
+        news: bootstrapPlayer?.news
       };
 
-      // Apply availability adjustments (handles injury/suspension/AFCON)
-      const adjustedPlayer = applyAvailabilityAdjustments(playerWithAvailability, bootstrapData as any, currentGameweek);
-      
       // Filter gameweek projections based on selected horizon
       const filteredGameweekProjections: { [key: string]: number } = {};
       let filteredTotal = 0;
       
       for (let gw = gameweekRange.start; gw <= gameweekRange.end; gw++) {
         const gwKey = gw.toString();
-        if (adjustedPlayer.gameweekProjections?.[gwKey] !== undefined) {
-          filteredGameweekProjections[gwKey] = adjustedPlayer.gameweekProjections[gwKey];
-          filteredTotal += adjustedPlayer.gameweekProjections[gwKey];
+        if (playerWithInfo.gameweekProjections?.[gwKey] !== undefined) {
+          filteredGameweekProjections[gwKey] = playerWithInfo.gameweekProjections[gwKey];
+          filteredTotal += playerWithInfo.gameweekProjections[gwKey];
         }
       }
       
       return {
-        ...adjustedPlayer,
+        ...playerWithInfo,
         gameweekProjections: filteredGameweekProjections,
         totalExpectedPoints: filteredTotal,
         averagePerGameweek: filteredTotal / gameweekHorizon
@@ -1105,13 +1104,16 @@ export default function TeamOptimizer() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 dark:from-gray-900 dark:to-gray-800 p-2 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-3 sm:space-y-4 md:space-y-6">
         {/* Header - Compact */}
-        <div className="text-center py-2">
+        <div className="text-center py-2 relative">
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
             Team Optimizer
           </h1>
           <p className="text-xs text-gray-600 dark:text-gray-300 hidden sm:block">
             Auto-optimized lineup and chip recommendations
           </p>
+          <div className="absolute right-0 top-1/2 -translate-y-1/2">
+            <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} compact />
+          </div>
         </div>
 
         {/* Manager Search Section - Compact */}

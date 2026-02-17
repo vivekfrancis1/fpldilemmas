@@ -14,6 +14,7 @@ let bootstrapData: any;
 let currentGameweek: number;
 let nextGameweek: number;
 let cachedPlayerTotalPoints: any[];
+let rawCachedPlayerTotalPoints: any[];
 let livePlayerTotalPoints: any[];
 
 beforeAll(async () => {
@@ -22,6 +23,7 @@ beforeAll(async () => {
   nextGameweek = Math.min(currentGameweek + 1, 38);
 
   cachedPlayerTotalPoints = await fetchJSON('/api/cached/player-total-points');
+  rawCachedPlayerTotalPoints = await fetchJSON('/api/cached/player-total-points?availabilityAdjusted=false');
   const endGW = Math.min(nextGameweek + 11, 38);
   livePlayerTotalPoints = await fetchJSON(`/api/player-total-points?startGameweek=${nextGameweek}&endGameweek=${endGW}`);
 }, 120000);
@@ -234,69 +236,176 @@ describe('Component Breakdown Consistency', () => {
   });
 });
 
-describe('Availability Adjustments Consistency', () => {
-  it('injured players (0% chance) have availability data in bootstrap for client-side adjustments', () => {
+describe('Server-Side Availability Adjustments', () => {
+  it('adjusted endpoint returns same number of players as raw endpoint', () => {
+    expect(cachedPlayerTotalPoints.length).toBe(rawCachedPlayerTotalPoints.length);
+  });
+
+  it('raw endpoint does not include availabilityAdjustments field for any player', () => {
+    for (const player of rawCachedPlayerTotalPoints.slice(0, 50)) {
+      expect(player.availabilityAdjustments).toBeUndefined();
+      expect(player.originalGameweekProjections).toBeUndefined();
+    }
+  });
+
+  it('adjusted endpoint includes availabilityAdjustments for injured/doubtful players', () => {
+    const injuredPlayers = bootstrapData.elements.filter(
+      (el: any) => el.chance_of_playing_next_round === 0 || 
+        (el.chance_of_playing_next_round !== null && el.chance_of_playing_next_round < 100)
+    );
+
+    let adjustedCount = 0;
+
+    for (const injured of injuredPlayers.slice(0, 20)) {
+      const adjustedPlayer = cachedPlayerTotalPoints.find(
+        (p: any) => p.playerId === injured.id
+      );
+
+      if (adjustedPlayer && adjustedPlayer.availabilityAdjustments && 
+          Object.keys(adjustedPlayer.availabilityAdjustments).length > 0) {
+        adjustedCount++;
+      }
+    }
+
+    expect(adjustedCount).toBeGreaterThan(0);
+  });
+
+  it('injured players (0% chance) have zero projections in adjusted response', () => {
     const injuredPlayers = bootstrapData.elements.filter(
       (el: any) => el.chance_of_playing_next_round === 0
     );
 
-    expect(injuredPlayers.length).toBeGreaterThan(0);
+    const issues: string[] = [];
 
-    for (const player of injuredPlayers.slice(0, 10)) {
-      expect(player.chance_of_playing_next_round).toBe(0);
-      expect(['i', 's', 'u', 'n', 'd']).toContain(player.status);
-
-      const cachedPlayer = cachedPlayerTotalPoints.find(
-        (p: any) => p.playerId === player.id
+    for (const injured of injuredPlayers.slice(0, 10)) {
+      const adjustedPlayer = cachedPlayerTotalPoints.find(
+        (p: any) => p.playerId === injured.id
       );
 
-      if (cachedPlayer) {
-        expect(cachedPlayer.gameweekProjections).toBeDefined();
+      if (!adjustedPlayer) continue;
+
+      const nextGWKey = nextGameweek.toString();
+      const gwProjection = adjustedPlayer.gameweekProjections?.[nextGWKey] || 0;
+
+      if (gwProjection > 0) {
+        issues.push(
+          `${injured.web_name} (ID: ${injured.id}): 0% chance but adjusted GW${nextGameweek} = ${gwProjection.toFixed(2)}`
+        );
       }
     }
+
+    if (issues.length > 0) {
+      console.log('Injured player adjusted projection issues:', issues);
+    }
+
+    expect(issues.length).toBe(0);
   });
 
-  it('doubtful players (25-75%) have availability data in bootstrap for client-side adjustments', () => {
-    const doubtfulPlayers = bootstrapData.elements.filter(
-      (el: any) =>
-        el.chance_of_playing_next_round !== null &&
-        el.chance_of_playing_next_round > 0 &&
-        el.chance_of_playing_next_round < 100
+  it('injured players have non-zero projections in raw response', () => {
+    const injuredPlayers = bootstrapData.elements.filter(
+      (el: any) => el.chance_of_playing_next_round === 0
     );
 
-    for (const player of doubtfulPlayers.slice(0, 10)) {
-      expect(player.chance_of_playing_next_round).toBeGreaterThan(0);
-      expect(player.chance_of_playing_next_round).toBeLessThan(100);
+    let rawNonZeroCount = 0;
 
-      const cachedPlayer = cachedPlayerTotalPoints.find(
-        (p: any) => p.playerId === player.id
+    for (const injured of injuredPlayers.slice(0, 10)) {
+      const rawPlayer = rawCachedPlayerTotalPoints.find(
+        (p: any) => p.playerId === injured.id
       );
 
-      if (cachedPlayer) {
-        expect(cachedPlayer.gameweekProjections).toBeDefined();
-        expect(typeof cachedPlayer.gameweekProjections).toBe('object');
+      if (!rawPlayer) continue;
+
+      const nextGWKey = nextGameweek.toString();
+      const gwProjection = rawPlayer.gameweekProjections?.[nextGWKey] || 0;
+
+      if (gwProjection > 0) {
+        rawNonZeroCount++;
       }
     }
+
+    expect(rawNonZeroCount).toBeGreaterThan(0);
   });
 
-  it('fully available players have unmodified projections', () => {
+  it('fully available players have identical projections in adjusted and raw responses', () => {
     const availablePlayers = bootstrapData.elements.filter(
       (el: any) =>
         el.status === 'a' &&
         (el.chance_of_playing_next_round === null || el.chance_of_playing_next_round === 100)
     );
 
-    const sample = availablePlayers.slice(0, 20);
+    const failures: string[] = [];
+    const sample = availablePlayers.slice(0, 30);
 
     for (const player of sample) {
-      const cachedPlayer = cachedPlayerTotalPoints.find(
-        (p: any) => p.playerId === player.id
+      const adjustedPlayer = cachedPlayerTotalPoints.find((p: any) => p.playerId === player.id);
+      const rawPlayer = rawCachedPlayerTotalPoints.find((p: any) => p.playerId === player.id);
+
+      if (!adjustedPlayer || !rawPlayer) continue;
+
+      const adjTotal = adjustedPlayer.totalExpectedPoints || 0;
+      const rawTotal = rawPlayer.totalExpectedPoints || 0;
+
+      if (Math.abs(adjTotal - rawTotal) > 0.01) {
+        failures.push(
+          `${player.web_name}: adjusted=${adjTotal.toFixed(2)}, raw=${rawTotal.toFixed(2)}`
+        );
+      }
+    }
+
+    expect(failures.length).toBe(0);
+  });
+
+  it('live endpoint also supports availabilityAdjusted param', async () => {
+    const endGW = Math.min(nextGameweek + 5, 38);
+    const adjustedData = await fetchJSON(`/api/player-total-points?startGameweek=${nextGameweek}&endGameweek=${endGW}`);
+    const rawData = await fetchJSON(`/api/player-total-points?startGameweek=${nextGameweek}&endGameweek=${endGW}&availabilityAdjusted=false`);
+
+    expect(adjustedData.length).toBe(rawData.length);
+
+    const injuredPlayers = bootstrapData.elements.filter(
+      (el: any) => el.chance_of_playing_next_round === 0
+    );
+
+    let differencesFound = 0;
+
+    for (const injured of injuredPlayers.slice(0, 5)) {
+      const adj = adjustedData.find((p: any) => p.playerId === injured.id);
+      const raw = rawData.find((p: any) => p.playerId === injured.id);
+
+      if (adj && raw) {
+        const adjTotal = adj.totalExpectedPoints || 0;
+        const rawTotal = raw.totalExpectedPoints || 0;
+
+        if (Math.abs(adjTotal - rawTotal) > 0.01) {
+          differencesFound++;
+        }
+      }
+    }
+
+    expect(differencesFound).toBeGreaterThan(0);
+  });
+
+  it('adjusted response preserves original projections in originalGameweekProjections', () => {
+    const injuredPlayers = bootstrapData.elements.filter(
+      (el: any) => el.chance_of_playing_next_round === 0
+    );
+
+    let hasOriginals = 0;
+
+    for (const injured of injuredPlayers.slice(0, 10)) {
+      const adjustedPlayer = cachedPlayerTotalPoints.find(
+        (p: any) => p.playerId === injured.id
       );
 
-      if (!cachedPlayer) continue;
-
-      expect(cachedPlayer.availabilityAdjustments).toBeUndefined();
+      if (adjustedPlayer && adjustedPlayer.originalGameweekProjections) {
+        hasOriginals++;
+        const origTotal = Object.values(adjustedPlayer.originalGameweekProjections as Record<string, number>)
+          .reduce((sum: number, v: number) => sum + v, 0);
+        expect(origTotal).toBeGreaterThanOrEqual(0);
+      }
     }
+
+    expect(hasOriginals).toBeGreaterThan(0);
   });
 });
 

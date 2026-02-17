@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -53,7 +53,8 @@ import { extractManagerId } from "@/lib/manager-id-utils";
 import { useAuth } from "@/hooks/useAuth";
 import { ListView, type ListPlayer } from "@/components/list-view";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
-import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
+import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
+import { AvailabilityToggle } from "@/components/availability-toggle";
 
 
 
@@ -308,6 +309,7 @@ export default function MyDashboard() {
   const [selectedPlayerForBreakdown, setSelectedPlayerForBreakdown] = useState<any | null>(null);
   const [showPointsBreakdown, setShowPointsBreakdown] = useState(false);
   const [optimisedPicks, setOptimisedPicks] = useState<TeamPick[] | null>(null);
+  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
 
 
   // Cache manager ID functionality
@@ -382,20 +384,18 @@ export default function MyDashboard() {
   });
 
   const { data: cachedPlayerProjections } = useQuery<any[]>({
-    queryKey: ["/api/cached/player-total-points"],
+    queryKey: ["/api/cached/player-total-points", { availabilityAdjusted: isAdjusted }],
+    queryFn: async () => {
+      const url = isAdjusted ? '/api/cached/player-total-points' : '/api/cached/player-total-points?availabilityAdjusted=false';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch');
+      return res.json();
+    },
     staleTime: 60 * 60 * 1000,
   });
 
-  const adjustedPlayerProjections = useMemo(() => {
-    if (!cachedPlayerProjections || !bootstrapData) return cachedPlayerProjections;
-    const currentGW = bootstrapData.events?.find((e: any) => e.is_current)?.id || 1;
-    return cachedPlayerProjections.map((player: any) =>
-      applyAvailabilityAdjustments(player, bootstrapData, currentGW)
-    );
-  }, [cachedPlayerProjections, bootstrapData]);
-
   const getProjectedPoints = (playerId: number, gameweek: number): number => {
-    const playerData = adjustedPlayerProjections?.find((p: any) => p.playerId === playerId);
+    const playerData = cachedPlayerProjections?.find((p: any) => p.playerId === playerId);
     return playerData?.gameweekProjections?.[gameweek.toString()] || 0;
   };
 
@@ -1216,6 +1216,9 @@ export default function MyDashboard() {
             <p className="fpl-page-subtitle">
               Complete overview of your Fantasy Premier League performance with detailed team analysis, league standings, and performance tracking
             </p>
+          </div>
+          <div className="flex justify-end mt-2">
+            <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} compact={true} />
           </div>
         </div>
 

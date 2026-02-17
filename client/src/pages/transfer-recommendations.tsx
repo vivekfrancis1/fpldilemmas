@@ -16,7 +16,8 @@ import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
-import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
+import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
+import { AvailabilityToggle } from "@/components/availability-toggle";
 
 interface TeamPick {
   element: number;
@@ -27,6 +28,7 @@ interface TeamPick {
 }
 
 export default function TransferRecommendations() {
+  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<string | null>(null);
@@ -115,12 +117,13 @@ export default function TransferRecommendations() {
 
   // Fetch player projections for the selected gameweek
   const { data: playerProjections } = useQuery<any[]>({
-    queryKey: ["/api/player-total-points", selectedGameweek],
+    queryKey: ["/api/player-total-points", selectedGameweek, { availabilityAdjusted: isAdjusted }],
     enabled: !!selectedGameweek && selectedGameweek !== null,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       if (!selectedGameweek) return [];
-      const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}`);
+      const availParam = !isAdjusted ? '&availabilityAdjusted=false' : '';
+      const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}${availParam}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch projections: ${response.statusText}`);
       }
@@ -128,15 +131,6 @@ export default function TransferRecommendations() {
       return Array.isArray(data) ? data : [];
     }
   });
-
-  // Apply availability adjustments to player projections for consistency
-  const adjustedPlayerProjections = useMemo(() => {
-    if (!playerProjections || !bootstrapData) return playerProjections;
-    const currentGW = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 1;
-    return playerProjections.map((player: any) =>
-      applyAvailabilityAdjustments(player, bootstrapData, currentGW)
-    );
-  }, [playerProjections, bootstrapData]);
 
   // Fetch fixtures
   const { data: fixturesData } = useQuery<any[]>({
@@ -527,13 +521,13 @@ export default function TransferRecommendations() {
     formation: { def: number; mid: number; fwd: number; name: string } | null;
     totalPoints: number;
   } | null => {
-    if (!applyRecommendedTransfers || !adjustedPlayerProjections || !bootstrapData || !selectedGameweek) {
+    if (!applyRecommendedTransfers || !playerProjections || !bootstrapData || !selectedGameweek) {
       return null;
     }
 
     // Get projected points for a player
     const getProjectedPoints = (playerId: number): number => {
-      const projection = adjustedPlayerProjections.find((p: any) => p.playerId === playerId);
+      const projection = playerProjections.find((p: any) => p.playerId === playerId);
       if (!projection) return 0;
       
       // The API returns gameweekProjections as an object with gameweek keys
@@ -677,7 +671,7 @@ export default function TransferRecommendations() {
       formation: bestFormation,
       totalPoints: bestPoints + (captainPick.projectedPoints || 0) // Add captain bonus
     };
-  }, [applyRecommendedTransfers, adjustedPlayerProjections, bootstrapData, selectedGameweek]);
+  }, [applyRecommendedTransfers, playerProjections, bootstrapData, selectedGameweek]);
 
   // Handle search
   const handleSearch = () => {
@@ -715,13 +709,13 @@ export default function TransferRecommendations() {
       hasGameweekData: !!adjustedRecommendations?.gameweeks?.[selectedGameweek || ''],
       hasApplyRecommendedTransfers: !!applyRecommendedTransfers,
       applyRecommendedTransfersLength: applyRecommendedTransfers?.length,
-      hasPlayerProjections: !!adjustedPlayerProjections,
-      playerProjectionsLength: adjustedPlayerProjections?.length,
+      hasPlayerProjections: !!playerProjections,
+      playerProjectionsLength: playerProjections?.length,
       hasBootstrapData: !!bootstrapData,
       hasOptimizedTeam: !!optimizedTeam,
       optimizedTeam
     });
-  }, [selectedGameweek, teamData, adjustedRecommendations, applyRecommendedTransfers, adjustedPlayerProjections, bootstrapData, optimizedTeam]);
+  }, [selectedGameweek, teamData, adjustedRecommendations, applyRecommendedTransfers, playerProjections, bootstrapData, optimizedTeam]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50/30 p-4">
@@ -733,6 +727,9 @@ export default function TransferRecommendations() {
           </div>
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Transfer Recommendations</h1>
           <p className="text-xs text-gray-600 hidden sm:block">Maximize your projected points for remaining gameweeks</p>
+          <div className="mt-2 flex justify-center">
+            <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} compact={true} />
+          </div>
         </div>
 
         {/* Manager Search Section - Compact */}

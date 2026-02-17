@@ -133,3 +133,144 @@ export function applyAvailabilityToGameweek(
   
   return { adjustedPoints: projectedPoints };
 }
+
+// Apply availability adjustments to a full player projection object
+// Matches client-side behavior from client/src/lib/availability-adjustments.ts
+export function applyAvailabilityAdjustmentsToPlayer(
+  player: any,
+  bootstrapData: any,
+  currentGameweek: number
+): any {
+  const chanceOfPlaying = player.chanceOfPlayingNextRound ?? 100;
+  const status = player.status || 'a';
+  const news = player.news || '';
+  
+  // If fully available, no adjustments needed
+  if (chanceOfPlaying >= 100 && status === 'a') {
+    return player;
+  }
+  
+  const adjustedPlayer = { ...player };
+  const adjustedProjections = { ...(player.gameweekProjections || {}) };
+  const originalProjections = { ...(player.gameweekProjections || {}) };
+  const availabilityAdjustments: { [gameweek: string]: { original: number; adjusted: number; reason: string } } = {};
+  
+  const events: BootstrapEvent[] = bootstrapData?.events || [];
+  
+  if (chanceOfPlaying === 0) {
+    const returnDate = parseReturnDate(news);
+    
+    if (returnDate) {
+      const returnGameweek = getGameweekFromDate(returnDate, events);
+      
+      Object.keys(adjustedProjections).forEach(gwKey => {
+        const gw = parseInt(gwKey);
+        if (returnGameweek && gw < returnGameweek) {
+          const original = adjustedProjections[gwKey];
+          adjustedProjections[gwKey] = 0;
+          if (original > 0) {
+            availabilityAdjustments[gwKey] = {
+              original,
+              adjusted: 0,
+              reason: `Injured/suspended until GW${returnGameweek}`
+            };
+          }
+        }
+      });
+    } else {
+      // No return date - zero out ALL projections
+      Object.keys(adjustedProjections).forEach(gwKey => {
+        const original = adjustedProjections[gwKey];
+        adjustedProjections[gwKey] = 0;
+        if (original > 0) {
+          availabilityAdjustments[gwKey] = {
+            original,
+            adjusted: 0,
+            reason: status === 's' ? 'Suspended' : status === 'i' ? 'Injured' : 'Unavailable'
+          };
+        }
+      });
+    }
+  } else if (chanceOfPlaying === 25 || chanceOfPlaying === 50 || chanceOfPlaying === 75) {
+    // Partial availability - multiply next gameweek only
+    const nextGameweek = (currentGameweek + 1).toString();
+    if (adjustedProjections[nextGameweek] !== undefined) {
+      const multiplier = chanceOfPlaying / 100;
+      const original = adjustedProjections[nextGameweek];
+      adjustedProjections[nextGameweek] = adjustedProjections[nextGameweek] * multiplier;
+      
+      if (original !== adjustedProjections[nextGameweek]) {
+        availabilityAdjustments[nextGameweek] = {
+          original,
+          adjusted: adjustedProjections[nextGameweek],
+          reason: `${chanceOfPlaying}% chance of playing`
+        };
+      }
+    }
+  }
+  
+  // Recalculate totals and averages after adjustments
+  const gameweekCount = Object.keys(adjustedProjections).length;
+  const newTotalExpectedPoints = Object.values(adjustedProjections).reduce((sum: number, points: any) => sum + (points as number), 0);
+  const newAveragePerGameweek = gameweekCount > 0 ? newTotalExpectedPoints / gameweekCount : 0;
+  const newAverageValue = player.price && player.price > 0 ? newTotalExpectedPoints / player.price : 0;
+  
+  // Calculate overall availability factor based on total change
+  const originalTotal = Object.values(originalProjections).reduce((sum: number, points: any) => sum + (points as number), 0);
+  const availabilityFactor = originalTotal > 0 ? newTotalExpectedPoints / originalTotal : 1;
+  
+  // Apply availability factor to component totals (proportional reduction)
+  const componentTotalKeys = [
+    'totalPointsFromGoals', 'totalPointsFromAssists', 'totalPointsFromCleanSheets',
+    'totalPointsFromDefensiveContributions', 'totalPointsFromMinutes', 'totalPointsFromBonus',
+    'totalPointsFromSaves', 'totalPointsFromGoalsConceded', 'totalPointsFromYellowCards', 'totalPointsFromRedCards'
+  ];
+  
+  // Per-gameweek component keys
+  const componentGwKeys = [
+    'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
+    'pointsFromDefensiveContributions', 'pointsFromMinutes', 'pointsFromBonus',
+    'pointsFromSaves', 'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards'
+  ];
+  
+  const originalComponentTotals: { [key: string]: number } = {};
+  componentTotalKeys.forEach(key => {
+    const originalValue = player[key];
+    if (originalValue !== undefined) {
+      originalComponentTotals[key] = originalValue;
+      adjustedPlayer[key] = Math.round(originalValue * availabilityFactor * 100) / 100;
+    }
+  });
+  
+  const originalComponentProjections: { [component: string]: { [gameweek: string]: number } } = {};
+  componentGwKeys.forEach(compKey => {
+    const compData = player[compKey];
+    if (compData && typeof compData === 'object') {
+      originalComponentProjections[compKey] = { ...compData };
+      
+      const adjustedCompData: { [gameweek: string]: number } = {};
+      Object.keys(compData).forEach(gwKey => {
+        const gwAdjustment = availabilityAdjustments[gwKey];
+        if (gwAdjustment) {
+          const multiplier = gwAdjustment.original > 0 ? gwAdjustment.adjusted / gwAdjustment.original : 0;
+          adjustedCompData[gwKey] = Math.round(compData[gwKey] * multiplier * 100) / 100;
+        } else {
+          adjustedCompData[gwKey] = compData[gwKey];
+        }
+      });
+      adjustedPlayer[compKey] = adjustedCompData;
+    }
+  });
+  
+  adjustedPlayer.gameweekProjections = adjustedProjections;
+  adjustedPlayer.originalGameweekProjections = originalProjections;
+  adjustedPlayer.availabilityAdjustments = availabilityAdjustments;
+  adjustedPlayer.originalComponentTotals = originalComponentTotals;
+  adjustedPlayer.originalComponentProjections = originalComponentProjections;
+  adjustedPlayer.totalExpectedPoints = Math.round(newTotalExpectedPoints * 100) / 100;
+  adjustedPlayer.totalPoints = Math.round(newTotalExpectedPoints * 100) / 100;
+  adjustedPlayer.averagePerGameweek = Math.round(newAveragePerGameweek * 100) / 100;
+  adjustedPlayer.averageValue = Math.round(newAverageValue * 100) / 100;
+  
+  return adjustedPlayer;
+}

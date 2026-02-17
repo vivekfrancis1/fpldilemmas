@@ -13,7 +13,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
+import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
+import { AvailabilityToggle } from "@/components/availability-toggle";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -181,9 +182,10 @@ interface AllPlayersProjectionsTabProps {
   onScrollComplete?: () => void;
   teamData?: TeamData;
   savedDrafts?: any[];
+  isAdjusted?: boolean;
 }
 
-function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank, initialPositionFilter = "all", scrollToView = false, onScrollComplete, teamData, savedDrafts }: AllPlayersProjectionsTabProps) {
+function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank, initialPositionFilter = "all", scrollToView = false, onScrollComplete, teamData, savedDrafts, isAdjusted = true }: AllPlayersProjectionsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState(initialPositionFilter);
   const [teamFilter, setTeamFilter] = useState("all");
@@ -216,7 +218,13 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   }, [scrollToView, onScrollComplete]);
 
   const { data: allPlayersData, isLoading } = useQuery<PlayerProjectionData[]>({
-    queryKey: ["/api/cached/player-total-points"],
+    queryKey: ['/api/cached/player-total-points', { availabilityAdjusted: isAdjusted }],
+    queryFn: async () => {
+      const url = !isAdjusted ? '/api/cached/player-total-points?availabilityAdjusted=false' : '/api/cached/player-total-points';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch projections');
+      return res.json();
+    },
     staleTime: 60 * 60 * 1000,
   });
 
@@ -255,22 +263,6 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     });
     return map;
   }, [bootstrapData]);
-
-  // Apply availability adjustments to all players - MUST BE BEFORE EARLY RETURNS
-  const adjustedPlayersData = useMemo(() => {
-    if (!bootstrapData || !allPlayersData) return allPlayersData || [];
-    
-    const currentEvent = bootstrapData.events.find(e => e.is_current);
-    const nextEvent = bootstrapData.events.find(e => e.is_next);
-    let currentGameweek = currentEvent?.id || nextEvent?.id || 1;
-    if (currentEvent?.finished) {
-      currentGameweek = nextEvent?.id || currentGameweek + 1;
-    }
-    
-    return allPlayersData.map(player => 
-      applyAvailabilityAdjustments(player, bootstrapData, currentGameweek)
-    );
-  }, [allPlayersData, bootstrapData]);
 
   if (isLoading) {
     return (
@@ -337,7 +329,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
 
   // Calculate top 3 players for each gameweek
   const getTop3ForGameweek = (gw: number) => {
-    const sorted = [...adjustedPlayersData]
+    const sorted = [...(allPlayersData || [])]
       .map(p => ({ playerId: p.playerId, points: p.gameweekProjections[gw.toString()] || 0 }))
       .sort((a, b) => b.points - a.points);
     
@@ -372,7 +364,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   };
 
   // Filter and sort players
-  let filteredPlayers = adjustedPlayersData
+  let filteredPlayers = (allPlayersData || [])
     .filter(player => {
       const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            player.team.toLowerCase().includes(searchTerm.toLowerCase());
@@ -968,6 +960,7 @@ export default function TransferPlanner() {
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   
   const { toast } = useToast();
+  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
 
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
@@ -1244,7 +1237,13 @@ export default function TransferPlanner() {
   // Fetch player projections from cached endpoint (contains all 12 gameweeks)
   // This allows instant gameweek switching without refetching
   const { data: cachedPlayerProjections, isLoading: projectionsLoading, error: projectionsError } = useQuery<any[]>({
-    queryKey: ["/api/cached/player-total-points"],
+    queryKey: ['/api/cached/player-total-points', { availabilityAdjusted: isAdjusted }],
+    queryFn: async () => {
+      const url = !isAdjusted ? '/api/cached/player-total-points?availabilityAdjusted=false' : '/api/cached/player-total-points';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch projections');
+      return res.json();
+    },
     staleTime: 60 * 60 * 1000, // 1 hour cache
   });
 
@@ -5373,10 +5372,11 @@ export default function TransferPlanner() {
         <div className="p-1.5 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg">
           <Target className="h-4 w-4 md:h-5 md:w-5 text-white" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-lg md:text-xl font-bold">Transfer Planner</h1>
           <p className="text-xs text-muted-foreground hidden sm:block">Plan transfers & optimise your lineup</p>
         </div>
+        <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} compact />
       </div>
 
       {/* Manager Search Section - Compact */}
@@ -6922,6 +6922,7 @@ export default function TransferPlanner() {
             onScrollComplete={() => setScrollToProjections(false)}
             teamData={teamData}
             savedDrafts={savedDrafts}
+            isAdjusted={isAdjusted}
           />
         </div>
       )}

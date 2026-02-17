@@ -12,7 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LoadingExperience } from "@/components/loading-experience";
-import { applyAvailabilityAdjustments } from "@/lib/availability-adjustments";
+import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
+import { AvailabilityToggle } from "@/components/availability-toggle";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -71,6 +72,8 @@ const VALID_FORMATIONS = [
 ];
 
 export default function BestFreehitTeam() {
+  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
+
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery({
     queryKey: ['/api/bootstrap-static'],
@@ -112,26 +115,24 @@ export default function BestFreehitTeam() {
 
   // Fetch cached Player Total Points data (now uses live API with memory caching)
   const { data: allCachedData, isLoading, error, refetch: refetchProjections } = useQuery({
-    queryKey: ['/api/cached/player-total-points'],
+    queryKey: ['/api/cached/player-total-points', { availabilityAdjusted: isAdjusted }],
     enabled: !!bootstrapData,
     staleTime: 5 * 60 * 1000, // 5 minutes cache
+    queryFn: async () => {
+      const url = !isAdjusted ? '/api/cached/player-total-points?availabilityAdjusted=false' : '/api/cached/player-total-points';
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch player total points');
+      return response.json();
+    },
   });
-
-  // Apply availability adjustments to cached data for consistency with other pages
-  const adjustedCachedData = useMemo(() => {
-    if (!allCachedData || !Array.isArray(allCachedData) || !bootstrapData) return allCachedData;
-    return (allCachedData as any[]).map((player: any) =>
-      applyAvailabilityAdjustments(player, bootstrapData, currentGameweek)
-    );
-  }, [allCachedData, bootstrapData, currentGameweek]);
 
   // Filter cached data to selected gameweek (instant filtering, no need to refetch!)
   const liveData = useMemo(() => {
-    if (!adjustedCachedData || !Array.isArray(adjustedCachedData)) return [];
+    if (!allCachedData || !Array.isArray(allCachedData)) return [];
     
     // Filter each player's gameweek projections to only the selected gameweek
     // Handle both key formats: "25" (numeric) and "gw25" (prefixed)
-    return (adjustedCachedData as any[]).map((player: any) => {
+    return (allCachedData as any[]).map((player: any) => {
       const originalProjections = player.gameweekProjections || {};
       const numericKey = selectedGameweek.toString();
       const prefixedKey = `gw${selectedGameweek}`;
@@ -144,7 +145,7 @@ export default function BestFreehitTeam() {
         totalExpectedPoints: points
       };
     });
-  }, [adjustedCachedData, selectedGameweek]);
+  }, [allCachedData, selectedGameweek]);
 
   const snapshots: PlayerSnapshot[] = liveData ? liveData.map((player: any) => ({
     playerId: player.playerId || 0,
@@ -1267,17 +1268,20 @@ export default function BestFreehitTeam() {
                 Select a gameweek to optimize your freehit team for maximum points
               </CardDescription>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefreshData}
-              disabled={isRefreshing || isLoading}
-              className="shrink-0"
-              data-testid="button-refresh-freehit-data"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span className="ml-2 hidden sm:inline">Refresh</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} compact={true} />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshData}
+                disabled={isRefreshing || isLoading}
+                className="shrink-0"
+                data-testid="button-refresh-freehit-data"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span className="ml-2 hidden sm:inline">Refresh</span>
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

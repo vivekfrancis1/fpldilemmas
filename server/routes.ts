@@ -33,7 +33,7 @@ import { normalizeGameweekKeys, normalizeGameweekKey } from './gameweek-key-util
 import { syncProjectionService } from './sync-projection-service';
 import { FPLScoringCacheService } from './fpl-scoring-cache-service';
 import { InitializationOrchestrator } from './initialization-orchestrator';
-import { applyAvailabilityToGameweek } from './availability-adjustments';
+import { applyAvailabilityToGameweek, applyAvailabilityAdjustmentsToPlayer } from './availability-adjustments';
 import { setupAuth, isAuthenticated } from './replitAuth';
 
 // Helper function for FPL API requests with retry logic
@@ -3714,7 +3714,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Calculating recommendations from GW${planningStart} to GW${recommendationEnd} (showing 6 GWs, using 12 GWs for point calculations)`);
       
       // PERFORMANCE OPTIMIZATION: Fetch cached projections ONCE instead of calling API in loop (10-20x faster!)
-      const cachedProjectionsResponse = await internalFetch(`api/cached/player-total-points`);
+      const cachedProjectionsResponse = await internalFetch(`api/cached/player-total-points?availabilityAdjusted=false`);
       if (!cachedProjectionsResponse.ok) {
         console.error('Failed to fetch cached projections for transfer recommendations');
         return res.status(500).json({ error: 'Failed to fetch projections data' });
@@ -12229,8 +12229,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (totalPointsCache.has(cacheKey)) {
         const cached = totalPointsCache.get(cacheKey);
         if (Date.now() - cached.timestamp < TOTAL_POINTS_CACHE_DURATION) {
-          console.log(`DEBUG: Serving cached Player Total Points for GW${start}-${end} (${cached.data.length} players)`);
-          return res.json(cached.data);
+          const availabilityAdjusted = req.query.availabilityAdjusted !== 'false';
+          const responseData = (availabilityAdjusted && bootstrapData)
+            ? cached.data.map((player: any) => applyAvailabilityAdjustmentsToPlayer(player, bootstrapData, currentGameweek))
+            : cached.data;
+          console.log(`DEBUG: Serving cached Player Total Points for GW${start}-${end} (${responseData.length} players, adjusted: ${availabilityAdjusted})`);
+          return res.json(responseData);
         }
       }
 
@@ -12633,11 +12637,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(503).json({ error: 'Insufficient projection data - system initializing, please try again' });
       }
       
-      // Cache the result for 15 minutes only if data is valid
+      // Cache the result for 15 minutes only if data is valid (always cache RAW projections)
       totalPointsCache.set(cacheKey, {
         data: projections,
         timestamp: Date.now()
       });
+      
+      // Apply availability adjustments if requested (default: true)
+      const availabilityAdjusted = req.query.availabilityAdjusted !== 'false';
+      if (availabilityAdjusted && bootstrapData) {
+        const adjustedProjections = projections.map((player: any) =>
+          applyAvailabilityAdjustmentsToPlayer(player, bootstrapData, currentGameweek)
+        );
+        return res.json(adjustedProjections);
+      }
       
       res.json(projections);
       
@@ -16406,8 +16419,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             });
             
-            console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${enrichedData.length} players)`);
-            return res.json(enrichedData);
+            // Apply availability adjustments if requested (default: true)
+            const availabilityAdjusted = req.query.availabilityAdjusted !== 'false';
+            const responseData = (availabilityAdjusted && bootstrapData)
+              ? enrichedData.map((player: any) => applyAvailabilityAdjustmentsToPlayer(player, bootstrapData, currentGameweek))
+              : enrichedData;
+            
+            console.log(`⚡ CACHE HIT: Serving cached Player Total Points for GW${startGameweek}-${endGameweek} (${responseData.length} players, adjusted: ${availabilityAdjusted})`);
+            return res.json(responseData);
           }
         }
       }
@@ -16505,14 +16524,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
               };
             }).sort((a, b) => b.totalPoints - a.totalPoints);
             
-            // Cache in memory for subsequent requests
+            // Cache in memory for subsequent requests (always cache RAW data)
             totalPointsCache.set(currentCacheKey, {
               data: transformedData,
               timestamp: Date.now()
             });
             
-            console.log(`⚡ SNAPSHOT DB HIT: Serving ${transformedData.length} players from Projection Accuracy snapshots`);
-            return res.json(transformedData);
+            // Apply availability adjustments if requested (default: true)
+            const availabilityAdjusted = req.query.availabilityAdjusted !== 'false';
+            const responseData = (availabilityAdjusted && bootstrapData)
+              ? transformedData.map((player: any) => applyAvailabilityAdjustmentsToPlayer(player, bootstrapData, currentGameweek))
+              : transformedData;
+            
+            console.log(`⚡ SNAPSHOT DB HIT: Serving ${responseData.length} players from Projection Accuracy snapshots (adjusted: ${availabilityAdjusted})`);
+            return res.json(responseData);
           }
         }
       } catch (dbError) {
@@ -16523,20 +16548,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("🔄 No valid cached data available - falling back to live API calculation");
       
       try {
-        // Call the main player total points API for fresh calculation
-        const liveResponse = await internalFetch(`api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+        // Call the main player total points API for fresh calculation (always fetch RAW data for caching)
+        const liveResponse = await internalFetch(`api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}&availabilityAdjusted=false`);
         
         if (liveResponse.ok) {
           const liveData = await liveResponse.json();
           
-          // Cache the fresh data in memory for subsequent requests
+          // Cache the fresh RAW data in memory for subsequent requests
           totalPointsCache.set(currentCacheKey, {
             data: liveData,
             timestamp: Date.now()
           });
           
-          console.log(`✅ LIVE: Generated and cached fresh Player Total Points for GW${startGameweek}-${endGameweek} (${liveData.length} players)`);
-          return res.json(liveData);
+          // Apply availability adjustments if requested (default: true)
+          const availabilityAdjusted = req.query.availabilityAdjusted !== 'false';
+          const responseData = (availabilityAdjusted && bootstrapData)
+            ? liveData.map((player: any) => applyAvailabilityAdjustmentsToPlayer(player, bootstrapData, currentGameweek))
+            : liveData;
+          
+          console.log(`✅ LIVE: Generated and cached fresh Player Total Points for GW${startGameweek}-${endGameweek} (${responseData.length} players, adjusted: ${availabilityAdjusted})`);
+          return res.json(responseData);
         } else {
           throw new Error(`Live API failed with status: ${liveResponse.status}`);
         }
@@ -18023,7 +18054,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allPlayers = bootstrapData.elements;
 
       // Use cached projections for much faster optimization
-      const projectionsResponse = await internalFetch(`/api/cached/player-total-points`);
+      const projectionsResponse = await internalFetch(`/api/cached/player-total-points?availabilityAdjusted=false`);
       const projections = await projectionsResponse.json();
 
       // Create a map of player ID to projected points for the specific gameweek
@@ -18202,7 +18233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allPlayers = bootstrapData.elements;
 
       // Use cached projections for much faster optimization
-      const projectionsResponse = await internalFetch(`/api/cached/player-total-points`);
+      const projectionsResponse = await internalFetch(`/api/cached/player-total-points?availabilityAdjusted=false`);
       const projections = await projectionsResponse.json();
 
       // Create enriched player list with projected points for this gameweek
@@ -18913,7 +18944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } else {
           // Future gameweek - fetch live projections
           const [playerResponse, teamResponse] = await Promise.all([
-            internalFetch('/api/cached/player-total-points'),
+            internalFetch('/api/cached/player-total-points?availabilityAdjusted=false'),
             internalFetch('/api/cached/team-goal-projections')
           ]);
           
@@ -19121,7 +19152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (gwsWithLiveData.length > 0) {
         try {
           // Fetch live player projections
-          const playerResponse = await internalFetch('/api/cached/player-total-points');
+          const playerResponse = await internalFetch('/api/cached/player-total-points?availabilityAdjusted=false');
           if (playerResponse.ok) {
             const playerData = await playerResponse.json();
             

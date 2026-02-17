@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { applyAvailabilityAdjustments, type BootstrapData as AvailabilityBootstrapData } from "@/lib/availability-adjustments";
+import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
+import { AvailabilityToggle } from "@/components/availability-toggle";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -190,6 +191,7 @@ export default function ProjectedPoints() {
   
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
 
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
@@ -304,7 +306,13 @@ export default function ProjectedPoints() {
 
   // Fetch projections using cached endpoint for faster loading
   const { data: allPlayerProjections, isLoading: isLoadingProjections, refetch: refetchProjections } = useQuery<any[]>({
-    queryKey: ["/api/cached/player-total-points"],
+    queryKey: ['/api/cached/player-total-points', { availabilityAdjusted: isAdjusted }],
+    queryFn: async () => {
+      const url = !isAdjusted ? '/api/cached/player-total-points?availabilityAdjusted=false' : '/api/cached/player-total-points';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch projections');
+      return res.json();
+    },
     enabled: !!bootstrapData,
     staleTime: 60 * 60 * 1000, // 1 hour cache
   });
@@ -319,31 +327,6 @@ export default function ProjectedPoints() {
     // Filter to only team players
     return allPlayerProjections.filter(player => teamPlayerIds.has(player.playerId));
   }, [allPlayerProjections, teamData]);
-
-  // Apply availability adjustments to player projections
-  const adjustedPlayerProjections = useMemo(() => {
-    if (!playerProjections6GW || !bootstrapData) return playerProjections6GW;
-
-    const currentGameweek = bootstrapData.events.find((e: any) => e.is_current)?.id || 
-                           bootstrapData.events.filter((e: any) => e.finished).sort((a: any, b: any) => b.id - a.id)[0]?.id || 1;
-
-    return playerProjections6GW.map(player => {
-      // Find matching player in bootstrap data for availability info
-      const bootstrapPlayer = bootstrapData.elements?.find((p: any) => p.id === player.playerId);
-      if (!bootstrapPlayer) return player;
-
-      // Create player object with required fields for availability adjustment
-      const playerWithAvailability = {
-        ...player,
-        chanceOfPlayingNextRound: bootstrapPlayer.chance_of_playing_next_round,
-        status: bootstrapPlayer.status,
-        news: bootstrapPlayer.news
-      };
-
-      // Apply availability adjustments (handles injury/suspension/AFCON)
-      return applyAvailabilityAdjustments(playerWithAvailability, bootstrapData as any, currentGameweek);
-    });
-  }, [playerProjections6GW, bootstrapData]);
 
   // Initialize manual lineup when team data loads
   useEffect(() => {
@@ -380,15 +363,14 @@ export default function ProjectedPoints() {
   // Get player by ID
   const getPlayerById = (id: number) => {
     // First try to get from adjusted projections (has availability data)
-    const adjustedPlayer = adjustedPlayerProjections?.find(p => p.playerId === id);
-    if (adjustedPlayer) {
-      // Merge with bootstrap data for other fields
+    const projectedPlayer = playerProjections6GW?.find(p => p.playerId === id);
+    if (projectedPlayer) {
       const bootstrapPlayer = bootstrapData?.elements.find(p => p.id === id);
       return {
         ...bootstrapPlayer,
-        chanceOfPlayingNextRound: adjustedPlayer.chanceOfPlayingNextRound,
-        status: adjustedPlayer.status,
-        news: adjustedPlayer.news
+        chanceOfPlayingNextRound: projectedPlayer.chanceOfPlayingNextRound,
+        status: projectedPlayer.status,
+        news: projectedPlayer.news
       };
     }
     return bootstrapData?.elements.find(p => p.id === id);
@@ -457,7 +439,7 @@ export default function ProjectedPoints() {
 
   // Get player projected points
   const getPlayerProjectedPoints = (playerId: number, gameweek: number): number => {
-    const playerData = adjustedPlayerProjections?.find((p: any) => p.playerId === playerId);
+    const playerData = playerProjections6GW?.find((p: any) => p.playerId === playerId);
     const points = playerData?.gameweekProjections?.[gameweek.toString()];
     
     // Debug logging for GW16 issue
@@ -797,7 +779,8 @@ export default function ProjectedPoints() {
               })()}
               
               {searchedId && (
-                <div className="flex flex-col sm:flex-row gap-3 sm:items-end border-t pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-end border-t pt-4 flex-wrap">
+                  <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} />
                   <div className="flex-1">
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                       Start Gameweek
