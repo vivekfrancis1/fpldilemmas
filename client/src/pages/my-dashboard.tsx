@@ -1819,6 +1819,41 @@ export default function MyDashboard() {
                     </AlertDescription>
                   </Alert>
                   
+                  {(() => {
+                    const nextGW = getNextGameweekDashboard();
+                    const starting11 = teamData.picks.filter(pick => pick.position <= 11);
+                    const bench = teamData.picks.filter(pick => pick.position > 11);
+                    let totalStartingXPts = 0;
+                    let totalBenchXPts = 0;
+                    for (const pick of starting11) {
+                      const proj = getProjectedPoints(pick.element, nextGW);
+                      totalStartingXPts += proj * (pick.multiplier || 1);
+                    }
+                    for (const pick of bench) {
+                      totalBenchXPts += getProjectedPoints(pick.element, nextGW);
+                    }
+                    return (
+                      <Card className="border-0 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg mb-4">
+                        <CardContent className="p-4 sm:p-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2.5 bg-purple-200 rounded-full">
+                                <Target className="h-6 w-6 text-purple-700" />
+                              </div>
+                              <div>
+                                <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points</p>
+                                <p className="text-2xl sm:text-3xl font-bold text-purple-900">{totalStartingXPts.toFixed(1)}</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-purple-600">Bench: {totalBenchXPts.toFixed(1)}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })()}
+
                   <Card className="border-0 bg-gradient-to-br from-amber-50 to-orange-50 shadow-lg">
                     <CardHeader className="pt-3 px-4 pb-2 sm:pt-4 sm:px-6 sm:pb-3">
                       <CardTitle className="text-lg sm:text-xl text-amber-900">
@@ -2003,6 +2038,66 @@ export default function MyDashboard() {
                             )}
                           </AlertDescription>
                         </Alert>
+                      );
+                    })()}
+
+                    {(() => {
+                      const nextGW = getNextGameweekDashboard();
+                      const starting11 = nextTeamData.picks.filter((p: any) => p.position <= 11);
+                      const bench = nextTeamData.picks.filter((p: any) => p.position > 11);
+                      const activeChipVal = nextTeamData.active_chip || getUpcomingActiveChip();
+                      let totalStartingXPts = 0;
+                      let totalBenchXPts = 0;
+                      for (const pick of starting11) {
+                        const proj = getProjectedPoints(pick.element, nextGW);
+                        const multiplier = activeChipVal === '3xc' && pick.is_captain ? 3 : (pick.multiplier || 1);
+                        totalStartingXPts += proj * multiplier;
+                      }
+                      for (const pick of bench) {
+                        totalBenchXPts += getProjectedPoints(pick.element, nextGW);
+                      }
+                      if (activeChipVal === 'bboost') {
+                        totalStartingXPts += totalBenchXPts;
+                      }
+                      const hitCost = (() => {
+                        const made = nextTeamData.transfers?.made || 0;
+                        const limit = nextTeamData.transfers?.limit || 1;
+                        return Math.max(0, (made - limit) * 4);
+                      })();
+                      const netXPts = totalStartingXPts - hitCost;
+                      return (
+                        <Card className="border-0 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-lg mb-6">
+                          <CardContent className="p-4 sm:p-6">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-purple-200 rounded-full">
+                                  <Target className="h-6 w-6 text-purple-700" />
+                                </div>
+                                <div>
+                                  <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points</p>
+                                  <div className="flex items-baseline gap-2">
+                                    <p className="text-2xl sm:text-3xl font-bold text-purple-900">{netXPts.toFixed(1)}</p>
+                                    {hitCost > 0 && (
+                                      <span className="text-sm text-red-600 font-medium">(-{hitCost} hit)</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right space-y-0.5">
+                                {activeChipVal === 'bboost' ? (
+                                  <p className="text-xs text-purple-600">Incl. bench (BB)</p>
+                                ) : (
+                                  <p className="text-xs text-purple-600">Bench: {totalBenchXPts.toFixed(1)}</p>
+                                )}
+                                {activeChipVal && activeChipVal !== 'bboost' && (
+                                  <Badge variant="outline" className="text-xs border-purple-300 text-purple-700 bg-purple-100">
+                                    {activeChipVal === '3xc' ? '3xC' : activeChipVal === 'freehit' ? 'FH' : activeChipVal === 'wildcard' ? 'WC' : activeChipVal}
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       );
                     })()}
 
