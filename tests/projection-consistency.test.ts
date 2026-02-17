@@ -723,6 +723,45 @@ describe('Transfer Planner Projection Consistency', () => {
       }
     }
   });
+
+  it('doubtful players are not double-adjusted (adjusted projection matches single adjustment)', () => {
+    const doubtfulPlayers = bootstrapData.elements.filter(
+      (el: any) =>
+        el.chance_of_playing_next_round !== null &&
+        el.chance_of_playing_next_round > 0 &&
+        el.chance_of_playing_next_round < 100
+    );
+
+    const nextGWKey = nextGameweek.toString();
+    const failures: string[] = [];
+
+    for (const player of doubtfulPlayers.slice(0, 15)) {
+      const adjustedPlayer = cachedPlayerTotalPoints.find((p: any) => p.playerId === player.id);
+      const rawPlayer = rawCachedPlayerTotalPoints.find((p: any) => p.playerId === player.id);
+
+      if (!adjustedPlayer || !rawPlayer) continue;
+
+      const rawGWPoints = rawPlayer.gameweekProjections?.[nextGWKey] || 0;
+      const adjustedGWPoints = adjustedPlayer.gameweekProjections?.[nextGWKey] || 0;
+
+      if (rawGWPoints === 0) continue;
+
+      const expectedRatio = player.chance_of_playing_next_round / 100;
+      const actualRatio = adjustedGWPoints / rawGWPoints;
+
+      if (Math.abs(actualRatio - expectedRatio) > 0.05 && Math.abs(actualRatio - expectedRatio * expectedRatio) < 0.05) {
+        failures.push(
+          `${player.web_name}: raw=${rawGWPoints.toFixed(2)}, adjusted=${adjustedGWPoints.toFixed(2)}, ` +
+          `ratio=${actualRatio.toFixed(3)} looks like double-adjustment (expected ~${expectedRatio.toFixed(2)}, got ~${(expectedRatio * expectedRatio).toFixed(2)})`
+        );
+      }
+    }
+
+    if (failures.length > 0) {
+      console.log('Double-adjustment detected:', failures);
+    }
+    expect(failures.length).toBe(0);
+  });
 });
 
 describe('Team Goal Projections', () => {
