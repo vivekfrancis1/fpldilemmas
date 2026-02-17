@@ -400,46 +400,30 @@ export default function MyDashboard() {
       };
     });
 
-    const gks = allPlayers.filter(p => p.element_type === 1);
-    const defs = allPlayers.filter(p => p.element_type === 2);
-    const mids = allPlayers.filter(p => p.element_type === 3);
-    const fwds = allPlayers.filter(p => p.element_type === 4);
-
-    gks.sort((a, b) => b.proj - a.proj);
-    defs.sort((a, b) => b.proj - a.proj);
-    mids.sort((a, b) => b.proj - a.proj);
-    fwds.sort((a, b) => b.proj - a.proj);
+    const gks = allPlayers.filter(p => p.element_type === 1).sort((a, b) => b.proj - a.proj);
+    const defs = allPlayers.filter(p => p.element_type === 2).sort((a, b) => b.proj - a.proj);
+    const mids = allPlayers.filter(p => p.element_type === 3).sort((a, b) => b.proj - a.proj);
+    const fwds = allPlayers.filter(p => p.element_type === 4).sort((a, b) => b.proj - a.proj);
 
     let bestTotal = -1;
     let bestStarting: typeof allPlayers = [];
     let bestBench: typeof allPlayers = [];
 
-    const defRange = [3, 4, 5];
-    const midRange = [2, 3, 4, 5];
-    const fwdRange = [1, 2, 3];
-
-    for (const numDef of defRange) {
-      for (const numMid of midRange) {
-        for (const numFwd of fwdRange) {
+    for (const numDef of [3, 4, 5]) {
+      for (const numMid of [2, 3, 4, 5]) {
+        for (const numFwd of [1, 2, 3]) {
           if (numDef + numMid + numFwd !== 10) continue;
           if (numDef > defs.length || numMid > mids.length || numFwd > fwds.length) continue;
 
-          const startGks = gks.slice(0, 1);
-          const startDefs = defs.slice(0, numDef);
-          const startMids = mids.slice(0, numMid);
-          const startFwds = fwds.slice(0, numFwd);
-          const starting = [...startGks, ...startDefs, ...startMids, ...startFwds];
+          const starting = [gks[0], ...defs.slice(0, numDef), ...mids.slice(0, numMid), ...fwds.slice(0, numFwd)];
           const total = starting.reduce((sum, p) => sum + p.proj, 0);
 
           if (total > bestTotal) {
             bestTotal = total;
             bestStarting = starting;
-            const benchGks = gks.slice(1);
-            const benchDefs = defs.slice(numDef);
-            const benchMids = mids.slice(numMid);
-            const benchFwds = fwds.slice(numFwd);
-            bestBench = [...benchGks, ...benchDefs, ...benchMids, ...benchFwds];
-            bestBench.sort((a, b) => b.proj - a.proj);
+            const benchOutfield = [...defs.slice(numDef), ...mids.slice(numMid), ...fwds.slice(numFwd)];
+            benchOutfield.sort((a, b) => b.proj - a.proj);
+            bestBench = [gks[1], ...benchOutfield];
           }
         }
       }
