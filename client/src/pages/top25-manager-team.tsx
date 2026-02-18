@@ -22,6 +22,12 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   ArrowLeft,
   Crown,
   DollarSign,
@@ -215,10 +221,10 @@ function getRankChangeDisplay(rankChange: number) {
 
 export default function Top25ManagerTeam() {
   const { rank } = useParams<{ rank: string }>();
-  // Always default to pitch view
   const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
+  const [showPointsBreakdown, setShowPointsBreakdown] = useState(false);
+  const [selectedPlayerForBreakdown, setSelectedPlayerForBreakdown] = useState<any>(null);
   
-  // Find manager info from our static data
   const managerInfo = TOP_25_MANAGERS.find(m => m.rank === parseInt(rank || '0'));
   const managerId = managerInfo?.managerId;
   
@@ -245,9 +251,15 @@ export default function Top25ManagerTeam() {
     queryKey: ['/api/bootstrap-static'],
   });
 
-  // Get fixtures data - must be at top level with other hooks
   const { data: fixturesData } = useQuery<any>({
     queryKey: ['/api/fixtures'],
+  });
+
+  const currentGameweek = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 1;
+  const { data: liveGameweekData } = useQuery<{ elements: Array<{ id: number; stats: any; explain: any[] }> }>({
+    queryKey: [`/api/event/${currentGameweek}/live`],
+    enabled: !!bootstrapData,
+    staleTime: 60000,
   });
 
   // Function to get completed gameweeks
@@ -474,6 +486,68 @@ export default function Top25ManagerTeam() {
     }
     
     return displayPoints.toString();
+  };
+
+  const statIdentifierLabels: Record<string, string> = {
+    'minutes': 'Minutes played',
+    'goals_scored': 'Goals scored',
+    'assists': 'Assists',
+    'clean_sheets': 'Clean sheet',
+    'goals_conceded': 'Goals conceded',
+    'own_goals': 'Own goals',
+    'penalties_saved': 'Penalties saved',
+    'penalties_missed': 'Penalties missed',
+    'yellow_cards': 'Yellow cards',
+    'red_cards': 'Red cards',
+    'saves': 'Saves',
+    'bonus': 'Bonus',
+    'bps': 'Bonus points system',
+  };
+
+  const getFixtureMatchLabel = (fixtureId: number, playerTeamId: number): { label: string; isHome: boolean } => {
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams) return { label: `Fixture ${fixtureId}`, isHome: true };
+    const fixture = (fixturesData as any[]).find((f: any) => f.id === fixtureId);
+    if (!fixture) return { label: `Fixture ${fixtureId}`, isHome: true };
+    const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+    const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+    const isHome = fixture.team_h === playerTeamId;
+    const score = fixture.started ? `${fixture.team_h_score ?? 0}-${fixture.team_a_score ?? 0}` : '';
+    const matchText = homeTeam && awayTeam
+      ? `${homeTeam.short_name} ${score} ${awayTeam.short_name}`
+      : `Fixture ${fixtureId}`;
+    return { label: matchText, isHome };
+  };
+
+  const getPerFixtureBreakdown = (player: any) => {
+    const explainEntries = player?.explain;
+    if (!explainEntries || explainEntries.length === 0) return [];
+    return explainEntries.map((ex: any) => {
+      const fixtureId = ex.fixture;
+      const { label, isHome } = getFixtureMatchLabel(fixtureId, player.team);
+      const stats = (ex.stats || [])
+        .filter((s: any) => s.points !== 0)
+        .map((s: any) => ({
+          label: statIdentifierLabels[s.identifier] || s.identifier.replace(/_/g, ' '),
+          value: s.value,
+          points: s.points,
+          identifier: s.identifier,
+        }));
+      const totalPoints = (ex.stats || []).reduce((sum: number, s: any) => sum + (s.points || 0), 0);
+      return { fixtureId, matchLabel: label, isHome, stats, totalPoints };
+    });
+  };
+
+  const handlePlayerCardClick = (player: any, isCaptain: boolean = false) => {
+    const liveElement = liveGameweekData?.elements?.find((e: any) => e.id === player.element || e.id === player.id);
+    const playerData = getPlayerData(player.element || player.id);
+    setSelectedPlayerForBreakdown({
+      ...playerData,
+      liveStats: liveElement?.stats,
+      explain: liveElement?.explain,
+      isCaptain,
+      captainMultiplier: player.multiplier || (isCaptain ? 2 : 1),
+    });
+    setShowPointsBreakdown(true);
   };
 
   const getNextFixtures = (teamId: number, count: number = 3) => {
@@ -724,6 +798,7 @@ export default function Top25ManagerTeam() {
                           benchPlayers={benchPlayers}
                           getNextFixtures={getNextFixtures}
                           showFixtures={true}
+                          onPlayerClick={(player) => handlePlayerCardClick(player, player.is_captain)}
                         />
                       </CardContent>
                     </Card>
@@ -1181,6 +1256,95 @@ export default function Top25ManagerTeam() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Player Points Breakdown Modal */}
+      <Dialog open={showPointsBreakdown} onOpenChange={setShowPointsBreakdown}>
+        <DialogContent className="w-[95vw] max-w-md mx-auto p-4 sm:p-6 rounded-xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex flex-col min-w-0">
+                <span className="text-base sm:text-lg font-bold truncate">
+                  {selectedPlayerForBreakdown?.web_name || selectedPlayerForBreakdown?.second_name}
+                </span>
+                <span className="text-xs sm:text-sm text-gray-500 font-normal truncate">
+                  {selectedPlayerForBreakdown?.first_name} {selectedPlayerForBreakdown?.second_name}
+                </span>
+              </div>
+              {selectedPlayerForBreakdown?.isCaptain && (
+                <Badge className="bg-yellow-400 text-yellow-900 text-xs shrink-0">
+                  {(selectedPlayerForBreakdown.captainMultiplier || 2) === 3 ? 'Triple Captain (3x)' : 'Captain (2x)'}
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-3 sm:space-y-4">
+            {selectedPlayerForBreakdown?.liveStats ? (
+              <>
+                {(() => {
+                  const mult = selectedPlayerForBreakdown.captainMultiplier || (selectedPlayerForBreakdown.isCaptain ? 2 : 1);
+                  const basePoints = selectedPlayerForBreakdown.liveStats.total_points || 0;
+                  const totalPoints = basePoints * mult;
+                  const fixtureBreakdowns = getPerFixtureBreakdown(selectedPlayerForBreakdown);
+                  
+                  return (
+                    <>
+                      <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                        <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Points</p>
+                        <p className="text-3xl sm:text-4xl font-bold text-green-700">
+                          {totalPoints}
+                        </p>
+                        {mult > 1 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            ({basePoints} × {mult} {mult === 3 ? 'triple captain' : 'captain'} bonus)
+                          </p>
+                        )}
+                      </div>
+                      
+                      {fixtureBreakdowns.length > 0 ? (
+                        <div className="space-y-3">
+                          {fixtureBreakdowns.map((fb: any, fIdx: number) => (
+                            <div key={fIdx} className="space-y-1">
+                              <div className="flex justify-between items-center bg-gray-100 rounded-lg px-3 py-2">
+                                <span className="font-semibold text-xs sm:text-sm text-gray-800">{fb.matchLabel}</span>
+                                <span className="font-bold text-xs sm:text-sm text-green-700">{fb.totalPoints} pts</span>
+                              </div>
+                              {fb.stats.length > 0 ? (
+                                <div className="space-y-0.5 pl-2">
+                                  {fb.stats.filter((s: any) => s.identifier !== 'bps').map((item: any, idx: number) => (
+                                    <div key={idx} className="flex justify-between items-center py-1.5 sm:py-1 px-2 rounded hover:bg-gray-50 active:bg-gray-100 touch-manipulation">
+                                      <div className="flex items-center gap-1.5 sm:gap-2">
+                                        <span className="text-xs sm:text-sm text-gray-700">{item.label}</span>
+                                        <span className="text-xs text-gray-400">({item.value})</span>
+                                      </div>
+                                      <span className={`font-semibold text-xs sm:text-sm ${item.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {item.points > 0 ? '+' : ''}{item.points}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-gray-400 text-center py-1">No points yet</p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs sm:text-sm text-gray-500 text-center py-2">No breakdown data available</p>
+                      )}
+                    </>
+                  );
+                })()}
+              </>
+            ) : (
+              <div className="text-center py-6 sm:py-8 text-gray-500">
+                <p className="text-sm">No live data available for this player</p>
+                <p className="text-xs sm:text-sm mt-1">Match may not have started yet</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
