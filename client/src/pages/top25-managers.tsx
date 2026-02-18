@@ -126,8 +126,23 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     render: (value, manager) => (
       <div className="text-purple-600">
         <span>{manager.projected_points != null ? manager.projected_points.toFixed(1) : '-'}</span>
-        {manager.active_chip && getChipLabel(manager.active_chip) && (
-          <span className="text-xs ml-1">({getChipLabel(manager.active_chip)})</span>
+      </div>
+    )
+  };
+
+  const chipCol: ResponsiveTableColumn<Top25Manager> = {
+    key: 'active_chip',
+    header: 'Chip',
+    priority: 'secondary',
+    align: 'center',
+    mobileLabel: 'Chip',
+    cardOrder: 4,
+    render: (value, manager) => (
+      <div className="text-center">
+        {manager.active_chip && getChipLabel(manager.active_chip) ? (
+          <span className="text-xs font-medium px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded">{getChipLabel(manager.active_chip)}</span>
+        ) : (
+          <span className="text-gray-300">-</span>
         )}
       </div>
     )
@@ -141,7 +156,7 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     gwTransfersKeyField: 'managerId',
   });
 
-  return [allTimeRankCol, nameCol, xPtsCol, ...sharedCols];
+  return [allTimeRankCol, nameCol, xPtsCol, chipCol, ...sharedCols];
 };
 
 interface BootstrapData {
