@@ -314,8 +314,8 @@ export function PitchView({
     <div className="space-y-0 sm:space-y-4 h-full">
       <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-3 sm:p-4 md:p-6 overflow-hidden h-full flex flex-col justify-center">
         {chipInfo && (
-          <div className={`absolute top-2 left-1/2 -translate-x-1/2 z-20 ${chipInfo.bg} ${chipInfo.text} px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold shadow-lg border border-white/30`}>
-            {chipInfo.label} Active
+          <div className={`absolute top-2 right-2 z-20 ${chipInfo.bg} ${chipInfo.text} px-2 py-0.5 sm:px-3 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold shadow-lg border border-white/30`}>
+            {chipInfo.label}
           </div>
         )}
         <div className="absolute inset-0 opacity-30 pointer-events-none">
