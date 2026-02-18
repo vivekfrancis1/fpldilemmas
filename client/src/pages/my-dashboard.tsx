@@ -1034,9 +1034,9 @@ export default function MyDashboard() {
     });
   };
 
-  const getPlayerDisplayPoints = (player: any, teamId: number, isMultiplied: boolean = false) => {
+  const getPlayerDisplayPoints = (player: any, teamId: number, captainMultiplier: number = 1) => {
     const points = player.event_points || 0;
-    const multiplier = isMultiplied ? 2 : 1;
+    const multiplier = captainMultiplier;
     const displayPoints = points * multiplier;
     
     const liveElement = liveGameweekData?.elements?.find((e: any) => e.id === player.id);
@@ -1835,7 +1835,7 @@ export default function MyDashboard() {
                         team_code: getTeamCode(playerTeam),
                         event_points: player.event_points,
                         in_dreamteam: player.in_dreamteam,
-                        points_display: getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.is_captain),
+                        points_display: getPlayerDisplayPoints(player, playerTeam?.id || 0, pick.multiplier || 1),
                         fixtures: fxs,
                         status: player.status,
                         chance_of_playing: player.chance_of_playing_next_round,
@@ -1861,7 +1861,7 @@ export default function MyDashboard() {
                         team_code: getTeamCode(playerTeam),
                         event_points: player.event_points,
                         in_dreamteam: player.in_dreamteam,
-                        points_display: getPlayerDisplayPoints(player, playerTeam?.id || 0, false),
+                        points_display: getPlayerDisplayPoints(player, playerTeam?.id || 0, 1),
                         fixtures: fxs,
                         status: player.status,
                         chance_of_playing: player.chance_of_playing_next_round,
