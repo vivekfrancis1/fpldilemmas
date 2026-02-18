@@ -3056,7 +3056,7 @@ export default function MyDashboard() {
                                   <TableHead className="text-xs sm:text-sm">Gain</TableHead>
                                   <TableHead className="text-xs sm:text-sm">Transfers</TableHead>
                                   <TableHead className="text-xs sm:text-sm">Cost</TableHead>
-                                  <TableHead className="text-xs sm:text-sm">Bench</TableHead>
+                                  <TableHead className="text-xs sm:text-sm">Bench Pts</TableHead>
                                   <TableHead className="text-xs sm:text-sm">Chip</TableHead>
                                 </TableRow>
                               </TableHeader>
