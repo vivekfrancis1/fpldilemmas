@@ -1992,6 +1992,8 @@ export default function MyDashboard() {
                             const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
                             const nextGW = getNextGameweekDashboard();
                             const projected = getProjectedPoints(pick.element, nextGW);
+                            const multiplier = pick.is_captain ? 2 : 1;
+                            const displayPts = projected * multiplier;
                             return {
                               element: pick.element,
                               element_type: player.element_type,
@@ -2003,7 +2005,7 @@ export default function MyDashboard() {
                               team_short_name: playerTeam?.short_name,
                               team_id: player.team,
                               team_code: playerTeam?.code || playerTeam?.id || 0,
-                              points_display: projected > 0 ? projected.toFixed(2) : '-',
+                              points_display: displayPts > 0 ? displayPts.toFixed(2) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
                               status: player.status,
                               chance_of_playing: player.chance_of_playing_next_round,
@@ -2436,6 +2438,8 @@ export default function MyDashboard() {
                             const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
                             const nextGW = getNextGameweekDashboard();
                             const projected = getProjectedPoints(pick.element, nextGW);
+                            const multiplier = pick.is_captain ? 2 : 1;
+                            const displayPts = projected * multiplier;
                             return {
                               element: pick.element,
                               element_type: player.element_type,
@@ -2447,7 +2451,7 @@ export default function MyDashboard() {
                               team_short_name: playerTeam?.short_name,
                               team_id: player.team,
                               team_code: playerTeam?.code || playerTeam?.id || 0,
-                              points_display: projected > 0 ? projected.toFixed(2) : '-',
+                              points_display: displayPts > 0 ? displayPts.toFixed(2) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
                               status: player.status,
                               chance_of_playing: player.chance_of_playing_next_round,
