@@ -453,7 +453,7 @@ export default function LeagueAnalysisPage() {
       valueScale: 'raw',
       gwTransfersMap: gwTransfersData?.transfers as Record<number | string, GWTransferDetail[]>,
       gwTransfersKeyField: 'managerId',
-    }).filter(col => col.key !== 'latestTracking.overallPoints' && col.key !== 'latestTracking.gameweekPoints');
+    }).filter(col => col.key !== 'latestTracking.overallPoints' && col.key !== 'latestTracking.gameweekPoints' && col.key !== 'rankChange');
 
     return [managerCol, leagueRankCol, totalPtsCol, gwPtsCol, xPtsCol, chipCol, gwRankCol, ...sharedCols];
   };
