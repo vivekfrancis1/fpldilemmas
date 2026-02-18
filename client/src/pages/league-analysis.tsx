@@ -364,6 +364,40 @@ export default function LeagueAnalysisPage() {
       )
     };
 
+    const totalPtsCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
+      key: 'latestTracking.overallPoints',
+      header: 'Total Pts',
+      priority: 'important',
+      align: 'right',
+      mobileLabel: 'Total',
+      cardOrder: 3,
+      sortable: true,
+      className: 'font-mono',
+      render: (_, entry) => {
+        const points = entry.latestTracking?.overallPoints ?? entry.total;
+        return points !== undefined && points !== null ? points.toLocaleString() : 'N/A';
+      }
+    };
+
+    const gwPtsCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
+      key: 'latestTracking.gameweekPoints',
+      header: <span className="text-center">GW{currentGameweek}<br/>Pts</span>,
+      priority: 'secondary',
+      align: 'right',
+      mobileLabel: `GW${currentGameweek}`,
+      cardOrder: 4,
+      sortable: true,
+      className: 'font-mono',
+      render: (_, entry) => {
+        const gwPoints = entry.latestTracking?.gameweekPoints ?? entry.event_total;
+        return (
+          <span className="font-mono font-bold">
+            {gwPoints !== undefined && gwPoints !== null ? gwPoints : 'N/A'}
+          </span>
+        );
+      }
+    };
+
     const xPtsCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
       key: 'projected_points',
       header: <span className="text-center">GW{currentGameweek}<br/>xPts</span>,
@@ -419,9 +453,9 @@ export default function LeagueAnalysisPage() {
       valueScale: 'raw',
       gwTransfersMap: gwTransfersData?.transfers as Record<number | string, GWTransferDetail[]>,
       gwTransfersKeyField: 'managerId',
-    });
+    }).filter(col => col.key !== 'latestTracking.overallPoints' && col.key !== 'latestTracking.gameweekPoints');
 
-    return [managerCol, leagueRankCol, xPtsCol, chipCol, gwRankCol, ...sharedCols];
+    return [managerCol, leagueRankCol, totalPtsCol, gwPtsCol, xPtsCol, chipCol, gwRankCol, ...sharedCols];
   };
 
   const getLiveColumns = (): ResponsiveTableColumn<EnrichedLiveEntry>[] => {
