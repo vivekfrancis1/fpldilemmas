@@ -1036,7 +1036,20 @@ export default function MyDashboard() {
 
   const getPlayerDisplayPoints = (player: any, teamId: number, isMultiplied: boolean = false) => {
     const points = player.event_points || 0;
-    const displayPoints = points * (isMultiplied ? 2 : 1);
+    const multiplier = isMultiplied ? 2 : 1;
+    const displayPoints = points * multiplier;
+    
+    const liveElement = liveGameweekData?.elements?.find((e: any) => e.id === player.id);
+    const explainEntries = liveElement?.explain;
+    
+    if (explainEntries && explainEntries.length > 1) {
+      const perFixture = explainEntries.map((ex: any) => {
+        const fixturePoints = ex.stats.reduce((sum: number, s: any) => sum + (s.points || 0), 0);
+        return fixturePoints;
+      });
+      const perFixtureDisplay = perFixture.map((pts: number) => (pts * multiplier).toString()).join('+');
+      return `${displayPoints} (${perFixtureDisplay})`;
+    }
     
     const currentFixture = getCurrentGameweekFixture(teamId);
     
