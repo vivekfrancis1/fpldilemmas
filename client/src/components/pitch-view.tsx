@@ -83,7 +83,7 @@ function getPointsDisplay(player: PitchPlayer): string {
     }
     return '-';
   }
-  const points = (player.event_points || 0) * (player.is_captain ? 2 : player.multiplier || 1);
+  const points = (player.event_points || 0) * (player.multiplier || 1);
   return points.toString();
 }
 

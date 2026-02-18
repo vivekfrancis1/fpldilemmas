@@ -395,6 +395,8 @@ export default function Top25ManagerTeam() {
   const pitchPlayers: PitchPlayer[] = startingEleven.map(pick => {
     const playerData = getPlayerData(pick.element);
     const teamData = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    const pts = pick.event_points || 0;
+    const mult = pick.multiplier || 1;
     
     return {
       element: pick.element,
@@ -410,6 +412,7 @@ export default function Top25ManagerTeam() {
       team_id: playerData?.team,
       team_code: teamData?.code,
       event_points: pick.event_points,
+      points_display: (pts * mult).toString(),
       in_dreamteam: playerData?.in_dreamteam || false,
       fixtures: getCurrentGWFixtures(playerData?.team),
       status: playerData?.status,
