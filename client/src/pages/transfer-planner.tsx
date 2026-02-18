@@ -2752,30 +2752,28 @@ export default function TransferPlanner() {
     const wasCaptain = temp.is_captain;
     const wasViceCaptain = temp.is_vice_captain;
     
+    const isTC = selectedGameweek ? plannedChips[selectedGameweek] === '3xc' : false;
+    const capMultiplier = isTC ? 3 : 2;
+    
     if (wasCaptain) {
       // Starting player was captain - current vice captain becomes captain, new player becomes vice captain
       const currentViceCaptain = newLineup.find(p => p.is_vice_captain);
       
       newLineup.forEach((pick, index) => {
         if (index === startingIndex) {
-          // New starting player becomes vice captain
-          newLineup[index] = { ...pick, is_vice_captain: true, is_captain: false };
+          newLineup[index] = { ...pick, is_vice_captain: true, is_captain: false, multiplier: 1 };
         } else if (currentViceCaptain && pick.element === currentViceCaptain.element) {
-          // Current vice captain becomes captain
-          newLineup[index] = { ...pick, is_captain: true, is_vice_captain: false };
+          newLineup[index] = { ...pick, is_captain: true, is_vice_captain: false, multiplier: capMultiplier };
         } else if (index === 11 + benchIndex) {
-          // Player going to bench loses captain status
-          newLineup[index] = { ...pick, is_captain: false, is_vice_captain: false };
+          newLineup[index] = { ...pick, is_captain: false, is_vice_captain: false, multiplier: 0 };
         }
       });
     } else if (wasViceCaptain) {
-      // Starting player was vice captain - new player becomes vice captain
-      newLineup[startingIndex] = { ...newLineup[startingIndex], is_vice_captain: true, is_captain: false };
-      newLineup[11 + benchIndex] = { ...newLineup[11 + benchIndex], is_vice_captain: false, is_captain: false };
+      newLineup[startingIndex] = { ...newLineup[startingIndex], is_vice_captain: true, is_captain: false, multiplier: 1 };
+      newLineup[11 + benchIndex] = { ...newLineup[11 + benchIndex], is_vice_captain: false, is_captain: false, multiplier: 0 };
     } else {
-      // Regular swap - preserve captain/vice captain flags
-      newLineup[startingIndex] = { ...newLineup[startingIndex], is_captain: false, is_vice_captain: false };
-      newLineup[11 + benchIndex] = { ...newLineup[11 + benchIndex], is_captain: false, is_vice_captain: false };
+      newLineup[startingIndex] = { ...newLineup[startingIndex], is_captain: false, is_vice_captain: false, multiplier: 1 };
+      newLineup[11 + benchIndex] = { ...newLineup[11 + benchIndex], is_captain: false, is_vice_captain: false, multiplier: 0 };
     }
     
     setManualLineup(newLineup);
@@ -2946,7 +2944,7 @@ export default function TransferPlanner() {
       squadByPosition[pos as keyof typeof squadByPosition].sort((a: any, b: any) => b.projectedPoints - a.projectedPoints);
     });
 
-    // Select best starting 11 using valid FPL formations
+    // Select best starting 11 using valid FPL formations (min 3 DEF, 2 MID, 1 FWD)
     const formations = [
       { def: 3, mid: 5, fwd: 2, name: '3-5-2' },
       { def: 3, mid: 4, fwd: 3, name: '3-4-3' },
@@ -2954,7 +2952,8 @@ export default function TransferPlanner() {
       { def: 4, mid: 4, fwd: 2, name: '4-4-2' },
       { def: 4, mid: 3, fwd: 3, name: '4-3-3' },
       { def: 5, mid: 4, fwd: 1, name: '5-4-1' },
-      { def: 5, mid: 3, fwd: 2, name: '5-3-2' }
+      { def: 5, mid: 3, fwd: 2, name: '5-3-2' },
+      { def: 5, mid: 2, fwd: 3, name: '5-2-3' }
     ];
 
     let bestFormation = null;
@@ -3024,18 +3023,21 @@ export default function TransferPlanner() {
         position: 12 + index,
         is_captain: false,
         is_vice_captain: false,
-        multiplier: 1
+        multiplier: 0
       }))
     ];
 
     // Set captain (highest projected points in starting 11)
+    const isTripleCaptainActive = selectedGameweek ? plannedChips[selectedGameweek] === '3xc' : false;
+    const captainMultiplier = isTripleCaptainActive ? 3 : 2;
+    
     const sortedByPoints = bestStarting11
       .map((pick: any, index) => ({ pick, index, points: pick.projectedPoints || 0 }))
       .sort((a, b) => b.points - a.points);
 
     if (sortedByPoints.length > 0) {
       optimizedLineup[sortedByPoints[0].index].is_captain = true;
-      optimizedLineup[sortedByPoints[0].index].multiplier = 2;
+      optimizedLineup[sortedByPoints[0].index].multiplier = captainMultiplier;
     }
 
     if (sortedByPoints.length > 1) {
@@ -3401,14 +3403,16 @@ export default function TransferPlanner() {
           const currentCaptain = prev.find(p => p.is_captain);
           const currentViceCaptain = prev.find(p => p.is_vice_captain);
           const newCaptainIsCurrentViceCaptain = currentViceCaptain?.element === playerId;
+          const isTC = selectedGameweek ? plannedChips[selectedGameweek] === '3xc' : false;
+          const capMultiplier = isTC ? 3 : 2;
           
           return prev.map(pick => {
             if (pick.element === playerId) {
-              return { ...pick, is_captain: true, is_vice_captain: false };
+              return { ...pick, is_captain: true, is_vice_captain: false, multiplier: capMultiplier };
             } else if (newCaptainIsCurrentViceCaptain && pick.element === currentCaptain?.element) {
-              return { ...pick, is_captain: false, is_vice_captain: true };
+              return { ...pick, is_captain: false, is_vice_captain: true, multiplier: 1 };
             } else if (pick.is_captain) {
-              return { ...pick, is_captain: false };
+              return { ...pick, is_captain: false, multiplier: 1 };
             } else {
               return pick;
             }
@@ -3435,13 +3439,16 @@ export default function TransferPlanner() {
       const currentViceCaptain = manualLineup.find(p => p.is_vice_captain);
       const newCaptainIsCurrentViceCaptain = currentViceCaptain?.element === playerId;
       
+      const isTC = selectedGameweek ? plannedChips[selectedGameweek] === '3xc' : false;
+      const capMultiplier = isTC ? 3 : 2;
+      
       const newLineup = manualLineup.map(pick => {
         if (pick.element === playerId) {
-          return { ...pick, is_captain: true, is_vice_captain: false };
+          return { ...pick, is_captain: true, is_vice_captain: false, multiplier: capMultiplier };
         } else if (newCaptainIsCurrentViceCaptain && pick.element === currentCaptain?.element) {
-          return { ...pick, is_captain: false, is_vice_captain: true };
+          return { ...pick, is_captain: false, is_vice_captain: true, multiplier: 1 };
         } else if (pick.is_captain) {
-          return { ...pick, is_captain: false };
+          return { ...pick, is_captain: false, multiplier: 1 };
         } else {
           return pick;
         }
@@ -3512,12 +3519,14 @@ export default function TransferPlanner() {
           const currentCaptain = prev.find(p => p.is_captain);
           const currentViceCaptain = prev.find(p => p.is_vice_captain);
           const newViceCaptainIsCurrentCaptain = currentCaptain?.element === playerId;
+          const isTC = selectedGameweek ? plannedChips[selectedGameweek] === '3xc' : false;
+          const capMultiplier = isTC ? 3 : 2;
           
           return prev.map(pick => {
             if (pick.element === playerId) {
-              return { ...pick, is_vice_captain: true, is_captain: false };
+              return { ...pick, is_vice_captain: true, is_captain: false, multiplier: 1 };
             } else if (newViceCaptainIsCurrentCaptain && pick.element === currentViceCaptain?.element) {
-              return { ...pick, is_vice_captain: false, is_captain: true };
+              return { ...pick, is_vice_captain: false, is_captain: true, multiplier: capMultiplier };
             } else if (pick.is_vice_captain) {
               return { ...pick, is_vice_captain: false };
             } else {
@@ -3546,11 +3555,14 @@ export default function TransferPlanner() {
       const currentViceCaptain = manualLineup.find(p => p.is_vice_captain);
       const newViceCaptainIsCurrentCaptain = currentCaptain?.element === playerId;
       
+      const isTC = selectedGameweek ? plannedChips[selectedGameweek] === '3xc' : false;
+      const capMultiplier = isTC ? 3 : 2;
+      
       const newLineup = manualLineup.map(pick => {
         if (pick.element === playerId) {
-          return { ...pick, is_vice_captain: true, is_captain: false };
+          return { ...pick, is_vice_captain: true, is_captain: false, multiplier: 1 };
         } else if (newViceCaptainIsCurrentCaptain && pick.element === currentViceCaptain?.element) {
-          return { ...pick, is_vice_captain: false, is_captain: true };
+          return { ...pick, is_vice_captain: false, is_captain: true, multiplier: capMultiplier };
         } else if (pick.is_vice_captain) {
           return { ...pick, is_vice_captain: false };
         } else {
@@ -5808,15 +5820,12 @@ export default function TransferPlanner() {
                 <div className="text-xl sm:text-2xl font-bold text-green-600">
                   {(() => {
                     const isBenchBoostActive = plannedChips[selectedGameweek] === 'bboost';
-                    const isTripleCaptainActive = plannedChips[selectedGameweek] === '3xc';
-                    const captainMultiplier = isTripleCaptainActive ? 3 : 2;
                     let total = 0;
                     const activePlayers = isBenchBoostActive ? manualLineup : manualLineup.slice(0, 11);
                     activePlayers.forEach((pick: TeamPick) => {
                       const points = getPlayerProjectedPoints(pick.element);
                       if (points !== null) {
-                        const multiplier = pick.is_captain ? captainMultiplier : 1;
-                        total += points * multiplier;
+                        total += points * (pick.multiplier || 1);
                       }
                     });
                     return total.toFixed(1);
@@ -5885,13 +5894,7 @@ export default function TransferPlanner() {
                         const playerData = playerProjections6GW.find((p: any) => p.playerId === pick.element);
                         const gwPoints = playerData?.gameweekProjections?.[gw.toString()] || 0;
                         
-                        // Apply captain multiplier for each gameweek (not just selected GW)
-                        let multiplier = 1;
-                        if (pick.is_captain) {
-                          multiplier = isTripleCaptainActive ? 3 : 2;
-                        }
-                        
-                        grandTotal += gwPoints * multiplier;
+                        grandTotal += gwPoints * (pick.multiplier || 1);
                       });
                     });
                     
@@ -6199,7 +6202,7 @@ export default function TransferPlanner() {
                       is_selected: selectedPlayer === pick.element,
                       is_empty_slot: isEmptySlot,
                       points_display: pick.is_captain && projectedPoints !== null
-                        ? `${(projectedPoints * 2).toFixed(1)} (${projectedPoints.toFixed(1)})`
+                        ? `${(projectedPoints * (pick.multiplier > 1 ? pick.multiplier : 2)).toFixed(1)} (${projectedPoints.toFixed(1)})`
                         : projectedPoints !== null ? projectedPoints.toFixed(1) : '-',
                       fixtures: playerFixtures as PitchPlayerFixture[],
                       status: player.status,
@@ -6294,14 +6297,11 @@ export default function TransferPlanner() {
                     <span className="text-2xl font-bold text-blue-600">
                       {(() => {
                         const isBenchBoostActive = selectedGameweek ? plannedChips[selectedGameweek] === 'bboost' : false;
-                        const isTripleCaptainActive = selectedGameweek ? plannedChips[selectedGameweek] === '3xc' : false;
-                        const captainMultiplier = isTripleCaptainActive ? 3 : 2;
                         const activePlayers = isBenchBoostActive ? manualLineup : manualLineup.slice(0, 11);
                         return activePlayers
                           .reduce((total, pick) => {
                             const projectedPoints = getPlayerProjectedPoints(pick.element);
-                            const multiplier = pick.is_captain ? captainMultiplier : 1;
-                            return total + (projectedPoints || 0) * multiplier;
+                            return total + (projectedPoints || 0) * (pick.multiplier || 1);
                           }, 0)
                           .toFixed(1);
                       })()}
