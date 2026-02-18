@@ -1858,6 +1858,7 @@ export default function MyDashboard() {
                       <PitchView 
                         players={gwPointsPitchPlayers}
                         benchPlayers={gwPointsBenchPlayers}
+                        activeChip={teamData.active_chip}
                         onPlayerClick={(player) => {
                           const fullPlayer = getPlayerById(player.element);
                           if (fullPlayer) handlePlayerCardClick(fullPlayer, player.is_captain, player.multiplier || 1);
@@ -2429,6 +2430,7 @@ export default function MyDashboard() {
 
                       <div className="mt-6">
                         <PitchView
+                          activeChip={nextTeamData.active_chip}
                           players={(optimisedPicks || nextTeamData.picks).filter(pick => pick.position <= 11).map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;

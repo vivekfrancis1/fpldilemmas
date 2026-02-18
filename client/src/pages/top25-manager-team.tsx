@@ -797,6 +797,7 @@ export default function Top25ManagerTeam() {
                           benchPlayers={benchPlayers}
                           getNextFixtures={getNextFixtures}
                           showFixtures={true}
+                          activeChip={teamData?.active_chip}
                           onPlayerClick={(player) => handlePlayerCardClick(player, player.is_captain)}
                         />
                       </CardContent>

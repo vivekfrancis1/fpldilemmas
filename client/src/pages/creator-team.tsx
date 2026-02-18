@@ -749,6 +749,7 @@ export default function CreatorTeam() {
                           benchPlayers={benchPlayers}
                           getNextFixtures={getNextFixtures}
                           showFixtures={true}
+                          activeChip={teamData?.active_chip}
                           onPlayerClick={(player) => handlePlayerCardClick(player, player.is_captain)}
                         />
                       </CardContent>

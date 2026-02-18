@@ -61,8 +61,24 @@ export interface PitchViewProps {
   showTeamName?: boolean;
   showOpponent?: boolean;
   isBench?: boolean;
+  activeChip?: string | null;
   onPlayerClick?: (player: PitchPlayer) => void;
   renderEmptySlot?: (player: PitchPlayer) => JSX.Element | null;
+}
+
+function getChipDisplayInfo(chip: string): { label: string; bg: string; text: string } | null {
+  switch (chip.toLowerCase()) {
+    case '3xc':
+      return { label: 'Triple Captain', bg: 'bg-yellow-500', text: 'text-yellow-900' };
+    case 'bboost':
+      return { label: 'Bench Boost', bg: 'bg-blue-500', text: 'text-white' };
+    case 'freehit':
+      return { label: 'Free Hit', bg: 'bg-emerald-500', text: 'text-white' };
+    case 'wildcard':
+      return { label: 'Wildcard', bg: 'bg-purple-500', text: 'text-white' };
+    default:
+      return null;
+  }
 }
 
 function getJerseyImageUrl(teamCode: number, isGoalkeeper: boolean = false): string {
@@ -168,11 +184,15 @@ function PlayerCard({
   return (
     <div className={`flex flex-col items-center ${isBench ? 'w-[19.5%]' : 'w-[19%]'} ${isBench ? 'opacity-90' : ''}`}>
       <div className="relative flex flex-col items-center">
-        {player.is_captain && (
+        {player.is_captain && (player.multiplier || 2) >= 3 ? (
+          <div className="absolute top-1 left-1 z-10 w-5 h-5 sm:w-6 sm:h-6 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full flex items-center justify-center border-2 border-white shadow-lg">
+            <span className="text-[7px] sm:text-[9px] font-extrabold text-yellow-900">TC</span>
+          </div>
+        ) : player.is_captain ? (
           <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full flex items-center justify-center border border-white shadow-md">
             <span className="text-[8px] sm:text-[10px] font-bold text-yellow-800">C</span>
           </div>
-        )}
+        ) : null}
         {player.is_vice_captain && !player.is_captain && (
           <div className="absolute top-1 left-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-blue-200 rounded-full flex items-center justify-center border border-white shadow-md">
             <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
@@ -265,11 +285,13 @@ export function PitchView({
   benchPlayers = [], 
   showTeamName = false,
   showOpponent = false,
+  activeChip,
   onPlayerClick,
   renderEmptySlot,
 }: PitchViewProps) {
   const sortedPlayers = sortPlayersByPosition(players);
   const sortedBench = benchPlayers;
+  const chipInfo = activeChip ? getChipDisplayInfo(activeChip) : null;
 
   const renderPlayer = (player: PitchPlayer, isGoalkeeper: boolean = false, isBench: boolean = false) => {
     if (player.is_empty_slot && renderEmptySlot) {
@@ -291,6 +313,11 @@ export function PitchView({
   return (
     <div className="space-y-0 sm:space-y-4 h-full">
       <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-lg p-3 sm:p-4 md:p-6 overflow-hidden h-full flex flex-col justify-center">
+        {chipInfo && (
+          <div className={`absolute top-2 left-1/2 -translate-x-1/2 z-20 ${chipInfo.bg} ${chipInfo.text} px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold shadow-lg border border-white/30`}>
+            {chipInfo.label} Active
+          </div>
+        )}
         <div className="absolute inset-0 opacity-30 pointer-events-none">
           <div className="absolute top-1/2 left-0 w-full h-px bg-white"></div>
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-full bg-white"></div>

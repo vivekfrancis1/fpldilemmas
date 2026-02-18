@@ -880,6 +880,7 @@ export default function ManagerTeam() {
                           benchPlayers={benchPlayers}
                           getNextFixtures={getNextFixtures}
                           showFixtures={false}
+                          activeChip={teamData?.active_chip}
                           onPlayerClick={(player) => handlePlayerCardClick(player, player.is_captain)}
                         />
                       </CardContent>
