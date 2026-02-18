@@ -1069,12 +1069,12 @@ export default function Top25ManagerTeam() {
                               <TableCell className="font-medium">{entry.total_points}</TableCell>
                               <TableCell>
                                 <div className="flex items-center space-x-2">
-                                  <span className="font-mono">#{entry.overall_rank.toLocaleString()}</span>
+                                  <span className="font-mono">{entry.overall_rank.toLocaleString()}</span>
                                   {rankChange !== null && getRankChangeDisplay(rankChange)}
                                 </div>
                               </TableCell>
                               <TableCell className="font-mono">
-                                {entry.rank ? `#${entry.rank.toLocaleString()}` : 'N/A'}
+                                {entry.rank ? entry.rank.toLocaleString() : 'N/A'}
                               </TableCell>
                               <TableCell className="font-mono">£{((entry.value - (entry.bank || 0)) / 10).toFixed(1)}m</TableCell>
                               <TableCell className="font-mono">£{((entry.bank || 0) / 10).toFixed(1)}m</TableCell>
