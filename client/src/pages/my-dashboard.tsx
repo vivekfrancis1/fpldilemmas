@@ -1933,14 +1933,14 @@ export default function MyDashboard() {
                               </div>
                               <div>
                                 <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points{optimisedPicks ? ' (Optimised)' : ''}</p>
-                                <p className="text-2xl sm:text-3xl font-bold text-purple-900">{totalStartingXPts.toFixed(1)}</p>
+                                <p className="text-2xl sm:text-3xl font-bold text-purple-900">{totalStartingXPts.toFixed(2)}</p>
                               </div>
                             </div>
                             <div className="text-right space-y-1.5">
                               {activeChipVal === 'bboost' ? (
                                 <p className="text-xs text-purple-600">Incl. bench (BB)</p>
                               ) : (
-                                <p className="text-xs text-purple-600">Bench: {totalBenchXPts.toFixed(1)}</p>
+                                <p className="text-xs text-purple-600">Bench: {totalBenchXPts.toFixed(2)}</p>
                               )}
                               <div className="flex gap-1.5 justify-end">
                                 {optimisedPicks ? (
@@ -2000,7 +2000,7 @@ export default function MyDashboard() {
                               team_short_name: playerTeam?.short_name,
                               team_id: player.team,
                               team_code: playerTeam?.code || playerTeam?.id || 0,
-                              points_display: projected > 0 ? projected.toFixed(1) : '-',
+                              points_display: projected > 0 ? projected.toFixed(2) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
                               status: player.status,
                               chance_of_playing: player.chance_of_playing_next_round,
@@ -2024,7 +2024,7 @@ export default function MyDashboard() {
                               team_short_name: playerTeam?.short_name,
                               team_id: player.team,
                               team_code: playerTeam?.code || playerTeam?.id || 0,
-                              points_display: projected > 0 ? projected.toFixed(1) : '-',
+                              points_display: projected > 0 ? projected.toFixed(2) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
                               status: player.status,
                               chance_of_playing: player.chance_of_playing_next_round,
@@ -2197,7 +2197,7 @@ export default function MyDashboard() {
                                 <div>
                                   <p className="text-xs sm:text-sm font-medium text-purple-700">GW {nextGW} Team Projected Points{optimisedPicks ? ' (Optimised)' : ''}</p>
                                   <div className="flex items-baseline gap-2">
-                                    <p className="text-2xl sm:text-3xl font-bold text-purple-900">{netXPts.toFixed(1)}</p>
+                                    <p className="text-2xl sm:text-3xl font-bold text-purple-900">{netXPts.toFixed(2)}</p>
                                     {hitCost > 0 && (
                                       <span className="text-sm text-red-600 font-medium">(-{hitCost} hit)</span>
                                     )}
@@ -2208,7 +2208,7 @@ export default function MyDashboard() {
                                 {activeChipVal === 'bboost' ? (
                                   <p className="text-xs text-purple-600">Incl. bench (BB)</p>
                                 ) : (
-                                  <p className="text-xs text-purple-600">Bench: {totalBenchXPts.toFixed(1)}</p>
+                                  <p className="text-xs text-purple-600">Bench: {totalBenchXPts.toFixed(2)}</p>
                                 )}
                                 <div className="flex gap-1.5 justify-end items-center">
                                   {activeChipVal && activeChipVal !== 'bboost' && (
@@ -2444,7 +2444,7 @@ export default function MyDashboard() {
                               team_short_name: playerTeam?.short_name,
                               team_id: player.team,
                               team_code: playerTeam?.code || playerTeam?.id || 0,
-                              points_display: projected > 0 ? projected.toFixed(1) : '-',
+                              points_display: projected > 0 ? projected.toFixed(2) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
                               status: player.status,
                               chance_of_playing: player.chance_of_playing_next_round,
@@ -2468,7 +2468,7 @@ export default function MyDashboard() {
                               team_short_name: playerTeam?.short_name,
                               team_id: player.team,
                               team_code: playerTeam?.code || playerTeam?.id || 0,
-                              points_display: projected > 0 ? projected.toFixed(1) : '-',
+                              points_display: projected > 0 ? projected.toFixed(2) : '-',
                               fixtures: fixtureInfos as PitchPlayerFixture[],
                               status: player.status,
                               chance_of_playing: player.chance_of_playing_next_round,

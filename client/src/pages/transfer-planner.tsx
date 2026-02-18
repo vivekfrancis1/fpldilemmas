@@ -741,7 +741,7 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                       return (
                         <td key={gw} className={`py-1 px-1 md:p-2 text-center ${bgColor} ${colCls}`}>
                           <span className={`${textColor} font-medium`}>
-                            {gwPoints.toFixed(1)}
+                            {gwPoints.toFixed(2)}
                           </span>
                         </td>
                       );
@@ -759,10 +759,10 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
                         return (
                           <>
                             <span className="font-bold text-green-600 lg:hidden">
-                              {first4GWTotal.toFixed(1)}
+                              {first4GWTotal.toFixed(2)}
                             </span>
                             <span className="font-bold text-green-600 hidden lg:inline">
-                              {total6GW.toFixed(1)}
+                              {total6GW.toFixed(2)}
                             </span>
                           </>
                         );
@@ -3082,7 +3082,7 @@ export default function TransferPlanner() {
     
     toast({
       title: "Team Optimized!",
-      description: `${formationName} formation selected. Captain: ${captainPlayer?.web_name || 'TBD'}. ${(bestPoints + (sortedByPoints[0]?.points || 0)).toFixed(1)} projected pts.`
+      description: `${formationName} formation selected. Captain: ${captainPlayer?.web_name || 'TBD'}. ${(bestPoints + (sortedByPoints[0]?.points || 0)).toFixed(2)} projected pts.`
     });
 
     // Save optimized lineup to state and immediately persist to database
@@ -4401,7 +4401,7 @@ export default function TransferPlanner() {
           await loadDrafts();
           toast({
             title: "Draft Created & Transfers Applied",
-            description: `Draft ${newDraftLetter}: ${newCompletedTransfers.length} transfer${newCompletedTransfers.length > 1 ? 's' : ''} (+${totalPoints.toFixed(1)} pts)`,
+            description: `Draft ${newDraftLetter}: ${newCompletedTransfers.length} transfer${newCompletedTransfers.length > 1 ? 's' : ''} (+${totalPoints.toFixed(2)} pts)`,
           });
         }
       } catch (error) {
@@ -4412,7 +4412,7 @@ export default function TransferPlanner() {
       await saveCurrentDraft(updatedGameweekTransfers, activeDraft, true);
       toast({
         title: `${newCompletedTransfers.length} Transfer${newCompletedTransfers.length > 1 ? 's' : ''} Applied`,
-        description: `${transferSummary} (+${totalPoints.toFixed(1)} pts)`,
+        description: `${transferSummary} (+${totalPoints.toFixed(2)} pts)`,
       });
     }
   };
@@ -5843,7 +5843,7 @@ export default function TransferPlanner() {
                         total += points * (pick.multiplier || 1);
                       }
                     });
-                    return total.toFixed(1);
+                    return total.toFixed(2);
                   })()}
                 </div>
               </div>
@@ -5913,7 +5913,7 @@ export default function TransferPlanner() {
                       });
                     });
                     
-                    return grandTotal.toFixed(1);
+                    return grandTotal.toFixed(2);
                   })()}
                 </div>
               </div>
@@ -6183,7 +6183,7 @@ export default function TransferPlanner() {
                       <p key={idx}>
                         {rec.playerOut?.webName} → {rec.playerIn?.webName} 
                         <span className="text-green-600 font-semibold ml-1">
-                          (+{rec.pointsGain?.toFixed(1) || '0.0'} pts)
+                          (+{rec.pointsGain?.toFixed(2) || '0.00'} pts)
                         </span>
                       </p>
                     ))}
@@ -6217,8 +6217,8 @@ export default function TransferPlanner() {
                       is_selected: selectedPlayer === pick.element,
                       is_empty_slot: isEmptySlot,
                       points_display: pick.is_captain && projectedPoints !== null
-                        ? `${(projectedPoints * (pick.multiplier > 1 ? pick.multiplier : 2)).toFixed(1)} (${projectedPoints.toFixed(1)})`
-                        : projectedPoints !== null ? projectedPoints.toFixed(1) : '-',
+                        ? `${(projectedPoints * (pick.multiplier > 1 ? pick.multiplier : 2)).toFixed(2)} (${projectedPoints.toFixed(2)})`
+                        : projectedPoints !== null ? projectedPoints.toFixed(2) : '-',
                       fixtures: playerFixtures as PitchPlayerFixture[],
                       status: player.status,
                       chance_of_playing: player.chance_of_playing_next_round,
@@ -6258,7 +6258,7 @@ export default function TransferPlanner() {
                         is_transferred_in: isPlayerTransferredIn(pick),
                         is_selected: selectedPlayer === pick.element,
                         is_empty_slot: isEmptySlot,
-                        points_display: projectedPoints !== null ? projectedPoints.toFixed(1) : '-',
+                        points_display: projectedPoints !== null ? projectedPoints.toFixed(2) : '-',
                         fixtures: benchFixtures as PitchPlayerFixture[],
                         status: player.status,
                         chance_of_playing: player.chance_of_playing_next_round,
@@ -6318,7 +6318,7 @@ export default function TransferPlanner() {
                             const projectedPoints = getPlayerProjectedPoints(pick.element);
                             return total + (projectedPoints || 0) * (pick.multiplier || 1);
                           }, 0)
-                          .toFixed(1);
+                          .toFixed(2);
                       })()}
                     </span>
                   </div>
@@ -6822,7 +6822,7 @@ export default function TransferPlanner() {
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <span className="cursor-help underline decoration-dotted">
-                                            {row.gameweeks[gw.id]?.toFixed(1) || '0.0'}
+                                            {row.gameweeks[gw.id]?.toFixed(2) || '0.00'}
                                           </span>
                                         </TooltipTrigger>
                                         <TooltipContent className="max-w-xs">
@@ -6840,7 +6840,7 @@ export default function TransferPlanner() {
                                       </Tooltip>
                                     </TooltipProvider>
                                   ) : (
-                                    <span>{row.gameweeks[gw.id]?.toFixed(1) || '0.0'}</span>
+                                    <span>{row.gameweeks[gw.id]?.toFixed(2) || '0.00'}</span>
                                   )}
                                   {plannedChip && (
                                     <TooltipProvider>
@@ -6870,7 +6870,7 @@ export default function TransferPlanner() {
                             className="text-center p-2 font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/20"
                             data-testid={`cell-${row.draftKey}-total`}
                           >
-                            {row.total.toFixed(1)}
+                            {row.total.toFixed(2)}
                           </td>
                         </tr>
                         );
