@@ -262,17 +262,13 @@ export default function Top25ManagerTeam() {
     staleTime: 60000,
   });
 
-  // Function to get completed gameweeks
   const getCompletedGameweeks = () => {
     if (!bootstrapData?.events) return [];
-    
-    // Return all gameweeks that are finished
     return bootstrapData.events
-      .filter((event: any) => event.finished)
+      .filter((event: any) => event.finished || event.is_current)
       .map((event: any) => event.id);
   };
 
-  // Filter manager history to only show completed gameweeks
   const filteredManagerHistory = managerHistory?.current?.filter((gw: HistoryEntry) => {
     const completedGameweeks = getCompletedGameweeks();
     return completedGameweeks.includes(gw.event);
