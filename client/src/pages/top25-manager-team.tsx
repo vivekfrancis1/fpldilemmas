@@ -1047,8 +1047,15 @@ export default function Top25ManagerTeam() {
                             const rankChange = prevEntry ? prevEntry.overall_rank - entry.overall_rank : null;
                           
                           return (
-                            <TableRow key={entry.event}>
-                              <TableCell className="font-medium">{entry.event}</TableCell>
+                            <TableRow key={entry.event} className={bootstrapData?.events?.find((e: any) => e.id === entry.event)?.is_current ? 'bg-amber-50/50' : ''}>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-1.5">
+                                  {entry.event}
+                                  {bootstrapData?.events?.find((e: any) => e.id === entry.event)?.is_current && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full">LIVE</span>
+                                  )}
+                                </div>
+                              </TableCell>
                               <TableCell>
                                 <div className="flex items-center">
                                   {entry.points}
