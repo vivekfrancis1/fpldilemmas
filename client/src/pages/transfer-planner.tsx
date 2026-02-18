@@ -5819,7 +5819,7 @@ export default function TransferPlanner() {
                         total += points * multiplier;
                       }
                     });
-                    return total.toFixed(2);
+                    return total.toFixed(1);
                   })()}
                 </div>
               </div>
@@ -5895,7 +5895,7 @@ export default function TransferPlanner() {
                       });
                     });
                     
-                    return grandTotal.toFixed(2);
+                    return grandTotal.toFixed(1);
                   })()}
                 </div>
               </div>
@@ -6292,14 +6292,19 @@ export default function TransferPlanner() {
                   <div className="flex justify-between items-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                     <span className="font-semibold">Total Projected Points (GW{selectedGameweek})</span>
                     <span className="text-2xl font-bold text-blue-600">
-                      {manualLineup
-                        .slice(0, 11)
-                        .reduce((total, pick) => {
-                          const projectedPoints = getPlayerProjectedPoints(pick.element);
-                          const multiplier = pick.is_captain ? 2 : 1;
-                          return total + (projectedPoints || 0) * multiplier;
-                        }, 0)
-                        .toFixed(2)}
+                      {(() => {
+                        const isBenchBoostActive = selectedGameweek ? plannedChips[selectedGameweek] === 'bboost' : false;
+                        const isTripleCaptainActive = selectedGameweek ? plannedChips[selectedGameweek] === '3xc' : false;
+                        const captainMultiplier = isTripleCaptainActive ? 3 : 2;
+                        const activePlayers = isBenchBoostActive ? manualLineup : manualLineup.slice(0, 11);
+                        return activePlayers
+                          .reduce((total, pick) => {
+                            const projectedPoints = getPlayerProjectedPoints(pick.element);
+                            const multiplier = pick.is_captain ? captainMultiplier : 1;
+                            return total + (projectedPoints || 0) * multiplier;
+                          }, 0)
+                          .toFixed(1);
+                      })()}
                     </span>
                   </div>
                 </div>
