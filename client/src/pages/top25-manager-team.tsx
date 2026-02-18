@@ -665,7 +665,7 @@ export default function Top25ManagerTeam() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-purple-700">
-                    #{teamData.entry_history.overall_rank?.toLocaleString()}
+                    {teamData.entry_history.overall_rank?.toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">Overall Rank</div>
                 </div>
@@ -721,7 +721,7 @@ export default function Top25ManagerTeam() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-2xl font-bold text-purple-700">
-                    #{teamData.general_info.summary_overall_rank?.toLocaleString()}
+                    {teamData.general_info.summary_overall_rank?.toLocaleString()}
                   </div>
                   <div className="text-sm text-muted-foreground">Overall Rank</div>
                 </div>
