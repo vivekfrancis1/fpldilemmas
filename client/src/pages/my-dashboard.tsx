@@ -1794,6 +1794,9 @@ export default function MyDashboard() {
                             const freeTransfers = transfersMade - (transferCost / 4);
                             return freeTransfers;
                           })()}
+                          {(teamData.entry_history?.event_transfers_cost || 0) > 0 && (
+                            <span className="text-red-600 text-xs sm:text-sm ml-1">(-{teamData.entry_history.event_transfers_cost}pts)</span>
+                          )}
                         </p>
                       </CardContent>
                     </Card>
