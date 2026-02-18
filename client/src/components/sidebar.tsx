@@ -55,7 +55,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/my-dashboard", label: "My Dashboard", icon: BarChart3, description: "Complete FPL overview" },
         { path: "/projected-points", label: "My Team Projected Points", icon: TrendingUp, description: "View projected points for your current team", popular: false, adminOnly: true },
         { path: "/team-optimizer", label: "Optimized Lineup", icon: Zap, description: "Auto-optimize your team lineup", popular: false, adminOnly: true },
-        { path: "/transfer-recommendations", label: "Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false },
+        { path: "/transfer-recommendations", label: "AI Recommended Transfers", icon: ArrowRightLeft, description: "Get transfer suggestions to maximize points", popular: false },
         { path: "/transfer-planner", label: "Transfer Planner", icon: Target, description: "Plan your transfers and optimize your team", popular: false, mobileHidden: false }
       ]
     },
