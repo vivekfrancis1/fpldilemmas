@@ -295,63 +295,58 @@ export default function ManagerTeam() {
       liveStats: liveElement?.stats,
       explain: liveElement?.explain,
       isCaptain,
+      captainMultiplier: player.multiplier || (isCaptain ? 2 : 1),
     });
     setShowPointsBreakdown(true);
   };
 
-  const getPointsBreakdown = (player: any) => {
-    if (!player?.liveStats) return [];
-    
-    const stats = player.liveStats;
-    const breakdown: { label: string; value: number; points: number }[] = [];
-    
-    if (stats.minutes > 0) {
-      const minPoints = stats.minutes >= 60 ? 2 : stats.minutes > 0 ? 1 : 0;
-      breakdown.push({ label: 'Minutes played', value: stats.minutes, points: minPoints });
-    }
-    if (stats.goals_scored > 0) {
-      const posType = player.element_type;
-      const goalPoints = posType === 1 ? 6 : posType === 2 ? 6 : posType === 3 ? 5 : 4;
-      breakdown.push({ label: 'Goals scored', value: stats.goals_scored, points: stats.goals_scored * goalPoints });
-    }
-    if (stats.assists > 0) {
-      breakdown.push({ label: 'Assists', value: stats.assists, points: stats.assists * 3 });
-    }
-    if (stats.clean_sheets > 0 && (player.element_type === 1 || player.element_type === 2)) {
-      breakdown.push({ label: 'Clean Sheet', value: stats.clean_sheets, points: stats.clean_sheets * 4 });
-    } else if (stats.clean_sheets > 0 && player.element_type === 3) {
-      breakdown.push({ label: 'Clean Sheet', value: stats.clean_sheets, points: stats.clean_sheets * 1 });
-    }
-    if (stats.goals_conceded >= 2 && (player.element_type === 1 || player.element_type === 2)) {
-      const concededPoints = -Math.floor(stats.goals_conceded / 2);
-      breakdown.push({ label: 'Goals conceded', value: stats.goals_conceded, points: concededPoints });
-    }
-    if (stats.saves > 0) {
-      const savePoints = Math.floor(stats.saves / 3);
-      if (savePoints > 0) {
-        breakdown.push({ label: 'Saves', value: stats.saves, points: savePoints });
-      }
-    }
-    if (stats.penalties_saved > 0) {
-      breakdown.push({ label: 'Penalties saved', value: stats.penalties_saved, points: stats.penalties_saved * 5 });
-    }
-    if (stats.penalties_missed > 0) {
-      breakdown.push({ label: 'Penalties missed', value: stats.penalties_missed, points: stats.penalties_missed * -2 });
-    }
-    if (stats.yellow_cards > 0) {
-      breakdown.push({ label: 'Yellow cards', value: stats.yellow_cards, points: stats.yellow_cards * -1 });
-    }
-    if (stats.red_cards > 0) {
-      breakdown.push({ label: 'Red cards', value: stats.red_cards, points: stats.red_cards * -3 });
-    }
-    if (stats.own_goals > 0) {
-      breakdown.push({ label: 'Own goals', value: stats.own_goals, points: stats.own_goals * -2 });
-    }
-    if (stats.bonus > 0) {
-      breakdown.push({ label: 'Bonus', value: stats.bonus, points: stats.bonus });
-    }
-    
-    return breakdown;
+  const statIdentifierLabels: Record<string, string> = {
+    'minutes': 'Minutes played',
+    'goals_scored': 'Goals scored',
+    'assists': 'Assists',
+    'clean_sheets': 'Clean sheet',
+    'goals_conceded': 'Goals conceded',
+    'own_goals': 'Own goals',
+    'penalties_saved': 'Penalties saved',
+    'penalties_missed': 'Penalties missed',
+    'yellow_cards': 'Yellow cards',
+    'red_cards': 'Red cards',
+    'saves': 'Saves',
+    'bonus': 'Bonus',
+    'bps': 'Bonus points system',
+  };
+
+  const getFixtureMatchLabel = (fixtureId: number, playerTeamId: number): { label: string; isHome: boolean } => {
+    if (!Array.isArray(fixturesData) || !bootstrapData?.teams) return { label: `Fixture ${fixtureId}`, isHome: true };
+    const fixture = (fixturesData as any[]).find((f: any) => f.id === fixtureId);
+    if (!fixture) return { label: `Fixture ${fixtureId}`, isHome: true };
+    const homeTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_h);
+    const awayTeam = bootstrapData.teams.find((t: any) => t.id === fixture.team_a);
+    const isHome = fixture.team_h === playerTeamId;
+    const score = fixture.started ? `${fixture.team_h_score ?? 0}-${fixture.team_a_score ?? 0}` : '';
+    const matchText = homeTeam && awayTeam
+      ? `${homeTeam.short_name} ${score} ${awayTeam.short_name}`
+      : `Fixture ${fixtureId}`;
+    return { label: matchText, isHome };
+  };
+
+  const getPerFixtureBreakdown = (player: any) => {
+    const explainEntries = player?.explain;
+    if (!explainEntries || explainEntries.length === 0) return [];
+    return explainEntries.map((ex: any) => {
+      const fixtureId = ex.fixture;
+      const { label, isHome } = getFixtureMatchLabel(fixtureId, player.team);
+      const stats = (ex.stats || [])
+        .filter((s: any) => s.points !== 0)
+        .map((s: any) => ({
+          label: statIdentifierLabels[s.identifier] || s.identifier.replace(/_/g, ' '),
+          value: s.value,
+          points: s.points,
+          identifier: s.identifier,
+        }));
+      const totalPoints = (ex.stats || []).reduce((sum: number, s: any) => sum + (s.points || 0), 0);
+      return { fixtureId, matchLabel: label, isHome, stats, totalPoints };
+    });
   };
 
   // Helper function to get position short name
@@ -1209,7 +1204,9 @@ export default function ManagerTeam() {
                 </span>
               </div>
               {selectedPlayerForBreakdown?.isCaptain && (
-                <Badge className="bg-yellow-400 text-yellow-900 text-xs shrink-0">Captain (2x)</Badge>
+                <Badge className="bg-yellow-400 text-yellow-900 text-xs shrink-0">
+                  {(selectedPlayerForBreakdown.captainMultiplier || 2) === 3 ? 'Triple Captain (3x)' : 'Captain (2x)'}
+                </Badge>
               )}
             </DialogTitle>
           </DialogHeader>
@@ -1217,38 +1214,60 @@ export default function ManagerTeam() {
           <div className="space-y-3 sm:space-y-4">
             {selectedPlayerForBreakdown?.liveStats ? (
               <>
-                <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                  <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Points</p>
-                  <p className="text-3xl sm:text-4xl font-bold text-green-700">
-                    {(selectedPlayerForBreakdown.liveStats.total_points || 0) * (selectedPlayerForBreakdown.isCaptain ? 2 : 1)}
-                  </p>
-                  {selectedPlayerForBreakdown.isCaptain && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      ({selectedPlayerForBreakdown.liveStats.total_points} × 2 captain bonus)
-                    </p>
-                  )}
-                </div>
-                
-                <div className="space-y-1 sm:space-y-2">
-                  <h4 className="font-semibold text-xs sm:text-sm text-gray-700 border-b pb-1">Points Breakdown</h4>
-                  {getPointsBreakdown(selectedPlayerForBreakdown).length > 0 ? (
-                    <div className="space-y-0.5 sm:space-y-1">
-                      {getPointsBreakdown(selectedPlayerForBreakdown).map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-center py-2 sm:py-1.5 px-2 rounded hover:bg-gray-50 active:bg-gray-100 touch-manipulation">
-                          <div className="flex items-center gap-1.5 sm:gap-2">
-                            <span className="text-xs sm:text-sm text-gray-700">{item.label}</span>
-                            <span className="text-xs text-gray-400">({item.value})</span>
-                          </div>
-                          <span className={`font-semibold text-xs sm:text-sm ${item.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {item.points > 0 ? '+' : ''}{item.points}
-                          </span>
+                {(() => {
+                  const mult = selectedPlayerForBreakdown.captainMultiplier || (selectedPlayerForBreakdown.isCaptain ? 2 : 1);
+                  const basePoints = selectedPlayerForBreakdown.liveStats.total_points || 0;
+                  const totalPoints = basePoints * mult;
+                  const fixtureBreakdowns = getPerFixtureBreakdown(selectedPlayerForBreakdown);
+                  
+                  return (
+                    <>
+                      <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                        <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Points</p>
+                        <p className="text-3xl sm:text-4xl font-bold text-green-700">
+                          {totalPoints}
+                        </p>
+                        {mult > 1 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            ({basePoints} × {mult} {mult === 3 ? 'triple captain' : 'captain'} bonus)
+                          </p>
+                        )}
+                      </div>
+                      
+                      {fixtureBreakdowns.length > 0 ? (
+                        <div className="space-y-3">
+                          {fixtureBreakdowns.map((fb: any, fIdx: number) => (
+                            <div key={fIdx} className="space-y-1">
+                              <div className="flex justify-between items-center bg-gray-100 rounded-lg px-3 py-2">
+                                <span className="font-semibold text-xs sm:text-sm text-gray-800">{fb.matchLabel}</span>
+                                <span className="font-bold text-xs sm:text-sm text-green-700">{fb.totalPoints} pts</span>
+                              </div>
+                              {fb.stats.length > 0 ? (
+                                <div className="space-y-0.5 pl-2">
+                                  {fb.stats.filter((s: any) => s.identifier !== 'bps').map((item: any, idx: number) => (
+                                    <div key={idx} className="flex justify-between items-center py-1.5 sm:py-1 px-2 rounded hover:bg-gray-50 active:bg-gray-100 touch-manipulation">
+                                      <div className="flex items-center gap-1.5 sm:gap-2">
+                                        <span className="text-xs sm:text-sm text-gray-700">{item.label}</span>
+                                        <span className="text-xs text-gray-400">({item.value})</span>
+                                      </div>
+                                      <span className={`font-semibold text-xs sm:text-sm ${item.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        {item.points > 0 ? '+' : ''}{item.points}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-gray-400 text-center py-1">No points yet</p>
+                              )}
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs sm:text-sm text-gray-500 text-center py-2">No points yet</p>
-                  )}
-                </div>
+                      ) : (
+                        <p className="text-xs sm:text-sm text-gray-500 text-center py-2">No breakdown data available</p>
+                      )}
+                    </>
+                  );
+                })()}
               </>
             ) : (
               <div className="text-center py-6 sm:py-8 text-gray-500">
