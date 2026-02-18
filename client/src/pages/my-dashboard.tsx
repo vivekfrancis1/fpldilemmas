@@ -1039,18 +1039,6 @@ export default function MyDashboard() {
     const multiplier = captainMultiplier;
     const displayPoints = points * multiplier;
     
-    const liveElement = liveGameweekData?.elements?.find((e: any) => e.id === player.id);
-    const explainEntries = liveElement?.explain;
-    
-    if (explainEntries && explainEntries.length > 1) {
-      const perFixture = explainEntries.map((ex: any) => {
-        const fixturePoints = ex.stats.reduce((sum: number, s: any) => sum + (s.points || 0), 0);
-        return fixturePoints;
-      });
-      const perFixtureDisplay = perFixture.map((pts: number) => (pts * multiplier).toString()).join('+');
-      return `${displayPoints} (${perFixtureDisplay})`;
-    }
-    
     const currentFixture = getCurrentGameweekFixture(teamId);
     
     if (!currentFixture) return displayPoints.toString();
@@ -1066,13 +1054,14 @@ export default function MyDashboard() {
     return displayPoints.toString();
   };
 
-  const handlePlayerCardClick = (player: any, isCaptain: boolean = false) => {
+  const handlePlayerCardClick = (player: any, isCaptain: boolean = false, captainMultiplier: number = 1) => {
     const liveElement = liveGameweekData?.elements?.find((e: any) => e.id === player.id);
     setSelectedPlayerForBreakdown({
       ...player,
       liveStats: liveElement?.stats,
       explain: liveElement?.explain,
       isCaptain,
+      captainMultiplier,
     });
     setShowPointsBreakdown(true);
   };
@@ -1875,7 +1864,7 @@ export default function MyDashboard() {
                         benchPlayers={gwPointsBenchPlayers}
                         onPlayerClick={(player) => {
                           const fullPlayer = getPlayerById(player.element);
-                          if (fullPlayer) handlePlayerCardClick(fullPlayer, player.is_captain);
+                          if (fullPlayer) handlePlayerCardClick(fullPlayer, player.is_captain, player.multiplier || 1);
                         }}
                       />
                     );
@@ -3323,7 +3312,9 @@ export default function MyDashboard() {
                 </span>
               </div>
               {selectedPlayerForBreakdown?.isCaptain && (
-                <Badge className="bg-yellow-400 text-yellow-900 text-xs shrink-0">Captain (2x)</Badge>
+                <Badge className="bg-yellow-400 text-yellow-900 text-xs shrink-0">
+                  {(selectedPlayerForBreakdown.captainMultiplier || 2) === 3 ? 'Triple Captain (3x)' : 'Captain (2x)'}
+                </Badge>
               )}
             </DialogTitle>
           </DialogHeader>
@@ -3331,38 +3322,77 @@ export default function MyDashboard() {
           <div className="space-y-3 sm:space-y-4">
             {selectedPlayerForBreakdown?.liveStats ? (
               <>
-                <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                  <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Points</p>
-                  <p className="text-3xl sm:text-4xl font-bold text-green-700">
-                    {(selectedPlayerForBreakdown.liveStats.total_points || 0) * (selectedPlayerForBreakdown.isCaptain ? 2 : 1)}
-                  </p>
-                  {selectedPlayerForBreakdown.isCaptain && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      ({selectedPlayerForBreakdown.liveStats.total_points} × 2 captain bonus)
-                    </p>
-                  )}
-                </div>
-                
-                <div className="space-y-1 sm:space-y-2">
-                  <h4 className="font-semibold text-xs sm:text-sm text-gray-700 border-b pb-1">Points Breakdown</h4>
-                  {getPointsBreakdown(selectedPlayerForBreakdown).length > 0 ? (
-                    <div className="space-y-0.5 sm:space-y-1">
-                      {getPointsBreakdown(selectedPlayerForBreakdown).map((item, idx) => (
-                        <div key={idx} className="flex justify-between items-center py-2 sm:py-1.5 px-2 rounded hover:bg-gray-50 active:bg-gray-100 touch-manipulation">
-                          <div className="flex items-center gap-1.5 sm:gap-2">
-                            <span className="text-xs sm:text-sm text-gray-700">{item.label}</span>
-                            <span className="text-xs text-gray-400">({item.value})</span>
+                {(() => {
+                  const mult = selectedPlayerForBreakdown.captainMultiplier || (selectedPlayerForBreakdown.isCaptain ? 2 : 1);
+                  const basePoints = selectedPlayerForBreakdown.liveStats.total_points || 0;
+                  const totalPoints = basePoints * mult;
+                  const explainEntries = selectedPlayerForBreakdown.explain;
+                  const isDGW = explainEntries && explainEntries.length > 1;
+                  
+                  return (
+                    <>
+                      <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                        <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Points</p>
+                        <p className="text-3xl sm:text-4xl font-bold text-green-700">
+                          {totalPoints}
+                        </p>
+                        {mult > 1 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            ({basePoints} × {mult} {mult === 3 ? 'triple captain' : 'captain'} bonus)
+                          </p>
+                        )}
+                      </div>
+                      
+                      {isDGW && (
+                        <div className="space-y-1 sm:space-y-2">
+                          <h4 className="font-semibold text-xs sm:text-sm text-gray-700 border-b pb-1">Per-Fixture Points</h4>
+                          <div className="space-y-0.5 sm:space-y-1">
+                            {explainEntries.map((ex: any, fIdx: number) => {
+                              const fixtureBasePoints = ex.stats.reduce((sum: number, s: any) => sum + (s.points || 0), 0);
+                              const fixtureId = ex.fixture;
+                              const fixture = Array.isArray(fixturesData) ? 
+                                (fixturesData as any[]).find((f: any) => f.id === fixtureId) : null;
+                              const homeTeam = bootstrapData?.teams?.find((t: any) => t.id === fixture?.team_h);
+                              const awayTeam = bootstrapData?.teams?.find((t: any) => t.id === fixture?.team_a);
+                              const matchLabel = homeTeam && awayTeam 
+                                ? `${homeTeam.short_name} vs ${awayTeam.short_name}` 
+                                : `Match ${fIdx + 1}`;
+                              return (
+                                <div key={fIdx} className="flex justify-between items-center py-2 sm:py-1.5 px-2 rounded hover:bg-gray-50">
+                                  <span className="text-xs sm:text-sm text-gray-700">{matchLabel}</span>
+                                  <span className="font-semibold text-xs sm:text-sm text-green-600">
+                                    {fixtureBasePoints} pts
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
-                          <span className={`font-semibold text-xs sm:text-sm ${item.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {item.points > 0 ? '+' : ''}{item.points}
-                          </span>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs sm:text-sm text-gray-500 text-center py-2">No points yet</p>
-                  )}
-                </div>
+                      )}
+                      
+                      <div className="space-y-1 sm:space-y-2">
+                        <h4 className="font-semibold text-xs sm:text-sm text-gray-700 border-b pb-1">Points Breakdown</h4>
+                        {getPointsBreakdown(selectedPlayerForBreakdown).length > 0 ? (
+                          <div className="space-y-0.5 sm:space-y-1">
+                            {getPointsBreakdown(selectedPlayerForBreakdown).map((item, idx) => (
+                              <div key={idx} className="flex justify-between items-center py-2 sm:py-1.5 px-2 rounded hover:bg-gray-50 active:bg-gray-100 touch-manipulation">
+                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                  <span className="text-xs sm:text-sm text-gray-700">{item.label}</span>
+                                  <span className="text-xs text-gray-400">({item.value})</span>
+                                </div>
+                                <span className={`font-semibold text-xs sm:text-sm ${item.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                  {item.points > 0 ? '+' : ''}{item.points}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs sm:text-sm text-gray-500 text-center py-2">No points yet</p>
+                        )}
+                      </div>
+                    </>
+                  );
+                })()}
               </>
             ) : (
               <div className="text-center py-6 sm:py-8 text-gray-500">
