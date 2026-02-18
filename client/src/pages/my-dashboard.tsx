@@ -1903,8 +1903,12 @@ export default function MyDashboard() {
                   
                   {(() => {
                     const nextGW = getNextGameweekDashboard();
-                    const activeChipVal = teamData.active_chip || null;
-                    const activePicks = optimisedPicks || teamData.picks;
+                    const activeChipVal = null;
+                    const normalizedPicks = teamData.picks.map(pick => ({
+                      ...pick,
+                      multiplier: pick.is_captain ? 2 : (pick.position <= 11 ? 1 : 0)
+                    }));
+                    const activePicks = optimisedPicks || normalizedPicks;
                     const starting11 = activePicks.filter(pick => pick.position <= 11);
                     const bench = activePicks.filter(pick => pick.position > 11);
                     let totalStartingXPts = 0;
@@ -1953,7 +1957,7 @@ export default function MyDashboard() {
                                   <Button
                                     size="sm"
                                     className="h-7 text-xs bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white"
-                                    onClick={() => optimizeLineup(teamData.picks, nextGW, activeChipVal)}
+                                    onClick={() => optimizeLineup(normalizedPicks, nextGW, null)}
                                   >
                                     <Sparkles className="h-3 w-3 mr-1" />
                                     Optimise Lineup
@@ -2156,8 +2160,12 @@ export default function MyDashboard() {
 
                     {(() => {
                       const nextGW = getNextGameweekDashboard();
-                      const activeChipVal = nextTeamData.active_chip || getUpcomingActiveChip();
-                      const activePicks = optimisedPicks || nextTeamData.picks;
+                      const activeChipVal = nextTeamData.active_chip ? nextTeamData.active_chip.toLowerCase() : null;
+                      const normalizedNextPicks = nextTeamData.picks.map((pick: any) => ({
+                        ...pick,
+                        multiplier: pick.is_captain ? (activeChipVal === '3xc' ? 3 : 2) : (pick.position <= 11 ? 1 : 0)
+                      }));
+                      const activePicks = optimisedPicks || normalizedNextPicks;
                       const starting11 = activePicks.filter((p: any) => p.position <= 11);
                       const bench = activePicks.filter((p: any) => p.position > 11);
                       let totalStartingXPts = 0;

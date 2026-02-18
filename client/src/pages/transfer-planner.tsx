@@ -1151,16 +1151,21 @@ export default function TransferPlanner() {
     if (!teamData?.picks) return [];
     
     // Start with original team with buy price overrides applied and clear transferred out status
+    // CRITICAL: Normalize multiplier values from FPL API picks so past chips (e.g. TC from GW 26)
+    // don't carry their multiplier into future gameweek projections
     let baseline = teamData.picks.map(pick => {
       const player = getPlayerById(pick.element);
       const currentPrice = player?.now_cost || pick.selling_price;
       const overridePrice = buyPriceOverridesData?.overrides?.[pick.element];
       const apiPrice = buyPricesData?.buyPrices?.[pick.element];
       
+      const normalizedMultiplier = pick.is_captain ? 2 : (pick.position <= 11 ? 1 : 0);
+      
       return {
         ...pick,
         purchase_price: overridePrice || apiPrice || pick.purchase_price || currentPrice,
-        is_transferred_out: false // Clear any transferred out flags
+        multiplier: normalizedMultiplier,
+        is_transferred_out: false
       };
     });
     
@@ -1214,13 +1219,15 @@ export default function TransferPlanner() {
         const player = getPlayerById(pick.element);
         const currentPrice = player?.now_cost || pick.selling_price;
         
-        // Check for manual override first (applies across all drafts)
         const overridePrice = buyPriceOverridesData?.overrides?.[pick.element];
         const apiPrice = buyPricesData?.buyPrices?.[pick.element];
         
+        const normalizedMultiplier = pick.is_captain ? 2 : (pick.position <= 11 ? 1 : 0);
+        
         return {
           ...pick,
-          purchase_price: overridePrice || apiPrice || currentPrice
+          purchase_price: overridePrice || apiPrice || currentPrice,
+          multiplier: normalizedMultiplier
         };
       });
       
@@ -1705,7 +1712,10 @@ export default function TransferPlanner() {
     if (activeDraft === "Base") {
       setTransferredOutPlayers([]);
       setCompletedTransfers([]);
-      const baseLineup = applyBuyPriceOverrides([...teamData.picks]);
+      const baseLineup = applyBuyPriceOverrides([...teamData.picks]).map(pick => ({
+        ...pick,
+        multiplier: pick.is_captain ? 2 : (pick.position <= 11 ? 1 : 0)
+      }));
       setManualLineup(baseLineup);
       return;
     }
@@ -1805,6 +1815,13 @@ export default function TransferPlanner() {
 
   const getPlayerById = (id: number): Player | undefined => {
     return bootstrapData?.elements.find(p => p.id === id);
+  };
+  
+  const normalizePickMultipliers = (picks: TeamPick[]): TeamPick[] => {
+    return picks.map(pick => ({
+      ...pick,
+      multiplier: pick.is_captain ? 2 : (pick.position <= 11 ? 1 : 0)
+    }));
   };
 
   const getPositionName = (elementType: number): string => {
@@ -2445,8 +2462,7 @@ export default function TransferPlanner() {
   const getSquadAtGameweek = (draftTransfers: Record<number, { transferredOut: any[], completed: any[] }>, targetGW: number): TeamPick[] => {
     if (!teamData?.picks) return [];
     
-    // Start with base team
-    let squad = [...teamData.picks];
+    let squad = normalizePickMultipliers([...teamData.picks]);
     const nextGWs = getNextGameweeks();
     
     // Track Free Hit gameweeks to handle squad reversion
@@ -3967,8 +3983,7 @@ export default function TransferPlanner() {
   const handleResetAllTransfers = async () => {
     if (!teamData?.picks || !selectedGameweek) return;
     
-    // Reset to original team data
-    setManualLineup([...teamData.picks]);
+    setManualLineup(normalizePickMultipliers([...teamData.picks]));
     
     // Clear all transfer data
     setTransferredOutPlayers([]);
@@ -4574,7 +4589,7 @@ export default function TransferPlanner() {
       setActiveDraft("Base");
       setHasUnsavedChanges(false);
       if (teamData?.picks) {
-        setManualLineup([...teamData.picks]);
+        setManualLineup(normalizePickMultipliers([...teamData.picks]));
       }
       isLoadingDraftRef.current = false;
       toast({ title: "Base Draft", description: "Switched to base team (no transfers)" });
@@ -4673,7 +4688,7 @@ export default function TransferPlanner() {
     setCompletedTransfers([]);
     setActiveDraft(nextLetter);
     if (teamData?.picks) {
-      setManualLineup([...teamData.picks]);
+      setManualLineup(normalizePickMultipliers([...teamData.picks]));
     }
     
     // Auto-save the new draft immediately
@@ -4797,7 +4812,7 @@ export default function TransferPlanner() {
           if (updatedSquad.length > 0) {
             setManualLineup(updatedSquad);
           } else if (teamData?.picks) {
-            setManualLineup([...teamData.picks]);
+            setManualLineup(normalizePickMultipliers([...teamData.picks]));
           }
           
           // Reload drafts list
