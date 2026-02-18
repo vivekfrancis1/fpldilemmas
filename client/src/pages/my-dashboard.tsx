@@ -3109,7 +3109,16 @@ export default function MyDashboard() {
                                         </TableCell>
                                         <TableCell className="text-xs sm:text-sm">{gw.event_transfers}</TableCell>
                                         <TableCell className="text-xs sm:text-sm">{gw.event_transfers_cost > 0 ? `-${gw.event_transfers_cost}` : '0'}</TableCell>
-                                        <TableCell className="text-xs sm:text-sm">{(gw as any).points_on_bench ?? '-'}</TableCell>
+                                        <TableCell className="text-xs sm:text-sm">
+                                          {(() => {
+                                            const isBB = chipUsed?.name === 'bboost';
+                                            const benchPts = (gw as any).points_on_bench;
+                                            if (isBB) {
+                                              return <span className="text-green-600 font-medium" title="Bench Boost active - bench points included in total">BB</span>;
+                                            }
+                                            return benchPts ?? '-';
+                                          })()}
+                                        </TableCell>
                                         <TableCell className="text-xs sm:text-sm">
                                           {chipUsed ? (
                                             <Badge variant="outline" className="text-[10px] sm:text-xs bg-amber-50 text-amber-700 border-amber-300">
