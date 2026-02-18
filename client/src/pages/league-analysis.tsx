@@ -376,11 +376,26 @@ export default function LeagueAnalysisPage() {
       render: (value, entry) => (
         <div className="text-purple-600">
           <span>{entry.projected_points !== undefined ? entry.projected_points.toFixed(1) : '-'}</span>
-          {entry.active_chip && getChipLabel(entry.active_chip) && (
-            <span className="text-xs ml-1">({getChipLabel(entry.active_chip)})</span>
-          )}
         </div>
       )
+    };
+
+    const chipCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
+      key: 'active_chip',
+      header: 'Chip',
+      priority: 'secondary',
+      align: 'center',
+      mobileLabel: 'Chip',
+      cardOrder: 6,
+      sortable: false,
+      render: (value, entry) => {
+        const label = entry.active_chip ? getChipLabel(entry.active_chip) : null;
+        return label ? (
+          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+            {label}
+          </Badge>
+        ) : <span className="text-gray-400">-</span>;
+      }
     };
 
     const gwRankCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
@@ -406,7 +421,7 @@ export default function LeagueAnalysisPage() {
       gwTransfersKeyField: 'managerId',
     });
 
-    return [managerCol, leagueRankCol, xPtsCol, gwRankCol, ...sharedCols];
+    return [managerCol, leagueRankCol, xPtsCol, chipCol, gwRankCol, ...sharedCols];
   };
 
   const getLiveColumns = (): ResponsiveTableColumn<EnrichedLiveEntry>[] => {
@@ -442,11 +457,6 @@ export default function LeagueAnalysisPage() {
                 </div>
               )}
               {isCurrentManager && <Badge className="bg-blue-600 text-xs">You</Badge>}
-              {entry.active_chip && getChipLabel(entry.active_chip) && (
-                <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
-                  {getChipLabel(entry.active_chip)}
-                </Badge>
-              )}
             </div>
             <div className="text-sm text-muted-foreground">{entry.entry_name}</div>
           </div>
@@ -520,11 +530,26 @@ export default function LeagueAnalysisPage() {
       render: (value, entry) => (
         <div className="text-purple-600">
           <span>{entry.projected_points?.toFixed(1) || '-'}</span>
-          {entry.active_chip && getChipLabel(entry.active_chip) && (
-            <span className="text-xs ml-1">({getChipLabel(entry.active_chip)})</span>
-          )}
         </div>
       )
+    };
+
+    const liveChipCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
+      key: 'active_chip',
+      header: 'Chip',
+      priority: 'secondary',
+      align: 'center',
+      mobileLabel: 'Chip',
+      cardOrder: 6,
+      sortable: false,
+      render: (value, entry) => {
+        const label = entry.active_chip ? getChipLabel(entry.active_chip) : null;
+        return label ? (
+          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+            {label}
+          </Badge>
+        ) : <span className="text-gray-400">-</span>;
+      }
     };
 
     const gwRankCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
@@ -550,7 +575,7 @@ export default function LeagueAnalysisPage() {
       gwTransfersKeyField: 'managerId',
     });
 
-    return [managerCol, liveRankCol, liveTotalCol, livePointsCol, xPtsCol, gwRankCol, ...sharedCols];
+    return [managerCol, liveRankCol, liveTotalCol, livePointsCol, xPtsCol, liveChipCol, gwRankCol, ...sharedCols];
   };
 
   if (isLoading) {
