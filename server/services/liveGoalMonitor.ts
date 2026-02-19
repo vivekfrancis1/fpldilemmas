@@ -400,19 +400,8 @@ export class LiveGoalMonitor {
           if (stat.identifier === 'red_cards' && stat.value > 0) {
             currentPlayerRedCards.set(el.id, stat.value);
           }
-        }
-
-        const elStats = el.stats;
-        if (elStats) {
-          const cbi = elStats.clearances_blocks_interceptions || 0;
-          const tackles = elStats.tackles || 0;
-          const recoveries = elStats.recoveries || 0;
-          const pos = POSITION_MAP[playerInfo.element_type] || 'MID';
-          const dc = (pos === 'GKP' || pos === 'DEF')
-            ? cbi + tackles
-            : cbi + tackles + recoveries;
-          if (dc > 0) {
-            currentPlayerDC.set(el.id, dc);
+          if (stat.identifier === 'defensive_contribution' && stat.value > 0) {
+            currentPlayerDC.set(el.id, stat.value);
           }
         }
       }
