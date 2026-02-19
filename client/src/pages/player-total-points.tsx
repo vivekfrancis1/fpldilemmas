@@ -1095,10 +1095,9 @@ export default function PlayerTotalPoints() {
 
   // ALL useQuery hooks - cached and live data sources
   const { data: cachedTotalPointsData, isLoading: cachedLoading, error: cachedError, refetch: refetchCached } = useQuery<PlayerTotalPointsData[]>({
-    queryKey: ["/api/cached/player-total-points", { availabilityAdjusted: isAdjusted }],
+    queryKey: ["/api/cached/player-total-points"],
     queryFn: async () => {
-      const url = isAdjusted ? '/api/cached/player-total-points' : '/api/cached/player-total-points?availabilityAdjusted=false';
-      const res = await fetch(url);
+      const res = await fetch('/api/cached/player-total-points?availabilityAdjusted=false');
       if (!res.ok) throw new Error('Failed to fetch');
       return res.json();
     },
@@ -1158,14 +1157,13 @@ export default function PlayerTotalPoints() {
   const { data: liveTotalPointsData, isLoading: liveLoading, error: liveError, refetch: refetchLive } = useQuery<PlayerTotalPointsData[]>({
     queryKey: ["/api/player-total-points", startGameweek, endGameweek],
     queryFn: async () => {
-      const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}&availabilityAdjusted=false`);
       if (!response.ok) {
         throw new Error(`Failed to fetch total points: ${response.statusText}`);
       }
       return response.json();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes for live data
-    // Only fetch live data when: future mode AND custom range (not default range which uses cached data)
     enabled: viewMode === "future" && startGameweek !== null && endGameweek !== null && !isDefaultRange,
   });
 
@@ -1210,50 +1208,166 @@ export default function PlayerTotalPoints() {
   // Recalculate player data based on excluded point components
   const adjustedPlayerData = useMemo((): PlayerTotalPointsData[] | null => {
     if (!totalPointsData) return null;
-    // Cast to PlayerTotalPointsData[] to handle availability adjustments return type
     const playerData = totalPointsData as PlayerTotalPointsData[];
-    if (excludedComponents.size === 0) return playerData;
+    
+    const needsAvailability = applyAvailability;
+    const needsComponentExclusion = excludedComponents.size > 0;
+    
+    if (!needsAvailability && !needsComponentExclusion) return playerData;
+    
+    const nextGwStr = nextGameweek.toString();
+    const currentGW = currentGameweek;
+    const events = bootstrapData?.events || [];
+    
+    const monthMap: { [key: string]: number } = {
+      jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2,
+      apr: 3, april: 3, may: 4, jun: 5, june: 5,
+      jul: 6, july: 6, aug: 7, august: 7, sep: 8, september: 8,
+      oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11
+    };
+    
+    const parseReturnDateLocal = (newsText: string): Date | null => {
+      if (!newsText) return null;
+      const patterns = [
+        /(?:expected back|return date|due back|back|suspended until)\s+(\d{1,2})\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
+        /(?:expected back|return date|due back|back|suspended until)\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i,
+        /(?:expected back|return date|due back|back)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i,
+        /(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})/i,
+        /(\d{1,2})\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i
+      ];
+      for (const pattern of patterns) {
+        const match = newsText.match(pattern);
+        if (match && match[1] && match[2]) {
+          const first = match[1];
+          const second = match[2];
+          let day: number, monthStr: string;
+          if (isNaN(parseInt(first))) { monthStr = first.toLowerCase(); day = parseInt(second); }
+          else { day = parseInt(first); monthStr = second.toLowerCase(); }
+          const month = monthMap[monthStr];
+          if (month === undefined) continue;
+          const now = new Date();
+          const year = month < now.getMonth() ? now.getFullYear() + 1 : now.getFullYear();
+          return new Date(year, month, day);
+        }
+      }
+      return null;
+    };
+    
+    const getGameweekFromDateLocal = (date: Date): number | null => {
+      if (!events || events.length === 0) return null;
+      const sortedEvents = [...events].sort((a: any, b: any) => a.id - b.id);
+      for (const event of sortedEvents) {
+        const deadlineDate = new Date((event as any).deadline_time);
+        const gameweekEnd = new Date(deadlineDate.getTime() + 24 * 60 * 60 * 1000);
+        if (date <= gameweekEnd) return (event as any).id;
+      }
+      const lastEvent = sortedEvents[sortedEvents.length - 1] as any;
+      return lastEvent ? lastEvent.id : null;
+    };
     
     return playerData.map(player => {
-      // Calculate new totals by summing only included components
-      let newTotal = 0;
-      const newGwProjections: { [key: string]: number } = {};
+      const chanceOfPlaying = player.chanceOfPlayingNextRound ?? 100;
+      const status = (player as any).status || 'a';
+      const news = (player as any).news || '';
       
-      // Get the gameweek keys from the player's projections
       const gwKeys = Object.keys(player.gameweekProjections || {});
       
-      // Initialize gameweek projections
-      gwKeys.forEach(gwKey => {
-        newGwProjections[gwKey] = 0;
-      });
-      
-      // Calculate availability factors per gameweek if availability adjustments are applied
       const availabilityFactors: { [key: string]: number } = {};
-      if (applyAvailability && (player as any).originalGameweekProjections && (player as any).availabilityAdjustments) {
-        const originalProjections = (player as any).originalGameweekProjections as { [key: string]: number };
-        const adjustments = (player as any).availabilityAdjustments as { [key: string]: { original: number; adjusted: number; reason: string } };
-        
-        gwKeys.forEach(gwKey => {
-          if (adjustments[gwKey]) {
-            // Use the adjustment ratio
-            const original = adjustments[gwKey].original;
-            availabilityFactors[gwKey] = original > 0 ? adjustments[gwKey].adjusted / original : 0;
+      const availabilityAdjustments: { [key: string]: { original: number; adjusted: number; reason: string } } = {};
+      
+      if (needsAvailability && (chanceOfPlaying < 100 || status !== 'a')) {
+        if (chanceOfPlaying === 0) {
+          const returnDate = parseReturnDateLocal(news);
+          if (returnDate) {
+            const returnGameweek = getGameweekFromDateLocal(returnDate);
+            gwKeys.forEach(gwKey => {
+              const gw = parseInt(gwKey);
+              if (returnGameweek && gw < returnGameweek) {
+                availabilityFactors[gwKey] = 0;
+                const original = player.gameweekProjections?.[gwKey] || 0;
+                if (original > 0) {
+                  availabilityAdjustments[gwKey] = {
+                    original,
+                    adjusted: 0,
+                    reason: `Injured/suspended until GW${returnGameweek}`
+                  };
+                }
+              } else {
+                availabilityFactors[gwKey] = 1;
+              }
+            });
           } else {
-            // No adjustment for this gameweek
-            availabilityFactors[gwKey] = 1;
+            gwKeys.forEach(gwKey => {
+              availabilityFactors[gwKey] = 0;
+              const original = player.gameweekProjections?.[gwKey] || 0;
+              if (original > 0) {
+                availabilityAdjustments[gwKey] = {
+                  original,
+                  adjusted: 0,
+                  reason: status === 's' ? 'Suspended' : status === 'i' ? 'Injured' : 'Unavailable'
+                };
+              }
+            });
           }
-        });
+        } else if (chanceOfPlaying === 25 || chanceOfPlaying === 50 || chanceOfPlaying === 75) {
+          gwKeys.forEach(gwKey => {
+            if (gwKey === nextGwStr) {
+              const multiplier = chanceOfPlaying / 100;
+              availabilityFactors[gwKey] = multiplier;
+              const original = player.gameweekProjections?.[gwKey] || 0;
+              if (original > 0) {
+                availabilityAdjustments[gwKey] = {
+                  original,
+                  adjusted: original * multiplier,
+                  reason: `${chanceOfPlaying}% chance of playing`
+                };
+              }
+            } else {
+              availabilityFactors[gwKey] = 1;
+            }
+          });
+        }
       }
       
-      // Sum up included components with availability adjustments
+      const hasAvailabilityChange = Object.keys(availabilityAdjustments).length > 0;
+      
+      if (!needsComponentExclusion) {
+        if (!hasAvailabilityChange) return player;
+        
+        const newGwProjections: { [key: string]: number } = {};
+        const originalGwProjections: { [key: string]: number } = {};
+        gwKeys.forEach(gwKey => {
+          originalGwProjections[gwKey] = player.gameweekProjections?.[gwKey] || 0;
+          const factor = availabilityFactors[gwKey] !== undefined ? availabilityFactors[gwKey] : 1;
+          newGwProjections[gwKey] = (player.gameweekProjections?.[gwKey] || 0) * factor;
+        });
+        
+        const newTotal = Object.values(newGwProjections).reduce((sum, val) => sum + val, 0);
+        const numGameweeks = gwKeys.length || 1;
+        const playerPrice = player.price || 0;
+        
+        return {
+          ...player,
+          gameweekProjections: newGwProjections,
+          originalGameweekProjections: originalGwProjections,
+          availabilityAdjustments,
+          totalExpectedPoints: Math.round(newTotal * 100) / 100,
+          totalPoints: Math.round(newTotal * 100) / 100,
+          averagePerGameweek: Math.round((newTotal / numGameweeks) * 100) / 100,
+          averageValue: Math.round((playerPrice > 0 ? newTotal / playerPrice : 0) * 100) / 100
+        };
+      }
+      
+      const newGwProjections: { [key: string]: number } = {};
+      gwKeys.forEach(gwKey => { newGwProjections[gwKey] = 0; });
+      
       POINT_COMPONENTS.forEach(component => {
         if (!excludedComponents.has(component.key)) {
-          // Add to each gameweek projection (with availability factor if applicable)
           const gwData = (player as any)[component.gwKey] as { [key: string]: number } | undefined;
           if (gwData) {
             gwKeys.forEach(gwKey => {
               const rawValue = gwData[gwKey] || 0;
-              const factor = applyAvailability && availabilityFactors[gwKey] !== undefined 
+              const factor = needsAvailability && availabilityFactors[gwKey] !== undefined 
                 ? availabilityFactors[gwKey] 
                 : 1;
               newGwProjections[gwKey] += rawValue * factor;
@@ -1262,14 +1376,10 @@ export default function PlayerTotalPoints() {
         }
       });
       
-      // Sum gameweek projections for total
-      newTotal = Object.values(newGwProjections).reduce((sum, val) => sum + val, 0);
-      
-      // Calculate new averages
+      const newTotal = Object.values(newGwProjections).reduce((sum, val) => sum + val, 0);
       const numGameweeks = gwKeys.length || 1;
       const newAverage = newTotal / numGameweeks;
       const playerPrice = player.price || 0;
-      // Value = Total Points / Price (points per million spent)
       const newAverageValue = playerPrice > 0 ? newTotal / playerPrice : 0;
       
       return {
@@ -1277,10 +1387,11 @@ export default function PlayerTotalPoints() {
         totalExpectedPoints: newTotal,
         gameweekProjections: newGwProjections,
         averagePerGameweek: newAverage,
-        averageValue: newAverageValue
+        averageValue: newAverageValue,
+        ...(hasAvailabilityChange ? { availabilityAdjustments } : {})
       };
     });
-  }, [totalPointsData, excludedComponents, POINT_COMPONENTS, applyAvailability]);
+  }, [totalPointsData, excludedComponents, POINT_COMPONENTS, applyAvailability, nextGameweek, currentGameweek, bootstrapData?.events]);
 
   // Create a map of original player data (BEFORE availability adjustments) for tooltip comparison
   // This uses the raw data directly without applyAvailability toggle, so we always have the unadjusted baseline
