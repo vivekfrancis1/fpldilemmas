@@ -136,6 +136,11 @@ export default function PlayerDetail() {
   const elementType = player?.element_type || 0;
 
   const columns: ColumnDef[] = useMemo(() => {
+    const sumField = (history: GameweekData[], field: keyof GameweekData) =>
+      history.reduce((s, gw) => s + (Number(gw[field]) || 0), 0);
+    const sumFloatField = (history: GameweekData[], field: keyof GameweekData) =>
+      history.reduce((s, gw) => s + (parseFloat(String(gw[field] || '0')) || 0), 0).toFixed(1);
+
     const allColumns: ColumnDef[] = [
       {
         key: 'opponent',
@@ -147,6 +152,7 @@ export default function PlayerDetail() {
           const venue = gw.was_home ? '(H)' : gw.was_home === false ? '(A)' : '';
           return <span><span className="font-medium">{opponent}</span><span className="text-xs ml-1 text-gray-500">{venue}</span></span>;
         },
+        aggregate: () => '',
       },
       {
         key: 'score',
@@ -156,6 +162,7 @@ export default function PlayerDetail() {
           if (gw.team_h_score == null || gw.team_a_score == null) return <span>-</span>;
           return <span className="text-gray-700">{gw.team_h_score}-{gw.team_a_score}</span>;
         },
+        aggregate: () => '',
       },
       {
         key: 'price',
@@ -163,6 +170,7 @@ export default function PlayerDetail() {
         shortLabel: '£',
         positions: [1, 2, 3, 4],
         render: (gw) => <span>{formatValue((gw.value || 0) / 10)}</span>,
+        aggregate: () => '',
       },
       {
         key: 'pts',
@@ -170,6 +178,7 @@ export default function PlayerDetail() {
         shortLabel: 'Pts',
         positions: [1, 2, 3, 4],
         render: (gw) => <span className={`font-semibold ${getPointsColor(gw.total_points)}`}>{gw.total_points}</span>,
+        aggregate: (h) => sumField(h, 'total_points'),
       },
       {
         key: 'min',
@@ -177,12 +186,14 @@ export default function PlayerDetail() {
         shortLabel: 'Min',
         positions: [1, 2, 3, 4],
         render: (gw) => <span>{gw.minutes}</span>,
+        aggregate: (h) => sumField(h, 'minutes'),
       },
       {
         key: 'starts',
         label: 'Starts',
         positions: [1, 2, 3, 4],
         render: (gw) => <span>{gw.starts ?? '-'}</span>,
+        aggregate: (h) => h.reduce((s, gw) => s + (gw.starts ?? 0), 0),
       },
       {
         key: 'goals',
@@ -190,6 +201,7 @@ export default function PlayerDetail() {
         shortLabel: 'G',
         positions: [1, 2, 3, 4],
         render: (gw) => <span className="text-green-600 font-medium">{gw.goals_scored}</span>,
+        aggregate: (h) => sumField(h, 'goals_scored'),
       },
       {
         key: 'assists',
@@ -197,24 +209,28 @@ export default function PlayerDetail() {
         shortLabel: 'A',
         positions: [1, 2, 3, 4],
         render: (gw) => <span className="text-blue-600 font-medium">{gw.assists}</span>,
+        aggregate: (h) => sumField(h, 'assists'),
       },
       {
         key: 'xg',
         label: 'xG',
         positions: [1, 2, 3, 4],
         render: (gw) => <span className="text-purple-600">{gw.expected_goals ? formatValue(gw.expected_goals) : '-'}</span>,
+        aggregate: (h) => sumFloatField(h, 'expected_goals'),
       },
       {
         key: 'xa',
         label: 'xA',
         positions: [1, 2, 3, 4],
         render: (gw) => <span className="text-blue-600">{gw.expected_assists ? formatValue(gw.expected_assists) : '-'}</span>,
+        aggregate: (h) => sumFloatField(h, 'expected_assists'),
       },
       {
         key: 'xgi',
         label: 'xGI',
         positions: [1, 2, 3, 4],
         render: (gw) => <span className="text-indigo-600">{gw.expected_goal_involvements ? formatValue(gw.expected_goal_involvements) : '-'}</span>,
+        aggregate: (h) => sumFloatField(h, 'expected_goal_involvements'),
       },
       {
         key: 'cs',
@@ -222,6 +238,7 @@ export default function PlayerDetail() {
         shortLabel: 'CS',
         positions: [1, 2, 3],
         render: (gw) => <span className="text-green-600">{gw.clean_sheets}</span>,
+        aggregate: (h) => sumField(h, 'clean_sheets'),
       },
       {
         key: 'gc',
@@ -229,12 +246,14 @@ export default function PlayerDetail() {
         shortLabel: 'GC',
         positions: [1, 2],
         render: (gw) => <span className="text-red-600">{gw.goals_conceded}</span>,
+        aggregate: (h) => sumField(h, 'goals_conceded'),
       },
       {
         key: 'xgc',
         label: 'xGC',
         positions: [1, 2],
         render: (gw) => <span className="text-red-600">{gw.expected_goals_conceded ? formatValue(gw.expected_goals_conceded) : '-'}</span>,
+        aggregate: (h) => sumFloatField(h, 'expected_goals_conceded'),
       },
       {
         key: 'saves',
@@ -242,6 +261,7 @@ export default function PlayerDetail() {
         shortLabel: 'Sav',
         positions: [1],
         render: (gw) => <span>{gw.saves}</span>,
+        aggregate: (h) => sumField(h, 'saves'),
       },
       {
         key: 'pen_saved',
@@ -249,25 +269,21 @@ export default function PlayerDetail() {
         shortLabel: 'PS',
         positions: [1],
         render: (gw) => <span>{gw.penalties_saved || 0}</span>,
+        aggregate: (h) => sumField(h, 'penalties_saved'),
       },
       {
         key: 'bonus',
         label: 'Bonus',
         positions: [1, 2, 3, 4],
         render: (gw) => <span className="text-purple-600 font-medium">{gw.bonus}</span>,
+        aggregate: (h) => sumField(h, 'bonus'),
       },
       {
         key: 'bps',
         label: 'BPS',
         positions: [1, 2, 3, 4],
         render: (gw) => <span>{gw.bps}</span>,
-      },
-      {
-        key: 'pen_missed',
-        label: 'Pen Missed',
-        shortLabel: 'PM',
-        positions: [1, 2, 3, 4],
-        render: (gw) => <span className="text-red-600">{gw.penalties_missed || 0}</span>,
+        aggregate: (h) => sumField(h, 'bps'),
       },
       {
         key: 'yc',
@@ -275,6 +291,7 @@ export default function PlayerDetail() {
         shortLabel: 'YC',
         positions: [1, 2, 3, 4],
         render: (gw) => <span className="text-yellow-600">{gw.yellow_cards}</span>,
+        aggregate: (h) => sumField(h, 'yellow_cards'),
       },
       {
         key: 'rc',
@@ -282,41 +299,7 @@ export default function PlayerDetail() {
         shortLabel: 'RC',
         positions: [1, 2, 3, 4],
         render: (gw) => <span className="text-red-600">{gw.red_cards}</span>,
-      },
-      {
-        key: 'og',
-        label: 'Own Goals',
-        shortLabel: 'OG',
-        positions: [1, 2, 3, 4],
-        render: (gw) => <span className="text-red-600">{gw.own_goals || 0}</span>,
-      },
-      {
-        key: 'ict',
-        label: 'ICT Index',
-        shortLabel: 'ICT',
-        positions: [1, 2, 3, 4],
-        render: (gw) => <span>{formatValue(gw.ict_index)}</span>,
-      },
-      {
-        key: 'transfers_in',
-        label: 'Transfers In',
-        shortLabel: 'TI',
-        positions: [1, 2, 3, 4],
-        render: (gw) => <span className="text-green-600">{(gw.transfers_in || 0).toLocaleString()}</span>,
-      },
-      {
-        key: 'transfers_out',
-        label: 'Transfers Out',
-        shortLabel: 'TO',
-        positions: [1, 2, 3, 4],
-        render: (gw) => <span className="text-red-600">{(gw.transfers_out || 0).toLocaleString()}</span>,
-      },
-      {
-        key: 'selected',
-        label: 'Selected By',
-        shortLabel: 'Sel',
-        positions: [1, 2, 3, 4],
-        render: (gw) => <span>{(gw.selected || 0).toLocaleString()}</span>,
+        aggregate: (h) => sumField(h, 'red_cards'),
       },
     ];
 
@@ -467,7 +450,48 @@ export default function PlayerDetail() {
                   No gameweek data available for this player
                 </div>
               ) : (
-                sortedHistory.map((gw) => {
+                <>
+                <div className="p-3 space-y-2 bg-purple-50 border-b-2 border-purple-200">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-purple-800">Total</span>
+                    <div className="text-lg font-bold text-purple-800">
+                      {totalStats.totalPoints} pts
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div className="text-center">
+                      <div className="text-xs text-purple-600">Min</div>
+                      <div className="font-bold text-purple-800">{totalStats.totalMinutes}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-purple-600">Goals</div>
+                      <div className="font-bold text-purple-800">{totalStats.totalGoals}</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-purple-600">Assists</div>
+                      <div className="font-bold text-purple-800">{totalStats.totalAssists}</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div className="text-center">
+                      <div className="text-xs text-purple-600">Bonus</div>
+                      <div className="font-bold text-purple-800">{totalStats.totalBonus}</div>
+                    </div>
+                    {[1, 2, 3].includes(elementType) && (
+                      <div className="text-center">
+                        <div className="text-xs text-purple-600">CS</div>
+                        <div className="font-bold text-purple-800">{totalStats.totalCleanSheets}</div>
+                      </div>
+                    )}
+                    {elementType === 1 && (
+                      <div className="text-center">
+                        <div className="text-xs text-purple-600">Saves</div>
+                        <div className="font-bold text-purple-800">{totalStats.totalSaves}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {sortedHistory.map((gw) => {
                   const opponent = gw.opponent_team ? teamMap[gw.opponent_team] || 'UNK' : '-';
                   const venue = gw.was_home ? '(H)' : gw.was_home === false ? '(A)' : '';
                   const score = gw.team_h_score != null && gw.team_a_score != null
@@ -515,14 +539,11 @@ export default function PlayerDetail() {
                             <div className="font-medium">{gw.saves}</div>
                           </div>
                         )}
-                        <div className="text-center">
-                          <div className="text-xs text-gray-500">ICT</div>
-                          <div className="font-medium">{formatValue(gw.ict_index)}</div>
-                        </div>
                       </div>
                     </div>
                   );
-                })
+                })}
+                </>
               )}
             </div>
           ) : (
@@ -546,7 +567,16 @@ export default function PlayerDetail() {
                       </td>
                     </tr>
                   ) : (
-                    sortedHistory.map((gw, index) => (
+                    <>
+                    <tr className="bg-purple-50 border-b-2 border-purple-200 font-bold">
+                      <td className="px-2 py-2.5 font-bold text-purple-800">Total</td>
+                      {columns.map(col => (
+                        <td key={col.key} className="px-2 py-2.5 text-center font-bold text-purple-800">
+                          {col.aggregate ? col.aggregate(sortedHistory) : ''}
+                        </td>
+                      ))}
+                    </tr>
+                    {sortedHistory.map((gw, index) => (
                       <tr
                         key={gw.round}
                         className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
@@ -560,7 +590,8 @@ export default function PlayerDetail() {
                           </td>
                         ))}
                       </tr>
-                    ))
+                    ))}
+                    </>
                   )}
                 </tbody>
               </table>
