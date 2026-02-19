@@ -2034,7 +2034,8 @@ export default function MyDashboard() {
                             const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
                             const nextGW = getNextGameweekDashboard();
                             const projected = getProjectedPoints(pick.element, nextGW);
-                            const multiplier = pick.is_captain ? 2 : 1;
+                            const upcomingChip = getUpcomingActiveChip();
+                            const multiplier = pick.is_captain ? (upcomingChip === '3xc' ? 3 : 2) : 1;
                             const displayPts = projected * multiplier;
                             return {
                               element: pick.element,
@@ -2042,7 +2043,7 @@ export default function MyDashboard() {
                               position: pick.position,
                               is_captain: pick.is_captain,
                               is_vice_captain: pick.is_vice_captain,
-                              multiplier: pick.multiplier,
+                              multiplier: multiplier,
                               web_name: player.web_name,
                               team_short_name: playerTeam?.short_name,
                               team_id: player.team,
@@ -2482,7 +2483,8 @@ export default function MyDashboard() {
                             const fixtureInfos = getNextGameweekFixtures(playerTeam?.id || 0);
                             const nextGW = getNextGameweekDashboard();
                             const projected = getProjectedPoints(pick.element, nextGW);
-                            const multiplier = pick.is_captain ? 2 : 1;
+                            const upcomingChip = getUpcomingActiveChip();
+                            const multiplier = pick.is_captain ? (upcomingChip === '3xc' ? 3 : 2) : 1;
                             const displayPts = projected * multiplier;
                             return {
                               element: pick.element,
@@ -2490,7 +2492,7 @@ export default function MyDashboard() {
                               position: pick.position,
                               is_captain: pick.is_captain,
                               is_vice_captain: pick.is_vice_captain,
-                              multiplier: pick.multiplier,
+                              multiplier: multiplier,
                               web_name: player.web_name,
                               team_short_name: playerTeam?.short_name,
                               team_id: player.team,
