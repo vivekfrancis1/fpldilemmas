@@ -296,9 +296,12 @@ export default function LeagueAnalysisPage() {
           if (!a.played && !b.played) return 0;
           if (!a.played) return 1;
           if (!b.played) return -1;
+          if (!a.rank && !b.rank) return 0;
+          if (!a.rank) return 1;
+          if (!b.rank) return -1;
           return historicalSortDirection === 'asc'
-            ? (a.rank || 0) - (b.rank || 0)
-            : (b.rank || 0) - (a.rank || 0);
+            ? a.rank - b.rank
+            : b.rank - a.rank;
         }
         if (historicalSortField === 'player_name') {
           return historicalSortDirection === 'asc'
@@ -977,7 +980,7 @@ export default function LeagueAnalysisPage() {
                               )}
                             </td>
                             <td className="px-3 py-2.5 text-right font-mono text-sm">
-                              {entry.played ? entry.rank?.toLocaleString() : (
+                              {entry.played && entry.rank ? entry.rank.toLocaleString() : (
                                 <span className="text-gray-400 text-xs">N/A</span>
                               )}
                             </td>

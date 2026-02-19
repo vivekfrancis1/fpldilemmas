@@ -802,6 +802,11 @@ export default function ContentCreators() {
         if (!b.played) return -1;
         const aVal = historicalSortField === 'total_points' ? a.totalPoints : a.rank;
         const bVal = historicalSortField === 'total_points' ? b.totalPoints : b.rank;
+        if (historicalSortField === 'rank') {
+          if (!aVal && !bVal) return 0;
+          if (!aVal) return 1;
+          if (!bVal) return -1;
+        }
         if (historicalSortField === 'total_points') {
           return historicalSortDirection === 'desc' ? (bVal - aVal) : (aVal - bVal);
         }
@@ -1039,7 +1044,7 @@ export default function ContentCreators() {
                               )}
                             </td>
                             <td className="px-3 py-2.5 text-right font-mono text-sm">
-                              {entry.played ? entry.rank?.toLocaleString() : (
+                              {entry.played && entry.rank ? entry.rank.toLocaleString() : (
                                 <span className="text-gray-400 text-xs">N/A</span>
                               )}
                             </td>
