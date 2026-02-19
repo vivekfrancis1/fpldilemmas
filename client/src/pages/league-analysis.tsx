@@ -876,6 +876,9 @@ export default function LeagueAnalysisPage() {
                   ? `${selectedSeason} season — ${historicalStandings.filter(m => m.played).length} of ${historicalStandings.length} managers played`
                   : 'Select a season to view how league members performed in past FPL seasons'}
               </p>
+              <p className="text-muted-foreground text-xs italic mt-1">
+                Based on the current league member list, not the actual members of this league in that season.
+              </p>
             </CardHeader>
             <CardContent>
               {isPastSeasonsLoading ? (
