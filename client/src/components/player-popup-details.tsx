@@ -138,29 +138,32 @@ export function PlayerPopupDetails({ player, children }: PlayerPopupDetailsProps
   const elementType = player.element_type;
 
   const statsGrid = useMemo(() => {
+    const ppg = parseFloat(player.points_per_game || '0');
+    const gamesPlayed = ppg > 0 ? Math.round((player.total_points || 0) / ppg) : 0;
     const stats: Array<{ label: string; value: string | number; color: string }> = [
+      { label: 'Matches Played', value: gamesPlayed, color: 'text-gray-700' },
+      { label: 'Starts', value: player.starts || 0, color: 'text-gray-600' },
+      { label: 'Minutes', value: player.minutes || 0, color: 'text-gray-700' },
       { label: 'Total Points', value: player.total_points || 0, color: 'text-purple-700' },
       { label: 'PPG', value: player.points_per_game || '0.0', color: 'text-blue-700' },
       { label: 'Form', value: player.form || '0.0', color: 'text-indigo-700' },
-      { label: 'Own%', value: `${player.selected_by_percent || '0'}%`, color: 'text-gray-700' },
       { label: 'Price', value: `£${((player.now_cost || 0) / 10).toFixed(1)}m`, color: 'text-emerald-700' },
       { label: 'Value', value: player.value_season || '0.0', color: 'text-teal-700' },
-      { label: 'Val Form', value: player.value_form || '0.0', color: 'text-teal-600' },
-      { label: 'Minutes', value: player.minutes || 0, color: 'text-gray-700' },
-      { label: 'Starts', value: player.starts || 0, color: 'text-gray-600' },
+      { label: 'Own%', value: `${player.selected_by_percent || '0'}%`, color: 'text-gray-700' },
       { label: 'Goals', value: player.goals_scored || 0, color: 'text-green-700' },
       { label: 'Assists', value: player.assists || 0, color: 'text-blue-600' },
+      { label: 'DC', value: player.defensive_contribution || 0, color: 'text-orange-600' },
       { label: 'xG', value: player.expected_goals ? parseFloat(player.expected_goals).toFixed(2) : '0.00', color: 'text-purple-600' },
       { label: 'xA', value: player.expected_assists ? parseFloat(player.expected_assists).toFixed(2) : '0.00', color: 'text-blue-600' },
       { label: 'xGI', value: player.expected_goal_involvements ? parseFloat(player.expected_goal_involvements).toFixed(2) : '0.00', color: 'text-indigo-600' },
     ];
 
-    if ([1, 2, 3].includes(elementType)) {
-      stats.push({ label: 'Clean Sheets', value: player.clean_sheets || 0, color: 'text-green-600' });
-    }
     if ([1, 2].includes(elementType)) {
       stats.push({ label: 'Goals Conceded', value: player.goals_conceded || 0, color: 'text-red-600' });
       stats.push({ label: 'xGC', value: player.expected_goals_conceded ? parseFloat(player.expected_goals_conceded).toFixed(2) : '0.00', color: 'text-red-600' });
+    }
+    if ([1, 2, 3].includes(elementType)) {
+      stats.push({ label: 'Clean Sheets', value: player.clean_sheets || 0, color: 'text-green-600' });
     }
     if (elementType === 1) {
       stats.push({ label: 'Saves', value: player.saves || 0, color: 'text-blue-600' });
@@ -169,14 +172,8 @@ export function PlayerPopupDetails({ player, children }: PlayerPopupDetailsProps
 
     stats.push(
       { label: 'Bonus', value: player.bonus || 0, color: 'text-purple-600' },
-      { label: 'BPS', value: player.bps || 0, color: 'text-gray-600' },
-      { label: 'DC', value: player.defensive_contribution || 0, color: 'text-orange-600' },
-      { label: 'ICT', value: player.ict_index ? parseFloat(player.ict_index).toFixed(1) : '0.0', color: 'text-amber-700' },
-      { label: 'Dream Team', value: player.dreamteam_count || 0, color: 'text-amber-600' },
       { label: 'YC', value: player.yellow_cards || 0, color: 'text-yellow-600' },
       { label: 'RC', value: player.red_cards || 0, color: 'text-red-600' },
-      { label: 'Price Δ GW', value: `${((player.cost_change_event || 0) / 10).toFixed(1)}`, color: (player.cost_change_event || 0) > 0 ? 'text-green-600' : (player.cost_change_event || 0) < 0 ? 'text-red-600' : 'text-gray-500' },
-      { label: 'Price Δ Total', value: `${((player.cost_change_start || 0) / 10).toFixed(1)}`, color: (player.cost_change_start || 0) > 0 ? 'text-green-600' : (player.cost_change_start || 0) < 0 ? 'text-red-600' : 'text-gray-500' },
     );
 
     return stats;
