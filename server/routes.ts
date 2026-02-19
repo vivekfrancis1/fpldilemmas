@@ -9490,31 +9490,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (currentPlayer && playerData.projectedGoals > 0) {
               const goalShare = (playerData.projectedGoals / teamData.expectedGoals) * 100;
               
-              // Apply seasonal average minutes scaling
-              // Calculate average minutes scaling across remaining gameweeks (5-38)
-              const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 4;
-              const remainingGameweeks = Array.from({length: 38 - currentGameweek}, (_, i) => currentGameweek + 1 + i);
-              
-              let totalMinutesFactor = 0;
-              let validGameweeks = 0;
-              
-              for (const gw of remainingGameweeks) {
-                try {
-                  // Get expected minutes for this gameweek (synchronous fallback if async fails)
-                  const expectedMinutes = await getExpectedMinutes(playerId, gw, "2025/26", false);
-                  const minutesFactor = Math.max(0, Math.min(1, expectedMinutes / 90));
-                  totalMinutesFactor += minutesFactor;
-                  validGameweeks++;
-                } catch (error) {
-                  // Use full minutes (1.0 factor) as fallback for this gameweek
-                  totalMinutesFactor += 1.0;
-                  validGameweeks++;
-                }
-              }
-              
-              const averageMinutesFactor = validGameweeks > 0 ? totalMinutesFactor / validGameweeks : 1.0;
-              const scaledProjectedGoals = playerData.projectedGoals * averageMinutesFactor;
-              
               allPlayerProjections.push({
                 id: playerId,
                 name: playerData.name,
@@ -9522,9 +9497,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 teamShort: team.short_name,
                 position: playerData.position,
                 currentPrice: currentPlayer.now_cost / 10,
-                projectedGoals: Math.round(scaledProjectedGoals * 100) / 100,
+                projectedGoals: Math.round(playerData.projectedGoals * 100) / 100,
                 goalShare: Math.round(goalShare * 10) / 10,
-                minutesFactor: Math.round(averageMinutesFactor * 1000) / 1000 // For debugging
               });
             }
           }
@@ -10963,9 +10937,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teams = bootstrapData.teams;
         const positions = bootstrapData.element_types;
         
-        // Get current gameweek
+        // Get current gameweek and count finished gameweeks for appearance rate
         const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 1;
-        console.log(`DEBUG: Current gameweek detected as: ${currentGameweek}`);
+        const finishedGWCount = bootstrapData.events.filter((e: any) => e.finished).length;
+        console.log(`DEBUG: Current gameweek detected as: ${currentGameweek}, finished GWs: ${finishedGWCount}`);
         
         // Filter players with minutes for detailed processing
         const playersWithMinutes = players.filter((p: any) => (p.minutes || 0) >= 1);
@@ -11023,9 +10998,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const confidenceFactor = Math.min(1, appearances / MIN_APPEARANCES_THRESHOLD);
               
               // Calculate points from minutes using probability-based formula
-              // Formula: (2 × % chance of 60+ mins) + (1 × % chance of 0-60 mins) × confidence
+              // Formula: (2 × % chance of 60+ mins) + (1 × % chance of 0-60 mins) × confidence × appearance rate
+              // Appearance rate converts per-appearance expectation to per-gameweek expectation
               const rawPointsFromMinutes = (pct60Plus / 100) * 2 + (pctBelow60 / 100) * 1;
-              const pointsFromMinutes = Math.round(rawPointsFromMinutes * confidenceFactor * 100) / 100;
+              const appearanceRate = finishedGWCount > 0 ? Math.min(1, appearances / finishedGWCount) : 1;
+              const pointsFromMinutes = Math.round(rawPointsFromMinutes * confidenceFactor * appearanceRate * 100) / 100;
               
               return {
                 playerId: player.id,
