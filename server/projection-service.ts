@@ -311,9 +311,20 @@ class ProjectionService {
               // Calculate expected saves (no minutes multiplier)
               const expectedSaves = (goalkeeperAvgSavesPerGame * opponentAGR / 1.35);
               
-              // 1 point for every 3 saves (according to FPL rules)
-              // Use expected value (not Math.floor) since we're projecting averages across many matches
-              savesPoints = expectedSaves / 3;
+              // Poisson probability-based saves points calculation
+              // FPL awards 1 point per 3 saves (floor-based thresholds: 3=1pt, 6=2pt, 9=3pt, 12=4pt)
+              const poissonProbAtLeast = (lambda: number, k: number): number => {
+                if (lambda <= 0) return 0;
+                let cumulativeProb = 0;
+                for (let i = 0; i < k; i++) {
+                  cumulativeProb += Math.exp(-lambda + i * Math.log(lambda) - Array.from({length: i}, (_, j) => Math.log(j + 1)).reduce((a, b) => a + b, 0));
+                }
+                return 1 - cumulativeProb;
+              };
+              savesPoints = poissonProbAtLeast(expectedSaves, 3)
+                + poissonProbAtLeast(expectedSaves, 6)
+                + poissonProbAtLeast(expectedSaves, 9)
+                + poissonProbAtLeast(expectedSaves, 12);
               
               // Penalty save probability (rare event, ~3% chance per game for top keepers)
               const penaltySaveProbability = position === 'GKP' ? 0.03 * (adjustedForm / 10) : 0;

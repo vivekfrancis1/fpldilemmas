@@ -15169,8 +15169,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
             });
             
-            // Apply new points formula: Points from saves = 0.33 × expected saves
-            const expectedPoints = gwExpectedSaves * 0.33;
+            // Poisson probability-based saves points calculation
+            // FPL awards 1 point per 3 saves (floor-based thresholds: 3=1pt, 6=2pt, 9=3pt, 12=4pt)
+            // Using Poisson CDF: P(X >= k) = 1 - P(X < k) for each threshold
+            const poissonProbAtLeast = (lambda: number, k: number): number => {
+              if (lambda <= 0) return 0;
+              let cumulativeProb = 0;
+              for (let i = 0; i < k; i++) {
+                cumulativeProb += Math.exp(-lambda + i * Math.log(lambda) - Array.from({length: i}, (_, j) => Math.log(j + 1)).reduce((a, b) => a + b, 0));
+              }
+              return 1 - cumulativeProb;
+            };
+            const expectedPoints = poissonProbAtLeast(gwExpectedSaves, 3)
+              + poissonProbAtLeast(gwExpectedSaves, 6)
+              + poissonProbAtLeast(gwExpectedSaves, 9)
+              + poissonProbAtLeast(gwExpectedSaves, 12);
             
             saves[`gw${gw}`] = parseFloat(gwExpectedSaves.toFixed(3));
             pointsFromSaves[`gw${gw}`] = parseFloat(expectedPoints.toFixed(3));
@@ -18848,6 +18861,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log('🔄 Manual cache refresh triggered...');
+      
+      // Clear in-memory cache first to prevent stale data being served during refresh
+      totalPointsCache.clear();
       
       // Import the daily projections service
       const { dailyProjectionsService } = await import('./daily-projections-job');
