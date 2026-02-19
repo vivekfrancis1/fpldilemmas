@@ -34,7 +34,7 @@ import { normalizeGameweekKeys, normalizeGameweekKey } from './gameweek-key-util
 import { syncProjectionService } from './sync-projection-service';
 import { FPLScoringCacheService } from './fpl-scoring-cache-service';
 import { InitializationOrchestrator } from './initialization-orchestrator';
-import { applyAvailabilityToGameweek, applyAvailabilityAdjustmentsToPlayer } from './availability-adjustments';
+import { applyAvailabilityToGameweek, applyAvailabilityAdjustmentsToPlayer, calculateAvailabilityProbability, BootstrapEvent } from './availability-adjustments';
 import { setupAuth, isAuthenticated } from './replitAuth';
 
 // Helper function for FPL API requests with retry logic
@@ -11118,15 +11118,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const pct60Plus = playerMinutes.pct60Plus || 0;
         const pctBelow60 = playerMinutes.pctBelow60 || 0;
-        const appearances = playerMinutes.playerAppearances || 1;
-        const finishedGWCount = bootstrapData.events.filter((e: any) => e.finished).length;
-        const appearanceRate = finishedGWCount > 0 ? Math.min(1, appearances / finishedGWCount) : 1;
 
         const cleanSheetPoints = (position.singular_name === 'Midfielder') ? 1 : 4;
+
+        const events: BootstrapEvent[] = bootstrapData.events || [];
 
         for (let gw = startGameweek; gw <= endGameweek; gw++) {
           const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
           const teamFixtureDetails = teamCSProjection.fixtureDetails?.[gw.toString()] || teamCSProjection.fixtureDetails?.[gw] || [];
+          
+          const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, events);
           
           let cleanSheetPointsForGW = 0;
           const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; cleanSheetPoints: number }> = [];
@@ -11134,7 +11135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (teamCleanSheetPercent !== undefined) {
             if (teamFixtureDetails.length > 0) {
               teamFixtureDetails.forEach((fd: any) => {
-                const fixtureCSPoints = appearanceRate * (fd.cleanSheetOdds / 100) * (pct60Plus / 100) * cleanSheetPoints;
+                const fixtureCSPoints = availabilityProb * (fd.cleanSheetOdds / 100) * (pct60Plus / 100) * cleanSheetPoints;
                 cleanSheetPointsForGW += fixtureCSPoints;
                 gwFixtureDetails.push({
                   opponent: fd.opponent,
@@ -11143,7 +11144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
               });
             } else {
-              cleanSheetPointsForGW = appearanceRate * (teamCleanSheetPercent / 100) * (pct60Plus / 100) * cleanSheetPoints;
+              cleanSheetPointsForGW = availabilityProb * (teamCleanSheetPercent / 100) * (pct60Plus / 100) * cleanSheetPoints;
               gwFixtureDetails.push({
                 opponent: 'OPP',
                 isHome: true,
@@ -11170,7 +11171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: position.singular_name,
           price: player.now_cost / 10,
           ownership: parseFloat(player.selected_by_percent),
-          appearances: appearances,
+          appearances: playerMinutes.playerAppearances || 0,
           pct60Plus: pct60Plus,
           pctBelow60: pctBelow60,
           gameweekProjections,
@@ -15535,10 +15536,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Find player's expected minutes data
           const playerMinutes = playerMinutesData.find((pm: any) => pm.playerId === player.id);
-          const expectedMinutesPerGame = playerMinutes?.expectedMinutesPerGame || 0;
+          const pct60Plus = (playerMinutes?.pct60Plus || 0) / 100;
           
           // Find team's projected goals conceded data
           const teamGoalData = teamProjections.find((tp: any) => tp.teamShort === team?.short_name);
+          
+          const events: BootstrapEvent[] = fplData.events || [];
           
           // Process each FUTURE gameweek only with pure projections
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
@@ -15549,8 +15552,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const teamGoalsAgainst = teamGoalData.gameweekProjections[gw.toString()] || teamGoalData.gameweekProjections[gw];
               
               if (teamGoalsAgainst !== undefined) {
-                // Player expected goals conceded = (expected minutes / 90) * Team expected goals AGAINST (conceded)
-                gwGoalsConceded = (expectedMinutesPerGame / 90) * parseFloat(teamGoalsAgainst);
+                const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, events);
+                gwGoalsConceded = availabilityProb * pct60Plus * parseFloat(teamGoalsAgainst);
                 
                 // Poisson-based goals conceded points calculation
                 // FPL rule: -1pt per 2 goals conceded (floor(gc/2) * -1)

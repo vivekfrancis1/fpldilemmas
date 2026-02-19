@@ -90,6 +90,84 @@ export function getGameweekFromDate(date: Date, events: BootstrapEvent[]): numbe
   return lastEvent ? lastEvent.id : null;
 }
 
+/**
+ * Calculate per-gameweek availability probability for a player.
+ * Returns a value between 0.0 and 1.0 representing the probability
+ * the player will be available and in the squad for that gameweek.
+ * 
+ * Logic:
+ * - Fully available (status='a', chance=null/100): 1.0 for all GWs
+ * - 25/50/75% chance: apply that probability for next GW only, 1.0 for GW+2 onwards
+ * - 0% with return date: 0.0 before return GW, 0.5 for return GW (uncertain if starting), 1.0 after
+ * - 0% with "Unknown return date": 0.0 for next GW, then gradual increase (0.25, 0.5, 0.75, 1.0)
+ * - Suspended: 0.0 until suspension end date, 1.0 after
+ * - Loaned/transferred out: 0.0 for all GWs
+ * - Season-ending injury (news contains "season"): 0.0 for all GWs
+ */
+export function calculateAvailabilityProbability(
+  player: { chance_of_playing_next_round: number | null; status: string; news: string },
+  gameweek: number,
+  currentGameweek: number,
+  events: BootstrapEvent[]
+): number {
+  const chance = player.chance_of_playing_next_round;
+  const status = player.status || 'a';
+  const news = (player.news || '').toLowerCase();
+  const nextGW = currentGameweek + 1;
+
+  if (status === 'a' && (chance === null || chance === 100)) {
+    return 1.0;
+  }
+
+  if (news.includes('loan') || news.includes('permanently') || news.includes('season-long')) {
+    return 0.0;
+  }
+
+  if (news.includes('rest of the season') || news.includes('season ending') || news.includes('out for season')) {
+    return 0.0;
+  }
+
+  if (status === 's') {
+    const returnDate = parseReturnDate(player.news || '');
+    if (returnDate) {
+      const returnGW = getGameweekFromDate(returnDate, events);
+      if (returnGW) {
+        if (gameweek < returnGW) return 0.0;
+        if (gameweek === returnGW) return 0.75;
+        return 1.0;
+      }
+    }
+    if (gameweek === nextGW) return 0.0;
+    return 1.0;
+  }
+
+  if (chance === 0 || status === 'i' || status === 'u') {
+    const returnDate = parseReturnDate(player.news || '');
+    if (returnDate) {
+      const returnGW = getGameweekFromDate(returnDate, events);
+      if (returnGW) {
+        if (gameweek < returnGW) return 0.0;
+        if (gameweek === returnGW) return 0.5;
+        return 1.0;
+      }
+    }
+
+    const gwsFromNow = gameweek - nextGW;
+    if (gwsFromNow <= 0) return 0.0;
+    if (gwsFromNow === 1) return 0.25;
+    if (gwsFromNow === 2) return 0.5;
+    if (gwsFromNow === 3) return 0.75;
+    return 1.0;
+  }
+
+  if (chance === 25 || chance === 50 || chance === 75) {
+    if (gameweek === nextGW) return chance / 100;
+    return 1.0;
+  }
+
+  return 1.0;
+}
+
 // Apply availability adjustment to a single gameweek's projected points
 // Uses only official FPL API data (chance_of_playing_next_round, status, news)
 export function applyAvailabilityToGameweek(
