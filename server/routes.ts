@@ -11116,17 +11116,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fixtureDetails: { [key: string]: Array<{ opponent: string; isHome: boolean; cleanSheetPoints: number }> } = {};
         let totalExpectedPoints = 0;
 
-        // Use actual 60+ minute probability from player history
-        const pct60Plus = playerMinutes.pct60Plus || 0; // % chance of hitting 60+ minutes
-        const pctBelow60 = playerMinutes.pctBelow60 || 0; // % chance below 60 minutes
+        const pct60Plus = playerMinutes.pct60Plus || 0;
+        const pctBelow60 = playerMinutes.pctBelow60 || 0;
         const appearances = playerMinutes.playerAppearances || 1;
+        const finishedGWCount = bootstrapData.events.filter((e: any) => e.finished).length;
+        const appearanceRate = finishedGWCount > 0 ? Math.min(1, appearances / finishedGWCount) : 1;
 
-        // Position-based clean sheet points: Defenders/GK = 4, Midfielders = 1
         const cleanSheetPoints = (position.singular_name === 'Midfielder') ? 1 : 4;
 
-        // Projection calculation using 60-minute threshold probability
-        // Formula: (Team CS %) × (% chance of 60+ mins) × (Position Points)
-        // Only players who hit 60+ minutes get full clean sheet points in FPL
         for (let gw = startGameweek; gw <= endGameweek; gw++) {
           const teamCleanSheetPercent = teamCSProjection.gameweekProjections[gw.toString()];
           const teamFixtureDetails = teamCSProjection.fixtureDetails?.[gw.toString()] || teamCSProjection.fixtureDetails?.[gw] || [];
@@ -11135,11 +11132,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; cleanSheetPoints: number }> = [];
           
           if (teamCleanSheetPercent !== undefined) {
-            // For each individual fixture in this gameweek (handles DGW and SGW)
             if (teamFixtureDetails.length > 0) {
               teamFixtureDetails.forEach((fd: any) => {
-                // Formula: (Fixture CS %) × (% chance of 60+ mins / 100) × (Position Points)
-                const fixtureCSPoints = (fd.cleanSheetOdds / 100) * (pct60Plus / 100) * cleanSheetPoints;
+                const fixtureCSPoints = appearanceRate * (fd.cleanSheetOdds / 100) * (pct60Plus / 100) * cleanSheetPoints;
                 cleanSheetPointsForGW += fixtureCSPoints;
                 gwFixtureDetails.push({
                   opponent: fd.opponent,
@@ -11148,9 +11143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
               });
             } else {
-              // Fallback if no fixture details available - create synthetic fixture detail
-              cleanSheetPointsForGW = (teamCleanSheetPercent / 100) * (pct60Plus / 100) * cleanSheetPoints;
-              // Add a single fixture detail for consistency
+              cleanSheetPointsForGW = appearanceRate * (teamCleanSheetPercent / 100) * (pct60Plus / 100) * cleanSheetPoints;
               gwFixtureDetails.push({
                 opponent: 'OPP',
                 isHome: true,
