@@ -323,13 +323,14 @@ export default function Fixtures() {
       const teamFixturesEntries = Object.entries(matrix[team.id] || {});
       const filteredFixtures = teamFixturesEntries.filter(([gw]) => !excludedGameweeks.has(parseInt(gw)));
       if (filteredFixtures.length > 0) {
-        // Sum all fixture difficulties (including multiple fixtures per GW for DGW)
         let totalDifficulty = 0;
         let fixtureCount = 0;
         filteredFixtures.forEach(([, fixtures]) => {
           fixtures.forEach(fixture => {
-            totalDifficulty += fixture.difficulty;
-            fixtureCount++;
+            if (!fixture.finished) {
+              totalDifficulty += fixture.difficulty;
+              fixtureCount++;
+            }
           });
         });
         avgFDR[team.id] = fixtureCount > 0 ? parseFloat((totalDifficulty / fixtureCount).toFixed(2)) : 0;
