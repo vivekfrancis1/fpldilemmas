@@ -19792,7 +19792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      results.sort((a, b) => b.actual.totalPoints.pts - a.actual.totalPoints.pts);
+      results.sort((a, b) => b.projected.totalPoints.pts - a.projected.totalPoints.pts);
 
       res.json({
         currentGameweek: currentGW,

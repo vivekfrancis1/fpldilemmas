@@ -32,17 +32,17 @@ interface PlayerValidation {
 }
 
 const COMPONENTS = [
+  { key: "totalPoints", label: "Total Points", hasRaw: false },
   { key: "goals", label: "Goals", hasRaw: true },
   { key: "assists", label: "Assists", hasRaw: true },
+  { key: "defensiveContributions", label: "Def. Contributions", hasRaw: true },
   { key: "cleanSheets", label: "Clean Sheets", hasRaw: true },
   { key: "minutes", label: "Minutes", hasRaw: true },
+  { key: "bonus", label: "Bonus", hasRaw: true },
+  { key: "saves", label: "Saves", hasRaw: true },
   { key: "goalsConceded", label: "Goals Conceded", hasRaw: true },
   { key: "yellowCards", label: "Yellow Cards", hasRaw: true },
   { key: "redCards", label: "Red Cards", hasRaw: true },
-  { key: "bonus", label: "Bonus", hasRaw: true },
-  { key: "saves", label: "Saves", hasRaw: true },
-  { key: "defensiveContributions", label: "Def. Contributions", hasRaw: true },
-  { key: "totalPoints", label: "Total Points", hasRaw: false },
 ];
 
 type ViewMode = "pts" | "raw" | "both";
@@ -68,10 +68,10 @@ export default function AdminProjectionValidation() {
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
   const [viewMode, setViewMode] = useState<ViewMode>("pts");
-  const [sortColumn, setSortColumn] = useState("totalPoints_diff_pts");
+  const [sortColumn, setSortColumn] = useState("totalPoints_proj_pts");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [visibleComponents, setVisibleComponents] = useState<Set<string>>(
-    new Set(["goals", "assists", "cleanSheets", "bonus", "defensiveContributions", "totalPoints"])
+    new Set(COMPONENTS.map(c => c.key))
   );
   const [showColumnPicker, setShowColumnPicker] = useState(false);
 
@@ -238,7 +238,7 @@ export default function AdminProjectionValidation() {
                 Projection Validation
               </CardTitle>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                Past avg/game ({data?.currentGameweek} GWs) vs Projected avg/game ({data?.players?.[0]?.projectedGWs || 12} GWs) &middot; {filteredPlayers.length} players
+                Past avg/match (GW1-{data?.currentGameweek}) vs Projected avg/GW (next {data?.players?.[0]?.projectedGWs || 12} GWs) &middot; {filteredPlayers.length} players
               </p>
             </div>
           </div>
