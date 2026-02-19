@@ -553,9 +553,9 @@ export default function Top25Managers() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b bg-gray-50/80">
-                          <th className="px-3 py-2 text-left font-medium text-muted-foreground w-12">#</th>
+                          <th className="px-2 sm:px-3 py-2 text-left font-medium text-muted-foreground w-10 sm:w-12">#</th>
                           <th
-                            className="px-3 py-2 text-left font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
+                            className="px-2 sm:px-3 py-2 text-left font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
                             onClick={() => {
                               if (historicalSortField === 'player_name') {
                                 setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
@@ -568,7 +568,7 @@ export default function Top25Managers() {
                             Manager {historicalSortField === 'player_name' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
                           </th>
                           <th
-                            className="px-3 py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
+                            className="px-2 sm:px-3 py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
                             onClick={() => {
                               if (historicalSortField === 'total_points') {
                                 setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
@@ -578,10 +578,10 @@ export default function Top25Managers() {
                               }
                             }}
                           >
-                            Total Points {historicalSortField === 'total_points' && (historicalSortDirection === 'desc' ? '▼' : '▲')}
+                            <span className="hidden sm:inline">Total Points</span><span className="sm:hidden">Pts</span> {historicalSortField === 'total_points' && (historicalSortDirection === 'desc' ? '▼' : '▲')}
                           </th>
                           <th
-                            className="px-3 py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
+                            className="px-2 sm:px-3 py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
                             onClick={() => {
                               if (historicalSortField === 'rank') {
                                 setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
@@ -591,7 +591,7 @@ export default function Top25Managers() {
                               }
                             }}
                           >
-                            Overall Rank {historicalSortField === 'rank' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
+                            <span className="hidden sm:inline">Overall Rank</span><span className="sm:hidden">Rank</span> {historicalSortField === 'rank' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
                           </th>
                         </tr>
                       </thead>
@@ -602,9 +602,9 @@ export default function Top25Managers() {
                             className="border-b hover:bg-gray-50/50 transition-colors cursor-pointer"
                             onClick={() => navigate(`/manager-team/${entry.managerId}`)}
                           >
-                            <td className="px-3 py-2.5">
+                            <td className="px-2 sm:px-3 py-2">
                               {entry.played ? (
-                                <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold ${
+                                <div className={`flex items-center justify-center w-6 h-6 sm:w-7 sm:h-7 rounded-full text-[10px] sm:text-xs font-semibold ${
                                   index === 0 ? 'bg-yellow-100 text-yellow-800' :
                                   index === 1 ? 'bg-gray-100 text-gray-800' :
                                   index === 2 ? 'bg-orange-100 text-orange-800' :
@@ -616,17 +616,17 @@ export default function Top25Managers() {
                                 <span className="text-gray-400 text-xs">-</span>
                               )}
                             </td>
-                            <td className="px-3 py-2.5">
-                              <div className="font-medium">{entry.playerName}</div>
+                            <td className="px-2 sm:px-3 py-2">
+                              <div className="font-medium text-sm truncate max-w-[140px] sm:max-w-none">{entry.playerName}</div>
                             </td>
-                            <td className="px-3 py-2.5 text-right font-mono font-semibold">
+                            <td className="px-2 sm:px-3 py-2 text-right font-mono font-semibold text-xs sm:text-sm">
                               {entry.played ? entry.totalPoints?.toLocaleString() : (
-                                <span className="text-gray-400 text-xs">Did not play</span>
+                                <span className="text-gray-400 text-[10px] sm:text-xs">Did not play</span>
                               )}
                             </td>
-                            <td className="px-3 py-2.5 text-right font-mono text-sm">
+                            <td className="px-2 sm:px-3 py-2 text-right font-mono text-xs sm:text-sm">
                               {entry.played && entry.rank ? entry.rank.toLocaleString() : (
-                                <span className="text-gray-400 text-xs">N/A</span>
+                                <span className="text-gray-400 text-[10px] sm:text-xs">N/A</span>
                               )}
                             </td>
                           </tr>

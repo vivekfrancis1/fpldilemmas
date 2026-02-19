@@ -735,21 +735,26 @@ export default function ProjectionAccuracy() {
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="text-left p-3 font-semibold">Player</th>
-                          <th className="text-center p-3 font-semibold">Team</th>
-                          <th className="text-center p-3 font-semibold">Pos</th>
-                          <th className="text-center p-3 font-semibold">Total Proj Pts (GW25-38)</th>
+                          <th className="text-left p-2 sm:p-3 font-semibold">Player</th>
+                          <th className="text-center p-2 sm:p-3 font-semibold hidden sm:table-cell">Team</th>
+                          <th className="text-center p-2 sm:p-3 font-semibold hidden sm:table-cell">Pos</th>
+                          <th className="text-center p-2 sm:p-3 font-semibold">Total Proj Pts</th>
                         </tr>
                       </thead>
                       <tbody>
                         {aggregateData.players.map((player) => {
                           const webName = playerIdToWebName.get(player.player_id) || player.player_name.split(' ').pop() || player.player_name;
+                          const teamShort = getTeamShortCode(player.team_name);
+                          const posShort = (player.position?.substring(0, 3) || player.position)?.toUpperCase();
                           return (
                             <tr key={player.player_id} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="p-3 font-medium text-gray-900">{webName}</td>
-                              <td className="text-center p-3 text-gray-600">{getTeamShortCode(player.team_name)}</td>
-                              <td className="text-center p-3 text-gray-600">{(player.position?.substring(0, 3) || player.position)?.toUpperCase()}</td>
-                              <td className="text-center p-3 font-bold text-purple-600">
+                              <td className="p-2 sm:p-3 font-medium text-gray-900">
+                                <div>{webName}</div>
+                                <div className="text-xs text-gray-500 sm:hidden">{teamShort} • {posShort}</div>
+                              </td>
+                              <td className="text-center p-2 sm:p-3 text-gray-600 hidden sm:table-cell">{teamShort}</td>
+                              <td className="text-center p-2 sm:p-3 text-gray-600 hidden sm:table-cell">{posShort}</td>
+                              <td className="text-center p-2 sm:p-3 font-bold text-purple-600">
                                 {player.total_projected_points.toFixed(2)}
                               </td>
                             </tr>
@@ -796,15 +801,15 @@ export default function ProjectionAccuracy() {
                     <table className="w-full text-sm">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="text-left p-3 font-semibold">Team</th>
-                          <th className="text-center p-3 font-semibold">Total Proj Goals (GW25-38)</th>
+                          <th className="text-left p-2 sm:p-3 font-semibold">Team</th>
+                          <th className="text-center p-2 sm:p-3 font-semibold">Total Proj Goals</th>
                         </tr>
                       </thead>
                       <tbody>
                         {aggregateData.teams.map((team) => (
                           <tr key={team.team_id} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="p-3 font-medium text-gray-900">{getTeamShortCode(team.team_name)}</td>
-                            <td className="text-center p-3 font-bold text-purple-600">
+                            <td className="p-2 sm:p-3 font-medium text-gray-900">{getTeamShortCode(team.team_name)}</td>
+                            <td className="text-center p-2 sm:p-3 font-bold text-purple-600">
                               {team.total_projected_goals.toFixed(2)}
                             </td>
                           </tr>
