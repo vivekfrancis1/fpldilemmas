@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Calendar, ArrowUpDown, ArrowUp, ArrowDown, Settings, RotateCcw, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, ArrowUpDown, ArrowUp, ArrowDown, Settings, RotateCcw, X, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -573,23 +573,34 @@ export default function Fixtures() {
           Analyze fixtures based on Official FPL ratings, Season Form or Custom ratings
         </p>
         {teamFilterId && bootstrapData?.teams && (
-          <div className="mt-2 flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
-            <span className="text-sm text-purple-800 font-medium">
-              Showing fixtures for: {bootstrapData.teams.find((t: any) => t.id === teamFilterId)?.name || 'Unknown'}
-            </span>
+          <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 px-2 text-purple-600 hover:text-purple-800 hover:bg-purple-100"
-              onClick={() => {
-                setTeamFilterId(null);
-                setExcludedTeams(new Set());
-                window.history.replaceState({}, '', '/fixtures');
-              }}
+              className="w-fit text-gray-600 hover:text-gray-800 -ml-2"
+              onClick={() => window.history.length > 1 ? window.history.back() : null}
             >
-              <X className="h-4 w-4 mr-1" />
-              Show All
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back
             </Button>
+            <div className="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
+              <span className="text-sm text-purple-800 font-medium">
+                Showing fixtures for: {bootstrapData.teams.find((t: any) => t.id === teamFilterId)?.name || 'Unknown'}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-purple-600 hover:text-purple-800 hover:bg-purple-100"
+                onClick={() => {
+                  setTeamFilterId(null);
+                  setExcludedTeams(new Set());
+                  window.history.replaceState({}, '', '/fixtures');
+                }}
+              >
+                <X className="h-4 w-4 mr-1" />
+                Show All
+              </Button>
+            </div>
           </div>
         )}
       </div>

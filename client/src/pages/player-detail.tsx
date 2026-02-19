@@ -327,8 +327,8 @@ export default function PlayerDetail() {
   if (!player && !isLoading) {
     return (
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-        <Button variant="ghost" onClick={() => setLocation('/player-statistics')} className="mb-4">
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Player Statistics
+        <Button variant="ghost" onClick={() => window.history.length > 1 ? window.history.back() : setLocation('/player-statistics')} className="mb-4">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
         <Card>
           <CardContent className="p-8 text-center text-gray-500">
@@ -341,8 +341,8 @@ export default function PlayerDetail() {
 
   return (
     <div className="p-2 sm:p-4 md:p-6 max-w-7xl mx-auto space-y-4">
-      <Button variant="ghost" onClick={() => setLocation('/player-statistics')} className="mb-2">
-        <ArrowLeft className="h-4 w-4 mr-2" /> Back to Player Statistics
+      <Button variant="ghost" onClick={() => window.history.length > 1 ? window.history.back() : setLocation('/player-statistics')} className="mb-2">
+        <ArrowLeft className="h-4 w-4 mr-2" /> Back
       </Button>
 
       {player && (
