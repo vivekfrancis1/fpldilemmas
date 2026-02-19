@@ -1151,7 +1151,7 @@ export default function ManagerTeam() {
                             </div>
                           </TableCell>
                           <TableCell>{season.total_points?.toLocaleString()}</TableCell>
-                          <TableCell>#{season.rank?.toLocaleString()}</TableCell>
+                          <TableCell>{season.rank ? `#${season.rank.toLocaleString()}` : 'N/A'}</TableCell>
                         </TableRow>
                       ));
                     })()}
