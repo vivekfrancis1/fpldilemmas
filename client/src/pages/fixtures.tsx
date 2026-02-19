@@ -478,11 +478,14 @@ export default function Fixtures() {
             : b.short_name.localeCompare(a.short_name)
         );
       case 'fdr-avg':
-        return teams.sort((a, b) => 
-          sortDirection === 'asc' 
-            ? (teamAverageFDR[a.id] || 0) - (teamAverageFDR[b.id] || 0)
-            : (teamAverageFDR[b.id] || 0) - (teamAverageFDR[a.id] || 0)
-        );
+        return teams.sort((a, b) => {
+          const gamesA = teamGameCount[a.id] || 0;
+          const gamesB = teamGameCount[b.id] || 0;
+          if (gamesA !== gamesB) return gamesB - gamesA;
+          const fdrA = teamAverageFDR[a.id] || 0;
+          const fdrB = teamAverageFDR[b.id] || 0;
+          return sortDirection === 'asc' ? fdrA - fdrB : fdrB - fdrA;
+        });
       case 'games':
         return teams.sort((a, b) => 
           sortDirection === 'asc'
@@ -923,7 +926,8 @@ export default function Fixtures() {
                           className="flex items-center gap-0.5 hover:text-blue-600 transition-colors mx-auto"
                           data-testid="sort-avg-fdr"
                         >
-                          Avg
+                          <span className="hidden sm:inline">Avg FDR</span>
+                          <span className="sm:hidden">Avg</span>
                           {sortBy === 'fdr-avg' && (
                             sortDirection === 'asc' ? <ArrowUp className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> : <ArrowDown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
                           )}
@@ -975,7 +979,7 @@ export default function Fixtures() {
                             </div>
                           </td>
                           <td className="sticky left-[50px] sm:left-[65px] md:left-[80px] lg:left-[100px] bg-white px-0.5 py-0.5 sm:py-1 text-center font-medium border-l z-10">
-                            <div className={`inline-block px-0.5 sm:px-1 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold ${
+                            <div className={`inline-block px-1 sm:px-1.5 py-0.5 rounded text-[11px] sm:text-xs font-bold ${
                               avgFDR <= 2 ? 'bg-green-100 text-green-800' :
                               avgFDR <= 3 ? 'bg-yellow-100 text-yellow-800' :
                               avgFDR <= 4 ? 'bg-orange-100 text-orange-800' :
@@ -985,7 +989,7 @@ export default function Fixtures() {
                             </div>
                           </td>
                           <td className="sticky left-[78px] sm:left-[101px] md:left-[125px] lg:left-[155px] bg-white px-0.5 py-0.5 sm:py-1 text-center font-medium border-l border-r z-10">
-                            <span className="text-[9px] sm:text-[10px] font-semibold text-gray-700">
+                            <span className="text-[11px] sm:text-xs font-bold text-gray-700">
                               {teamGameCount[team.id] || 0}
                             </span>
                           </td>
