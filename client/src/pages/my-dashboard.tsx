@@ -298,6 +298,10 @@ export default function MyDashboard() {
   const { user } = useAuth();
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tab') || 'overview';
+  });
   // Always default to pitch view
   const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
   const [nextTeamView, setNextTeamView] = useState<"pitch" | "list">("pitch");
@@ -1297,7 +1301,7 @@ export default function MyDashboard() {
             </Card>
 
             {/* Main Dashboard Tabs */}
-            <Tabs defaultValue="overview" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               {/* Dynamic grid based on whether next team data is available */}
               <TabsList className={`grid w-full ${teamData ? 'grid-cols-3 sm:grid-cols-6' : 'grid-cols-3 sm:grid-cols-5'} gap-1 sm:gap-0 h-auto p-1 bg-white/70 backdrop-blur-sm border-0 shadow-lg`}>
                 <TabsTrigger 
@@ -3384,13 +3388,13 @@ export default function MyDashboard() {
 
             {selectedPlayerForBreakdown && (
               <div className="flex gap-2 pt-2 border-t border-gray-200">
-                <Link href={`/player/${selectedPlayerForBreakdown.id}?from=${encodeURIComponent(window.location.pathname)}`} className="flex-1">
+                <Link href={`/player/${selectedPlayerForBreakdown.id}?from=${encodeURIComponent(`/my-dashboard?tab=${activeTab}`)}`} className="flex-1">
                   <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-purple-600 hover:to-indigo-600 transition-all">
                     <BarChart3 className="h-3.5 w-3.5" />
                     Season Statistics
                   </button>
                 </Link>
-                <Link href={`/fixtures?team=${selectedPlayerForBreakdown.team}&from=${encodeURIComponent(window.location.pathname)}`} className="flex-1">
+                <Link href={`/fixtures?team=${selectedPlayerForBreakdown.team}&from=${encodeURIComponent(`/my-dashboard?tab=${activeTab}`)}`} className="flex-1">
                   <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-green-600 hover:to-emerald-600 transition-all">
                     <Calendar className="h-3.5 w-3.5" />
                     Upcoming Fixtures

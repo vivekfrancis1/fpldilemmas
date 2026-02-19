@@ -579,26 +579,26 @@ export default function Fixtures() {
           Analyze fixtures based on Official FPL ratings, Season Form or Custom ratings
         </p>
         {teamFilterId && bootstrapData?.teams && (
-          <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
+          <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2 relative z-10">
             {returnPath && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-fit text-gray-600 hover:text-gray-800 -ml-2"
+                className="w-fit text-white hover:text-white/80 hover:bg-white/10 -ml-2"
                 onClick={() => setLocation(returnPath)}
               >
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 Back
               </Button>
             )}
-            <div className="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
-              <span className="text-sm text-purple-800 font-medium">
+            <div className="flex items-center gap-2 bg-white/20 border border-white/30 rounded-lg px-3 py-2">
+              <span className="text-sm text-white font-medium">
                 Showing fixtures for: {bootstrapData.teams.find((t: any) => t.id === teamFilterId)?.name || 'Unknown'}
               </span>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-purple-600 hover:text-purple-800 hover:bg-purple-100"
+                className="h-6 px-2 text-white hover:text-white hover:bg-white/20"
                 onClick={() => {
                   setTeamFilterId(null);
                   setExcludedTeams(new Set());

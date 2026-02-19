@@ -348,7 +348,7 @@ html {
 
 .fpl-page-header::before {
   content: '';
-  @apply absolute inset-0 opacity-10;
+  @apply absolute inset-0 opacity-10 pointer-events-none;
   background: repeating-linear-gradient(
     45deg,
     transparent,
