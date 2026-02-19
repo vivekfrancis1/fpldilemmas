@@ -204,7 +204,7 @@ export default function ManagerTeam() {
   
   // Fetch manager general info (name, etc.)
   const { data: managerInfo } = useQuery<any>({
-    queryKey: [`/api/manager/${managerId}`],
+    queryKey: [`/api/manager/${managerId}?source=navigation`],
     enabled: !!managerId,
     retry: 2,
   });

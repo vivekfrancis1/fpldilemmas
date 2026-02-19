@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Users, LogIn, Link2, Search, ChevronLeft, ChevronRight, Activity, Clock } from "lucide-react";
+import { Loader2, Users, LogIn, Link2, Search, ChevronLeft, ChevronRight, Activity, Clock, Navigation } from "lucide-react";
 
 function isUnauthorizedError(error: Error): boolean {
   return /^401: .*Unauthorized/.test(error.message);
@@ -40,6 +40,8 @@ function getActivityBadge(type: string) {
   switch (type) {
     case 'manager_id_search':
       return <Badge className="bg-blue-100 text-blue-800 border-blue-200"><Search className="h-3 w-3 mr-1" />Manager Search</Badge>;
+    case 'manager_navigation':
+      return <Badge className="bg-amber-100 text-amber-800 border-amber-200"><Navigation className="h-3 w-3 mr-1" />Manager Navigation</Badge>;
     case 'login':
       return <Badge className="bg-green-100 text-green-800 border-green-200"><LogIn className="h-3 w-3 mr-1" />Login</Badge>;
     case 'fpl_connect':
@@ -177,6 +179,7 @@ export default function AdminActivityLogs() {
               <SelectContent>
                 <SelectItem value="all">All Activities</SelectItem>
                 <SelectItem value="manager_id_search">Manager Searches</SelectItem>
+                <SelectItem value="manager_navigation">Manager Navigation</SelectItem>
                 <SelectItem value="login">Logins</SelectItem>
                 <SelectItem value="fpl_connect">FPL Connections</SelectItem>
               </SelectContent>

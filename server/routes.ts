@@ -3253,7 +3253,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const data = await fetchPromise;
 
-        logUserActivity(req, 'manager_id_search', {
+        const source = req.query.source;
+        logUserActivity(req, source === 'navigation' ? 'manager_navigation' : 'manager_id_search', {
           managerId: Number(managerId),
           managerName: (data.player_first_name || '') + ' ' + (data.player_last_name || ''),
           metadata: { teamName: data.name },
