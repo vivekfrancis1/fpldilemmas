@@ -196,12 +196,12 @@ export function PlayerPopupDetails({ player, children }: PlayerPopupDetailsProps
           <span className="text-xs text-gray-500">{teamName}</span>
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
           {statsGrid.map((stat, idx) => (
             <Card key={idx} className="border-0 bg-white/80 backdrop-blur-sm shadow-sm">
-              <CardContent className="p-2 text-center">
-                <div className="text-[10px] text-gray-500 mb-0.5 leading-tight">{stat.label}</div>
-                <div className={`text-sm font-bold ${stat.color}`}>{stat.value}</div>
+              <CardContent className="p-1.5 sm:p-2 text-center">
+                <div className="text-[9px] sm:text-[10px] text-gray-500 mb-0.5 leading-tight truncate">{stat.label}</div>
+                <div className={`text-xs sm:text-sm font-bold ${stat.color}`}>{stat.value}</div>
               </CardContent>
             </Card>
           ))}

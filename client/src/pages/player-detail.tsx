@@ -379,97 +379,97 @@ export default function PlayerDetail() {
             </CardContent>
           </Card>
 
-          <div className={`grid gap-3 ${isMobile ? 'grid-cols-3' : 'grid-cols-5 lg:grid-cols-7'}`}>
+          <div className={`grid gap-2 sm:gap-3 ${isMobile ? 'grid-cols-3' : 'grid-cols-5 lg:grid-cols-7'}`}>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Total Points</div>
-                <div className="text-lg font-bold text-purple-700">{totalStats.totalPoints}</div>
+              <CardContent className="p-2 sm:p-3 text-center">
+                <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">Total Points</div>
+                <div className="text-base sm:text-lg font-bold text-purple-700">{totalStats.totalPoints}</div>
               </CardContent>
             </Card>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">PPG</div>
-                <div className="text-lg font-bold text-blue-700">{player.points_per_game || totalStats.avgPoints}</div>
+              <CardContent className="p-2 sm:p-3 text-center">
+                <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">PPG</div>
+                <div className="text-base sm:text-lg font-bold text-blue-700">{player.points_per_game || totalStats.avgPoints}</div>
               </CardContent>
             </Card>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Form</div>
-                <div className="text-lg font-bold text-indigo-700">{player.form || '0.0'}</div>
+              <CardContent className="p-2 sm:p-3 text-center">
+                <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">Form</div>
+                <div className="text-base sm:text-lg font-bold text-indigo-700">{player.form || '0.0'}</div>
               </CardContent>
             </Card>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Own%</div>
-                <div className="text-lg font-bold text-gray-700">{player.selected_by_percent || '0'}%</div>
+              <CardContent className="p-2 sm:p-3 text-center">
+                <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">Own%</div>
+                <div className="text-base sm:text-lg font-bold text-gray-700">{player.selected_by_percent || '0'}%</div>
               </CardContent>
             </Card>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Appearances</div>
-                <div className="text-lg font-bold text-gray-700">{totalStats.gameweeksPlayed}</div>
+              <CardContent className="p-2 sm:p-3 text-center">
+                <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">Appearances</div>
+                <div className="text-base sm:text-lg font-bold text-gray-700">{totalStats.gameweeksPlayed}</div>
               </CardContent>
             </Card>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Goals</div>
-                <div className="text-lg font-bold text-green-700">{totalStats.totalGoals}</div>
+              <CardContent className="p-2 sm:p-3 text-center">
+                <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">Goals</div>
+                <div className="text-base sm:text-lg font-bold text-green-700">{totalStats.totalGoals}</div>
               </CardContent>
             </Card>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Assists</div>
-                <div className="text-lg font-bold text-blue-600">{totalStats.totalAssists}</div>
+              <CardContent className="p-2 sm:p-3 text-center">
+                <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">Assists</div>
+                <div className="text-base sm:text-lg font-bold text-blue-600">{totalStats.totalAssists}</div>
               </CardContent>
             </Card>
             {[1, 2, 3].includes(elementType) && (
               <Card className="border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-3 text-center">
-                  <div className="text-xs text-gray-500 mb-1">Clean Sheets</div>
-                  <div className="text-lg font-bold text-green-600">{totalStats.totalCleanSheets}</div>
+                <CardContent className="p-2 sm:p-3 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">Clean Sheets</div>
+                  <div className="text-base sm:text-lg font-bold text-green-600">{totalStats.totalCleanSheets}</div>
                 </CardContent>
               </Card>
             )}
             {[1, 2].includes(elementType) && (
               <Card className="border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-3 text-center">
-                  <div className="text-xs text-gray-500 mb-1">Goals Conceded</div>
-                  <div className="text-lg font-bold text-red-600">{totalStats.totalGoalsConceded}</div>
+                <CardContent className="p-2 sm:p-3 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">Goals Conceded</div>
+                  <div className="text-base sm:text-lg font-bold text-red-600">{totalStats.totalGoalsConceded}</div>
                 </CardContent>
               </Card>
             )}
             {elementType === 1 && (
               <Card className="border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-3 text-center">
-                  <div className="text-xs text-gray-500 mb-1">Saves</div>
-                  <div className="text-lg font-bold text-blue-600">{totalStats.totalSaves}</div>
+                <CardContent className="p-2 sm:p-3 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">Saves</div>
+                  <div className="text-base sm:text-lg font-bold text-blue-600">{totalStats.totalSaves}</div>
                 </CardContent>
               </Card>
             )}
             {elementType === 1 && (
               <Card className="border-0 bg-white/80 backdrop-blur-sm">
-                <CardContent className="p-3 text-center">
-                  <div className="text-xs text-gray-500 mb-1">Pen Saved</div>
-                  <div className="text-lg font-bold text-green-700">{totalStats.totalPenSaved}</div>
+                <CardContent className="p-2 sm:p-3 text-center">
+                  <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">Pen Saved</div>
+                  <div className="text-base sm:text-lg font-bold text-green-700">{totalStats.totalPenSaved}</div>
                 </CardContent>
               </Card>
             )}
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Bonus</div>
-                <div className="text-lg font-bold text-purple-600">{totalStats.totalBonus}</div>
+              <CardContent className="p-2 sm:p-3 text-center">
+                <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">Bonus</div>
+                <div className="text-base sm:text-lg font-bold text-purple-600">{totalStats.totalBonus}</div>
               </CardContent>
             </Card>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">DC</div>
-                <div className="text-lg font-bold text-orange-600">{player.defensive_contribution || 0}</div>
+              <CardContent className="p-2 sm:p-3 text-center">
+                <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">DC</div>
+                <div className="text-base sm:text-lg font-bold text-orange-600">{player.defensive_contribution || 0}</div>
               </CardContent>
             </Card>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Dream Team</div>
-                <div className="text-lg font-bold text-amber-600">{player.dreamteam_count || 0}</div>
+              <CardContent className="p-2 sm:p-3 text-center">
+                <div className="text-[10px] sm:text-xs text-gray-500 mb-0.5 sm:mb-1 truncate">Dream Team</div>
+                <div className="text-base sm:text-lg font-bold text-amber-600">{player.dreamteam_count || 0}</div>
               </CardContent>
             </Card>
           </div>
