@@ -1869,7 +1869,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             starts: p.starts || 0,
             own_goals: p.own_goals || 0,
             penalties_saved: p.penalties_saved || 0,
-            penalties_missed: p.penalties_missed || 0
+            penalties_missed: p.penalties_missed || 0,
+            defensive_contribution: p.defensive_contribution || 0,
+            tackles: p.tackles || 0,
+            recoveries: p.recoveries || 0,
+            clearances_blocks_interceptions: p.clearances_blocks_interceptions || 0
           }
         });
       });
@@ -1930,6 +1934,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ownGoals: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.own_goals}), 0)`.as('own_goals'),
             penaltiesSaved: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.penalties_saved}), 0)`.as('penalties_saved'),
             penaltiesMissed: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.penalties_missed}), 0)`.as('penalties_missed'),
+            defensiveContribution: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.defensive_contribution}), 0)`.as('defensive_contribution_tot'),
+            tackles: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.tackles}), 0)`.as('tackles_tot'),
+            recoveries: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.recoveries}), 0)`.as('recoveries_tot'),
+            clearancesBlocksInterceptions: sql<number>`COALESCE(SUM(${gameweekPlayerDataTable.clearances_blocks_interceptions}), 0)`.as('cbi_tot'),
             gamesPlayed: sql<number>`COUNT(CASE WHEN ${gameweekPlayerDataTable.minutes} > 0 THEN 1 END)`.as('games_played')
           })
           .from(gameweekPlayerDataTable)
@@ -1970,6 +1978,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ownGoals: 0,
           penaltiesSaved: 0,
           penaltiesMissed: 0,
+          defensiveContribution: 0,
+          tackles: 0,
+          recoveries: 0,
+          clearancesBlocksInterceptions: 0,
           gamesPlayed: 0
         };
 
@@ -1990,6 +2002,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           finalStats.ownGoals += Number(stats.ownGoals) || 0;
           finalStats.penaltiesSaved += Number(stats.penaltiesSaved) || 0;
           finalStats.penaltiesMissed += Number(stats.penaltiesMissed) || 0;
+          finalStats.defensiveContribution += Number(stats.defensiveContribution) || 0;
+          finalStats.tackles += Number(stats.tackles) || 0;
+          finalStats.recoveries += Number(stats.recoveries) || 0;
+          finalStats.clearancesBlocksInterceptions += Number(stats.clearancesBlocksInterceptions) || 0;
           finalStats.gamesPlayed += Number(stats.gamesPlayed) || 0;
         }
 
@@ -2013,6 +2029,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const currentGWOwnGoals = cumulative.own_goals - (cachedTotals?.ownGoals || 0);
           const currentGWPenaltiesSaved = cumulative.penalties_saved - (cachedTotals?.penaltiesSaved || 0);
           const currentGWPenaltiesMissed = cumulative.penalties_missed - (cachedTotals?.penaltiesMissed || 0);
+          const currentGWDefensiveContribution = cumulative.defensive_contribution - (cachedTotals?.defensiveContribution || 0);
+          const currentGWTackles = cumulative.tackles - (cachedTotals?.tackles || 0);
+          const currentGWRecoveries = cumulative.recoveries - (cachedTotals?.recoveries || 0);
+          const currentGWCBI = cumulative.clearances_blocks_interceptions - (cachedTotals?.clearancesBlocksInterceptions || 0);
           
           // Only add positive derived values (negative would indicate data inconsistency)
           if (currentGWPoints >= 0) finalStats.totalPoints += currentGWPoints;
@@ -2030,6 +2050,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (currentGWOwnGoals >= 0) finalStats.ownGoals += currentGWOwnGoals;
           if (currentGWPenaltiesSaved >= 0) finalStats.penaltiesSaved += currentGWPenaltiesSaved;
           if (currentGWPenaltiesMissed >= 0) finalStats.penaltiesMissed += currentGWPenaltiesMissed;
+          if (currentGWDefensiveContribution >= 0) finalStats.defensiveContribution += currentGWDefensiveContribution;
+          if (currentGWTackles >= 0) finalStats.tackles += currentGWTackles;
+          if (currentGWRecoveries >= 0) finalStats.recoveries += currentGWRecoveries;
+          if (currentGWCBI >= 0) finalStats.clearancesBlocksInterceptions += currentGWCBI;
           if (currentGWMinutes > 0) finalStats.gamesPlayed += 1;
         }
 
@@ -2076,6 +2100,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             own_goals: finalStats.ownGoals,
             penalties_saved: finalStats.penaltiesSaved,
             penalties_missed: finalStats.penaltiesMissed,
+            defensive_contribution: finalStats.defensiveContribution,
+            tackles: finalStats.tackles,
+            recoveries: finalStats.recoveries,
+            clearances_blocks_interceptions: finalStats.clearancesBlocksInterceptions,
             games_played: finalStats.gamesPlayed,
             points_per_game: finalStats.gamesPlayed > 0 ? (finalStats.totalPoints / finalStats.gamesPlayed).toFixed(1) : "0.0",
             minutes_per_game: finalStats.gamesPlayed > 0 ? Math.round(finalStats.minutes / finalStats.gamesPlayed) : 0,
