@@ -12797,8 +12797,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                                totalPointsFromMinutes + totalPointsFromGoalsConceded + totalPointsFromYellowCards + 
                                totalPointsFromRedCards + totalPointsFromBonus + totalPointsFromSaves + totalPointsFromDefensiveContributions;
         
-        // Calculate average value (total points across all gameweeks / price)
-        const avgPointsPerGameweek = calculatedTotal / (end - start + 1);
+        // Count only non-blank gameweeks (where player has a fixture) for accurate averages
+        const nonBlankGameweeks = Object.values(gameweekProjections).filter((pts: number) => pts > 0).length || 1;
+        const avgPointsPerGameweek = calculatedTotal / nonBlankGameweeks;
         const averageValue = price > 0 ? calculatedTotal / price : 0;
 
         return {
@@ -19659,8 +19660,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const numGWs = gwKeys.length;
         if (numGWs === 0) continue;
 
+        // Count only non-blank gameweeks (where player has a fixture with non-zero projection)
+        const nonBlankGWs = gwKeys.filter(gw => (cached.gameweekProjections?.[gw] || 0) > 0).length;
+
         let projFixtures = 0;
         for (const gw of gwKeys) {
+          if ((cached.gameweekProjections?.[gw] || 0) === 0) continue;
           const fd = cached.fixtureDetails?.[gw];
           projFixtures += Array.isArray(fd) ? fd.length : 1;
         }
@@ -19717,7 +19722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           team: teamName,
           teamId: playerInfo.team,
           matchesPlayed: g,
-          projectedGWs: numGWs,
+          projectedGWs: nonBlankGWs,
           projectedFixtures: projFixtures,
           actual: {
             goals: { raw: +(pa.totalGoals / g).toFixed(3), pts: +(pa.totalGoalPts / g).toFixed(3) },
@@ -19732,8 +19737,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             defensiveContributions: { raw: +(pa.totalDCRaw / g).toFixed(3), pts: +(pa.totalDCPts / g).toFixed(3) },
             totalPoints: { pts: +(pa.totalPoints / g).toFixed(3) }
           },
-          projectedPerMatch: buildAvg(projFixtures),
-          projectedPerGW: buildAvg(numGWs)
+          projectedPerMatch: buildAvg(projFixtures || 1),
+          projectedPerGW: buildAvg(nonBlankGWs || 1)
         });
       }
 

@@ -550,7 +550,7 @@ export class PlayerTotalPointsAggregator {
           price: playerBootstrap ? playerBootstrap.now_cost / 10 : 0, // Convert from tenths
           ownership: playerBootstrap ? parseFloat(playerBootstrap.selected_by_percent || '0') : 0,
           totalProjectedPoints: player.totalPoints,
-          averagePointsPerGameweek: player.totalPoints / Math.max(Object.keys(player.gameweekPoints).length, 1),
+          averagePointsPerGameweek: player.totalPoints / Math.max(Object.values(player.gameweekPoints).filter((pts: number) => pts > 0).length, 1),
           averageValue: playerBootstrap ? 
             (player.totalPoints / Math.max(playerBootstrap.now_cost / 10, 0.1)) : 0, // Points per million
           averageMinutes: 60, // Default estimate - could be enhanced with actual minutes data
