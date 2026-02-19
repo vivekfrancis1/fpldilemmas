@@ -9127,15 +9127,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // TRY LIVE API CALCULATION FIRST
       try {
-        // Fetch full season goal share data and team projections
-        const [goalShareResponse, teamProjectionsResponse] = await Promise.all([
+        // Fetch full season goal share data, team projections, and bootstrap for availability
+        const [goalShareResponse, teamProjectionsResponse, bootstrapResponse] = await Promise.all([
           internalFetch('api/goal-share-season'),
-          internalFetch('api/team-goal-projections')
+          internalFetch('api/team-goal-projections'),
+          internalFetch('api/bootstrap-static')
         ]);
         
-        if (goalShareResponse.ok && teamProjectionsResponse.ok) {
+        if (goalShareResponse.ok && teamProjectionsResponse.ok && bootstrapResponse.ok) {
           const goalShareData = await goalShareResponse.json();
           const teamProjectionsData = await teamProjectionsResponse.json();
+          const bootstrapData = await bootstrapResponse.json();
+          
+          const goalsEvents: BootstrapEvent[] = bootstrapData.events || [];
+          const currentGW = goalsEvents.find((e: any) => e.is_current)?.id || goalsEvents.filter((e: any) => e.finished).length;
+          
+          const fplPlayerMap = new Map<number, any>();
+          (bootstrapData.elements || []).forEach((el: any) => {
+            fplPlayerMap.set(el.id, el);
+          });
           
           // Create lookup map for team projections by teamId (include fixtureDetails for DGW)
           const teamProjectionsMap: { [teamId: number]: any } = {};
@@ -9143,7 +9153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamProjectionsMap[team.teamId] = team;
           });
           
-          // Calculate player projections using formula: goal share × team projections per gameweek
+          // Calculate player projections using formula: goal share × team projections × availability per gameweek
           const playerProjections: any[] = [];
           
           goalShareData.forEach((team: any) => {
@@ -9152,13 +9162,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (team.players && Array.isArray(team.players) && teamProjections) {
               team.players.forEach((player: any) => {
                 const goalShare = player.goalShare || 0;
+                const fplPlayer = fplPlayerMap.get(player.playerId);
                 
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; goals: number }> } = {};
                 
-                // Calculate projected goals for each gameweek using full season goal share
+                // Calculate projected goals for each gameweek using full season goal share × availability
                 Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamGoals]) => {
-                  gameweekProjections[gameweek] = (goalShare / 100) * (teamGoals as number);
+                  const gwNum = parseInt(gameweek);
+                  const availability = fplPlayer
+                    ? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, goalsEvents)
+                    : 1.0;
+                  
+                  gameweekProjections[gameweek] = (goalShare / 100) * (teamGoals as number) * availability;
                   
                   // Build fixtureDetails for DGW support (individual fixture breakdown)
                   const teamFixtures = teamProjections.fixtureDetails?.[gameweek] || [];
@@ -9166,7 +9182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     fixtureDetails[gameweek] = teamFixtures.map((f: any) => ({
                       opponent: f.opponent,
                       isHome: f.isHome,
-                      goals: (goalShare / 100) * (f.goals || 0)
+                      goals: (goalShare / 100) * (f.goals || 0) * availability
                     }));
                   }
                 });
@@ -9532,15 +9548,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // TRY LIVE API CALCULATION FIRST
       try {
-        // Fetch full season assist share data and team projections
-        const [assistShareResponse, teamProjectionsResponse] = await Promise.all([
+        // Fetch full season assist share data, team projections, and bootstrap for availability
+        const [assistShareResponse, teamProjectionsResponse, bootstrapResponse] = await Promise.all([
           internalFetch('api/assist-share-season'),
-          internalFetch('api/team-assist-projections')
+          internalFetch('api/team-assist-projections'),
+          internalFetch('api/bootstrap-static')
         ]);
         
-        if (assistShareResponse.ok && teamProjectionsResponse.ok) {
+        if (assistShareResponse.ok && teamProjectionsResponse.ok && bootstrapResponse.ok) {
           const assistShareData = await assistShareResponse.json();
           const teamProjectionsData = await teamProjectionsResponse.json();
+          const bootstrapData = await bootstrapResponse.json();
+          
+          const assistsEvents: BootstrapEvent[] = bootstrapData.events || [];
+          const currentGW = assistsEvents.find((e: any) => e.is_current)?.id || assistsEvents.filter((e: any) => e.finished).length;
+          
+          const fplPlayerMap = new Map<number, any>();
+          (bootstrapData.elements || []).forEach((el: any) => {
+            fplPlayerMap.set(el.id, el);
+          });
           
           // Create lookup map for team projections by teamId (include fixtureDetails for DGW)
           const teamProjectionsMap: { [teamId: number]: any } = {};
@@ -9548,7 +9574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamProjectionsMap[team.teamId] = team;
           });
           
-          // Calculate player projections using formula: assist share × team projections per gameweek
+          // Calculate player projections using formula: assist share × team projections × availability per gameweek
           const playerProjections: any[] = [];
           
           assistShareData.forEach((team: any) => {
@@ -9557,13 +9583,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (team.players && Array.isArray(team.players) && teamProjections) {
               team.players.forEach((player: any) => {
                 const assistShare = player.assistShare || 0;
+                const fplPlayer = fplPlayerMap.get(player.playerId);
                 
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; assists: number }> } = {};
                 
-                // Calculate projected assists for each gameweek using full season assist share
+                // Calculate projected assists for each gameweek using full season assist share × availability
                 Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamAssists]) => {
-                  gameweekProjections[gameweek] = (assistShare / 100) * (teamAssists as number);
+                  const gwNum = parseInt(gameweek);
+                  const availability = fplPlayer
+                    ? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, assistsEvents)
+                    : 1.0;
+                  
+                  gameweekProjections[gameweek] = (assistShare / 100) * (teamAssists as number) * availability;
                   
                   // Build fixtureDetails for DGW support (individual fixture breakdown)
                   const teamFixtures = teamProjections.fixtureDetails?.[gameweek] || [];
@@ -9571,7 +9603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     fixtureDetails[gameweek] = teamFixtures.map((f: any) => ({
                       opponent: f.opponent,
                       isHome: f.isHome,
-                      assists: (assistShare / 100) * (f.assists || 0)
+                      assists: (assistShare / 100) * (f.assists || 0) * availability
                     }));
                   }
                 });
