@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "wouter";
+import { PlayerPopupDetails } from "@/components/player-popup-details";
 import {
   Card,
   CardContent,
@@ -1337,89 +1338,74 @@ export default function CreatorTeam() {
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-3 sm:space-y-4">
-            {selectedPlayerForBreakdown?.liveStats ? (
-              <>
-                {(() => {
-                  const mult = selectedPlayerForBreakdown.captainMultiplier || (selectedPlayerForBreakdown.isCaptain ? 2 : 1);
-                  const liveStats = selectedPlayerForBreakdown.liveStats?.stats || selectedPlayerForBreakdown.liveStats;
-                  const basePoints = liveStats?.total_points || 0;
-                  const totalPoints = basePoints * mult;
-                  const fixtureBreakdowns = getPerFixtureBreakdown(selectedPlayerForBreakdown);
-                  
-                  return (
-                    <>
-                      <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                        <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Points</p>
-                        <p className="text-3xl sm:text-4xl font-bold text-green-700">
-                          {totalPoints}
-                        </p>
-                        {mult > 1 && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            ({basePoints} × {mult} {mult === 3 ? 'triple captain' : 'captain'} bonus)
+          {selectedPlayerForBreakdown && (
+            <PlayerPopupDetails player={selectedPlayerForBreakdown}>
+              {selectedPlayerForBreakdown?.liveStats ? (
+                <>
+                  {(() => {
+                    const mult = selectedPlayerForBreakdown.captainMultiplier || (selectedPlayerForBreakdown.isCaptain ? 2 : 1);
+                    const liveStats = selectedPlayerForBreakdown.liveStats?.stats || selectedPlayerForBreakdown.liveStats;
+                    const basePoints = liveStats?.total_points || 0;
+                    const totalPoints = basePoints * mult;
+                    const fixtureBreakdowns = getPerFixtureBreakdown(selectedPlayerForBreakdown);
+                    
+                    return (
+                      <>
+                        <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                          <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Points</p>
+                          <p className="text-3xl sm:text-4xl font-bold text-green-700">
+                            {totalPoints}
                           </p>
-                        )}
-                      </div>
-                      
-                      {fixtureBreakdowns.length > 0 ? (
-                        <div className="space-y-3">
-                          {fixtureBreakdowns.map((fb: any, fIdx: number) => (
-                            <div key={fIdx} className="space-y-1">
-                              <div className="flex justify-between items-center bg-gray-100 rounded-lg px-3 py-2">
-                                <span className="font-semibold text-xs sm:text-sm text-gray-800">{fb.matchLabel}</span>
-                                <span className="font-bold text-xs sm:text-sm text-green-700">{fb.totalPoints} pts</span>
-                              </div>
-                              {fb.stats.length > 0 ? (
-                                <div className="space-y-0.5 pl-2">
-                                  {fb.stats.filter((s: any) => s.identifier !== 'bps').map((item: any, idx: number) => (
-                                    <div key={idx} className="flex justify-between items-center py-1.5 sm:py-1 px-2 rounded hover:bg-gray-50 active:bg-gray-100 touch-manipulation">
-                                      <div className="flex items-center gap-1.5 sm:gap-2">
-                                        <span className="text-xs sm:text-sm text-gray-700">{item.label}</span>
-                                        <span className="text-xs text-gray-400">({item.value})</span>
-                                      </div>
-                                      <span className={`font-semibold text-xs sm:text-sm ${item.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {item.points > 0 ? '+' : ''}{item.points}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-xs text-gray-400 text-center py-1">No points yet</p>
-                              )}
-                            </div>
-                          ))}
+                          {mult > 1 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              ({basePoints} × {mult} {mult === 3 ? 'triple captain' : 'captain'} bonus)
+                            </p>
+                          )}
                         </div>
-                      ) : (
-                        <p className="text-xs sm:text-sm text-gray-500 text-center py-2">No breakdown data available</p>
-                      )}
-                    </>
-                  );
-                })()}
-              </>
-            ) : (
-              <div className="text-center py-6 sm:py-8 text-gray-500">
-                <p className="text-sm">No live data available for this player</p>
-                <p className="text-xs sm:text-sm mt-1">Match may not have started yet</p>
-              </div>
-            )}
-
-            {selectedPlayerForBreakdown && (
-              <div className="flex gap-2 pt-2 border-t border-gray-200">
-                <Link href={`/player/${selectedPlayerForBreakdown.id}?from=${encodeURIComponent(window.location.pathname)}`} className="flex-1">
-                  <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-purple-600 hover:to-indigo-600 transition-all">
-                    <BarChart3 className="h-3.5 w-3.5" />
-                    Season Statistics
-                  </button>
-                </Link>
-                <Link href={`/fixtures?team=${selectedPlayerForBreakdown.team}&from=${encodeURIComponent(window.location.pathname)}`} className="flex-1">
-                  <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-green-600 hover:to-emerald-600 transition-all">
-                    <Calendar className="h-3.5 w-3.5" />
-                    Upcoming Fixtures
-                  </button>
-                </Link>
-              </div>
-            )}
-          </div>
+                        
+                        {fixtureBreakdowns.length > 0 ? (
+                          <div className="space-y-3">
+                            {fixtureBreakdowns.map((fb: any, fIdx: number) => (
+                              <div key={fIdx} className="space-y-1">
+                                <div className="flex justify-between items-center bg-gray-100 rounded-lg px-3 py-2">
+                                  <span className="font-semibold text-xs sm:text-sm text-gray-800">{fb.matchLabel}</span>
+                                  <span className="font-bold text-xs sm:text-sm text-green-700">{fb.totalPoints} pts</span>
+                                </div>
+                                {fb.stats.length > 0 ? (
+                                  <div className="space-y-0.5 pl-2">
+                                    {fb.stats.filter((s: any) => s.identifier !== 'bps').map((item: any, idx: number) => (
+                                      <div key={idx} className="flex justify-between items-center py-1.5 sm:py-1 px-2 rounded hover:bg-gray-50 active:bg-gray-100 touch-manipulation">
+                                        <div className="flex items-center gap-1.5 sm:gap-2">
+                                          <span className="text-xs sm:text-sm text-gray-700">{item.label}</span>
+                                          <span className="text-xs text-gray-400">({item.value})</span>
+                                        </div>
+                                        <span className={`font-semibold text-xs sm:text-sm ${item.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                          {item.points > 0 ? '+' : ''}{item.points}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-gray-400 text-center py-1">No points yet</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs sm:text-sm text-gray-500 text-center py-2">No breakdown data available</p>
+                        )}
+                      </>
+                    );
+                  })()}
+                </>
+              ) : (
+                <div className="text-center py-6 sm:py-8 text-gray-500">
+                  <p className="text-sm">No live data available for this player</p>
+                  <p className="text-xs sm:text-sm mt-1">Match may not have started yet</p>
+                </div>
+              )}
+            </PlayerPopupDetails>
+          )}
         </DialogContent>
       </Dialog>
     </div>

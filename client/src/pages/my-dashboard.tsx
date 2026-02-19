@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PlayerPopupDetails } from "@/components/player-popup-details";
 import {
   Table,
   TableBody,
@@ -3364,111 +3365,94 @@ export default function MyDashboard() {
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-3 sm:space-y-4">
-            {selectedPlayerForProjection && (
-              <>
-                <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg">
-                  <p className="text-xs sm:text-sm text-gray-600 mb-1">GW {selectedPlayerForProjection.gameweek} Projected Points</p>
-                  <p className="text-3xl sm:text-4xl font-bold text-purple-700">
-                    {(selectedPlayerForProjection.totalProjected * selectedPlayerForProjection.multiplier).toFixed(2)}
+          {selectedPlayerForProjection && (
+            <PlayerPopupDetails player={selectedPlayerForProjection}>
+              <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">GW {selectedPlayerForProjection.gameweek} Projected Points</p>
+                <p className="text-3xl sm:text-4xl font-bold text-purple-700">
+                  {(selectedPlayerForProjection.totalProjected * selectedPlayerForProjection.multiplier).toFixed(2)}
+                </p>
+                {selectedPlayerForProjection.multiplier > 1 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    ({selectedPlayerForProjection.totalProjected.toFixed(2)} x {selectedPlayerForProjection.multiplier} {selectedPlayerForProjection.multiplier === 3 ? 'triple captain' : 'captain'} bonus)
                   </p>
-                  {selectedPlayerForProjection.multiplier > 1 && (
-                    <p className="text-xs text-gray-500 mt-1">
-                      ({selectedPlayerForProjection.totalProjected.toFixed(2)} x {selectedPlayerForProjection.multiplier} {selectedPlayerForProjection.multiplier === 3 ? 'triple captain' : 'captain'} bonus)
-                    </p>
-                  )}
-                </div>
-
-                {selectedPlayerForProjection.fixtureDetails?.length > 0 ? (
-                  <div className="space-y-3">
-                    {selectedPlayerForProjection.fixtureDetails.map((fixture: any, fIdx: number) => {
-                      const fixtureComponents = [
-                        { label: 'Minutes', points: fixture.pointsFromMinutes || 0, icon: '⏱️' },
-                        { label: 'Goals', points: fixture.pointsFromGoals || 0, icon: '⚽' },
-                        { label: 'Assists', points: fixture.pointsFromAssists || 0, icon: '🎯' },
-                        { label: 'Clean Sheets', points: fixture.pointsFromCleanSheets || 0, icon: '🛡️' },
-                        { label: 'Goals Conceded', points: fixture.pointsFromGoalsConceded || 0, icon: '🚪' },
-                        { label: 'Saves', points: fixture.pointsFromSaves || 0, icon: '🧤' },
-                        { label: 'Bonus', points: fixture.pointsFromBonus || 0, icon: '✨' },
-                        { label: 'Yellow Cards', points: fixture.pointsFromYellowCards || 0, icon: '🟨' },
-                        { label: 'Red Cards', points: fixture.pointsFromRedCards || 0, icon: '🟥' },
-                        { label: 'Defensive Contributions', points: fixture.pointsFromDefensiveContributions || 0, icon: '🔒' },
-                      ].filter(c => Math.abs(c.points) >= 0.01);
-                      
-                      return (
-                        <div key={fIdx} className="space-y-1">
-                          <div className="flex justify-between items-center bg-gray-100 rounded-lg px-3 py-2">
-                            <span className="font-semibold text-xs sm:text-sm text-gray-800">
-                              {fixture.isHome ? 'vs' : '@'} {fixture.opponent}
-                            </span>
-                            <span className="font-bold text-xs sm:text-sm text-purple-700">
-                              {(fixture.totalPoints || 0).toFixed(2)} pts
-                            </span>
-                          </div>
-                          {fixtureComponents.length > 0 ? (
-                            <div className="space-y-0.5 pl-2">
-                              {fixtureComponents.map((comp, idx) => (
-                                <div key={idx} className="flex justify-between items-center py-1.5 sm:py-1 px-2 rounded hover:bg-gray-50">
-                                  <div className="flex items-center gap-1.5 sm:gap-2">
-                                    <span className="text-sm">{comp.icon}</span>
-                                    <span className="text-xs sm:text-sm text-gray-700">{comp.label}</span>
-                                  </div>
-                                  <span className={`font-semibold text-xs sm:text-sm ${comp.points >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
-                                    {comp.points > 0 ? '+' : ''}{comp.points.toFixed(2)}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-gray-400 text-center py-1">No projected points</p>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center bg-gray-100 rounded-lg px-3 py-2">
-                      <span className="font-semibold text-xs sm:text-sm text-gray-800">Scoring Components</span>
-                      <span className="font-bold text-xs sm:text-sm text-purple-700">
-                        {selectedPlayerForProjection.totalProjected.toFixed(2)} pts
-                      </span>
-                    </div>
-                    <div className="space-y-0.5 pl-2">
-                      {selectedPlayerForProjection.components
-                        .filter((c: any) => Math.abs(c.points) >= 0.01)
-                        .map((comp: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center py-1.5 sm:py-1 px-2 rounded hover:bg-gray-50">
-                            <div className="flex items-center gap-1.5 sm:gap-2">
-                              <span className="text-sm">{comp.icon}</span>
-                              <span className="text-xs sm:text-sm text-gray-700">{comp.label}</span>
-                            </div>
-                            <span className={`font-semibold text-xs sm:text-sm ${comp.points >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
-                              {comp.points > 0 ? '+' : ''}{comp.points.toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
                 )}
+              </div>
 
-                <div className="flex gap-2 pt-2 border-t border-gray-200">
-                  <Link href={`/player/${selectedPlayerForProjection.id}?from=${encodeURIComponent(`/my-dashboard?tab=${activeTab}`)}`} className="flex-1">
-                    <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-purple-600 hover:to-indigo-600 transition-all">
-                      <BarChart3 className="h-3.5 w-3.5" />
-                      Season Statistics
-                    </button>
-                  </Link>
-                  <Link href={`/fixtures?team=${selectedPlayerForProjection.team}&from=${encodeURIComponent(`/my-dashboard?tab=${activeTab}`)}`} className="flex-1">
-                    <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-green-600 hover:to-emerald-600 transition-all">
-                      <Calendar className="h-3.5 w-3.5" />
-                      Upcoming Fixtures
-                    </button>
-                  </Link>
+              {selectedPlayerForProjection.fixtureDetails?.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedPlayerForProjection.fixtureDetails.map((fixture: any, fIdx: number) => {
+                    const fixtureComponents = [
+                      { label: 'Minutes', points: fixture.pointsFromMinutes || 0, icon: '⏱️' },
+                      { label: 'Goals', points: fixture.pointsFromGoals || 0, icon: '⚽' },
+                      { label: 'Assists', points: fixture.pointsFromAssists || 0, icon: '🎯' },
+                      { label: 'Clean Sheets', points: fixture.pointsFromCleanSheets || 0, icon: '🛡️' },
+                      { label: 'Goals Conceded', points: fixture.pointsFromGoalsConceded || 0, icon: '🚪' },
+                      { label: 'Saves', points: fixture.pointsFromSaves || 0, icon: '🧤' },
+                      { label: 'Bonus', points: fixture.pointsFromBonus || 0, icon: '✨' },
+                      { label: 'Yellow Cards', points: fixture.pointsFromYellowCards || 0, icon: '🟨' },
+                      { label: 'Red Cards', points: fixture.pointsFromRedCards || 0, icon: '🟥' },
+                      { label: 'Defensive Contributions', points: fixture.pointsFromDefensiveContributions || 0, icon: '🔒' },
+                    ].filter(c => Math.abs(c.points) >= 0.01);
+                    
+                    return (
+                      <div key={fIdx} className="space-y-1">
+                        <div className="flex justify-between items-center bg-gray-100 rounded-lg px-3 py-2">
+                          <span className="font-semibold text-xs sm:text-sm text-gray-800">
+                            {fixture.isHome ? 'vs' : '@'} {fixture.opponent}
+                          </span>
+                          <span className="font-bold text-xs sm:text-sm text-purple-700">
+                            {(fixture.totalPoints || 0).toFixed(2)} pts
+                          </span>
+                        </div>
+                        {fixtureComponents.length > 0 ? (
+                          <div className="space-y-0.5 pl-2">
+                            {fixtureComponents.map((comp, idx) => (
+                              <div key={idx} className="flex justify-between items-center py-1.5 sm:py-1 px-2 rounded hover:bg-gray-50">
+                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                  <span className="text-sm">{comp.icon}</span>
+                                  <span className="text-xs sm:text-sm text-gray-700">{comp.label}</span>
+                                </div>
+                                <span className={`font-semibold text-xs sm:text-sm ${comp.points >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
+                                  {comp.points > 0 ? '+' : ''}{comp.points.toFixed(2)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-400 text-center py-1">No projected points</p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              </>
-            )}
-          </div>
+              ) : (
+                <div className="space-y-1">
+                  <div className="flex justify-between items-center bg-gray-100 rounded-lg px-3 py-2">
+                    <span className="font-semibold text-xs sm:text-sm text-gray-800">Scoring Components</span>
+                    <span className="font-bold text-xs sm:text-sm text-purple-700">
+                      {selectedPlayerForProjection.totalProjected.toFixed(2)} pts
+                    </span>
+                  </div>
+                  <div className="space-y-0.5 pl-2">
+                    {selectedPlayerForProjection.components
+                      .filter((c: any) => Math.abs(c.points) >= 0.01)
+                      .map((comp: any, idx: number) => (
+                        <div key={idx} className="flex justify-between items-center py-1.5 sm:py-1 px-2 rounded hover:bg-gray-50">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <span className="text-sm">{comp.icon}</span>
+                            <span className="text-xs sm:text-sm text-gray-700">{comp.label}</span>
+                          </div>
+                          <span className={`font-semibold text-xs sm:text-sm ${comp.points >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
+                            {comp.points > 0 ? '+' : ''}{comp.points.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </PlayerPopupDetails>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -3493,88 +3477,73 @@ export default function MyDashboard() {
             </DialogTitle>
           </DialogHeader>
           
-          <div className="space-y-3 sm:space-y-4">
-            {selectedPlayerForBreakdown?.liveStats ? (
-              <>
-                {(() => {
-                  const mult = selectedPlayerForBreakdown.captainMultiplier || (selectedPlayerForBreakdown.isCaptain ? 2 : 1);
-                  const basePoints = selectedPlayerForBreakdown.liveStats.total_points || 0;
-                  const totalPoints = basePoints * mult;
-                  const fixtureBreakdowns = getPerFixtureBreakdown(selectedPlayerForBreakdown);
-                  
-                  return (
-                    <>
-                      <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                        <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Points</p>
-                        <p className="text-3xl sm:text-4xl font-bold text-green-700">
-                          {totalPoints}
-                        </p>
-                        {mult > 1 && (
-                          <p className="text-xs text-gray-500 mt-1">
-                            ({basePoints} × {mult} {mult === 3 ? 'triple captain' : 'captain'} bonus)
+          {selectedPlayerForBreakdown && (
+            <PlayerPopupDetails player={selectedPlayerForBreakdown}>
+              {selectedPlayerForBreakdown?.liveStats ? (
+                <>
+                  {(() => {
+                    const mult = selectedPlayerForBreakdown.captainMultiplier || (selectedPlayerForBreakdown.isCaptain ? 2 : 1);
+                    const basePoints = selectedPlayerForBreakdown.liveStats.total_points || 0;
+                    const totalPoints = basePoints * mult;
+                    const fixtureBreakdowns = getPerFixtureBreakdown(selectedPlayerForBreakdown);
+                    
+                    return (
+                      <>
+                        <div className="text-center p-3 sm:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
+                          <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Points</p>
+                          <p className="text-3xl sm:text-4xl font-bold text-green-700">
+                            {totalPoints}
                           </p>
-                        )}
-                      </div>
-                      
-                      {fixtureBreakdowns.length > 0 ? (
-                        <div className="space-y-3">
-                          {fixtureBreakdowns.map((fb: any, fIdx: number) => (
-                            <div key={fIdx} className="space-y-1">
-                              <div className="flex justify-between items-center bg-gray-100 rounded-lg px-3 py-2">
-                                <span className="font-semibold text-xs sm:text-sm text-gray-800">{fb.matchLabel}</span>
-                                <span className="font-bold text-xs sm:text-sm text-green-700">{fb.totalPoints} pts</span>
-                              </div>
-                              {fb.stats.length > 0 ? (
-                                <div className="space-y-0.5 pl-2">
-                                  {fb.stats.filter((s: any) => s.identifier !== 'bps').map((item: any, idx: number) => (
-                                    <div key={idx} className="flex justify-between items-center py-1.5 sm:py-1 px-2 rounded hover:bg-gray-50 active:bg-gray-100 touch-manipulation">
-                                      <div className="flex items-center gap-1.5 sm:gap-2">
-                                        <span className="text-xs sm:text-sm text-gray-700">{item.label}</span>
-                                        <span className="text-xs text-gray-400">({item.value})</span>
-                                      </div>
-                                      <span className={`font-semibold text-xs sm:text-sm ${item.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                        {item.points > 0 ? '+' : ''}{item.points}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <p className="text-xs text-gray-400 text-center py-1">No points yet</p>
-                              )}
-                            </div>
-                          ))}
+                          {mult > 1 && (
+                            <p className="text-xs text-gray-500 mt-1">
+                              ({basePoints} × {mult} {mult === 3 ? 'triple captain' : 'captain'} bonus)
+                            </p>
+                          )}
                         </div>
-                      ) : (
-                        <p className="text-xs sm:text-sm text-gray-500 text-center py-2">No breakdown data available</p>
-                      )}
-                    </>
-                  );
-                })()}
-              </>
-            ) : (
-              <div className="text-center py-6 sm:py-8 text-gray-500">
-                <p className="text-sm">No live data available for this player</p>
-                <p className="text-xs sm:text-sm mt-1">Match may not have started yet</p>
-              </div>
-            )}
-
-            {selectedPlayerForBreakdown && (
-              <div className="flex gap-2 pt-2 border-t border-gray-200">
-                <Link href={`/player/${selectedPlayerForBreakdown.id}?from=${encodeURIComponent(`/my-dashboard?tab=${activeTab}`)}`} className="flex-1">
-                  <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-purple-600 hover:to-indigo-600 transition-all">
-                    <BarChart3 className="h-3.5 w-3.5" />
-                    Season Statistics
-                  </button>
-                </Link>
-                <Link href={`/fixtures?team=${selectedPlayerForBreakdown.team}&from=${encodeURIComponent(`/my-dashboard?tab=${activeTab}`)}`} className="flex-1">
-                  <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-green-600 hover:to-emerald-600 transition-all">
-                    <Calendar className="h-3.5 w-3.5" />
-                    Upcoming Fixtures
-                  </button>
-                </Link>
-              </div>
-            )}
-          </div>
+                        
+                        {fixtureBreakdowns.length > 0 ? (
+                          <div className="space-y-3">
+                            {fixtureBreakdowns.map((fb: any, fIdx: number) => (
+                              <div key={fIdx} className="space-y-1">
+                                <div className="flex justify-between items-center bg-gray-100 rounded-lg px-3 py-2">
+                                  <span className="font-semibold text-xs sm:text-sm text-gray-800">{fb.matchLabel}</span>
+                                  <span className="font-bold text-xs sm:text-sm text-green-700">{fb.totalPoints} pts</span>
+                                </div>
+                                {fb.stats.length > 0 ? (
+                                  <div className="space-y-0.5 pl-2">
+                                    {fb.stats.filter((s: any) => s.identifier !== 'bps').map((item: any, idx: number) => (
+                                      <div key={idx} className="flex justify-between items-center py-1.5 sm:py-1 px-2 rounded hover:bg-gray-50 active:bg-gray-100 touch-manipulation">
+                                        <div className="flex items-center gap-1.5 sm:gap-2">
+                                          <span className="text-xs sm:text-sm text-gray-700">{item.label}</span>
+                                          <span className="text-xs text-gray-400">({item.value})</span>
+                                        </div>
+                                        <span className={`font-semibold text-xs sm:text-sm ${item.points >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                          {item.points > 0 ? '+' : ''}{item.points}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-gray-400 text-center py-1">No points yet</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs sm:text-sm text-gray-500 text-center py-2">No breakdown data available</p>
+                        )}
+                      </>
+                    );
+                  })()}
+                </>
+              ) : (
+                <div className="text-center py-6 sm:py-8 text-gray-500">
+                  <p className="text-sm">No live data available for this player</p>
+                  <p className="text-xs sm:text-sm mt-1">Match may not have started yet</p>
+                </div>
+              )}
+            </PlayerPopupDetails>
+          )}
         </DialogContent>
       </Dialog>
     </div>
