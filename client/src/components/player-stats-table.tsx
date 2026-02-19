@@ -1153,7 +1153,7 @@ export default function PlayerStatsTable({
                       <div>
                         <div 
                           className="text-sm font-medium text-gray-900 hover:text-purple-700 cursor-pointer hover:underline"
-                          onClick={() => navigate(`/player/${player.id}`)}
+                          onClick={() => navigate(`/player/${player.id}?from=${encodeURIComponent(window.location.pathname)}`)}
                         >
                           {player.web_name}
                         </div>
@@ -1177,7 +1177,7 @@ export default function PlayerStatsTable({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => navigate(`/player/${player.id}`)}
+                      onClick={() => navigate(`/player/${player.id}?from=${encodeURIComponent(window.location.pathname)}`)}
                       className="h-4 w-4 p-0 hover:bg-blue-50 hover:border-blue-300"
                       title="View detailed gameweek statistics"
                       data-testid={`button-player-details-${player.id}`}

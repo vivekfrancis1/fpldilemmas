@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, ArrowUpDown, ArrowUp, ArrowDown, Settings, RotateCcw, X, ChevronDown, ChevronUp, ArrowLeft } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
@@ -29,6 +30,7 @@ interface CustomFDR {
 }
 
 export default function Fixtures() {
+  const [, setLocation] = useLocation();
   // Dynamic gameweek range based on current gameweek
   const [gameweekRange, setGameweekRange] = useState<{ start: number; end: number } | null>(null);
   const [sortBy, setSortBy] = useState<'team' | 'fdr-avg' | string>('fdr-avg');
@@ -42,6 +44,10 @@ export default function Fixtures() {
     const params = new URLSearchParams(window.location.search);
     const teamParam = params.get('team');
     return teamParam ? parseInt(teamParam) : null;
+  });
+  const [returnPath] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('from') || null;
   });
   
   // Load custom FDR from localStorage
@@ -574,15 +580,17 @@ export default function Fixtures() {
         </p>
         {teamFilterId && bootstrapData?.teams && (
           <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-fit text-gray-600 hover:text-gray-800 -ml-2"
-              onClick={() => window.history.length > 1 ? window.history.back() : null}
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
+            {returnPath && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-fit text-gray-600 hover:text-gray-800 -ml-2"
+                onClick={() => setLocation(returnPath)}
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Back
+              </Button>
+            )}
             <div className="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
               <span className="text-sm text-purple-800 font-medium">
                 Showing fixtures for: {bootstrapData.teams.find((t: any) => t.id === teamFilterId)?.name || 'Unknown'}

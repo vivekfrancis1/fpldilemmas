@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, Calendar, TrendingUp, Target, Award, Shield, Clock, Loader2 } from "lucide-react";
@@ -105,6 +105,10 @@ export default function PlayerDetail() {
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
   const playerId = parseInt(params.id || '0');
+  const [returnPath] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('from') || '/player-statistics';
+  });
 
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -327,7 +331,7 @@ export default function PlayerDetail() {
   if (!player && !isLoading) {
     return (
       <div className="p-4 sm:p-6 max-w-7xl mx-auto">
-        <Button variant="ghost" onClick={() => window.history.length > 1 ? window.history.back() : setLocation('/player-statistics')} className="mb-4">
+        <Button variant="ghost" onClick={() => setLocation(returnPath)} className="mb-4">
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
         <Card>
@@ -341,7 +345,7 @@ export default function PlayerDetail() {
 
   return (
     <div className="p-2 sm:p-4 md:p-6 max-w-7xl mx-auto space-y-4">
-      <Button variant="ghost" onClick={() => window.history.length > 1 ? window.history.back() : setLocation('/player-statistics')} className="mb-2">
+      <Button variant="ghost" onClick={() => setLocation(returnPath)} className="mb-2">
         <ArrowLeft className="h-4 w-4 mr-2" /> Back
       </Button>
 
