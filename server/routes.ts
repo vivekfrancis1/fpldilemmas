@@ -1245,17 +1245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const myTeamData = await myTeamResponse.json();
-      console.log("DEBUG my-team: active_chip =", myTeamData.active_chip, "| chips =", JSON.stringify(myTeamData.chips));
-      
-      // Detect active chip from chips array if not set at top level
-      // FPL API returns chips with status_for_entry='active' for pending chips
-      if (!myTeamData.active_chip && myTeamData.chips && Array.isArray(myTeamData.chips)) {
-        const activeChip = myTeamData.chips.find((chip: any) => chip.status_for_entry === 'active');
-        if (activeChip) {
-          myTeamData.active_chip = activeChip.name;
-          console.log("DEBUG my-team: Detected active chip from chips array:", activeChip.name);
-        }
-      }
+      console.log("DEBUG my-team: active_chip =", myTeamData.active_chip);
       
       res.json(myTeamData);
     } catch (error) {

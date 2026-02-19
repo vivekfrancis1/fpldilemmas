@@ -778,14 +778,11 @@ export default function MyDashboard() {
     return Math.min(currentId + 1, 38);
   };
 
-  // Helper to get active chip for upcoming gameweek from nextTeamData API
   const getUpcomingActiveChip = (): string | null => {
-    // Only return active chip if nextTeamData explicitly reports it
-    // This ensures we don't show stale chip data from past gameweeks
+    if (!isOwnTeam) return null;
     if (nextTeamData?.active_chip) {
       return nextTeamData.active_chip.toLowerCase();
     }
-    
     return null;
   };
 
@@ -2211,7 +2208,7 @@ export default function MyDashboard() {
 
                     {(() => {
                       const nextGW = getNextGameweekDashboard();
-                      const activeChipVal = nextTeamData.active_chip ? nextTeamData.active_chip.toLowerCase() : null;
+                      const activeChipVal = getUpcomingActiveChip();
                       const normalizedNextPicks = nextTeamData.picks.map((pick: any) => ({
                         ...pick,
                         multiplier: pick.is_captain ? (activeChipVal === '3xc' ? 3 : 2) : (pick.position <= 11 ? 1 : 0)
@@ -2477,7 +2474,7 @@ export default function MyDashboard() {
 
                       <div className="mt-6">
                         <PitchView
-                          activeChip={nextTeamData.active_chip}
+                          activeChip={getUpcomingActiveChip()}
                           players={(optimisedPicks || nextTeamData.picks).filter(pick => pick.position <= 11).map(pick => {
                             const player = getPlayerById(pick.element);
                             if (!player) return null;
