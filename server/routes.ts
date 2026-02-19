@@ -12763,11 +12763,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Minutes: Each fixture in a DGW earns full per-match minutes points (player plays 60+ mins in each match)
               // Don't divide - each match independently earns ~2 pts for playing 60+ mins
               const fixtureMinutesPts = minutesPts;
-              const fixtureGoalsConcededPts = goalsConcededFixture.goalsConceded ? -(goalsConcededFixture.goalsConceded / 2) : 0;
+              const fixtureGoalsConcededPts = goalsConcededFixture.goalsConceded ? -(goalsConcededFixture.goalsConceded / 2) : (goalsConcededPts / numFixtures);
               const fixtureYellowCardsPts = -(yellowCardsFixture.yellowCards || 0);
               const fixtureRedCardsPts = -(redCardsFixture.redCards || 0) * 3;
               const fixtureBonusPts = bonusFixture.bonusPoints || 0;
-              const fixtureSavesPts = savesFixture.saves ? Math.floor(savesFixture.saves / 3) : 0;
+              const fixtureSavesPts = savesFixture.saves ? (savesFixture.saves / 3) : (savesPts / numFixtures);
               // DC: Each fixture in a DGW earns full per-match defensive contribution points
               // Don't divide - defensive actions are earned independently in each match
               const fixtureDefensiveContributionsPts = defensiveContributionsPts;

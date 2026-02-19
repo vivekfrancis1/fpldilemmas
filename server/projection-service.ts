@@ -312,7 +312,8 @@ class ProjectionService {
               const expectedSaves = (goalkeeperAvgSavesPerGame * opponentAGR / 1.35);
               
               // 1 point for every 3 saves (according to FPL rules)
-              savesPoints = Math.floor(expectedSaves / 3);
+              // Use expected value (not Math.floor) since we're projecting averages across many matches
+              savesPoints = expectedSaves / 3;
               
               // Penalty save probability (rare event, ~3% chance per game for top keepers)
               const penaltySaveProbability = position === 'GKP' ? 0.03 * (adjustedForm / 10) : 0;
@@ -333,7 +334,8 @@ class ProjectionService {
               const expectedGoalsConceded = (opponentAttackStrength / teamDefenseStrength) * (averageMinutesPerGame / 90);
               
               // -1 point for every 2 goals conceded (official FPL rule)
-              goalsConcededPoints = -(Math.floor(expectedGoalsConceded / 2));
+              // Use expected value (not Math.floor) since we're projecting averages across many matches
+              goalsConcededPoints = -(expectedGoalsConceded / 2);
             }
             
             // 7. YELLOW CARDS (All Positions) - Official FPL Rules: -1pt per yellow card
