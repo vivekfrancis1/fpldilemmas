@@ -19592,10 +19592,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrap = await bootstrapRes.json() as any;
 
       const currentGW = bootstrap.events.find((e: any) => e.is_current)?.id || 1;
+      const finishedGWs = bootstrap.events.filter((e: any) => e.finished).map((e: any) => e.id);
+      const lastFinishedGW = finishedGWs.length > 0 ? Math.max(...finishedGWs) : 0;
+
       const teams: Record<number, string> = {};
       for (const t of bootstrap.teams) teams[t.id] = t.short_name;
-
       const posMap: Record<number, string> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
+
+      const playerInfoMap = new Map<number, any>();
+      for (const el of bootstrap.elements) {
+        playerInfoMap.set(el.id, el);
+      }
 
       const cachedRes = await fetch("http://localhost:5000/api/cached/player-total-points?availabilityAdjusted=false");
       if (!cachedRes.ok) throw new Error("Failed to fetch cached projections");
@@ -19603,56 +19610,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cachedMap = new Map<number, any>();
       for (const p of cachedPlayers) cachedMap.set(p.playerId, p);
 
+      console.log(`Projection Validation: Fetching live data for GW1-${lastFinishedGW} (${lastFinishedGW} gameweeks)...`);
+
+      const liveDataPromises = finishedGWs.map(async (gw: number) => {
+        try {
+          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+          if (liveResponse.ok) return { gw, data: await liveResponse.json() };
+        } catch (err) {
+          console.error(`Error fetching GW${gw} live data:`, err);
+        }
+        return null;
+      });
+
+      const liveResults = await Promise.all(liveDataPromises);
+
+      const identifierMap: Record<string, string> = {
+        minutes: 'minutes', goals_scored: 'goals', assists: 'assists',
+        clean_sheets: 'cleanSheets', goals_conceded: 'goalsConceded',
+        yellow_cards: 'yellowCards', red_cards: 'redCards',
+        bonus: 'bonus', saves: 'saves', defensive_contribution: 'defensiveContributions'
+      };
+
+      const playerActuals = new Map<number, {
+        matchesPlayed: number;
+        totalGoals: number; totalGoalPts: number;
+        totalAssists: number; totalAssistPts: number;
+        totalCS: number; totalCSPts: number;
+        totalMinutes: number; totalMinPts: number;
+        totalGC: number; totalGCPts: number;
+        totalYC: number; totalYCPts: number;
+        totalRC: number; totalRCPts: number;
+        totalBonus: number; totalBonusPts: number;
+        totalSaves: number; totalSavesPts: number;
+        totalDCRaw: number; totalDCPts: number;
+        totalPoints: number;
+      }>();
+
+      for (const result of liveResults) {
+        if (!result) continue;
+        const { data: liveData } = result;
+
+        for (const el of liveData.elements) {
+          const stats = el.stats;
+          if ((stats.minutes || 0) === 0) continue;
+
+          const playerInfo = playerInfoMap.get(el.id);
+          if (!playerInfo) continue;
+
+          const fixtureCount = (el.explain || []).length || 1;
+
+          const explainPtsMap: Record<string, number> = {};
+          const explainRawMap: Record<string, number> = {};
+          for (const fixture of (el.explain || [])) {
+            for (const stat of (fixture.stats || [])) {
+              const key = identifierMap[stat.identifier];
+              if (key) {
+                explainPtsMap[key] = (explainPtsMap[key] || 0) + (stat.points || 0);
+                explainRawMap[key] = (explainRawMap[key] || 0) + (stat.value || 0);
+              }
+            }
+          }
+
+          if (!playerActuals.has(el.id)) {
+            playerActuals.set(el.id, {
+              matchesPlayed: 0,
+              totalGoals: 0, totalGoalPts: 0,
+              totalAssists: 0, totalAssistPts: 0,
+              totalCS: 0, totalCSPts: 0,
+              totalMinutes: 0, totalMinPts: 0,
+              totalGC: 0, totalGCPts: 0,
+              totalYC: 0, totalYCPts: 0,
+              totalRC: 0, totalRCPts: 0,
+              totalBonus: 0, totalBonusPts: 0,
+              totalSaves: 0, totalSavesPts: 0,
+              totalDCRaw: 0, totalDCPts: 0,
+              totalPoints: 0,
+            });
+          }
+
+          const pa = playerActuals.get(el.id)!;
+          pa.matchesPlayed += fixtureCount;
+          pa.totalGoals += (explainRawMap.goals || 0); pa.totalGoalPts += (explainPtsMap.goals || 0);
+          pa.totalAssists += (explainRawMap.assists || 0); pa.totalAssistPts += (explainPtsMap.assists || 0);
+          pa.totalCS += (explainRawMap.cleanSheets || 0); pa.totalCSPts += (explainPtsMap.cleanSheets || 0);
+          pa.totalMinutes += (explainRawMap.minutes || 0); pa.totalMinPts += (explainPtsMap.minutes || 0);
+          pa.totalGC += (explainRawMap.goalsConceded || 0); pa.totalGCPts += (explainPtsMap.goalsConceded || 0);
+          pa.totalYC += (explainRawMap.yellowCards || 0); pa.totalYCPts += (explainPtsMap.yellowCards || 0);
+          pa.totalRC += (explainRawMap.redCards || 0); pa.totalRCPts += (explainPtsMap.redCards || 0);
+          pa.totalBonus += (explainRawMap.bonus || 0); pa.totalBonusPts += (explainPtsMap.bonus || 0);
+          pa.totalSaves += (explainRawMap.saves || 0); pa.totalSavesPts += (explainPtsMap.saves || 0);
+          pa.totalDCRaw += (explainRawMap.defensiveContributions || 0); pa.totalDCPts += (explainPtsMap.defensiveContributions || 0);
+          pa.totalPoints += (stats.total_points || 0);
+        }
+      }
+
+      console.log(`Projection Validation: Processed ${playerActuals.size} players from live GW data`);
+
       const results: any[] = [];
 
-      for (const el of bootstrap.elements) {
-        const gamesPlayed = el.starts || 0;
-        if (gamesPlayed === 0) continue;
+      for (const [playerId, pa] of playerActuals) {
+        const playerInfo = playerInfoMap.get(playerId);
+        if (!playerInfo) continue;
+        if (pa.matchesPlayed === 0) continue;
 
-        const pos = posMap[el.element_type] || "?";
-        const teamName = teams[el.team] || "?";
-        const isMid = el.element_type === 3;
-        const isFwd = el.element_type === 4;
-        const isDef = el.element_type === 2;
-        const isGkp = el.element_type === 1;
-
-        const actualGoals = el.goals_scored || 0;
-        const actualAssists = el.assists || 0;
-        const actualCS = el.clean_sheets || 0;
-        const actualMinutes = el.minutes || 0;
-        const actualGC = el.goals_conceded || 0;
-        const actualYC = el.yellow_cards || 0;
-        const actualRC = el.red_cards || 0;
-        const actualBonus = el.bonus || 0;
-        const actualSaves = el.saves || 0;
-        const actualTotalPts = el.total_points || 0;
-        const actualOwnGoals = el.own_goals || 0;
-        const actualPenMissed = el.penalties_missed || 0;
-        const actualPenSaved = el.penalties_saved || 0;
-        const actualDCRawStat = el.defensive_contribution || 0;
-
+        const pos = posMap[playerInfo.element_type] || "?";
+        const teamName = teams[playerInfo.team] || "?";
+        const isGkp = playerInfo.element_type === 1;
+        const isDef = playerInfo.element_type === 2;
+        const isMid = playerInfo.element_type === 3;
         const goalMultiplier = (isGkp || isDef) ? 6 : isMid ? 5 : 4;
-        const actualGoalPts = actualGoals * goalMultiplier;
-        const actualAssistPts = actualAssists * 3;
-        const actualCSPts = (isGkp || isDef) ? actualCS * 4 : isMid ? actualCS * 1 : 0;
-        const actualGCPts = (isGkp || isDef) ? Math.floor(actualGC / 2) * -1 : 0;
-        const actualYCPts = actualYC * -1;
-        const actualRCPts = actualRC * -3;
-        const actualBonusPts = actualBonus;
-        const actualSavesPts = (isGkp) ? Math.floor(actualSaves / 3) : 0;
-        const actualOGPts = actualOwnGoals * -2;
-        const actualPenMissedPts = actualPenMissed * -2;
-        const actualPenSavedPts = actualPenSaved * 5;
+        const g = pa.matchesPlayed;
 
-        const knownNonMinNonDCPts = actualGoalPts + actualAssistPts + actualCSPts +
-          actualGCPts + actualYCPts + actualRCPts + actualBonusPts + actualSavesPts +
-          actualOGPts + actualPenMissedPts + actualPenSavedPts;
-        const actualMinPlusDCPts = actualTotalPts - knownNonMinNonDCPts;
-        const approxMinPts = gamesPlayed * 2;
-        const actualDCPts = Math.max(0, actualMinPlusDCPts - approxMinPts);
-        const actualMinPts = actualMinPlusDCPts - actualDCPts;
-
-        const cached = cachedMap.get(el.id);
+        const cached = cachedMap.get(playerId);
         if (!cached) continue;
 
         const gwKeys = Object.keys(cached.gameweekProjections || {});
@@ -19683,29 +19752,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const projGCRaw = (isGkp || isDef) ? projGCPts * -2 : 0;
         const projYCRaw = projYCPts * -1;
         const projRCRaw = projRCPts / -3;
-        const projSavesRaw = (isGkp) ? projSavesPts * 3 : 0;
+        const projSavesRaw = isGkp ? projSavesPts * 3 : 0;
 
         results.push({
-          playerId: el.id,
-          playerName: el.web_name,
-          fullName: el.first_name + " " + el.second_name,
+          playerId,
+          playerName: playerInfo.web_name,
+          fullName: playerInfo.first_name + " " + playerInfo.second_name,
           position: pos,
           team: teamName,
-          teamId: el.team,
-          gamesPlayed,
+          teamId: playerInfo.team,
+          matchesPlayed: g,
           projectedGWs: numGWs,
           actual: {
-            goals: { raw: +(actualGoals / gamesPlayed).toFixed(3), pts: +(actualGoalPts / gamesPlayed).toFixed(3) },
-            assists: { raw: +(actualAssists / gamesPlayed).toFixed(3), pts: +(actualAssistPts / gamesPlayed).toFixed(3) },
-            cleanSheets: { raw: +(actualCS / gamesPlayed).toFixed(3), pts: +(actualCSPts / gamesPlayed).toFixed(3) },
-            minutes: { raw: +(actualMinutes / gamesPlayed).toFixed(1), pts: +(actualMinPts / gamesPlayed).toFixed(3) },
-            goalsConceded: { raw: +(actualGC / gamesPlayed).toFixed(3), pts: +(actualGCPts / gamesPlayed).toFixed(3) },
-            yellowCards: { raw: +(actualYC / gamesPlayed).toFixed(3), pts: +(actualYCPts / gamesPlayed).toFixed(3) },
-            redCards: { raw: +(actualRC / gamesPlayed).toFixed(3), pts: +(actualRCPts / gamesPlayed).toFixed(3) },
-            bonus: { raw: +(actualBonus / gamesPlayed).toFixed(3), pts: +(actualBonusPts / gamesPlayed).toFixed(3) },
-            saves: { raw: +(actualSaves / gamesPlayed).toFixed(3), pts: +(actualSavesPts / gamesPlayed).toFixed(3) },
-            defensiveContributions: { raw: +(actualDCRawStat / gamesPlayed).toFixed(3), pts: +(actualDCPts / gamesPlayed).toFixed(3) },
-            totalPoints: { pts: +(actualTotalPts / gamesPlayed).toFixed(3) }
+            goals: { raw: +(pa.totalGoals / g).toFixed(3), pts: +(pa.totalGoalPts / g).toFixed(3) },
+            assists: { raw: +(pa.totalAssists / g).toFixed(3), pts: +(pa.totalAssistPts / g).toFixed(3) },
+            cleanSheets: { raw: +(pa.totalCS / g).toFixed(3), pts: +(pa.totalCSPts / g).toFixed(3) },
+            minutes: { raw: +(pa.totalMinutes / g).toFixed(1), pts: +(pa.totalMinPts / g).toFixed(3) },
+            goalsConceded: { raw: +(pa.totalGC / g).toFixed(3), pts: +(pa.totalGCPts / g).toFixed(3) },
+            yellowCards: { raw: +(pa.totalYC / g).toFixed(3), pts: +(pa.totalYCPts / g).toFixed(3) },
+            redCards: { raw: +(pa.totalRC / g).toFixed(3), pts: +(pa.totalRCPts / g).toFixed(3) },
+            bonus: { raw: +(pa.totalBonus / g).toFixed(3), pts: +(pa.totalBonusPts / g).toFixed(3) },
+            saves: { raw: +(pa.totalSaves / g).toFixed(3), pts: +(pa.totalSavesPts / g).toFixed(3) },
+            defensiveContributions: { raw: +(pa.totalDCRaw / g).toFixed(3), pts: +(pa.totalDCPts / g).toFixed(3) },
+            totalPoints: { pts: +(pa.totalPoints / g).toFixed(3) }
           },
           projected: {
             goals: { raw: +(projGoalRaw / numGWs).toFixed(3), pts: +(projGoalPts / numGWs).toFixed(3) },
@@ -19727,6 +19796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         currentGameweek: currentGW,
+        lastFinishedGW,
         playerCount: results.length,
         players: results
       });

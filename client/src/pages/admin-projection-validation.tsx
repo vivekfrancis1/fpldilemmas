@@ -25,24 +25,24 @@ interface PlayerValidation {
   position: string;
   team: string;
   teamId: number;
-  gamesPlayed: number;
+  matchesPlayed: number;
   projectedGWs: number;
   actual: Record<string, ComponentData>;
   projected: Record<string, ComponentData>;
 }
 
 const COMPONENTS = [
-  { key: "goals", label: "Goals", hasRaw: true, approx: false },
-  { key: "assists", label: "Assists", hasRaw: true, approx: false },
-  { key: "cleanSheets", label: "Clean Sheets", hasRaw: true, approx: false },
-  { key: "minutes", label: "Minutes*", hasRaw: true, approx: true },
-  { key: "goalsConceded", label: "Goals Conceded", hasRaw: true, approx: false },
-  { key: "yellowCards", label: "Yellow Cards", hasRaw: true, approx: false },
-  { key: "redCards", label: "Red Cards", hasRaw: true, approx: false },
-  { key: "bonus", label: "Bonus", hasRaw: true, approx: false },
-  { key: "saves", label: "Saves", hasRaw: true, approx: false },
-  { key: "defensiveContributions", label: "Def. Contrib*", hasRaw: true, approx: true },
-  { key: "totalPoints", label: "Total Points", hasRaw: false, approx: false },
+  { key: "goals", label: "Goals", hasRaw: true },
+  { key: "assists", label: "Assists", hasRaw: true },
+  { key: "cleanSheets", label: "Clean Sheets", hasRaw: true },
+  { key: "minutes", label: "Minutes", hasRaw: true },
+  { key: "goalsConceded", label: "Goals Conceded", hasRaw: true },
+  { key: "yellowCards", label: "Yellow Cards", hasRaw: true },
+  { key: "redCards", label: "Red Cards", hasRaw: true },
+  { key: "bonus", label: "Bonus", hasRaw: true },
+  { key: "saves", label: "Saves", hasRaw: true },
+  { key: "defensiveContributions", label: "Def. Contributions", hasRaw: true },
+  { key: "totalPoints", label: "Total Points", hasRaw: false },
 ];
 
 type ViewMode = "pts" | "raw" | "both";
@@ -115,8 +115,8 @@ export default function AdminProjectionValidation() {
           ? a.playerName.localeCompare(b.playerName)
           : b.playerName.localeCompare(a.playerName);
       }
-      if (sortColumn === "gamesPlayed") {
-        valA = a.gamesPlayed; valB = b.gamesPlayed;
+      if (sortColumn === "matchesPlayed") {
+        valA = a.matchesPlayed; valB = b.matchesPlayed;
       } else if (sortColumn === "position") {
         return sortDir === "asc"
           ? a.position.localeCompare(b.position)
@@ -333,13 +333,11 @@ export default function AdminProjectionValidation() {
             </Card>
           )}
 
-          <div className="text-xs text-muted-foreground space-y-1">
-            <div className="flex flex-wrap gap-3">
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Close (&lt;0.15)</span>
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Moderate (0.15-0.3)</span>
-              <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Large (&gt;0.3)</span>
-            </div>
-            <p className="italic">* Minutes pts and Def. Contrib pts are approximate (split from residual). Raw DC stat is exact from FPL API. Total Points is exact.</p>
+          <div className="text-xs text-muted-foreground flex flex-wrap gap-3">
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> Close (&lt;0.15)</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Moderate (0.15-0.3)</span>
+            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Large (&gt;0.3)</span>
+            <span className="italic ml-2">All values exact from per-match FPL live data</span>
           </div>
 
           <div className="overflow-x-auto -mx-2 sm:-mx-4">
@@ -353,8 +351,8 @@ export default function AdminProjectionValidation() {
                     <TableHead className="text-center text-xs min-w-[40px] cursor-pointer" onClick={() => handleSort("position")}>
                       <div className="flex items-center justify-center">Pos <SortIcon col="position" /></div>
                     </TableHead>
-                    <TableHead className="text-center text-xs min-w-[40px] cursor-pointer" onClick={() => handleSort("gamesPlayed")}>
-                      <div className="flex items-center justify-center">GP <SortIcon col="gamesPlayed" /></div>
+                    <TableHead className="text-center text-xs min-w-[40px] cursor-pointer" onClick={() => handleSort("matchesPlayed")}>
+                      <div className="flex items-center justify-center">MP <SortIcon col="matchesPlayed" /></div>
                     </TableHead>
                     {activeComponents.map(comp => {
                       const showRaw = viewMode !== "pts" && comp.hasRaw && comp.key !== "totalPoints";
@@ -422,7 +420,7 @@ export default function AdminProjectionValidation() {
                           {player.position}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-center text-xs py-1.5">{player.gamesPlayed}</TableCell>
+                      <TableCell className="text-center text-xs py-1.5">{player.matchesPlayed}</TableCell>
                       {activeComponents.map(comp => {
                         const showRaw = viewMode !== "pts" && comp.hasRaw && comp.key !== "totalPoints";
                         const showPts = viewMode !== "raw" || comp.key === "totalPoints";
