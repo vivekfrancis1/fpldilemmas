@@ -16,8 +16,6 @@ import { LoadingExperience } from "@/components/loading-experience";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
-import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
-import { AvailabilityToggle } from "@/components/availability-toggle";
 
 interface TeamPick {
   element: number;
@@ -28,7 +26,6 @@ interface TeamPick {
 }
 
 export default function TransferRecommendations() {
-  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
   const [selectedGameweek, setSelectedGameweek] = useState<string | null>(null);
@@ -117,13 +114,12 @@ export default function TransferRecommendations() {
 
   // Fetch player projections for the selected gameweek
   const { data: playerProjections } = useQuery<any[]>({
-    queryKey: ["/api/player-total-points", selectedGameweek, { availabilityAdjusted: isAdjusted }],
+    queryKey: ["/api/player-total-points", selectedGameweek],
     enabled: !!selectedGameweek && selectedGameweek !== null,
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       if (!selectedGameweek) return [];
-      const availParam = !isAdjusted ? '&availabilityAdjusted=false' : '';
-      const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}${availParam}`);
+      const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch projections: ${response.statusText}`);
       }
@@ -727,9 +723,6 @@ export default function TransferRecommendations() {
           </div>
           <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Transfer Recommendations</h1>
           <p className="text-xs text-gray-600 hidden sm:block">Maximize your projected points for remaining gameweeks</p>
-          <div className="mt-2 flex justify-center">
-            <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} compact={true} />
-          </div>
         </div>
 
         {/* Manager Search Section - Compact */}

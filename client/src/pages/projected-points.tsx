@@ -12,8 +12,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
-import { AvailabilityToggle } from "@/components/availability-toggle";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -191,8 +189,6 @@ export default function ProjectedPoints() {
   
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
-
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
     try {
@@ -306,10 +302,9 @@ export default function ProjectedPoints() {
 
   // Fetch projections using cached endpoint for faster loading
   const { data: allPlayerProjections, isLoading: isLoadingProjections, refetch: refetchProjections } = useQuery<any[]>({
-    queryKey: ['/api/cached/player-total-points', { availabilityAdjusted: isAdjusted }],
+    queryKey: ['/api/cached/player-total-points'],
     queryFn: async () => {
-      const url = !isAdjusted ? '/api/cached/player-total-points?availabilityAdjusted=false' : '/api/cached/player-total-points';
-      const res = await fetch(url);
+      const res = await fetch('/api/cached/player-total-points');
       if (!res.ok) throw new Error('Failed to fetch projections');
       return res.json();
     },
@@ -780,7 +775,6 @@ export default function ProjectedPoints() {
               
               {searchedId && (
                 <div className="flex flex-col sm:flex-row gap-3 sm:items-end border-t pt-4 flex-wrap">
-                  <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} />
                   <div className="flex-1">
                     <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 sm:mb-2">
                       Start Gameweek

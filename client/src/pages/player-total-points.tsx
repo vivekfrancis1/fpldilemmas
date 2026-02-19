@@ -13,8 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { LoadingExperience } from "@/components/loading-experience";
-import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
-import { AvailabilityToggle } from "@/components/availability-toggle";
 import { useAuth } from "@/hooks/useAuth";
 
 // Player Availability Badge Component - only shows for players with < 100% availability
@@ -812,8 +810,6 @@ function createPlayerTotalPointsColumns(
 export default function PlayerTotalPoints() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
-  
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -942,7 +938,7 @@ export default function PlayerTotalPoints() {
   const includeAllComponents = () => setExcludedComponents(new Set());
   const excludeAllComponents = () => setExcludedComponents(new Set(POINT_COMPONENTS.map(c => c.key)));
   
-  const applyAvailability = isAdjusted;
+  const applyAvailability = true;
 
   // Get last finished gameweek
   const lastFinishedGW = useMemo(() => {
@@ -1097,7 +1093,7 @@ export default function PlayerTotalPoints() {
   const { data: cachedTotalPointsData, isLoading: cachedLoading, error: cachedError, refetch: refetchCached } = useQuery<PlayerTotalPointsData[]>({
     queryKey: ["/api/cached/player-total-points"],
     queryFn: async () => {
-      const res = await fetch('/api/cached/player-total-points?availabilityAdjusted=false');
+      const res = await fetch('/api/cached/player-total-points');
       if (!res.ok) throw new Error('Failed to fetch');
       return res.json();
     },
@@ -1157,7 +1153,7 @@ export default function PlayerTotalPoints() {
   const { data: liveTotalPointsData, isLoading: liveLoading, error: liveError, refetch: refetchLive } = useQuery<PlayerTotalPointsData[]>({
     queryKey: ["/api/player-total-points", startGameweek, endGameweek],
     queryFn: async () => {
-      const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}&availabilityAdjusted=false`);
+      const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch total points: ${response.statusText}`);
       }
@@ -1970,7 +1966,6 @@ export default function PlayerTotalPoints() {
                       <span className="hidden sm:inline">{showOpponent ? 'Hide Opponent' : 'Show Opponent'}</span>
                       <span className="sm:hidden">{showOpponent ? 'Hide' : 'Show'}</span>
                     </Button>
-                    <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} compact />
                     {excludedGameweeks.size > 0 && (
                       <Button 
                         variant="ghost" 

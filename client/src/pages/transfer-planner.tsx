@@ -15,8 +15,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { apiRequest } from "@/lib/queryClient";
 import { PlayerPopupDetails } from "@/components/player-popup-details";
 import { useToast } from "@/hooks/use-toast";
-import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
-import { AvailabilityToggle } from "@/components/availability-toggle";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -184,10 +182,9 @@ interface AllPlayersProjectionsTabProps {
   onScrollComplete?: () => void;
   teamData?: TeamData;
   savedDrafts?: any[];
-  isAdjusted?: boolean;
 }
 
-function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank, initialPositionFilter = "all", scrollToView = false, onScrollComplete, teamData, savedDrafts, isAdjusted = true }: AllPlayersProjectionsTabProps) {
+function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onTransferIn, currentBank, initialPositionFilter = "all", scrollToView = false, onScrollComplete, teamData, savedDrafts }: AllPlayersProjectionsTabProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState(initialPositionFilter);
   const [teamFilter, setTeamFilter] = useState("all");
@@ -220,10 +217,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   }, [scrollToView, onScrollComplete]);
 
   const { data: allPlayersData, isLoading } = useQuery<PlayerProjectionData[]>({
-    queryKey: ['/api/cached/player-total-points', { availabilityAdjusted: isAdjusted }],
+    queryKey: ['/api/cached/player-total-points'],
     queryFn: async () => {
-      const url = !isAdjusted ? '/api/cached/player-total-points?availabilityAdjusted=false' : '/api/cached/player-total-points';
-      const res = await fetch(url);
+      const res = await fetch('/api/cached/player-total-points');
       if (!res.ok) throw new Error('Failed to fetch projections');
       return res.json();
     },
@@ -962,8 +958,6 @@ export default function TransferPlanner() {
   const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
   
   const { toast } = useToast();
-  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
-
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
     try {
@@ -1246,10 +1240,9 @@ export default function TransferPlanner() {
   // Fetch player projections from cached endpoint (contains all 12 gameweeks)
   // This allows instant gameweek switching without refetching
   const { data: cachedPlayerProjections, isLoading: projectionsLoading, error: projectionsError } = useQuery<any[]>({
-    queryKey: ['/api/cached/player-total-points', { availabilityAdjusted: isAdjusted }],
+    queryKey: ['/api/cached/player-total-points'],
     queryFn: async () => {
-      const url = !isAdjusted ? '/api/cached/player-total-points?availabilityAdjusted=false' : '/api/cached/player-total-points';
-      const res = await fetch(url);
+      const res = await fetch('/api/cached/player-total-points');
       if (!res.ok) throw new Error('Failed to fetch projections');
       return res.json();
     },
@@ -5329,7 +5322,6 @@ export default function TransferPlanner() {
           <h1 className="text-lg md:text-xl font-bold">Transfer Planner</h1>
           <p className="text-xs text-muted-foreground hidden sm:block">Plan transfers & optimise your lineup</p>
         </div>
-        <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} compact />
       </div>
 
       {/* Manager Search Section - Compact */}
@@ -6911,7 +6903,6 @@ export default function TransferPlanner() {
             onScrollComplete={() => setScrollToProjections(false)}
             teamData={teamData}
             savedDrafts={savedDrafts}
-            isAdjusted={isAdjusted}
           />
         </div>
       )}

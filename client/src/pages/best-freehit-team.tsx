@@ -12,8 +12,6 @@ import { Separator } from "@/components/ui/separator";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { LoadingExperience } from "@/components/loading-experience";
-import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
-import { AvailabilityToggle } from "@/components/availability-toggle";
 
 interface PlayerSnapshot {
   playerId: number;
@@ -72,8 +70,6 @@ const VALID_FORMATIONS = [
 ];
 
 export default function BestFreehitTeam() {
-  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
-
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery({
     queryKey: ['/api/bootstrap-static'],
@@ -115,12 +111,11 @@ export default function BestFreehitTeam() {
 
   // Fetch cached Player Total Points data (now uses live API with memory caching)
   const { data: allCachedData, isLoading, error, refetch: refetchProjections } = useQuery({
-    queryKey: ['/api/cached/player-total-points', { availabilityAdjusted: isAdjusted }],
+    queryKey: ['/api/cached/player-total-points'],
     enabled: !!bootstrapData,
     staleTime: 5 * 60 * 1000, // 5 minutes cache
     queryFn: async () => {
-      const url = !isAdjusted ? '/api/cached/player-total-points?availabilityAdjusted=false' : '/api/cached/player-total-points';
-      const response = await fetch(url);
+      const response = await fetch('/api/cached/player-total-points');
       if (!response.ok) throw new Error('Failed to fetch player total points');
       return response.json();
     },
@@ -1269,7 +1264,6 @@ export default function BestFreehitTeam() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} compact={true} />
               <Button
                 variant="outline"
                 size="sm"

@@ -10,8 +10,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
-import { AvailabilityToggle } from "@/components/availability-toggle";
 import { extractManagerId } from "@/lib/manager-id-utils";
 import { FplConnectDialog } from "@/components/fpl-connect-dialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -192,8 +190,6 @@ export default function TeamOptimizer() {
   
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
-
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
     try {
@@ -282,10 +278,9 @@ export default function TeamOptimizer() {
 
   // Fetch projections using cached endpoint for faster loading (always gets next 12 GWs)
   const { data: playerProjections12GW, refetch: refetchProjections, isRefetching } = useQuery<any[]>({
-    queryKey: ['/api/cached/player-total-points', { availabilityAdjusted: isAdjusted }],
+    queryKey: ['/api/cached/player-total-points'],
     queryFn: async () => {
-      const url = !isAdjusted ? '/api/cached/player-total-points?availabilityAdjusted=false' : '/api/cached/player-total-points';
-      const res = await fetch(url);
+      const res = await fetch('/api/cached/player-total-points');
       if (!res.ok) throw new Error('Failed to fetch projections');
       return res.json();
     },
@@ -1111,9 +1106,6 @@ export default function TeamOptimizer() {
           <p className="text-xs text-gray-600 dark:text-gray-300 hidden sm:block">
             Auto-optimized lineup and chip recommendations
           </p>
-          <div className="absolute right-0 top-1/2 -translate-y-1/2">
-            <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} compact />
-          </div>
         </div>
 
         {/* Manager Search Section - Compact */}

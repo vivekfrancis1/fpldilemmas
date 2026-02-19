@@ -54,8 +54,6 @@ import { extractManagerId } from "@/lib/manager-id-utils";
 import { useAuth } from "@/hooks/useAuth";
 import { ListView, type ListPlayer } from "@/components/list-view";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
-import { useAvailabilityToggle } from "@/hooks/use-availability-toggle";
-import { AvailabilityToggle } from "@/components/availability-toggle";
 
 
 
@@ -318,9 +316,6 @@ export default function MyDashboard() {
   const [selectedPlayerForProjection, setSelectedPlayerForProjection] = useState<any | null>(null);
   const [showProjectionBreakdown, setShowProjectionBreakdown] = useState(false);
   const [optimisedPicks, setOptimisedPicks] = useState<TeamPick[] | null>(null);
-  const { isAdjusted, toggle: toggleAvailability, queryParam } = useAvailabilityToggle();
-
-
   // Cache manager ID functionality
   const saveManagerIdToCache = (id: string) => {
     try {
@@ -393,10 +388,9 @@ export default function MyDashboard() {
   });
 
   const { data: cachedPlayerProjections } = useQuery<any[]>({
-    queryKey: ["/api/cached/player-total-points", { availabilityAdjusted: isAdjusted }],
+    queryKey: ["/api/cached/player-total-points"],
     queryFn: async () => {
-      const url = isAdjusted ? '/api/cached/player-total-points' : '/api/cached/player-total-points?availabilityAdjusted=false';
-      const res = await fetch(url);
+      const res = await fetch('/api/cached/player-total-points');
       if (!res.ok) throw new Error('Failed to fetch');
       return res.json();
     },
@@ -1257,9 +1251,6 @@ export default function MyDashboard() {
             <p className="fpl-page-subtitle">
               Complete overview of your Fantasy Premier League performance with detailed team analysis, league standings, and performance tracking
             </p>
-          </div>
-          <div className="flex justify-end mt-2">
-            <AvailabilityToggle isAdjusted={isAdjusted} onToggle={toggleAvailability} compact={true} />
           </div>
         </div>
 
