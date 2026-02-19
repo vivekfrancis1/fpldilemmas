@@ -32,11 +32,11 @@ export interface PlayerStat {
 
 export interface StatsData {
   totalPlayers: number;
-  avgPrice: string;
   mostOwned: PlayerStat;
   bestValue: PlayerStat;
   mostPoints: PlayerStat;
   mostGoals: PlayerStat;
   mostAssists: PlayerStat;
+  mostDefensiveContributions: PlayerStat;
   bestForm: PlayerStat;
 }

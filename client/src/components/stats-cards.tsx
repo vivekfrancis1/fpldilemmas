@@ -1,4 +1,4 @@
-import { Users, PoundSterling, Star, TrendingUp, Target, Zap, UserPlus, Activity } from "lucide-react";
+import { Users, Shield, Star, TrendingUp, Target, Zap, UserPlus, Activity } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
 import { StatsData } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,8 +12,6 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
   const calculateStats = (data: BootstrapData): StatsData => {
     const players = data.elements;
     const totalPlayers = players.length;
-    const avgPrice = (players.reduce((sum, p) => sum + p.now_cost, 0) / totalPlayers / 10).toFixed(1);
-    
     // Find specific players for different stats
     const mostOwnedPlayer = players.reduce((max, p) => 
       parseFloat(p.selected_by_percent) > parseFloat(max.selected_by_percent) ? p : max
@@ -35,13 +33,16 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
       p.assists > max.assists ? p : max
     );
     
+    const mostDCPlayer = players.reduce((max, p) => 
+      ((p as any).defensive_contribution || 0) > ((max as any).defensive_contribution || 0) ? p : max
+    );
+    
     const bestFormPlayer = players.reduce((max, p) => 
       parseFloat(p.form) > parseFloat(max.form) ? p : max
     );
     
     return {
       totalPlayers,
-      avgPrice: `£${avgPrice}m`,
       mostOwned: {
         value: `${parseFloat(mostOwnedPlayer.selected_by_percent).toFixed(1)}%`,
         player: `${mostOwnedPlayer.first_name} ${mostOwnedPlayer.second_name}`
@@ -61,6 +62,10 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
       mostAssists: {
         value: `${mostAssistsPlayer.assists} assists`,
         player: `${mostAssistsPlayer.first_name} ${mostAssistsPlayer.second_name}`
+      },
+      mostDefensiveContributions: {
+        value: `${(mostDCPlayer as any).defensive_contribution || 0} DC`,
+        player: `${mostDCPlayer.first_name} ${mostDCPlayer.second_name}`
       },
       bestForm: {
         value: `${parseFloat(bestFormPlayer.form).toFixed(1)} avg`,
@@ -104,16 +109,6 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
       testId: "total-players"
     },
     {
-      title: "Avg Player Price", 
-      value: stats.avgPrice,
-      player: null,
-      icon: PoundSterling,
-      bgColor: "border-blue-500",
-      iconBg: "bg-blue-100",
-      iconColor: "text-blue-500",
-      testId: "avg-price"
-    },
-    {
       title: "Most Points",
       value: stats.mostPoints.value,
       player: stats.mostPoints.player,
@@ -142,6 +137,16 @@ export default function StatsCards({ data, isLoading }: StatsCardsProps) {
       iconBg: "bg-purple-100",
       iconColor: "text-purple-500",
       testId: "most-assists"
+    },
+    {
+      title: "Most Defensive Contributions",
+      value: stats.mostDefensiveContributions.value,
+      player: stats.mostDefensiveContributions.player,
+      icon: Shield,
+      bgColor: "border-blue-500",
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-500",
+      testId: "most-dc"
     },
     {
       title: "Best Form",
