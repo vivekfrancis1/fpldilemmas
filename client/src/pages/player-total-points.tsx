@@ -682,21 +682,6 @@ function createPlayerTotalPointsColumns(
       )
     },
     {
-      key: 'averageValue',
-      header: 'Value',
-      sortable: true,
-      align: 'center',
-      className: 'min-w-[50px] md:min-w-[70px] bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300 px-1',
-      render: (value) => (
-        <ValueCell 
-          value={value || 0} 
-          format="number" 
-          decimals={2}
-          className="font-bold text-purple-800 text-sm md:text-lg"
-        />
-      )
-    },
-    {
       key: 'averagePerGameweek',
       header: 'Avg',
       sortable: true,
@@ -708,6 +693,21 @@ function createPlayerTotalPointsColumns(
           format="points" 
           decimals={2}
           className="font-bold text-orange-800 text-xs md:text-sm"
+        />
+      )
+    },
+    {
+      key: 'averageValue',
+      header: 'Value',
+      sortable: true,
+      align: 'center',
+      className: 'min-w-[50px] md:min-w-[70px] bg-gradient-to-r from-purple-50 to-violet-50 border-l border-gray-300 px-1',
+      render: (value) => (
+        <ValueCell 
+          value={value || 0} 
+          format="number" 
+          decimals={2}
+          className="font-bold text-purple-800 text-sm md:text-lg"
         />
       )
     },
