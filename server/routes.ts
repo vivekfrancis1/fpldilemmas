@@ -19728,6 +19728,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const numGWs = gwKeys.length;
         if (numGWs === 0) continue;
 
+        let projFixtures = 0;
+        for (const gw of gwKeys) {
+          const fd = cached.fixtureDetails?.[gw];
+          projFixtures += Array.isArray(fd) ? fd.length : 1;
+        }
+
         let projGoalPts = 0, projAssistPts = 0, projCSPts = 0, projMinPts = 0;
         let projGCPts = 0, projYCPts = 0, projRCPts = 0, projBonusPts = 0;
         let projSavesPts = 0, projDCPts = 0, projTotal = 0;
@@ -19754,6 +19760,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const projRCRaw = projRCPts / -3;
         const projSavesRaw = isGkp ? projSavesPts * 3 : 0;
 
+        const buildAvg = (divisor: number) => ({
+          goals: { raw: +(projGoalRaw / divisor).toFixed(3), pts: +(projGoalPts / divisor).toFixed(3) },
+          assists: { raw: +(projAssistRaw / divisor).toFixed(3), pts: +(projAssistPts / divisor).toFixed(3) },
+          cleanSheets: { raw: +(projCSRaw / divisor).toFixed(3), pts: +(projCSPts / divisor).toFixed(3) },
+          minutes: { raw: 0, pts: +(projMinPts / divisor).toFixed(3) },
+          goalsConceded: { raw: +(projGCRaw / divisor).toFixed(3), pts: +(projGCPts / divisor).toFixed(3) },
+          yellowCards: { raw: +(projYCRaw / divisor).toFixed(3), pts: +(projYCPts / divisor).toFixed(3) },
+          redCards: { raw: +(projRCRaw / divisor).toFixed(3), pts: +(projRCPts / divisor).toFixed(3) },
+          bonus: { raw: +(projBonusPts / divisor).toFixed(3), pts: +(projBonusPts / divisor).toFixed(3) },
+          saves: { raw: +(projSavesRaw / divisor).toFixed(3), pts: +(projSavesPts / divisor).toFixed(3) },
+          defensiveContributions: { raw: +(projDCPts / divisor).toFixed(3), pts: +(projDCPts / divisor).toFixed(3) },
+          totalPoints: { pts: +(projTotal / divisor).toFixed(3) }
+        });
+
         results.push({
           playerId,
           playerName: playerInfo.web_name,
@@ -19763,6 +19783,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamId: playerInfo.team,
           matchesPlayed: g,
           projectedGWs: numGWs,
+          projectedFixtures: projFixtures,
           actual: {
             goals: { raw: +(pa.totalGoals / g).toFixed(3), pts: +(pa.totalGoalPts / g).toFixed(3) },
             assists: { raw: +(pa.totalAssists / g).toFixed(3), pts: +(pa.totalAssistPts / g).toFixed(3) },
@@ -19776,23 +19797,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             defensiveContributions: { raw: +(pa.totalDCRaw / g).toFixed(3), pts: +(pa.totalDCPts / g).toFixed(3) },
             totalPoints: { pts: +(pa.totalPoints / g).toFixed(3) }
           },
-          projected: {
-            goals: { raw: +(projGoalRaw / numGWs).toFixed(3), pts: +(projGoalPts / numGWs).toFixed(3) },
-            assists: { raw: +(projAssistRaw / numGWs).toFixed(3), pts: +(projAssistPts / numGWs).toFixed(3) },
-            cleanSheets: { raw: +(projCSRaw / numGWs).toFixed(3), pts: +(projCSPts / numGWs).toFixed(3) },
-            minutes: { raw: 0, pts: +(projMinPts / numGWs).toFixed(3) },
-            goalsConceded: { raw: +(projGCRaw / numGWs).toFixed(3), pts: +(projGCPts / numGWs).toFixed(3) },
-            yellowCards: { raw: +(projYCRaw / numGWs).toFixed(3), pts: +(projYCPts / numGWs).toFixed(3) },
-            redCards: { raw: +(projRCRaw / numGWs).toFixed(3), pts: +(projRCPts / numGWs).toFixed(3) },
-            bonus: { raw: +(projBonusPts / numGWs).toFixed(3), pts: +(projBonusPts / numGWs).toFixed(3) },
-            saves: { raw: +(projSavesRaw / numGWs).toFixed(3), pts: +(projSavesPts / numGWs).toFixed(3) },
-            defensiveContributions: { raw: +(projDCPts / numGWs).toFixed(3), pts: +(projDCPts / numGWs).toFixed(3) },
-            totalPoints: { pts: +(projTotal / numGWs).toFixed(3) }
-          }
+          projectedPerMatch: buildAvg(projFixtures),
+          projectedPerGW: buildAvg(numGWs)
         });
       }
 
-      results.sort((a, b) => b.projected.totalPoints.pts - a.projected.totalPoints.pts);
+      results.sort((a, b) => b.projectedPerMatch.totalPoints.pts - a.projectedPerMatch.totalPoints.pts);
 
       res.json({
         currentGameweek: currentGW,

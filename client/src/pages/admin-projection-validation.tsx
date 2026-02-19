@@ -27,9 +27,13 @@ interface PlayerValidation {
   teamId: number;
   matchesPlayed: number;
   projectedGWs: number;
+  projectedFixtures: number;
   actual: Record<string, ComponentData>;
-  projected: Record<string, ComponentData>;
+  projectedPerMatch: Record<string, ComponentData>;
+  projectedPerGW: Record<string, ComponentData>;
 }
+
+type AvgMode = "perMatch" | "perGW";
 
 const COMPONENTS = [
   { key: "totalPoints", label: "Total Points", hasRaw: false },
@@ -68,6 +72,7 @@ export default function AdminProjectionValidation() {
   const [positionFilter, setPositionFilter] = useState("all");
   const [teamFilter, setTeamFilter] = useState("all");
   const [viewMode, setViewMode] = useState<ViewMode>("pts");
+  const [avgMode, setAvgMode] = useState<AvgMode>("perMatch");
   const [sortColumn, setSortColumn] = useState("totalPoints_proj_pts");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [visibleComponents, setVisibleComponents] = useState<Set<string>>(
@@ -109,6 +114,7 @@ export default function AdminProjectionValidation() {
 
     players = [...players].sort((a, b) => {
       let valA = 0, valB = 0;
+      const getProj = (p: PlayerValidation) => avgMode === "perMatch" ? p.projectedPerMatch : p.projectedPerGW;
 
       if (sortColumn === "playerName") {
         return sortDir === "asc"
@@ -117,6 +123,8 @@ export default function AdminProjectionValidation() {
       }
       if (sortColumn === "matchesPlayed") {
         valA = a.matchesPlayed; valB = b.matchesPlayed;
+      } else if (sortColumn === "projectedFixtures") {
+        valA = a.projectedFixtures; valB = b.projectedFixtures;
       } else if (sortColumn === "position") {
         return sortDir === "asc"
           ? a.position.localeCompare(b.position)
@@ -131,14 +139,14 @@ export default function AdminProjectionValidation() {
           valA = metric === "raw" ? (a.actual[compKey]?.raw ?? 0) : (a.actual[compKey]?.pts ?? 0);
           valB = metric === "raw" ? (b.actual[compKey]?.raw ?? 0) : (b.actual[compKey]?.pts ?? 0);
         } else if (type === "proj") {
-          valA = metric === "raw" ? (a.projected[compKey]?.raw ?? 0) : (a.projected[compKey]?.pts ?? 0);
-          valB = metric === "raw" ? (b.projected[compKey]?.raw ?? 0) : (b.projected[compKey]?.pts ?? 0);
+          valA = metric === "raw" ? (getProj(a)[compKey]?.raw ?? 0) : (getProj(a)[compKey]?.pts ?? 0);
+          valB = metric === "raw" ? (getProj(b)[compKey]?.raw ?? 0) : (getProj(b)[compKey]?.pts ?? 0);
         } else if (type === "diff") {
-          const projVal = metric === "raw" ? (a.projected[compKey]?.raw ?? 0) : (a.projected[compKey]?.pts ?? 0);
+          const projVal = metric === "raw" ? (getProj(a)[compKey]?.raw ?? 0) : (getProj(a)[compKey]?.pts ?? 0);
           const actVal = metric === "raw" ? (a.actual[compKey]?.raw ?? 0) : (a.actual[compKey]?.pts ?? 0);
           valA = projVal - actVal;
 
-          const projValB = metric === "raw" ? (b.projected[compKey]?.raw ?? 0) : (b.projected[compKey]?.pts ?? 0);
+          const projValB = metric === "raw" ? (getProj(b)[compKey]?.raw ?? 0) : (getProj(b)[compKey]?.pts ?? 0);
           const actValB = metric === "raw" ? (b.actual[compKey]?.raw ?? 0) : (b.actual[compKey]?.pts ?? 0);
           valB = projValB - actValB;
         }
@@ -148,7 +156,7 @@ export default function AdminProjectionValidation() {
     });
 
     return players;
-  }, [data, searchQuery, positionFilter, teamFilter, sortColumn, sortDir]);
+  }, [data, searchQuery, positionFilter, teamFilter, sortColumn, sortDir, avgMode]);
 
   const handleSort = (col: string) => {
     if (sortColumn === col) {
@@ -238,7 +246,7 @@ export default function AdminProjectionValidation() {
                 Projection Validation
               </CardTitle>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                Past avg/match (GW1-{data?.currentGameweek}) vs Projected avg/GW (next {data?.players?.[0]?.projectedGWs || 12} GWs) &middot; {filteredPlayers.length} players
+                Past avg/match vs Projected avg/{avgMode === "perMatch" ? "match" : "GW"} ({data?.players?.[0]?.projectedGWs || 12} GWs) &middot; {filteredPlayers.length} players
               </p>
             </div>
           </div>
@@ -277,6 +285,16 @@ export default function AdminProjectionValidation() {
                 {teams.map(([name]) => (
                   <SelectItem key={name} value={name}>{name}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={avgMode} onValueChange={v => setAvgMode(v as AvgMode)}>
+              <SelectTrigger className="w-[130px] h-9 text-sm">
+                <SelectValue placeholder="Avg Mode" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="perMatch">Per Match</SelectItem>
+                <SelectItem value="perGW">Per Gameweek</SelectItem>
               </SelectContent>
             </Select>
 
@@ -352,7 +370,10 @@ export default function AdminProjectionValidation() {
                       <div className="flex items-center justify-center">Pos <SortIcon col="position" /></div>
                     </TableHead>
                     <TableHead className="text-center text-xs min-w-[40px] cursor-pointer" onClick={() => handleSort("matchesPlayed")}>
-                      <div className="flex items-center justify-center">MP <SortIcon col="matchesPlayed" /></div>
+                      <div className="flex items-center justify-center" title="Past Matches Played">MP <SortIcon col="matchesPlayed" /></div>
+                    </TableHead>
+                    <TableHead className="text-center text-xs min-w-[40px] cursor-pointer" onClick={() => handleSort("projectedFixtures")}>
+                      <div className="flex items-center justify-center" title="Projected Fixtures">PF <SortIcon col="projectedFixtures" /></div>
                     </TableHead>
                     {activeComponents.map(comp => {
                       const showRaw = viewMode !== "pts" && comp.hasRaw && comp.key !== "totalPoints";
@@ -367,6 +388,7 @@ export default function AdminProjectionValidation() {
                   </TableRow>
                   <TableRow className="bg-gray-50/80">
                     <TableHead className="sticky left-0 bg-gray-50/80 z-10" />
+                    <TableHead />
                     <TableHead />
                     <TableHead />
                     {activeComponents.map(comp => {
@@ -421,16 +443,18 @@ export default function AdminProjectionValidation() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center text-xs py-1.5">{player.matchesPlayed}</TableCell>
+                      <TableCell className="text-center text-xs py-1.5">{player.projectedFixtures}</TableCell>
                       {activeComponents.map(comp => {
                         const showRaw = viewMode !== "pts" && comp.hasRaw && comp.key !== "totalPoints";
                         const showPts = viewMode !== "raw" || comp.key === "totalPoints";
+                        const proj = avgMode === "perMatch" ? player.projectedPerMatch : player.projectedPerGW;
 
                         const actualRaw = player.actual[comp.key]?.raw ?? 0;
-                        const projRaw = player.projected[comp.key]?.raw ?? 0;
+                        const projRaw = proj[comp.key]?.raw ?? 0;
                         const diffRaw = projRaw - actualRaw;
 
                         const actualPts = player.actual[comp.key]?.pts ?? 0;
-                        const projPts = player.projected[comp.key]?.pts ?? 0;
+                        const projPts = proj[comp.key]?.pts ?? 0;
                         const diffPts = projPts - actualPts;
 
                         const rawThreshold = comp.key === "minutes" ? 10 : comp.key === "totalPoints" ? 0.5 : 0.1;
