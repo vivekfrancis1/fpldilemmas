@@ -17,7 +17,8 @@ import {
   users,
   gameweekPlayerDataTable,
   playerTotalPointsWindows,
-  playerTotalPointsSnapshots
+  playerTotalPointsSnapshots,
+  userActivityLogs
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
@@ -870,6 +871,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }
 
+  async function logUserActivity(req: any, activityType: string, data: {
+    managerId?: number;
+    managerName?: string;
+    email?: string;
+    userId?: string;
+    metadata?: any;
+  }) {
+    try {
+      const ipAddress = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress;
+      const userAgent = req.headers['user-agent'] || '';
+      await db.insert(userActivityLogs).values({
+        activityType,
+        managerId: data.managerId || null,
+        managerName: data.managerName || null,
+        email: data.email || null,
+        userId: data.userId || null,
+        ipAddress,
+        userAgent,
+        metadata: data.metadata || null,
+      });
+    } catch (err) {
+      console.error('Failed to log user activity:', err);
+    }
+  }
+
+  app.get("/api/admin/user-activity-logs", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+      const activityType = req.query.type as string;
+      const offset = (page - 1) * limit;
+
+      let query = db.select().from(userActivityLogs).orderBy(desc(userActivityLogs.createdAt)).limit(limit).offset(offset);
+      let countQuery = db.select({ count: sql<number>`count(*)` }).from(userActivityLogs);
+
+      if (activityType) {
+        query = db.select().from(userActivityLogs).where(eq(userActivityLogs.activityType, activityType)).orderBy(desc(userActivityLogs.createdAt)).limit(limit).offset(offset);
+        countQuery = db.select({ count: sql<number>`count(*)` }).from(userActivityLogs).where(eq(userActivityLogs.activityType, activityType));
+      }
+
+      const [logs, [{ count: totalCount }]] = await Promise.all([query, countQuery]);
+
+      res.json({
+        logs,
+        pagination: {
+          page,
+          limit,
+          total: Number(totalCount),
+          totalPages: Math.ceil(Number(totalCount) / limit),
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching activity logs:', error);
+      res.status(500).json({ error: 'Failed to fetch activity logs' });
+    }
+  });
+
+  app.get("/api/admin/user-activity-stats", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const stats = await db.select({
+        activityType: userActivityLogs.activityType,
+        count: sql<number>`count(*)`,
+        uniqueManagers: sql<number>`count(distinct manager_id)`,
+        uniqueEmails: sql<number>`count(distinct email)`,
+      }).from(userActivityLogs).groupBy(userActivityLogs.activityType);
+
+      const totalLogs = await db.select({ count: sql<number>`count(*)` }).from(userActivityLogs);
+      const todayLogs = await db.select({ count: sql<number>`count(*)` }).from(userActivityLogs)
+        .where(gte(userActivityLogs.createdAt, sql`NOW() - INTERVAL '24 hours'`));
+
+      res.json({
+        byType: stats,
+        total: Number(totalLogs[0]?.count || 0),
+        last24h: Number(todayLogs[0]?.count || 0),
+      });
+    } catch (error) {
+      console.error('Error fetching activity stats:', error);
+      res.status(500).json({ error: 'Failed to fetch activity stats' });
+    }
+  });
+
   // Local username/password login
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -907,6 +989,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Session login error:', err);
           return res.status(500).json({ error: 'Failed to establish session' });
         }
+
+        logUserActivity(req, 'login', {
+          email: user.email || undefined,
+          userId: String(user.id),
+          managerId: user.fplManagerId || undefined,
+          metadata: { method: 'local' },
+        });
 
         res.json({ 
           success: true, 
@@ -1045,6 +1134,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(users.id, userId));
 
       console.log('✅ FPL account connected successfully for user:', userId);
+
+      const [connectedUser] = await db.select().from(users).where(eq(users.id, userId));
+      logUserActivity(req, 'fpl_connect', {
+        managerId: fplManagerId,
+        email: connectedUser?.email || undefined,
+        userId,
+        metadata: { managerName: meData?.player?.first_name + ' ' + meData?.player?.last_name },
+      });
 
       res.json({ 
         success: true, 
@@ -3062,6 +3159,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         const data = await fetchPromise;
+
+        logUserActivity(req, 'manager_id_search', {
+          managerId: Number(managerId),
+          managerName: (data.player_first_name || '') + ' ' + (data.player_last_name || ''),
+          metadata: { teamName: data.name },
+        });
+
         res.json(data);
       } catch (error: any) {
         if (error?.status === 404) {

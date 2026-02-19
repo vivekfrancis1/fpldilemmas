@@ -1650,3 +1650,20 @@ export const projectionAccuracySummary = pgTable("projection_accuracy_summary", 
   index("idx_accuracy_summary_gameweek").on(table.gameweek),
   uniqueIndex("idx_accuracy_summary_unique").on(table.gameweek, table.season),
 ]);
+
+export const userActivityLogs = pgTable("user_activity_logs", {
+  id: serial("id").primaryKey(),
+  activityType: varchar("activity_type", { length: 50 }).notNull(),
+  managerId: integer("manager_id"),
+  managerName: varchar("manager_name", { length: 255 }),
+  email: varchar("email", { length: 255 }),
+  userId: varchar("user_id", { length: 255 }),
+  ipAddress: varchar("ip_address", { length: 100 }),
+  userAgent: text("user_agent"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_activity_type").on(table.activityType),
+  index("idx_activity_created_at").on(table.createdAt),
+  index("idx_activity_manager_id").on(table.managerId),
+]);

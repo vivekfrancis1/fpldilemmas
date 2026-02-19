@@ -21,7 +21,8 @@ import {
   Book,
   Database,
   UserCog,
-  FileText
+  FileText,
+  Activity
 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -123,7 +124,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/admin-clean-sheet-config", label: "Team Clean Sheet Config", icon: Shield, description: "Configure clean sheet probability calculations", popular: false },
         { path: "/admin-upset-config", label: "Upset Configuration", icon: Settings, description: "Configure upset configuration settings", popular: false },
         { path: "/admin-data-population", label: "Data Population", icon: Database, description: "Populate and manage data", popular: false },
-        { path: "/admin-gameweek-cache", label: "Gameweek Cache", icon: RefreshCw, description: "Manage gameweek cache", popular: false }
+        { path: "/admin-gameweek-cache", label: "Gameweek Cache", icon: RefreshCw, description: "Manage gameweek cache", popular: false },
+        { path: "/admin-activity-logs", label: "User Activity Logs", icon: Activity, description: "View user activity and search logs", popular: false }
       ]
     },
     {

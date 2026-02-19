@@ -59,6 +59,7 @@ const AdminDataPopulation = lazy(() => import("./pages/admin-data-population"));
 const AdminGameweekCache = lazy(() => import("./pages/admin-gameweek-cache"));
 const AdminCleanSheetConfig = lazy(() => import("./pages/admin-clean-sheet-config"));
 const AdminCacheManagement = lazy(() => import("./pages/admin-cache-management"));
+const AdminActivityLogs = lazy(() => import("./pages/admin-activity-logs"));
 const PlayerDefensiveContributions = lazy(() => import("./pages/player-defensive-contributions"));
 const ProjectionDocumentation = lazy(() => import("./pages/projection-documentation"));
 const PlayerSaves = lazy(() => import("./pages/player-saves"));
@@ -188,6 +189,7 @@ function Router() {
             </Suspense>
           </ProtectedRoute>
         </Route>
+        <Route path="/admin-activity-logs" component={AdminActivityLogs} />
         <Route path="/admin-data-population" component={AdminDataPopulation} />
         <Route path="/admin-gameweek-cache" component={AdminGameweekCache} />
         <Route path="/content-creators" component={ContentCreators} />

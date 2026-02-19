@@ -4,6 +4,8 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
+import { db } from "./db";
+import { userActivityLogs } from "@shared/schema";
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -86,6 +88,22 @@ export async function setupAuth(app: Express) {
       failureRedirect: "/login" 
     }),
     (req, res) => {
+      const user = req.user as any;
+      if (user) {
+        try {
+          const ipAddress = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress;
+          db.insert(userActivityLogs).values({
+            activityType: 'login',
+            email: user.email || null,
+            userId: user.id || null,
+            ipAddress: ipAddress || null,
+            userAgent: req.headers['user-agent'] || '',
+            metadata: { method: 'google_oauth' },
+          }).catch(err => console.error('Failed to log Google login:', err));
+        } catch (err) {
+          console.error('Failed to log Google login:', err);
+        }
+      }
       res.redirect("/");
     }
   );
