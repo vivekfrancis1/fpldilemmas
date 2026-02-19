@@ -1078,7 +1078,6 @@ export default function MyDashboard() {
     const nextGW = getNextGameweekDashboard();
     const gwKey = nextGW.toString();
     const playerData = cachedPlayerProjections?.find((p: any) => p.playerId === pitchPlayer.element);
-    const totalProjected = playerData?.gameweekProjections?.[gwKey] || 0;
     const multiplier = pitchPlayer.multiplier || (pitchPlayer.is_captain ? 2 : 1);
     
     const components = [
@@ -1095,6 +1094,9 @@ export default function MyDashboard() {
     ];
     
     const fixtureDetailsForGW = playerData?.fixtureDetails?.[gwKey] || [];
+    const totalProjected = fixtureDetailsForGW.length > 0
+      ? fixtureDetailsForGW.reduce((sum: number, f: any) => sum + (f.totalPoints || 0), 0)
+      : (playerData?.gameweekProjections?.[gwKey] || 0);
     
     setSelectedPlayerForProjection({
       ...fullPlayer,
