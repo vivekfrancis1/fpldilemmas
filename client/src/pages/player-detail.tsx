@@ -406,18 +406,6 @@ export default function PlayerDetail() {
             </Card>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Value</div>
-                <div className="text-lg font-bold text-teal-700">{player.value_season || '0.0'}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Val Form</div>
-                <div className="text-lg font-bold text-teal-600">{player.value_form || '0.0'}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
                 <div className="text-xs text-gray-500 mb-1">Appearances</div>
                 <div className="text-lg font-bold text-gray-700">{totalStats.gameweeksPlayed}</div>
               </CardContent>
@@ -482,22 +470,6 @@ export default function PlayerDetail() {
               <CardContent className="p-3 text-center">
                 <div className="text-xs text-gray-500 mb-1">Dream Team</div>
                 <div className="text-lg font-bold text-amber-600">{player.dreamteam_count || 0}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Price &Delta; GW</div>
-                <div className={`text-lg font-bold ${(player.cost_change_event || 0) > 0 ? 'text-green-600' : (player.cost_change_event || 0) < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                  {((player.cost_change_event || 0) / 10).toFixed(1)}
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-0 bg-white/80 backdrop-blur-sm">
-              <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Price &Delta; Season</div>
-                <div className={`text-lg font-bold ${(player.cost_change_start || 0) > 0 ? 'text-green-600' : (player.cost_change_start || 0) < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                  {((player.cost_change_start || 0) / 10).toFixed(1)}
-                </div>
               </CardContent>
             </Card>
           </div>
