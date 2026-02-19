@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from "react";
+import { useLocation } from "wouter";
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Eye, UserPlus, UserMinus, ZoomIn, ZoomOut, Settings2, Check, GripVertical, MoveUp, MoveDown, RotateCcw, Plus, Minus } from "lucide-react";
 import { BootstrapData, Player, Team, ElementType } from "@shared/schema";
 import { FilterState, SortState, SortableField } from "@/lib/types";
@@ -150,6 +151,7 @@ export default function PlayerStatsTable({
   compareList = [],
   maxCompareReached = false
 }: PlayerStatsTableProps) {
+  const [, navigate] = useLocation();
   const [currentPage, setCurrentPage] = useState(1);
   const [displayMode, setDisplayMode] = useState<'totals' | 'per_match' | 'per_start' | 'per_90'>('totals');
   const [venueFilter, setVenueFilter] = useState<'all' | 'home' | 'away'>('all');
@@ -1143,7 +1145,10 @@ export default function PlayerStatsTable({
                   <td className="px-4 py-4 sticky left-0 bg-white hover:bg-gray-50 border-r min-w-[140px]">
                     <div className="flex items-center">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">
+                        <div 
+                          className="text-sm font-medium text-gray-900 hover:text-purple-700 cursor-pointer hover:underline"
+                          onClick={() => navigate(`/player/${player.id}`)}
+                        >
                           {player.web_name}
                         </div>
                         <div className="flex items-center gap-1 mt-1">
@@ -1166,7 +1171,7 @@ export default function PlayerStatsTable({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onPlayerDetailsClick?.(player)}
+                      onClick={() => navigate(`/player/${player.id}`)}
                       className="h-4 w-4 p-0 hover:bg-blue-50 hover:border-blue-300"
                       title="View detailed gameweek statistics"
                       data-testid={`button-player-details-${player.id}`}
