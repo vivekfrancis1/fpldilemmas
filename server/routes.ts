@@ -2704,6 +2704,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/leagues-classic/:leagueId/past-seasons", async (req, res) => {
+    try {
+      const { leagueId } = req.params;
+
+      if (!leagueId || isNaN(Number(leagueId))) {
+        return res.status(400).json({ message: "Invalid league ID" });
+      }
+
+      const standingsResponse = await fetchWithRetry(
+        `https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_new_entries=1&page_standings=1&phase=1`
+      );
+      if (!standingsResponse || !standingsResponse.ok) {
+        throw new Error("Failed to fetch league standings");
+      }
+      const standingsData = await standingsResponse.json();
+
+      const leagueType = standingsData?.league?.league_type;
+      if (leagueType !== "x") {
+        return res.status(400).json({ message: "Historical standings are only available for Classic Leagues" });
+      }
+
+      let allResults = standingsData.standings?.results || [];
+      if (standingsData.standings?.has_next) {
+        try {
+          const page2 = await fetchWithRetry(
+            `https://fantasy.premierleague.com/api/leagues-classic/${leagueId}/standings/?page_new_entries=1&page_standings=2&phase=1`
+          );
+          if (page2 && page2.ok) {
+            const page2Data = await page2.json();
+            if (page2Data.standings?.results) {
+              allResults = [...allResults, ...page2Data.standings.results];
+            }
+          }
+        } catch (e) {
+          console.warn(`Failed to fetch page 2 for league past-seasons ${leagueId}`);
+        }
+      }
+
+      const managerIds = allResults.map((r: any) => r.entry);
+      const managerNames = new Map<number, { playerName: string; entryName: string }>();
+      allResults.forEach((r: any) => {
+        managerNames.set(r.entry, { playerName: r.player_name, entryName: r.entry_name });
+      });
+
+      const pastSeasonResults = await Promise.all(
+        managerIds.slice(0, 100).map(async (mid: number) => {
+          try {
+            const cached = managerHistoryCache.get(String(mid));
+            let historyData;
+            if (cached && (Date.now() - cached.timestamp) < MANAGER_CACHE_DURATION) {
+              historyData = cached.data;
+            } else {
+              const histResp = await fetchWithRetry(
+                `https://fantasy.premierleague.com/api/entry/${mid}/history/`
+              );
+              if (!histResp || !histResp.ok) return { managerId: mid, past: [] };
+              historyData = await histResp.json();
+              managerHistoryCache.set(String(mid), { data: historyData, timestamp: Date.now() });
+            }
+            return {
+              managerId: mid,
+              playerName: managerNames.get(mid)?.playerName || '',
+              entryName: managerNames.get(mid)?.entryName || '',
+              past: historyData?.past || [],
+            };
+          } catch {
+            return { managerId: mid, playerName: managerNames.get(mid)?.playerName || '', entryName: managerNames.get(mid)?.entryName || '', past: [] };
+          }
+        })
+      );
+
+      const allSeasons = new Set<string>();
+      pastSeasonResults.forEach(m => {
+        m.past.forEach((s: any) => allSeasons.add(s.season_name));
+      });
+
+      const sortedSeasons = Array.from(allSeasons).sort().reverse();
+
+      res.json({
+        leagueId: Number(leagueId),
+        leagueName: standingsData.league?.name || '',
+        seasons: sortedSeasons,
+        managers: pastSeasonResults,
+      });
+    } catch (error) {
+      console.error(`Error fetching league past seasons for ${req.params.leagueId}:`, error);
+      res.status(500).json({
+        error: "Failed to fetch league historical data",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // League Live Standings - includes live points, bonus, and auto-sub calculations
   app.get("/api/leagues-classic/:leagueId/live-standings", async (req, res) => {
     try {

@@ -1,11 +1,12 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ResponsiveTable, ResponsiveTableColumn } from "@/components/ui/responsive-table";
-import { BarChart3, ArrowLeft, Trophy, Activity, RefreshCw, ChevronUp, ChevronDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BarChart3, ArrowLeft, Trophy, Activity, RefreshCw, ChevronUp, ChevronDown, History, Loader2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { getSharedColumns, sortManagerData, GWTransferDetail, GWHistory, ChipUsage, renderRankChange, getChipLabel } from "@/lib/manager-standings-columns";
 
@@ -135,6 +136,26 @@ interface EnrichedLiveEntry extends LiveLeagueEntry {
   chipsAvailable: number;
 }
 
+interface PastSeasonEntry {
+  season_name: string;
+  total_points: number;
+  rank: number;
+}
+
+interface ManagerPastSeasons {
+  managerId: number;
+  playerName: string;
+  entryName: string;
+  past: PastSeasonEntry[];
+}
+
+interface PastSeasonsData {
+  leagueId: number;
+  leagueName: string;
+  seasons: string[];
+  managers: ManagerPastSeasons[];
+}
+
 export default function LeagueAnalysisPage() {
   const [location, navigate] = useLocation();
   const pathParts = location.split('/').filter(part => part);
@@ -145,6 +166,9 @@ export default function LeagueAnalysisPage() {
   const [showLiveStandings, setShowLiveStandings] = useState(false);
   const [sortField, setSortField] = useState<string>('rank');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [selectedSeason, setSelectedSeason] = useState<string>('');
+  const [historicalSortField, setHistoricalSortField] = useState<string>('total_points');
+  const [historicalSortDirection, setHistoricalSortDirection] = useState<'asc' | 'desc'>('desc');
 
   if (!leagueId) {
     return (
@@ -225,6 +249,65 @@ export default function LeagueAnalysisPage() {
     enabled: managerIds.length > 0,
     staleTime: 5 * 60 * 1000,
   });
+
+  const isClassicLeague = (leagueData as any)?.league?.league_type === 'x';
+
+  const { data: pastSeasonsData, isLoading: isPastSeasonsLoading } = useQuery<PastSeasonsData>({
+    queryKey: ['/api/leagues-classic', leagueId, 'past-seasons'],
+    queryFn: async () => {
+      const res = await fetch(`/api/leagues-classic/${leagueId}/past-seasons`);
+      if (!res.ok) throw new Error('Failed to fetch past seasons');
+      return res.json();
+    },
+    enabled: !!leagueId && isClassicLeague,
+    staleTime: 10 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (pastSeasonsData?.seasons?.length && !selectedSeason) {
+      setSelectedSeason(pastSeasonsData.seasons[0]);
+    }
+  }, [pastSeasonsData?.seasons]);
+
+  const historicalStandings = useMemo(() => {
+    if (!pastSeasonsData?.managers || !selectedSeason) return [];
+    return pastSeasonsData.managers
+      .map(m => {
+        const seasonData = m.past.find(s => s.season_name === selectedSeason);
+        return {
+          managerId: m.managerId,
+          playerName: m.playerName,
+          entryName: m.entryName,
+          totalPoints: seasonData?.total_points ?? null,
+          rank: seasonData?.rank ?? null,
+          played: !!seasonData,
+        };
+      })
+      .sort((a, b) => {
+        if (historicalSortField === 'total_points') {
+          if (!a.played && !b.played) return 0;
+          if (!a.played) return 1;
+          if (!b.played) return -1;
+          return historicalSortDirection === 'desc'
+            ? (b.totalPoints || 0) - (a.totalPoints || 0)
+            : (a.totalPoints || 0) - (b.totalPoints || 0);
+        }
+        if (historicalSortField === 'rank') {
+          if (!a.played && !b.played) return 0;
+          if (!a.played) return 1;
+          if (!b.played) return -1;
+          return historicalSortDirection === 'asc'
+            ? (a.rank || 0) - (b.rank || 0)
+            : (b.rank || 0) - (a.rank || 0);
+        }
+        if (historicalSortField === 'player_name') {
+          return historicalSortDirection === 'asc'
+            ? a.playerName.localeCompare(b.playerName)
+            : b.playerName.localeCompare(a.playerName);
+        }
+        return 0;
+      });
+  }, [pastSeasonsData, selectedSeason, historicalSortField, historicalSortDirection]);
 
   const projectedPointsMap = useMemo(() => {
     const map = new Map<number, { projected_points: number; projected_bench_points: number; active_chip: string | null }>();
@@ -763,6 +846,148 @@ export default function LeagueAnalysisPage() {
             )}
           </CardContent>
         </Card>
+
+        {isClassicLeague && (
+          <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
+                  <History className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Historical Standings
+                </CardTitle>
+                <Select
+                  value={selectedSeason}
+                  onValueChange={(v) => setSelectedSeason(v)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select Season" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(pastSeasonsData?.seasons || []).map((season) => (
+                      <SelectItem key={season} value={season}>
+                        {season}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-muted-foreground text-sm">
+                {selectedSeason
+                  ? `${selectedSeason} season — ${historicalStandings.filter(m => m.played).length} of ${historicalStandings.length} managers played`
+                  : 'Select a season to view how league members performed in past FPL seasons'}
+              </p>
+            </CardHeader>
+            <CardContent>
+              {isPastSeasonsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+                  <span className="ml-3 text-muted-foreground">Loading historical data...</span>
+                </div>
+              ) : !selectedSeason ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Choose a season from the dropdown above to see how your league members performed.
+                </div>
+              ) : historicalStandings.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No data available for {selectedSeason}.
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-gray-50/80">
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground w-12">#</th>
+                        <th
+                          className="px-3 py-2 text-left font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
+                          onClick={() => {
+                            if (historicalSortField === 'player_name') {
+                              setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setHistoricalSortField('player_name');
+                              setHistoricalSortDirection('asc');
+                            }
+                          }}
+                        >
+                          Manager {historicalSortField === 'player_name' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
+                        </th>
+                        <th
+                          className="px-3 py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
+                          onClick={() => {
+                            if (historicalSortField === 'total_points') {
+                              setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setHistoricalSortField('total_points');
+                              setHistoricalSortDirection('desc');
+                            }
+                          }}
+                        >
+                          Total Points {historicalSortField === 'total_points' && (historicalSortDirection === 'desc' ? '▼' : '▲')}
+                        </th>
+                        <th
+                          className="px-3 py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
+                          onClick={() => {
+                            if (historicalSortField === 'rank') {
+                              setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                            } else {
+                              setHistoricalSortField('rank');
+                              setHistoricalSortDirection('asc');
+                            }
+                          }}
+                        >
+                          Overall Rank {historicalSortField === 'rank' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historicalStandings.map((entry, index) => {
+                        const isCurrentManager = entry.managerId.toString() === managerId;
+                        return (
+                          <tr
+                            key={entry.managerId}
+                            className={`border-b hover:bg-gray-50/50 transition-colors cursor-pointer ${isCurrentManager ? 'bg-blue-50/50' : ''}`}
+                            onClick={() => navigate(`/manager-team/${entry.managerId}`)}
+                          >
+                            <td className="px-3 py-2.5">
+                              {entry.played ? (
+                                <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold ${
+                                  index === 0 ? 'bg-yellow-100 text-yellow-800' :
+                                  index === 1 ? 'bg-gray-100 text-gray-800' :
+                                  index === 2 ? 'bg-orange-100 text-orange-800' :
+                                  'bg-blue-50 text-blue-700'
+                                }`}>
+                                  {index + 1}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-xs">-</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <div className="font-medium flex items-center gap-2">
+                                {entry.playerName}
+                                {isCurrentManager && <Badge className="bg-blue-600 text-xs">You</Badge>}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{entry.entryName}</div>
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-mono font-semibold">
+                              {entry.played ? entry.totalPoints?.toLocaleString() : (
+                                <span className="text-gray-400 text-xs">Did not play</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-sm">
+                              {entry.played ? entry.rank?.toLocaleString() : (
+                                <span className="text-gray-400 text-xs">N/A</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
