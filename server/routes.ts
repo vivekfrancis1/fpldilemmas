@@ -2797,6 +2797,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/managers/past-seasons", async (req, res) => {
+    try {
+      const { managerIds, managerNames } = req.body;
+      if (!Array.isArray(managerIds) || managerIds.length === 0) {
+        return res.status(400).json({ message: "managerIds array is required" });
+      }
+
+      const ids = managerIds.slice(0, 100);
+      const namesMap = new Map<number, { playerName: string; entryName: string }>();
+      if (Array.isArray(managerNames)) {
+        managerNames.forEach((m: any) => namesMap.set(m.managerId, { playerName: m.playerName || '', entryName: m.entryName || '' }));
+      }
+
+      const results = await Promise.all(
+        ids.map(async (mid: number) => {
+          try {
+            const cached = managerHistoryCache.get(String(mid));
+            let historyData;
+            if (cached && (Date.now() - cached.timestamp) < MANAGER_CACHE_DURATION) {
+              historyData = cached.data;
+            } else {
+              const histResp = await fetchWithRetry(
+                `https://fantasy.premierleague.com/api/entry/${mid}/history/`
+              );
+              if (!histResp || !histResp.ok) return { managerId: mid, playerName: namesMap.get(mid)?.playerName || '', entryName: namesMap.get(mid)?.entryName || '', past: [] };
+              historyData = await histResp.json();
+              managerHistoryCache.set(String(mid), { data: historyData, timestamp: Date.now() });
+            }
+            return {
+              managerId: mid,
+              playerName: namesMap.get(mid)?.playerName || '',
+              entryName: namesMap.get(mid)?.entryName || '',
+              past: historyData?.past || [],
+            };
+          } catch {
+            return { managerId: mid, playerName: namesMap.get(mid)?.playerName || '', entryName: namesMap.get(mid)?.entryName || '', past: [] };
+          }
+        })
+      );
+
+      const allSeasons = new Set<string>();
+      results.forEach(m => {
+        m.past.forEach((s: any) => allSeasons.add(s.season_name));
+      });
+      const sortedSeasons = Array.from(allSeasons).sort().reverse();
+
+      res.json({ seasons: sortedSeasons, managers: results });
+    } catch (error) {
+      console.error("Error fetching managers past seasons:", error);
+      res.status(500).json({ error: "Failed to fetch historical data" });
+    }
+  });
+
   // League Live Standings - includes live points, bonus, and auto-sub calculations
   app.get("/api/leagues-classic/:leagueId/live-standings", async (req, res) => {
     try {

@@ -853,7 +853,7 @@ export default function LeagueAnalysisPage() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
                   <History className="h-4 w-4 sm:h-5 sm:w-5" />
-                  Historical Standings
+                  Previous Seasons
                 </CardTitle>
                 <Select
                   value={selectedSeason}

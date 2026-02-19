@@ -55,6 +55,8 @@ import {
   Zap,
   ArrowUpDown,
   Activity,
+  History,
+  Loader2 as Loader2Icon,
   PieChart,
 } from "lucide-react";
 import { SiInstagram, SiTiktok, SiX, SiYoutube } from "react-icons/si";
@@ -349,6 +351,9 @@ export default function ContentCreators() {
 
   const [sortBy, setSortBy] = useState<string>("latestTracking.overallRank");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [selectedSeason, setSelectedSeason] = useState<string>('');
+  const [historicalSortField, setHistoricalSortField] = useState<string>('rank');
+  const [historicalSortDirection, setHistoricalSortDirection] = useState<'asc' | 'desc'>('asc');
 
   // Cached Content Creators data response type
   interface CachedCreatorsResponse {
@@ -749,6 +754,61 @@ export default function ContentCreators() {
     },
   });
 
+  const { data: pastSeasonsData, isLoading: isPastSeasonsLoading } = useQuery<{ seasons: string[]; managers: any[] }>({
+    queryKey: ['/api/managers/past-seasons', 'content-creators', creatorManagerIds.join(',')],
+    queryFn: async () => {
+      const res = await fetch('/api/managers/past-seasons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          managerIds: creatorManagerIds,
+          managerNames: (creators || []).map(c => ({ managerId: c.managerId, playerName: c.name, entryName: '' })),
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to fetch past seasons');
+      return res.json();
+    },
+    enabled: creatorManagerIds.length > 0,
+    staleTime: 30 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (pastSeasonsData?.seasons?.length && !selectedSeason) {
+      setSelectedSeason(pastSeasonsData.seasons[0]);
+    }
+  }, [pastSeasonsData?.seasons]);
+
+  const historicalStandings = useMemo(() => {
+    if (!pastSeasonsData?.managers || !selectedSeason) return [];
+    return pastSeasonsData.managers
+      .map((m: any) => {
+        const seasonData = m.past.find((s: any) => s.season_name === selectedSeason);
+        return {
+          managerId: m.managerId,
+          playerName: m.playerName,
+          entryName: m.entryName,
+          played: !!seasonData,
+          totalPoints: seasonData?.total_points ?? null,
+          rank: seasonData?.rank ?? null,
+        };
+      })
+      .sort((a: any, b: any) => {
+        if (historicalSortField === 'player_name') {
+          const cmp = (a.playerName || '').localeCompare(b.playerName || '');
+          return historicalSortDirection === 'asc' ? cmp : -cmp;
+        }
+        if (!a.played && !b.played) return 0;
+        if (!a.played) return 1;
+        if (!b.played) return -1;
+        const aVal = historicalSortField === 'total_points' ? a.totalPoints : a.rank;
+        const bVal = historicalSortField === 'total_points' ? b.totalPoints : b.rank;
+        if (historicalSortField === 'total_points') {
+          return historicalSortDirection === 'desc' ? (bVal - aVal) : (aVal - bVal);
+        }
+        return historicalSortDirection === 'asc' ? (aVal - bVal) : (bVal - aVal);
+      });
+  }, [pastSeasonsData, selectedSeason, historicalSortField, historicalSortDirection]);
+
   const sortedCreators = useMemo(() => {
     const data = creatorsWithHistory.length > 0 ? creatorsWithHistory : (creators || []) as FPLCreator[];
     return sortManagerData(data, sortBy, sortOrder, currentGameweek, 'millions', upcomingGameweek);
@@ -862,6 +922,135 @@ export default function ContentCreators() {
                 data-testid="content-creators-table"
               />
             </div>
+
+            {/* Previous Seasons */}
+            <Card className="border-0 bg-white/80 backdrop-blur-sm shadow-lg mt-6">
+              <CardHeader className="pb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <CardTitle className="fpl-heading-card flex items-center gap-2 text-base sm:text-lg">
+                    <History className="h-4 w-4 sm:h-5 sm:w-5" />
+                    Previous Seasons
+                  </CardTitle>
+                  <Select value={selectedSeason} onValueChange={(v) => setSelectedSeason(v)}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select Season" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(pastSeasonsData?.seasons || []).map((season: string) => (
+                        <SelectItem key={season} value={season}>{season}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-muted-foreground text-sm">
+                  {selectedSeason
+                    ? `${selectedSeason} season — ${historicalStandings.filter((m: any) => m.played).length} of ${historicalStandings.length} creators played`
+                    : 'Select a season to view past performance'}
+                </p>
+              </CardHeader>
+              <CardContent>
+                {isPastSeasonsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2Icon className="h-8 w-8 animate-spin text-purple-600" />
+                    <span className="ml-3 text-muted-foreground">Loading historical data...</span>
+                  </div>
+                ) : !selectedSeason ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Choose a season from the dropdown above.
+                  </div>
+                ) : historicalStandings.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No data available for {selectedSeason}.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-gray-50/80">
+                          <th className="px-3 py-2 text-left font-medium text-muted-foreground w-12">#</th>
+                          <th
+                            className="px-3 py-2 text-left font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
+                            onClick={() => {
+                              if (historicalSortField === 'player_name') {
+                                setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                              } else {
+                                setHistoricalSortField('player_name');
+                                setHistoricalSortDirection('asc');
+                              }
+                            }}
+                          >
+                            Creator {historicalSortField === 'player_name' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
+                          </th>
+                          <th
+                            className="px-3 py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
+                            onClick={() => {
+                              if (historicalSortField === 'total_points') {
+                                setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                              } else {
+                                setHistoricalSortField('total_points');
+                                setHistoricalSortDirection('desc');
+                              }
+                            }}
+                          >
+                            Total Points {historicalSortField === 'total_points' && (historicalSortDirection === 'desc' ? '▼' : '▲')}
+                          </th>
+                          <th
+                            className="px-3 py-2 text-right font-medium text-muted-foreground cursor-pointer hover:text-gray-900"
+                            onClick={() => {
+                              if (historicalSortField === 'rank') {
+                                setHistoricalSortDirection(d => d === 'asc' ? 'desc' : 'asc');
+                              } else {
+                                setHistoricalSortField('rank');
+                                setHistoricalSortDirection('asc');
+                              }
+                            }}
+                          >
+                            Overall Rank {historicalSortField === 'rank' && (historicalSortDirection === 'asc' ? '▲' : '▼')}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {historicalStandings.map((entry: any, index: number) => (
+                          <tr
+                            key={entry.managerId}
+                            className="border-b hover:bg-gray-50/50 transition-colors cursor-pointer"
+                            onClick={() => navigate(`/manager-team/${entry.managerId}`)}
+                          >
+                            <td className="px-3 py-2.5">
+                              {entry.played ? (
+                                <div className={`flex items-center justify-center w-7 h-7 rounded-full text-xs font-semibold ${
+                                  index === 0 ? 'bg-yellow-100 text-yellow-800' :
+                                  index === 1 ? 'bg-gray-100 text-gray-800' :
+                                  index === 2 ? 'bg-orange-100 text-orange-800' :
+                                  'bg-blue-50 text-blue-700'
+                                }`}>
+                                  {index + 1}
+                                </div>
+                              ) : (
+                                <span className="text-gray-400 text-xs">-</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <div className="font-medium">{entry.playerName}</div>
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-mono font-semibold">
+                              {entry.played ? entry.totalPoints?.toLocaleString() : (
+                                <span className="text-gray-400 text-xs">Did not play</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-mono text-sm">
+                              {entry.played ? entry.rank?.toLocaleString() : (
+                                <span className="text-gray-400 text-xs">N/A</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Team Analysis Tab */}
