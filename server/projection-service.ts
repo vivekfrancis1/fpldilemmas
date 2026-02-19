@@ -344,9 +344,25 @@ class ProjectionService {
               const teamDefenseStrength = (adjustedForm * 0.05) + 0.85; // Base 85% + form
               const expectedGoalsConceded = (opponentAttackStrength / teamDefenseStrength) * (averageMinutesPerGame / 90);
               
-              // -1 point for every 2 goals conceded (official FPL rule)
-              // Use expected value (not Math.floor) since we're projecting averages across many matches
-              goalsConcededPoints = -(expectedGoalsConceded / 2);
+              // Poisson-based goals conceded points calculation
+              // FPL rule: -1pt per 2 goals conceded (floor(gc/2) * -1)
+              // E[points] = -Σ floor(k/2) * P(X=k) for k=0,1,2,...
+              const lambda = expectedGoalsConceded;
+              if (lambda > 0) {
+                let expectedPenalty = 0;
+                let cumulativeProb = 0;
+                let logFactorial = 0;
+                const maxK = Math.max(20, Math.ceil(lambda * 3));
+                for (let k = 0; k <= maxK; k++) {
+                  if (k > 0) logFactorial += Math.log(k);
+                  const logProb = -lambda + k * Math.log(lambda) - logFactorial;
+                  const prob = Math.exp(logProb);
+                  cumulativeProb += prob;
+                  expectedPenalty += Math.floor(k / 2) * prob;
+                  if (cumulativeProb > 0.9999) break;
+                }
+                goalsConcededPoints = -expectedPenalty;
+              }
             }
             
             // 7. YELLOW CARDS (All Positions) - Official FPL Rules: -1pt per yellow card

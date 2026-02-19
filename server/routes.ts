@@ -12756,7 +12756,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Minutes: Each fixture in a DGW earns full per-match minutes points (player plays 60+ mins in each match)
               // Don't divide - each match independently earns ~2 pts for playing 60+ mins
               const fixtureMinutesPts = minutesPts;
-              const fixtureGoalsConcededPts = goalsConcededFixture.goalsConceded ? -(goalsConcededFixture.goalsConceded / 2) : (goalsConcededPts / numFixtures);
+              const fixtureGoalsConcededPts = goalsConcededFixture.goalsConceded ? (() => {
+                const gcLambda = goalsConcededFixture.goalsConceded;
+                let gcExpectedPenalty = 0;
+                let gcCumulativeProb = 0;
+                let gcLogFactorial = 0;
+                const gcMaxK = Math.max(20, Math.ceil(gcLambda * 3));
+                for (let gcK = 0; gcK <= gcMaxK; gcK++) {
+                  if (gcK > 0) gcLogFactorial += Math.log(gcK);
+                  const gcLogProb = -gcLambda + gcK * Math.log(gcLambda) - gcLogFactorial;
+                  const gcProb = Math.exp(gcLogProb);
+                  gcCumulativeProb += gcProb;
+                  gcExpectedPenalty += Math.floor(gcK / 2) * gcProb;
+                  if (gcCumulativeProb > 0.9999) break;
+                }
+                return -gcExpectedPenalty;
+              })() : (goalsConcededPts / numFixtures);
               const fixtureYellowCardsPts = -(yellowCardsFixture.yellowCards || 0);
               const fixtureRedCardsPts = -(redCardsFixture.redCards || 0) * 3;
               const fixtureBonusPts = bonusFixture.bonusPoints || 0;
@@ -15544,8 +15559,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 // Player expected goals conceded = (expected minutes / 90) * Team expected goals AGAINST (conceded)
                 gwGoalsConceded = (expectedMinutesPerGame / 90) * parseFloat(teamGoalsAgainst);
                 
-                // Points from goals conceded = -0.5 * Player expected goals conceded
-                gwPoints = -0.5 * gwGoalsConceded;
+                // Poisson-based goals conceded points calculation
+                // FPL rule: -1pt per 2 goals conceded (floor(gc/2) * -1)
+                // E[points] = -Σ floor(k/2) * P(X=k) for k=0,1,2,...
+                const lambda = gwGoalsConceded;
+                if (lambda > 0) {
+                  let expectedPenalty = 0;
+                  let cumulativeProb = 0;
+                  let logFactorial = 0;
+                  const maxK = Math.max(20, Math.ceil(lambda * 3));
+                  for (let k = 0; k <= maxK; k++) {
+                    if (k > 0) logFactorial += Math.log(k);
+                    const logProb = -lambda + k * Math.log(lambda) - logFactorial;
+                    const prob = Math.exp(logProb);
+                    cumulativeProb += prob;
+                    expectedPenalty += Math.floor(k / 2) * prob;
+                    if (cumulativeProb > 0.9999) break;
+                  }
+                  gwPoints = -expectedPenalty;
+                } else {
+                  gwPoints = 0;
+                }
               }
             }
             
