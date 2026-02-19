@@ -38,6 +38,11 @@ export default function Fixtures() {
   const [fdrMode, setFdrMode] = useState<'official' | 'form' | 'custom'>('official');
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
   const [excludedTeams, setExcludedTeams] = useState<Set<number>>(new Set());
+  const [teamFilterId, setTeamFilterId] = useState<number | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    const teamParam = params.get('team');
+    return teamParam ? parseInt(teamParam) : null;
+  });
   
   // Load custom FDR from localStorage
   const [customFDR, setCustomFDR] = useState<CustomFDR>(() => {
@@ -105,11 +110,18 @@ export default function Fixtures() {
   useEffect(() => {
     if (bootstrapData?.events && !gameweekRange) {
       const range = computeNextRange(bootstrapData.events);
-      // Default to 6 gameweeks for fixture analyzer
       const endGw = Math.min(range.start + 5, 38);
       setGameweekRange({ start: range.start, end: endGw });
     }
   }, [bootstrapData?.events, gameweekRange]);
+
+  useEffect(() => {
+    if (teamFilterId && bootstrapData?.teams) {
+      const allTeamIds = bootstrapData.teams.map((t: any) => t.id);
+      const excluded = new Set(allTeamIds.filter((id: number) => id !== teamFilterId));
+      setExcludedTeams(excluded);
+    }
+  }, [teamFilterId, bootstrapData?.teams]);
 
   // Clear excluded gameweeks when gameweek range changes
   const handleGameweekRangeChange = (start: number, end: number) => {
@@ -560,6 +572,26 @@ export default function Fixtures() {
         <p className="fpl-page-subtitle text-xs sm:text-sm">
           Analyze fixtures based on Official FPL ratings, Season Form or Custom ratings
         </p>
+        {teamFilterId && bootstrapData?.teams && (
+          <div className="mt-2 flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2">
+            <span className="text-sm text-purple-800 font-medium">
+              Showing fixtures for: {bootstrapData.teams.find((t: any) => t.id === teamFilterId)?.name || 'Unknown'}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-purple-600 hover:text-purple-800 hover:bg-purple-100"
+              onClick={() => {
+                setTeamFilterId(null);
+                setExcludedTeams(new Set());
+                window.history.replaceState({}, '', '/fixtures');
+              }}
+            >
+              <X className="h-4 w-4 mr-1" />
+              Show All
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="fpl-section-spacing">

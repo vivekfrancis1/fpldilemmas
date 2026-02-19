@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import { Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info, Heart, AlertTriangle, XCircle, Clock, List, Search, AlertCircle } from "lucide-react";
+import { Users, TrendingUp, Save, Calendar, Target, Sparkles, Crown, ArrowUpDown, ChevronUp, ChevronDown, X, Plus, RotateCcw, Copy, Trash2, Edit2, Check, Info, Heart, AlertTriangle, XCircle, Clock, List, Search, AlertCircle, BarChart3 } from "lucide-react";
 import { LoadingExperience } from "@/components/loading-experience";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -5296,12 +5297,26 @@ export default function TransferPlanner() {
             </>
           )}
           <button 
-            className="w-full h-14 sm:h-12 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
+            className="w-full h-14 sm:h-12 border-b border-gray-200 dark:border-gray-700 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900 dark:hover:bg-sky-800 font-semibold text-base sm:text-lg text-gray-900 dark:text-white transition-colors" 
             onClick={() => { setSelectedPlayer(null); openBuyPriceDialog(pick.element, (pick.purchase_price || 0) / 10); }} 
             data-testid={`${isBench ? 'bench' : 'list'}-edit-buy-price-${pick.element}`}
           >
             Edit Buy Price
           </button>
+          <div className="flex gap-2 p-3">
+            <Link href={`/player/${pick.element}`} className="flex-1">
+              <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-purple-600 hover:to-indigo-600 transition-all">
+                <BarChart3 className="h-3.5 w-3.5" />
+                Season Statistics
+              </button>
+            </Link>
+            <Link href={`/fixtures?team=${player.team}`} className="flex-1">
+              <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-green-600 hover:to-emerald-600 transition-all">
+                <Calendar className="h-3.5 w-3.5" />
+                Upcoming Fixtures
+              </button>
+            </Link>
+          </div>
         </div>
       </>
     );

@@ -1402,6 +1402,23 @@ export default function CreatorTeam() {
                 <p className="text-xs sm:text-sm mt-1">Match may not have started yet</p>
               </div>
             )}
+
+            {selectedPlayerForBreakdown && (
+              <div className="flex gap-2 pt-2 border-t border-gray-200">
+                <Link href={`/player/${selectedPlayerForBreakdown.id}`} className="flex-1">
+                  <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-purple-600 hover:to-indigo-600 transition-all">
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    Season Statistics
+                  </button>
+                </Link>
+                <Link href={`/fixtures?team=${selectedPlayerForBreakdown.team}`} className="flex-1">
+                  <button className="w-full flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-xs sm:text-sm font-medium hover:from-green-600 hover:to-emerald-600 transition-all">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Upcoming Fixtures
+                  </button>
+                </Link>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
