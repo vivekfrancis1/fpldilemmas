@@ -1094,9 +1094,7 @@ export default function MyDashboard() {
     ];
     
     const fixtureDetailsForGW = playerData?.fixtureDetails?.[gwKey] || [];
-    const totalProjected = fixtureDetailsForGW.length > 0
-      ? fixtureDetailsForGW.reduce((sum: number, f: any) => sum + (f.totalPoints || 0), 0)
-      : (playerData?.gameweekProjections?.[gwKey] || 0);
+    const totalProjected = playerData?.gameweekProjections?.[gwKey] || 0;
     
     setSelectedPlayerForProjection({
       ...fullPlayer,

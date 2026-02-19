@@ -1171,6 +1171,130 @@ describe('Team Projection Cross-Consistency', () => {
   });
 });
 
+describe('Fixture Detail vs Aggregate Projection Consistency', () => {
+  it('gameweekProjections[gw] equals sum of fixtureDetails[gw].totalPoints for every player and gameweek', () => {
+    const failures: string[] = [];
+
+    for (const player of rawCachedPlayerTotalPoints) {
+      const gwKeys = Object.keys(player.gameweekProjections || {});
+
+      for (const gw of gwKeys) {
+        const aggregateTotal = player.gameweekProjections[gw] || 0;
+        const fixtures = player.fixtureDetails?.[gw];
+
+        if (!fixtures || fixtures.length === 0) {
+          if (aggregateTotal === 0) continue;
+          failures.push(
+            `${player.playerName || player.playerId} GW${gw}: aggregate=${aggregateTotal.toFixed(2)} but no fixtureDetails`
+          );
+          continue;
+        }
+
+        const fixtureSum = fixtures.reduce((sum: number, f: any) => sum + (f.totalPoints || 0), 0);
+        const diff = Math.abs(fixtureSum - aggregateTotal);
+
+        if (diff > 0.02) {
+          failures.push(
+            `${player.playerName || player.playerId} GW${gw}: aggregate=${aggregateTotal.toFixed(2)}, fixtureSum=${fixtureSum.toFixed(2)}, diff=${diff.toFixed(4)}`
+          );
+        }
+      }
+    }
+
+    if (failures.length > 0) {
+      console.log(`Fixture vs aggregate mismatches (${failures.length} total, showing first 15):`, failures.slice(0, 15));
+    }
+
+    expect(failures.length).toBe(0);
+  });
+
+  it('each component total matches sum of per-fixture components for every player and gameweek', () => {
+    const componentKeys = [
+      'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
+      'pointsFromMinutes', 'pointsFromGoalsConceded', 'pointsFromYellowCards',
+      'pointsFromRedCards', 'pointsFromBonus', 'pointsFromSaves',
+      'pointsFromDefensiveContributions'
+    ];
+
+    const fixtureComponentKeys = [
+      'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
+      'pointsFromMinutes', 'pointsFromGoalsConceded', 'pointsFromYellowCards',
+      'pointsFromRedCards', 'pointsFromBonus', 'pointsFromSaves',
+      'pointsFromDefensiveContributions'
+    ];
+
+    const failures: string[] = [];
+
+    for (const player of rawCachedPlayerTotalPoints) {
+      const gwKeys = Object.keys(player.gameweekProjections || {});
+
+      for (const gw of gwKeys) {
+        const fixtures = player.fixtureDetails?.[gw];
+        if (!fixtures || fixtures.length === 0) continue;
+
+        for (let i = 0; i < componentKeys.length; i++) {
+          const compKey = componentKeys[i];
+          const fixtureCompKey = fixtureComponentKeys[i];
+
+          const aggregateVal = player[compKey]?.[gw] || 0;
+          const fixtureSum = fixtures.reduce((sum: number, f: any) => sum + (f[fixtureCompKey] || 0), 0);
+          const diff = Math.abs(fixtureSum - aggregateVal);
+
+          if (diff > 0.02) {
+            failures.push(
+              `${player.playerName || player.playerId} GW${gw} ${compKey}: aggregate=${aggregateVal.toFixed(2)}, fixtureSum=${fixtureSum.toFixed(2)}`
+            );
+          }
+        }
+      }
+    }
+
+    if (failures.length > 0) {
+      console.log(`Component fixture vs aggregate mismatches (${failures.length} total, showing first 15):`, failures.slice(0, 15));
+    }
+
+    expect(failures.length).toBe(0);
+  });
+
+  it('sum of all components equals gameweekProjections total for each gameweek (strict)', () => {
+    const componentKeys = [
+      'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
+      'pointsFromMinutes', 'pointsFromGoalsConceded', 'pointsFromYellowCards',
+      'pointsFromRedCards', 'pointsFromBonus', 'pointsFromSaves',
+      'pointsFromDefensiveContributions'
+    ];
+
+    const failures: string[] = [];
+
+    for (const player of rawCachedPlayerTotalPoints) {
+      const gwKeys = Object.keys(player.gameweekProjections || {});
+
+      for (const gw of gwKeys) {
+        const totalForGW = player.gameweekProjections[gw] || 0;
+        if (totalForGW === 0) continue;
+
+        let componentSum = 0;
+        for (const key of componentKeys) {
+          componentSum += player[key]?.[gw] || 0;
+        }
+
+        const diff = Math.abs(componentSum - totalForGW);
+        if (diff > 0.15) {
+          failures.push(
+            `${player.playerName || player.playerId} GW${gw}: components=${componentSum.toFixed(2)}, total=${totalForGW.toFixed(2)}, diff=${diff.toFixed(4)}`
+          );
+        }
+      }
+    }
+
+    if (failures.length > 0) {
+      console.log(`Component sum vs total mismatches (${failures.length} total, showing first 15):`, failures.slice(0, 15));
+    }
+
+    expect(failures.length).toBe(0);
+  });
+});
+
 describe('Double Gameweek (DGW) Handling', () => {
   it('DGW fixtures result in higher projections than single GW for same team', async () => {
     let fixturesData: any[];

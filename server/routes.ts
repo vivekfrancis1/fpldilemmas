@@ -12796,9 +12796,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
-          // DGW HANDLING: Use per-fixture summation for multi-fixture gameweeks
-          // This ensures component totals match what's displayed in the popover
-          if (fixtureDetails[gwKey] && fixtureDetails[gwKey].length > 1) {
+          // CONSISTENCY FIX: Use per-fixture summation as single source of truth for ALL gameweeks
+          // This ensures component totals always match what's displayed in the popover
+          // (Previously only applied to DGW, causing SGW divergence between aggregate and fixture totals)
+          if (fixtureDetails[gwKey] && fixtureDetails[gwKey].length > 0) {
             pointsFromGoals[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromGoals, 0);
             pointsFromAssists[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromAssists, 0);
             pointsFromCleanSheets[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromCleanSheets, 0);
@@ -12811,13 +12812,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pointsFromDefensiveContributions[gwKey] = fixtureDetails[gwKey].reduce((sum, f) => sum + f.pointsFromDefensiveContributions, 0);
           }
 
-          // Calculate gameweek total
+          // Calculate gameweek total from fixture details (single source of truth)
           let gwTotal: number;
-          if (fixtureDetails[gwKey] && fixtureDetails[gwKey].length > 1) {
-            // DGW: Sum per-fixture totals for consistency with popover display
+          if (fixtureDetails[gwKey] && fixtureDetails[gwKey].length > 0) {
             gwTotal = fixtureDetails[gwKey].reduce((sum, f) => sum + f.totalPoints, 0);
           } else {
-            // SGW: Use aggregate component totals (preserves original accuracy)
+            // Fallback: no fixture details available (shouldn't happen for non-BGW)
             gwTotal = goalsPts + assistsPts + cleansheetPts + minutesPts + 
                      goalsConcededPts + yellowCardsPts + redCardsPts + bonusPts + savesPts + defensiveContributionsPts;
           }
