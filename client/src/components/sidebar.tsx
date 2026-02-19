@@ -125,7 +125,8 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         { path: "/admin-upset-config", label: "Upset Configuration", icon: Settings, description: "Configure upset configuration settings", popular: false },
         { path: "/admin-data-population", label: "Data Population", icon: Database, description: "Populate and manage data", popular: false },
         { path: "/admin-gameweek-cache", label: "Gameweek Cache", icon: RefreshCw, description: "Manage gameweek cache", popular: false },
-        { path: "/admin-activity-logs", label: "User Activity Logs", icon: Activity, description: "View user activity and search logs", popular: false }
+        { path: "/admin-activity-logs", label: "User Activity Logs", icon: Activity, description: "View user activity and search logs", popular: false },
+        { path: "/admin-projection-validation", label: "Projection Validation", icon: BarChart3, description: "Compare past vs projected averages per component", popular: false }
       ]
     },
     {

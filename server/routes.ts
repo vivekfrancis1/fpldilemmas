@@ -19585,6 +19585,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   console.log("✓ Projection accuracy API routes registered");
 
+  app.get("/api/admin/projection-validation", isAuthenticated, requireAdmin, async (req: any, res) => {
+    try {
+      const bootstrapRes = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+      if (!bootstrapRes.ok) throw new Error("Failed to fetch bootstrap data");
+      const bootstrap = await bootstrapRes.json() as any;
+
+      const currentGW = bootstrap.events.find((e: any) => e.is_current)?.id || 1;
+      const teams: Record<number, string> = {};
+      for (const t of bootstrap.teams) teams[t.id] = t.short_name;
+
+      const posMap: Record<number, string> = { 1: "GKP", 2: "DEF", 3: "MID", 4: "FWD" };
+
+      const cachedRes = await fetch("http://localhost:5000/api/cached/player-total-points?availabilityAdjusted=false");
+      if (!cachedRes.ok) throw new Error("Failed to fetch cached projections");
+      const cachedPlayers = await cachedRes.json() as any[];
+      const cachedMap = new Map<number, any>();
+      for (const p of cachedPlayers) cachedMap.set(p.playerId, p);
+
+      const results: any[] = [];
+
+      for (const el of bootstrap.elements) {
+        const gamesPlayed = el.starts || 0;
+        if (gamesPlayed === 0) continue;
+
+        const pos = posMap[el.element_type] || "?";
+        const teamName = teams[el.team] || "?";
+        const isMid = el.element_type === 3;
+        const isFwd = el.element_type === 4;
+        const isDef = el.element_type === 2;
+        const isGkp = el.element_type === 1;
+
+        const actualGoals = el.goals_scored || 0;
+        const actualAssists = el.assists || 0;
+        const actualCS = el.clean_sheets || 0;
+        const actualMinutes = el.minutes || 0;
+        const actualGC = el.goals_conceded || 0;
+        const actualYC = el.yellow_cards || 0;
+        const actualRC = el.red_cards || 0;
+        const actualBonus = el.bonus || 0;
+        const actualSaves = el.saves || 0;
+        const actualTotalPts = el.total_points || 0;
+        const actualOwnGoals = el.own_goals || 0;
+        const actualPenMissed = el.penalties_missed || 0;
+        const actualPenSaved = el.penalties_saved || 0;
+        const actualDCRawStat = el.defensive_contribution || 0;
+
+        const goalMultiplier = (isGkp || isDef) ? 6 : isMid ? 5 : 4;
+        const actualGoalPts = actualGoals * goalMultiplier;
+        const actualAssistPts = actualAssists * 3;
+        const actualCSPts = (isGkp || isDef) ? actualCS * 4 : isMid ? actualCS * 1 : 0;
+        const actualGCPts = (isGkp || isDef) ? Math.floor(actualGC / 2) * -1 : 0;
+        const actualYCPts = actualYC * -1;
+        const actualRCPts = actualRC * -3;
+        const actualBonusPts = actualBonus;
+        const actualSavesPts = (isGkp) ? Math.floor(actualSaves / 3) : 0;
+        const actualOGPts = actualOwnGoals * -2;
+        const actualPenMissedPts = actualPenMissed * -2;
+        const actualPenSavedPts = actualPenSaved * 5;
+
+        const knownNonMinNonDCPts = actualGoalPts + actualAssistPts + actualCSPts +
+          actualGCPts + actualYCPts + actualRCPts + actualBonusPts + actualSavesPts +
+          actualOGPts + actualPenMissedPts + actualPenSavedPts;
+        const actualMinPlusDCPts = actualTotalPts - knownNonMinNonDCPts;
+        const approxMinPts = gamesPlayed * 2;
+        const actualDCPts = Math.max(0, actualMinPlusDCPts - approxMinPts);
+        const actualMinPts = actualMinPlusDCPts - actualDCPts;
+
+        const cached = cachedMap.get(el.id);
+        if (!cached) continue;
+
+        const gwKeys = Object.keys(cached.gameweekProjections || {});
+        const numGWs = gwKeys.length;
+        if (numGWs === 0) continue;
+
+        let projGoalPts = 0, projAssistPts = 0, projCSPts = 0, projMinPts = 0;
+        let projGCPts = 0, projYCPts = 0, projRCPts = 0, projBonusPts = 0;
+        let projSavesPts = 0, projDCPts = 0, projTotal = 0;
+
+        for (const gw of gwKeys) {
+          projGoalPts += cached.pointsFromGoals?.[gw] || 0;
+          projAssistPts += cached.pointsFromAssists?.[gw] || 0;
+          projCSPts += cached.pointsFromCleanSheets?.[gw] || 0;
+          projMinPts += cached.pointsFromMinutes?.[gw] || 0;
+          projGCPts += cached.pointsFromGoalsConceded?.[gw] || 0;
+          projYCPts += cached.pointsFromYellowCards?.[gw] || 0;
+          projRCPts += cached.pointsFromRedCards?.[gw] || 0;
+          projBonusPts += cached.pointsFromBonus?.[gw] || 0;
+          projSavesPts += cached.pointsFromSaves?.[gw] || 0;
+          projDCPts += cached.pointsFromDefensiveContributions?.[gw] || 0;
+          projTotal += cached.gameweekProjections?.[gw] || 0;
+        }
+
+        const projGoalRaw = projGoalPts / goalMultiplier;
+        const projAssistRaw = projAssistPts / 3;
+        const projCSRaw = (isGkp || isDef) ? projCSPts / 4 : isMid ? projCSPts / 1 : 0;
+        const projGCRaw = (isGkp || isDef) ? projGCPts * -2 : 0;
+        const projYCRaw = projYCPts * -1;
+        const projRCRaw = projRCPts / -3;
+        const projSavesRaw = (isGkp) ? projSavesPts * 3 : 0;
+
+        results.push({
+          playerId: el.id,
+          playerName: el.web_name,
+          fullName: el.first_name + " " + el.second_name,
+          position: pos,
+          team: teamName,
+          teamId: el.team,
+          gamesPlayed,
+          projectedGWs: numGWs,
+          actual: {
+            goals: { raw: +(actualGoals / gamesPlayed).toFixed(3), pts: +(actualGoalPts / gamesPlayed).toFixed(3) },
+            assists: { raw: +(actualAssists / gamesPlayed).toFixed(3), pts: +(actualAssistPts / gamesPlayed).toFixed(3) },
+            cleanSheets: { raw: +(actualCS / gamesPlayed).toFixed(3), pts: +(actualCSPts / gamesPlayed).toFixed(3) },
+            minutes: { raw: +(actualMinutes / gamesPlayed).toFixed(1), pts: +(actualMinPts / gamesPlayed).toFixed(3) },
+            goalsConceded: { raw: +(actualGC / gamesPlayed).toFixed(3), pts: +(actualGCPts / gamesPlayed).toFixed(3) },
+            yellowCards: { raw: +(actualYC / gamesPlayed).toFixed(3), pts: +(actualYCPts / gamesPlayed).toFixed(3) },
+            redCards: { raw: +(actualRC / gamesPlayed).toFixed(3), pts: +(actualRCPts / gamesPlayed).toFixed(3) },
+            bonus: { raw: +(actualBonus / gamesPlayed).toFixed(3), pts: +(actualBonusPts / gamesPlayed).toFixed(3) },
+            saves: { raw: +(actualSaves / gamesPlayed).toFixed(3), pts: +(actualSavesPts / gamesPlayed).toFixed(3) },
+            defensiveContributions: { raw: +(actualDCRawStat / gamesPlayed).toFixed(3), pts: +(actualDCPts / gamesPlayed).toFixed(3) },
+            totalPoints: { pts: +(actualTotalPts / gamesPlayed).toFixed(3) }
+          },
+          projected: {
+            goals: { raw: +(projGoalRaw / numGWs).toFixed(3), pts: +(projGoalPts / numGWs).toFixed(3) },
+            assists: { raw: +(projAssistRaw / numGWs).toFixed(3), pts: +(projAssistPts / numGWs).toFixed(3) },
+            cleanSheets: { raw: +(projCSRaw / numGWs).toFixed(3), pts: +(projCSPts / numGWs).toFixed(3) },
+            minutes: { raw: 0, pts: +(projMinPts / numGWs).toFixed(3) },
+            goalsConceded: { raw: +(projGCRaw / numGWs).toFixed(3), pts: +(projGCPts / numGWs).toFixed(3) },
+            yellowCards: { raw: +(projYCRaw / numGWs).toFixed(3), pts: +(projYCPts / numGWs).toFixed(3) },
+            redCards: { raw: +(projRCRaw / numGWs).toFixed(3), pts: +(projRCPts / numGWs).toFixed(3) },
+            bonus: { raw: +(projBonusPts / numGWs).toFixed(3), pts: +(projBonusPts / numGWs).toFixed(3) },
+            saves: { raw: +(projSavesRaw / numGWs).toFixed(3), pts: +(projSavesPts / numGWs).toFixed(3) },
+            defensiveContributions: { raw: +(projDCPts / numGWs).toFixed(3), pts: +(projDCPts / numGWs).toFixed(3) },
+            totalPoints: { pts: +(projTotal / numGWs).toFixed(3) }
+          }
+        });
+      }
+
+      results.sort((a, b) => b.actual.totalPoints.pts - a.actual.totalPoints.pts);
+
+      res.json({
+        currentGameweek: currentGW,
+        playerCount: results.length,
+        players: results
+      });
+    } catch (error) {
+      console.error("Error in projection validation:", error);
+      res.status(500).json({ error: "Failed to generate projection validation data" });
+    }
+  });
+
+  console.log("✓ Projection validation API route registered");
+
   const httpServer = createServer(app);
   return httpServer;
 }
