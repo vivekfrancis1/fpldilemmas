@@ -249,9 +249,9 @@ export default function ProjectionDocumentation() {
                     <div className="text-xs text-pink-500 mt-1">9 seasons of data</div>
                   </div>
                   <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-lg text-center">
-                    <div className="text-3xl font-bold text-indigo-700">5min</div>
+                    <div className="text-3xl font-bold text-indigo-700">30min</div>
                     <div className="text-sm text-indigo-600 mt-1">Cache Duration</div>
-                    <div className="text-xs text-indigo-500 mt-1">Live standings data</div>
+                    <div className="text-xs text-indigo-500 mt-1">In-memory projection cache TTL</div>
                   </div>
                   <div className="bg-gradient-to-br from-teal-50 to-teal-100 p-4 rounded-lg text-center">
                     <div className="text-3xl font-bold text-teal-700">15+</div>
@@ -299,6 +299,14 @@ export default function ProjectionDocumentation() {
                           <span className="text-green-500 mt-0.5">▪</span>
                           <span><strong>Simplified System:</strong> Removed complexity for more transparent projections</span>
                         </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-500 mt-0.5">▪</span>
+                          <span><strong>Availability Applied Server-Side Only:</strong> All per-gameweek availability probability (0%/25%/50%/75%/100%) is now applied exclusively server-side in individual projection components. Frontend no longer re-applies availability multipliers, preventing double-application bugs.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-500 mt-0.5">▪</span>
+                          <span><strong>Blank Gameweek Handling:</strong> Averages (points per GW, value) now divide by non-blank gameweeks only - teams with postponed fixtures (e.g. MCI/CRY GW31) get accurate averages instead of deflated values.</span>
+                        </li>
                       </ul>
                     </div>
 
@@ -319,10 +327,6 @@ export default function ProjectionDocumentation() {
                         <li className="flex items-start gap-2">
                           <span className="text-red-500 mt-0.5">▪</span>
                           <span><strong>Tier-based Multipliers:</strong> Static tier system replaced with dynamic real-time data</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <span className="text-red-500 mt-0.5">▪</span>
-                          <span><strong>Home Advantage (1.16×):</strong> Standard 16% boost for home fixtures</span>
                         </li>
                         <li className="flex items-start gap-2">
                           <span className="text-red-500 mt-0.5">▪</span>
@@ -430,7 +434,7 @@ export default function ProjectionDocumentation() {
                         <div>
                           <strong>Updated Parameters:</strong>
                           <ul className="list-disc ml-5 mt-1">
-                            <li>homeAdvantageMultiplier: 1.12 (reduced from 1.16)</li>
+                            <li>homeAdvantageMultiplier: 1.16</li>
                             <li>awayFactorMultiplier: 0.84 (unchanged)</li>
                             <li>Context multipliers (15+ factors)</li>
                             <li>Market bounds: REMOVED completely</li>
@@ -509,7 +513,7 @@ export default function ProjectionDocumentation() {
                               <li>Opponent real xGF from current standings</li>
                               <li>Team actual goals conceded average</li>
                               <li>Team real xGA from current standings</li>
-                              <li>Venue factor (1.12/0.84) - updated</li>
+                              <li>Venue factor (1.16/0.84)</li>
                               <li>Context multipliers</li>
                             </ul>
                           </div>
@@ -538,16 +542,15 @@ export default function ProjectionDocumentation() {
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
                           <strong>Formula:</strong><br/>
-                          TeamAssists = TeamGoals × GoalToAssistRatio × CreativityFactor
+                          TeamAssists = TeamGoals × 0.85
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                           <div>
                             <strong>Inputs:</strong>
                             <ul className="list-disc ml-5 mt-1">
                               <li>Team goals scored (from Step 2)</li>
-                              <li>Historical goal-to-assist ratio</li>
-                              <li>Team creativity metrics</li>
-                              <li>Playing style factors</li>
+                              <li>Assist ratio: 0.85 (85% of goals have assists in FPL)</li>
+                              <li>Simple multiplication - no additional factors</li>
                             </ul>
                           </div>
                           <div>
@@ -749,8 +752,8 @@ export default function ProjectionDocumentation() {
                     <div className="bg-gray-50 p-4 rounded">
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded border font-mono text-sm">
-                          <strong>NEW Formula (Based on Real Data):</strong><br/>
-                          TotalPoints = HybridGoalPoints + HybridAssistPoints + HybridCSPoints + DCPoints + BonusPoints + MinutesPoints + SavesPoints - PenaltyPoints
+                          <strong>10-Component Formula:</strong><br/>
+                          TotalPoints = GoalPoints + AssistPoints + CSPoints + MinutesPoints + SavesPoints + BonusPoints + DCPoints + GoalsConcededPoints + YellowCardPoints + RedCardPoints
                         </div>
                         <div className="text-sm">
                           <strong>Real Data Compilation:</strong>
@@ -759,10 +762,10 @@ export default function ProjectionDocumentation() {
                             <li>Assist points: HybridPlayerAssists × 3 points</li>
                             <li>Clean sheet points: From Step 8 (based on hybrid goals conceded)</li>
                             <li>Defensive contribution points: From Step 9 (unchanged)</li>
-                            <li>Minutes points: 1pt if ≥60min, 2pts if ≥90min</li>
-                            <li>Saves points: GK only, 1pt per 3 saves (database-cached FPL data)</li>
-                            <li>Bonus points: Database-cached probability-based calculation</li>
-                            <li>Penalty points: Yellow cards (-1), Red cards (-3), Goals conceded (-1 per 2 for GK/DEF) - all from FPL cache</li>
+                            <li>Minutes points: 2pts for 60+ min probability + 1pt for sub-60 min probability</li>
+                            <li>Saves points: GK only, floor(saves/3) where saves = avg saves/game × (opponent AGR / 1.35)</li>
+                            <li>Bonus points: Historical bonus-per-fixture rate × mild fixture difficulty adjustment (0.85-1.15)</li>
+                            <li>Yellow cards: Season rate per game × -1 point | Red cards: Historical rate × -3 points | Goals conceded: -floor(projected GC / 2) for GK/DEF</li>
                           </ul>
                         </div>
                       </div>
@@ -1294,25 +1297,26 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Goalkeeper save projections based on opponent shots on target and defensive quality.
+                    Goalkeeper save projections based on average saves per game adjusted by opponent attacking threat.
                   </p>
                   <div className="bg-cyan-50 p-3 rounded text-sm">
                     <strong>Formula:</strong><br/>
-                    <code className="text-xs">ExpectedSaves = OpponentShotsOnTarget × TeamDefensiveQuality</code><br/>
-                    <code className="text-xs">SavePoints = floor(Saves / 3) × 1</code>
+                    <code className="text-xs">ExpectedSaves = AvgSaves/game × (OpponentAGR / 1.35)</code><br/>
+                    <code className="text-xs">AGR = 0.5 × (GF + XGF) / GamesPlayed</code><br/>
+                    <code className="text-xs">SavePoints = floor(ExpectedSaves / 3)</code>
                   </div>
                   <div className="space-y-1 text-sm">
-                    <div><strong>FPL Scoring Rules:</strong></div>
+                    <div><strong>Calculation Details:</strong></div>
                     <ul className="list-disc ml-5 text-xs">
-                      <li>1 point for every 3 saves</li>
-                      <li>5 bonus points for each penalty save</li>
-                      <li>Examples: 6 saves = 2pts, 9 saves = 3pts</li>
+                      <li>Average saves per game from bootstrap static data</li>
+                      <li>Opponent AGR (Attack Goal Rate) scales saves up/down</li>
+                      <li>1.35 is league-average AGR normalizer</li>
+                      <li>1 point for every 3 saves (floor division)</li>
                     </ul>
-                    <div><strong>Data Source:</strong> Cached from FPL live data</div>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
-                    <div>Cache: cached_player_save_points</div>
-                    <div>Table: gameweek_player_data (saves)</div>
+                    <div>API: /api/player-saves-projections</div>
+                    <div>Data: Bootstrap static + fixtures + current standings</div>
                   </div>
                 </CardContent>
               </Card>
@@ -1331,8 +1335,8 @@ export default function ProjectionDocumentation() {
                   </p>
                   <div className="bg-orange-50 p-3 rounded text-sm">
                     <strong>Formula:</strong><br/>
-                    <code className="text-xs">GoalsConceded = OpponentGoalsScored (from hybrid formula)</code><br/>
-                    <code className="text-xs">GCPoints = -floor(GoalsConceded / 2)</code>
+                    <code className="text-xs">GC per GW = Team Goals Against Projection (mirror of opponent's team goals scored)</code><br/>
+                    <code className="text-xs">GCPoints = -floor(GC / 2) for GK/DEF only</code>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div><strong>FPL Scoring Rules:</strong></div>
@@ -1359,25 +1363,25 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Yellow card probability based on player position, form, and opponent difficulty.
+                    Yellow card projections based on simple season rate per game.
                   </p>
                   <div className="bg-yellow-50 p-3 rounded text-sm">
                     <strong>Formula:</strong><br/>
-                    <code className="text-xs">YCProbability = BaseRate × PositionMultiplier × FormFactor × FixtureDifficulty</code><br/>
-                    <code className="text-xs">YCPoints = ExpectedYellowCards × -1</code>
+                    <code className="text-xs">ExpectedYCPerGame = SeasonYellowCards / GamesPlayed</code><br/>
+                    <code className="text-xs">YCPoints = ExpectedYCPerGame × -1</code>
                   </div>
                   <div className="space-y-1 text-sm">
-                    <div><strong>Position Base Rates:</strong></div>
+                    <div><strong>Calculation Details:</strong></div>
                     <ul className="list-disc ml-5 text-xs">
-                      <li>Defenders: Higher base probability</li>
-                      <li>Midfielders: Medium probability</li>
-                      <li>Forwards: Lower probability</li>
+                      <li>Simple season rate: Each player's total yellow cards divided by their team's games played</li>
+                      <li>Flat rate applied to all future gameweeks</li>
+                      <li>No position multiplier, form factor, or fixture difficulty adjustments</li>
                     </ul>
                     <div><strong>Points:</strong> Each yellow card = -1 point</div>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
-                    <div>Cache: cached_player_yellow_cards</div>
-                    <div>Data: Historical yellow card rates</div>
+                    <div>API: /api/player-yellow-cards-projections</div>
+                    <div>Data: Season yellow card totals from bootstrap static</div>
                   </div>
                 </CardContent>
               </Card>
@@ -1392,24 +1396,25 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Red card probability based on player discipline, position, and fixture difficulty.
+                    Red card projections based on simple season rate per game.
                   </p>
                   <div className="bg-red-50 p-3 rounded text-sm">
                     <strong>Formula:</strong><br/>
-                    <code className="text-xs">RCProbability = BaseRate × PositionMultiplier × FormFactor × FixtureDifficulty</code><br/>
-                    <code className="text-xs">RCPoints = ExpectedRedCards × -3</code>
+                    <code className="text-xs">ExpectedRCPerGame = SeasonRedCards / GamesPlayed</code><br/>
+                    <code className="text-xs">RCPoints = ExpectedRCPerGame × -3</code>
                   </div>
                   <div className="space-y-1 text-sm">
-                    <div><strong>Position Risk:</strong></div>
+                    <div><strong>Calculation Details:</strong></div>
                     <ul className="list-disc ml-5 text-xs">
-                      <li>Defenders: Higher risk (last man situations)</li>
-                      <li>Others: Lower base probability</li>
+                      <li>Simple season rate: Each player's total red cards divided by their team's games played</li>
+                      <li>Generally very low (~0.01-0.03 per game)</li>
+                      <li>No position multiplier, form factor, or fixture difficulty adjustments</li>
                     </ul>
                     <div><strong>Points:</strong> Each red card = -3 points</div>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
-                    <div>Cache: cached_player_red_cards</div>
-                    <div>Probability: Generally very low (&lt;0.1)</div>
+                    <div>API: /api/player-red-cards-projections</div>
+                    <div>Data: Season red card totals from bootstrap static</div>
                   </div>
                 </CardContent>
               </Card>
@@ -1424,25 +1429,25 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Bonus point projections based on overall performance metrics and historical BPS data.
+                    Bonus point projections based on historical bonus-per-fixture rate with fixture difficulty adjustment.
                   </p>
                   <div className="bg-amber-50 p-3 rounded text-sm">
                     <strong>Formula:</strong><br/>
-                    <code className="text-xs">BonusProbability = f(Goals, Assists, CleanSheets) × FormFactor × OwnershipWeight</code>
+                    <code className="text-xs">BonusPerFixture = SeasonBonus / TeamFixturesPlayed</code><br/>
+                    <code className="text-xs">GWBonus = BonusPerFixture × DifficultyFactor(0.85-1.15) × Availability</code>
                   </div>
                   <div className="space-y-1 text-sm">
-                    <div><strong>Calculation Factors:</strong></div>
+                    <div><strong>Calculation Details:</strong></div>
                     <ul className="list-disc ml-5 text-xs">
-                      <li>Goals, assists, clean sheets performance</li>
-                      <li>Recent form and BPS trends</li>
-                      <li>Player ownership influence</li>
-                      <li>Capped probability for realistic distribution</li>
+                      <li>Historical bonus-per-appearance rate applied to future fixtures</li>
+                      <li>Mild difficulty adjustment (harder opponents = 0.85×, easier opponents = 1.15×)</li>
+                      <li>No ownership or form factor applied</li>
+                      <li>Difficulty factor clamped between 0.85-1.15 based on opponent FDR</li>
                     </ul>
-                    <div><strong>Note:</strong> Probabilistic estimate, actual bonus based on FPL BPS</div>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
-                    <div>Cache: cached_player_bonus_points</div>
-                    <div>Data: Probability-based calculation</div>
+                    <div>API: /api/player-bonus-points-projections</div>
+                    <div>Data: Season bonus totals + fixture difficulty ratings</div>
                   </div>
                 </CardContent>
               </Card>
@@ -1583,14 +1588,14 @@ export default function ProjectionDocumentation() {
                       <li>• Player actual assists this season</li>
                       <li>• Player expected assists (xA)</li>
                       <li>• Team total assists and xA</li>
-                      <li>• Blended season + recent form data</li>
+                      <li>• Season-only data - no blending</li>
                     </ul>
                   </div>
 
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono space-y-1">
                     <div><strong>API:</strong> /api/team-assist-projections</div>
                     <div><strong>Module:</strong> server/routes.ts</div>
-                    <div><strong>Input:</strong> Team goal projections × 0.72</div>
+                    <div><strong>Input:</strong> Team goal projections × 0.85</div>
                     <div><strong>Method:</strong> Pure raw share calculation</div>
                   </div>
                 </CardContent>
@@ -1690,16 +1695,16 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-gray-600">
-                    Individual player goal projections calculated by distributing team goals based on historical share percentage with strict position-based caps.
+                    Individual player goal projections calculated by distributing team goals based on raw share percentage with set piece bonuses.
                   </p>
                   
                   <div className="bg-orange-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-orange-900 mb-2">Player Goal Share Formula</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm mb-3">
-                      PlayerGoals = TeamGoals × (HistoricalShare × FormFactor)
+                      PlayerGoals = TeamGoals × (GoalShare / 100)
                     </div>
                     <p className="text-sm text-orange-800">
-                      Each player's goal projection is their raw share of the team's total expected goals based purely on historical performance data.
+                      Each player's goal projection is their raw share of the team's total expected goals. GoalShare includes set piece bonuses (penalties, direct FKs) added to the base season share.
                     </p>
                   </div>
 
@@ -2154,49 +2159,11 @@ export default function ProjectionDocumentation() {
                   Goal and assist shares are calculated using pure raw percentages without position caps or any artificial adjustments. Share = (PlayerGoals + PlayerXG) / TeamTotal × 100.
                 </p>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-green-900 mb-3">Goal Share Caps</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center bg-white p-2 rounded">
-                        <span className="text-sm">Goalkeeper (GK)</span>
-                        <span className="font-bold text-green-700">2%</span>
-                      </div>
-                      <div className="flex justify-between items-center bg-white p-2 rounded">
-                        <span className="text-sm">Defender (DEF)</span>
-                        <span className="font-bold text-green-700">10%</span>
-                      </div>
-                      <div className="flex justify-between items-center bg-white p-2 rounded">
-                        <span className="text-sm">Midfielder (MID)</span>
-                        <span className="font-bold text-green-700">25%</span>
-                      </div>
-                      <div className="flex justify-between items-center bg-white p-2 rounded">
-                        <span className="text-sm">Forward (FWD)</span>
-                        <span className="font-bold text-green-700">30%</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-blue-900 mb-3">Assist Share Caps</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center bg-white p-2 rounded">
-                        <span className="text-sm">Goalkeeper (GK)</span>
-                        <span className="font-bold text-blue-700">2%</span>
-                      </div>
-                      <div className="flex justify-between items-center bg-white p-2 rounded">
-                        <span className="text-sm">Defender (DEF)</span>
-                        <span className="font-bold text-blue-700">15%</span>
-                      </div>
-                      <div className="flex justify-between items-center bg-white p-2 rounded">
-                        <span className="text-sm">Midfielder (MID)</span>
-                        <span className="font-bold text-blue-700">30%</span>
-                      </div>
-                      <div className="flex justify-between items-center bg-white p-2 rounded">
-                        <span className="text-sm">Forward (FWD)</span>
-                        <span className="font-bold text-blue-700">25%</span>
-                      </div>
-                    </div>
-                  </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-green-900 mb-3">No Position Caps Applied</h4>
+                  <p className="text-sm text-green-800">
+                    No position caps are applied to goal or assist shares. Pure raw share percentage is used directly based on each player's historical contribution (goals + xG or assists + xA) as a percentage of team total.
+                  </p>
                 </div>
 
                 <div className="bg-yellow-50 p-3 rounded text-sm">
@@ -2377,12 +2344,12 @@ export default function ProjectionDocumentation() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-gray-50 p-4 rounded">
                     <h4 className="font-semibold mb-2">Assist Ratio</h4>
-                    <div className="text-2xl font-bold text-gray-700">0.72</div>
+                    <div className="text-2xl font-bold text-gray-700">0.85</div>
                     <p className="text-sm text-gray-600 mt-1">
-                      TeamAssists = TeamGoals × 0.72
+                      TeamAssists = TeamGoals × 0.85
                     </p>
                     <p className="text-xs text-gray-500 mt-2">
-                      Based on PL historical average (72% of goals have assists)
+                      Based on FPL's generous assist rules (85% of goals have assists)
                     </p>
                   </div>
                   <div className="bg-gray-50 p-4 rounded">
