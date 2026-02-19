@@ -53,7 +53,7 @@ export default function PlayerStats() {
   });
 
   // Determine if we need gameweek-filtered data
-  const needsGameweekFilter = selectedSeason === "current" && (startGameweek !== 1 || (endGameweek !== null && endGameweek !== 19));
+  const needsGameweekFilter = selectedSeason === "current" && (startGameweek !== 1 || (endGameweek !== null && endGameweek !== currentGameweek));
 
   // Get gameweek-filtered player stats when filters are used
   const { data: filteredStatsData, isLoading: filteredLoading, error: filteredError } = useQuery<{players: any[], gameweekRange: {start: number, end: number}}>({
@@ -79,9 +79,11 @@ export default function PlayerStats() {
 
   // Calculate current gameweek from bootstrap data
   const currentGameweek = useMemo(() => {
-    if (!bootstrapData?.events) return 19; // Default fallback
-    const currentEvent = bootstrapData.events.find(event => event.is_current);
-    return currentEvent?.id || 19;
+    if (!bootstrapData?.events) return 26;
+    const currentEvent = bootstrapData.events.find((event: any) => event.is_current);
+    if (currentEvent) return currentEvent.id;
+    const finishedEvents = bootstrapData.events.filter((event: any) => event.finished);
+    return finishedEvents.length > 0 ? finishedEvents[finishedEvents.length - 1].id : 26;
   }, [bootstrapData?.events]);
 
   // Available gameweeks for dropdowns (1 to current gameweek)
