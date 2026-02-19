@@ -94,6 +94,8 @@ export async function setupAuth(app: Express) {
           const ipAddress = req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.ip || req.connection?.remoteAddress;
           db.insert(userActivityLogs).values({
             activityType: 'login',
+            managerId: user.fplManagerId || null,
+            managerName: user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : null,
             email: user.email || null,
             userId: user.id || null,
             ipAddress: ipAddress || null,
