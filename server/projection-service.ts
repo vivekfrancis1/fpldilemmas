@@ -407,28 +407,13 @@ class ProjectionService {
               redCardPoints = redCardProbability * (-3) * (averageMinutesPerGame / 90); // -3 points per red card (official FPL rule)
             }
             
-            // 9. BONUS POINTS (All Positions) - Official FPL Rules: 1-3pts based on BPS system
+            // 9. BONUS POINTS (All Positions) - Historical bonus-per-appearance approach
+            // Uses player's actual demonstrated bonus earning rate from the season
             let bonusPoints = 0;
-            // Bonus probability based on overall performance and position
-            const overallPerformance = goalsExpected + assistsExpected + (cleanSheetProb * 0.5);
-            
-            let bonusProbability;
-            if (overallPerformance >= 1.0) {
-              bonusProbability = 0.25; // High performers get 25% chance
-            } else if (overallPerformance >= 0.5) {
-              bonusProbability = 0.15; // Medium performers get 15% chance  
-            } else if (overallPerformance >= 0.2) {
-              bonusProbability = 0.08; // Low performers get 8% chance
-            } else {
-              bonusProbability = 0.02; // Very poor performance 2% chance
-            }
-            
-            // Adjust for form and ownership (popular players more likely to get bonus)
-            bonusProbability *= (1 + (selectedBy / 200)); // Ownership boost
-            bonusProbability *= Math.min(adjustedForm / 8, 1.2); // Form boost (capped)
-            
-            // Expected bonus points (average 1.5 points when bonus is awarded, 1-3pt range)
-            bonusPoints = bonusProbability * 1.5;
+            const playerSeasonBonus = parseFloat(fplPlayer.bonus || "0");
+            const finishedGWCount = Math.max(startGameweek - 1, 1);
+            // bonus_per_gw includes both appearance rate and bonus earning rate naturally
+            bonusPoints = playerSeasonBonus / finishedGWCount;
             totalCleanSheetPoints += gwCleanSheetPoints;
             
             // 10. DEFENSIVE CONTRIBUTIONS (2025/26 season) - Threshold-based scoring

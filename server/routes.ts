@@ -16118,57 +16118,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return formMultiplier;
   }
 
-  // Helper function for BPS-based bonus point calculation  
-  function calculateBonusPointsFromBPS(player: any, position: string): number {
-    const form = parseFloat(player.form || "0");
-    const totalPoints = parseFloat(player.total_points || "0");
-    const playerValue = parseFloat(player.now_cost || "50") / 10;
-    const goalsScored = parseFloat(player.goals_scored || "0");
-    const assists = parseFloat(player.assists || "0");
-    const bps = parseFloat(player.bps || "0"); // Historic BPS data
-    
-    // Calculate projected BPS based on historic performance and current form
-    let projectedBPS = 0;
-    
-    if (bps > 0) {
-      // Use historic BPS as baseline, adjusted for form
-      const formMultiplier = Math.max(0.5, Math.min(1.8, 1 + (form - 5) * 0.1));
-      projectedBPS = bps * formMultiplier;
-    } else {
-      // For players without BPS history, estimate based on goals/assists and position
-      let baseBPS = 0;
-      if (position === 'FWD') {
-        baseBPS = (goalsScored * 24) + (assists * 18) + (form * 2); // Goals worth 24 BPS, assists 18
-      } else if (position === 'MID') {
-        baseBPS = (goalsScored * 18) + (assists * 12) + (form * 2); // Different scoring for mids
-      } else if (position === 'DEF') {
-        baseBPS = (goalsScored * 24) + (assists * 12) + (form * 1.5); // Defenders get full goal BPS
-      } else if (position === 'GKP') {
-        baseBPS = (goalsScored * 24) + (form * 1); // Rare but valuable GK goals
-      }
-      
-      projectedBPS = Math.max(5, baseBPS); // Minimum 5 BPS for playing
-    }
-    
-    // Convert BPS to bonus point probability
-    // Typically need 25+ BPS for 1 point, 30+ for 2 points, 35+ for 3 points
-    let bonusPointsProbability = 0;
-    
-    if (projectedBPS >= 35) {
-      bonusPointsProbability = 3.0; // Very high BPS = 3 points likely
-    } else if (projectedBPS >= 30) {
-      bonusPointsProbability = 2.0; // Good BPS = 2 points likely
-    } else if (projectedBPS >= 25) {
-      bonusPointsProbability = 1.0; // Decent BPS = 1 point likely
-    } else if (projectedBPS >= 20) {
-      bonusPointsProbability = 0.5; // Moderate BPS = 50% chance of 1 point
-    } else {
-      bonusPointsProbability = 0.0; // Low BPS = no bonus
-    }
-    
-    // Apply the 1.5x multiplier as suggested and cap at reasonable levels
-    return Math.min(3.0, bonusPointsProbability * 1.5);
-  }
+  // Historical bonus-per-appearance approach: uses each player's actual bonus earning rate
+  // from the season so far, then projects forward with fixture difficulty adjustment.
+  // This naturally captures position-specific patterns (e.g., FWDs get high bonus when scoring, 0 otherwise)
+  // and avoids the flawed BPS-ratio-to-proportional-bonus mapping.
 
   // Player Bonus Points Projections - API-first with cache fallback
   app.get("/api/player-bonus-points-projections", async (req, res) => {
@@ -16195,14 +16148,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Filter only players with 1+ minutes for meaningful projections
         const activePlayers = fplData.elements.filter((player: any) => (player.minutes || 0) >= 1);
+        const finishedGWs = fplData.events.filter((e: any) => e.finished).length;
         
-        // Store full season BPS for all players (no last 6 games fetching)
-        const playerSeasonBPSMap = new Map<number, number>();
-        activePlayers.forEach((player: any) => {
-          playerSeasonBPSMap.set(player.id, player.bps || 0);
+        // Count finished fixtures per team (accounts for DGWs)
+        const teamFixturesPlayed = new Map<number, number>();
+        allFixtures.forEach((f: any) => {
+          if (f.finished && f.event && f.event <= finishedGWs) {
+            teamFixturesPlayed.set(f.team_h, (teamFixturesPlayed.get(f.team_h) || 0) + 1);
+            teamFixturesPlayed.set(f.team_a, (teamFixturesPlayed.get(f.team_a) || 0) + 1);
+          }
         });
         
-        // Extract bonus points projections using full season BPS ratio
+        // Historical bonus-per-appearance approach:
+        // bonus_per_fixture = player.bonus / team_fixtures_played
+        // This naturally incorporates both appearance rate AND bonus earning rate
+        // Then apply mild fixture difficulty adjustment for future games
         const bonusPointsProjections = activePlayers.map((player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
@@ -16212,13 +16172,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalBonusPoints = 0;
           let totalPoints = 0;
           
-          // Get player's full season BPS
-          const playerSeasonBPS = playerSeasonBPSMap.get(player.id) || 0;
+          const playerBonus = player.bonus || 0;
+          const teamFixtures = teamFixturesPlayed.get(player.team) || finishedGWs;
+          const bonusPerFixture = teamFixtures > 0 ? playerBonus / teamFixtures : 0;
           
-          // Process each FUTURE gameweek
-          // DGW FIX: Find ALL fixtures for this player's team per gameweek
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Find ALL fixtures for this team in this gameweek (handles DGW)
             const fixtures = allFixtures.filter((f: any) => 
               f.event === gw && (f.team_h === player.team || f.team_a === player.team)
             );
@@ -16226,33 +16184,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let gwBonusPoints = 0;
             const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; bonusPoints: number }> = [];
             
-            // Sum bonus points across all fixtures in this gameweek
             fixtures.forEach((fixture: any) => {
               const opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
               
-              let fixtureBonus = 0;
-              if (playerSeasonBPS > 0) {
-                // Get both teams playing in this fixture
-                const homeTeamId = fixture.team_h;
-                const awayTeamId = fixture.team_a;
-                
-                // Calculate total BPS for both teams combined (full season)
-                const bothTeamsPlayers = activePlayers.filter((p: any) => 
-                  p.team === homeTeamId || p.team === awayTeamId
-                );
-                
-                let totalBothTeamsBPS = 0;
-                bothTeamsPlayers.forEach((p: any) => {
-                  totalBothTeamsBPS += playerSeasonBPSMap.get(p.id) || 0;
-                });
-                
-                // Full Season Formula: player's BPS share of total match BPS × 6 bonus points available
-                const bpsRatio = totalBothTeamsBPS > 0 ? playerSeasonBPS / totalBothTeamsBPS : 0;
-                fixtureBonus = bpsRatio * 6;
-                gwBonusPoints += fixtureBonus;
-              }
+              // Mild fixture difficulty adjustment: easier opponents (lower FDR) = slightly more bonus
+              // FDR ranges 1-5 where 2 is easy, 5 is hardest
+              // Use opponent's strength rating from FPL
+              const opponentStrength = isHome 
+                ? (opponentTeam?.strength_away_overall || 1200) 
+                : (opponentTeam?.strength_home_overall || 1200);
+              const avgStrength = 1200;
+              // Scale factor: 0.85 for very hard fixtures, 1.15 for very easy fixtures
+              const difficultyFactor = 1 + (avgStrength - opponentStrength) / avgStrength * 0.5;
+              const clampedFactor = Math.max(0.85, Math.min(1.15, difficultyFactor));
+              
+              const fixtureBonus = bonusPerFixture * clampedFactor;
+              gwBonusPoints += fixtureBonus;
               
               gwFixtureDetails.push({
                 opponent: opponentTeam?.short_name || 'UNK',
@@ -16284,7 +16233,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
         
-        console.log(`✅ LIVE SUCCESS: Generated full season BPS bonus projections for ${bonusPointsProjections.length} players`);
+        console.log(`✅ LIVE SUCCESS: Generated historical bonus-per-appearance projections for ${bonusPointsProjections.length} players`);
         return res.json(bonusPointsProjections);
 
       } catch (liveError) {
