@@ -12637,6 +12637,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pointsFromBonus: { [key: string]: number } = {};
         const pointsFromSaves: { [key: string]: number } = {};
         const pointsFromDefensiveContributions: { [key: string]: number } = {};
+        const rawGoalCounts: { [key: string]: number } = {};
+        const rawAssistCounts: { [key: string]: number } = {};
+        const rawSaveCounts: { [key: string]: number } = {};
+        const rawGCCounts: { [key: string]: number } = {};
+        const rawYCCounts: { [key: string]: number } = {};
+        const rawRCCounts: { [key: string]: number } = {};
         const fixtureDetails: { [key: string]: Array<{
           opponent: string;
           isHome: boolean;
@@ -12675,10 +12681,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const assistsPts = rawAssists * 3;
           const cleansheetPts = cleansheetPlayer?.pointsFromCleanSheets?.[gwApiKey] || 0;
           const goalsConcededPts = goalsConcededPlayer?.pointsFromGoalsConceded?.[gwApiKey] || 0;
+          const rawGC = goalsConcededPlayer?.goalsConceded?.[gwApiKey] || 0;
           const yellowCardsPts = yellowCardsPlayer?.pointsFromYellowCards?.[gwApiKey] || 0;
+          const rawYC = yellowCardsPlayer?.yellowCards?.[gwApiKey] || 0;
           const redCardsPts = redCardsPlayer?.pointsFromRedCards?.[gwApiKey] || 0;
+          const rawRC = redCardsPlayer?.redCards?.[gwApiKey] || 0;
           const bonusPts = bonusPointsPlayer?.pointsFromBonus?.[gwApiKey] || 0;
           const savesPts = savesPlayer?.pointsFromSaves?.[gwApiKey] || 0;
+          const rawSaves = savesPlayer?.saves?.[gwApiKey] || 0;
           const defensiveContributionsPts = defensiveContributionsPlayer?.pointsFromDefensiveContributions?.[gwApiKey] || 0;
           
           // For minutes, use the total points since no gameweek breakdown available
@@ -12695,6 +12705,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromBonus[gwKey] = bonusPts;
           pointsFromSaves[gwKey] = savesPts;
           pointsFromDefensiveContributions[gwKey] = defensiveContributionsPts;
+          rawGoalCounts[gwKey] = rawGoals;
+          rawAssistCounts[gwKey] = rawAssists;
+          rawSaveCounts[gwKey] = rawSaves;
+          rawGCCounts[gwKey] = rawGC;
+          rawYCCounts[gwKey] = rawYC;
+          rawRCCounts[gwKey] = rawRC;
           
           // Build fixtureDetails for DGW support - show per-fixture component breakdowns
           // Use goals player fixtureDetails as the base for fixtures (most likely to have accurate fixture info)
@@ -12885,8 +12901,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsFromBonus,
           pointsFromSaves,
           pointsFromDefensiveContributions,
-          fixtureDetails, // Per-fixture component breakdowns for DGW support
-          // Component totals
+          rawGoalCounts,
+          rawAssistCounts,
+          rawSaveCounts,
+          rawGCCounts,
+          rawYCCounts,
+          rawRCCounts,
+          fixtureDetails,
           totalPointsFromGoals,
           totalPointsFromAssists,
           totalPointsFromCleanSheets,
@@ -19718,7 +19739,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const isGkp = playerInfo.element_type === 1;
         const isDef = playerInfo.element_type === 2;
         const isMid = playerInfo.element_type === 3;
-        const goalMultiplier = (isGkp || isDef) ? 6 : isMid ? 5 : 4;
         const g = pa.matchesPlayed;
 
         const cached = cachedMap.get(playerId);
@@ -19737,6 +19757,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let projGoalPts = 0, projAssistPts = 0, projCSPts = 0, projMinPts = 0;
         let projGCPts = 0, projYCPts = 0, projRCPts = 0, projBonusPts = 0;
         let projSavesPts = 0, projDCPts = 0, projTotal = 0;
+        let projGoalRaw = 0, projAssistRaw = 0, projSavesRaw = 0;
+        let projGCRaw = 0, projYCRaw = 0, projRCRaw = 0;
 
         for (const gw of gwKeys) {
           projGoalPts += cached.pointsFromGoals?.[gw] || 0;
@@ -19750,21 +19772,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           projSavesPts += cached.pointsFromSaves?.[gw] || 0;
           projDCPts += cached.pointsFromDefensiveContributions?.[gw] || 0;
           projTotal += cached.gameweekProjections?.[gw] || 0;
+          projGoalRaw += cached.rawGoalCounts?.[gw] || 0;
+          projAssistRaw += cached.rawAssistCounts?.[gw] || 0;
+          projSavesRaw += cached.rawSaveCounts?.[gw] || 0;
+          projGCRaw += cached.rawGCCounts?.[gw] || 0;
+          projYCRaw += cached.rawYCCounts?.[gw] || 0;
+          projRCRaw += cached.rawRCCounts?.[gw] || 0;
         }
 
-        const projGoalRaw = projGoalPts / goalMultiplier;
-        const projAssistRaw = projAssistPts / 3;
-        const projCSRaw = (isGkp || isDef) ? projCSPts / 4 : isMid ? projCSPts / 1 : 0;
-        const projGCRaw = (isGkp || isDef) ? projGCPts * -2 : 0;
-        const projYCRaw = projYCPts * -1;
-        const projRCRaw = projRCPts / -3;
-        const projSavesRaw = isGkp ? projSavesPts * 3 : 0;
+        const csMultiplier = (isGkp || isDef) ? 4 : isMid ? 1 : 0;
+        const projCSRaw = csMultiplier > 0 ? projCSPts / csMultiplier : 0;
+        const projMinRaw = cached.avgMinutesPerGameweek || 0;
 
         const buildAvg = (divisor: number) => ({
           goals: { raw: +(projGoalRaw / divisor).toFixed(3), pts: +(projGoalPts / divisor).toFixed(3) },
           assists: { raw: +(projAssistRaw / divisor).toFixed(3), pts: +(projAssistPts / divisor).toFixed(3) },
           cleanSheets: { raw: +(projCSRaw / divisor).toFixed(3), pts: +(projCSPts / divisor).toFixed(3) },
-          minutes: { raw: 0, pts: +(projMinPts / divisor).toFixed(3) },
+          minutes: { raw: +(projMinRaw).toFixed(1), pts: +(projMinPts / divisor).toFixed(3) },
           goalsConceded: { raw: +(projGCRaw / divisor).toFixed(3), pts: +(projGCPts / divisor).toFixed(3) },
           yellowCards: { raw: +(projYCRaw / divisor).toFixed(3), pts: +(projYCPts / divisor).toFixed(3) },
           redCards: { raw: +(projRCRaw / divisor).toFixed(3), pts: +(projRCPts / divisor).toFixed(3) },
