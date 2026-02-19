@@ -10998,11 +10998,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const confidenceFactor = Math.min(1, appearances / MIN_APPEARANCES_THRESHOLD);
               
               // Calculate points from minutes using probability-based formula
-              // Formula: (2 × % chance of 60+ mins) + (1 × % chance of 0-60 mins) × confidence × appearance rate
-              // Appearance rate converts per-appearance expectation to per-gameweek expectation
+              // Formula: (2 × % chance of 60+ mins) + (1 × % chance of 0-60 mins) × confidence
+              // Per-GW availability from calculateAvailabilityProbability replaces flat appearanceRate
               const rawPointsFromMinutes = (pct60Plus / 100) * 2 + (pctBelow60 / 100) * 1;
-              const appearanceRate = finishedGWCount > 0 ? Math.min(1, appearances / finishedGWCount) : 1;
-              const pointsFromMinutes = Math.round(rawPointsFromMinutes * confidenceFactor * appearanceRate * 100) / 100;
+              const baseMinutesPoints = rawPointsFromMinutes * confidenceFactor;
+              
+              // Build per-GW minutes points using availability probability
+              const events: BootstrapEvent[] = bootstrapData.events || [];
+              const { computeNextRange } = await import("../shared/gameweek-utils");
+              const gameweekRange = computeNextRange(bootstrapData.events, 12);
+              const gwStart = gameweekRange.start;
+              const gwEnd = gameweekRange.end;
+              
+              const pointsFromMinutesPerGW: { [key: string]: number } = {};
+              for (let gw = gwStart; gw <= gwEnd; gw++) {
+                const availProb = calculateAvailabilityProbability(player, gw, currentGameweek, events);
+                pointsFromMinutesPerGW[`gw${gw}`] = Math.round(baseMinutesPoints * availProb * 100) / 100;
+              }
+              
+              // Flat value for backward compatibility (use availability=1.0, i.e. "when playing")
+              const pointsFromMinutes = Math.round(baseMinutesPoints * 100) / 100;
               
               return {
                 playerId: player.id,
@@ -11013,6 +11028,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 currentMinutesPerGame: Math.round(avgMinutesPerGame * 10) / 10,
                 expectedMinutesPerGame: Math.round(expectedMinutesPerGame),
                 pointsFromMinutes: pointsFromMinutes,
+                pointsFromMinutesPerGW: pointsFromMinutesPerGW,
                 playerAppearances: appearances,
                 gamesHit60Plus: gamesHit60Plus,
                 gamesBelow60: gamesBelow60,
@@ -12662,8 +12678,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const rawSaves = savesPlayer?.saves?.[gwApiKey] || 0;
           const defensiveContributionsPts = defensiveContributionsPlayer?.pointsFromDefensiveContributions?.[gwApiKey] || 0;
           
-          // For minutes, use the total points since no gameweek breakdown available
-          const minutesPts = minutesPlayer?.pointsFromMinutes || 0;
+          // For minutes, prefer per-GW data if available, else fall back to flat value
+          const minutesPts = minutesPlayer?.pointsFromMinutesPerGW?.[gwApiKey] ?? minutesPlayer?.pointsFromMinutes ?? 0;
 
           // Store individual component points
           pointsFromGoals[gwKey] = goalsPts;
@@ -15147,9 +15163,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // FULL SEASON: Calculate saves per team game for this player
           const savesPerTeamGame = currentSeasonSaves / teamGamesPlayed;
           
+          const savesEvents: BootstrapEvent[] = fplData.events || [];
+          
           // Process each FUTURE gameweek only with new formula
           // DGW FIX: Find ALL fixtures for this team in each gameweek
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
+            // Per-GW availability probability for this goalkeeper
+            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, savesEvents);
+            
             // Find ALL fixtures for this team in this gameweek (handles DGW)
             const fixtures = fixturesData.filter((f: any) => 
               f.event === gw && (f.team_h === player.team || f.team_a === player.team)
@@ -15167,8 +15188,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Get opponent's AGR (Average Goals Received/Against per game)
               const opponentAGR = getOpponentAGR(opponentId);
               
-              // Apply user's exact formula: Expected saves = Average saves/game × AGR of opponent/1.35
-              const fixtureSaves = savesPerTeamGame * (opponentAGR / 1.35);
+              // Apply formula: Expected saves = Average saves/game × AGR of opponent/1.35 × availability
+              const fixtureSaves = savesPerTeamGame * (opponentAGR / 1.35) * availabilityProb;
               gwExpectedSaves += fixtureSaves;
               
               gwFixtureDetails.push({
@@ -15408,8 +15429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Calculate % chance of hitting threshold
           const chanceOfHittingThreshold = timesHitThreshold / playerMatchesPlayed;
           
-          // Calculate minutes multiplier (avg minutes / 90)
-          const minutesMultiplier = avgMinutesPerGame / 90;
+          const dcEvents: BootstrapEvent[] = fplData.events || [];
           
           // Process each FUTURE gameweek only
           for (let gw = Math.max(startGameweek, nextGameweek); gw <= endGameweek; gw++) {
@@ -15426,16 +15446,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Get opponent's DCC per game from current standings
             const opponentDCC = teamDCCPerGame.get(opponentId) || 0;
             
-            // Apply formula: Projected DC = ((Current DC/game + Threshold) / 2) × (Opponent DCC / 80) × (Avg Minutes / 90)
-            const projectedDC = ((dcPerGame + threshold) / 2) * (opponentDCC / 80) * minutesMultiplier;
+            // Use per-GW availability probability instead of flat minutesMultiplier
+            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, dcEvents);
+            
+            // Apply formula: Projected DC = ((Current DC/game + Threshold) / 2) × (Opponent DCC / 80) × availability
+            const projectedDC = ((dcPerGame + threshold) / 2) * (opponentDCC / 80) * availabilityProb;
             
             // Round to 1 decimal place for threshold comparison to avoid floating-point precision issues
             const normalizedDC = parseFloat(projectedDC.toFixed(1));
             
-            // Calculate points using probability-based formula: % chance of hitting threshold × (Opponent DCC / 80) × 2
+            // Calculate points using probability-based formula: % chance of hitting threshold × (Opponent DCC / 80) × 2 × availability
             // chanceOfHittingThreshold is already a decimal (e.g., 0.222 for 22.2%)
             // Cap at maximum 2 points (FPL maximum for DC in a single gameweek)
-            let points = Math.min(chanceOfHittingThreshold * (opponentDCC / 80) * 2, 2);
+            let points = Math.min(chanceOfHittingThreshold * (opponentDCC / 80) * 2 * availabilityProb, 2);
             // Goalkeepers don't get points from defensive contributions
             if (player.element_type === 1) {
               points = 0;
@@ -15471,7 +15494,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             threshold: threshold, // Threshold value (10 for DEF, 12 for MID/FWD)
             playerMatchesPlayed: playerMatchesPlayed, // Actual matches played by this player
             avgMinutesPerGame: parseFloat(avgMinutesPerGame.toFixed(1)), // Average minutes per game
-            minutesMultiplier: parseFloat(minutesMultiplier.toFixed(2)), // Minutes multiplier (avg/90)
+            minutesMultiplier: 1.0, // Now using per-GW availability probability
             seasonDefensiveContribution: seasonDefensiveContribution // Include raw DC value
           };
         })
@@ -15665,9 +15688,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const teamGamesPlayed = currentGameweek; // Average number of games team has played
           const expectedYellowCardsPerGame = teamGamesPlayed > 0 ? seasonYellowCards / teamGamesPlayed : 0;
           
+          const ycEvents: BootstrapEvent[] = fplData.events || [];
+          
           // Process each gameweek in the next 12 gameweeks range
           // DGW FIX: Count fixtures per gameweek and multiply rate
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
+            // Per-GW availability probability
+            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, ycEvents);
+            
             // Find fixtures for this team in this gameweek
             const fixtures = fixturesData.filter((f: any) => 
               f.event === gw && (f.team_h === player.team || f.team_a === player.team)
@@ -15682,7 +15710,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
               
-              gwYellowCards += expectedYellowCardsPerGame;
+              gwYellowCards += expectedYellowCardsPerGame * availabilityProb;
               gwFixtureDetails.push({
                 opponent: opponentTeam?.short_name || 'UNK',
                 isHome,
@@ -15780,9 +15808,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const teamGamesPlayed = currentGameweek; // Average number of games team has played
           const expectedRedCardsPerGame = teamGamesPlayed > 0 ? seasonRedCards / teamGamesPlayed : 0;
           
+          const rcEvents: BootstrapEvent[] = fplData.events || [];
+          
           // Process each gameweek in the next 6 gameweeks range
           // DGW FIX: Count fixtures per gameweek and multiply rate
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
+            // Per-GW availability probability
+            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, rcEvents);
+            
             // Find fixtures for this team in this gameweek
             const fixtures = fixturesData.filter((f: any) => 
               f.event === gw && (f.team_h === player.team || f.team_a === player.team)
@@ -15797,7 +15830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
               
-              gwRedCards += expectedRedCardsPerGame;
+              gwRedCards += expectedRedCardsPerGame * availabilityProb;
               gwFixtureDetails.push({
                 opponent: opponentTeam?.short_name || 'UNK',
                 isHome,
@@ -16172,7 +16205,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const teamFixtures = teamFixturesPlayed.get(player.team) || finishedGWs;
           const bonusPerFixture = teamFixtures > 0 ? playerBonus / teamFixtures : 0;
           
+          const bonusEvents: BootstrapEvent[] = fplData.events || [];
+          const currentGW = fplData.events.find((e: any) => e.is_current)?.id || 1;
+          
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
+            // Per-GW availability probability
+            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGW, bonusEvents);
+            
             const fixtures = allFixtures.filter((f: any) => 
               f.event === gw && (f.team_h === player.team || f.team_a === player.team)
             );
@@ -16196,7 +16235,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const difficultyFactor = 1 + (avgStrength - opponentStrength) / avgStrength * 0.5;
               const clampedFactor = Math.max(0.85, Math.min(1.15, difficultyFactor));
               
-              const fixtureBonus = bonusPerFixture * clampedFactor;
+              const fixtureBonus = bonusPerFixture * clampedFactor * availabilityProb;
               gwBonusPoints += fixtureBonus;
               
               gwFixtureDetails.push({

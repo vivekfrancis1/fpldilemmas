@@ -437,6 +437,7 @@ export class PlayerTotalPointsAggregator {
 
       const player = playerMap.get(playerId)!;
       const minutesPerGame = minutesComponent.minutesPerGame || 0;
+      const perGW = minutesComponent.pointsFromMinutesPerGW;
       
       // Apply minutes points to each gameweek (GW25-36)
       for (let gw = 25; gw <= 36; gw++) {
@@ -444,11 +445,17 @@ export class PlayerTotalPointsAggregator {
         if (!player.gameweekPoints[gwKey]) {
           player.gameweekPoints[gwKey] = 0;
         }
-        player.gameweekPoints[gwKey] += minutesPerGame;
+        const gwPts = perGW?.[`gw${gw}`] ?? minutesPerGame;
+        player.gameweekPoints[gwKey] += gwPts;
       }
 
-      // Add to total points (12 gameweeks)
-      player.totalPoints += minutesPerGame * 12;
+      // Add to total points (sum of per-GW values or fallback)
+      if (perGW) {
+        const total = Object.values(perGW as Record<string, number>).reduce((sum: number, v: number) => sum + v, 0);
+        player.totalPoints += total;
+      } else {
+        player.totalPoints += minutesPerGame * 12;
+      }
     }
   }
 
