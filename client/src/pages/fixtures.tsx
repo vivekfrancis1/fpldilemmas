@@ -240,14 +240,16 @@ export default function Fixtures() {
   };
 
   // Build fixture matrix with average FDR calculation
-  const { fixtureMatrix, teamAverageFDR } = useMemo(() => {
+  const { fixtureMatrix, teamAverageFDR, teamGameCount } = useMemo(() => {
     if (!fixturesData || !bootstrapData?.events || !gameweekRange) return { 
       fixtureMatrix: {}, 
-      teamAverageFDR: {} 
+      teamAverageFDR: {},
+      teamGameCount: {}
     };
 
     const matrix: Record<number, Record<number, Array<{ opponent: string, difficulty: number, isHome: boolean, finished: boolean }>>> = {};
     const avgFDR: Record<number, number> = {};
+    const gameCount: Record<number, number> = {};
     
     // Initialize matrix
     bootstrapData.teams.forEach(team => {
@@ -334,14 +336,17 @@ export default function Fixtures() {
           });
         });
         avgFDR[team.id] = fixtureCount > 0 ? parseFloat((totalDifficulty / fixtureCount).toFixed(2)) : 0;
+        gameCount[team.id] = fixtureCount;
       } else {
         avgFDR[team.id] = 0;
+        gameCount[team.id] = 0;
       }
     });
 
     return { 
       fixtureMatrix: matrix, 
-      teamAverageFDR: avgFDR
+      teamAverageFDR: avgFDR,
+      teamGameCount: gameCount
     };
   }, [bootstrapData, fixturesData, gameweekRange, customFDR, fdrMode, formBasedFDR, excludedGameweeks]);
 
@@ -478,6 +483,12 @@ export default function Fixtures() {
             ? (teamAverageFDR[a.id] || 0) - (teamAverageFDR[b.id] || 0)
             : (teamAverageFDR[b.id] || 0) - (teamAverageFDR[a.id] || 0)
         );
+      case 'games':
+        return teams.sort((a, b) => 
+          sortDirection === 'asc'
+            ? (teamGameCount[a.id] || 0) - (teamGameCount[b.id] || 0)
+            : (teamGameCount[b.id] || 0) - (teamGameCount[a.id] || 0)
+        );
       default:
         if (sortBy.startsWith('gw-')) {
           const gw = parseInt(sortBy.replace('gw-', ''));
@@ -497,7 +508,7 @@ export default function Fixtures() {
         }
         return teams.sort((a, b) => a.short_name.localeCompare(b.short_name));
     }
-  }, [bootstrapData, fixtureMatrix, teamAverageFDR, sortBy, sortDirection, excludedTeams]);
+  }, [bootstrapData, fixtureMatrix, teamAverageFDR, teamGameCount, sortBy, sortDirection, excludedTeams]);
 
   if (isLoading) {
     return (
@@ -918,6 +929,18 @@ export default function Fixtures() {
                           )}
                         </button>
                       </th>
+                      <th className="sticky left-[78px] sm:left-[101px] md:left-[125px] lg:left-[155px] bg-gray-50 px-0.5 sm:px-1 py-1 text-center font-semibold min-w-[28px] sm:min-w-[36px] md:min-w-[45px] lg:min-w-[55px] border-l z-20">
+                        <button
+                          onClick={() => handleSort('games')}
+                          className="flex items-center gap-0.5 hover:text-blue-600 transition-colors mx-auto"
+                        >
+                          <span className="hidden sm:inline">Games</span>
+                          <span className="sm:hidden">G</span>
+                          {sortBy === 'games' && (
+                            sortDirection === 'asc' ? <ArrowUp className="h-2 w-2 sm:h-2.5 sm:w-2.5" /> : <ArrowDown className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                          )}
+                        </button>
+                      </th>
                       {gameweeks.map(gw => (
                         <th key={gw} className={`px-0.5 py-1 text-center font-semibold min-w-[32px] sm:min-w-[40px] md:min-w-[50px] lg:min-w-[60px] ${
                           gw === nextGameweek ? 'bg-blue-100 text-blue-900' : ''
@@ -951,7 +974,7 @@ export default function Fixtures() {
                               <span className="font-semibold">{team.short_name}</span>
                             </div>
                           </td>
-                          <td className="sticky left-[50px] sm:left-[65px] md:left-[80px] lg:left-[100px] bg-white px-0.5 py-0.5 sm:py-1 text-center font-medium border-l border-r z-10">
+                          <td className="sticky left-[50px] sm:left-[65px] md:left-[80px] lg:left-[100px] bg-white px-0.5 py-0.5 sm:py-1 text-center font-medium border-l z-10">
                             <div className={`inline-block px-0.5 sm:px-1 py-0.5 rounded text-[9px] sm:text-[10px] font-semibold ${
                               avgFDR <= 2 ? 'bg-green-100 text-green-800' :
                               avgFDR <= 3 ? 'bg-yellow-100 text-yellow-800' :
@@ -960,6 +983,11 @@ export default function Fixtures() {
                             }`}>
                               {avgFDR > 0 ? avgFDR : '-'}
                             </div>
+                          </td>
+                          <td className="sticky left-[78px] sm:left-[101px] md:left-[125px] lg:left-[155px] bg-white px-0.5 py-0.5 sm:py-1 text-center font-medium border-l border-r z-10">
+                            <span className="text-[9px] sm:text-[10px] font-semibold text-gray-700">
+                              {teamGameCount[team.id] || 0}
+                            </span>
                           </td>
                           {gameweeks.map(gw => {
                             const fixtures = fixtureMatrix[team.id]?.[gw];
