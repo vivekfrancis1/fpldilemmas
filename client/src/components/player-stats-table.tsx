@@ -70,7 +70,13 @@ const COLUMN_DEFINITIONS: ColumnDefinition[] = [
   { id: 'cost_change_start', field: 'cost_change_start', label: 'Price Δ Start', tooltip: 'Price Change Since Start', category: 'other', totalsOnly: true },
 ];
 
-const DEFAULT_VISIBLE_COLUMNS = COLUMN_DEFINITIONS.map(c => c.id);
+const DEFAULT_VISIBLE_COLUMNS = [
+  'now_cost', 'games_played', 'total_points', 'value_season', 'points_per_game', 'form', 'selected_by_percent', 'minutes', 'starts',
+  'goals_scored', 'assists', 'clean_sheets', 'goals_conceded', 'saves', 'bonus', 'bps', 'penalties_saved',
+  'expected_goals', 'expected_assists', 'expected_goal_involvements', 'expected_goals_conceded',
+  'defensive_contribution',
+  'value_form', 'dreamteam_count', 'yellow_cards', 'red_cards', 'cost_change_event', 'cost_change_start',
+];
 
 // Default column order (matches COLUMN_DEFINITIONS order)
 const DEFAULT_COLUMN_ORDER = COLUMN_DEFINITIONS.map(c => c.id);
@@ -135,7 +141,7 @@ interface MinutesPointsData {
 }
 
 const ITEMS_PER_PAGE = 20;
-const COLUMN_SETTINGS_VERSION = 2; // Increment to reset user's column visibility to new defaults
+const COLUMN_SETTINGS_VERSION = 3; // Increment to reset user's column visibility to new defaults
 
 export default function PlayerStatsTable({ 
   data, 
