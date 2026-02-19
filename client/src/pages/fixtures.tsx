@@ -1092,7 +1092,7 @@ export default function Fixtures() {
                                 return (
                                   <td key={fw.gw} className="px-0.5 py-0.5 text-center">
                                     <div className={`px-0.5 py-0.5 rounded text-[10px] md:text-xs ${isRecommended ? 'font-bold' : 'font-medium'} ${getDifficultyColor(fw.team1Fixture.difficulty)}`}>
-                                      {fw.team1Fixture.opponent}({fw.team1Fixture.isHome ? 'H' : 'A'})
+                                      {fw.team1Fixture.opponent === '-' ? '-' : `${fw.team1Fixture.opponent}(${fw.team1Fixture.isHome ? 'H' : 'A'})`}
                                     </div>
                                   </td>
                                 );
@@ -1119,7 +1119,7 @@ export default function Fixtures() {
                                 return (
                                   <td key={fw.gw} className="px-0.5 py-0.5 text-center">
                                     <div className={`px-0.5 py-0.5 rounded text-[10px] md:text-xs ${isRecommended ? 'font-bold' : 'font-medium'} ${getDifficultyColor(fw.team2Fixture.difficulty)}`}>
-                                      {fw.team2Fixture.opponent}({fw.team2Fixture.isHome ? 'H' : 'A'})
+                                      {fw.team2Fixture.opponent === '-' ? '-' : `${fw.team2Fixture.opponent}(${fw.team2Fixture.isHome ? 'H' : 'A'})`}
                                     </div>
                                   </td>
                                 );
