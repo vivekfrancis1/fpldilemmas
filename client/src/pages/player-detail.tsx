@@ -315,8 +315,10 @@ export default function PlayerDetail() {
       totalGoals: history.reduce((s, gw) => s + gw.goals_scored, 0),
       totalAssists: history.reduce((s, gw) => s + gw.assists, 0),
       totalCleanSheets: history.reduce((s, gw) => s + gw.clean_sheets, 0),
+      totalGoalsConceded: history.reduce((s, gw) => s + gw.goals_conceded, 0),
       totalBonus: history.reduce((s, gw) => s + gw.bonus, 0),
       totalSaves: history.reduce((s, gw) => s + gw.saves, 0),
+      totalPenSaved: history.reduce((s, gw) => s + (gw.penalties_saved || 0), 0),
       gameweeksPlayed: played.length,
       avgPoints: played.length > 0 ? (history.reduce((s, gw) => s + gw.total_points, 0) / played.length).toFixed(1) : '0.0',
     };
@@ -373,7 +375,7 @@ export default function PlayerDetail() {
             </CardContent>
           </Card>
 
-          <div className={`grid gap-3 ${isMobile ? 'grid-cols-2' : 'grid-cols-4 lg:grid-cols-6'}`}>
+          <div className={`grid gap-3 ${isMobile ? 'grid-cols-3' : 'grid-cols-5 lg:grid-cols-7'}`}>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="p-3 text-center">
                 <div className="text-xs text-gray-500 mb-1">Total Points</div>
@@ -382,8 +384,32 @@ export default function PlayerDetail() {
             </Card>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="p-3 text-center">
-                <div className="text-xs text-gray-500 mb-1">Avg Points</div>
-                <div className="text-lg font-bold text-blue-700">{totalStats.avgPoints}</div>
+                <div className="text-xs text-gray-500 mb-1">PPG</div>
+                <div className="text-lg font-bold text-blue-700">{player.points_per_game || totalStats.avgPoints}</div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3 text-center">
+                <div className="text-xs text-gray-500 mb-1">Form</div>
+                <div className="text-lg font-bold text-indigo-700">{player.form || '0.0'}</div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3 text-center">
+                <div className="text-xs text-gray-500 mb-1">Own%</div>
+                <div className="text-lg font-bold text-gray-700">{player.selected_by_percent || '0'}%</div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3 text-center">
+                <div className="text-xs text-gray-500 mb-1">Value</div>
+                <div className="text-lg font-bold text-teal-700">{player.value_season || '0.0'}</div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3 text-center">
+                <div className="text-xs text-gray-500 mb-1">Val Form</div>
+                <div className="text-lg font-bold text-teal-600">{player.value_form || '0.0'}</div>
               </CardContent>
             </Card>
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
@@ -398,11 +424,25 @@ export default function PlayerDetail() {
                 <div className="text-lg font-bold text-green-700">{totalStats.totalGoals}</div>
               </CardContent>
             </Card>
+            <Card className="border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3 text-center">
+                <div className="text-xs text-gray-500 mb-1">Assists</div>
+                <div className="text-lg font-bold text-blue-600">{totalStats.totalAssists}</div>
+              </CardContent>
+            </Card>
             {[1, 2, 3].includes(elementType) && (
               <Card className="border-0 bg-white/80 backdrop-blur-sm">
                 <CardContent className="p-3 text-center">
                   <div className="text-xs text-gray-500 mb-1">Clean Sheets</div>
                   <div className="text-lg font-bold text-green-600">{totalStats.totalCleanSheets}</div>
+                </CardContent>
+              </Card>
+            )}
+            {[1, 2].includes(elementType) && (
+              <Card className="border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-3 text-center">
+                  <div className="text-xs text-gray-500 mb-1">Goals Conceded</div>
+                  <div className="text-lg font-bold text-red-600">{totalStats.totalGoalsConceded}</div>
                 </CardContent>
               </Card>
             )}
@@ -414,10 +454,46 @@ export default function PlayerDetail() {
                 </CardContent>
               </Card>
             )}
+            {elementType === 1 && (
+              <Card className="border-0 bg-white/80 backdrop-blur-sm">
+                <CardContent className="p-3 text-center">
+                  <div className="text-xs text-gray-500 mb-1">Pen Saved</div>
+                  <div className="text-lg font-bold text-green-700">{totalStats.totalPenSaved}</div>
+                </CardContent>
+              </Card>
+            )}
             <Card className="border-0 bg-white/80 backdrop-blur-sm">
               <CardContent className="p-3 text-center">
                 <div className="text-xs text-gray-500 mb-1">Bonus</div>
                 <div className="text-lg font-bold text-purple-600">{totalStats.totalBonus}</div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3 text-center">
+                <div className="text-xs text-gray-500 mb-1">DC</div>
+                <div className="text-lg font-bold text-orange-600">{player.defensive_contribution || 0}</div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3 text-center">
+                <div className="text-xs text-gray-500 mb-1">Dream Team</div>
+                <div className="text-lg font-bold text-amber-600">{player.dreamteam_count || 0}</div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3 text-center">
+                <div className="text-xs text-gray-500 mb-1">Price &Delta; GW</div>
+                <div className={`text-lg font-bold ${(player.cost_change_event || 0) > 0 ? 'text-green-600' : (player.cost_change_event || 0) < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                  {((player.cost_change_event || 0) / 10).toFixed(1)}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-0 bg-white/80 backdrop-blur-sm">
+              <CardContent className="p-3 text-center">
+                <div className="text-xs text-gray-500 mb-1">Price &Delta; Season</div>
+                <div className={`text-lg font-bold ${(player.cost_change_start || 0) > 0 ? 'text-green-600' : (player.cost_change_start || 0) < 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                  {((player.cost_change_start || 0) / 10).toFixed(1)}
+                </div>
               </CardContent>
             </Card>
           </div>
