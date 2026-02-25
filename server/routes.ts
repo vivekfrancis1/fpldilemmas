@@ -36,6 +36,7 @@ import { FPLScoringCacheService } from './fpl-scoring-cache-service';
 import { InitializationOrchestrator } from './initialization-orchestrator';
 import { calculateAvailabilityProbability, BootstrapEvent } from './availability-adjustments';
 import { setupAuth, isAuthenticated } from './replitAuth';
+import { totalPointsCache } from './total-points-cache';
 
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
@@ -126,105 +127,42 @@ async function fetchGWTransfersForManagers(
 // REMOVED: MASTER_TEAM_DEFAULTS - now using team-config.ts centralized configuration
 
 
-// Enhanced totalPointsCache with TTL and size management
-interface CacheEntry {
-  data: any;
-  timestamp: number;
-  gameweekRange?: { start: number; end: number };
-  ttl?: number;
-}
+// totalPointsCache is imported from './total-points-cache' (see top of file)
 
+// Lightweight cache class for internal route-level caches
 class EnhancedCache {
-  private cache = new Map<string, CacheEntry>();
+  private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
   private readonly maxSize: number;
   private readonly defaultTTL: number;
-  
-  constructor(maxSize = 1000, defaultTTL = 30 * 60 * 1000) { // 30 minutes default TTL
+  constructor(maxSize = 1000, defaultTTL = 30 * 60 * 1000) {
     this.maxSize = maxSize;
     this.defaultTTL = defaultTTL;
-    
-    // Cleanup expired entries every 5 minutes
     setInterval(() => this.cleanup(), 5 * 60 * 1000);
   }
-  
   set(key: string, value: any, ttl?: number): void {
-    // Evict oldest entries if cache is full
-    if (this.cache.size >= this.maxSize) {
-      this.evictOldest();
-    }
-    
-    this.cache.set(key, {
-      data: value,
-      timestamp: Date.now(),
-      ttl: ttl || this.defaultTTL
-    });
+    if (this.cache.size >= this.maxSize) this.evictOldest();
+    this.cache.set(key, { data: value, timestamp: Date.now(), ttl: ttl || this.defaultTTL });
   }
-  
   get(key: string): any | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
-    
-    // Check if entry has expired
-    if (Date.now() - entry.timestamp > (entry.ttl || this.defaultTTL)) {
-      this.cache.delete(key);
-      return null;
-    }
-    
+    if (Date.now() - entry.timestamp > entry.ttl) { this.cache.delete(key); return null; }
     return entry.data;
   }
-  
-  has(key: string): boolean {
-    return this.get(key) !== null;
-  }
-  
-  delete(key: string): boolean {
-    return this.cache.delete(key);
-  }
-  
-  clear(): void {
-    this.cache.clear();
-  }
-  
-  size(): number {
-    return this.cache.size;
-  }
-  
+  has(key: string): boolean { return this.get(key) !== null; }
+  delete(key: string): boolean { return this.cache.delete(key); }
+  clear(): void { this.cache.clear(); }
+  size(): number { return this.cache.size; }
   private evictOldest(): void {
-    let oldestKey: string | null = null;
-    let oldestTime = Date.now();
-    
-    for (const [key, entry] of this.cache) {
-      if (entry.timestamp < oldestTime) {
-        oldestTime = entry.timestamp;
-        oldestKey = key;
-      }
-    }
-    
-    if (oldestKey) {
-      this.cache.delete(oldestKey);
-      console.log(`🧹 Evicted oldest cache entry: ${oldestKey}`);
-    }
+    let oldestKey: string | null = null, oldestTime = Date.now();
+    for (const [k, e] of this.cache) { if (e.timestamp < oldestTime) { oldestTime = e.timestamp; oldestKey = k; } }
+    if (oldestKey) this.cache.delete(oldestKey);
   }
-  
   private cleanup(): void {
     const now = Date.now();
-    let cleanedCount = 0;
-    
-    for (const [key, entry] of this.cache) {
-      if (now - entry.timestamp > (entry.ttl || this.defaultTTL)) {
-        this.cache.delete(key);
-        cleanedCount++;
-      }
-    }
-    
-    if (cleanedCount > 0) {
-      console.log(`🧹 Cleaned up ${cleanedCount} expired cache entries`);
-    }
+    for (const [k, e] of this.cache) { if (now - e.timestamp > e.ttl) this.cache.delete(k); }
   }
 }
-
-// Export enhanced totalPointsCache
-export const totalPointsCache = new EnhancedCache(1000, 30 * 60 * 1000); // 1000 entries, 30min TTL
 
 // Recommended Transfers Cache - Short TTL for fresh recommendations
 const recommendedTransfersCache = new EnhancedCache(100, 3 * 60 * 1000); // 100 entries, 3min TTL
@@ -16704,10 +16642,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               
               for (const [gw, data] of Object.entries(breakdown)) {
                 const gwNum = gw.replace(/^gw/i, '');
-                // Skip non-numeric keys like "position", "teamName", etc.
-                if (isNaN(parseInt(gwNum))) continue;
+                const gwInt = parseInt(gwNum);
+                // Skip non-numeric keys and past gameweeks
+                if (isNaN(gwInt) || gwInt < startGameweek) continue;
                 
-                // Data can be a number (total points) or an object with breakdown
+                // Data can be a number (flat total) or an object with component breakdown
                 const isNumeric = typeof data === 'number';
                 if (isNumeric) {
                   gameweekProjections[gwNum] = data;
@@ -16809,7 +16748,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
               for (const [gw, data] of Object.entries(breakdown)) {
                 const gwNum = gw.replace(/^gw/i, '');
-                if (isNaN(parseInt(gwNum))) continue;
+                const gwInt2 = parseInt(gwNum);
+                if (isNaN(gwInt2) || gwInt2 < startGameweek) continue;
                 const isNumeric = typeof data === 'number';
                 if (isNumeric) {
                   gameweekProjections[gwNum] = data;

@@ -1,5 +1,6 @@
 import { PlayerTotalPointsAggregator } from "./player-total-points-aggregator";
 import { internalFetch } from "./config";
+import { totalPointsCache } from "./total-points-cache";
 
 export class FPLScoringCacheService {
   private static updateLock = false;
@@ -35,7 +36,9 @@ export class FPLScoringCacheService {
       console.log(`🔧 Starting Player Total Points aggregation for GW${resolvedStart}-${resolvedEnd}...`);
       const aggregator = new PlayerTotalPointsAggregator();
       await aggregator.aggregatePlayerTotalPoints(resolvedStart, resolvedEnd);
-      console.log("✅ FPL scoring component cache update completed successfully");
+      // Clear memory cache so the next request reads the freshly aggregated DB data
+      totalPointsCache.clear();
+      console.log("✅ FPL scoring component cache update completed successfully — memory cache cleared");
     } catch (error) {
       console.error("❌ FPL scoring component cache update failed:", error);
       throw error;

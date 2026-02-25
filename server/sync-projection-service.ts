@@ -1,4 +1,5 @@
 import { projectionService } from "./projection-service";
+import { totalPointsCache } from "./total-points-cache";
 // Removed minutes scaling utils per simplification mandate
 
 /**
@@ -117,8 +118,7 @@ class SyncProjectionService {
       throw new Error(`Cannot merge projections - missing data for gameweeks: ${missingGameweeks.join(', ')}`);
     }
     
-    // Step 2: Get cached individual gameweek data and combine with new projections  
-    const { totalPointsCache } = require('./routes');
+    // Step 2: Get cached individual gameweek data and combine with new projections
     const playerProjectionMap = new Map<string, any>();
     
     // Process cached gameweeks first

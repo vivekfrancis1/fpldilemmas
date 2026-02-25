@@ -10,13 +10,30 @@ import { internalFetch } from "./config";
 import { storage } from "./storage";
 import { sql } from "drizzle-orm";
 
+interface GWBreakdown {
+  goals: number;
+  assists: number;
+  cleanSheets: number;
+  minutes: number;
+  goalsConceded: number;
+  yellowCards: number;
+  redCards: number;
+  bonus: number;
+  saves: number;
+  points: number;
+}
+
 interface PlayerPointsData {
   playerId: number;
   playerName: string;
   teamName: string;
   position: string;
-  gameweekPoints: { [gameweek: string]: number };
+  gameweekBreakdown: { [gameweek: string]: GWBreakdown };
   totalPoints: number;
+}
+
+function emptyGW(): GWBreakdown {
+  return { goals: 0, assists: 0, cleanSheets: 0, minutes: 0, goalsConceded: 0, yellowCards: 0, redCards: 0, bonus: 0, saves: 0, points: 0 };
 }
 
 export class PlayerTotalPointsAggregator {
@@ -34,16 +51,11 @@ export class PlayerTotalPointsAggregator {
    * 7. Red Cards (-3 pts)
    * 8. Bonus (1-3 pts)
    * 9. Saves (1 pt per 3 saves for GK)
-   * 
-   * Note: CBIT (Clearances/Blocks/Interceptions/Tackles) and Save Points were
-   * previously included but are NOT separate FPL scoring categories - they're
-   * used for BPS calculation which already feeds into Bonus points.
    */
-  async aggregatePlayerTotalPoints(startGameweek: number = 12, endGameweek: number = 23): Promise<void> {
+  async aggregatePlayerTotalPoints(startGameweek: number = 28, endGameweek: number = 38): Promise<void> {
     console.log(`🔧 Starting Player Total Points aggregation for GW${startGameweek}-${endGameweek}...`);
     
     try {
-      // Step 1: Fetch all 9 FPL scoring component caches
       const [
         savesData,
         goalsConcededData,
@@ -68,27 +80,32 @@ export class PlayerTotalPointsAggregator {
 
       console.log(`📊 Component data fetched - Saves: ${savesData.length}, Goals Conceded: ${goalsConcededData.length}, Cards: ${yellowCardsData.length + redCardsData.length}, Bonus: ${bonusPointsData.length}, Minutes: ${minutesPointsData.length}, Goals: ${goalsPointsData.length}, Assists: ${assistsPointsData.length}, CleanSheets: ${cleanSheetPointsData.length}`);
 
-      // Step 2: Aggregate all components by player
-      const playerTotalPointsMap = new Map<number, PlayerPointsData>();
+      const playerMap = new Map<number, PlayerPointsData>();
 
-      // Aggregate each of the 9 FPL scoring components
-      this.aggregateComponentData(playerTotalPointsMap, savesData, "saves");
-      this.aggregateComponentData(playerTotalPointsMap, goalsConcededData, "goalsConceded");
-      this.aggregateComponentData(playerTotalPointsMap, yellowCardsData, "yellowCards");
-      this.aggregateComponentData(playerTotalPointsMap, redCardsData, "redCards");
-      this.aggregateComponentData(playerTotalPointsMap, bonusPointsData, "bonusPoints");
-      this.aggregateMinutesData(playerTotalPointsMap, minutesPointsData, startGameweek, endGameweek);
-      this.aggregateGoalsAssistsData(playerTotalPointsMap, goalsPointsData, "goals");
-      this.aggregateGoalsAssistsData(playerTotalPointsMap, assistsPointsData, "assists");
-      this.aggregateCleanSheetData(playerTotalPointsMap, cleanSheetPointsData);
+      this.addComponentPoints(playerMap, savesData, "saves");
+      this.addComponentPoints(playerMap, goalsConcededData, "goalsConceded");
+      this.addComponentPoints(playerMap, yellowCardsData, "yellowCards");
+      this.addComponentPoints(playerMap, redCardsData, "redCards");
+      this.addComponentPoints(playerMap, bonusPointsData, "bonus");
+      this.addMinutesPoints(playerMap, minutesPointsData, startGameweek, endGameweek);
+      this.addComponentPoints(playerMap, goalsPointsData, "goals");
+      this.addComponentPoints(playerMap, assistsPointsData, "assists");
+      this.addComponentPoints(playerMap, cleanSheetPointsData, "cleanSheets");
 
-      console.log(`🔄 Aggregated data for ${playerTotalPointsMap.size} players`);
+      // Recompute per-GW totals from components
+      for (const player of playerMap.values()) {
+        let runningTotal = 0;
+        for (const gw of Object.values(player.gameweekBreakdown)) {
+          gw.points = gw.goals + gw.assists + gw.cleanSheets + gw.minutes + gw.goalsConceded + gw.yellowCards + gw.redCards + gw.bonus + gw.saves;
+          runningTotal += gw.points;
+        }
+        player.totalPoints = runningTotal;
+      }
 
-      const aggregatedData = Array.from(playerTotalPointsMap.values());
-
+      console.log(`🔄 Aggregated data for ${playerMap.size} players`);
+      const aggregatedData = Array.from(playerMap.values());
       console.log(`✅ Player Total Points aggregation completed successfully - ${aggregatedData.length} players cached`);
       
-      // Save to persistent database storage (playerTotalPointsSnapshots)
       await this.saveToDatabaseStorage(aggregatedData, startGameweek, endGameweek);
       
     } catch (error) {
@@ -97,9 +114,75 @@ export class PlayerTotalPointsAggregator {
     }
   }
 
+  private ensurePlayer(playerMap: Map<number, PlayerPointsData>, playerId: number, playerName: string, teamName: string, position: string): PlayerPointsData {
+    if (!playerMap.has(playerId)) {
+      playerMap.set(playerId, {
+        playerId,
+        playerName,
+        teamName,
+        position,
+        gameweekBreakdown: {},
+        totalPoints: 0
+      });
+    }
+    return playerMap.get(playerId)!;
+  }
+
+  private ensureGW(player: PlayerPointsData, gwKey: string): GWBreakdown {
+    if (!player.gameweekBreakdown[gwKey]) {
+      player.gameweekBreakdown[gwKey] = emptyGW();
+    }
+    return player.gameweekBreakdown[gwKey];
+  }
+
   /**
-   * Fetch saves data from live API
+   * Add points from a component into the per-GW structured breakdown.
+   * componentKey maps to the exact field name in GWBreakdown.
    */
+  private addComponentPoints(
+    playerMap: Map<number, PlayerPointsData>,
+    componentData: any[],
+    componentKey: keyof Omit<GWBreakdown, "points">
+  ) {
+    for (const component of componentData) {
+      const player = this.ensurePlayer(playerMap, component.playerId, component.playerName, component.teamName, component.position);
+      const pointsData = component.pointsData || {};
+
+      for (const [rawKey, points] of Object.entries(pointsData)) {
+        const gwKey = rawKey.replace(/^gw/i, '');
+        if (isNaN(parseInt(gwKey))) continue;
+        const gw = this.ensureGW(player, gwKey);
+        gw[componentKey] += Number(points) || 0;
+      }
+    }
+  }
+
+  /**
+   * Add minutes points — handles both per-GW objects and flat-rate fallback.
+   */
+  private addMinutesPoints(playerMap: Map<number, PlayerPointsData>, minutesData: any[], startGameweek: number, endGameweek: number) {
+    for (const minutesComponent of minutesData) {
+      const player = this.ensurePlayer(playerMap, minutesComponent.playerId, minutesComponent.playerName, minutesComponent.teamName, minutesComponent.position);
+      const perGW = minutesComponent.pointsFromMinutesPerGW;
+      const flatRate = minutesComponent.minutesPerGame || 0;
+
+      if (perGW && typeof perGW === 'object' && Object.keys(perGW).length > 0) {
+        for (const [rawKey, pts] of Object.entries(perGW as Record<string, number>)) {
+          const gwKey = rawKey.replace(/^gw/i, '');
+          if (isNaN(parseInt(gwKey))) continue;
+          const gw = this.ensureGW(player, gwKey);
+          gw.minutes += pts;
+        }
+      } else {
+        for (let gwNum = startGameweek; gwNum <= endGameweek; gwNum++) {
+          const gwKey = String(gwNum);
+          const gw = this.ensureGW(player, gwKey);
+          gw.minutes += flatRate;
+        }
+      }
+    }
+  }
+
   private async fetchSavesData(startGameweek: number, endGameweek: number) {
     try {
       const response = await internalFetch(`api/player-saves-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
@@ -119,9 +202,6 @@ export class PlayerTotalPointsAggregator {
     }
   }
 
-  /**
-   * Fetch goals conceded data from live API
-   */
   private async fetchGoalsConcededData(startGameweek: number, endGameweek: number) {
     try {
       const response = await internalFetch(`api/player-goals-conceded-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
@@ -141,9 +221,6 @@ export class PlayerTotalPointsAggregator {
     }
   }
 
-  /**
-   * Fetch yellow cards data from live API
-   */
   private async fetchYellowCardsData(startGameweek: number, endGameweek: number) {
     try {
       const response = await internalFetch(`api/player-yellow-cards-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
@@ -163,9 +240,6 @@ export class PlayerTotalPointsAggregator {
     }
   }
 
-  /**
-   * Fetch red cards data from live API
-   */
   private async fetchRedCardsData(startGameweek: number, endGameweek: number) {
     try {
       const response = await internalFetch(`api/player-red-cards-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
@@ -185,9 +259,6 @@ export class PlayerTotalPointsAggregator {
     }
   }
 
-  /**
-   * Fetch bonus points data from live API
-   */
   private async fetchBonusPointsData(startGameweek: number, endGameweek: number) {
     try {
       const response = await internalFetch(`api/player-bonus-points-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
@@ -207,10 +278,6 @@ export class PlayerTotalPointsAggregator {
     }
   }
 
-
-  /**
-   * Fetch minutes points data from live API
-   */
   private async fetchMinutesPointsData(startGameweek: number, endGameweek: number) {
     try {
       const response = await internalFetch(`api/player-minutes-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
@@ -219,10 +286,10 @@ export class PlayerTotalPointsAggregator {
       return data.map((player: any) => ({
         playerId: player.playerId,
         playerName: player.playerName,
-        teamName: player.teamShort,
+        teamName: player.teamShort || player.teamName,
         position: player.position,
         minutesPerGame: player.pointsFromMinutes || 0,
-        totalPoints: player.pointsFromMinutes * 12 || 0 // Estimate for 12 gameweeks
+        pointsFromMinutesPerGW: player.pointsFromMinutesPerGW || null
       }));
     } catch (error) {
       console.warn("⚠️ Failed to fetch minutes points data:", error);
@@ -230,68 +297,49 @@ export class PlayerTotalPointsAggregator {
     }
   }
 
-  /**
-   * Fetch and convert goals projection data to points
-   */
   private async fetchGoalsPointsData(startGameweek: number, endGameweek: number) {
     try {
-      // Use fast cached endpoint instead of slow API
       const response = await internalFetch(`api/cached/player-goals-projections`);
       if (!response.ok) throw new Error(`Failed to fetch goals data: ${response.statusText}`);
-      
       const goalsData = await response.json();
-      
-      // Convert goals projections to points using FPL scoring rules
       return goalsData.map((player: any) => ({
         playerId: player.playerId,
         playerName: player.playerName,
         teamName: player.teamName,
         position: player.position,
-        pointsData: this.convertGoalsToPoints(player.gameweekProjections, player.position),
-        totalPoints: Object.values(this.convertGoalsToPoints(player.gameweekProjections, player.position)).reduce((sum: number, points: any) => sum + points, 0)
+        pointsData: this.convertGoalsToPoints(player.gameweekProjections, player.position, startGameweek, endGameweek),
+        totalPoints: 0
       }));
     } catch (error) {
-      console.warn("⚠️ Failed to fetch goals points data, using empty array:", error);
+      console.warn("⚠️ Failed to fetch goals points data:", error);
       return [];
     }
   }
 
-  /**
-   * Fetch and convert assists projection data to points
-   */
   private async fetchAssistsPointsData(startGameweek: number, endGameweek: number) {
     try {
-      // Use fast cached endpoint instead of slow API
       const response = await internalFetch(`api/cached/player-assists-projections`);
       if (!response.ok) throw new Error(`Failed to fetch assists data: ${response.statusText}`);
-      
       const assistsData = await response.json();
-      
-      // Convert assists projections to points using FPL scoring rules (3 points per assist)
       return assistsData.map((player: any) => ({
         playerId: player.playerId,
         playerName: player.playerName,
         teamName: player.teamName,
         position: player.position,
-        pointsData: this.convertAssistsToPoints(player.gameweekProjections),
-        totalPoints: Object.values(this.convertAssistsToPoints(player.gameweekProjections)).reduce((sum: number, points: any) => sum + points, 0)
+        pointsData: this.convertAssistsToPoints(player.gameweekProjections, startGameweek, endGameweek),
+        totalPoints: 0
       }));
     } catch (error) {
-      console.warn("⚠️ Failed to fetch assists points data, using empty array:", error);
+      console.warn("⚠️ Failed to fetch assists points data:", error);
       return [];
     }
   }
 
-  /**
-   * Fetch clean sheet points data from API
-   */
   private async fetchCleanSheetPointsData(startGameweek: number, endGameweek: number) {
     try {
       const response = await internalFetch(`api/player-cleansheet-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) throw new Error(`Failed to fetch clean sheet data: ${response.statusText}`);
-      
       const cleanSheetData = await response.json();
-      
       return cleanSheetData.map((player: any) => ({
         playerId: player.playerId,
         playerName: player.playerName,
@@ -301,208 +349,46 @@ export class PlayerTotalPointsAggregator {
         totalPoints: player.totalExpectedPoints || 0
       }));
     } catch (error) {
-      console.warn("⚠️ Failed to fetch clean sheet points data, using empty array:", error);
+      console.warn("⚠️ Failed to fetch clean sheet points data:", error);
       return [];
     }
   }
 
-  /**
-   * Aggregate clean sheet data into player total points map
-   */
-  private aggregateCleanSheetData(playerMap: Map<number, PlayerPointsData>, cleanSheetData: any[]) {
-    for (const component of cleanSheetData) {
-      if (!playerMap.has(component.playerId)) {
-        playerMap.set(component.playerId, {
-          playerId: component.playerId,
-          playerName: component.playerName,
-          teamName: component.teamName,
-          position: component.position,
-          gameweekPoints: {},
-          totalPoints: 0
-        });
-      }
-
-      const player = playerMap.get(component.playerId)!;
-      const pointsData = component.pointsData || {};
-
-      // Add points from clean sheets to each gameweek
-      // NORMALIZE KEYS: Convert "gw13" format to numeric "13" for consistency
-      for (const [gameweek, points] of Object.entries(pointsData)) {
-        const normalizedGW = gameweek.replace(/^gw/i, '');
-        if (!player.gameweekPoints[normalizedGW]) {
-          player.gameweekPoints[normalizedGW] = 0;
-        }
-        player.gameweekPoints[normalizedGW] += Number(points) || 0;
-      }
-
-      // Add to total points
-      player.totalPoints += component.totalPoints || 0;
-    }
-  }
-
-  /**
-   * Convert goals projections to FPL points
-   */
-  private convertGoalsToPoints(goalProjections: { [gameweek: string]: number }, position: string): { [gameweek: string]: number } {
-    const goalPoints: { [gameweek: string]: number } = {};
-    
-    // Official FPL scoring for goals:
-    // Goalkeeper: 10 points, Defender: 6 points, Midfielder: 5 points, Forward: 4 points
+  private convertGoalsToPoints(
+    goalProjections: { [gameweek: string]: number },
+    position: string,
+    startGameweek: number,
+    endGameweek: number
+  ): { [gameweek: string]: number } {
     let pointsPerGoal: number;
-    if (position === "Goalkeeper" || position === "GKP") {
-      pointsPerGoal = 10;
-    } else if (position === "Defender" || position === "DEF") {
-      pointsPerGoal = 6;
-    } else if (position === "Midfielder" || position === "MID") {
-      pointsPerGoal = 5;
-    } else {
-      pointsPerGoal = 4; // Forward/FWD
+    if (position === "Goalkeeper" || position === "GKP") pointsPerGoal = 10;
+    else if (position === "Defender" || position === "DEF") pointsPerGoal = 6;
+    else if (position === "Midfielder" || position === "MID") pointsPerGoal = 5;
+    else pointsPerGoal = 4;
+
+    const result: { [gameweek: string]: number } = {};
+    for (const [gw, goals] of Object.entries(goalProjections)) {
+      const gwNum = parseInt(gw.replace(/^gw/i, ''));
+      if (isNaN(gwNum) || gwNum < startGameweek || gwNum > endGameweek) continue;
+      result[String(gwNum)] = goals * pointsPerGoal;
     }
-    
-    for (const [gameweek, goals] of Object.entries(goalProjections)) {
-      goalPoints[gameweek] = goals * pointsPerGoal;
-    }
-    
-    return goalPoints;
+    return result;
   }
 
-  /**
-   * Convert assists projections to FPL points (3 points per assist for all positions)
-   */
-  private convertAssistsToPoints(assistProjections: { [gameweek: string]: number }): { [gameweek: string]: number } {
-    const assistPoints: { [gameweek: string]: number } = {};
-    
-    for (const [gameweek, assists] of Object.entries(assistProjections)) {
-      assistPoints[gameweek] = assists * 3; // 3 points per assist
+  private convertAssistsToPoints(
+    assistProjections: { [gameweek: string]: number },
+    startGameweek: number,
+    endGameweek: number
+  ): { [gameweek: string]: number } {
+    const result: { [gameweek: string]: number } = {};
+    for (const [gw, assists] of Object.entries(assistProjections)) {
+      const gwNum = parseInt(gw.replace(/^gw/i, ''));
+      if (isNaN(gwNum) || gwNum < startGameweek || gwNum > endGameweek) continue;
+      result[String(gwNum)] = assists * 3;
     }
-    
-    return assistPoints;
+    return result;
   }
 
-  /**
-   * Aggregate component data into player total points map
-   */
-  private aggregateComponentData(
-    playerMap: Map<number, PlayerPointsData>, 
-    componentData: any[], 
-    componentName: string
-  ) {
-    for (const component of componentData) {
-      if (!playerMap.has(component.playerId)) {
-        playerMap.set(component.playerId, {
-          playerId: component.playerId,
-          playerName: component.playerName,
-          teamName: component.teamName,
-          position: component.position,
-          gameweekPoints: {},
-          totalPoints: 0
-        });
-      }
-
-      const player = playerMap.get(component.playerId)!;
-      const pointsData = component.pointsData || {};
-
-      // Add points from this component to each gameweek
-      // NORMALIZE KEYS: Convert "gw13" format to numeric "13" for consistency
-      for (const [gameweek, points] of Object.entries(pointsData)) {
-        const normalizedGW = gameweek.replace(/^gw/i, ''); // Remove "gw" prefix if present
-        if (!player.gameweekPoints[normalizedGW]) {
-          player.gameweekPoints[normalizedGW] = 0;
-        }
-        player.gameweekPoints[normalizedGW] += Number(points) || 0;
-      }
-
-      // Add to total points
-      player.totalPoints += component.totalPoints || 0;
-    }
-  }
-
-  /**
-   * Aggregate minutes data - applies per-game points to each future gameweek
-   */
-  private aggregateMinutesData(playerMap: Map<number, PlayerPointsData>, minutesData: any[], startGameweek?: number, endGameweek?: number) {
-    for (const minutesComponent of minutesData) {
-      const playerId = minutesComponent.playerId;
-      
-      if (!playerMap.has(playerId)) {
-        playerMap.set(playerId, {
-          playerId: playerId,
-          playerName: minutesComponent.playerName,
-          teamName: minutesComponent.teamName,
-          position: minutesComponent.position,
-          gameweekPoints: {},
-          totalPoints: 0
-        });
-      }
-
-      const player = playerMap.get(playerId)!;
-      const minutesPerGame = minutesComponent.minutesPerGame || 0;
-      const perGW = minutesComponent.pointsFromMinutesPerGW;
-
-      // If the minutes endpoint returned per-GW data, use it directly (keys normalised to numeric strings)
-      if (perGW && typeof perGW === 'object' && Object.keys(perGW).length > 0) {
-        for (const [rawKey, pts] of Object.entries(perGW as Record<string, number>)) {
-          const gwKey = rawKey.replace(/^gw/i, '');
-          if (!player.gameweekPoints[gwKey]) player.gameweekPoints[gwKey] = 0;
-          player.gameweekPoints[gwKey] += pts;
-        }
-        const total = Object.values(perGW as Record<string, number>).reduce((sum: number, v: number) => sum + v, 0);
-        player.totalPoints += total;
-      } else if (startGameweek !== undefined && endGameweek !== undefined) {
-        // Fallback: apply flat per-game rate across the requested range
-        for (let gw = startGameweek; gw <= endGameweek; gw++) {
-          const gwKey = String(gw);
-          if (!player.gameweekPoints[gwKey]) player.gameweekPoints[gwKey] = 0;
-          player.gameweekPoints[gwKey] += minutesPerGame;
-        }
-        player.totalPoints += minutesPerGame * (endGameweek - startGameweek + 1);
-      } else {
-        player.totalPoints += minutesPerGame * 12;
-      }
-    }
-  }
-
-  /**
-   * Aggregate goals/assists data (from API responses)
-   */
-  private aggregateGoalsAssistsData(
-    playerMap: Map<number, PlayerPointsData>, 
-    goalsAssistsData: any[], 
-    type: "goals" | "assists"
-  ) {
-    for (const component of goalsAssistsData) {
-      if (!playerMap.has(component.playerId)) {
-        playerMap.set(component.playerId, {
-          playerId: component.playerId,
-          playerName: component.playerName,
-          teamName: component.teamName,
-          position: component.position,
-          gameweekPoints: {},
-          totalPoints: 0
-        });
-      }
-
-      const player = playerMap.get(component.playerId)!;
-      const pointsData = component.pointsData || {};
-
-      // Add points from this component to each gameweek
-      // NORMALIZE KEYS: Convert "gw13" format to numeric "13" for consistency
-      for (const [gameweek, points] of Object.entries(pointsData)) {
-        const normalizedGW = gameweek.replace(/^gw/i, ''); // Remove "gw" prefix if present
-        if (!player.gameweekPoints[normalizedGW]) {
-          player.gameweekPoints[normalizedGW] = 0;
-        }
-        player.gameweekPoints[normalizedGW] += Number(points) || 0;
-      }
-
-      // Add to total points
-      player.totalPoints += component.totalPoints || 0;
-    }
-  }
-
-  /**
-   * Save aggregated data to persistent database storage for historical tracking
-   */
   private async saveToDatabaseStorage(
     aggregatedData: PlayerPointsData[], 
     startGameweek: number, 
@@ -511,64 +397,47 @@ export class PlayerTotalPointsAggregator {
     try {
       console.log(`💾 Saving Player Total Points to database storage (GW${startGameweek}-${endGameweek})...`);
       
-      // Step 1: Create or get active window
       let activeWindow = await storage.getActivePlayerTotalPointsWindow();
       
       if (!activeWindow || activeWindow.startGameweek !== startGameweek || activeWindow.endGameweek !== endGameweek) {
-        // Create new window for current gameweek range
         const windowResponse = await storage.createPlayerTotalPointsWindow(startGameweek, endGameweek, CURRENT_SEASON);
-        activeWindow = {
-          windowId: windowResponse.windowId,
-          startGameweek,
-          endGameweek
-        };
+        activeWindow = { windowId: windowResponse.windowId, startGameweek, endGameweek };
         console.log(`📊 Created new Player Total Points window: ${activeWindow.windowId}`);
       } else {
         console.log(`📊 Using existing active window: ${activeWindow.windowId}`);
       }
 
-      // Step 2: Fetch current bootstrap data for price and ownership
       const bootstrapResponse = await internalFetch('api/bootstrap-static');
-      if (!bootstrapResponse.ok) {
-        throw new Error('Failed to fetch bootstrap data for prices and ownership');
-      }
+      if (!bootstrapResponse.ok) throw new Error('Failed to fetch bootstrap data');
       const bootstrapData = await bootstrapResponse.json();
-      const playersData = bootstrapData.elements || [];
-      const teamsData = bootstrapData.teams || [];
+      const playersMap = new Map((bootstrapData.elements || []).map((p: any) => [p.id, p]));
+      const teamsMap = new Map((bootstrapData.teams || []).map((t: any) => [t.id, t]));
 
-      // Create lookup maps
-      const playersMap = new Map(playersData.map((p: any) => [p.id, p]));
-      const teamsMap = new Map(teamsData.map((t: any) => [t.id, t]));
-
-      // Step 3: Transform aggregated data into snapshot format
       const snapshots = aggregatedData.map(player => {
-        const playerBootstrap = playersMap.get(player.playerId);
-        const team = playerBootstrap ? teamsMap.get(playerBootstrap.team) : null;
+        const playerBootstrap = playersMap.get(player.playerId) as any;
+        const team = playerBootstrap ? (teamsMap.get(playerBootstrap.team) as any) : null;
+        const gwCount = Math.max(Object.keys(player.gameweekBreakdown).length, 1);
 
         return {
           playerId: player.playerId,
           playerName: player.playerName,
           teamName: team?.short_name || player.teamName,
           position: player.position,
-          price: playerBootstrap ? playerBootstrap.now_cost / 10 : 0, // Convert from tenths
+          price: playerBootstrap ? playerBootstrap.now_cost / 10 : 0,
           ownership: playerBootstrap ? parseFloat(playerBootstrap.selected_by_percent || '0') : 0,
           totalProjectedPoints: player.totalPoints,
-          averagePointsPerGameweek: player.totalPoints / Math.max(Object.values(player.gameweekPoints).filter((pts: number) => pts > 0).length, 1),
-          averageValue: playerBootstrap ? 
-            (player.totalPoints / Math.max(playerBootstrap.now_cost / 10, 0.1)) : 0, // Points per million
-          averageMinutes: 60, // Default estimate - could be enhanced with actual minutes data
-          gameweekBreakdown: player.gameweekPoints
+          averagePointsPerGameweek: player.totalPoints / gwCount,
+          averageValue: playerBootstrap ? (player.totalPoints / Math.max(playerBootstrap.now_cost / 10, 0.1)) : 0,
+          averageMinutes: 60,
+          gameweekBreakdown: player.gameweekBreakdown
         };
       });
 
-      // Step 4: Save snapshots to database
       await storage.savePlayerTotalPointsSnapshots(activeWindow.windowId, snapshots);
-      
       console.log(`✅ Successfully saved ${snapshots.length} Player Total Points snapshots to database storage`);
       
     } catch (error) {
       console.error("❌ Failed to save Player Total Points to database storage:", error);
-      // Don't throw error to avoid breaking the main aggregation process
     }
   }
 }
