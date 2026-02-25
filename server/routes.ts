@@ -17682,6 +17682,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("📊 Serving cached player saves data");
       const cachedData = await fplScoringCacheService.getCachedPlayerSaves();
+      if (!cachedData || cachedData.length === 0) {
+        console.log("⚠️ Cached player saves empty, falling back to live endpoint");
+        return res.redirect(307, "/api/player-saves-projections");
+      }
       res.json(cachedData);
     } catch (error) {
       console.error("Error fetching cached player saves:", error);
@@ -17694,6 +17698,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("📊 Serving cached player goals conceded data");
       const cachedData = await fplScoringCacheService.getCachedPlayerGoalsConceded();
+      if (!cachedData || cachedData.length === 0) {
+        console.log("⚠️ Cached player goals conceded empty, falling back to live endpoint");
+        return res.redirect(307, "/api/player-goals-conceded-projections");
+      }
       res.json(cachedData);
     } catch (error) {
       console.error("Error fetching cached player goals conceded:", error);
@@ -17706,6 +17714,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("📊 Serving cached player yellow cards data");
       const cachedData = await fplScoringCacheService.getCachedPlayerYellowCards();
+      if (!cachedData || cachedData.length === 0) {
+        console.log("⚠️ Cached player yellow cards empty, falling back to live endpoint");
+        return res.redirect(307, "/api/player-yellow-cards-projections");
+      }
       res.json(cachedData);
     } catch (error) {
       console.error("Error fetching cached player yellow cards:", error);
@@ -17718,6 +17730,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("📊 Serving cached player red cards data");
       const cachedData = await fplScoringCacheService.getCachedPlayerRedCards();
+      if (!cachedData || cachedData.length === 0) {
+        console.log("⚠️ Cached player red cards empty, falling back to live endpoint");
+        return res.redirect(307, "/api/player-red-cards-projections");
+      }
       res.json(cachedData);
     } catch (error) {
       console.error("Error fetching cached player red cards:", error);
