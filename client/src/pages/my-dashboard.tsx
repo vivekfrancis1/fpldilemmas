@@ -1383,17 +1383,17 @@ export default function MyDashboard() {
 
               {/* Overview Tab */}
               <TabsContent value="overview" className="space-y-6 mt-6 sm:mt-8">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="grid grid-cols-4 gap-1 sm:gap-6">
                   {/* Total Points */}
                   <Card className="border-0 bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-total-points">
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-blue-600 mb-1 sm:mb-2">Total Points</p>
-                          <p className="text-xl sm:text-2xl font-bold text-blue-900">{managerData.summary_overall_points.toLocaleString()}</p>
+                    <CardContent className="p-1.5 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[10px] sm:text-sm font-medium text-blue-600 leading-tight sm:mb-2">Total Pts</p>
+                          <p className="text-sm sm:text-2xl font-bold text-blue-900 truncate">{managerData.summary_overall_points.toLocaleString()}</p>
                         </div>
-                        <div className="p-2 sm:p-2.5 bg-blue-100 rounded-full flex-shrink-0">
-                          <Target className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
+                        <div className="hidden sm:flex p-2.5 bg-blue-100 rounded-full flex-shrink-0">
+                          <Target className="h-5 w-5 text-blue-600" />
                         </div>
                       </div>
                     </CardContent>
@@ -1401,13 +1401,13 @@ export default function MyDashboard() {
 
                   {/* Overall Rank */}
                   <Card className="border-0 bg-gradient-to-br from-amber-50 to-yellow-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-overall-rank">
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-amber-600 mb-1 sm:mb-2">Overall Rank</p>
-                          <p className="text-xl sm:text-2xl font-bold text-amber-900 break-words">{formatRank(managerData.summary_overall_rank)}</p>
+                    <CardContent className="p-1.5 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[10px] sm:text-sm font-medium text-amber-600 leading-tight sm:mb-2">Rank</p>
+                          <p className="text-sm sm:text-2xl font-bold text-amber-900 truncate">{formatRank(managerData.summary_overall_rank)}</p>
                           {getRankChange() !== null && getRankChange() !== 0 && (
-                            <div className={`flex items-center text-xs mt-1 ${getRankChange()! > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            <div className={`hidden sm:flex items-center text-xs mt-1 ${getRankChange()! > 0 ? 'text-green-600' : 'text-red-600'}`}>
                               {getRankChange()! > 0 ? (
                                 <TrendingUp className="h-3 w-3 mr-1 flex-shrink-0" />
                               ) : (
@@ -1419,8 +1419,8 @@ export default function MyDashboard() {
                             </div>
                           )}
                         </div>
-                        <div className="p-2 sm:p-2.5 bg-amber-100 rounded-full flex-shrink-0">
-                          <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600" />
+                        <div className="hidden sm:flex p-2.5 bg-amber-100 rounded-full flex-shrink-0">
+                          <Trophy className="h-5 w-5 text-amber-600" />
                         </div>
                       </div>
                     </CardContent>
@@ -1428,19 +1428,19 @@ export default function MyDashboard() {
 
                   {/* Bank */}
                   <Card className="border-0 bg-gradient-to-br from-orange-50 to-amber-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-bank">
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-orange-600 mb-1 sm:mb-2">Bank</p>
-                          <p className="text-xl sm:text-2xl font-bold text-orange-900">
+                    <CardContent className="p-1.5 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[10px] sm:text-sm font-medium text-orange-600 leading-tight sm:mb-2">Bank</p>
+                          <p className="text-sm sm:text-2xl font-bold text-orange-900 truncate">
                             {formatPrice(nextTeamData?.transfers?.bank || nextTeamData?.entry_history?.bank || teamData?.entry_history?.bank || 0)}
                           </p>
-                          <p className="text-xs text-orange-600 font-medium mt-1">
+                          <p className="hidden sm:block text-xs text-orange-600 font-medium mt-1">
                             GW{nextTeamData ? getNextGameweekDashboard() : getCurrentGameweekDashboard()}
                           </p>
                         </div>
-                        <div className="p-2 sm:p-2.5 bg-orange-100 rounded-full flex-shrink-0">
-                          <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
+                        <div className="hidden sm:flex p-2.5 bg-orange-100 rounded-full flex-shrink-0">
+                          <DollarSign className="h-5 w-5 text-orange-600" />
                         </div>
                       </div>
                     </CardContent>
@@ -1448,11 +1448,11 @@ export default function MyDashboard() {
 
                   {/* Squad Value */}
                   <Card className="border-0 bg-gradient-to-br from-teal-50 to-emerald-50 shadow-lg hover:shadow-xl transition-all duration-300" data-testid="card-squad-value">
-                    <CardContent className="p-4 sm:p-6">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs sm:text-sm font-medium text-teal-600 mb-1 sm:mb-2">Squad Value</p>
-                          <p className="text-xl sm:text-2xl font-bold text-teal-900">
+                    <CardContent className="p-1.5 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[10px] sm:text-sm font-medium text-teal-600 leading-tight sm:mb-2">Squad</p>
+                          <p className="text-sm sm:text-2xl font-bold text-teal-900 truncate">
                             {formatPrice((() => {
                               const picks = nextTeamData?.picks || teamData?.picks;
                               if (!picks) return 0;
@@ -1462,12 +1462,12 @@ export default function MyDashboard() {
                               }, 0);
                             })())}
                           </p>
-                          <p className="text-xs text-teal-600 font-medium mt-1">
+                          <p className="hidden sm:block text-xs text-teal-600 font-medium mt-1">
                             GW{nextTeamData ? getNextGameweekDashboard() : getCurrentGameweekDashboard()}
                           </p>
                         </div>
-                        <div className="p-2 sm:p-2.5 bg-teal-100 rounded-full flex-shrink-0">
-                          <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-teal-600" />
+                        <div className="hidden sm:flex p-2.5 bg-teal-100 rounded-full flex-shrink-0">
+                          <TrendingUp className="h-5 w-5 text-teal-600" />
                         </div>
                       </div>
                     </CardContent>
