@@ -842,7 +842,7 @@ export default function CreatorTeam() {
                   const freeTransfersAvailable = calculateFreeTransfers(
                     managerHistory?.current,
                     managerHistory?.chips,
-                    currentGW
+                    currentGW + 1
                   );
                   return (
                     <div className="flex flex-wrap gap-3 mb-4">
