@@ -8651,14 +8651,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamTotal += playerTotal;
       });
       
+      // T002: Compute team average xG per 90 (weighted by minutes) for blending
+      let teamTotalXGPer90Weighted = 0;
+      let teamTotalMinutes = 0;
+      teamPlayersList.forEach((player: any) => {
+        const xgPer90 = parseFloat(player.expected_goals_per_90 || 0);
+        const mins = player.minutes || 0;
+        teamTotalXGPer90Weighted += xgPer90 * mins;
+        teamTotalMinutes += mins;
+      });
+      const teamAvgXGPer90 = teamTotalMinutes > 0 ? teamTotalXGPer90Weighted / teamTotalMinutes : 0.05;
+      
       // Calculate shares with set piece bonuses (no normalization - just boost individuals)
       teamPlayersList.forEach((player: any) => {
         const playerTotal = playerTotals[player.id] || 0;
         const goalsScored = parseInt(player.goals_scored || 0);
         
         if (playerTotal > 0 && teamTotal > 0) {
-          // Base goal share from raw data
-          let goalShare = (playerTotal / teamTotal) * 100;
+          // T002: Blend season-total share (50%) with xG-per-90 share (50%)
+          // xG per 90 reflects current form and role better than season totals
+          const seasonTotalShare = (playerTotal / teamTotal) * 100;
+          const playerXGPer90 = parseFloat(player.expected_goals_per_90 || 0);
+          const xgPer90Share = teamAvgXGPer90 > 0 ? (playerXGPer90 / teamAvgXGPer90) * (seasonTotalShare) : seasonTotalShare;
+          // Only blend when player has meaningful minutes to trust xG per 90 (≥300 min)
+          const blendWeight = (player.minutes || 0) >= 300 ? 0.5 : 0;
+          let goalShare = seasonTotalShare * (1 - blendWeight) + xgPer90Share * blendWeight;
           
           // Apply penalty taker bonus (no normalization)
           const penaltyOrder = player.penalties_order || 99;
@@ -9085,6 +9102,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Calculate player projections using formula: goal share × team projections × availability per gameweek
           const playerProjections: any[] = [];
           
+          // T001: Build teamGamesPlayed map for starting rate calculation
+          const goalsTeamGamesPlayed = new Map<number, number>();
+          (bootstrapData.events || []).forEach((e: any) => { /* placeholder */ });
+          // We use bootstrapData.teams to seed, then count finished fixtures
+          // Finished fixtures aren't directly available here, so use fplPlayer.starts / fplPlayer.minutes/90 proxy
+          
           goalShareData.forEach((team: any) => {
             const teamProjections = teamProjectionsMap[team.teamId];
             
@@ -9093,14 +9116,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const goalShare = player.goalShare || 0;
                 const fplPlayer = fplPlayerMap.get(player.playerId);
                 
+                // T001: Starting rate from FPL player starts data
+                // Estimate teamGamesPlayed as the max starts any player on the team has (proxy)
+                // or use minutes / 90 as a proxy when starts is unavailable
+                let startingRate = 1.0;
+                if (fplPlayer) {
+                  const fplStarts = fplPlayer.starts || 0;
+                  // Proxy teamGamesPlayed: minutes of full match / 90 gives max possible starts
+                  const maxTeamGP = Math.max(1, Math.round((fplPlayer.minutes || 0) / 90 + fplStarts) / 2);
+                  // Better proxy: use the finished events count from bootstrapData
+                  const finishedEvents = (bootstrapData.events || []).filter((e: any) => e.finished).length;
+                  const teamGP = Math.max(finishedEvents, 1);
+                  if (teamGP >= 5 && fplStarts > 0) {
+                    startingRate = Math.max(0.10, Math.min(1.0, fplStarts / teamGP));
+                  }
+                }
+                
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; goals: number }> } = {};
                 
-                // Calculate projected goals for each gameweek using full season goal share × availability
+                // Calculate projected goals for each gameweek using blended goal share × availability × startingRate
                 Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamGoals]) => {
                   const gwNum = parseInt(gameweek);
                   const availability = fplPlayer
-                    ? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, goalsEvents)
+                    ? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, goalsEvents) * startingRate
                     : 1.0;
                   
                   gameweekProjections[gameweek] = (goalShare / 100) * (teamGoals as number) * availability;
@@ -9245,6 +9284,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const nextGameweek = currentGameweek + 1; // Start from next gameweek
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
       
+      // T001: Build player lookup map for starting rate calculation
+      const bootstrapPlayerMap = new Map<number, any>();
+      (bootstrapData.elements || []).forEach((el: any) => bootstrapPlayerMap.set(el.id, el));
+      const finishedEventsCount = (bootstrapData.events || []).filter((e: any) => e.finished).length;
+      
       // Create player projections using pure projection methodology
       const playerProjections: any[] = [];
       
@@ -9265,6 +9309,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const playerId = player.id || player.playerId;
           const playerName = player.name || player.playerName;
           
+          // T001: Starting rate to account for rotation risk
+          let goalsStartingRate = 1.0;
+          const fplEl = bootstrapPlayerMap.get(playerId);
+          if (fplEl && finishedEventsCount >= 5) {
+            const fplStarts = fplEl.starts || 0;
+            goalsStartingRate = fplStarts > 0
+              ? Math.max(0.10, Math.min(1.0, fplStarts / finishedEventsCount))
+              : 0.10;
+          }
           
           const gameweekProjections: { [gameweek: number]: number } = {};
           let totalProjectedGoals = 0;
@@ -9280,8 +9333,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const projectedTeamGoals = (typeof teamGoals === 'number') ? teamGoals : 0;
             const rawGoalProjection = projectedTeamGoals * (player.goalShare / 100);
             
-            // Use raw goal projection (no minutes scaling)
-            const playerGoalsForGW = rawGoalProjection;
+            // Apply starting rate (T001) to account for rotation
+            const playerGoalsForGW = rawGoalProjection * goalsStartingRate;
             
             gameweekProjections[gameweek] = Math.round(playerGoalsForGW * 100) / 100;
             totalProjectedGoals += playerGoalsForGW;
@@ -15154,8 +15207,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Get opponent's AGR (Average Goals Received/Against per game)
               const opponentAGR = getOpponentAGR(opponentId);
               
-              // Apply formula: Expected saves = Average saves/game × AGR of opponent/1.35 × availability
-              const fixtureSaves = savesPerTeamGame * (opponentAGR / 1.35) * availabilityProb;
+              // T003: Blend saves_per_90 (Opta direct metric) with AGR-based formula
+              // saves_per_90 from FPL API captures the actual shot-stopping rate independent of team quality
+              const fplSavesPer90 = parseFloat(player.saves_per_90 || 0);
+              // AGR-based formula: savesPerTeamGame × (opponentAGR / 1.35)
+              const agrBasedSaves = savesPerTeamGame * (opponentAGR / 1.35);
+              // Direct xGA-scaled formula: fplSavesPer90 × (opponentAGR / 1.35) — normalises shots vs saves
+              const directSaves = fplSavesPer90 > 0 ? fplSavesPer90 * (opponentAGR / 1.35) : agrBasedSaves;
+              // 50/50 blend when player has appeared (saves_per_90 > 0), else fall back to AGR formula
+              const blendedSaves = fplSavesPer90 > 0 ? (agrBasedSaves * 0.5 + directSaves * 0.5) : agrBasedSaves;
+              const fixtureSaves = blendedSaves * availabilityProb;
               gwExpectedSaves += fixtureSaves;
               
               gwFixtureDetails.push({
@@ -15639,6 +15700,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fixturesResponse = await internalFetch("api/fixtures");
         const fixturesData = await fixturesResponse.json();
         
+        // T001: Compute teamGamesPlayed from finished fixtures for starting rate calculation
+        const ycTeamGamesPlayed = new Map<number, number>();
+        fixturesData.forEach((f: any) => {
+          if (f.finished) {
+            ycTeamGamesPlayed.set(f.team_h, (ycTeamGamesPlayed.get(f.team_h) || 0) + 1);
+            ycTeamGamesPlayed.set(f.team_a, (ycTeamGamesPlayed.get(f.team_a) || 0) + 1);
+          }
+        });
+        
         // Extract yellow card data for all players using historical data
         const yellowCardProjections = fplData.elements.map((player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -15649,9 +15719,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalYellowCards = 0;
           let totalPoints = 0;
           
+          // T001: Starting rate — reflects rotation risk beyond injury/suspension
+          const ycTeamGP = Math.max(1, ycTeamGamesPlayed.get(player.team) || 1);
+          const playerStarts = player.starts || 0;
+          const startingRate = ycTeamGP >= 5 ? Math.max(0.10, Math.min(1.0, playerStarts / ycTeamGP)) : 1.0;
+          
           // Calculate expected yellow cards PER GAME using season data
           const seasonYellowCards = player.yellow_cards || 0;
-          const teamGamesPlayed = currentGameweek; // Average number of games team has played
+          const teamGamesPlayed = ycTeamGP;
           const expectedYellowCardsPerGame = teamGamesPlayed > 0 ? seasonYellowCards / teamGamesPlayed : 0;
           
           const ycEvents: BootstrapEvent[] = fplData.events || [];
@@ -15659,8 +15734,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Process each gameweek in the next 12 gameweeks range
           // DGW FIX: Count fixtures per gameweek and multiply rate
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Per-GW availability probability
-            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, ycEvents);
+            // Per-GW availability probability × starting rate (T001)
+            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, ycEvents) * startingRate;
             
             // Find fixtures for this team in this gameweek
             const fixtures = fixturesData.filter((f: any) => 
@@ -15767,6 +15842,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fixturesResponse = await internalFetch("api/fixtures");
         const fixturesData = await fixturesResponse.json();
         
+        // T001: Compute teamGamesPlayed from finished fixtures for starting rate calculation
+        const rcTeamGamesPlayed = new Map<number, number>();
+        fixturesData.forEach((f: any) => {
+          if (f.finished) {
+            rcTeamGamesPlayed.set(f.team_h, (rcTeamGamesPlayed.get(f.team_h) || 0) + 1);
+            rcTeamGamesPlayed.set(f.team_a, (rcTeamGamesPlayed.get(f.team_a) || 0) + 1);
+          }
+        });
+        
         // Extract red card data for all players using historical data
         const redCardProjections = fplData.elements.map((player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -15777,9 +15861,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalRedCards = 0;
           let totalPoints = 0;
           
+          // T001: Starting rate — reflects rotation risk beyond injury/suspension
+          const rcTeamGP = Math.max(1, rcTeamGamesPlayed.get(player.team) || 1);
+          const rcPlayerStarts = player.starts || 0;
+          const rcStartingRate = rcTeamGP >= 5 ? Math.max(0.10, Math.min(1.0, rcPlayerStarts / rcTeamGP)) : 1.0;
+          
           // Calculate expected red cards PER GAME using season data
           const seasonRedCards = player.red_cards || 0;
-          const teamGamesPlayed = currentGameweek; // Average number of games team has played
+          const teamGamesPlayed = rcTeamGP;
           const expectedRedCardsPerGame = teamGamesPlayed > 0 ? seasonRedCards / teamGamesPlayed : 0;
           
           const rcEvents: BootstrapEvent[] = fplData.events || [];
@@ -15787,8 +15876,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Process each gameweek in the next 6 gameweeks range
           // DGW FIX: Count fixtures per gameweek and multiply rate
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Per-GW availability probability
-            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, rcEvents);
+            // Per-GW availability probability × starting rate (T001)
+            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, rcEvents) * rcStartingRate;
             
             // Find fixtures for this team in this gameweek
             const fixtures = fixturesData.filter((f: any) => 
@@ -16179,12 +16268,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const teamFixtures = teamFixturesPlayed.get(player.team) || finishedGWs;
           const bonusPerFixture = teamFixtures > 0 ? playerBonus / teamFixtures : 0;
           
+          // T001: Starting rate — bonus already uses bonus/teamFixtures (accounts for appearances),
+          // but availabilityProb doesn't capture rotation for fit players.
+          // Note: bonusPerFixture already reflects per-team-game (not per-player-game), so startingRate
+          // corrects for players who are fit but rarely start.
+          const bonusTeamGP = Math.max(1, teamFixtures);
+          const bonusPlayerStarts = player.starts || 0;
+          const bonusStartingRate = bonusTeamGP >= 5 ? Math.max(0.10, Math.min(1.0, bonusPlayerStarts / bonusTeamGP)) : 1.0;
+          
           const bonusEvents: BootstrapEvent[] = fplData.events || [];
           const currentGW = fplData.events.find((e: any) => e.is_current)?.id || 1;
           
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Per-GW availability probability
-            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGW, bonusEvents);
+            // Per-GW availability probability × starting rate (T001)
+            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGW, bonusEvents) * bonusStartingRate;
             
             const fixtures = allFixtures.filter((f: any) => 
               f.event === gw && (f.team_h === player.team || f.team_a === player.team)
