@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, Search, ArrowUpDown, Users, Loader2, X, Filter, ChevronDown, ChevronUp, History, Calendar } from "lucide-react";
+import { Shield, Search, ArrowUpDown, Users, X, Filter, ChevronDown, ChevronUp, History, Calendar } from "lucide-react";
+import { LoadingExperience } from "@/components/loading-experience";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -421,22 +422,43 @@ export default function PlayerSaves() {
   // Show loading state while data is loading
   if (isDataLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-blue-50">
-        <Card className="w-96 shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
-              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-              {viewMode === "future" ? "Loading Saves Projections" : "Loading Historical Saves"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-gray-600">
-              {viewMode === "future" 
-                ? "Calculating goalkeeper saves and FPL points for all players across the next 12 gameweeks..."
-                : "Loading historical goalkeeper saves data..."}
+      <div className="fpl-page-container">
+        <div className="fpl-page-header">
+          <div className="fpl-page-header-content">
+            <div className="fpl-page-title">
+              <Shield className="h-8 w-8" />
+              <h1>{viewMode === "future" ? "Goalkeeper Saves Projections" : "Goalkeeper Saves History"}</h1>
+            </div>
+            <p className="fpl-page-subtitle">
+              {viewMode === "future"
+                ? "Goalkeeper save predictions and FPL points analysis for upcoming gameweeks"
+                : "Actual goalkeeper saves from past gameweeks"}
             </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+        {viewMode === "future" ? (
+          <LoadingExperience
+            variant="analysis"
+            title="Loading Saves Projections"
+            description="Fetching goalkeeper data and calculating projected saves for all upcoming gameweeks..."
+            steps={[
+              { text: "Fetching goalkeeper stats and opponent data", delay: "0s" },
+              { text: "Calculating saves using AGR formula", delay: "0.3s" },
+              { text: "Applying availability adjustments", delay: "0.6s" },
+            ]}
+          />
+        ) : (
+          <LoadingExperience
+            variant="table"
+            title="Loading Historical Saves"
+            description="Retrieving goalkeeper save data from completed gameweeks..."
+            steps={[
+              { text: "Connecting to data source", delay: "0s" },
+              { text: "Loading historical records", delay: "0.3s" },
+              { text: "Formatting display", delay: "0.6s" },
+            ]}
+          />
+        )}
       </div>
     );
   }
