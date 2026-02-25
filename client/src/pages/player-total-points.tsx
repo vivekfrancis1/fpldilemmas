@@ -729,6 +729,25 @@ function createPlayerTotalPointsColumns(
   ];
 }
 
+const GW_COMPONENT_KEYS = [
+  'pointsFromGoals', 'pointsFromAssists', 'pointsFromCleanSheets',
+  'pointsFromDefensiveContributions', 'pointsFromMinutes', 'pointsFromBonus',
+  'pointsFromSaves', 'pointsFromGoalsConceded', 'pointsFromYellowCards', 'pointsFromRedCards',
+] as const;
+
+const TOTAL_COMPONENT_KEYS: Record<string, string> = {
+  pointsFromGoals: 'totalPointsFromGoals',
+  pointsFromAssists: 'totalPointsFromAssists',
+  pointsFromCleanSheets: 'totalPointsFromCleanSheets',
+  pointsFromDefensiveContributions: 'totalPointsFromDefensiveContributions',
+  pointsFromMinutes: 'totalPointsFromMinutes',
+  pointsFromBonus: 'totalPointsFromBonus',
+  pointsFromSaves: 'totalPointsFromSaves',
+  pointsFromGoalsConceded: 'totalPointsFromGoalsConceded',
+  pointsFromYellowCards: 'totalPointsFromYellowCards',
+  pointsFromRedCards: 'totalPointsFromRedCards',
+};
+
 export default function PlayerTotalPoints() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -1067,59 +1086,57 @@ export default function PlayerTotalPoints() {
     enabled: viewMode === "past" && startGameweek !== null && endGameweek !== null,
   });
 
-  // Check if default range (for deciding whether to use cached or live endpoint)
-  const isDefaultRange = startGameweek === nextGameweek && endGameweek === maxAvailableGW;
-  
-  const { data: liveTotalPointsData, isLoading: liveLoading, error: liveError, refetch: refetchLive } = useQuery<PlayerTotalPointsData[]>({
-    queryKey: ["/api/player-total-points", startGameweek, endGameweek],
-    queryFn: async () => {
-      const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch total points: ${response.statusText}`);
-      }
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes for live data
-    enabled: viewMode === "future" && startGameweek !== null && endGameweek !== null && !isDefaultRange,
-  });
-
-  // Data selection logic - Cache-first approach for faster loading
+  // Apply GW range filter to cached data client-side — consistent per-GW values regardless of filter
   const totalPointsData = useMemo(() => {
-    let selectedData: PlayerTotalPointsData[] | null = null;
-    
-    // PRIORITY 1: Use cached data if available and user is viewing default range (fast path)
-    if (isDefaultRange && cachedTotalPointsData && cachedTotalPointsData.length > 0) {
-      const samplePlayer = cachedTotalPointsData[0];
-      
-      // Simplified validation - just check for basic required fields
-      const hasValidCachedData = (samplePlayer.name || samplePlayer.playerName) && 
-        samplePlayer.totalExpectedPoints !== undefined;
-      
-      if (hasValidCachedData) {
-        selectedData = cachedTotalPointsData;
+    if (!cachedTotalPointsData || cachedTotalPointsData.length === 0) return null;
+    if (!startGameweek || !endGameweek) return null;
+
+    const samplePlayer = cachedTotalPointsData[0];
+    const hasValidData = (samplePlayer.name || samplePlayer.playerName) &&
+      samplePlayer.totalExpectedPoints !== undefined;
+    if (!hasValidData) return null;
+
+    return cachedTotalPointsData.map(player => {
+      const filtered: { [key: string]: number } = {};
+      const gwProjections = (player.gameweekProjections || {}) as { [key: string]: number };
+
+      for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        const key = gw.toString();
+        if (key in gwProjections) {
+          filtered[key] = gwProjections[key];
+        }
       }
-    }
-    
-    // PRIORITY 2: Use live API data for custom ranges or if cache unavailable
-    if (!selectedData && liveTotalPointsData && liveTotalPointsData.length > 0 && !liveError) {
-      const samplePlayer = liveTotalPointsData[0];
-      
-      // Simplified validation - just check for basic required fields
-      const hasValidLiveData = (samplePlayer.name || samplePlayer.playerName) && 
-        samplePlayer.totalExpectedPoints !== undefined;
-      
-      if (hasValidLiveData) {
-        selectedData = liveTotalPointsData;
+
+      const newTotal = Object.values(filtered).reduce((s, v) => s + v, 0);
+      const numGWs = Object.keys(filtered).length || 1;
+      const playerPrice = player.price || 0;
+
+      const componentOverrides: { [key: string]: any } = {};
+      for (const compKey of GW_COMPONENT_KEYS) {
+        const gwMap = (player as any)[compKey] as { [key: string]: number } | undefined;
+        if (!gwMap) continue;
+        const filteredComp: { [key: string]: number } = {};
+        for (let gw = startGameweek; gw <= endGameweek; gw++) {
+          const key = gw.toString();
+          if (key in gwMap) filteredComp[key] = gwMap[key];
+        }
+        componentOverrides[compKey] = filteredComp;
+        const totalKey = TOTAL_COMPONENT_KEYS[compKey];
+        if (totalKey) {
+          componentOverrides[totalKey] = Object.values(filteredComp).reduce((s, v) => s + v, 0);
+        }
       }
-    }
-    
-    // PRIORITY 3: Return null if neither data source is available
-    if (!selectedData) {
-      return null;
-    }
-    
-    return selectedData;
-  }, [liveTotalPointsData, liveError, cachedTotalPointsData, isDefaultRange]);
+
+      return {
+        ...player,
+        ...componentOverrides,
+        gameweekProjections: filtered,
+        totalExpectedPoints: newTotal,
+        averagePerGameweek: newTotal / numGWs,
+        averageValue: playerPrice > 0 ? newTotal / playerPrice : 0,
+      };
+    });
+  }, [cachedTotalPointsData, startGameweek, endGameweek]);
 
   // Recalculate player data based on excluded point components
   const adjustedPlayerData = useMemo((): PlayerTotalPointsData[] | null => {
@@ -1161,40 +1178,19 @@ export default function PlayerTotalPoints() {
     });
   }, [totalPointsData, excludedComponents, POINT_COMPONENTS]);
 
-  // Loading state - Cache-first loading logic: show loading for cache, then live API if needed
+  // Loading state — single source of truth is the cache
   const isLoading = useMemo(() => {
-    // For past mode, show loading while history loads
-    if (viewMode === "past") {
-      return historyLoading;
-    }
-    
-    // PRIORITY 1: For default range, show loading while cache loads
-    if (isDefaultRange && cachedLoading) return true;
-    
-    // PRIORITY 2: For custom ranges, show loading while live API loads
-    if (!isDefaultRange && liveLoading) return true;
-    
-    // PRIORITY 3: Show loading if neither data source is available yet
-    if (!liveTotalPointsData && !cachedTotalPointsData && !liveError && !cachedError) return true;
-    
+    if (viewMode === "past") return historyLoading;
+    if (cachedLoading) return true;
+    if (!cachedTotalPointsData && !cachedError) return true;
     return false;
-  }, [viewMode, historyLoading, liveLoading, liveError, liveTotalPointsData, cachedLoading, cachedTotalPointsData, cachedError, isDefaultRange]);
+  }, [viewMode, historyLoading, cachedLoading, cachedTotalPointsData, cachedError]);
 
-  // Error handling - API-first: prioritize live API errors, only show cached errors if live API succeeds
+  // Error handling — only cached data source now
   const error = useMemo(() => {
-    // If live API has error and cached also fails, show live error (primary source)
-    if (liveError && cachedError) return liveError;
-    // If only live API has error but cached works, don't show error (cache fallback working)
-    if (liveError && cachedTotalPointsData) return null;
-    // If live API works but cached fails, don't show error (primary source working)
-    if (liveTotalPointsData && cachedError) return null;
-    // Show live API error if no cached fallback available
-    if (liveError && !cachedTotalPointsData) return liveError;
-    // Show cached error only if live API is also unavailable
-    if (cachedError && !liveTotalPointsData) return cachedError;
-    
+    if (cachedError && !cachedTotalPointsData) return cachedError;
     return null;
-  }, [liveError, cachedError, liveTotalPointsData, cachedTotalPointsData]);
+  }, [cachedError, cachedTotalPointsData]);
 
   const handleRefreshData = async () => {
     console.log('🔄 Total Points refresh button clicked!');
@@ -1214,12 +1210,9 @@ export default function PlayerTotalPoints() {
         }
       });
       
-      // Force refetch both cached and live data
+      // Force refetch cached data
       console.log('🔄 Refetching total points data...');
-      await Promise.all([
-        refetchCached(),
-        refetchLive()
-      ]);
+      await refetchCached();
       console.log('🔄 Total points refresh completed!');
     } finally {
       setIsRefreshing(false);
