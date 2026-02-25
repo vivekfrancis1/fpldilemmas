@@ -226,23 +226,22 @@ class ProjectionService {
         }
       });
 
-      // Build fixture lookup: fixtureMap[teamId][gw] = { opponentXG, opponentXGC, isHome }
-      const fixtureMap = new Map<number, Map<number, { opponentXG: number; opponentXGC: number; isHome: boolean }>>();
+      // Build fixture lookup: fixtureMap[teamId][gw] = Array of fixtures (supports DGW — multiple fixtures same GW)
+      type FixtureEntry = { opponentXG: number; opponentXGC: number; isHome: boolean };
+      const fixtureMap = new Map<number, Map<number, FixtureEntry[]>>();
       fixturesData.filter((f: any) => !f.finished && f.event != null).forEach((f: any) => {
-        // Home team perspective
+        // Home team perspective — push so DGW second fixture is NOT dropped
         if (!fixtureMap.has(f.team_h)) fixtureMap.set(f.team_h, new Map());
         const homeMap = fixtureMap.get(f.team_h)!;
-        if (!homeMap.has(f.event)) {
-          const oppStats = teamStatsMap.get(f.team_a) || { xGFor: leagueAvgXG, xGAgainst: leagueAvgXGC, played: 1 };
-          homeMap.set(f.event, { opponentXG: oppStats.xGFor, opponentXGC: oppStats.xGAgainst, isHome: true });
-        }
+        if (!homeMap.has(f.event)) homeMap.set(f.event, []);
+        const oppStatsA = teamStatsMap.get(f.team_a) || { xGFor: leagueAvgXG, xGAgainst: leagueAvgXGC, played: 1 };
+        homeMap.get(f.event)!.push({ opponentXG: oppStatsA.xGFor, opponentXGC: oppStatsA.xGAgainst, isHome: true });
         // Away team perspective
         if (!fixtureMap.has(f.team_a)) fixtureMap.set(f.team_a, new Map());
         const awayMap = fixtureMap.get(f.team_a)!;
-        if (!awayMap.has(f.event)) {
-          const oppStats = teamStatsMap.get(f.team_h) || { xGFor: leagueAvgXG, xGAgainst: leagueAvgXGC, played: 1 };
-          awayMap.set(f.event, { opponentXG: oppStats.xGFor, opponentXGC: oppStats.xGAgainst, isHome: false });
-        }
+        if (!awayMap.has(f.event)) awayMap.set(f.event, []);
+        const oppStatsH = teamStatsMap.get(f.team_h) || { xGFor: leagueAvgXG, xGAgainst: leagueAvgXGC, played: 1 };
+        awayMap.get(f.event)!.push({ opponentXG: oppStatsH.xGFor, opponentXGC: oppStatsH.xGAgainst, isHome: false });
       });
 
       // Include ALL players in the FPL database (no filtering)
@@ -271,249 +270,215 @@ class ProjectionService {
           const cleanSheetPoints = position === 'GKP' || position === 'DEF' ? 4 : position === 'MID' ? 1 : 0;
           
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Get gameweek-specific opponent strength and fixture context
+            // Player-level season data (constant for all fixtures in this GW)
             const form = parseFloat(fplPlayer.form || "0");
             const totalPoints = parseFloat(fplPlayer.total_points || "0");
             const selectedBy = parseFloat(fplPlayer.selected_by_percent || "1");
             const minutes = parseFloat(fplPlayer.minutes || "0");
-            
-            // T001: Use real fixture data for opponent strength instead of fake seed
             const teamId = fplPlayer.team;
-            const teamGWFixtures = fixtureMap.get(teamId);
-            const realFixture = teamGWFixtures?.get(gw);
-            
-            // If no fixture this GW (blank gameweek), skip — project 0 points for this GW
-            if (!realFixture) {
+
+            // DGW support: gwFixtureList has 1 entry for normal GW, 2 for DGW, 0 for blank GW
+            const gwFixtureList = fixtureMap.get(teamId)?.get(gw) ?? [];
+
+            // Blank gameweek — project 0 for every component
+            if (gwFixtureList.length === 0) {
               gameweekProjections[gw.toString()] = 0;
               pointsFromGoals[gw.toString()] = 0;
               pointsFromAssists[gw.toString()] = 0;
               pointsFromCleanSheets[gw.toString()] = 0;
               pointsFromMinutes[gw.toString()] = 0;
               pointsFromBonus[gw.toString()] = 0;
+              pointsFromDefensiveContributions[gw.toString()] = 0;
               continue;
             }
-            
-            const isHomeFixture = realFixture.isHome;
-            const opponentXG = realFixture.opponentXG;   // Opponent's attacking rate (threat to our CS/saves)
-            const opponentXGC = realFixture.opponentXGC; // Opponent's defensive weakness (opportunity for our attack)
-            
-            // Difficulty multiplier: relative opponent defensive weakness × venue adjustment
-            const rawDifficulty = opponentXGC / Math.max(leagueAvgXGC, 0.5);
-            const venueBase = isHomeFixture ? 1.00 : 0.84;
-            const difficultyMultiplier = Math.max(0.60, Math.min(1.40, rawDifficulty * venueBase));
-            
-            // Base form with season performance weighting
-            const seasonPerformance = totalPoints / Math.max(minutes / 90, 1); // Points per 90 minutes
+
+            // Player-level constants (same regardless of which fixture in a DGW)
+            const seasonPerformance = totalPoints / Math.max(minutes / 90, 1);
             const adjustedForm = Math.max(form * 0.7 + seasonPerformance * 0.3, 1.0);
-            
-            // Calculate average minutes per game from season data
-            const gamesPlayed = Math.max(startGameweek - 1, 1); // Number of gameweeks that have finished
-            const averageMinutesPerGame = minutes > 0 ? (minutes / gamesPlayed) : 45; // Default to 45 if no data
-            
-            // 1. MINUTES CALCULATION
+            const gamesPlayed = Math.max(startGameweek - 1, 1);
+            const averageMinutesPerGame = minutes > 0 ? (minutes / gamesPlayed) : 45;
             const injuryRisk = (fplPlayer.chance_of_playing_next_round || 100) / 100;
-            const rotationRisk = selectedBy > 30 ? 0.95 : selectedBy > 10 ? 0.85 : 0.75; // Popular players less rotated
-            
-            // Player availability uses official FPL API data
-            let expectedMinutes = Math.min(90, adjustedForm * 15) * injuryRisk * rotationRisk;
-            
-            const minutesPoints = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
-            pointsFromMinutes[gw.toString()] = minutesPoints; // Use numeric string for consistency
-            totalMinutesPoints += minutesPoints;
-            
-            // 2. GOALS CALCULATION (per 90 minutes, NOT scaled by expected minutes)
-            let goalsExpected;
-            if (position === 'FWD') {
-              goalsExpected = (adjustedForm * 0.12 + seasonPerformance * 0.05) * difficultyMultiplier;
-            } else if (position === 'MID') {
-              goalsExpected = (adjustedForm * 0.06 + seasonPerformance * 0.03) * difficultyMultiplier;
-            } else if (position === 'DEF') {
-              goalsExpected = (adjustedForm * 0.02 + seasonPerformance * 0.01) * difficultyMultiplier;
-            } else {
-              goalsExpected = adjustedForm * 0.005 * difficultyMultiplier; // GKP
-            }
-            
-            const gwGoalPoints = goalsExpected * goalPoints;
-            pointsFromGoals[gw.toString()] = Math.round(gwGoalPoints * 100) / 100; // Use numeric string for consistency
-            totalGoalPoints += gwGoalPoints;
-            
-            // 3. ASSISTS CALCULATION (NOT scaled by expected minutes)
-            let assistsExpected;
-            if (position === 'MID') {
-              assistsExpected = (adjustedForm * 0.08 + seasonPerformance * 0.04) * difficultyMultiplier;
-            } else if (position === 'FWD') {
-              assistsExpected = (adjustedForm * 0.04 + seasonPerformance * 0.02) * difficultyMultiplier;
-            } else if (position === 'DEF') {
-              assistsExpected = (adjustedForm * 0.025 + seasonPerformance * 0.01) * difficultyMultiplier;
-            } else {
-              assistsExpected = adjustedForm * 0.003 * difficultyMultiplier; // GKP
-            }
-            
-            const gwAssistPoints = assistsExpected * assistPoints;
-            pointsFromAssists[gw.toString()] = Math.round(gwAssistPoints * 100) / 100; // Use numeric string for consistency
-            totalAssistPoints += gwAssistPoints;
-            
-            // 4. CLEAN SHEET CALCULATION (T002: Poisson model with real opponent xG)
-            let cleanSheetProb = 0;
-            if (position === 'GKP' || position === 'DEF' || position === 'MID') {
-              // λ = opponent xG × venue scaling (opponents score more when we're away)
-              const csVenueScale = isHomeFixture ? 0.84 : 1.16;
-              const lambda = opponentXG * csVenueScale;
-              // Calibrated Poisson CS probability using per-team coefficient
-              const k = teamCSCoeffMap.get(teamId) ?? 1.0;
-              cleanSheetProb = Math.max(0, Math.min(0.85, Math.exp(-lambda * k)));
-              if (position === 'MID') cleanSheetProb *= 0.8;
-              // No separate venue ×0.9 — venue is baked into λ above
-            }
-            
-            const gwCleanSheetPoints = cleanSheetProb * cleanSheetPoints * (averageMinutesPerGame / 90);
-            pointsFromCleanSheets[gw.toString()] = Math.round(gwCleanSheetPoints * 100) / 100; // Use numeric string for consistency
-            
-            // 5. SAVES CALCULATION (Goalkeepers Only) - Official FPL Rules: 1pt per 3 saves, 5pts per penalty save
-            let savesPoints = 0;
-            if (position === 'GKP') {
-              // NEW FORMULA: (Goalkeeper Avg Saves/Game × Opponent AGR) / 1.35
-              // Get goalkeeper's historical average saves per game from FPL data
-              const goalkeeperAvgSavesPerGame = fplPlayer.saves && fplPlayer.minutes > 0 
-                ? (fplPlayer.saves / (fplPlayer.minutes / 90)) 
-                : 2.5; // Default to 2.5 saves per 90 if no data
-              
-              // T001: Use real opponent xG as Attacking Goal Rate
-              const opponentAGR = opponentXG;
-              
-              // Calculate expected saves (no minutes multiplier)
-              const expectedSaves = (goalkeeperAvgSavesPerGame * opponentAGR / 1.35);
-              
-              // Poisson probability-based saves points calculation
-              // FPL awards 1 point per 3 saves (floor-based thresholds: 3=1pt, 6=2pt, 9=3pt, 12=4pt)
-              const poissonProbAtLeast = (lambda: number, k: number): number => {
-                if (lambda <= 0) return 0;
-                let cumulativeProb = 0;
-                for (let i = 0; i < k; i++) {
-                  cumulativeProb += Math.exp(-lambda + i * Math.log(lambda) - Array.from({length: i}, (_, j) => Math.log(j + 1)).reduce((a, b) => a + b, 0));
-                }
-                return 1 - cumulativeProb;
-              };
-              savesPoints = poissonProbAtLeast(expectedSaves, 3)
-                + poissonProbAtLeast(expectedSaves, 6)
-                + poissonProbAtLeast(expectedSaves, 9)
-                + poissonProbAtLeast(expectedSaves, 12);
-              
-              // Penalty save probability (rare event, ~3% chance per game for top keepers)
-              const penaltySaveProbability = position === 'GKP' ? 0.03 * (adjustedForm / 10) : 0;
-              const penaltySavePoints = penaltySaveProbability * 5; // 5 points per penalty save
-              
-              savesPoints += penaltySavePoints;
-            }
-            
-            // 6. GOALS CONCEDED (Goalkeepers and Defenders Only) - Official FPL Rules: -1pt per 2 goals conceded
-            let goalsConcededPoints = 0;
-            if ((position === 'GKP' || position === 'DEF') && averageMinutesPerGame >= 1) {
-              // T001: Use real opponent xG as attack strength for goals conceded
-              const opponentAttackStrength = opponentXG;
-              
-              const teamDefenseStrength = (adjustedForm * 0.05) + 0.85; // Base 85% + form
-              const expectedGoalsConceded = (opponentAttackStrength / teamDefenseStrength) * (averageMinutesPerGame / 90);
-              
-              // Poisson-based goals conceded points calculation
-              // FPL rule: -1pt per 2 goals conceded (floor(gc/2) * -1)
-              // E[points] = -Σ floor(k/2) * P(X=k) for k=0,1,2,...
-              const lambda = expectedGoalsConceded;
-              if (lambda > 0) {
-                let expectedPenalty = 0;
-                let cumulativeProb = 0;
-                let logFactorial = 0;
-                const maxK = Math.max(20, Math.ceil(lambda * 3));
-                for (let k = 0; k <= maxK; k++) {
-                  if (k > 0) logFactorial += Math.log(k);
-                  const logProb = -lambda + k * Math.log(lambda) - logFactorial;
-                  const prob = Math.exp(logProb);
-                  cumulativeProb += prob;
-                  expectedPenalty += Math.floor(k / 2) * prob;
-                  if (cumulativeProb > 0.9999) break;
-                }
-                goalsConcededPoints = -expectedPenalty;
-              }
-            }
-            
-            // 7. YELLOW CARDS (All Positions) - Official FPL Rules: -1pt per yellow card
-            let yellowCardPoints = 0;
-            if (averageMinutesPerGame >= 1) {
-              // Position-average league rates (empirical baseline)
-              const positionAvgYCRate = position === 'DEF' ? 0.15 : position === 'MID' ? 0.12 : position === 'FWD' ? 0.08 : 0.03;
-              
-              // T002: Player-specific rate blended 50/50 with position average for accuracy
-              const playerYellowCards = parseFloat((fplPlayer as any).yellow_cards || 0);
-              const playerApps = gamesPlayed; // finished GWs = team games played denominator
-              let yellowCardProbability: number;
-              if (playerApps >= 5) {
-                const playerYCRate = playerYellowCards / playerApps;
-                yellowCardProbability = (playerYCRate * 0.5 + positionAvgYCRate * 0.5) * (adjustedForm / 10);
-              } else {
-                yellowCardProbability = positionAvgYCRate * (adjustedForm / 10);
-              }
-              
-              // T001: Adjust for fixture difficulty using real opponent xGC (tougher defense = more cards trying to break down)
-              const ycDiffRatio = opponentXGC / Math.max(leagueAvgXGC, 0.5);
-              if (ycDiffRatio < 0.80) yellowCardProbability *= 1.3; // vs tight defensive teams (elite)
-              else if (ycDiffRatio < 0.95) yellowCardProbability *= 1.1; // vs solid teams
-              
-              // Scale by average minutes
-              yellowCardPoints = yellowCardProbability * (-1) * (averageMinutesPerGame / 90); // -1 point per yellow card (official FPL rule)
-            }
-            
-            // 8. RED CARDS (All Positions) - Official FPL Rules: -3pts per red card
-            let redCardPoints = 0;
-            if (averageMinutesPerGame >= 1) {
-              // Red card probability (much rarer than yellow cards)
-              let redCardProbability;
-              if (position === 'DEF') {
-                redCardProbability = 0.02 * (adjustedForm / 10); // Defenders highest risk
-              } else if (position === 'MID') {
-                redCardProbability = 0.015 * (adjustedForm / 10); // Midfielders moderate
-              } else if (position === 'FWD') {
-                redCardProbability = 0.01 * (adjustedForm / 10); // Forwards lower risk
-              } else {
-                redCardProbability = 0.005 * (adjustedForm / 10); // Goalkeepers very rare
-              }
-              
-              // Scale by average minutes
-              redCardPoints = redCardProbability * (-3) * (averageMinutesPerGame / 90); // -3 points per red card (official FPL rule)
-            }
-            
-            // 9. BONUS POINTS (All Positions) - Historical bonus-per-appearance approach
-            // Uses player's actual demonstrated bonus earning rate from the season
-            let bonusPoints = 0;
+            const rotationRisk = selectedBy > 30 ? 0.95 : selectedBy > 10 ? 0.85 : 0.75;
+            const expectedMinutes = Math.min(90, adjustedForm * 15) * injuryRisk * rotationRisk;
+            const fixtureCount = gwFixtureList.length; // 1 = normal, 2 = DGW
+
+            // 1. MINUTES — each fixture is a separate appearance, scale by fixtureCount
+            const minutesPointsPerFixture = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
+            const gwMinutesPoints = minutesPointsPerFixture * fixtureCount;
+            pointsFromMinutes[gw.toString()] = gwMinutesPoints;
+            totalMinutesPoints += gwMinutesPoints;
+
+            // 9. BONUS — players earn bonus from each fixture in a DGW
             const playerSeasonBonus = parseFloat(fplPlayer.bonus || "0");
             const finishedGWCount = Math.max(startGameweek - 1, 1);
-            // bonus_per_gw includes both appearance rate and bonus earning rate naturally
-            bonusPoints = playerSeasonBonus / finishedGWCount;
-            totalCleanSheetPoints += gwCleanSheetPoints;
-            
-            // 10. DEFENSIVE CONTRIBUTIONS (2025/26 season) - Threshold-based scoring
-            let gwDefensivePoints = 0;
-            if (position === 'DEF' || position === 'MID' || position === 'FWD') {
-              // Estimate DC value based on form and minutes
-              const estimatedDC = position === 'DEF' ? 
-                (adjustedForm * 0.8 + seasonPerformance * 0.3) * (expectedMinutes / 90) : 
-                (adjustedForm * 0.4 + seasonPerformance * 0.2) * (expectedMinutes / 90);
-              
-              // Apply FPL threshold rule: 2 points if DC >= 10 for DEF, >= 12 for MID/FWD
-              const dcThreshold = position === 'DEF' ? 10 : 12;
-              gwDefensivePoints = estimatedDC >= dcThreshold ? 2 : 0;
-            }
-            pointsFromDefensiveContributions[gw.toString()] = Math.round(gwDefensivePoints * 100) / 100; // Use numeric string for consistency
-            totalDefensivePoints += gwDefensivePoints;
-            
-            // Store bonus points in the dedicated tracking
-            pointsFromBonus[gw.toString()] = Math.round(bonusPoints * 100) / 100; // Use numeric string for consistency
-            totalBonusPoints += bonusPoints;
-            
-            // 11. TOTAL GAMEWEEK POINTS (sum ALL FPL scoring components)
-            const gwTotal = gwGoalPoints + gwAssistPoints + gwCleanSheetPoints + gwDefensivePoints + 
-                          minutesPoints + savesPoints + goalsConcededPoints + yellowCardPoints + 
-                          redCardPoints + bonusPoints;
-            gameweekProjections[gw.toString()] = Math.max(Math.round(gwTotal * 100) / 100, 0.0); // Use numeric string for consistency
+            const gwBonusPoints = (playerSeasonBonus / finishedGWCount) * fixtureCount;
+            pointsFromBonus[gw.toString()] = Math.round(gwBonusPoints * 100) / 100;
+            totalBonusPoints += gwBonusPoints;
+
+            // T002: Per-player penalty save rate (computed once, used inside fixture loop for GKPs)
+            const playerPenSaved = parseFloat((fplPlayer as any).penalties_saved || "0");
+            const playerPenRate = playerPenSaved / Math.max(gamesPlayed, 1);
+            const blendedPenRate = gamesPlayed >= 5
+              ? Math.max(0.01, Math.min(0.08, playerPenRate * 0.5 + 0.03 * 0.5))
+              : 0.03;
+
+            // Poisson helper (defined once per player loop for efficiency)
+            const poissonProbAtLeast = (lambda: number, k: number): number => {
+              if (lambda <= 0) return 0;
+              let cumulativeProb = 0;
+              for (let i = 0; i < k; i++) {
+                cumulativeProb += Math.exp(-lambda + i * Math.log(lambda) - Array.from({length: i}, (_, j) => Math.log(j + 1)).reduce((a, b) => a + b, 0));
+              }
+              return 1 - cumulativeProb;
+            };
+
+            // Per-fixture accumulators — summed across both fixtures in a DGW
+            let gwGoalPointsAcc = 0;
+            let gwAssistPointsAcc = 0;
+            let gwCleanSheetPointsAcc = 0;
+            let gwSavesPointsAcc = 0;
+            let gwGoalsConcededAcc = 0;
+            let gwYellowCardAcc = 0;
+            let gwRedCardAcc = 0;
+            let gwDefensiveAcc = 0;
+
+            for (const realFixture of gwFixtureList) {
+              const isHomeFixture = realFixture.isHome;
+              const opponentXG = realFixture.opponentXG;
+              const opponentXGC = realFixture.opponentXGC;
+
+              // Difficulty multiplier: opponent defensive weakness × venue adjustment
+              const rawDifficulty = opponentXGC / Math.max(leagueAvgXGC, 0.5);
+              const venueBase = isHomeFixture ? 1.00 : 0.84;
+              const difficultyMultiplier = Math.max(0.60, Math.min(1.40, rawDifficulty * venueBase));
+
+              // 2. GOALS CALCULATION
+              let goalsExpected;
+              if (position === 'FWD') {
+                goalsExpected = (adjustedForm * 0.12 + seasonPerformance * 0.05) * difficultyMultiplier;
+              } else if (position === 'MID') {
+                goalsExpected = (adjustedForm * 0.06 + seasonPerformance * 0.03) * difficultyMultiplier;
+              } else if (position === 'DEF') {
+                goalsExpected = (adjustedForm * 0.02 + seasonPerformance * 0.01) * difficultyMultiplier;
+              } else {
+                goalsExpected = adjustedForm * 0.005 * difficultyMultiplier; // GKP
+              }
+              gwGoalPointsAcc += goalsExpected * goalPoints;
+
+              // 3. ASSISTS CALCULATION
+              let assistsExpected;
+              if (position === 'MID') {
+                assistsExpected = (adjustedForm * 0.08 + seasonPerformance * 0.04) * difficultyMultiplier;
+              } else if (position === 'FWD') {
+                assistsExpected = (adjustedForm * 0.04 + seasonPerformance * 0.02) * difficultyMultiplier;
+              } else if (position === 'DEF') {
+                assistsExpected = (adjustedForm * 0.025 + seasonPerformance * 0.01) * difficultyMultiplier;
+              } else {
+                assistsExpected = adjustedForm * 0.003 * difficultyMultiplier; // GKP
+              }
+              gwAssistPointsAcc += assistsExpected * assistPoints;
+
+              // 4. CLEAN SHEET — Poisson model with real opponent xG
+              let cleanSheetProb = 0;
+              if (position === 'GKP' || position === 'DEF' || position === 'MID') {
+                const csVenueScale = isHomeFixture ? 0.84 : 1.16;
+                const lambda = opponentXG * csVenueScale;
+                const k = teamCSCoeffMap.get(teamId) ?? 1.0;
+                cleanSheetProb = Math.max(0, Math.min(0.85, Math.exp(-lambda * k)));
+                if (position === 'MID') cleanSheetProb *= 0.8;
+              }
+              gwCleanSheetPointsAcc += cleanSheetProb * cleanSheetPoints * (averageMinutesPerGame / 90);
+
+              // 5. SAVES (Goalkeepers Only)
+              if (position === 'GKP') {
+                const goalkeeperAvgSavesPerGame = fplPlayer.saves && fplPlayer.minutes > 0
+                  ? (fplPlayer.saves / (fplPlayer.minutes / 90))
+                  : 2.5;
+                const expectedSaves = goalkeeperAvgSavesPerGame * opponentXG / 1.35;
+                let savesPoints = poissonProbAtLeast(expectedSaves, 3)
+                  + poissonProbAtLeast(expectedSaves, 6)
+                  + poissonProbAtLeast(expectedSaves, 9)
+                  + poissonProbAtLeast(expectedSaves, 12);
+                // T002: per-player blended penalty save probability
+                const penaltySaveProbability = blendedPenRate * (adjustedForm / 10);
+                savesPoints += penaltySaveProbability * 5;
+                gwSavesPointsAcc += savesPoints;
+              }
+
+              // 6. GOALS CONCEDED (GKP and DEF only)
+              if ((position === 'GKP' || position === 'DEF') && averageMinutesPerGame >= 1) {
+                const teamDefenseStrength = (adjustedForm * 0.05) + 0.85;
+                const expectedGoalsConceded = (opponentXG / teamDefenseStrength) * (averageMinutesPerGame / 90);
+                const lambda = expectedGoalsConceded;
+                if (lambda > 0) {
+                  let expectedPenalty = 0;
+                  let cumulativeProb = 0;
+                  let logFactorial = 0;
+                  const maxK = Math.max(20, Math.ceil(lambda * 3));
+                  for (let k = 0; k <= maxK; k++) {
+                    if (k > 0) logFactorial += Math.log(k);
+                    const logProb = -lambda + k * Math.log(lambda) - logFactorial;
+                    const prob = Math.exp(logProb);
+                    cumulativeProb += prob;
+                    expectedPenalty += Math.floor(k / 2) * prob;
+                    if (cumulativeProb > 0.9999) break;
+                  }
+                  gwGoalsConcededAcc += -expectedPenalty;
+                }
+              }
+
+              // 7. YELLOW CARDS
+              if (averageMinutesPerGame >= 1) {
+                const positionAvgYCRate = position === 'DEF' ? 0.15 : position === 'MID' ? 0.12 : position === 'FWD' ? 0.08 : 0.03;
+                const playerYellowCards = parseFloat((fplPlayer as any).yellow_cards || 0);
+                let yellowCardProbability: number;
+                if (gamesPlayed >= 5) {
+                  const playerYCRate = playerYellowCards / gamesPlayed;
+                  yellowCardProbability = (playerYCRate * 0.5 + positionAvgYCRate * 0.5) * (adjustedForm / 10);
+                } else {
+                  yellowCardProbability = positionAvgYCRate * (adjustedForm / 10);
+                }
+                const ycDiffRatio = opponentXGC / Math.max(leagueAvgXGC, 0.5);
+                if (ycDiffRatio < 0.80) yellowCardProbability *= 1.3;
+                else if (ycDiffRatio < 0.95) yellowCardProbability *= 1.1;
+                gwYellowCardAcc += yellowCardProbability * (-1) * (averageMinutesPerGame / 90);
+              }
+
+              // 8. RED CARDS
+              if (averageMinutesPerGame >= 1) {
+                let redCardProbability;
+                if (position === 'DEF') redCardProbability = 0.02 * (adjustedForm / 10);
+                else if (position === 'MID') redCardProbability = 0.015 * (adjustedForm / 10);
+                else if (position === 'FWD') redCardProbability = 0.01 * (adjustedForm / 10);
+                else redCardProbability = 0.005 * (adjustedForm / 10);
+                gwRedCardAcc += redCardProbability * (-3) * (averageMinutesPerGame / 90);
+              }
+
+              // 10. DEFENSIVE CONTRIBUTIONS
+              if (position === 'DEF' || position === 'MID' || position === 'FWD') {
+                const estimatedDC = position === 'DEF'
+                  ? (adjustedForm * 0.8 + seasonPerformance * 0.3) * (expectedMinutes / 90)
+                  : (adjustedForm * 0.4 + seasonPerformance * 0.2) * (expectedMinutes / 90);
+                const dcThreshold = position === 'DEF' ? 10 : 12;
+                gwDefensiveAcc += estimatedDC >= dcThreshold ? 2 : 0;
+              }
+            } // end per-fixture loop
+
+            // Store per-GW breakdowns (accumulated across all fixtures for this GW)
+            pointsFromGoals[gw.toString()] = Math.round(gwGoalPointsAcc * 100) / 100;
+            totalGoalPoints += gwGoalPointsAcc;
+            pointsFromAssists[gw.toString()] = Math.round(gwAssistPointsAcc * 100) / 100;
+            totalAssistPoints += gwAssistPointsAcc;
+            pointsFromCleanSheets[gw.toString()] = Math.round(gwCleanSheetPointsAcc * 100) / 100;
+            totalCleanSheetPoints += gwCleanSheetPointsAcc;
+            pointsFromDefensiveContributions[gw.toString()] = Math.round(gwDefensiveAcc * 100) / 100;
+            totalDefensivePoints += gwDefensiveAcc;
+
+            // 11. TOTAL GAMEWEEK POINTS
+            const gwTotal = gwGoalPointsAcc + gwAssistPointsAcc + gwCleanSheetPointsAcc + gwDefensiveAcc +
+                            gwMinutesPoints + gwSavesPointsAcc + gwGoalsConcededAcc + gwYellowCardAcc +
+                            gwRedCardAcc + gwBonusPoints;
+            gameweekProjections[gw.toString()] = Math.max(Math.round(gwTotal * 100) / 100, 0.0);
             totalExpectedPoints += gwTotal;
           }
           
