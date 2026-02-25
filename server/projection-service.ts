@@ -302,6 +302,16 @@ class ProjectionService {
             const expectedMinutes = Math.min(90, adjustedForm * 15) * injuryRisk * rotationRisk;
             const fixtureCount = gwFixtureList.length; // 1 = normal, 2 = DGW
 
+            // xG/xA per 90 from FPL bootstrap — only trusted when player has enough minutes
+            // (< 300 min = < ~3 full games: sample too small, xG/90 unreliable, use form fallback)
+            const MIN_MINUTES_FOR_XG = 300;
+            const xGPer90Raw = parseFloat(fplPlayer.expected_goals_per_90 || '0');
+            const xAPer90Raw = parseFloat(fplPlayer.expected_assists_per_90 || '0');
+            const xGPer90 = minutes >= MIN_MINUTES_FOR_XG ? xGPer90Raw : 0;
+            const xAPer90 = minutes >= MIN_MINUTES_FOR_XG ? xAPer90Raw : 0;
+            // Form recency factor: 0.80–1.20 range relative to league baseline of ~6 FPL pts/90
+            const formFactor = Math.max(0.80, Math.min(1.20, adjustedForm / 6.0));
+
             // 1. MINUTES — each fixture is a separate appearance, scale by fixtureCount
             const minutesPointsPerFixture = expectedMinutes >= 60 ? 2 : expectedMinutes >= 1 ? 1 : 0;
             const gwMinutesPoints = minutesPointsPerFixture * fixtureCount;
@@ -352,29 +362,37 @@ class ProjectionService {
               const venueBase = isHomeFixture ? 1.00 : 0.84;
               const difficultyMultiplier = Math.max(0.60, Math.min(1.40, rawDifficulty * venueBase));
 
-              // 2. GOALS CALCULATION
+              // 2. GOALS CALCULATION — xG/90-primary when available, form fallback for new/no-data players
               let goalsExpected;
-              if (position === 'FWD') {
-                goalsExpected = (adjustedForm * 0.12 + seasonPerformance * 0.05) * difficultyMultiplier;
-              } else if (position === 'MID') {
-                goalsExpected = (adjustedForm * 0.06 + seasonPerformance * 0.03) * difficultyMultiplier;
-              } else if (position === 'DEF') {
-                goalsExpected = (adjustedForm * 0.02 + seasonPerformance * 0.01) * difficultyMultiplier;
+              if (xGPer90 > 0) {
+                goalsExpected = xGPer90 * 0.65 * formFactor * difficultyMultiplier;
               } else {
-                goalsExpected = adjustedForm * 0.005 * difficultyMultiplier; // GKP
+                if (position === 'FWD') {
+                  goalsExpected = (adjustedForm * 0.12 + seasonPerformance * 0.05) * difficultyMultiplier;
+                } else if (position === 'MID') {
+                  goalsExpected = (adjustedForm * 0.06 + seasonPerformance * 0.03) * difficultyMultiplier;
+                } else if (position === 'DEF') {
+                  goalsExpected = (adjustedForm * 0.02 + seasonPerformance * 0.01) * difficultyMultiplier;
+                } else {
+                  goalsExpected = adjustedForm * 0.005 * difficultyMultiplier; // GKP
+                }
               }
               gwGoalPointsAcc += goalsExpected * goalPoints;
 
-              // 3. ASSISTS CALCULATION
+              // 3. ASSISTS CALCULATION — xA/90-primary when available, form fallback for new/no-data players
               let assistsExpected;
-              if (position === 'MID') {
-                assistsExpected = (adjustedForm * 0.08 + seasonPerformance * 0.04) * difficultyMultiplier;
-              } else if (position === 'FWD') {
-                assistsExpected = (adjustedForm * 0.04 + seasonPerformance * 0.02) * difficultyMultiplier;
-              } else if (position === 'DEF') {
-                assistsExpected = (adjustedForm * 0.025 + seasonPerformance * 0.01) * difficultyMultiplier;
+              if (xAPer90 > 0) {
+                assistsExpected = xAPer90 * 0.65 * formFactor * difficultyMultiplier;
               } else {
-                assistsExpected = adjustedForm * 0.003 * difficultyMultiplier; // GKP
+                if (position === 'MID') {
+                  assistsExpected = (adjustedForm * 0.08 + seasonPerformance * 0.04) * difficultyMultiplier;
+                } else if (position === 'FWD') {
+                  assistsExpected = (adjustedForm * 0.04 + seasonPerformance * 0.02) * difficultyMultiplier;
+                } else if (position === 'DEF') {
+                  assistsExpected = (adjustedForm * 0.025 + seasonPerformance * 0.01) * difficultyMultiplier;
+                } else {
+                  assistsExpected = adjustedForm * 0.003 * difficultyMultiplier; // GKP
+                }
               }
               gwAssistPointsAcc += assistsExpected * assistPoints;
 
