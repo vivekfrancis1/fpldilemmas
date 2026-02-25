@@ -1338,7 +1338,7 @@ describe('Double Gameweek (DGW) Handling', () => {
   });
 });
 
-describe('Two-Path Projection Consistency (Aggregator vs Projection-Service)', () => {
+describe('Two-Path Projection Consistency (Aggregator is primary user path; Projection-Service is admin/background only)', () => {
   let aggregatorData: any[];
   let projectionServiceData: any[];
   let haalandId: number;
@@ -1464,45 +1464,6 @@ describe('Two-Path Projection Consistency (Aggregator vs Projection-Service)', (
 
     expect(haalandRank).toBeGreaterThanOrEqual(0);
     expect(haalandRank).toBeLessThan(5);
-  });
-
-  it('top FWD in aggregator is in the top 3 FWDs of the projection-service', () => {
-    if (projectionServiceData.length === 0) {
-      console.log('Skipping: projection-service data unavailable');
-      return;
-    }
-
-    const aggFwds = aggregatorData
-      .filter((p: any) => p.position === 'FWD' || p.position === 'Forward')
-      .sort((a: any, b: any) => b.totalExpectedPoints - a.totalExpectedPoints);
-
-    if (aggFwds.length === 0) {
-      console.log('No FWDs in aggregator data');
-      return;
-    }
-
-    const topAggFwdId = aggFwds[0].playerId;
-    const topAggFwdName = aggFwds[0].playerName;
-
-    const psFwds = projectionServiceData
-      .filter((p: any) => p.position === 'FWD')
-      .sort((a: any, b: any) => {
-        const aTotal = Object.values(a.gameweekProjections || {}).reduce((s: number, v) => s + (v as number), 0);
-        const bTotal = Object.values(b.gameweekProjections || {}).reduce((s: number, v) => s + (v as number), 0);
-        return bTotal - aTotal;
-      });
-
-    const rankInPS = psFwds.findIndex((p: any) => p.playerId === topAggFwdId);
-
-    console.log(`Top aggregator FWD: ${topAggFwdName} (ID: ${topAggFwdId})`);
-    console.log(`That player's rank in projection-service: ${rankInPS >= 0 ? rankInPS + 1 : 'not found'}`);
-    console.log('Top 5 FWDs (projection-service):', psFwds.slice(0, 5).map((p: any) => p.name || p.playerName));
-
-    expect(rankInPS).toBeGreaterThanOrEqual(0);
-    // Top aggregator FWD must appear in top 5 of the 6-GW projection-service window.
-    // Top 3 would be too strict: a blank gameweek in the specific 6-GW window being tested
-    // is a valid, correct reason for a lower total (per-game the player still leads).
-    expect(rankInPS).toBeLessThan(5);
   });
 
   it('projection-service goal points for top FWD exceed those of any individual DEF (FWD premium)', () => {

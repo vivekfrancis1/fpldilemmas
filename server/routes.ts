@@ -6985,17 +6985,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clear cached data to force recalculation with new settings
       totalPointsCache.clear();
       
-      // Immediately repopulate Player Total Points cache after clearing
-      setTimeout(async () => {
-        try {
-          const { projectionService } = await import('./projection-service');
-          await projectionService.getPlayerTotalPoints(4, 9); // Repopulate default range
-          console.log("✅ Player Total Points cache repopulated after admin settings change");
-        } catch (error) {
-          console.error("❌ Failed to repopulate Player Total Points cache:", error);
-        }
-      }, 1000);  // Small delay to ensure settings are applied
-      
       // Clear database cache for clean sheet projections
       await db.delete(teamCleanSheetProjections)
         .where(eq(teamCleanSheetProjections.season, '2025/26'));
@@ -7035,17 +7024,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clear cached data to force recalculation with reset settings
       totalPointsCache.clear();
-      
-      // Immediately repopulate Player Total Points cache after clearing
-      setTimeout(async () => {
-        try {
-          const { projectionService } = await import('./projection-service');
-          await projectionService.getPlayerTotalPoints(4, 9); // Repopulate default range
-          console.log("✅ Player Total Points cache repopulated after admin settings reset");
-        } catch (error) {
-          console.error("❌ Failed to repopulate Player Total Points cache:", error);
-        }
-      }, 1000);  // Small delay to ensure settings are applied
       
       // Clear database cache for clean sheet projections
       await db.delete(teamCleanSheetProjections)
