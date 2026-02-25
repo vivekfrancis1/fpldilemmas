@@ -1028,16 +1028,17 @@ export default function PlayerTotalPoints() {
   // Check if max compare reached
   const maxCompareReached = compareList.length >= 5;
 
-  // ALL useQuery hooks - cached and live data sources
-  const { data: cachedTotalPointsData, isLoading: cachedLoading, error: cachedError, refetch: refetchCached } = useQuery<PlayerTotalPointsData[]>({
-    queryKey: ["/api/cached/player-total-points"],
+  // Fetch the full available GW range once — query key excludes user-selected Start/End GW
+  // so TanStack Query does NOT refetch when the user changes the filter (instant client-side filtering)
+  const { data: fullRangeData, isLoading: fullRangeLoading, error: fullRangeError, refetch: refetchFullRange } = useQuery<PlayerTotalPointsData[]>({
+    queryKey: ["/api/player-total-points/full-range", nextGameweek, maxAvailableGW],
     queryFn: async () => {
-      const res = await fetch('/api/cached/player-total-points');
-      if (!res.ok) throw new Error('Failed to fetch');
+      const res = await fetch(`/api/player-total-points?startGameweek=${nextGameweek}&endGameweek=${maxAvailableGW}`);
+      if (!res.ok) throw new Error('Failed to fetch player total points');
       return res.json();
     },
-    staleTime: 60 * 60 * 1000, // 1 hour cache
-    enabled: viewMode === "future",
+    staleTime: 30 * 60 * 1000, // 30 min — matches server-side in-memory cache TTL
+    enabled: viewMode === "future" && nextGameweek > 0 && maxAvailableGW > 0,
   });
 
   // History query for past gameweeks
@@ -1086,17 +1087,17 @@ export default function PlayerTotalPoints() {
     enabled: viewMode === "past" && startGameweek !== null && endGameweek !== null,
   });
 
-  // Apply GW range filter to cached data client-side — consistent per-GW values regardless of filter
+  // Apply GW range filter to full-range data client-side — consistent per-GW values regardless of filter
   const totalPointsData = useMemo(() => {
-    if (!cachedTotalPointsData || cachedTotalPointsData.length === 0) return null;
+    if (!fullRangeData || fullRangeData.length === 0) return null;
     if (!startGameweek || !endGameweek) return null;
 
-    const samplePlayer = cachedTotalPointsData[0];
+    const samplePlayer = fullRangeData[0];
     const hasValidData = (samplePlayer.name || samplePlayer.playerName) &&
       samplePlayer.totalExpectedPoints !== undefined;
     if (!hasValidData) return null;
 
-    return cachedTotalPointsData.map(player => {
+    return fullRangeData.map(player => {
       const filtered: { [key: string]: number } = {};
       const gwProjections = (player.gameweekProjections || {}) as { [key: string]: number };
 
@@ -1136,7 +1137,7 @@ export default function PlayerTotalPoints() {
         averageValue: playerPrice > 0 ? newTotal / playerPrice : 0,
       };
     });
-  }, [cachedTotalPointsData, startGameweek, endGameweek]);
+  }, [fullRangeData, startGameweek, endGameweek]);
 
   // Recalculate player data based on excluded point components
   const adjustedPlayerData = useMemo((): PlayerTotalPointsData[] | null => {
@@ -1178,19 +1179,19 @@ export default function PlayerTotalPoints() {
     });
   }, [totalPointsData, excludedComponents, POINT_COMPONENTS]);
 
-  // Loading state — single source of truth is the cache
+  // Loading state — single source of truth is the live full-range fetch
   const isLoading = useMemo(() => {
     if (viewMode === "past") return historyLoading;
-    if (cachedLoading) return true;
-    if (!cachedTotalPointsData && !cachedError) return true;
+    if (fullRangeLoading) return true;
+    if (!fullRangeData && !fullRangeError) return true;
     return false;
-  }, [viewMode, historyLoading, cachedLoading, cachedTotalPointsData, cachedError]);
+  }, [viewMode, historyLoading, fullRangeLoading, fullRangeData, fullRangeError]);
 
-  // Error handling — only cached data source now
+  // Error handling — live full-range source
   const error = useMemo(() => {
-    if (cachedError && !cachedTotalPointsData) return cachedError;
+    if (fullRangeError && !fullRangeData) return fullRangeError;
     return null;
-  }, [cachedError, cachedTotalPointsData]);
+  }, [fullRangeError, fullRangeData]);
 
   const handleRefreshData = async () => {
     console.log('🔄 Total Points refresh button clicked!');
@@ -1202,17 +1203,17 @@ export default function PlayerTotalPoints() {
       
       // Invalidate all total points related queries
       console.log('🔄 Invalidating total points queries...');
-      await queryClient.invalidateQueries({ queryKey: ["/api/cached/player-total-points"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/player-total-points/full-range"] });
       await queryClient.invalidateQueries({ 
         predicate: (query) => {
           const key = query.queryKey[0] as string;
-          return key?.includes("/api/player-total-points") || key?.includes("/api/cached/player-total-points");
+          return key?.includes("/api/player-total-points");
         }
       });
       
-      // Force refetch cached data
+      // Force refetch full-range data
       console.log('🔄 Refetching total points data...');
-      await refetchCached();
+      await refetchFullRange();
       console.log('🔄 Total points refresh completed!');
     } finally {
       setIsRefreshing(false);
