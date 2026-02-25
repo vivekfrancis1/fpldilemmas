@@ -763,9 +763,9 @@ export default function ProjectionDocumentation() {
                             <li>Clean sheet points: From Step 8 (based on hybrid goals conceded)</li>
                             <li>Defensive contribution points: From Step 9 (unchanged)</li>
                             <li>Minutes points: 2pts for 60+ min probability + 1pt for sub-60 min probability</li>
-                            <li>Saves points: GK only, floor(saves/3) where saves = avg saves/game × (opponent AGR / 1.35)</li>
-                            <li>Bonus points: Historical bonus-per-fixture rate × mild fixture difficulty adjustment (0.85-1.15)</li>
-                            <li>Yellow cards: Season rate per game × -1 point | Red cards: Historical rate × -3 points | Goals conceded: -floor(projected GC / 2) for GK/DEF</li>
+                            <li>Saves points: GK only, Poisson-based from blended saves/game (60% season avg + 40% saves_per_90) × (opponent AGR / 1.35)</li>
+                            <li>Bonus points: Historical bonus-per-start rate × mild fixture difficulty adjustment (0.85-1.15)</li>
+                            <li>Yellow cards: Blended rate (60% player season rate + 40% position baseline) × opponent difficulty (±20%) × -1pt | Red cards: Blended rate (50/50) × -3pts | Goals conceded: -floor(projected GC / 2) for GK/DEF</li>
                           </ul>
                         </div>
                       </div>
@@ -1087,14 +1087,17 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Individual player goal projections using hybrid team goals and season goal share with set piece bonuses.
+                    Individual player goal projections using hybrid team goals and season goal share, adjusted by a mild form multiplier based on current FPL form vs position average.
                   </p>
                   <div className="bg-green-50 p-3 rounded text-sm">
                     <strong>Formula:</strong><br/>
-                    <code className="text-xs">PlayerGoals = HybridTeamGoals × (PlayerGoalShare / 100)</code><br/>
-                    <code className="text-xs">GoalShare = BaseShare + PenaltyBonus + DirectFKBonus</code>
+                    <code className="text-xs">PlayerGoals = HybridTeamGoals × (GoalShare / 100) × Availability × FormMultiplier</code><br/>
+                    <code className="text-xs">GoalShare = BaseShare + PenaltyBonus + DirectFKBonus</code><br/>
+                    <code className="text-xs">FormFactor = clamp(0.75, 1.25, player.form / positionAvgForm)</code><br/>
+                    <code className="text-xs">FormMultiplier = 0.75 + 0.25 × FormFactor  (range: ~0.94–1.06)</code>
                   </div>
                   <div className="space-y-1 text-sm">
+                    <div><strong>Form Multiplier:</strong> Conservative adjustment anchored at position average — a player at average form = 1.0× (no change). Max effect ±12.5% from season share baseline.</div>
                     <div><strong>Set Piece Bonuses (No Normalization):</strong></div>
                     <ul className="list-disc ml-5 text-xs">
                       <li>Penalty taker (penalties_order=1): +0.8 to +1.5</li>
@@ -1109,7 +1112,7 @@ export default function ProjectionDocumentation() {
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                     <div>API: /api/goal-share-season</div>
-                    <div>Data Source: Season goals + xG + set piece order</div>
+                    <div>Data Source: Season goals + xG + set piece order + FPL form</div>
                   </div>
                 </CardContent>
               </Card>
@@ -1124,26 +1127,29 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Assist projections based on team creativity and season assist share with set piece bonuses.
+                    Assist projections based on team creativity and season assist share with set piece bonuses, adjusted by a mild form multiplier.
                   </p>
                   <div className="bg-blue-50 p-3 rounded text-sm">
                     <strong>Formula:</strong><br/>
-                    <code className="text-xs">PlayerAssists = TeamAssists × (PlayerAssistShare / 100)</code><br/>
-                    <code className="text-xs">AssistShare = BaseShare + CornerBonus</code>
+                    <code className="text-xs">PlayerAssists = TeamAssists × (AssistShare / 100) × Availability × FormMultiplier</code><br/>
+                    <code className="text-xs">AssistShare = BaseShare + CornerBonus</code><br/>
+                    <code className="text-xs">FormFactor = clamp(0.75, 1.25, player.form / positionAvgForm)</code><br/>
+                    <code className="text-xs">FormMultiplier = 0.75 + 0.25 × FormFactor  (range: ~0.94–1.06)</code>
                   </div>
                   <div className="space-y-1 text-sm">
+                    <div><strong>Form Multiplier:</strong> Same as goals — conservative ±12.5% max adjustment vs position peers. Players at average form are unaffected.</div>
                     <div><strong>Set Piece Bonuses (No Normalization):</strong></div>
                     <ul className="list-disc ml-5 text-xs">
                       <li>Corner taker (corners_and_indirect_freekicks_order=1): +0.8 to +1.2</li>
                       <li>Secondary (order=2): +0.5 to +1.2</li>
                       <li>Tertiary (order=3): +0.3 to +1.2</li>
                     </ul>
-                    <div><strong>Assist Ratio:</strong> TeamAssists = TeamGoals × 0.85</div>
+                    <div><strong>Assist Ratio:</strong> Per-team ratio from actual season data (clamped 0.50–1.00), replacing fixed 0.85</div>
                     <div><strong>Points:</strong> Each assist = 3 points</div>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                     <div>API: /api/assist-share-season</div>
-                    <div>Data: Season assists + xA + corner order</div>
+                    <div>Data: Season assists + xA + corner order + FPL form</div>
                   </div>
                 </CardContent>
               </Card>
@@ -1297,26 +1303,29 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Goalkeeper save projections based on average saves per game adjusted by opponent attacking threat.
+                    Goalkeeper save projections blending season average with recent saves_per_90, adjusted by opponent attacking threat.
                   </p>
                   <div className="bg-cyan-50 p-3 rounded text-sm">
                     <strong>Formula:</strong><br/>
-                    <code className="text-xs">ExpectedSaves = AvgSaves/game × (OpponentAGR / 1.35)</code><br/>
+                    <code className="text-xs">BlendedSavesPerGame = 0.60 × SeasonAvg + 0.40 × saves_per_90</code><br/>
+                    <code className="text-xs">ExpectedSaves = BlendedSavesPerGame × (OpponentAGR / 1.35) × Availability</code><br/>
                     <code className="text-xs">AGR = 0.5 × (GF + XGF) / GamesPlayed</code><br/>
-                    <code className="text-xs">SavePoints = floor(ExpectedSaves / 3)</code>
+                    <code className="text-xs">SavePoints = Poisson probability-based (thresholds: 3/6/9/12 saves)</code>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div><strong>Calculation Details:</strong></div>
                     <ul className="list-disc ml-5 text-xs">
-                      <li>Average saves per game from bootstrap static data</li>
-                      <li>Opponent AGR (Attack Goal Rate) scales saves up/down</li>
+                      <li>60% weight on full season saves per game (stability)</li>
+                      <li>40% weight on saves_per_90 from FPL API (recency)</li>
+                      <li>Falls back to season avg if saves_per_90 is missing/zero</li>
+                      <li>Opponent AGR scales saves up/down (harder attack = more saves)</li>
                       <li>1.35 is league-average AGR normalizer</li>
-                      <li>1 point for every 3 saves (floor division)</li>
+                      <li>Points via Poisson CDF: 1pt at 3+ saves, +1pt per additional 3</li>
                     </ul>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                     <div>API: /api/player-saves-projections</div>
-                    <div>Data: Bootstrap static + fixtures + current standings</div>
+                    <div>Data: Bootstrap static + fixtures + current standings + saves_per_90</div>
                   </div>
                 </CardContent>
               </Card>
@@ -1363,25 +1372,30 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Yellow card projections based on simple season rate per game.
+                    Yellow card projections using a position-weighted blended rate scaled by opponent attacking strength.
                   </p>
                   <div className="bg-yellow-50 p-3 rounded text-sm">
                     <strong>Formula:</strong><br/>
-                    <code className="text-xs">ExpectedYCPerGame = SeasonYellowCards / GamesPlayed</code><br/>
-                    <code className="text-xs">YCPoints = ExpectedYCPerGame × -1</code>
+                    <code className="text-xs">PlayerRate = SeasonYellowCards / GamesPlayed</code><br/>
+                    <code className="text-xs">PositionBaseline = GKP: 0.020 | DEF: 0.070 | MID: 0.090 | FWD: 0.050 per game</code><br/>
+                    <code className="text-xs">BlendedRate = 0.60 × PlayerRate + 0.40 × PositionBaseline</code><br/>
+                    <code className="text-xs">OpponentMult = clamp(0.85, 1.20, 1 + 0.25 × (OpponentAGR / LeagueAvgAGR - 1))</code><br/>
+                    <code className="text-xs">ExpectedYC = BlendedRate × OpponentMult × Availability</code><br/>
+                    <code className="text-xs">YCPoints = ExpectedYC × -1</code>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div><strong>Calculation Details:</strong></div>
                     <ul className="list-disc ml-5 text-xs">
-                      <li>Simple season rate: Each player's total yellow cards divided by their team's games played</li>
-                      <li>Flat rate applied to all future gameweeks</li>
-                      <li>No position multiplier, form factor, or fixture difficulty adjustments</li>
+                      <li>60% player season rate + 40% position baseline prevents zero-YC players from projecting 0 risk</li>
+                      <li>Position baseline anchors GKPs lower (~0.02/game) and MIDs higher (~0.09/game)</li>
+                      <li>Opponent multiplier: tougher attack (higher AGR) = more defensive pressure = up to +20% more cards</li>
+                      <li>Opponent multiplier clamped to 0.85–1.20 range</li>
                     </ul>
                     <div><strong>Points:</strong> Each yellow card = -1 point</div>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                     <div>API: /api/player-yellow-cards-projections</div>
-                    <div>Data: Season yellow card totals from bootstrap static</div>
+                    <div>Data: Season yellow card totals + fixtures + opponent AGR</div>
                   </div>
                 </CardContent>
               </Card>
@@ -1396,25 +1410,29 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Red card projections based on simple season rate per game.
+                    Red card projections using a 50/50 blend of player season rate and position baseline — personal red card rate is too noisy to use alone.
                   </p>
                   <div className="bg-red-50 p-3 rounded text-sm">
                     <strong>Formula:</strong><br/>
-                    <code className="text-xs">ExpectedRCPerGame = SeasonRedCards / GamesPlayed</code><br/>
-                    <code className="text-xs">RCPoints = ExpectedRCPerGame × -3</code>
+                    <code className="text-xs">PlayerRate = SeasonRedCards / GamesPlayed</code><br/>
+                    <code className="text-xs">PositionBaseline = GKP: 0.005 | DEF: 0.012 | MID: 0.008 | FWD: 0.007 per game</code><br/>
+                    <code className="text-xs">BlendedRate = 0.50 × PlayerRate + 0.50 × PositionBaseline</code><br/>
+                    <code className="text-xs">ExpectedRC = BlendedRate × Availability</code><br/>
+                    <code className="text-xs">RCPoints = ExpectedRC × -3</code>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div><strong>Calculation Details:</strong></div>
                     <ul className="list-disc ml-5 text-xs">
-                      <li>Simple season rate: Each player's total red cards divided by their team's games played</li>
-                      <li>Generally very low (~0.01-0.03 per game)</li>
-                      <li>No position multiplier, form factor, or fixture difficulty adjustments</li>
+                      <li>50% position baseline (higher than YC) because most players have 0 RCs this season</li>
+                      <li>All GKPs carry a small baseline risk (~0.005/game) rather than projecting exactly 0</li>
+                      <li>DEFs project slightly higher than MIDs and FWDs from baseline</li>
+                      <li>No opponent multiplier — red cards are more impulsive and less correlated with opponent strength</li>
                     </ul>
                     <div><strong>Points:</strong> Each red card = -3 points</div>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                     <div>API: /api/player-red-cards-projections</div>
-                    <div>Data: Season red card totals from bootstrap static</div>
+                    <div>Data: Season red card totals + position baseline blending</div>
                   </div>
                 </CardContent>
               </Card>
@@ -1429,25 +1447,25 @@ export default function ProjectionDocumentation() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-gray-600">
-                    Bonus point projections based on historical bonus-per-fixture rate with fixture difficulty adjustment.
+                    Bonus point projections based on historical bonus-per-start rate with fixture difficulty adjustment.
                   </p>
                   <div className="bg-amber-50 p-3 rounded text-sm">
                     <strong>Formula:</strong><br/>
-                    <code className="text-xs">BonusPerFixture = SeasonBonus / TeamFixturesPlayed</code><br/>
-                    <code className="text-xs">GWBonus = BonusPerFixture × DifficultyFactor(0.85-1.15) × Availability</code>
+                    <code className="text-xs">BonusPerStart = SeasonBonus / PlayerStarts  (fallback: SeasonBonus / TeamFixturesPlayed)</code><br/>
+                    <code className="text-xs">GWBonus = BonusPerStart × DifficultyFactor(0.85-1.15) × Availability</code>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div><strong>Calculation Details:</strong></div>
                     <ul className="list-disc ml-5 text-xs">
-                      <li>Historical bonus-per-appearance rate applied to future fixtures</li>
-                      <li>Mild difficulty adjustment (harder opponents = 0.85×, easier opponents = 1.15×)</li>
-                      <li>No ownership or form factor applied</li>
-                      <li>Difficulty factor clamped between 0.85-1.15 based on opponent FDR</li>
+                      <li>Per-start rate (not per-team-game) correctly reflects rotation players' actual bonus earning frequency</li>
+                      <li>Example: 8 bonus in 15 starts = 0.53/start, vs misleading 0.30/game if divided by team fixtures played</li>
+                      <li>Falls back to per-team-game if player has 0 recorded starts</li>
+                      <li>Mild difficulty adjustment (harder opponents = 0.85×, easier opponents = 1.15×) based on opponent strength rating</li>
                     </ul>
                   </div>
                   <div className="bg-gray-50 p-3 rounded text-sm font-mono">
                     <div>API: /api/player-bonus-points-projections</div>
-                    <div>Data: Season bonus totals + fixture difficulty ratings</div>
+                    <div>Data: Season bonus totals + player starts + fixture difficulty ratings</div>
                   </div>
                 </CardContent>
               </Card>

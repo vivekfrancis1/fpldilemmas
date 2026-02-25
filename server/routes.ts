@@ -8998,13 +8998,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fplPlayerMap.set(el.id, el);
           });
           
+          // Compute position-average FPL form for form multiplier
+          const positionAvgFormGoals = new Map<string, number>();
+          for (const pos of ['GKP', 'DEF', 'MID', 'FWD']) {
+            const posPlayers = bootstrapData.elements.filter(
+              (p: any) => ['', 'GKP', 'DEF', 'MID', 'FWD'][p.element_type] === pos && (p.minutes || 0) > 0
+            );
+            const avg = posPlayers.length
+              ? posPlayers.reduce((s: number, p: any) => s + parseFloat(p.form || '0'), 0) / posPlayers.length
+              : 5.0;
+            positionAvgFormGoals.set(pos, avg);
+          }
+
           // Create lookup map for team projections by teamId (include fixtureDetails for DGW)
           const teamProjectionsMap: { [teamId: number]: any } = {};
           teamProjectionsData.forEach((team: any) => {
             teamProjectionsMap[team.teamId] = team;
           });
           
-          // Calculate player projections using formula: goal share × team projections × availability per gameweek
+          // Calculate player projections using formula: goal share × team projections × availability × form per gameweek
           const playerProjections: any[] = [];
           
           goalShareData.forEach((team: any) => {
@@ -9015,17 +9027,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const goalShare = player.goalShare || 0;
                 const fplPlayer = fplPlayerMap.get(player.playerId);
                 
+                // Form multiplier: 75% base + 25% form-adjusted; range 0.84–1.06 max
+                const playerForm = parseFloat(fplPlayer?.form || '0');
+                const posAvgGoals = positionAvgFormGoals.get(player.position) || 5.0;
+                const formFactor = Math.max(0.75, Math.min(1.25, playerForm / Math.max(posAvgGoals, 0.1)));
+                const formMultiplier = 0.75 + 0.25 * formFactor;
+
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; goals: number }> } = {};
                 
-                // Calculate projected goals for each gameweek using full season goal share × availability
+                // Calculate projected goals for each gameweek using full season goal share × availability × form
                 Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamGoals]) => {
                   const gwNum = parseInt(gameweek);
                   const availability = fplPlayer
                     ? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, goalsEvents)
                     : 1.0;
                   
-                  gameweekProjections[gameweek] = (goalShare / 100) * (teamGoals as number) * availability;
+                  gameweekProjections[gameweek] = (goalShare / 100) * (teamGoals as number) * availability * formMultiplier;
                   
                   // Build fixtureDetails for DGW support (individual fixture breakdown)
                   const teamFixtures = teamProjections.fixtureDetails?.[gameweek] || [];
@@ -9033,7 +9051,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     fixtureDetails[gameweek] = teamFixtures.map((f: any) => ({
                       opponent: f.opponent,
                       isHome: f.isHome,
-                      goals: (goalShare / 100) * (f.goals || 0) * availability
+                      goals: (goalShare / 100) * (f.goals || 0) * availability * formMultiplier
                     }));
                   }
                 });
@@ -9418,6 +9436,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           (bootstrapData.elements || []).forEach((el: any) => {
             fplPlayerMap.set(el.id, el);
           });
+
+          // Compute position-average FPL form for form multiplier
+          const positionAvgFormAssists = new Map<string, number>();
+          for (const pos of ['GKP', 'DEF', 'MID', 'FWD']) {
+            const posPlayers = bootstrapData.elements.filter(
+              (p: any) => ['', 'GKP', 'DEF', 'MID', 'FWD'][p.element_type] === pos && (p.minutes || 0) > 0
+            );
+            const avg = posPlayers.length
+              ? posPlayers.reduce((s: number, p: any) => s + parseFloat(p.form || '0'), 0) / posPlayers.length
+              : 5.0;
+            positionAvgFormAssists.set(pos, avg);
+          }
           
           // Create lookup map for team projections by teamId (include fixtureDetails for DGW)
           const teamProjectionsMap: { [teamId: number]: any } = {};
@@ -9425,7 +9455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             teamProjectionsMap[team.teamId] = team;
           });
           
-          // Calculate player projections using formula: assist share × team projections × availability per gameweek
+          // Calculate player projections using formula: assist share × team projections × availability × form per gameweek
           const playerProjections: any[] = [];
           
           assistShareData.forEach((team: any) => {
@@ -9435,18 +9465,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
               team.players.forEach((player: any) => {
                 const assistShare = player.assistShare || 0;
                 const fplPlayer = fplPlayerMap.get(player.playerId);
+
+                // Form multiplier: 75% base + 25% form-adjusted; conservative range
+                const playerForm = parseFloat(fplPlayer?.form || '0');
+                const posAvgAssists = positionAvgFormAssists.get(player.position) || 5.0;
+                const formFactor = Math.max(0.75, Math.min(1.25, playerForm / Math.max(posAvgAssists, 0.1)));
+                const formMultiplier = 0.75 + 0.25 * formFactor;
                 
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; assists: number }> } = {};
                 
-                // Calculate projected assists for each gameweek using full season assist share × availability
+                // Calculate projected assists for each gameweek using full season assist share × availability × form
                 Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamAssists]) => {
                   const gwNum = parseInt(gameweek);
                   const availability = fplPlayer
                     ? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, assistsEvents)
                     : 1.0;
                   
-                  gameweekProjections[gameweek] = (assistShare / 100) * (teamAssists as number) * availability;
+                  gameweekProjections[gameweek] = (assistShare / 100) * (teamAssists as number) * availability * formMultiplier;
                   
                   // Build fixtureDetails for DGW support (individual fixture breakdown)
                   const teamFixtures = teamProjections.fixtureDetails?.[gameweek] || [];
@@ -9454,7 +9490,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     fixtureDetails[gameweek] = teamFixtures.map((f: any) => ({
                       opponent: f.opponent,
                       isHome: f.isHome,
-                      assists: (assistShare / 100) * (f.assists || 0) * availability
+                      assists: (assistShare / 100) * (f.assists || 0) * availability * formMultiplier
                     }));
                   }
                 });
@@ -15033,6 +15069,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // FULL SEASON: Calculate saves per team game for this player
           const savesPerTeamGame = currentSeasonSaves / teamGamesPlayed;
+
+          // D1: Blend season avg with saves_per_90 from FPL API for recency sensitivity
+          const savesPer90FromAPI = parseFloat(player.saves_per_90 || '0');
+          const blendedSavesPerGame = savesPer90FromAPI > 0
+            ? 0.60 * savesPerTeamGame + 0.40 * savesPer90FromAPI
+            : savesPerTeamGame;
           
           const savesEvents: BootstrapEvent[] = fplData.events || [];
           
@@ -15059,8 +15101,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Get opponent's AGR (Average Goals Received/Against per game)
               const opponentAGR = getOpponentAGR(opponentId);
               
-              // Apply formula: Expected saves = Average saves/game × AGR of opponent/1.35 × availability
-              const fixtureSaves = savesPerTeamGame * (opponentAGR / 1.35) * availabilityProb;
+              // Apply formula: blended saves/game (60% season + 40% saves_per_90) × AGR of opponent/1.35 × availability
+              const fixtureSaves = blendedSavesPerGame * (opponentAGR / 1.35) * availabilityProb;
               gwExpectedSaves += fixtureSaves;
               
               gwFixtureDetails.push({
@@ -15543,6 +15585,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fetch fixtures to detect DGW
         const fixturesResponse = await internalFetch("api/fixtures");
         const fixturesData = await fixturesResponse.json();
+
+        // League average AGR for opponent difficulty scaling
+        const totalLeagueGoalsYC = fplData.elements.reduce(
+          (s: number, p: any) => s + (p.goals_scored || 0), 0
+        );
+        const leagueAvgAGR_YC = totalLeagueGoalsYC / Math.max(1, fplData.teams.length * currentGameweek);
+
+        // Position-level YC baselines (per game)
+        const positionYCBaseline: Record<string, number> = {
+          GKP: 0.020, DEF: 0.070, MID: 0.090, FWD: 0.050
+        };
         
         // Extract yellow card data for all players using historical data
         const yellowCardProjections = fplData.elements.map((player: any) => {
@@ -15558,6 +15611,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const seasonYellowCards = player.yellow_cards || 0;
           const teamGamesPlayed = currentGameweek; // Average number of games team has played
           const expectedYellowCardsPerGame = teamGamesPlayed > 0 ? seasonYellowCards / teamGamesPlayed : 0;
+
+          // Blend player rate with position baseline (60/40) for robustness
+          const posBaseline_YC = positionYCBaseline[position] ?? 0.060;
+          const blendedYCRate = 0.60 * expectedYellowCardsPerGame + 0.40 * posBaseline_YC;
           
           const ycEvents: BootstrapEvent[] = fplData.events || [];
           
@@ -15575,17 +15632,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; yellowCards: number }> = [];
             let gwYellowCards = 0;
             
-            // Sum yellow cards across all fixtures
+            // Sum yellow cards across all fixtures with opponent difficulty scaling
             fixtures.forEach((fixture: any) => {
               const opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
-              
-              gwYellowCards += expectedYellowCardsPerGame * availabilityProb;
+
+              // Opponent attack rate: stronger attack = more pressure on defenders = more cards
+              const opponentGoals = fplData.elements
+                .filter((p: any) => p.team === opponentId)
+                .reduce((s: number, p: any) => s + (p.goals_scored || 0), 0);
+              const opponentAGR = opponentGoals / Math.max(1, currentGameweek);
+              const opponentMult = Math.max(0.85, Math.min(1.20,
+                1 + 0.25 * (opponentAGR / Math.max(leagueAvgAGR_YC, 0.01) - 1)
+              ));
+
+              const fixtureYC = blendedYCRate * opponentMult * availabilityProb;
+              gwYellowCards += fixtureYC;
               gwFixtureDetails.push({
                 opponent: opponentTeam?.short_name || 'UNK',
                 isHome,
-                yellowCards: parseFloat(expectedYellowCardsPerGame.toFixed(3))
+                yellowCards: parseFloat(fixtureYC.toFixed(3))
               });
             });
             
@@ -15663,6 +15730,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fetch fixtures to detect DGW
         const fixturesResponse = await internalFetch("api/fixtures");
         const fixturesData = await fixturesResponse.json();
+
+        // Position-level RC baselines (per game) — most players have 0 this season so we anchor to position
+        const positionRCBaseline: Record<string, number> = {
+          GKP: 0.005, DEF: 0.012, MID: 0.008, FWD: 0.007
+        };
         
         // Extract red card data for all players using historical data
         const redCardProjections = fplData.elements.map((player: any) => {
@@ -15678,6 +15750,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const seasonRedCards = player.red_cards || 0;
           const teamGamesPlayed = currentGameweek; // Average number of games team has played
           const expectedRedCardsPerGame = teamGamesPlayed > 0 ? seasonRedCards / teamGamesPlayed : 0;
+
+          // Blend 50/50 with position baseline — personal RC rate is too noisy on its own
+          const posBaseline_RC = positionRCBaseline[position] ?? 0.008;
+          const blendedRCRate = 0.50 * expectedRedCardsPerGame + 0.50 * posBaseline_RC;
           
           const rcEvents: BootstrapEvent[] = fplData.events || [];
           
@@ -15695,17 +15771,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; redCards: number }> = [];
             let gwRedCards = 0;
             
-            // Sum red cards across all fixtures
+            // Sum red cards across all fixtures using blended rate
             fixtures.forEach((fixture: any) => {
               const opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
               
-              gwRedCards += expectedRedCardsPerGame * availabilityProb;
+              gwRedCards += blendedRCRate * availabilityProb;
               gwFixtureDetails.push({
                 opponent: opponentTeam?.short_name || 'UNK',
                 isHome,
-                redCards: parseFloat(expectedRedCardsPerGame.toFixed(3))
+                redCards: parseFloat(blendedRCRate.toFixed(3))
               });
             });
             
@@ -16074,7 +16150,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const playerBonus = player.bonus || 0;
           const teamFixtures = teamFixturesPlayed.get(player.team) || finishedGWs;
-          const bonusPerFixture = teamFixtures > 0 ? playerBonus / teamFixtures : 0;
+          // E1: Use per-start rate for accuracy — rotation players' bonus rate is better expressed per appearance
+          const playerStarts = player.starts || 0;
+          const bonusPerFixture = playerStarts > 0
+            ? playerBonus / playerStarts
+            : (teamFixtures > 0 ? playerBonus / teamFixtures : 0);
           
           const bonusEvents: BootstrapEvent[] = fplData.events || [];
           const currentGW = fplData.events.find((e: any) => e.is_current)?.id || 1;
