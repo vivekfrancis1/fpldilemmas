@@ -216,18 +216,22 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
     }
   }, [scrollToView, onScrollComplete]);
 
+  const { data: rawBootstrapData } = useQuery<BootstrapData>({
+    queryKey: ["/api/bootstrap-static"],
+  });
+
+  const tabNextGW = ((rawBootstrapData?.events.find((e: any) => e.is_current)?.id) || 27) + 1;
+  const tabMaxGW = Math.min(38, tabNextGW + 11);
+
   const { data: allPlayersData, isLoading } = useQuery<PlayerProjectionData[]>({
-    queryKey: ['/api/cached/player-total-points'],
+    queryKey: ["/api/player-total-points/full-range", tabNextGW, tabMaxGW],
     queryFn: async () => {
-      const res = await fetch('/api/cached/player-total-points');
+      const res = await fetch(`/api/player-total-points?startGameweek=${tabNextGW}&endGameweek=${tabMaxGW}`);
       if (!res.ok) throw new Error('Failed to fetch projections');
       return res.json();
     },
-    staleTime: 60 * 60 * 1000,
-  });
-
-  const { data: rawBootstrapData } = useQuery<BootstrapData>({
-    queryKey: ["/api/bootstrap-static"],
+    staleTime: 30 * 60 * 1000,
+    enabled: !!rawBootstrapData,
   });
 
   // Apply manual availability overrides to bootstrap data
@@ -1237,16 +1241,23 @@ export default function TransferPlanner() {
     }
   }, [teamData, searchedId]); // Removed buyPricesData and buyPriceOverridesData to prevent resetting optimized lineups
 
-  // Fetch player projections from cached endpoint (contains all 12 gameweeks)
+  // Compute stable GW range from bootstrap data for the projection query
+  const plannerCurrentGW = bootstrapData?.events.find((e: any) => e.is_current)?.id || 27;
+  const plannerNextGW = plannerCurrentGW + 1;
+  const plannerMaxGW = Math.min(38, plannerNextGW + 11);
+
+  // Fetch player projections from live endpoint (contains all 12 gameweeks)
+  // Stable query key — does NOT include user's selected GW so TanStack caches once
   // This allows instant gameweek switching without refetching
   const { data: cachedPlayerProjections, isLoading: projectionsLoading, error: projectionsError } = useQuery<any[]>({
-    queryKey: ['/api/cached/player-total-points'],
+    queryKey: ["/api/player-total-points/full-range", plannerNextGW, plannerMaxGW],
     queryFn: async () => {
-      const res = await fetch('/api/cached/player-total-points');
+      const res = await fetch(`/api/player-total-points?startGameweek=${plannerNextGW}&endGameweek=${plannerMaxGW}`);
       if (!res.ok) throw new Error('Failed to fetch projections');
       return res.json();
     },
-    staleTime: 60 * 60 * 1000, // 1 hour cache
+    staleTime: 30 * 60 * 1000,
+    enabled: !!bootstrapData,
   });
 
   // Use cached projections for both single GW and 6GW calculations

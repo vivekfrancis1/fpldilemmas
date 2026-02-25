@@ -109,13 +109,14 @@ export default function BestFreehitTeam() {
   const excludeListRef = useRef<HTMLDivElement>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch cached Player Total Points data (now uses live API with memory caching)
+  // Fetch live player projection data for the full available GW range
+  // Stable query key (not dependent on selectedGameweek) — range filter applied client-side
   const { data: allCachedData, isLoading, error, refetch: refetchProjections } = useQuery({
-    queryKey: ['/api/cached/player-total-points'],
-    enabled: !!bootstrapData,
-    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    queryKey: ["/api/player-total-points/full-range", startGameweek, endGameweek],
+    enabled: !!bootstrapData && startGameweek > 0,
+    staleTime: 30 * 60 * 1000,
     queryFn: async () => {
-      const response = await fetch('/api/cached/player-total-points');
+      const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) throw new Error('Failed to fetch player total points');
       return response.json();
     },

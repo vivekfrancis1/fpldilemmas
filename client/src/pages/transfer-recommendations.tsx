@@ -112,14 +112,17 @@ export default function TransferRecommendations() {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Fetch player projections for the selected gameweek
+  // Fetch full-range player projections once — filter to selectedGameweek client-side
+  // Stable query key (not dependent on selectedGameweek) so no refetch on GW change
+  const recCurrentGW = bootstrapData?.events?.find((e: any) => e.is_current)?.id || 27;
+  const recNextGW = recCurrentGW + 1;
+  const recMaxGW = Math.min(38, recNextGW + 11);
   const { data: playerProjections } = useQuery<any[]>({
-    queryKey: ["/api/player-total-points", selectedGameweek],
-    enabled: !!selectedGameweek && selectedGameweek !== null,
-    staleTime: 5 * 60 * 1000,
+    queryKey: ["/api/player-total-points/full-range", recNextGW, recMaxGW],
+    enabled: !!bootstrapData,
+    staleTime: 30 * 60 * 1000,
     queryFn: async () => {
-      if (!selectedGameweek) return [];
-      const response = await fetch(`/api/player-total-points?startGameweek=${selectedGameweek}&endGameweek=${selectedGameweek}`);
+      const response = await fetch(`/api/player-total-points?startGameweek=${recNextGW}&endGameweek=${recMaxGW}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch projections: ${response.statusText}`);
       }
