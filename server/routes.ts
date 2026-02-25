@@ -8150,10 +8150,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamGoalsAgainstDetailsMap.set(team.id, team.fixtureDetails || {});
       });
       
-      // CHANGE 4: Compute actual clean sheet rate per team from finished fixtures.
+      // CHANGE 4: Compute actual clean sheet rate per team from finished 2025/26 fixtures.
       // Used to calibrate the team-specific Poisson coefficient below.
       const teamActualCSRateMap = new Map<number, number>();
-      const avgLeagueCSRate = 0.25; // league-wide historical average
       const teamCSCount = new Map<number, { cs: number; games: number }>();
       fixturesData.forEach((f: any) => {
         if (!f.finished) return;
@@ -8164,6 +8163,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const a = teamCSCount.get(f.team_a) || { cs: 0, games: 0 };
         teamCSCount.set(f.team_a, { cs: a.cs + awayCS, games: a.games + 1 });
       });
+      // Compute league-wide average CS rate from current 2025/26 finished fixtures
+      let leagueTotalCS = 0, leagueTotalGames = 0;
+      teamCSCount.forEach(d => { leagueTotalCS += d.cs; leagueTotalGames += d.games; });
+      const avgLeagueCSRate = leagueTotalGames >= 20
+        ? leagueTotalCS / leagueTotalGames
+        : 0.25; // fallback for very early season
+      console.log(`DEBUG CS: 2025/26 league avg CS rate = ${avgLeagueCSRate.toFixed(4)} (${leagueTotalCS} CSs from ${leagueTotalGames} team-games)`);
       teams.forEach((t: any) => {
         const d = teamCSCount.get(t.id);
         const rate = d && d.games >= 5 ? d.cs / d.games : avgLeagueCSRate;
