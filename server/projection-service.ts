@@ -294,7 +294,15 @@ class ProjectionService {
 
             // Player-level constants (same regardless of which fixture in a DGW)
             const seasonPerformance = totalPoints / Math.max(minutes / 90, 1);
-            const adjustedForm = Math.max(form * 0.7 + seasonPerformance * 0.3, 1.0);
+            // Cap seasonPerformance for players with < 300 min — small samples (1-3 games)
+            // produce unrealistic per-90 rates (e.g. 18 pts in 151 min = 10.73 pts/90).
+            // 6.5 pts/90 is the ceiling for a consistently elite outfield performer.
+            const MIN_MINUTES_FOR_XG = 300;
+            const SEASON_PERF_CAP = 6.5;
+            const cappedSeasonPerformance = minutes >= MIN_MINUTES_FOR_XG
+              ? seasonPerformance
+              : Math.min(seasonPerformance, SEASON_PERF_CAP);
+            const adjustedForm = Math.max(form * 0.7 + cappedSeasonPerformance * 0.3, 1.0);
             const gamesPlayed = Math.max(startGameweek - 1, 1);
             const averageMinutesPerGame = minutes > 0 ? (minutes / gamesPlayed) : 45;
             const injuryRisk = (fplPlayer.chance_of_playing_next_round || 100) / 100;
@@ -304,7 +312,6 @@ class ProjectionService {
 
             // xG/xA per 90 from FPL bootstrap — only trusted when player has enough minutes
             // (< 300 min = < ~3 full games: sample too small, xG/90 unreliable, use form fallback)
-            const MIN_MINUTES_FOR_XG = 300;
             const xGPer90Raw = parseFloat(fplPlayer.expected_goals_per_90 || '0');
             const xAPer90Raw = parseFloat(fplPlayer.expected_assists_per_90 || '0');
             const xGPer90 = minutes >= MIN_MINUTES_FOR_XG ? xGPer90Raw : 0;
@@ -368,11 +375,11 @@ class ProjectionService {
                 goalsExpected = xGPer90 * 0.65 * formFactor * difficultyMultiplier;
               } else {
                 if (position === 'FWD') {
-                  goalsExpected = (adjustedForm * 0.12 + seasonPerformance * 0.05) * difficultyMultiplier;
+                  goalsExpected = (adjustedForm * 0.12 + cappedSeasonPerformance * 0.05) * difficultyMultiplier;
                 } else if (position === 'MID') {
-                  goalsExpected = (adjustedForm * 0.06 + seasonPerformance * 0.03) * difficultyMultiplier;
+                  goalsExpected = (adjustedForm * 0.06 + cappedSeasonPerformance * 0.03) * difficultyMultiplier;
                 } else if (position === 'DEF') {
-                  goalsExpected = (adjustedForm * 0.02 + seasonPerformance * 0.01) * difficultyMultiplier;
+                  goalsExpected = (adjustedForm * 0.02 + cappedSeasonPerformance * 0.01) * difficultyMultiplier;
                 } else {
                   goalsExpected = adjustedForm * 0.005 * difficultyMultiplier; // GKP
                 }
@@ -385,11 +392,11 @@ class ProjectionService {
                 assistsExpected = xAPer90 * 0.65 * formFactor * difficultyMultiplier;
               } else {
                 if (position === 'MID') {
-                  assistsExpected = (adjustedForm * 0.08 + seasonPerformance * 0.04) * difficultyMultiplier;
+                  assistsExpected = (adjustedForm * 0.08 + cappedSeasonPerformance * 0.04) * difficultyMultiplier;
                 } else if (position === 'FWD') {
-                  assistsExpected = (adjustedForm * 0.04 + seasonPerformance * 0.02) * difficultyMultiplier;
+                  assistsExpected = (adjustedForm * 0.04 + cappedSeasonPerformance * 0.02) * difficultyMultiplier;
                 } else if (position === 'DEF') {
-                  assistsExpected = (adjustedForm * 0.025 + seasonPerformance * 0.01) * difficultyMultiplier;
+                  assistsExpected = (adjustedForm * 0.025 + cappedSeasonPerformance * 0.01) * difficultyMultiplier;
                 } else {
                   assistsExpected = adjustedForm * 0.003 * difficultyMultiplier; // GKP
                 }
