@@ -8076,11 +8076,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { TeamGoalsService } = await import('./team-goals-service');
       const teamGoals = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
       
-      // FORMULA: Team Assists = 85% of Team Goals (FPL awards more assists than standard stats)
+      // B3: Compute per-team assist ratio from GW 1-27 actual data (assists / goals_scored)
+      // Instead of hardcoded 0.85, use each team's real ratio clamped to [0.50, 1.20]
+      const teamAssistRatios = new Map<number, number>();
+      bootstrapData.teams.forEach((t: any) => {
+        const teamPlayers = bootstrapData.elements.filter((p: any) => p.team === t.id);
+        const teamGoalsScored = teamPlayers.reduce((s: number, p: any) => s + parseInt(p.goals_scored || 0), 0);
+        const teamAssistsTotal = teamPlayers.reduce((s: number, p: any) => s + parseInt(p.assists || 0), 0);
+        const ratio = teamGoalsScored > 0
+          ? Math.min(1.20, Math.max(0.50, teamAssistsTotal / teamGoalsScored))
+          : 0.85;
+        teamAssistRatios.set(t.id, ratio);
+      });
+
+      // FORMULA: Team Assists = team-specific assist ratio × Team Goals
       const assistProjections = teamGoals.map((tp: any) => {
+        const assistRatio = teamAssistRatios.get(tp.teamId) ?? 0.85;
         const gameweekAssists = Object.fromEntries(
           Object.entries(tp.gameweekProjections || {}).map(([gw, g]: [string, any]) => 
-            [Number(gw), Math.round((g || 0) * 0.85 * 100) / 100]
+            [Number(gw), Math.round((g || 0) * assistRatio * 100) / 100]
           )
         );
         
@@ -8091,7 +8105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fixtureDetails[gw] = (fixtures || []).map((f: any) => ({
               opponent: f.opponent,
               isHome: f.isHome,
-              assists: Math.round((f.goals || 0) * 0.85 * 100) / 100
+              assists: Math.round((f.goals || 0) * assistRatio * 100) / 100
             }));
           });
         }
@@ -8102,8 +8116,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: tp.teamShort,
           gameweekProjections: gameweekAssists,
           fixtureDetails: fixtureDetails,
-          totalAssists: Math.round((tp.totalGoals || 0) * 0.85 * 100) / 100,
-          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * 0.85 * 100) / 100,
+          totalAssists: Math.round((tp.totalGoals || 0) * assistRatio * 100) / 100,
+          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * assistRatio * 100) / 100,
           confidence: tp.confidence
         };
       });
