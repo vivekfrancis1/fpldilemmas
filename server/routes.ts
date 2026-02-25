@@ -6988,8 +6988,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Immediately repopulate Player Total Points cache after clearing
       setTimeout(async () => {
         try {
-          const { projectionService } = await import('./projection-service');
-          await projectionService.getPlayerTotalPoints(4, 9); // Repopulate default range
+          const { fplScoringCacheService } = await import('./fpl-scoring-cache-service');
+          await fplScoringCacheService.updateAllScoringData();
           console.log("✅ Player Total Points cache repopulated after admin settings change");
         } catch (error) {
           console.error("❌ Failed to repopulate Player Total Points cache:", error);
@@ -7039,8 +7039,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Immediately repopulate Player Total Points cache after clearing
       setTimeout(async () => {
         try {
-          const { projectionService } = await import('./projection-service');
-          await projectionService.getPlayerTotalPoints(4, 9); // Repopulate default range
+          const { fplScoringCacheService } = await import('./fpl-scoring-cache-service');
+          await fplScoringCacheService.updateAllScoringData();
           console.log("✅ Player Total Points cache repopulated after admin settings reset");
         } catch (error) {
           console.error("❌ Failed to repopulate Player Total Points cache:", error);
@@ -16773,30 +16773,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("📦 Projection Accuracy snapshots unavailable:", dbError);
       }
       
-      // Fallback to live API calculation
-      console.log("🔄 No valid cached data available - falling back to live API calculation");
+      // Fallback: run the aggregator fresh and then re-serve from DB snapshot
+      console.log("🔄 No valid cached data — running fresh aggregator calculation...");
       
       try {
-        // Call the main player total points API for fresh calculation (always fetch RAW data for caching)
-        const liveResponse = await internalFetch(`api/player-total-points?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
-        
-        if (liveResponse.ok) {
-          const liveData = await liveResponse.json();
-          
-          // Cache the fresh data in memory for subsequent requests
-          totalPointsCache.set(currentCacheKey, {
-            data: liveData,
-            timestamp: Date.now()
-          });
-          
-          console.log(`✅ LIVE: Generated and cached fresh Player Total Points for GW${startGameweek}-${endGameweek} (${liveData.length} players)`);
-          return res.json(liveData);
-        } else {
-          throw new Error(`Live API failed with status: ${liveResponse.status}`);
+        const { fplScoringCacheService } = await import('./fpl-scoring-cache-service');
+        await fplScoringCacheService.updateAllScoringData(startGameweek, endGameweek);
+
+        // Re-query snapshots after aggregation completes
+        const activeWindow2 = await db.select()
+          .from(playerTotalPointsWindows)
+          .where(sql`${playerTotalPointsWindows.startGameweek} = ${startGameweek} AND ${playerTotalPointsWindows.isActive} = true`)
+          .limit(1);
+
+        if (activeWindow2.length > 0) {
+          const snapshots2 = await db.select()
+            .from(playerTotalPointsSnapshots)
+            .where(sql`${playerTotalPointsSnapshots.windowId} = ${activeWindow2[0].windowId}`);
+
+          if (snapshots2.length > 0) {
+            const transformedData2 = snapshots2.map((snapshot: any) => {
+              const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === snapshot.playerId);
+              const breakdown = snapshot.gameweekBreakdown || {};
+              const gameweekProjections: Record<string, number> = {};
+              const pointsFromGoals: Record<string, number> = {};
+              const pointsFromAssists: Record<string, number> = {};
+              const pointsFromCleanSheets: Record<string, number> = {};
+              const pointsFromMinutes: Record<string, number> = {};
+              const pointsFromGoalsConceded: Record<string, number> = {};
+              const pointsFromYellowCards: Record<string, number> = {};
+              const pointsFromRedCards: Record<string, number> = {};
+              const pointsFromBonus: Record<string, number> = {};
+              const pointsFromSaves: Record<string, number> = {};
+              const pointsFromDefensiveContributions: Record<string, number> = {};
+
+              for (const [gw, data] of Object.entries(breakdown)) {
+                const gwNum = gw.replace(/^gw/i, '');
+                if (isNaN(parseInt(gwNum))) continue;
+                const isNumeric = typeof data === 'number';
+                if (isNumeric) {
+                  gameweekProjections[gwNum] = data;
+                } else {
+                  const gwData = data as any;
+                  gameweekProjections[gwNum] = gwData.points || 0;
+                  pointsFromGoals[gwNum] = gwData.goals || 0;
+                  pointsFromAssists[gwNum] = gwData.assists || 0;
+                  pointsFromCleanSheets[gwNum] = gwData.cleanSheets || 0;
+                  pointsFromMinutes[gwNum] = gwData.minutes || 0;
+                  pointsFromGoalsConceded[gwNum] = gwData.goalsConceded || 0;
+                  pointsFromYellowCards[gwNum] = gwData.yellowCards || 0;
+                  pointsFromRedCards[gwNum] = gwData.redCards || 0;
+                  pointsFromBonus[gwNum] = gwData.bonus || 0;
+                  pointsFromSaves[gwNum] = gwData.saves || 0;
+                  pointsFromDefensiveContributions[gwNum] = gwData.defensive || 0;
+                }
+              }
+
+              return {
+                playerId: snapshot.playerId,
+                playerName: snapshot.playerName,
+                name: snapshot.playerName,
+                fullName: snapshot.playerName,
+                teamName: snapshot.teamName,
+                team: snapshot.teamName,
+                position: snapshot.position,
+                price: parseFloat(snapshot.price) || 0,
+                ownership: parseFloat(snapshot.ownership) || 0,
+                form: bootstrapPlayer ? parseFloat(bootstrapPlayer.form) : 0,
+                gameweekProjections,
+                totalExpectedPoints: parseFloat(snapshot.totalProjectedPoints) || 0,
+                totalPoints: parseFloat(snapshot.totalProjectedPoints) || 0,
+                averagePerGameweek: parseFloat(snapshot.averagePointsPerGameweek) || 0,
+                averageValue: parseFloat(snapshot.averageValue) || 0,
+                chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
+                status: bootstrapPlayer?.status || 'a',
+                news: bootstrapPlayer?.news || '',
+                pointsFromGoals, pointsFromAssists, pointsFromCleanSheets, pointsFromMinutes,
+                pointsFromGoalsConceded, pointsFromYellowCards, pointsFromRedCards,
+                pointsFromBonus, pointsFromSaves, pointsFromDefensiveContributions
+              };
+            }).sort((a: any, b: any) => b.totalPoints - a.totalPoints);
+
+            totalPointsCache.set(currentCacheKey, { data: transformedData2, timestamp: Date.now() });
+            console.log(`✅ AGGREGATOR FRESH: Serving ${transformedData2.length} players after fresh calculation`);
+            return res.json(transformedData2);
+          }
         }
+
+        // If DB still empty after aggregation, return empty gracefully
+        console.warn("⚠️ Aggregator completed but no snapshots found — returning empty");
+        res.json([]);
       } catch (fallbackError) {
-        console.error("🚨 FALLBACK FAILED: Both cache and live API failed:", fallbackError);
-        res.json([]); // Only return empty array as last resort
+        console.error("🚨 FALLBACK FAILED: Aggregator failed:", fallbackError);
+        res.json([]);
       }
       
     } catch (error) {

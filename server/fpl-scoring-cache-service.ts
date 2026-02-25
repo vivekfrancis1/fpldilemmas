@@ -1,4 +1,5 @@
 import { PlayerTotalPointsAggregator } from "./player-total-points-aggregator";
+import { internalFetch } from "./config";
 
 export class FPLScoringCacheService {
   private static updateLock = false;
@@ -13,9 +14,27 @@ export class FPLScoringCacheService {
     console.log("🚀 Starting FPL scoring component cache update...");
     
     try {
-      console.log("🔧 Starting Player Total Points aggregation...");
+      // Determine dynamic GW range from current gameweek if not supplied
+      let resolvedStart = startGameweek;
+      let resolvedEnd = endGameweek;
+      if (resolvedStart === undefined || resolvedEnd === undefined) {
+        try {
+          const bootstrapResp = await internalFetch("api/bootstrap-static");
+          if (bootstrapResp.ok) {
+            const bootstrapData = await bootstrapResp.json();
+            const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 1;
+            resolvedStart = currentGW + 1;
+            resolvedEnd = Math.min(currentGW + 12, 38);
+          }
+        } catch {
+          resolvedStart = resolvedStart ?? 25;
+          resolvedEnd = resolvedEnd ?? 36;
+        }
+      }
+
+      console.log(`🔧 Starting Player Total Points aggregation for GW${resolvedStart}-${resolvedEnd}...`);
       const aggregator = new PlayerTotalPointsAggregator();
-      await aggregator.aggregatePlayerTotalPoints(startGameweek, endGameweek);
+      await aggregator.aggregatePlayerTotalPoints(resolvedStart, resolvedEnd);
       console.log("✅ FPL scoring component cache update completed successfully");
     } catch (error) {
       console.error("❌ FPL scoring component cache update failed:", error);

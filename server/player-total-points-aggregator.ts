@@ -55,12 +55,12 @@ export class PlayerTotalPointsAggregator {
         assistsPointsData,
         cleanSheetPointsData
       ] = await Promise.all([
-        this.fetchSavesData(),
-        this.fetchGoalsConcededData(),
-        this.fetchYellowCardsData(),
-        this.fetchRedCardsData(),
-        this.fetchBonusPointsData(),
-        this.fetchMinutesPointsData(),
+        this.fetchSavesData(startGameweek, endGameweek),
+        this.fetchGoalsConcededData(startGameweek, endGameweek),
+        this.fetchYellowCardsData(startGameweek, endGameweek),
+        this.fetchRedCardsData(startGameweek, endGameweek),
+        this.fetchBonusPointsData(startGameweek, endGameweek),
+        this.fetchMinutesPointsData(startGameweek, endGameweek),
         this.fetchGoalsPointsData(startGameweek, endGameweek),
         this.fetchAssistsPointsData(startGameweek, endGameweek),
         this.fetchCleanSheetPointsData(startGameweek, endGameweek)
@@ -77,7 +77,7 @@ export class PlayerTotalPointsAggregator {
       this.aggregateComponentData(playerTotalPointsMap, yellowCardsData, "yellowCards");
       this.aggregateComponentData(playerTotalPointsMap, redCardsData, "redCards");
       this.aggregateComponentData(playerTotalPointsMap, bonusPointsData, "bonusPoints");
-      this.aggregateMinutesData(playerTotalPointsMap, minutesPointsData);
+      this.aggregateMinutesData(playerTotalPointsMap, minutesPointsData, startGameweek, endGameweek);
       this.aggregateGoalsAssistsData(playerTotalPointsMap, goalsPointsData, "goals");
       this.aggregateGoalsAssistsData(playerTotalPointsMap, assistsPointsData, "assists");
       this.aggregateCleanSheetData(playerTotalPointsMap, cleanSheetPointsData);
@@ -100,9 +100,9 @@ export class PlayerTotalPointsAggregator {
   /**
    * Fetch saves data from live API
    */
-  private async fetchSavesData() {
+  private async fetchSavesData(startGameweek: number, endGameweek: number) {
     try {
-      const response = await internalFetch(`api/player-saves-projections?startGameweek=25&endGameweek=36`);
+      const response = await internalFetch(`api/player-saves-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) return [];
       const data = await response.json();
       return data.map((player: any) => ({
@@ -122,9 +122,9 @@ export class PlayerTotalPointsAggregator {
   /**
    * Fetch goals conceded data from live API
    */
-  private async fetchGoalsConcededData() {
+  private async fetchGoalsConcededData(startGameweek: number, endGameweek: number) {
     try {
-      const response = await internalFetch(`api/player-goals-conceded-projections?startGameweek=25&endGameweek=36`);
+      const response = await internalFetch(`api/player-goals-conceded-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) return [];
       const data = await response.json();
       return data.map((player: any) => ({
@@ -144,9 +144,9 @@ export class PlayerTotalPointsAggregator {
   /**
    * Fetch yellow cards data from live API
    */
-  private async fetchYellowCardsData() {
+  private async fetchYellowCardsData(startGameweek: number, endGameweek: number) {
     try {
-      const response = await internalFetch(`api/player-yellow-cards-projections?startGameweek=25&endGameweek=36`);
+      const response = await internalFetch(`api/player-yellow-cards-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) return [];
       const data = await response.json();
       return data.map((player: any) => ({
@@ -166,9 +166,9 @@ export class PlayerTotalPointsAggregator {
   /**
    * Fetch red cards data from live API
    */
-  private async fetchRedCardsData() {
+  private async fetchRedCardsData(startGameweek: number, endGameweek: number) {
     try {
-      const response = await internalFetch(`api/player-red-cards-projections?startGameweek=25&endGameweek=36`);
+      const response = await internalFetch(`api/player-red-cards-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) return [];
       const data = await response.json();
       return data.map((player: any) => ({
@@ -188,9 +188,9 @@ export class PlayerTotalPointsAggregator {
   /**
    * Fetch bonus points data from live API
    */
-  private async fetchBonusPointsData() {
+  private async fetchBonusPointsData(startGameweek: number, endGameweek: number) {
     try {
-      const response = await internalFetch(`api/player-bonus-points-projections?startGameweek=25&endGameweek=36`);
+      const response = await internalFetch(`api/player-bonus-points-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) return [];
       const data = await response.json();
       return data.map((player: any) => ({
@@ -211,9 +211,9 @@ export class PlayerTotalPointsAggregator {
   /**
    * Fetch minutes points data from live API
    */
-  private async fetchMinutesPointsData() {
+  private async fetchMinutesPointsData(startGameweek: number, endGameweek: number) {
     try {
-      const response = await internalFetch(`api/player-minutes-projections`);
+      const response = await internalFetch(`api/player-minutes-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) return [];
       const data = await response.json();
       return data.map((player: any) => ({
@@ -420,7 +420,7 @@ export class PlayerTotalPointsAggregator {
   /**
    * Aggregate minutes data - applies per-game points to each future gameweek
    */
-  private aggregateMinutesData(playerMap: Map<number, PlayerPointsData>, minutesData: any[]) {
+  private aggregateMinutesData(playerMap: Map<number, PlayerPointsData>, minutesData: any[], startGameweek?: number, endGameweek?: number) {
     for (const minutesComponent of minutesData) {
       const playerId = minutesComponent.playerId;
       
@@ -438,21 +438,24 @@ export class PlayerTotalPointsAggregator {
       const player = playerMap.get(playerId)!;
       const minutesPerGame = minutesComponent.minutesPerGame || 0;
       const perGW = minutesComponent.pointsFromMinutesPerGW;
-      
-      // Apply minutes points to each gameweek (GW25-36)
-      for (let gw = 25; gw <= 36; gw++) {
-        const gwKey = String(gw);
-        if (!player.gameweekPoints[gwKey]) {
-          player.gameweekPoints[gwKey] = 0;
-        }
-        const gwPts = perGW?.[`gw${gw}`] ?? minutesPerGame;
-        player.gameweekPoints[gwKey] += gwPts;
-      }
 
-      // Add to total points (sum of per-GW values or fallback)
-      if (perGW) {
+      // If the minutes endpoint returned per-GW data, use it directly (keys normalised to numeric strings)
+      if (perGW && typeof perGW === 'object' && Object.keys(perGW).length > 0) {
+        for (const [rawKey, pts] of Object.entries(perGW as Record<string, number>)) {
+          const gwKey = rawKey.replace(/^gw/i, '');
+          if (!player.gameweekPoints[gwKey]) player.gameweekPoints[gwKey] = 0;
+          player.gameweekPoints[gwKey] += pts;
+        }
         const total = Object.values(perGW as Record<string, number>).reduce((sum: number, v: number) => sum + v, 0);
         player.totalPoints += total;
+      } else if (startGameweek !== undefined && endGameweek !== undefined) {
+        // Fallback: apply flat per-game rate across the requested range
+        for (let gw = startGameweek; gw <= endGameweek; gw++) {
+          const gwKey = String(gw);
+          if (!player.gameweekPoints[gwKey]) player.gameweekPoints[gwKey] = 0;
+          player.gameweekPoints[gwKey] += minutesPerGame;
+        }
+        player.totalPoints += minutesPerGame * (endGameweek - startGameweek + 1);
       } else {
         player.totalPoints += minutesPerGame * 12;
       }

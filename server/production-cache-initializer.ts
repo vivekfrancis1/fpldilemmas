@@ -234,13 +234,10 @@ export class ProductionCacheInitializer {
    */
   private async populatePlayerTotalPointsCache(): Promise<void> {
     try {
-      console.log("🎯 Populating player total points cache...");
-      const response = await internalFetch("api/player-total-points-projections/full-calculation");
-      if (response.ok) {
-        console.log("✅ Player total points cache populated");
-      } else {
-        throw new Error(`Player total points API failed: ${response.status}`);
-      }
+      console.log("🎯 Populating player total points cache via aggregator...");
+      const { fplScoringCacheService } = await import('./fpl-scoring-cache-service');
+      await fplScoringCacheService.updateAllScoringData();
+      console.log("✅ Player total points cache populated");
     } catch (error) {
       console.error("❌ Failed to populate player total points cache:", error);
     }
