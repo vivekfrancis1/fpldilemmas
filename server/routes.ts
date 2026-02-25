@@ -8685,16 +8685,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamTotal += playerTotal;
       });
       
-      // T002: Compute team average xG per 90 (weighted by minutes) for blending
-      let teamTotalXGPer90Weighted = 0;
-      let teamTotalMinutes = 0;
+      // Compute team xG per 90 SUM (normalized) across qualified players for share blending.
+      // Using a sum — not an average — ensures each player's xgPer90Share is naturally
+      // bounded [0–100%] and cannot exceed the team total, preventing amplification for
+      // dominant scorers like strikers whose xG/90 ratio vs the team average was ≥10×.
+      // Only players with ≥300 minutes are included to filter inactive/fringe squad members.
+      let teamXGPer90Total = 0;
       teamPlayersList.forEach((player: any) => {
-        const xgPer90 = parseFloat(player.expected_goals_per_90 || 0);
-        const mins = player.minutes || 0;
-        teamTotalXGPer90Weighted += xgPer90 * mins;
-        teamTotalMinutes += mins;
+        if ((player.minutes || 0) >= 300) {
+          teamXGPer90Total += parseFloat(player.expected_goals_per_90 || 0);
+        }
       });
-      const teamAvgXGPer90 = teamTotalMinutes > 0 ? teamTotalXGPer90Weighted / teamTotalMinutes : 0.05;
       
       // Calculate shares with set piece bonuses (no normalization - just boost individuals)
       teamPlayersList.forEach((player: any) => {
@@ -8706,7 +8707,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // xG per 90 reflects current form and role better than season totals
           const seasonTotalShare = (playerTotal / teamTotal) * 100;
           const playerXGPer90 = parseFloat(player.expected_goals_per_90 || 0);
-          const xgPer90Share = teamAvgXGPer90 > 0 ? (playerXGPer90 / teamAvgXGPer90) * (seasonTotalShare) : seasonTotalShare;
+          // xgPer90Share: player's fraction of the team's total xG per 90 output (sum-normalised).
+          // Result is naturally bounded [0–100%] so it cannot amplify beyond reality.
+          const xgPer90Share = teamXGPer90Total > 0 && (player.minutes || 0) >= 300
+            ? (playerXGPer90 / teamXGPer90Total) * 100
+            : seasonTotalShare;
           // Only blend when player has meaningful minutes to trust xG per 90 (≥300 min)
           const blendWeight = (player.minutes || 0) >= 300 ? 0.5 : 0;
           let goalShare = seasonTotalShare * (1 - blendWeight) + xgPer90Share * blendWeight;
@@ -8737,6 +8742,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Add bonuses to goal share (boosting individual without normalization)
           goalShare += penaltyBonus + freekickBonus;
+
+          // Position-based hard cap: prevents any player exceeding a realistic max goal share
+          const elementType = player.element_type;
+          if (elementType === 1) goalShare = Math.min(goalShare, 3);       // GKP
+          else if (elementType === 2) goalShare = Math.min(goalShare, 12); // DEF
+          else if (elementType === 3) goalShare = Math.min(goalShare, 25); // MID
+          else if (elementType === 4) goalShare = Math.min(goalShare, 50); // FWD
           
           const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
           
@@ -9831,16 +9843,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teamPlayers: any[] = [];
         const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
         
-        // T001 (assist): Compute team-average xA per 90 weighted by minutes for blending
-        let teamXAWeightedSum = 0, teamXAMinutesSum = 0;
+        // Compute team xA per 90 SUM (normalized) across qualified players for share blending.
+        // Sum-based — not average — so each player's xaPer90Share is bounded [0–100%] and
+        // cannot be amplified by the player/average ratio (same fix as goal share).
+        let teamXAPer90Total = 0;
         teamPlayersList.forEach((p: any) => {
-          const pMins = parseFloat(p.minutes || 0);
-          if (pMins >= 60) {
-            teamXAWeightedSum += parseFloat(p.expected_assists_per_90 || 0) * pMins;
-            teamXAMinutesSum += pMins;
+          if ((p.minutes || 0) >= 300) {
+            teamXAPer90Total += parseFloat(p.expected_assists_per_90 || 0);
           }
         });
-        const teamAvgXAPer90 = teamXAMinutesSum > 0 ? teamXAWeightedSum / teamXAMinutesSum : 0.05;
         
         teamPlayersList.forEach((player: any) => {
           const assists = parseInt(player.assists || 0);
@@ -9851,12 +9862,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Season-total assist share (assists + xA) / team total
             const seasonTotalShare = (playerTotal / teamData.total) * 100;
             
-            // T001 (assist): 50/50 blend with xA per 90 share for players ≥300 mins
+            // 50/50 blend with xA per 90 share for players ≥300 mins.
+            // xaPer90Share is sum-normalised: (player xA/90) / (team total xA/90) × 100
+            // This is naturally bounded [0–100%] and cannot amplify beyond the team total.
             const playerMins = parseFloat(player.minutes || 0);
+            const playerXAPer90 = parseFloat(player.expected_assists_per_90 || 0);
             let assistShare = seasonTotalShare;
-            if (playerMins >= 300 && teamAvgXAPer90 > 0) {
-              const playerXAPer90 = parseFloat(player.expected_assists_per_90 || 0);
-              const xaPer90Share = (playerXAPer90 / teamAvgXAPer90) * seasonTotalShare;
+            if (playerMins >= 300 && teamXAPer90Total > 0) {
+              const xaPer90Share = (playerXAPer90 / teamXAPer90Total) * 100;
               assistShare = seasonTotalShare * 0.5 + xaPer90Share * 0.5;
             }
             
@@ -9877,6 +9890,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Add bonus to assist share (no normalization)
             assistShare += setPieceBonus;
+
+            // Position-based hard cap: prevents any player exceeding a realistic max assist share
+            const elementTypeA = player.element_type;
+            if (elementTypeA === 1) assistShare = Math.min(assistShare, 2);       // GKP
+            else if (elementTypeA === 2) assistShare = Math.min(assistShare, 20); // DEF
+            else if (elementTypeA === 3) assistShare = Math.min(assistShare, 35); // MID
+            else if (elementTypeA === 4) assistShare = Math.min(assistShare, 30); // FWD
             
             const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
             
