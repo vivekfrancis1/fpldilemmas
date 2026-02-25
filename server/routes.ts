@@ -9803,14 +9803,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teamPlayers: any[] = [];
         const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
         
+        // T001 (assist): Compute team-average xA per 90 weighted by minutes for blending
+        let teamXAWeightedSum = 0, teamXAMinutesSum = 0;
+        teamPlayersList.forEach((p: any) => {
+          const pMins = parseFloat(p.minutes || 0);
+          if (pMins >= 60) {
+            teamXAWeightedSum += parseFloat(p.expected_assists_per_90 || 0) * pMins;
+            teamXAMinutesSum += pMins;
+          }
+        });
+        const teamAvgXAPer90 = teamXAMinutesSum > 0 ? teamXAWeightedSum / teamXAMinutesSum : 0.05;
+        
         teamPlayersList.forEach((player: any) => {
           const assists = parseInt(player.assists || 0);
           const expectedAssists = parseFloat(player.expected_assists || 0);
           const playerTotal = assists + expectedAssists;
           
           if (playerTotal > 0 && teamData.total > 0) {
-            // Base assist share from raw data
-            let assistShare = (playerTotal / teamData.total) * 100;
+            // Season-total assist share (assists + xA) / team total
+            const seasonTotalShare = (playerTotal / teamData.total) * 100;
+            
+            // T001 (assist): 50/50 blend with xA per 90 share for players ≥300 mins
+            const playerMins = parseFloat(player.minutes || 0);
+            let assistShare = seasonTotalShare;
+            if (playerMins >= 300 && teamAvgXAPer90 > 0) {
+              const playerXAPer90 = parseFloat(player.expected_assists_per_90 || 0);
+              const xaPer90Share = (playerXAPer90 / teamAvgXAPer90) * seasonTotalShare;
+              assistShare = seasonTotalShare * 0.5 + xaPer90Share * 0.5;
+            }
             
             // Apply set piece taker bonus (no normalization - just boost individuals)
             const cornerOrder = player.corners_and_indirect_freekicks_order || 99;
@@ -16272,7 +16292,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const playerBonus = player.bonus || 0;
           const teamFixtures = teamFixturesPlayed.get(player.team) || finishedGWs;
-          const bonusPerFixture = teamFixtures > 0 ? playerBonus / teamFixtures : 0;
+          const rawBonusPerFixture = teamFixtures > 0 ? playerBonus / teamFixtures : 0;
+          
+          // T004: Blend BPS rate into bonus projection
+          // player.bps = cumulative Bonus Points System score (continuous signal underlying awarded bonus)
+          // Normalise per team-game then blend 50/50 with raw bonus rate (≥3 appearances only)
+          const playerBPS = player.bps || 0;
+          const teamPlayersForBPS = fplData.elements.filter((p: any) => p.team === player.team && (p.minutes || 0) > 0);
+          let teamBPSSum = 0, teamBPSCount = 0;
+          let teamBonusSum = 0;
+          teamPlayersForBPS.forEach((p: any) => {
+            teamBPSSum += (p.bps || 0);
+            teamBonusSum += (p.bonus || 0);
+            teamBPSCount++;
+          });
+          const teamAvgBPSPerTeamGame = teamBPSCount > 0 && teamFixtures > 0
+            ? teamBPSSum / (teamBPSCount * teamFixtures) : 1;
+          const teamAvgBonusPerTeamGame = teamBPSCount > 0 && teamFixtures > 0
+            ? teamBonusSum / (teamBPSCount * teamFixtures) : 0.033;
+          const playerBPSPerTeamGame = teamFixtures > 0 ? playerBPS / teamFixtures : 0;
+          const relativeBPS = playerBPSPerTeamGame / Math.max(teamAvgBPSPerTeamGame, 0.1);
+          const bpsDerivedBonus = relativeBPS * teamAvgBonusPerTeamGame;
+          const playerAppsForBPS = Math.min(teamFixtures, Math.ceil((player.minutes || 0) / 45));
+          const bonusPerFixture = playerAppsForBPS >= 3
+            ? (rawBonusPerFixture * 0.5 + bpsDerivedBonus * 0.5)
+            : rawBonusPerFixture;
           
           // T001: Starting rate — bonus already uses bonus/teamFixtures (accounts for appearances),
           // but availabilityProb doesn't capture rotation for fit players.

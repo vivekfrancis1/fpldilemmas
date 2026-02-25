@@ -441,33 +441,35 @@ export class TeamGoalsService {
   }
   
   private static calculateTeamForm(teamId: number, currentGameweek: number, fixturesData: any[], adminGoalSettings: any): number {
-    const recentGames = fixturesData
-      .filter((f: any) => 
-        f.finished && 
-        f.event < currentGameweek && 
-        (f.team_h === teamId || f.team_a === teamId)
-      )
-      .sort((a: any, b: any) => b.event - a.event)
-      .slice(0, 5);
-      
-    if (recentGames.length === 0) return 1.00;
-    
-    let wins = 0;
-    recentGames.forEach((game: any) => {
-      const isHome = game.team_h === teamId;
-      const teamScore = isHome ? game.team_h_score : game.team_a_score;
-      const opponentScore = isHome ? game.team_a_score : game.team_h_score;
-      
-      if (teamScore > opponentScore) wins++;
+    // Compute season average goals-for from all finished fixtures
+    const allFinished = fixturesData.filter((f: any) =>
+      f.finished && (f.team_h === teamId || f.team_a === teamId)
+    );
+    if (allFinished.length === 0) return 1.00;
+
+    let seasonGoals = 0;
+    allFinished.forEach((g: any) => {
+      seasonGoals += g.team_h === teamId ? (g.team_h_score || 0) : (g.team_a_score || 0);
     });
-    
-    if (wins >= 3) {
-      return adminGoalSettings.teamFormMultiplier || 1.06;
-    } else if (wins <= 1) {
-      return (2 - (adminGoalSettings.teamFormMultiplier || 1.06));
-    } else {
-      return 1.00;
-    }
+    const seasonAvgGoals = seasonGoals / allFinished.length;
+
+    // Recent 6 fixtures (goals-per-game form signal)
+    const recentGames = allFinished
+      .filter((f: any) => f.event < currentGameweek)
+      .sort((a: any, b: any) => b.event - a.event)
+      .slice(0, 6);
+
+    if (recentGames.length === 0) return 1.00;
+
+    let recentGoals = 0;
+    recentGames.forEach((g: any) => {
+      recentGoals += g.team_h === teamId ? (g.team_h_score || 0) : (g.team_a_score || 0);
+    });
+    const recentGoalsPerGame = recentGoals / recentGames.length;
+
+    // Continuous multiplier: 0.7 + 0.3 × (recent / season avg), clamped 0.80–1.25
+    const raw = 0.7 + 0.3 * (recentGoalsPerGame / Math.max(seasonAvgGoals, 0.5));
+    return Math.max(0.80, Math.min(1.25, raw));
   }
   
   private static applyTimingAndContextFactors(

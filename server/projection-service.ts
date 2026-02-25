@@ -368,16 +368,18 @@ class ProjectionService {
             // 7. YELLOW CARDS (All Positions) - Official FPL Rules: -1pt per yellow card
             let yellowCardPoints = 0;
             if (averageMinutesPerGame >= 1) {
-              // Card probability based on position and playing style (empirical data from Premier League)
-              let yellowCardProbability;
-              if (position === 'DEF') {
-                yellowCardProbability = 0.15 * (adjustedForm / 10); // Defenders more prone to cards
-              } else if (position === 'MID') {
-                yellowCardProbability = 0.12 * (adjustedForm / 10); // Midfielders moderate risk
-              } else if (position === 'FWD') {
-                yellowCardProbability = 0.08 * (adjustedForm / 10); // Forwards less cards
+              // Position-average league rates (empirical baseline)
+              const positionAvgYCRate = position === 'DEF' ? 0.15 : position === 'MID' ? 0.12 : position === 'FWD' ? 0.08 : 0.03;
+              
+              // T002: Player-specific rate blended 50/50 with position average for accuracy
+              const playerYellowCards = parseFloat((fplPlayer as any).yellow_cards || 0);
+              const playerApps = gamesPlayed; // finished GWs = team games played denominator
+              let yellowCardProbability: number;
+              if (playerApps >= 5) {
+                const playerYCRate = playerYellowCards / playerApps;
+                yellowCardProbability = (playerYCRate * 0.5 + positionAvgYCRate * 0.5) * (adjustedForm / 10);
               } else {
-                yellowCardProbability = 0.03 * (adjustedForm / 10); // Goalkeepers very rare
+                yellowCardProbability = positionAvgYCRate * (adjustedForm / 10);
               }
               
               // Adjust for fixture difficulty (harder games = more cards)
