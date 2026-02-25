@@ -123,6 +123,30 @@ export class TeamGoalsService {
     const calculatedStartGameweek = startGameweek || (currentGameweek + 1);
     const calculatedEndGameweek = endGameweek || Math.min(currentGameweek + 6, 38);
     
+    // T005: Calibrate home/away venue multipliers from actual 2025/26 results
+    const finishedFix = fixturesData.filter((f: any) => f.finished && f.team_h_score != null && f.team_a_score != null);
+    let dynamicHomeMultiplier = MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier || 1.16;
+    let dynamicAwayMultiplier = MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier || 0.84;
+    if (finishedFix.length >= 50) {
+      const homeGoalsTotal = finishedFix.reduce((s: number, f: any) => s + (f.team_h_score || 0), 0);
+      const awayGoalsTotal = finishedFix.reduce((s: number, f: any) => s + (f.team_a_score || 0), 0);
+      const homeGPG = homeGoalsTotal / finishedFix.length;
+      const awayGPG = awayGoalsTotal / finishedFix.length;
+      const overallAvg = (homeGPG + awayGPG) / 2;
+      if (overallAvg > 0) {
+        dynamicHomeMultiplier = Math.max(1.05, Math.min(1.30, homeGPG / overallAvg));
+        dynamicAwayMultiplier = Math.max(0.70, Math.min(0.95, awayGPG / overallAvg));
+        console.log(`📊 T005: Dynamic venue multipliers — Home: ${dynamicHomeMultiplier.toFixed(3)}, Away: ${dynamicAwayMultiplier.toFixed(3)} (from ${finishedFix.length} fixtures)`);
+      }
+    }
+    
+    // Inject dynamic venue multipliers into admin settings (non-mutating override)
+    const adminGoalSettingsWithVenue = {
+      ...adminGoalSettings,
+      homeAdvantageGoalsMultiplier: dynamicHomeMultiplier,
+      awayFactorGoalsMultiplier: dynamicAwayMultiplier,
+    };
+    
     // Use centralized team service for betting data
     const teamService = await createTeamService();
     const bettingData = teamService.getBettingData();
@@ -160,7 +184,7 @@ export class TeamGoalsService {
         // Apply the hybrid team goal calculation logic with real xGF/xGA data
         const expectedGoals = await TeamGoalsService.calculateFixtureGoals(
           team, opponent, fixture, isHome, bootstrapData, fixturesData, 
-          bettingData, adminGoalSettings, MASTER_TEAM_DEFAULTS
+          bettingData, adminGoalSettingsWithVenue, MASTER_TEAM_DEFAULTS
         );
         
         // Note: calculateFixtureGoals now guarantees a valid number, no need to filter

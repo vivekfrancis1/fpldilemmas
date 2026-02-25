@@ -176,6 +176,75 @@ class ProjectionService {
       }
       const bootstrapData = await bootstrapResponse.json();
 
+      // T001: Fetch real fixtures and standings for opponent-based projections
+      const [fixturesRes, standingsRes] = await Promise.all([
+        fetch("http://localhost:5000/api/fixtures"),
+        fetch("http://localhost:5000/api/current-standings?venue=all")
+      ]);
+      const fixturesData: any[] = fixturesRes.ok ? await fixturesRes.json() : [];
+      const standingsData: any[] = standingsRes.ok ? await standingsRes.json() : [];
+
+      // Build per-team xG and xGC rates from standings
+      const teamStatsMap = new Map<number, { xGFor: number; xGAgainst: number; played: number }>();
+      standingsData.forEach((t: any) => {
+        if (t.played > 0) {
+          teamStatsMap.set(t.id, {
+            xGFor: (t.expectedGoalsFor || 0) / t.played,
+            xGAgainst: (t.expectedGoalsAgainst || 0) / t.played,
+            played: t.played
+          });
+        }
+      });
+
+      // League average xG and xGC per game
+      const teamStatValues = Array.from(teamStatsMap.values());
+      const leagueAvgXG = teamStatValues.length > 0
+        ? teamStatValues.reduce((s, t) => s + t.xGFor, 0) / teamStatValues.length : 1.3;
+      const leagueAvgXGC = teamStatValues.length > 0
+        ? teamStatValues.reduce((s, t) => s + t.xGAgainst, 0) / teamStatValues.length : 1.3;
+
+      // T002: Per-team CS calibration coefficients (same approach as team CS projections page)
+      // kCoeff[teamId] = leagueAvgCSRate / teamCSRate, clamped 0.70–1.40
+      const finishedFixtures = fixturesData.filter((f: any) => f.finished && f.team_h_score != null);
+      const leagueCSCount = finishedFixtures.filter((f: any) =>
+        f.team_h_score === 0 || f.team_a_score === 0).length;
+      const leagueAvgCSRate = finishedFixtures.length > 0
+        ? leagueCSCount / (finishedFixtures.length * 2) : 0.26;
+
+      const teamCSCoeffMap = new Map<number, number>();
+      bootstrapData.teams.forEach((t: any) => {
+        const teamGames = finishedFixtures.filter((f: any) => f.team_h === t.id || f.team_a === t.id);
+        if (teamGames.length > 0) {
+          const teamCS = teamGames.filter((f: any) =>
+            (f.team_h === t.id && f.team_a_score === 0) ||
+            (f.team_a === t.id && f.team_h_score === 0)).length;
+          const teamCSRate = Math.max(0.05, teamCS / teamGames.length);
+          const k = Math.max(0.70, Math.min(1.40, leagueAvgCSRate / teamCSRate));
+          teamCSCoeffMap.set(t.id, k);
+        } else {
+          teamCSCoeffMap.set(t.id, 1.0);
+        }
+      });
+
+      // Build fixture lookup: fixtureMap[teamId][gw] = { opponentXG, opponentXGC, isHome }
+      const fixtureMap = new Map<number, Map<number, { opponentXG: number; opponentXGC: number; isHome: boolean }>>();
+      fixturesData.filter((f: any) => !f.finished && f.event != null).forEach((f: any) => {
+        // Home team perspective
+        if (!fixtureMap.has(f.team_h)) fixtureMap.set(f.team_h, new Map());
+        const homeMap = fixtureMap.get(f.team_h)!;
+        if (!homeMap.has(f.event)) {
+          const oppStats = teamStatsMap.get(f.team_a) || { xGFor: leagueAvgXG, xGAgainst: leagueAvgXGC, played: 1 };
+          homeMap.set(f.event, { opponentXG: oppStats.xGFor, opponentXGC: oppStats.xGAgainst, isHome: true });
+        }
+        // Away team perspective
+        if (!fixtureMap.has(f.team_a)) fixtureMap.set(f.team_a, new Map());
+        const awayMap = fixtureMap.get(f.team_a)!;
+        if (!awayMap.has(f.event)) {
+          const oppStats = teamStatsMap.get(f.team_h) || { xGFor: leagueAvgXG, xGAgainst: leagueAvgXGC, played: 1 };
+          awayMap.set(f.event, { opponentXG: oppStats.xGFor, opponentXGC: oppStats.xGAgainst, isHome: false });
+        }
+      });
+
       // Include ALL players in the FPL database (no filtering)
       const players = bootstrapData.elements
         .sort((a: any, b: any) => parseFloat(b.total_points) - parseFloat(a.total_points)) // Sort by total points
@@ -208,22 +277,30 @@ class ProjectionService {
             const selectedBy = parseFloat(fplPlayer.selected_by_percent || "1");
             const minutes = parseFloat(fplPlayer.minutes || "0");
             
-            // Fixture difficulty based on team ID and gameweek (simulates opponent strength)
+            // T001: Use real fixture data for opponent strength instead of fake seed
             const teamId = fplPlayer.team;
-            const opponentStrengthSeed = ((teamId * 7) + (gw * 3)) % 20; // 0-19 range
-            const isHomeFixture = (teamId + gw) % 2 === 0; // Alternating home/away
+            const teamGWFixtures = fixtureMap.get(teamId);
+            const realFixture = teamGWFixtures?.get(gw);
             
-            // Opponent difficulty: Elite (0-4), Strong (5-9), Average (10-14), Weak (15-19)
-            let difficultyMultiplier;
-            if (opponentStrengthSeed <= 4) {
-              difficultyMultiplier = isHomeFixture ? 0.75 : 0.65; // vs Elite teams
-            } else if (opponentStrengthSeed <= 9) {
-              difficultyMultiplier = isHomeFixture ? 0.90 : 0.80; // vs Strong teams
-            } else if (opponentStrengthSeed <= 14) {
-              difficultyMultiplier = isHomeFixture ? 1.10 : 1.00; // vs Average teams
-            } else {
-              difficultyMultiplier = isHomeFixture ? 1.35 : 1.25; // vs Weak teams
+            // If no fixture this GW (blank gameweek), skip — project 0 points for this GW
+            if (!realFixture) {
+              gameweekProjections[gw.toString()] = 0;
+              pointsFromGoals[gw.toString()] = 0;
+              pointsFromAssists[gw.toString()] = 0;
+              pointsFromCleanSheets[gw.toString()] = 0;
+              pointsFromMinutes[gw.toString()] = 0;
+              pointsFromBonus[gw.toString()] = 0;
+              continue;
             }
+            
+            const isHomeFixture = realFixture.isHome;
+            const opponentXG = realFixture.opponentXG;   // Opponent's attacking rate (threat to our CS/saves)
+            const opponentXGC = realFixture.opponentXGC; // Opponent's defensive weakness (opportunity for our attack)
+            
+            // Difficulty multiplier: relative opponent defensive weakness × venue adjustment
+            const rawDifficulty = opponentXGC / Math.max(leagueAvgXGC, 0.5);
+            const venueBase = isHomeFixture ? 1.00 : 0.84;
+            const difficultyMultiplier = Math.max(0.60, Math.min(1.40, rawDifficulty * venueBase));
             
             // Base form with season performance weighting
             const seasonPerformance = totalPoints / Math.max(minutes / 90, 1); // Points per 90 minutes
@@ -276,18 +353,17 @@ class ProjectionService {
             pointsFromAssists[gw.toString()] = Math.round(gwAssistPoints * 100) / 100; // Use numeric string for consistency
             totalAssistPoints += gwAssistPoints;
             
-            // 4. CLEAN SHEET CALCULATION (defensive strength vs opponent attack)
+            // 4. CLEAN SHEET CALCULATION (T002: Poisson model with real opponent xG)
             let cleanSheetProb = 0;
             if (position === 'GKP' || position === 'DEF' || position === 'MID') {
-              // Team defensive strength based on form and opponent weakness
-              const teamDefensiveStrength = (adjustedForm * 0.05) + 0.25; // Base 25% + form
-              const opponentAttackStrength = opponentStrengthSeed <= 4 ? 0.85 : 
-                                           opponentStrengthSeed <= 9 ? 0.65 : 
-                                           opponentStrengthSeed <= 14 ? 0.45 : 0.25;
-              
-              cleanSheetProb = Math.max(0, teamDefensiveStrength - opponentAttackStrength);
-              if (position === 'MID') cleanSheetProb *= 0.8; // Midfielders get reduced CS probability
-              if (!isHomeFixture) cleanSheetProb *= 0.9; // Away fixtures slightly harder
+              // λ = opponent xG × venue scaling (opponents score more when we're away)
+              const csVenueScale = isHomeFixture ? 0.84 : 1.16;
+              const lambda = opponentXG * csVenueScale;
+              // Calibrated Poisson CS probability using per-team coefficient
+              const k = teamCSCoeffMap.get(teamId) ?? 1.0;
+              cleanSheetProb = Math.max(0, Math.min(0.85, Math.exp(-lambda * k)));
+              if (position === 'MID') cleanSheetProb *= 0.8;
+              // No separate venue ×0.9 — venue is baked into λ above
             }
             
             const gwCleanSheetPoints = cleanSheetProb * cleanSheetPoints * (averageMinutesPerGame / 90);
@@ -302,11 +378,8 @@ class ProjectionService {
                 ? (fplPlayer.saves / (fplPlayer.minutes / 90)) 
                 : 2.5; // Default to 2.5 saves per 90 if no data
               
-              // Get opponent team's AGR from standings (approximated by opponent strength)
-              // AGR ranges from ~0.5 (weak attack) to ~2.5 (strong attack) goals per game
-              const opponentAGR = opponentStrengthSeed <= 4 ? 2.0 : // vs Elite teams
-                                  opponentStrengthSeed <= 9 ? 1.5 : // vs Strong teams  
-                                  opponentStrengthSeed <= 14 ? 1.2 : 0.8; // vs Average/Weak teams
+              // T001: Use real opponent xG as Attacking Goal Rate
+              const opponentAGR = opponentXG;
               
               // Calculate expected saves (no minutes multiplier)
               const expectedSaves = (goalkeeperAvgSavesPerGame * opponentAGR / 1.35);
@@ -336,10 +409,8 @@ class ProjectionService {
             // 6. GOALS CONCEDED (Goalkeepers and Defenders Only) - Official FPL Rules: -1pt per 2 goals conceded
             let goalsConcededPoints = 0;
             if ((position === 'GKP' || position === 'DEF') && averageMinutesPerGame >= 1) {
-              // Expected goals conceded based on team defense vs opponent attack
-              const opponentAttackStrength = opponentStrengthSeed <= 4 ? 2.1 : // vs Elite teams
-                                            opponentStrengthSeed <= 9 ? 1.6 : // vs Strong teams
-                                            opponentStrengthSeed <= 14 ? 1.2 : 0.9; // vs Average/Weak teams
+              // T001: Use real opponent xG as attack strength for goals conceded
+              const opponentAttackStrength = opponentXG;
               
               const teamDefenseStrength = (adjustedForm * 0.05) + 0.85; // Base 85% + form
               const expectedGoalsConceded = (opponentAttackStrength / teamDefenseStrength) * (averageMinutesPerGame / 90);
@@ -382,9 +453,10 @@ class ProjectionService {
                 yellowCardProbability = positionAvgYCRate * (adjustedForm / 10);
               }
               
-              // Adjust for fixture difficulty (harder games = more cards)
-              if (opponentStrengthSeed <= 4) yellowCardProbability *= 1.3; // vs Elite teams
-              else if (opponentStrengthSeed <= 9) yellowCardProbability *= 1.1; // vs Strong teams
+              // T001: Adjust for fixture difficulty using real opponent xGC (tougher defense = more cards trying to break down)
+              const ycDiffRatio = opponentXGC / Math.max(leagueAvgXGC, 0.5);
+              if (ycDiffRatio < 0.80) yellowCardProbability *= 1.3; // vs tight defensive teams (elite)
+              else if (ycDiffRatio < 0.95) yellowCardProbability *= 1.1; // vs solid teams
               
               // Scale by average minutes
               yellowCardPoints = yellowCardProbability * (-1) * (averageMinutesPerGame / 90); // -1 point per yellow card (official FPL rule)

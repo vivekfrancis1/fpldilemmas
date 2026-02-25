@@ -8076,11 +8076,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { TeamGoalsService } = await import('./team-goals-service');
       const teamGoals = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
       
-      // FORMULA: Team Assists = 85% of Team Goals (FPL awards more assists than standard stats)
+      // T003: Compute per-team assist ratio from current standings instead of hardcoded 0.85
+      const standingsForAssists = await fetch("http://localhost:5000/api/current-standings?venue=all");
+      const standingsAssistData: any[] = standingsForAssists.ok ? await standingsForAssists.json() : [];
+      const teamAssistRatioMap = new Map<number, number>();
+      standingsAssistData.forEach((t: any) => {
+        if (t.played >= 5 && t.totalGoals > 0) {
+          const ratio = Math.max(0.55, Math.min(1.10, t.totalAssists / t.totalGoals));
+          teamAssistRatioMap.set(t.id, ratio);
+        }
+      });
+      
+      // FORMULA: Team Assists = per-team ratio × Team Goals (from actual 2025/26 data; fallback 0.85)
       const assistProjections = teamGoals.map((tp: any) => {
+        const ratio = teamAssistRatioMap.get(tp.teamId) ?? 0.85;
         const gameweekAssists = Object.fromEntries(
           Object.entries(tp.gameweekProjections || {}).map(([gw, g]: [string, any]) => 
-            [Number(gw), Math.round((g || 0) * 0.85 * 100) / 100]
+            [Number(gw), Math.round((g || 0) * ratio * 100) / 100]
           )
         );
         
@@ -8091,7 +8103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fixtureDetails[gw] = (fixtures || []).map((f: any) => ({
               opponent: f.opponent,
               isHome: f.isHome,
-              assists: Math.round((f.goals || 0) * 0.85 * 100) / 100
+              assists: Math.round((f.goals || 0) * ratio * 100) / 100
             }));
           });
         }
@@ -8102,8 +8114,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: tp.teamShort,
           gameweekProjections: gameweekAssists,
           fixtureDetails: fixtureDetails,
-          totalAssists: Math.round((tp.totalGoals || 0) * 0.85 * 100) / 100,
-          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * 0.85 * 100) / 100,
+          totalAssists: Math.round((tp.totalGoals || 0) * ratio * 100) / 100,
+          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * ratio * 100) / 100,
           confidence: tp.confidence
         };
       });
@@ -8420,7 +8432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player availability now uses only official FPL API data (chance_of_playing_next_round, status, news)
 
   // Enhanced helper function for comprehensive availability and injury analysis
-  function calculateExpectedMinutes(player: any, allPlayers: any[]): number {
+  function calculateExpectedMinutes(player: any, allPlayers: any[], gamesPlayed?: number): number {
     const position = player.element_type;
     const currentMinutes = player.minutes || 0;
     
@@ -8436,22 +8448,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let expectedMinutes: number;
     const currentGamesWorth = Math.ceil(currentMinutes / 90); // Estimate games played
     
+    // T004: Use starts-rate tiering when we have sufficient sample (≥5 games played)
+    const gp = gamesPlayed ?? 0;
+    const startRate = gp >= 5 && player.starts != null ? player.starts / Math.max(gp, 1) : null;
+    
     switch (position) {
       case 1: // Goalkeeper
-        expectedMinutes = currentGamesWorth >= 15 ? 
-          positionExpectedMinutes[1].starter : positionExpectedMinutes[1].backup;
+        if (startRate !== null) {
+          expectedMinutes = startRate >= 0.70 ? positionExpectedMinutes[1].starter : positionExpectedMinutes[1].backup;
+        } else {
+          expectedMinutes = currentGamesWorth >= 15 ? positionExpectedMinutes[1].starter : positionExpectedMinutes[1].backup;
+        }
         break;
       case 2: // Defender
-        expectedMinutes = currentMinutes > 1800 ? 
-          positionExpectedMinutes[2].regular : positionExpectedMinutes[2].rotation;
+        if (startRate !== null) {
+          expectedMinutes = startRate >= 0.60 ? positionExpectedMinutes[2].regular : positionExpectedMinutes[2].rotation;
+        } else {
+          expectedMinutes = currentMinutes > 1800 ? positionExpectedMinutes[2].regular : positionExpectedMinutes[2].rotation;
+        }
         break;
       case 3: // Midfielder
-        expectedMinutes = currentMinutes > 1200 ? 
-          positionExpectedMinutes[3].key : positionExpectedMinutes[3].squad;
+        if (startRate !== null) {
+          expectedMinutes = startRate >= 0.55 ? positionExpectedMinutes[3].key : positionExpectedMinutes[3].squad;
+        } else {
+          expectedMinutes = currentMinutes > 1200 ? positionExpectedMinutes[3].key : positionExpectedMinutes[3].squad;
+        }
         break;
       case 4: // Forward
-        expectedMinutes = currentMinutes > 900 ? 
-          positionExpectedMinutes[4].starting : positionExpectedMinutes[4].backup;
+        if (startRate !== null) {
+          expectedMinutes = startRate >= 0.50 ? positionExpectedMinutes[4].starting : positionExpectedMinutes[4].backup;
+        } else {
+          expectedMinutes = currentMinutes > 900 ? positionExpectedMinutes[4].starting : positionExpectedMinutes[4].backup;
+        }
         break;
       default:
         expectedMinutes = 1000;
@@ -10250,7 +10278,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const xAPer90 = currentYearXAPer90 > 0 ? currentYearXAPer90 : fallbackXA;
       
       // PURE PROJECTION: Only projected assists for next 6 gameweeks
-      const expectedMinutes = calculateExpectedMinutes(player, players);
+      const gpForMinutes = (bootstrapData.events.find((e: any) => e.is_current)?.id ?? 1) - 1;
+      const expectedMinutes = calculateExpectedMinutes(player, players, gpForMinutes);
       
       // NOTE: Set piece adjustments (corner/freekick) are now applied during cache generation
       // in projection-cache-worker.ts to prevent double-counting
@@ -10296,7 +10325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         minutesRestriction = 0.6; // 60% for rotation players (instead of 20%)
       }
       
-      const maxExpectedMinutes = Math.max(...players.map(p => calculateExpectedMinutes(p, players)), 1);
+      const maxExpectedMinutes = Math.max(...players.map(p => calculateExpectedMinutes(p, players, gpForMinutes)), 1);
       const basicMinutesWeight = Math.max(0.05, expectedMinutes / maxExpectedMinutes);
       const finalMinutesWeight = basicMinutesWeight * minutesRestriction;
       
@@ -17842,16 +17871,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cachedData = await db.select().from(teamProjections)
         .where(eq(teamProjections.season, '2025/26'));
       
-      // Transform to expected format with assist multiplier
+      // T003: Fetch per-team assist ratios from standings
+      const standingsCachedRes = await fetch("http://localhost:5000/api/current-standings?venue=all");
+      const standingsCachedData: any[] = standingsCachedRes.ok ? await standingsCachedRes.json() : [];
+      const cachedAssistRatioMap = new Map<number, number>();
+      standingsCachedData.forEach((t: any) => {
+        if (t.played >= 5 && t.totalGoals > 0) {
+          const ratio = Math.max(0.55, Math.min(1.10, t.totalAssists / t.totalGoals));
+          cachedAssistRatioMap.set(t.id, ratio);
+        }
+      });
+      
+      // Transform to expected format with per-team assist ratio (fallback 0.85)
       const teamAssistData = cachedData.map((team) => {
         const goalProjections = team.goalProjections as any;
         const totalGoals = Object.values(goalProjections).reduce((sum: number, val: any) => sum + (val || 0), 0);
-        const totalAssists = totalGoals * 0.85; // FPL assist multiplier (higher than standard due to FPL's generous assist rules)
+        const ratio = cachedAssistRatioMap.get(team.teamId) ?? 0.85;
+        const totalAssists = totalGoals * ratio;
         
-        // Create assist projections based on goal projections
+        // Create assist projections based on goal projections with per-team ratio
         const assistProjections: any = {};
         Object.keys(goalProjections).forEach(gw => {
-          assistProjections[gw] = Math.round((goalProjections[gw] || 0) * 0.85 * 100) / 100;
+          assistProjections[gw] = Math.round((goalProjections[gw] || 0) * ratio * 100) / 100;
         });
         
         return {
