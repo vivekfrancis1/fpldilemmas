@@ -934,7 +934,7 @@ export default function ManagerTeam() {
                 const freeTransfersRemaining = calculateFreeTransfers(
                   managerHistory?.current,
                   managerHistory?.chips,
-                  currentGW
+                  currentGW + 1
                 );
                 
                 if (filteredTransfers.length === 0) {

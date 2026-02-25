@@ -870,7 +870,7 @@ export default function Top25ManagerTeam() {
               const totalTransfers = history
                 .filter((gw: HistoryEntry) => !chipGWs.has(gw.event))
                 .reduce((sum: number, gw: HistoryEntry) => sum + (gw.event_transfers || 0), 0);
-              const freeTransfersAvailable = calculateFreeTransfers(history, chips, currentGW);
+              const freeTransfersAvailable = calculateFreeTransfers(history, chips, currentGW + 1);
               return (
                 <div className="flex flex-wrap gap-2 mb-4">
                   <Badge variant="outline" className="text-sm px-3 py-1 bg-blue-50 text-blue-700 border-blue-300">
