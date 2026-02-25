@@ -8150,6 +8150,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamGoalsAgainstDetailsMap.set(team.id, team.fixtureDetails || {});
       });
       
+      // CHANGE 4: Compute actual clean sheet rate per team from finished fixtures.
+      // Used to calibrate the team-specific Poisson coefficient below.
+      const teamActualCSRateMap = new Map<number, number>();
+      const avgLeagueCSRate = 0.25; // league-wide historical average
+      const teamCSCount = new Map<number, { cs: number; games: number }>();
+      fixturesData.forEach((f: any) => {
+        if (!f.finished) return;
+        const homeCS = (f.team_a_score || 0) === 0 ? 1 : 0;
+        const awayCS = (f.team_h_score || 0) === 0 ? 1 : 0;
+        const h = teamCSCount.get(f.team_h) || { cs: 0, games: 0 };
+        teamCSCount.set(f.team_h, { cs: h.cs + homeCS, games: h.games + 1 });
+        const a = teamCSCount.get(f.team_a) || { cs: 0, games: 0 };
+        teamCSCount.set(f.team_a, { cs: a.cs + awayCS, games: a.games + 1 });
+      });
+      teams.forEach((t: any) => {
+        const d = teamCSCount.get(t.id);
+        const rate = d && d.games >= 5 ? d.cs / d.games : avgLeagueCSRate;
+        teamActualCSRateMap.set(t.id, rate);
+      });
+      
       // Use centralized team service for consistent data
       const teamService = await createTeamService();
       const bettingData = teamService.getBettingData();
@@ -8192,8 +8212,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const matchingFixture = gwFixtureDetails.find((fd: any) => fd.opponent === opponent.short_name);
           const perGameGoalsAgainst = matchingFixture ? matchingFixture.goalsAgainst : 1.5; // Default if not found
           
-          // POISSON DISTRIBUTION FORMULA: P(Clean Sheet) = e^(-λ) where λ is expected goals conceded for THIS SPECIFIC FIXTURE
-          let cleanSheetProbability = Math.exp(-perGameGoalsAgainst) * 100; // Convert to percentage
+          // CHANGE 4: Team-specific Poisson coefficient from actual season CS rate.
+          // Teams that keep more CSs than league average get a lower coefficient → higher CS probability per xGA.
+          // Leaky teams get a higher coefficient → lower CS probability per xGA.
+          // Formula: k = avgLeagueCSRate / teamActualCSRate (normalised around 1.0 at league average)
+          const teamActualCSRate = teamActualCSRateMap.get(team.id) ?? avgLeagueCSRate;
+          const rawPoissonCoeff = avgLeagueCSRate / Math.max(teamActualCSRate, 0.05);
+          // Clamp: 0.70 (top defensive side e.g. Forest) to 1.40 (leaky side e.g. Wolves)
+          const poissonCoefficient = Math.max(0.70, Math.min(1.40, rawPoissonCoeff));
+          
+          // POISSON DISTRIBUTION FORMULA: P(Clean Sheet) = e^(-λ*k) where λ is expected goals conceded
+          // and k is the team-specific decay coefficient
+          let cleanSheetProbability = Math.exp(-perGameGoalsAgainst * poissonCoefficient) * 100; // Convert to percentage
           
           // Ensure realistic bounds (0-100%)
           cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
@@ -12416,6 +12446,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
       }
       
+      // CHANGE 2: Build a form factor map per player from FPL's own form metric.
+      // player.form = average FPL points per game over the last 4 GWs (official API field).
+      // Normalised: form=5 → 1.0 (neutral), form=0 → keep at 1.0 (no data), form=10 → 1.20 cap.
+      // Applied only to goal and assist projections since those are the most form-sensitive components.
+      const playerFormMap = new Map<number, number>();
+      if (bootstrapData?.elements) {
+        for (const el of bootstrapData.elements) {
+          const rawForm = parseFloat(el.form || '0');
+          const formFactor = rawForm === 0 ? 1.0 : Math.max(0.80, Math.min(1.20, rawForm / 5));
+          playerFormMap.set(el.id, formFactor);
+        }
+      }
+      
       const { startGameweek = dynamicStart, endGameweek = dynamicEnd } = req.query;
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
@@ -12580,6 +12623,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                               basePlayer.position === 'Defender' || basePlayer.position === 'DEF' ? 6 : 
                               basePlayer.position === 'Midfielder' || basePlayer.position === 'MID' ? 5 : 4;
 
+        // CHANGE 2: Form factor lookup — same player for all GWs, compute once outside the loop.
+        const formFactor = playerFormMap.get(playerId) ?? 1.0;
+
         // Sum points for each gameweek from all APIs
         for (let gw = start; gw <= end; gw++) {
           const gwKey = gw.toString(); // Use numeric keys for consistency
@@ -12587,11 +12633,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Get points from each API for this gameweek
           // Goals: Calculate points from raw goal count × position multiplier
-          const rawGoals = goalsPlayer?.gameweekProjections?.[gw.toString()] || 0;
+          // CHANGE 2: Apply form factor — players in good recent form project higher goal/assist rates.
+          const rawGoals = (goalsPlayer?.gameweekProjections?.[gw.toString()] || 0) * formFactor;
           const goalsPts = rawGoals * goalMultiplier;
           
           // Assists: Calculate points from raw assist count × 3
-          const rawAssists = assistsPlayer?.gameweekProjections?.[gw.toString()] || 0;
+          const rawAssists = (assistsPlayer?.gameweekProjections?.[gw.toString()] || 0) * formFactor;
           const assistsPts = rawAssists * 3;
           const cleansheetPts = cleansheetPlayer?.pointsFromCleanSheets?.[gwApiKey] || 0;
           const goalsConcededPts = goalsConcededPlayer?.pointsFromGoalsConceded?.[gwApiKey] || 0;
@@ -15629,11 +15676,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
               
-              gwYellowCards += expectedYellowCardsPerGame * availabilityProb;
+              // CHANGE 3: Fixture difficulty adjustment for yellow cards using per-fixture FDR (1-5 scale).
+              // Harder fixtures (higher FDR) = more defensive pressure = more bookings.
+              // FDR=1: easy (−20%), FDR=3: neutral, FDR=5: hardest (+27% → capped at +20%)
+              const fixtureFDR = isHome ? (fixture.team_h_difficulty || 3) : (fixture.team_a_difficulty || 3);
+              const rawYCFactor = 1.0 + (fixtureFDR - 3) / 3 * 0.6;
+              const ycDifficultyFactor = Math.max(0.80, Math.min(1.20, rawYCFactor));
+              
+              const fixtureYC = expectedYellowCardsPerGame * availabilityProb * ycDifficultyFactor;
+              gwYellowCards += fixtureYC;
               gwFixtureDetails.push({
                 opponent: opponentTeam?.short_name || 'UNK',
                 isHome,
-                yellowCards: parseFloat(expectedYellowCardsPerGame.toFixed(3))
+                yellowCards: parseFloat((expectedYellowCardsPerGame * ycDifficultyFactor).toFixed(3))
               });
             });
             
@@ -16143,16 +16198,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
               
-              // Mild fixture difficulty adjustment: easier opponents (lower FDR) = slightly more bonus
-              // FDR ranges 1-5 where 2 is easy, 5 is hardest
-              // Use opponent's strength rating from FPL
-              const opponentStrength = isHome 
-                ? (opponentTeam?.strength_away_overall || 1200) 
-                : (opponentTeam?.strength_home_overall || 1200);
-              const avgStrength = 1200;
-              // Scale factor: 0.85 for very hard fixtures, 1.15 for very easy fixtures
-              const difficultyFactor = 1 + (avgStrength - opponentStrength) / avgStrength * 0.5;
-              const clampedFactor = Math.max(0.85, Math.min(1.15, difficultyFactor));
+              // CHANGE 1: Position-specific fixture difficulty for bonus using per-fixture FDR (1-5 scale).
+              // Easier fixtures (lower FDR) = more goals/assists = more bonus.
+              // FWD bonus is tightly event-driven → wider sensitivity range.
+              // MID moderately event-driven. DEF/GKP less sensitive.
+              const bonusFDR = isHome ? (fixture.team_h_difficulty || 3) : (fixture.team_a_difficulty || 3);
+              // Sensitivity: higher = wider swing per FDR step
+              const sensitivity = position === 'FWD' ? 0.90 : position === 'MID' ? 0.66 : position === 'GKP' ? 0.30 : 0.45;
+              const rawFactor = 1 + (3 - bonusFDR) / 3 * sensitivity;
+              // Position-specific clamp ranges (FWD: ±30%, MID: ±22%, DEF: ±15%, GKP: ±10%)
+              const [minFactor, maxFactor] =
+                position === 'FWD' ? [0.70, 1.30] :
+                position === 'MID' ? [0.78, 1.22] :
+                position === 'GKP' ? [0.90, 1.10] :
+                [0.85, 1.15]; // DEF default
+              const clampedFactor = Math.max(minFactor, Math.min(maxFactor, rawFactor));
               
               const fixtureBonus = bonusPerFixture * clampedFactor * availabilityProb;
               gwBonusPoints += fixtureBonus;
