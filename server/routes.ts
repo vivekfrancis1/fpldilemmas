@@ -9027,11 +9027,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const goalShare = player.goalShare || 0;
                 const fplPlayer = fplPlayerMap.get(player.playerId);
                 
-                // Form multiplier: 75% base + 25% form-adjusted; range 0.84–1.06 max
+                // Form multiplier: 65% base + 35% form-adjusted; effective range 0.825–1.175 (35% spread)
                 const playerForm = parseFloat(fplPlayer?.form || '0');
                 const posAvgGoals = positionAvgFormGoals.get(player.position) || 5.0;
-                const formFactor = Math.max(0.75, Math.min(1.25, playerForm / Math.max(posAvgGoals, 0.1)));
-                const formMultiplier = 0.75 + 0.25 * formFactor;
+                const formFactor = Math.max(0.5, Math.min(1.5, playerForm / Math.max(posAvgGoals, 0.1)));
+                const formMultiplier = 0.65 + 0.35 * formFactor;
 
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; goals: number }> } = {};
@@ -9466,11 +9466,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const assistShare = player.assistShare || 0;
                 const fplPlayer = fplPlayerMap.get(player.playerId);
 
-                // Form multiplier: 75% base + 25% form-adjusted; conservative range
+                // Form multiplier: 65% base + 35% form-adjusted; effective range 0.825–1.175 (35% spread)
                 const playerForm = parseFloat(fplPlayer?.form || '0');
                 const posAvgAssists = positionAvgFormAssists.get(player.position) || 5.0;
-                const formFactor = Math.max(0.75, Math.min(1.25, playerForm / Math.max(posAvgAssists, 0.1)));
-                const formMultiplier = 0.75 + 0.25 * formFactor;
+                const formFactor = Math.max(0.5, Math.min(1.5, playerForm / Math.max(posAvgAssists, 0.1)));
+                const formMultiplier = 0.65 + 0.35 * formFactor;
                 
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; assists: number }> } = {};
@@ -10894,7 +10894,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   if (gamesWithMinutes.length > 0) {
                     appearances = gamesWithMinutes.length;
-                    gamesHit60Plus = gamesWithMinutes.filter((gw: any) => gw.minutes >= 60).length;
+                    // T002: Recency-weighted pct60Plus — last 5 games count 2×, older games 1×
+                    const RECENT_N = 5;
+                    const recentGames = gamesWithMinutes.slice(-RECENT_N);
+                    const olderGames  = gamesWithMinutes.slice(0, -RECENT_N);
+                    const RECENT_WEIGHT = 2, OLDER_WEIGHT = 1;
+                    const recentHit = recentGames.filter((g: any) => g.minutes >= 60).length;
+                    const olderHit  = olderGames.filter((g: any)  => g.minutes >= 60).length;
+                    const weightedHit   = recentHit * RECENT_WEIGHT + olderHit * OLDER_WEIGHT;
+                    const weightedTotal = recentGames.length * RECENT_WEIGHT + olderGames.length * OLDER_WEIGHT;
+                    gamesHit60Plus = weightedTotal > 0
+                      ? (weightedHit / weightedTotal) * appearances
+                      : gamesWithMinutes.filter((gw: any) => gw.minutes >= 60).length;
                     gamesBelow60 = appearances - gamesHit60Plus;
                     const totalHistoryMinutes = gamesWithMinutes.reduce((sum: number, gw: any) => sum + gw.minutes, 0);
                     avgMinutesPerGame = totalHistoryMinutes / appearances;
