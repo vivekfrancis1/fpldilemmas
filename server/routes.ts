@@ -8084,7 +8084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teamGoalsScored = teamPlayers.reduce((s: number, p: any) => s + parseInt(p.goals_scored || 0), 0);
         const teamAssistsTotal = teamPlayers.reduce((s: number, p: any) => s + parseInt(p.assists || 0), 0);
         const ratio = teamGoalsScored > 0
-          ? Math.min(1.20, Math.max(0.50, teamAssistsTotal / teamGoalsScored))
+          ? Math.min(1.00, Math.max(0.50, teamAssistsTotal / teamGoalsScored))
           : 0.85;
         teamAssistRatios.set(t.id, ratio);
       });
