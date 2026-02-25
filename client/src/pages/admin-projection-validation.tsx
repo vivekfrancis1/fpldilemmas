@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Filter, Eye, EyeOff, Trophy } from "lucide-react";
+import { Loader2, Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight, Filter, Eye, EyeOff } from "lucide-react";
 
 function isUnauthorizedError(error: Error): boolean {
   return /^401: .*Unauthorized/.test(error.message);
@@ -84,33 +84,6 @@ export default function AdminProjectionValidation() {
     queryKey: ["/api/admin/projection-validation"],
     enabled: isAdmin && isAuthenticated,
   });
-
-  const { data: aggregatorData } = useQuery<any[]>({
-    queryKey: ["/api/cached/player-total-points"],
-    queryFn: async () => {
-      const res = await fetch('/api/cached/player-total-points');
-      if (!res.ok) throw new Error('Failed to fetch aggregator data');
-      return res.json();
-    },
-    enabled: isAdmin && isAuthenticated,
-  });
-
-  const topForwards = useMemo(() => {
-    if (!aggregatorData) return [];
-    return aggregatorData
-      .filter((p: any) => p.position === 'FWD' || p.position === 'Forward')
-      .sort((a: any, b: any) => b.totalExpectedPoints - a.totalExpectedPoints)
-      .slice(0, 10)
-      .map((p: any, idx: number) => ({
-        rank: idx + 1,
-        playerId: p.playerId,
-        playerName: p.playerName,
-        teamName: p.teamName,
-        totalPts: p.totalExpectedPoints || 0,
-        gwCount: Object.keys(p.gameweekProjections || {}).length || 1,
-        goalPts: Object.values(p.pointsFromGoals || {}).reduce((s: number, v) => s + (v as number), 0),
-      }));
-  }, [aggregatorData]);
 
   const teams = useMemo(() => {
     if (!data?.players) return [];
@@ -516,62 +489,6 @@ export default function AdminProjectionValidation() {
           </div>
           {filteredPlayers.length > 200 && (
             <p className="text-xs text-muted-foreground text-center">Showing first 200 of {filteredPlayers.length} players</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="border-0 bg-white/80 backdrop-blur-sm">
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-4 h-4 text-amber-500" />
-            <CardTitle className="text-base bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-              Aggregator Forward Rankings (Sanity Check)
-            </CardTitle>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Top 10 FWDs from the live aggregator — the source used by Player Total Points, Transfer Recommendations, and Team Optimizer.
-            Haaland should appear at #1.
-          </p>
-        </CardHeader>
-        <CardContent>
-          {!aggregatorData ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Loading aggregator data...
-            </div>
-          ) : topForwards.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-4">No forward data available.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="text-center text-xs w-10">#</TableHead>
-                    <TableHead className="text-xs">Player</TableHead>
-                    <TableHead className="text-xs">Team</TableHead>
-                    <TableHead className="text-center text-xs">Total Pts</TableHead>
-                    <TableHead className="text-center text-xs">Per GW</TableHead>
-                    <TableHead className="text-center text-xs">Goal Pts</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {topForwards.map(fwd => (
-                    <TableRow key={fwd.playerId} className={fwd.rank === 1 ? "bg-amber-50" : "hover:bg-gray-50/50"}>
-                      <TableCell className="text-center text-sm font-bold tabular-nums">
-                        {fwd.rank === 1 ? <span className="text-amber-500">1</span> : fwd.rank}
-                      </TableCell>
-                      <TableCell className="text-sm font-medium">{fwd.playerName}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{fwd.teamName}</TableCell>
-                      <TableCell className="text-center text-sm tabular-nums font-semibold">{fwd.totalPts.toFixed(1)}</TableCell>
-                      <TableCell className="text-center text-sm tabular-nums text-muted-foreground">
-                        {(fwd.totalPts / fwd.gwCount).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-center text-sm tabular-nums">{fwd.goalPts.toFixed(1)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
           )}
         </CardContent>
       </Card>

@@ -6985,6 +6985,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Clear cached data to force recalculation with new settings
       totalPointsCache.clear();
       
+      // Immediately repopulate Player Total Points cache after clearing
+      setTimeout(async () => {
+        try {
+          const { projectionService } = await import('./projection-service');
+          await projectionService.getPlayerTotalPoints(4, 9); // Repopulate default range
+          console.log("✅ Player Total Points cache repopulated after admin settings change");
+        } catch (error) {
+          console.error("❌ Failed to repopulate Player Total Points cache:", error);
+        }
+      }, 1000);  // Small delay to ensure settings are applied
+      
       // Clear database cache for clean sheet projections
       await db.delete(teamCleanSheetProjections)
         .where(eq(teamCleanSheetProjections.season, '2025/26'));
@@ -7024,6 +7035,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clear cached data to force recalculation with reset settings
       totalPointsCache.clear();
+      
+      // Immediately repopulate Player Total Points cache after clearing
+      setTimeout(async () => {
+        try {
+          const { projectionService } = await import('./projection-service');
+          await projectionService.getPlayerTotalPoints(4, 9); // Repopulate default range
+          console.log("✅ Player Total Points cache repopulated after admin settings reset");
+        } catch (error) {
+          console.error("❌ Failed to repopulate Player Total Points cache:", error);
+        }
+      }, 1000);  // Small delay to ensure settings are applied
       
       // Clear database cache for clean sheet projections
       await db.delete(teamCleanSheetProjections)
@@ -8054,23 +8076,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { TeamGoalsService } = await import('./team-goals-service');
       const teamGoals = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
       
-      // T003: Compute per-team assist ratio from current standings instead of hardcoded 0.85
-      const standingsForAssists = await fetch("http://localhost:5000/api/current-standings?venue=all");
-      const standingsAssistData: any[] = standingsForAssists.ok ? await standingsForAssists.json() : [];
-      const teamAssistRatioMap = new Map<number, number>();
-      standingsAssistData.forEach((t: any) => {
-        if (t.played >= 5 && t.totalGoals > 0) {
-          const ratio = Math.max(0.55, Math.min(1.10, t.totalAssists / t.totalGoals));
-          teamAssistRatioMap.set(t.id, ratio);
-        }
-      });
-      
-      // FORMULA: Team Assists = per-team ratio × Team Goals (from actual 2025/26 data; fallback 0.85)
+      // FORMULA: Team Assists = 85% of Team Goals (FPL awards more assists than standard stats)
       const assistProjections = teamGoals.map((tp: any) => {
-        const ratio = teamAssistRatioMap.get(tp.teamId) ?? 0.85;
         const gameweekAssists = Object.fromEntries(
           Object.entries(tp.gameweekProjections || {}).map(([gw, g]: [string, any]) => 
-            [Number(gw), Math.round((g || 0) * ratio * 100) / 100]
+            [Number(gw), Math.round((g || 0) * 0.85 * 100) / 100]
           )
         );
         
@@ -8081,7 +8091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fixtureDetails[gw] = (fixtures || []).map((f: any) => ({
               opponent: f.opponent,
               isHome: f.isHome,
-              assists: Math.round((f.goals || 0) * ratio * 100) / 100
+              assists: Math.round((f.goals || 0) * 0.85 * 100) / 100
             }));
           });
         }
@@ -8092,8 +8102,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamShort: tp.teamShort,
           gameweekProjections: gameweekAssists,
           fixtureDetails: fixtureDetails,
-          totalAssists: Math.round((tp.totalGoals || 0) * ratio * 100) / 100,
-          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * ratio * 100) / 100,
+          totalAssists: Math.round((tp.totalGoals || 0) * 0.85 * 100) / 100,
+          averageAssistsPerGame: Math.round((tp.averageGoalsPerGame || 0) * 0.85 * 100) / 100,
           confidence: tp.confidence
         };
       });
@@ -8140,32 +8150,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamGoalsAgainstDetailsMap.set(team.id, team.fixtureDetails || {});
       });
       
-      // CHANGE 4: Compute actual clean sheet rate per team from finished 2025/26 fixtures.
-      // Used to calibrate the team-specific Poisson coefficient below.
-      const teamActualCSRateMap = new Map<number, number>();
-      const teamCSCount = new Map<number, { cs: number; games: number }>();
-      fixturesData.forEach((f: any) => {
-        if (!f.finished) return;
-        const homeCS = (f.team_a_score || 0) === 0 ? 1 : 0;
-        const awayCS = (f.team_h_score || 0) === 0 ? 1 : 0;
-        const h = teamCSCount.get(f.team_h) || { cs: 0, games: 0 };
-        teamCSCount.set(f.team_h, { cs: h.cs + homeCS, games: h.games + 1 });
-        const a = teamCSCount.get(f.team_a) || { cs: 0, games: 0 };
-        teamCSCount.set(f.team_a, { cs: a.cs + awayCS, games: a.games + 1 });
-      });
-      // Compute league-wide average CS rate from current 2025/26 finished fixtures
-      let leagueTotalCS = 0, leagueTotalGames = 0;
-      teamCSCount.forEach(d => { leagueTotalCS += d.cs; leagueTotalGames += d.games; });
-      const avgLeagueCSRate = leagueTotalGames >= 20
-        ? leagueTotalCS / leagueTotalGames
-        : 0.25; // fallback for very early season
-      console.log(`DEBUG CS: 2025/26 league avg CS rate = ${avgLeagueCSRate.toFixed(4)} (${leagueTotalCS} CSs from ${leagueTotalGames} team-games)`);
-      teams.forEach((t: any) => {
-        const d = teamCSCount.get(t.id);
-        const rate = d && d.games >= 5 ? d.cs / d.games : avgLeagueCSRate;
-        teamActualCSRateMap.set(t.id, rate);
-      });
-      
       // Use centralized team service for consistent data
       const teamService = await createTeamService();
       const bettingData = teamService.getBettingData();
@@ -8208,18 +8192,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const matchingFixture = gwFixtureDetails.find((fd: any) => fd.opponent === opponent.short_name);
           const perGameGoalsAgainst = matchingFixture ? matchingFixture.goalsAgainst : 1.5; // Default if not found
           
-          // CHANGE 4: Team-specific Poisson coefficient from actual season CS rate.
-          // Teams that keep more CSs than league average get a lower coefficient → higher CS probability per xGA.
-          // Leaky teams get a higher coefficient → lower CS probability per xGA.
-          // Formula: k = avgLeagueCSRate / teamActualCSRate (normalised around 1.0 at league average)
-          const teamActualCSRate = teamActualCSRateMap.get(team.id) ?? avgLeagueCSRate;
-          const rawPoissonCoeff = avgLeagueCSRate / Math.max(teamActualCSRate, 0.05);
-          // Clamp: 0.70 (top defensive side e.g. Forest) to 1.40 (leaky side e.g. Wolves)
-          const poissonCoefficient = Math.max(0.70, Math.min(1.40, rawPoissonCoeff));
-          
-          // POISSON DISTRIBUTION FORMULA: P(Clean Sheet) = e^(-λ*k) where λ is expected goals conceded
-          // and k is the team-specific decay coefficient
-          let cleanSheetProbability = Math.exp(-perGameGoalsAgainst * poissonCoefficient) * 100; // Convert to percentage
+          // POISSON DISTRIBUTION FORMULA: P(Clean Sheet) = e^(-λ) where λ is expected goals conceded for THIS SPECIFIC FIXTURE
+          let cleanSheetProbability = Math.exp(-perGameGoalsAgainst) * 100; // Convert to percentage
           
           // Ensure realistic bounds (0-100%)
           cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
@@ -8410,7 +8384,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player availability now uses only official FPL API data (chance_of_playing_next_round, status, news)
 
   // Enhanced helper function for comprehensive availability and injury analysis
-  function calculateExpectedMinutes(player: any, allPlayers: any[], gamesPlayed?: number): number {
+  function calculateExpectedMinutes(player: any, allPlayers: any[]): number {
     const position = player.element_type;
     const currentMinutes = player.minutes || 0;
     
@@ -8426,38 +8400,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let expectedMinutes: number;
     const currentGamesWorth = Math.ceil(currentMinutes / 90); // Estimate games played
     
-    // T004: Use starts-rate tiering when we have sufficient sample (≥5 games played)
-    const gp = gamesPlayed ?? 0;
-    const startRate = gp >= 5 && player.starts != null ? player.starts / Math.max(gp, 1) : null;
-    
     switch (position) {
       case 1: // Goalkeeper
-        if (startRate !== null) {
-          expectedMinutes = startRate >= 0.70 ? positionExpectedMinutes[1].starter : positionExpectedMinutes[1].backup;
-        } else {
-          expectedMinutes = currentGamesWorth >= 15 ? positionExpectedMinutes[1].starter : positionExpectedMinutes[1].backup;
-        }
+        expectedMinutes = currentGamesWorth >= 15 ? 
+          positionExpectedMinutes[1].starter : positionExpectedMinutes[1].backup;
         break;
       case 2: // Defender
-        if (startRate !== null) {
-          expectedMinutes = startRate >= 0.60 ? positionExpectedMinutes[2].regular : positionExpectedMinutes[2].rotation;
-        } else {
-          expectedMinutes = currentMinutes > 1800 ? positionExpectedMinutes[2].regular : positionExpectedMinutes[2].rotation;
-        }
+        expectedMinutes = currentMinutes > 1800 ? 
+          positionExpectedMinutes[2].regular : positionExpectedMinutes[2].rotation;
         break;
       case 3: // Midfielder
-        if (startRate !== null) {
-          expectedMinutes = startRate >= 0.55 ? positionExpectedMinutes[3].key : positionExpectedMinutes[3].squad;
-        } else {
-          expectedMinutes = currentMinutes > 1200 ? positionExpectedMinutes[3].key : positionExpectedMinutes[3].squad;
-        }
+        expectedMinutes = currentMinutes > 1200 ? 
+          positionExpectedMinutes[3].key : positionExpectedMinutes[3].squad;
         break;
       case 4: // Forward
-        if (startRate !== null) {
-          expectedMinutes = startRate >= 0.50 ? positionExpectedMinutes[4].starting : positionExpectedMinutes[4].backup;
-        } else {
-          expectedMinutes = currentMinutes > 900 ? positionExpectedMinutes[4].starting : positionExpectedMinutes[4].backup;
-        }
+        expectedMinutes = currentMinutes > 900 ? 
+          positionExpectedMinutes[4].starting : positionExpectedMinutes[4].backup;
         break;
       default:
         expectedMinutes = 1000;
@@ -8663,36 +8621,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamTotal += playerTotal;
       });
       
-      // Compute team xG per 90 SUM (normalized) across qualified players for share blending.
-      // Using a sum — not an average — ensures each player's xgPer90Share is naturally
-      // bounded [0–100%] and cannot exceed the team total, preventing amplification for
-      // dominant scorers like strikers whose xG/90 ratio vs the team average was ≥10×.
-      // Only players with ≥300 minutes are included to filter inactive/fringe squad members.
-      let teamXGPer90Total = 0;
-      teamPlayersList.forEach((player: any) => {
-        if ((player.minutes || 0) >= 300) {
-          teamXGPer90Total += parseFloat(player.expected_goals_per_90 || 0);
-        }
-      });
-      
       // Calculate shares with set piece bonuses (no normalization - just boost individuals)
       teamPlayersList.forEach((player: any) => {
         const playerTotal = playerTotals[player.id] || 0;
         const goalsScored = parseInt(player.goals_scored || 0);
         
         if (playerTotal > 0 && teamTotal > 0) {
-          // T002: Blend season-total share (50%) with xG-per-90 share (50%)
-          // xG per 90 reflects current form and role better than season totals
-          const seasonTotalShare = (playerTotal / teamTotal) * 100;
-          const playerXGPer90 = parseFloat(player.expected_goals_per_90 || 0);
-          // xgPer90Share: player's fraction of the team's total xG per 90 output (sum-normalised).
-          // Result is naturally bounded [0–100%] so it cannot amplify beyond reality.
-          const xgPer90Share = teamXGPer90Total > 0 && (player.minutes || 0) >= 300
-            ? (playerXGPer90 / teamXGPer90Total) * 100
-            : seasonTotalShare;
-          // Only blend when player has meaningful minutes to trust xG per 90 (≥300 min)
-          const blendWeight = (player.minutes || 0) >= 300 ? 0.5 : 0;
-          let goalShare = seasonTotalShare * (1 - blendWeight) + xgPer90Share * blendWeight;
+          // Base goal share from raw data
+          let goalShare = (playerTotal / teamTotal) * 100;
           
           // Apply penalty taker bonus (no normalization)
           const penaltyOrder = player.penalties_order || 99;
@@ -8720,13 +8656,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Add bonuses to goal share (boosting individual without normalization)
           goalShare += penaltyBonus + freekickBonus;
-
-          // Position-based hard cap: prevents any player exceeding a realistic max goal share
-          const elementType = player.element_type;
-          if (elementType === 1) goalShare = Math.min(goalShare, 3);       // GKP
-          else if (elementType === 2) goalShare = Math.min(goalShare, 12); // DEF
-          else if (elementType === 3) goalShare = Math.min(goalShare, 25); // MID
-          else if (elementType === 4) goalShare = Math.min(goalShare, 50); // FWD
           
           const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
           
@@ -9126,12 +9055,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Calculate player projections using formula: goal share × team projections × availability per gameweek
           const playerProjections: any[] = [];
           
-          // T001: Build teamGamesPlayed map for starting rate calculation
-          const goalsTeamGamesPlayed = new Map<number, number>();
-          (bootstrapData.events || []).forEach((e: any) => { /* placeholder */ });
-          // We use bootstrapData.teams to seed, then count finished fixtures
-          // Finished fixtures aren't directly available here, so use fplPlayer.starts / fplPlayer.minutes/90 proxy
-          
           goalShareData.forEach((team: any) => {
             const teamProjections = teamProjectionsMap[team.teamId];
             
@@ -9140,30 +9063,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const goalShare = player.goalShare || 0;
                 const fplPlayer = fplPlayerMap.get(player.playerId);
                 
-                // T001: Starting rate from FPL player starts data
-                // Estimate teamGamesPlayed as the max starts any player on the team has (proxy)
-                // or use minutes / 90 as a proxy when starts is unavailable
-                let startingRate = 1.0;
-                if (fplPlayer) {
-                  const fplStarts = fplPlayer.starts || 0;
-                  // Proxy teamGamesPlayed: minutes of full match / 90 gives max possible starts
-                  const maxTeamGP = Math.max(1, Math.round((fplPlayer.minutes || 0) / 90 + fplStarts) / 2);
-                  // Better proxy: use the finished events count from bootstrapData
-                  const finishedEvents = (bootstrapData.events || []).filter((e: any) => e.finished).length;
-                  const teamGP = Math.max(finishedEvents, 1);
-                  if (teamGP >= 5 && fplStarts > 0) {
-                    startingRate = Math.max(0.10, Math.min(1.0, fplStarts / teamGP));
-                  }
-                }
-                
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; goals: number }> } = {};
                 
-                // Calculate projected goals for each gameweek using blended goal share × availability × startingRate
+                // Calculate projected goals for each gameweek using full season goal share × availability
                 Object.entries(teamProjections.gameweekProjections || {}).forEach(([gameweek, teamGoals]) => {
                   const gwNum = parseInt(gameweek);
                   const availability = fplPlayer
-                    ? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, goalsEvents) * startingRate
+                    ? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, goalsEvents)
                     : 1.0;
                   
                   gameweekProjections[gameweek] = (goalShare / 100) * (teamGoals as number) * availability;
@@ -9308,11 +9215,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const nextGameweek = currentGameweek + 1; // Start from next gameweek
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, starting projections from GW${nextGameweek}`);
       
-      // T001: Build player lookup map for starting rate calculation
-      const bootstrapPlayerMap = new Map<number, any>();
-      (bootstrapData.elements || []).forEach((el: any) => bootstrapPlayerMap.set(el.id, el));
-      const finishedEventsCount = (bootstrapData.events || []).filter((e: any) => e.finished).length;
-      
       // Create player projections using pure projection methodology
       const playerProjections: any[] = [];
       
@@ -9333,15 +9235,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const playerId = player.id || player.playerId;
           const playerName = player.name || player.playerName;
           
-          // T001: Starting rate to account for rotation risk
-          let goalsStartingRate = 1.0;
-          const fplEl = bootstrapPlayerMap.get(playerId);
-          if (fplEl && finishedEventsCount >= 5) {
-            const fplStarts = fplEl.starts || 0;
-            goalsStartingRate = fplStarts > 0
-              ? Math.max(0.10, Math.min(1.0, fplStarts / finishedEventsCount))
-              : 0.10;
-          }
           
           const gameweekProjections: { [gameweek: number]: number } = {};
           let totalProjectedGoals = 0;
@@ -9357,8 +9250,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const projectedTeamGoals = (typeof teamGoals === 'number') ? teamGoals : 0;
             const rawGoalProjection = projectedTeamGoals * (player.goalShare / 100);
             
-            // Apply starting rate (T001) to account for rotation
-            const playerGoalsForGW = rawGoalProjection * goalsStartingRate;
+            // Use raw goal projection (no minutes scaling)
+            const playerGoalsForGW = rawGoalProjection;
             
             gameweekProjections[gameweek] = Math.round(playerGoalsForGW * 100) / 100;
             totalProjectedGoals += playerGoalsForGW;
@@ -9821,35 +9714,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teamPlayers: any[] = [];
         const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
         
-        // Compute team xA per 90 SUM (normalized) across qualified players for share blending.
-        // Sum-based — not average — so each player's xaPer90Share is bounded [0–100%] and
-        // cannot be amplified by the player/average ratio (same fix as goal share).
-        let teamXAPer90Total = 0;
-        teamPlayersList.forEach((p: any) => {
-          if ((p.minutes || 0) >= 300) {
-            teamXAPer90Total += parseFloat(p.expected_assists_per_90 || 0);
-          }
-        });
-        
         teamPlayersList.forEach((player: any) => {
           const assists = parseInt(player.assists || 0);
           const expectedAssists = parseFloat(player.expected_assists || 0);
           const playerTotal = assists + expectedAssists;
           
           if (playerTotal > 0 && teamData.total > 0) {
-            // Season-total assist share (assists + xA) / team total
-            const seasonTotalShare = (playerTotal / teamData.total) * 100;
-            
-            // 50/50 blend with xA per 90 share for players ≥300 mins.
-            // xaPer90Share is sum-normalised: (player xA/90) / (team total xA/90) × 100
-            // This is naturally bounded [0–100%] and cannot amplify beyond the team total.
-            const playerMins = parseFloat(player.minutes || 0);
-            const playerXAPer90 = parseFloat(player.expected_assists_per_90 || 0);
-            let assistShare = seasonTotalShare;
-            if (playerMins >= 300 && teamXAPer90Total > 0) {
-              const xaPer90Share = (playerXAPer90 / teamXAPer90Total) * 100;
-              assistShare = seasonTotalShare * 0.5 + xaPer90Share * 0.5;
-            }
+            // Base assist share from raw data
+            let assistShare = (playerTotal / teamData.total) * 100;
             
             // Apply set piece taker bonus (no normalization - just boost individuals)
             const cornerOrder = player.corners_and_indirect_freekicks_order || 99;
@@ -9868,13 +9740,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             // Add bonus to assist share (no normalization)
             assistShare += setPieceBonus;
-
-            // Position-based hard cap: prevents any player exceeding a realistic max assist share
-            const elementTypeA = player.element_type;
-            if (elementTypeA === 1) assistShare = Math.min(assistShare, 2);       // GKP
-            else if (elementTypeA === 2) assistShare = Math.min(assistShare, 20); // DEF
-            else if (elementTypeA === 3) assistShare = Math.min(assistShare, 35); // MID
-            else if (elementTypeA === 4) assistShare = Math.min(assistShare, 30); // FWD
             
             const position = bootstrapData.element_types.find((pos: any) => pos.id === player.element_type)?.singular_name || 'Unknown';
             
@@ -10276,8 +10141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const xAPer90 = currentYearXAPer90 > 0 ? currentYearXAPer90 : fallbackXA;
       
       // PURE PROJECTION: Only projected assists for next 6 gameweeks
-      const gpForMinutes = (bootstrapData.events.find((e: any) => e.is_current)?.id ?? 1) - 1;
-      const expectedMinutes = calculateExpectedMinutes(player, players, gpForMinutes);
+      const expectedMinutes = calculateExpectedMinutes(player, players);
       
       // NOTE: Set piece adjustments (corner/freekick) are now applied during cache generation
       // in projection-cache-worker.ts to prevent double-counting
@@ -10323,7 +10187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         minutesRestriction = 0.6; // 60% for rotation players (instead of 20%)
       }
       
-      const maxExpectedMinutes = Math.max(...players.map(p => calculateExpectedMinutes(p, players, gpForMinutes)), 1);
+      const maxExpectedMinutes = Math.max(...players.map(p => calculateExpectedMinutes(p, players)), 1);
       const basicMinutesWeight = Math.max(0.05, expectedMinutes / maxExpectedMinutes);
       const finalMinutesWeight = basicMinutesWeight * minutesRestriction;
       
@@ -12552,19 +12416,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
       }
       
-      // CHANGE 2: Build a form factor map per player from FPL's own form metric.
-      // player.form = average FPL points per game over the last 4 GWs (official API field).
-      // Normalised: form=5 → 1.0 (neutral), form=0 → keep at 1.0 (no data), form=10 → 1.20 cap.
-      // Applied only to goal and assist projections since those are the most form-sensitive components.
-      const playerFormMap = new Map<number, number>();
-      if (bootstrapData?.elements) {
-        for (const el of bootstrapData.elements) {
-          const rawForm = parseFloat(el.form || '0');
-          const formFactor = rawForm === 0 ? 1.0 : Math.max(0.80, Math.min(1.20, rawForm / 5));
-          playerFormMap.set(el.id, formFactor);
-        }
-      }
-      
       const { startGameweek = dynamicStart, endGameweek = dynamicEnd } = req.query;
       const start = parseInt(startGameweek as string);
       const end = parseInt(endGameweek as string);
@@ -12729,9 +12580,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                               basePlayer.position === 'Defender' || basePlayer.position === 'DEF' ? 6 : 
                               basePlayer.position === 'Midfielder' || basePlayer.position === 'MID' ? 5 : 4;
 
-        // CHANGE 2: Form factor lookup — same player for all GWs, compute once outside the loop.
-        const formFactor = playerFormMap.get(playerId) ?? 1.0;
-
         // Sum points for each gameweek from all APIs
         for (let gw = start; gw <= end; gw++) {
           const gwKey = gw.toString(); // Use numeric keys for consistency
@@ -12739,12 +12587,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Get points from each API for this gameweek
           // Goals: Calculate points from raw goal count × position multiplier
-          // CHANGE 2: Apply form factor — players in good recent form project higher goal/assist rates.
-          const rawGoals = (goalsPlayer?.gameweekProjections?.[gw.toString()] || 0) * formFactor;
+          const rawGoals = goalsPlayer?.gameweekProjections?.[gw.toString()] || 0;
           const goalsPts = rawGoals * goalMultiplier;
           
           // Assists: Calculate points from raw assist count × 3
-          const rawAssists = (assistsPlayer?.gameweekProjections?.[gw.toString()] || 0) * formFactor;
+          const rawAssists = assistsPlayer?.gameweekProjections?.[gw.toString()] || 0;
           const assistsPts = rawAssists * 3;
           const cleansheetPts = cleansheetPlayer?.pointsFromCleanSheets?.[gwApiKey] || 0;
           const goalsConcededPts = goalsConcededPlayer?.pointsFromGoalsConceded?.[gwApiKey] || 0;
@@ -15260,16 +15107,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Get opponent's AGR (Average Goals Received/Against per game)
               const opponentAGR = getOpponentAGR(opponentId);
               
-              // T003: Blend saves_per_90 (Opta direct metric) with AGR-based formula
-              // saves_per_90 from FPL API captures the actual shot-stopping rate independent of team quality
-              const fplSavesPer90 = parseFloat(player.saves_per_90 || 0);
-              // AGR-based formula: savesPerTeamGame × (opponentAGR / 1.35)
-              const agrBasedSaves = savesPerTeamGame * (opponentAGR / 1.35);
-              // Direct xGA-scaled formula: fplSavesPer90 × (opponentAGR / 1.35) — normalises shots vs saves
-              const directSaves = fplSavesPer90 > 0 ? fplSavesPer90 * (opponentAGR / 1.35) : agrBasedSaves;
-              // 50/50 blend when player has appeared (saves_per_90 > 0), else fall back to AGR formula
-              const blendedSaves = fplSavesPer90 > 0 ? (agrBasedSaves * 0.5 + directSaves * 0.5) : agrBasedSaves;
-              const fixtureSaves = blendedSaves * availabilityProb;
+              // Apply formula: Expected saves = Average saves/game × AGR of opponent/1.35 × availability
+              const fixtureSaves = savesPerTeamGame * (opponentAGR / 1.35) * availabilityProb;
               gwExpectedSaves += fixtureSaves;
               
               gwFixtureDetails.push({
@@ -15753,15 +15592,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fixturesResponse = await internalFetch("api/fixtures");
         const fixturesData = await fixturesResponse.json();
         
-        // T001: Compute teamGamesPlayed from finished fixtures for starting rate calculation
-        const ycTeamGamesPlayed = new Map<number, number>();
-        fixturesData.forEach((f: any) => {
-          if (f.finished) {
-            ycTeamGamesPlayed.set(f.team_h, (ycTeamGamesPlayed.get(f.team_h) || 0) + 1);
-            ycTeamGamesPlayed.set(f.team_a, (ycTeamGamesPlayed.get(f.team_a) || 0) + 1);
-          }
-        });
-        
         // Extract yellow card data for all players using historical data
         const yellowCardProjections = fplData.elements.map((player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -15772,14 +15602,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalYellowCards = 0;
           let totalPoints = 0;
           
-          // T001: Starting rate — reflects rotation risk beyond injury/suspension
-          const ycTeamGP = Math.max(1, ycTeamGamesPlayed.get(player.team) || 1);
-          const playerStarts = player.starts || 0;
-          const startingRate = ycTeamGP >= 5 ? Math.max(0.10, Math.min(1.0, playerStarts / ycTeamGP)) : 1.0;
-          
           // Calculate expected yellow cards PER GAME using season data
           const seasonYellowCards = player.yellow_cards || 0;
-          const teamGamesPlayed = ycTeamGP;
+          const teamGamesPlayed = currentGameweek; // Average number of games team has played
           const expectedYellowCardsPerGame = teamGamesPlayed > 0 ? seasonYellowCards / teamGamesPlayed : 0;
           
           const ycEvents: BootstrapEvent[] = fplData.events || [];
@@ -15787,8 +15612,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Process each gameweek in the next 12 gameweeks range
           // DGW FIX: Count fixtures per gameweek and multiply rate
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Per-GW availability probability × starting rate (T001)
-            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, ycEvents) * startingRate;
+            // Per-GW availability probability
+            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, ycEvents);
             
             // Find fixtures for this team in this gameweek
             const fixtures = fixturesData.filter((f: any) => 
@@ -15804,19 +15629,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
               
-              // CHANGE 3: Fixture difficulty adjustment for yellow cards using per-fixture FDR (1-5 scale).
-              // Harder fixtures (higher FDR) = more defensive pressure = more bookings.
-              // FDR=1: easy (−20%), FDR=3: neutral, FDR=5: hardest (+27% → capped at +20%)
-              const fixtureFDR = isHome ? (fixture.team_h_difficulty || 3) : (fixture.team_a_difficulty || 3);
-              const rawYCFactor = 1.0 + (fixtureFDR - 3) / 3 * 0.6;
-              const ycDifficultyFactor = Math.max(0.80, Math.min(1.20, rawYCFactor));
-              
-              const fixtureYC = expectedYellowCardsPerGame * availabilityProb * ycDifficultyFactor;
-              gwYellowCards += fixtureYC;
+              gwYellowCards += expectedYellowCardsPerGame * availabilityProb;
               gwFixtureDetails.push({
                 opponent: opponentTeam?.short_name || 'UNK',
                 isHome,
-                yellowCards: parseFloat((expectedYellowCardsPerGame * ycDifficultyFactor).toFixed(3))
+                yellowCards: parseFloat(expectedYellowCardsPerGame.toFixed(3))
               });
             });
             
@@ -15895,15 +15712,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fixturesResponse = await internalFetch("api/fixtures");
         const fixturesData = await fixturesResponse.json();
         
-        // T001: Compute teamGamesPlayed from finished fixtures for starting rate calculation
-        const rcTeamGamesPlayed = new Map<number, number>();
-        fixturesData.forEach((f: any) => {
-          if (f.finished) {
-            rcTeamGamesPlayed.set(f.team_h, (rcTeamGamesPlayed.get(f.team_h) || 0) + 1);
-            rcTeamGamesPlayed.set(f.team_a, (rcTeamGamesPlayed.get(f.team_a) || 0) + 1);
-          }
-        });
-        
         // Extract red card data for all players using historical data
         const redCardProjections = fplData.elements.map((player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
@@ -15914,14 +15722,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalRedCards = 0;
           let totalPoints = 0;
           
-          // T001: Starting rate — reflects rotation risk beyond injury/suspension
-          const rcTeamGP = Math.max(1, rcTeamGamesPlayed.get(player.team) || 1);
-          const rcPlayerStarts = player.starts || 0;
-          const rcStartingRate = rcTeamGP >= 5 ? Math.max(0.10, Math.min(1.0, rcPlayerStarts / rcTeamGP)) : 1.0;
-          
           // Calculate expected red cards PER GAME using season data
           const seasonRedCards = player.red_cards || 0;
-          const teamGamesPlayed = rcTeamGP;
+          const teamGamesPlayed = currentGameweek; // Average number of games team has played
           const expectedRedCardsPerGame = teamGamesPlayed > 0 ? seasonRedCards / teamGamesPlayed : 0;
           
           const rcEvents: BootstrapEvent[] = fplData.events || [];
@@ -15929,8 +15732,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Process each gameweek in the next 6 gameweeks range
           // DGW FIX: Count fixtures per gameweek and multiply rate
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Per-GW availability probability × starting rate (T001)
-            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, rcEvents) * rcStartingRate;
+            // Per-GW availability probability
+            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGameweek, rcEvents);
             
             // Find fixtures for this team in this gameweek
             const fixtures = fixturesData.filter((f: any) => 
@@ -16319,46 +16122,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           const playerBonus = player.bonus || 0;
           const teamFixtures = teamFixturesPlayed.get(player.team) || finishedGWs;
-          const rawBonusPerFixture = teamFixtures > 0 ? playerBonus / teamFixtures : 0;
-          
-          // T004: Blend BPS rate into bonus projection
-          // player.bps = cumulative Bonus Points System score (continuous signal underlying awarded bonus)
-          // Normalise per team-game then blend 50/50 with raw bonus rate (≥3 appearances only)
-          const playerBPS = player.bps || 0;
-          const teamPlayersForBPS = fplData.elements.filter((p: any) => p.team === player.team && (p.minutes || 0) > 0);
-          let teamBPSSum = 0, teamBPSCount = 0;
-          let teamBonusSum = 0;
-          teamPlayersForBPS.forEach((p: any) => {
-            teamBPSSum += (p.bps || 0);
-            teamBonusSum += (p.bonus || 0);
-            teamBPSCount++;
-          });
-          const teamAvgBPSPerTeamGame = teamBPSCount > 0 && teamFixtures > 0
-            ? teamBPSSum / (teamBPSCount * teamFixtures) : 1;
-          const teamAvgBonusPerTeamGame = teamBPSCount > 0 && teamFixtures > 0
-            ? teamBonusSum / (teamBPSCount * teamFixtures) : 0.033;
-          const playerBPSPerTeamGame = teamFixtures > 0 ? playerBPS / teamFixtures : 0;
-          const relativeBPS = playerBPSPerTeamGame / Math.max(teamAvgBPSPerTeamGame, 0.1);
-          const bpsDerivedBonus = relativeBPS * teamAvgBonusPerTeamGame;
-          const playerAppsForBPS = Math.min(teamFixtures, Math.ceil((player.minutes || 0) / 45));
-          const bonusPerFixture = playerAppsForBPS >= 3
-            ? (rawBonusPerFixture * 0.5 + bpsDerivedBonus * 0.5)
-            : rawBonusPerFixture;
-          
-          // T001: Starting rate — bonus already uses bonus/teamFixtures (accounts for appearances),
-          // but availabilityProb doesn't capture rotation for fit players.
-          // Note: bonusPerFixture already reflects per-team-game (not per-player-game), so startingRate
-          // corrects for players who are fit but rarely start.
-          const bonusTeamGP = Math.max(1, teamFixtures);
-          const bonusPlayerStarts = player.starts || 0;
-          const bonusStartingRate = bonusTeamGP >= 5 ? Math.max(0.10, Math.min(1.0, bonusPlayerStarts / bonusTeamGP)) : 1.0;
+          const bonusPerFixture = teamFixtures > 0 ? playerBonus / teamFixtures : 0;
           
           const bonusEvents: BootstrapEvent[] = fplData.events || [];
           const currentGW = fplData.events.find((e: any) => e.is_current)?.id || 1;
           
           for (let gw = startGameweek; gw <= endGameweek; gw++) {
-            // Per-GW availability probability × starting rate (T001)
-            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGW, bonusEvents) * bonusStartingRate;
+            // Per-GW availability probability
+            const availabilityProb = calculateAvailabilityProbability(player, gw, currentGW, bonusEvents);
             
             const fixtures = allFixtures.filter((f: any) => 
               f.event === gw && (f.team_h === player.team || f.team_a === player.team)
@@ -16372,21 +16143,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
               
-              // CHANGE 1: Position-specific fixture difficulty for bonus using per-fixture FDR (1-5 scale).
-              // Easier fixtures (lower FDR) = more goals/assists = more bonus.
-              // FWD bonus is tightly event-driven → wider sensitivity range.
-              // MID moderately event-driven. DEF/GKP less sensitive.
-              const bonusFDR = isHome ? (fixture.team_h_difficulty || 3) : (fixture.team_a_difficulty || 3);
-              // Sensitivity: higher = wider swing per FDR step
-              const sensitivity = position === 'FWD' ? 0.90 : position === 'MID' ? 0.66 : position === 'GKP' ? 0.30 : 0.45;
-              const rawFactor = 1 + (3 - bonusFDR) / 3 * sensitivity;
-              // Position-specific clamp ranges (FWD: ±30%, MID: ±22%, DEF: ±15%, GKP: ±10%)
-              const [minFactor, maxFactor] =
-                position === 'FWD' ? [0.70, 1.30] :
-                position === 'MID' ? [0.78, 1.22] :
-                position === 'GKP' ? [0.90, 1.10] :
-                [0.85, 1.15]; // DEF default
-              const clampedFactor = Math.max(minFactor, Math.min(maxFactor, rawFactor));
+              // Mild fixture difficulty adjustment: easier opponents (lower FDR) = slightly more bonus
+              // FDR ranges 1-5 where 2 is easy, 5 is hardest
+              // Use opponent's strength rating from FPL
+              const opponentStrength = isHome 
+                ? (opponentTeam?.strength_away_overall || 1200) 
+                : (opponentTeam?.strength_home_overall || 1200);
+              const avgStrength = 1200;
+              // Scale factor: 0.85 for very hard fixtures, 1.15 for very easy fixtures
+              const difficultyFactor = 1 + (avgStrength - opponentStrength) / avgStrength * 0.5;
+              const clampedFactor = Math.max(0.85, Math.min(1.15, difficultyFactor));
               
               const fixtureBonus = bonusPerFixture * clampedFactor * availabilityProb;
               gwBonusPoints += fixtureBonus;
@@ -17869,28 +17635,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cachedData = await db.select().from(teamProjections)
         .where(eq(teamProjections.season, '2025/26'));
       
-      // T003: Fetch per-team assist ratios from standings
-      const standingsCachedRes = await fetch("http://localhost:5000/api/current-standings?venue=all");
-      const standingsCachedData: any[] = standingsCachedRes.ok ? await standingsCachedRes.json() : [];
-      const cachedAssistRatioMap = new Map<number, number>();
-      standingsCachedData.forEach((t: any) => {
-        if (t.played >= 5 && t.totalGoals > 0) {
-          const ratio = Math.max(0.55, Math.min(1.10, t.totalAssists / t.totalGoals));
-          cachedAssistRatioMap.set(t.id, ratio);
-        }
-      });
-      
-      // Transform to expected format with per-team assist ratio (fallback 0.85)
+      // Transform to expected format with assist multiplier
       const teamAssistData = cachedData.map((team) => {
         const goalProjections = team.goalProjections as any;
         const totalGoals = Object.values(goalProjections).reduce((sum: number, val: any) => sum + (val || 0), 0);
-        const ratio = cachedAssistRatioMap.get(team.teamId) ?? 0.85;
-        const totalAssists = totalGoals * ratio;
+        const totalAssists = totalGoals * 0.85; // FPL assist multiplier (higher than standard due to FPL's generous assist rules)
         
-        // Create assist projections based on goal projections with per-team ratio
+        // Create assist projections based on goal projections
         const assistProjections: any = {};
         Object.keys(goalProjections).forEach(gw => {
-          assistProjections[gw] = Math.round((goalProjections[gw] || 0) * ratio * 100) / 100;
+          assistProjections[gw] = Math.round((goalProjections[gw] || 0) * 0.85 * 100) / 100;
         });
         
         return {

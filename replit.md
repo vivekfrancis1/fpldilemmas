@@ -1,45 +1,47 @@
 # FPL Dilemmas
 
 ## Overview
-FPL Dilemmas is an analytics application designed for Fantasy Premier League (FPL) managers. Its core purpose is to provide FPL managers with data-driven insights and tools to enhance their team's performance. The application offers intuitive data presentation, filtering, sorting, and statistical analysis, including AI-powered player projections, detailed team analysis, and comprehensive historical data. It aims to be a leading platform for optimizing FPL team decisions and gaining a competitive advantage.
+FPL Dilemmas is an analytics application for Fantasy Premier League (FPL) managers. Its purpose is to empower users to make informed decisions for their fantasy teams through intuitive data presentation, filtering, sorting, and statistical analysis. The application aims to be a go-to tool for optimizing team performance and gaining a competitive edge, offering advanced features like AI-powered player projections, detailed team analysis, and comprehensive historical data.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 **Development Protocol**: Always ask permission before making any changes to logic, calculations, or functionality. No unauthorized modifications are permitted.
 **Test-Driven Development (TDD)**: TDD is applied to backend logic, API contracts, and calculation functions — not UI/styling. Scope: (1) API endpoint behavior — correct data shapes, edge cases, query param handling, (2) Calculation/projection logic — scoring formulas, transfer costs, availability adjustments, (3) Data consistency — cached vs live data, cross-endpoint consistency. Workflow: Write test cases first (red), implement to pass (green), refactor while green. A backend feature is only complete when all its test cases pass. Tests live in `tests/` directory using Vitest. Existing test file: `tests/projection-consistency.test.ts`. UI/styling changes do not require tests.
+Site tagline: "FPL made smarter with predictive analytics." displayed in header.
+Navigation priority: Player Total Points as default landing page (home route '/'), with side navigation for all tools.
+Manager ID Auto-Load: All 6 FPL Manager tools (My Dashboard, My Live Rank, My Leagues, Team Optimizer, Transfer Planner, My Team Projected Points) automatically load and fetch data from the last searched Manager ID saved in localStorage on component mount. The Manager ID input field is pre-filled and data fetching is triggered automatically when a cached ID exists, providing seamless user experience without requiring manual button clicks. All tools share a unified search section design with consistent Card styling (border-0 bg-white/80 backdrop-blur-sm), gradient purple-to-indigo buttons, and responsive layout matching My Dashboard.
+Projection Tools Limit: Both team-level and player-level projection tools now generate 12 gameweeks of data with dropdown filters showing 12 weeks but defaulting to 6 gameweeks view for consistent user experience. All tools show only future gameweeks excluding current/finished gameweeks. Player projection pages (goals, assists, goals scored, bonus points, saves, total points) use shared gameweek utilities with proper validation and loading states.
+Most popular tools: Player Statistics, My Live Rank, and Fixture Analyzer.
+Fixture Analyzer display: Shows 6 gameweeks by default with user customization up to GW38.
+FPL Content Creators Admin: Streamlined admin interface with only essential fields: Name, Manager ID, Description, Twitter Handle, and YouTube URL. Both Twitter and YouTube fields are optional and can be left blank. Complete CRUD functionality implemented including delete feature. Admin URL updated to /admin-content-creators.
+Navigation Cleanup: Hidden Player Yellow Cards, Red Cards, Goals Conceded, and Bonus Points tools from sidebar navigation. These components are now integrated into the comprehensive Player Total Points tool.
+Mobile Optimization: Comprehensive responsive design implemented across all major pages including FPL Manager tools (My Team Projected Points, Transfer Recommendations, Best Free Hit Team, Transfer Planner) and analytics pages (Current Standings, Player Statistics, My Dashboard, Top 25 Managers, Content Creators, Results and Fixtures) with adaptive column hiding, responsive grids, mobile-friendly touch targets, natural page scrolling, and responsive padding (p-2 sm:p-4, px-3 sm:px-4). Transfer Planner pitch view aggressively optimized for maximum mobile screen usage with sticky columns and horizontal scroll on mobile devices.
+SEO Optimization: Comprehensive search engine optimization implemented with keyword-rich meta tags targeting FPL predictions, analytics, player projections, team projections, and related search terms. Open Graph and Twitter Card tags for enhanced social media sharing. JSON-LD structured data for search engines. Complete sitemap.xml with all 20+ pages and robots.txt for proper crawling. Primary keywords: FPL predictions, Fantasy Premier League analytics, player projections, team projections, captain selector, transfer planner, price tracker, fixture analyzer.
+Loading Experience: Enhanced loading screens implemented across all major slow-loading pages using shared LoadingExperience component with 4 variants (analysis, simulation, table, optimization). Standardized loading UI with Loader2 spinning icon, Card-based design, contextual messages, and 3-step progress indicators with staggered animations. Implemented on: Transfer Recommendations, Transfer Planner, Best Free Hit Team, OpenFPL Projections, My Dashboard, Top 25 Managers, and Player Stats pages.
 
 ## System Architecture
 
 ### Frontend Architecture
 - **Framework**: React with TypeScript, using Vite.
-- **Routing**: Wouter for client-side routing; Player Total Points is the default route (`/`).
+- **Routing**: Wouter for client-side routing; Player Total Points is the default route.
 - **State Management**: TanStack Query for server state.
 - **UI Library**: shadcn/ui components built on Radix UI primitives.
 - **Styling**: Tailwind CSS with a custom FPL-themed design system.
-- **UI/UX Decisions**:
-    - Tagline: "FPL made smarter with predictive analytics." displayed in header.
-    - Default landing page: Player Total Points.
-    - Manager ID Auto-Load: All 6 FPL Manager tools (My Dashboard, My Live Rank, My Leagues, Team Optimizer, Transfer Planner, My Team Projected Points) automatically load and fetch data from the last searched Manager ID saved in localStorage.
-    - Projection Tools Limit: Both team-level and player-level projection tools generate 12 gameweeks of data, defaulting to 6 gameweeks view, showing only future gameweeks.
-    - Fixture Analyzer: Shows 6 gameweeks by default with user customization up to GW38.
-    - Navigation Cleanup: Player Yellow Cards, Red Cards, Goals Conceded, and Bonus Points tools are integrated into the Player Total Points tool and hidden from sidebar navigation.
-    - Mobile Optimization: Comprehensive responsive design across all major pages, including FPL Manager tools and analytics pages, with adaptive column hiding, responsive grids, and optimized touch targets. Transfer Planner pitch view is aggressively optimized for mobile.
-    - SEO Optimization: Comprehensive SEO with keyword-rich meta tags, Open Graph, Twitter Card tags, JSON-LD structured data, sitemap.xml, and robots.txt.
-    - Loading Experience: Enhanced loading screens using a shared `LoadingExperience` component with 4 variants, standardized UI, contextual messages, and 3-step progress indicators across slow-loading pages.
+- **UI/UX Decisions**: Enhanced UI design for My Team section; color-coded defensive metrics in Player Statistics; streamlined interfaces for Transfer Tracker and Open FPL Projections. Unified pitch view styling and standardized header system.
 
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js.
 - **API Design**: RESTful API endpoints prefixed with `/api/`.
 - **Data Fetching**: Proxy server for official FPL API data.
-- **Caching Strategy**: Database-backed projection caching with PostgreSQL. Cache-first architecture across projection endpoints for pre-computed aggregated data and team-level predictions, resulting in 10-20x faster loading times.
-- **Performance Optimization**: Dedicated `ProjectionService` with intelligent caching and client-side filtering for optimized data retrieval.
+- **Caching Strategy**: Database-backed projection caching with PostgreSQL.
+- **Performance Optimization**: Dedicated ProjectionService with intelligent caching. Cache-first architecture implemented across projection endpoints: `/api/cached/player-total-points` for pre-computed aggregated player data, `/api/cached/team-goal-projections` for team-level predictions, `/api/cached/player-saves-projections`, `/api/cached/player-yellow-cards-projections`, and `/api/cached/player-red-cards-projections` for defensive statistics. Team Optimizer, Player Total Points, Team Goal Projections, My Team Projected Points, Best Wildcard Team, Best Free Hit Team, Player Saves, Player Yellow Cards, Player Red Cards, Transfer Recommendations (backend optimized to fetch cached data once instead of loop calls), and Transfer Planner optimization features (Optimize GW, Optimize All GWs) all use cached endpoints with client-side filtering for 10-20x faster loading times. Best Free Hit Team additionally benefits from instant gameweek switching with no refetch required.
 
 ### Data Storage Solutions
 - **Primary Storage**: In-memory storage (Map and object caching).
 - **Database Configuration**: Drizzle ORM for PostgreSQL (Neon Database) for historical data and daily price tracking.
 - **Data Persistence**: Automated daily collection of player prices, ownership, and transfer data.
-- **Data Consistency**: All projection tools use deterministic calculations based on team ID and gameweek seeds. `MASTER_TEAM_DEFAULTS` serves as the central configuration for projection multipliers.
-- **Cache Refresh Strategy**: Daily automated cache refresh at 3 AM for all projection caches. Manual cache refresh available via POST `/api/admin/refresh-cache` endpoint (requires API key authentication). In-memory caches have 30-minute TTL with automatic invalidation.
+- **Data Consistency**: All projection tools use deterministic calculations based on team ID and gameweek seeds. MASTER_TEAM_DEFAULTS serves as the central configuration source for all projection multipliers.
+- **Cache Refresh Strategy**: Daily automated cache refresh at 3 AM refreshes all projection caches (team projections, goal shares, assist shares, player total points, player saves, player yellow cards, player red cards). Manual cache refresh available via POST `/api/admin/refresh-cache` endpoint (requires API key authentication via X-API-Key header or apiKey body field) for immediate updates. In-memory caches have 30-minute TTL with automatic invalidation.
 
 ### API Integration
 - **External API**: Official Fantasy Premier League API.
@@ -48,23 +50,22 @@ Preferred communication style: Simple, everyday language.
 
 ### Feature Specifications
 - **My Dashboard**: Comprehensive FPL overview combining My Live Rank, My Team, and My Leagues in a single tabbed interface, serving as the home page.
-- **Player Projections**: AI-powered projection model for various player statistics (minutes, goals, assists, clean sheets, bonus points, CBIT%), using official FPL API availability data.
-- **Team Projections**: Advanced team-level forecasting for goals and clean sheets using spread betting market analysis and statistical modeling.
-- **Goal/Assist Share**: Tools showing team expected goals/assists breakdown by player percentage share.
-- **Captain Selector**: Enhanced with historical performance data, a 6-factor scoring algorithm, and ownership analysis.
+- **Player Projections**: AI-powered projection model for various player statistics (minutes, goals, assists, clean sheets, bonus points, CBIT%). Uses only official FPL API availability data (chance_of_playing_next_round, status, news).
+- **Team Projections**: Advanced team-level forecasting for goals and clean sheets using 8-phase spread betting market analysis and statistical modeling.
+- **Goal/Assist Share**: Dedicated tools showing team expected goals/assists breakdown by player percentage share.
+- **Captain Selector**: Enhanced with historical captaincy performance data, 6-factor scoring algorithm, and ownership analysis.
 - **Transfer Tracker**: Authentic transfer data analysis using real FPL API data.
 - **Open FPL Projections**: Advanced machine learning projection tool with position-specific ensemble models, multi-horizon forecasting, and hourly updates.
 - **Price Tracker**: FPL API-based system tracking actual price changes.
-- **Twitter Integration**: Automated daily price change posting (risers and fallers) at 7 AM IST using Twitter API v2.
-- **Live Goal Tweets**: Automated live goal monitoring via `LiveGoalMonitor` service polling FPL fixtures API every 60 seconds during live matches, tweeting goals, red cards, and defensive contribution points for players with >10% ownership. Bonus points are tweeted upon match finish with 12-hour post-match monitoring for recalculations.
+- **Twitter Integration**: Automated daily price change posting at 7 AM IST using Twitter API v2 with OAuth 1.0a authentication. Posts 2 separate tweets (risers and fallers) sorted by ownership percentage with full ownership data. Includes manual preview endpoint (`/api/admin/twitter/preview`) and test posting endpoint (`/api/admin/twitter/test`). Lazy initialization of Twitter client allows server to run without credentials in development.
+- **Live Goal Tweets**: Automated live goal monitoring via `LiveGoalMonitor` service that polls FPL fixtures API every 60 seconds during live matches. Detects new goals by comparing player stats snapshots between polls using the FPL `explain` data per fixture. Only tweets when player has >10% ownership. Tweet includes scorer name, assister (when safely attributable), ownership %, updated score, minute, and link to match stats page. Groups fixtures by gameweek for correct API calls. Also tweets red cards and defensive contribution points (DEF/GKP ≥10, MID/FWD ≥12) for players with >10% ownership. Yellow cards and save points removed to conserve API quota. DC uses post-match summary format listing all qualifying players in a single tweet instead of live per-player alerts. Bonus points tweeted when match finishes with 12-hour post-match monitoring for BPS recalculations — sends update tweet if bonus allocation changes. Admin endpoints: `/api/admin/live-goals/status` and `/api/admin/live-goals/preview`.
 - **Results Projections**: Match prediction tool displaying predicted scores, win probabilities, expected goals, and clean sheet odds for future gameweeks.
-- **Results and Fixtures**: Comprehensive match schedule with LIVE indicators, clickable player stats, and automatic background refresh during live matches.
+- **Results and Fixtures**: Comprehensive match schedule with LIVE match indicators, clickable player stats, and automatic 30-second background refresh during live matches. Player Stats modal displays categorized performance data.
 - **Historical Data**: Year selection functionality for player statistics from 2016/17 season onwards.
-- **Defensive Contribution Analytics**: Integration of new FPL API defensive data points and a comprehensive projection model.
-- **Comprehensive FPL Scoring System**: Implemented probability-based calculations for all official FPL scoring components with a hybrid methodology.
-- **Projection Formula Decisions**: Goals/assists use xG/90-primary formula for players with ≥300 minutes; form-based fallback for low-minute players. Includes guards to prevent small-sample inflation and ensure realistic projections.
-- **Transfer Planner**: Comprehensive transfer planning tool with gameweek selector, team selection interface, chip planning, draft management, Team Evolution visualization, and Projected Points analysis. Fully implements FPL 2024/25 rule changes including 5 free transfers and GW16 AFCON Free Transfer Top-Up. All user actions are permanently saved to the database.
-- **Availability Tracking**: Player availability uses only official FPL API data.
+- **Defensive Contribution Analytics**: Integration of new FPL API defensive data points and comprehensive projection model.
+- **Comprehensive FPL Scoring System**: Implemented probability-based calculations for all official FPL scoring components with hybrid methodology.
+- **Transfer Planner**: Comprehensive transfer planning tool with gameweek selector, team selection interface, chip planning, draft management (Base + A-E drafts), Team Evolution visualization, and Projected Points analysis. Draft Comparison table intelligently shown only when there are at least 2 unique (non-duplicate) drafts. Team Evolution section only shown when transfers have been made for the current draft in any gameweek. Fully implements FPL 2024/25 rule changes including 5 free transfers and GW16 AFCON Free Transfer Top-Up with complete backend parity. Free transfer calculations use history-based seeding from finished gameweeks, proper chip handling (Free Hit, Wildcard), and banking logic matching /transfer-recommendations endpoint. Lineup optimization features include single-gameweek optimization and bulk "Optimize All Gameweeks" functionality. All user actions (transfers, position swaps, buy price edits, captain/vice captain selections, and lineup optimizations) are permanently saved to the database immediately and persist across draft switches, gameweek changes, and page reloads.
+- **Availability Tracking**: Player availability uses only official FPL API data (chance_of_playing_next_round, status, news) with no custom hardcoded player lists.
 
 ## External Dependencies
 
@@ -91,4 +92,3 @@ Preferred communication style: Simple, everyday language.
 
 ### External APIs
 - **FPL API**: Official Fantasy Premier League API.
-- **Twitter API v2**: For automated tweets.

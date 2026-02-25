@@ -123,30 +123,6 @@ export class TeamGoalsService {
     const calculatedStartGameweek = startGameweek || (currentGameweek + 1);
     const calculatedEndGameweek = endGameweek || Math.min(currentGameweek + 6, 38);
     
-    // T005: Calibrate home/away venue multipliers from actual 2025/26 results
-    const finishedFix = fixturesData.filter((f: any) => f.finished && f.team_h_score != null && f.team_a_score != null);
-    let dynamicHomeMultiplier = MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier || 1.16;
-    let dynamicAwayMultiplier = MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier || 0.84;
-    if (finishedFix.length >= 50) {
-      const homeGoalsTotal = finishedFix.reduce((s: number, f: any) => s + (f.team_h_score || 0), 0);
-      const awayGoalsTotal = finishedFix.reduce((s: number, f: any) => s + (f.team_a_score || 0), 0);
-      const homeGPG = homeGoalsTotal / finishedFix.length;
-      const awayGPG = awayGoalsTotal / finishedFix.length;
-      const overallAvg = (homeGPG + awayGPG) / 2;
-      if (overallAvg > 0) {
-        dynamicHomeMultiplier = Math.max(1.05, Math.min(1.30, homeGPG / overallAvg));
-        dynamicAwayMultiplier = Math.max(0.70, Math.min(0.95, awayGPG / overallAvg));
-        console.log(`📊 T005: Dynamic venue multipliers — Home: ${dynamicHomeMultiplier.toFixed(3)}, Away: ${dynamicAwayMultiplier.toFixed(3)} (from ${finishedFix.length} fixtures)`);
-      }
-    }
-    
-    // Inject dynamic venue multipliers into admin settings (non-mutating override)
-    const adminGoalSettingsWithVenue = {
-      ...adminGoalSettings,
-      homeAdvantageGoalsMultiplier: dynamicHomeMultiplier,
-      awayFactorGoalsMultiplier: dynamicAwayMultiplier,
-    };
-    
     // Use centralized team service for betting data
     const teamService = await createTeamService();
     const bettingData = teamService.getBettingData();
@@ -184,7 +160,7 @@ export class TeamGoalsService {
         // Apply the hybrid team goal calculation logic with real xGF/xGA data
         const expectedGoals = await TeamGoalsService.calculateFixtureGoals(
           team, opponent, fixture, isHome, bootstrapData, fixturesData, 
-          bettingData, adminGoalSettingsWithVenue, MASTER_TEAM_DEFAULTS
+          bettingData, adminGoalSettings, MASTER_TEAM_DEFAULTS
         );
         
         // Note: calculateFixtureGoals now guarantees a valid number, no need to filter
@@ -465,35 +441,33 @@ export class TeamGoalsService {
   }
   
   private static calculateTeamForm(teamId: number, currentGameweek: number, fixturesData: any[], adminGoalSettings: any): number {
-    // Compute season average goals-for from all finished fixtures
-    const allFinished = fixturesData.filter((f: any) =>
-      f.finished && (f.team_h === teamId || f.team_a === teamId)
-    );
-    if (allFinished.length === 0) return 1.00;
-
-    let seasonGoals = 0;
-    allFinished.forEach((g: any) => {
-      seasonGoals += g.team_h === teamId ? (g.team_h_score || 0) : (g.team_a_score || 0);
-    });
-    const seasonAvgGoals = seasonGoals / allFinished.length;
-
-    // Recent 6 fixtures (goals-per-game form signal)
-    const recentGames = allFinished
-      .filter((f: any) => f.event < currentGameweek)
+    const recentGames = fixturesData
+      .filter((f: any) => 
+        f.finished && 
+        f.event < currentGameweek && 
+        (f.team_h === teamId || f.team_a === teamId)
+      )
       .sort((a: any, b: any) => b.event - a.event)
-      .slice(0, 6);
-
+      .slice(0, 5);
+      
     if (recentGames.length === 0) return 1.00;
-
-    let recentGoals = 0;
-    recentGames.forEach((g: any) => {
-      recentGoals += g.team_h === teamId ? (g.team_h_score || 0) : (g.team_a_score || 0);
+    
+    let wins = 0;
+    recentGames.forEach((game: any) => {
+      const isHome = game.team_h === teamId;
+      const teamScore = isHome ? game.team_h_score : game.team_a_score;
+      const opponentScore = isHome ? game.team_a_score : game.team_h_score;
+      
+      if (teamScore > opponentScore) wins++;
     });
-    const recentGoalsPerGame = recentGoals / recentGames.length;
-
-    // Continuous multiplier: 0.7 + 0.3 × (recent / season avg), clamped 0.80–1.25
-    const raw = 0.7 + 0.3 * (recentGoalsPerGame / Math.max(seasonAvgGoals, 0.5));
-    return Math.max(0.80, Math.min(1.25, raw));
+    
+    if (wins >= 3) {
+      return adminGoalSettings.teamFormMultiplier || 1.06;
+    } else if (wins <= 1) {
+      return (2 - (adminGoalSettings.teamFormMultiplier || 1.06));
+    } else {
+      return 1.00;
+    }
   }
   
   private static applyTimingAndContextFactors(
