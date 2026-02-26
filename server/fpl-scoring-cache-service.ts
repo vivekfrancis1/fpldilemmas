@@ -35,6 +35,16 @@ export class FPLScoringCacheService {
       }
 
       console.log(`🔧 Starting Player Total Points aggregation for GW${resolvedStart}-${resolvedEnd}...`);
+      
+      // Pre-warm TeamGoalsService so all 4 team-data-dependent components hit the cache immediately
+      try {
+        const { TeamGoalsService } = await import('./team-goals-service');
+        await TeamGoalsService.getTeamGoalProjections(resolvedStart!, resolvedEnd!);
+        console.log("🔥 TeamGoalsService pre-warmed for aggregation");
+      } catch (e) {
+        console.warn("⚠️ TeamGoalsService pre-warm failed (non-fatal):", e);
+      }
+      
       const aggregator = new PlayerTotalPointsAggregator();
       await aggregator.aggregatePlayerTotalPoints(resolvedStart, resolvedEnd);
       // Clear memory cache so the next request reads the freshly aggregated DB data

@@ -8097,35 +8097,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.log(`DEBUG: Team CS Projections API called - generating next 12 gameweeks`);
       
-      // Use internal cached endpoints for better performance
-      const [bootstrapResponse, fixturesResponse, goalsAgainstResponse] = await Promise.all([
-        fetch("http://localhost:5000/api/bootstrap-static"),
-        fetch("http://localhost:5000/api/fixtures"),
-        fetch(`http://localhost:5000/api/team-goals-against-projections`)
+      const [bootstrapResponse, fixturesResponse] = await Promise.all([
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
       ]);
       
-      if (!bootstrapResponse.ok || !fixturesResponse.ok || !goalsAgainstResponse.ok) {
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
         throw new Error("Failed to fetch data from internal API");
       }
       
       const bootstrapData = await bootstrapResponse.json();
       const fixturesData = await fixturesResponse.json();
-      const goalsAgainstData = await goalsAgainstResponse.json();
       
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       const endGameweek = Math.min(currentGameweek + 12, 38);
+      const startGWforCS = currentGameweek + 1;
       
-      console.log(`DEBUG: Processing next 12 gameweeks for clean sheets (GW${currentGameweek + 1} to GW${endGameweek}), current GW: ${currentGameweek}`);
+      console.log(`DEBUG: Processing next 12 gameweeks for clean sheets (GW${startGWforCS} to GW${endGameweek}), current GW: ${currentGameweek}`);
       
-      // Create lookup map for team Goals Against by gameweek for new formula
-      // Also store fixtureDetails for individual fixture CS calculations
+      // Get team goal projections directly — no HTTP round-trip, no readiness gate dependency
+      const { TeamGoalsService: TeamGoalsServiceCS } = await import('./team-goals-service');
+      const teamGoalProjectionsCS = await TeamGoalsServiceCS.getTeamGoalProjections(startGWforCS, endGameweek);
+      
+      // Build goals-against maps by mirroring: home concedes what away scores and vice versa
       const teamGoalsAgainstMap = new Map();
       const teamGoalsAgainstDetailsMap = new Map();
-      goalsAgainstData.forEach((team: any) => {
-        teamGoalsAgainstMap.set(team.id, team.gameweekProjections);
-        teamGoalsAgainstDetailsMap.set(team.id, team.fixtureDetails || {});
+      teams.forEach((team: any) => {
+        teamGoalsAgainstMap.set(team.id, {});
+        teamGoalsAgainstDetailsMap.set(team.id, {});
       });
+      fixturesData
+        .filter((f: any) => f.event >= startGWforCS && f.event <= endGameweek && !f.finished)
+        .forEach((fixture: any) => {
+          const gw = fixture.event;
+          const homeTeam = teams.find((t: any) => t.id === fixture.team_h);
+          const awayTeam = teams.find((t: any) => t.id === fixture.team_a);
+          if (!homeTeam || !awayTeam) return;
+          const homeProj = teamGoalProjectionsCS.find((t: any) => t.teamId === fixture.team_h);
+          const awayProj = teamGoalProjectionsCS.find((t: any) => t.teamId === fixture.team_a);
+          const homeFixtures = homeProj?.fixtureDetails?.[gw] || [];
+          const awayFixtures = awayProj?.fixtureDetails?.[gw] || [];
+          const homeGoals = homeFixtures.find((fd: any) => fd.opponent === awayTeam.short_name)?.goals
+            ?? (homeProj?.gameweekProjections?.[gw] ?? 1.5);
+          const awayGoals = awayFixtures.find((fd: any) => fd.opponent === homeTeam.short_name)?.goals
+            ?? (awayProj?.gameweekProjections?.[gw] ?? 1.5);
+          const homeGA = teamGoalsAgainstDetailsMap.get(fixture.team_h);
+          const awayGA = teamGoalsAgainstDetailsMap.get(fixture.team_a);
+          if (homeGA) {
+            if (!homeGA[gw.toString()]) homeGA[gw.toString()] = [];
+            homeGA[gw.toString()].push({ opponent: awayTeam.short_name, isHome: true, goalsAgainst: Math.round(awayGoals * 100) / 100 });
+          }
+          if (awayGA) {
+            if (!awayGA[gw.toString()]) awayGA[gw.toString()] = [];
+            awayGA[gw.toString()].push({ opponent: homeTeam.short_name, isHome: false, goalsAgainst: Math.round(homeGoals * 100) / 100 });
+          }
+        });
       
       // Use centralized team service for consistent data
       const teamService = await createTeamService();
@@ -11461,7 +11488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Team Goals Against Projections endpoint - PERFECT MIRROR IMAGE
   app.get("/api/team-goals-against-projections", 
-    requireReadiness(['bootstrap-data', 'team-goals'], 'team-goals-against-projections'),
+    requireReadiness(['bootstrap-data'], 'team-goals-against-projections'),
     async (req, res) => {
     try {
       if (teamGoalsAgainstCache && (Date.now() - teamGoalsAgainstCache.timestamp) < TEAM_PROJECTION_CACHE_DURATION) {
@@ -11469,21 +11496,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.log(`DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping`);
       
-      // Fetch Team Goal projections to create perfect mirror
-      const teamGoalResponse = await fetch(`http://localhost:5000/api/team-goal-projections`);
-      if (!teamGoalResponse.ok) {
-        throw new Error("Failed to fetch team goal projections");
-      }
-      
-      const teamGoalProjections = await teamGoalResponse.json();
-      
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("https://fantasy.premierleague.com/api/fixtures/")
+        internalFetch('api/bootstrap-static'),
+        internalFetch('api/fixtures')
       ]);
+      
+      if (!bootstrapResponse.ok || !fixturesResponse.ok) {
+        throw new Error("Failed to fetch bootstrap/fixtures data");
+      }
       
       const bootstrapData = await bootstrapResponse.json();
       const fixturesData = await fixturesResponse.json();
+      
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
       
@@ -11491,6 +11515,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamsGoalsAgainst = new Map();
       const startGameweek = currentGameweek + 1;
       const endGameweek = Math.min(currentGameweek + 12, 38);
+      
+      // Call TeamGoalsService directly — has its own 30-min cache + in-flight dedup, no HTTP round-trip
+      const { TeamGoalsService } = await import('./team-goals-service');
+      const teamGoalProjections = await TeamGoalsService.getTeamGoalProjections(startGameweek, endGameweek);
       console.log(`DEBUG: Team Goals Conceded Projections - Limiting to next 12 gameweeks: GW${startGameweek}-${endGameweek}`);
       
       teams.forEach((team: any) => {

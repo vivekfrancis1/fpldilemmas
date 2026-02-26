@@ -56,38 +56,33 @@ export class PlayerTotalPointsAggregator {
     console.log(`🔧 Starting Player Total Points aggregation for GW${startGameweek}-${endGameweek}...`);
     
     try {
-      // Sequential fetching: process one component at a time so only one large
-      // response array is held in memory at once (reduces peak memory by ~9×).
       const playerMap = new Map<number, PlayerPointsData>();
 
-      console.log(`📊 Fetching component 1/9: saves...`);
-      this.addComponentPoints(playerMap, await this.fetchSavesData(startGameweek, endGameweek), "saves");
+      // Fetch all 9 components in parallel — each writes to independent keys in GWBreakdown, no conflicts
+      console.log(`📊 Fetching all 9 components in parallel...`);
+      const [savesData, gcData, ycData, rcData, bonusData, minsData, goalsData, assistsData, csData] =
+        await Promise.all([
+          this.fetchSavesData(startGameweek, endGameweek),
+          this.fetchGoalsConcededData(startGameweek, endGameweek),
+          this.fetchYellowCardsData(startGameweek, endGameweek),
+          this.fetchRedCardsData(startGameweek, endGameweek),
+          this.fetchBonusPointsData(startGameweek, endGameweek),
+          this.fetchMinutesPointsData(startGameweek, endGameweek),
+          this.fetchGoalsPointsData(startGameweek, endGameweek),
+          this.fetchAssistsPointsData(startGameweek, endGameweek),
+          this.fetchCleanSheetPointsData(startGameweek, endGameweek),
+        ]);
+      console.log(`📊 All 9 components fetched — applying to player map...`);
 
-      console.log(`📊 Fetching component 2/9: goals conceded...`);
-      this.addComponentPoints(playerMap, await this.fetchGoalsConcededData(startGameweek, endGameweek), "goalsConceded");
-
-      console.log(`📊 Fetching component 3/9: yellow cards...`);
-      this.addComponentPoints(playerMap, await this.fetchYellowCardsData(startGameweek, endGameweek), "yellowCards");
-
-      console.log(`📊 Fetching component 4/9: red cards...`);
-      this.addComponentPoints(playerMap, await this.fetchRedCardsData(startGameweek, endGameweek), "redCards");
-
-      console.log(`📊 Fetching component 5/9: bonus points...`);
-      this.addComponentPoints(playerMap, await this.fetchBonusPointsData(startGameweek, endGameweek), "bonus");
-
-      console.log(`📊 Fetching component 6/9: minutes...`);
-      this.addMinutesPoints(playerMap, await this.fetchMinutesPointsData(startGameweek, endGameweek), startGameweek, endGameweek);
-
-      console.log(`📊 Fetching component 7/9: goals scored...`);
-      this.addComponentPoints(playerMap, await this.fetchGoalsPointsData(startGameweek, endGameweek), "goals");
-
-      console.log(`📊 Fetching component 8/9: assists...`);
-      this.addComponentPoints(playerMap, await this.fetchAssistsPointsData(startGameweek, endGameweek), "assists");
-
-      console.log(`📊 Fetching component 9/9: clean sheets...`);
-      this.addComponentPoints(playerMap, await this.fetchCleanSheetPointsData(startGameweek, endGameweek), "cleanSheets");
-
-      console.log(`📊 All 9 components fetched sequentially — peak memory reduced vs concurrent fetch`);
+      this.addComponentPoints(playerMap, savesData, "saves");
+      this.addComponentPoints(playerMap, gcData, "goalsConceded");
+      this.addComponentPoints(playerMap, ycData, "yellowCards");
+      this.addComponentPoints(playerMap, rcData, "redCards");
+      this.addComponentPoints(playerMap, bonusData, "bonus");
+      this.addMinutesPoints(playerMap, minsData, startGameweek, endGameweek);
+      this.addComponentPoints(playerMap, goalsData, "goals");
+      this.addComponentPoints(playerMap, assistsData, "assists");
+      this.addComponentPoints(playerMap, csData, "cleanSheets");
 
       // BLANK GAMEWEEK ZEROING: Zero out all components for GWs where a player's team has no fixture.
       // This mirrors the blank-GW guard in the live /api/player-total-points route handler and

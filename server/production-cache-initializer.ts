@@ -170,6 +170,23 @@ export class ProductionCacheInitializer {
       timeout: 60000 // 60 seconds for network calls
     });
 
+    // Job: Always warm TeamGoalsService — runs on every restart so downstream endpoints never hit a cold cache
+    orchestrator.registerJob({
+      id: 'team-goals-warmup',
+      name: 'TeamGoals Service Warmup',
+      dependencies: ['bootstrap-data'],
+      executor: async () => {
+        console.log("🔥 Pre-warming TeamGoalsService...");
+        const bootstrapResp = await internalFetch("api/bootstrap-static");
+        const bootstrapData = await bootstrapResp.json();
+        const currentGW = bootstrapData.events.find((e: any) => e.is_current)?.id || 1;
+        const { TeamGoalsService } = await import('./team-goals-service');
+        await TeamGoalsService.getTeamGoalProjections(currentGW + 1, Math.min(currentGW + 12, 38));
+        console.log("✅ TeamGoalsService pre-warmed successfully");
+      },
+      timeout: 60000
+    });
+
     // Job 2: Player history prefetch (depends on bootstrap, always runs — quick DB verification)
     orchestrator.registerJob({
       id: 'player-histories',
