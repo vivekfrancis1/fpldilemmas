@@ -11039,6 +11039,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endGameweek = parseInt(req.query.endGameweek as string) || Math.min(startGameweek + 11, 38);
       console.log(`DEBUG: Current gameweek: ${currentGameweek}, projecting GW${startGameweek}-${endGameweek}`);
       
+      // T003: Per-team defensive absence factor — teams missing GKP/key DEFs keep fewer clean sheets
+      const defensiveAbsenceMap = new Map<number, number>();
+      for (const t of bootstrapData.teams) {
+        const teamEls = bootstrapData.elements.filter((el: any) => el.team === t.id);
+        const unavailGKP = teamEls.filter((el: any) =>
+          el.element_type === 1 &&
+          el.chance_of_playing_next_round !== null &&
+          el.chance_of_playing_next_round < 75
+        ).length;
+        const unavailDEF = teamEls.filter((el: any) =>
+          el.element_type === 2 &&
+          el.chance_of_playing_next_round !== null &&
+          el.chance_of_playing_next_round < 75
+        ).length;
+        let factor = 1.0;
+        if (unavailGKP >= 1) factor *= 0.87;
+        if (unavailDEF >= 2) factor *= 0.88;
+        defensiveAbsenceMap.set(t.id, Math.max(0.70, factor));
+      }
+
       // Create player clean sheet points projections
       const playerCleanSheetProjections: any[] = [];
       
@@ -11079,9 +11099,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const gwFixtureDetails: Array<{ opponent: string; isHome: boolean; cleanSheetPoints: number }> = [];
           
           if (teamCleanSheetPercent !== undefined) {
+            const absenceFactor = defensiveAbsenceMap.get(player.team) ?? 1.0;
             if (teamFixtureDetails.length > 0) {
               teamFixtureDetails.forEach((fd: any) => {
-                const fixtureCSPoints = availabilityProb * (fd.cleanSheetOdds / 100) * (pct60Plus / 100) * cleanSheetPoints;
+                const fixtureCSPoints = availabilityProb * (fd.cleanSheetOdds / 100) * absenceFactor * (pct60Plus / 100) * cleanSheetPoints;
                 cleanSheetPointsForGW += fixtureCSPoints;
                 gwFixtureDetails.push({
                   opponent: fd.opponent,
@@ -11090,7 +11111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
               });
             } else {
-              cleanSheetPointsForGW = availabilityProb * (teamCleanSheetPercent / 100) * (pct60Plus / 100) * cleanSheetPoints;
+              cleanSheetPointsForGW = availabilityProb * (teamCleanSheetPercent / 100) * absenceFactor * (pct60Plus / 100) * cleanSheetPoints;
               gwFixtureDetails.push({
                 opponent: 'OPP',
                 isHome: true,
@@ -15742,6 +15763,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fixturesResponse = await internalFetch("api/fixtures");
         const fixturesData = await fixturesResponse.json();
 
+        // T005: League-average AGR for opponent pressure scaling in RC
+        const totalLeagueGoalsRC = fplData.elements.reduce(
+          (s: number, p: any) => s + (p.goals_scored || 0), 0
+        );
+        const leagueAvgAGR_RC = totalLeagueGoalsRC / Math.max(1, fplData.teams.length * currentGameweek);
+
         // Position-level RC baselines (per game) — most players have 0 this season so we anchor to position
         const positionRCBaseline: Record<string, number> = {
           GKP: 0.005, DEF: 0.012, MID: 0.008, FWD: 0.007
@@ -15787,8 +15814,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const opponentId = fixture.team_h === player.team ? fixture.team_a : fixture.team_h;
               const isHome = fixture.team_h === player.team;
               const opponentTeam = fplData.teams.find((t: any) => t.id === opponentId);
-              
-              gwRedCards += blendedRCRate * availabilityProb;
+
+              // T005: Mild opponent pressure multiplier (half sensitivity of YC)
+              const opponentGoalsRC = fplData.elements
+                .filter((p: any) => p.team === opponentId)
+                .reduce((s: number, p: any) => s + (p.goals_scored || 0), 0);
+              const opponentAGR_RC = opponentGoalsRC / Math.max(1, currentGameweek);
+              const rcOpponentMult = Math.max(0.90, Math.min(1.15,
+                1 + 0.12 * (opponentAGR_RC / Math.max(leagueAvgAGR_RC, 0.01) - 1)
+              ));
+
+              gwRedCards += blendedRCRate * availabilityProb * rcOpponentMult;
               gwFixtureDetails.push({
                 opponent: opponentTeam?.short_name || 'UNK',
                 isHome,
@@ -16167,6 +16203,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ? playerBonus / playerStarts
             : (teamFixtures > 0 ? playerBonus / teamFixtures : 0);
           
+          // T004: Form-based goal contribution multiplier — hot players earn more bonus per game
+          const playerFormVal = parseFloat(player.form || "0");
+          const positionEls = activePlayers.filter((p: any) => p.element_type === player.element_type);
+          const posAvgBonusForm = positionEls.length > 0
+            ? positionEls.reduce((s: number, p: any) => s + parseFloat(p.form || "0"), 0) / positionEls.length
+            : 3.0;
+          const formBonusMultiplier = Math.max(0.85, Math.min(1.20,
+            1 + (playerFormVal - posAvgBonusForm) / Math.max(posAvgBonusForm, 0.1) * 0.30
+          ));
+
           const bonusEvents: BootstrapEvent[] = fplData.events || [];
           const currentGW = fplData.events.find((e: any) => e.is_current)?.id || 1;
           
@@ -16197,7 +16243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const difficultyFactor = 1 + (avgStrength - opponentStrength) / avgStrength * 0.5;
               const clampedFactor = Math.max(0.85, Math.min(1.15, difficultyFactor));
               
-              const fixtureBonus = bonusPerFixture * clampedFactor * availabilityProb;
+              const fixtureBonus = bonusPerFixture * clampedFactor * availabilityProb * formBonusMultiplier;
               gwBonusPoints += fixtureBonus;
               
               gwFixtureDetails.push({
