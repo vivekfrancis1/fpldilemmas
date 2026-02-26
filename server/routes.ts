@@ -7280,21 +7280,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameweeksToFetch.push(gw);
       }
       
-      // Fetch all gameweeks in PARALLEL for speed
-      const liveDataPromises = gameweeksToFetch.map(async (gw) => {
-        try {
-          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
-          if (liveResponse.ok) {
-            const liveData = await liveResponse.json();
-            return { gw, data: liveData };
+      // Fetch gameweeks in batches of 3 to avoid OOM from simultaneous large responses
+      const liveResults: ({ gw: number; data: any } | null)[] = [];
+      for (let i = 0; i < gameweeksToFetch.length; i += 3) {
+        const batch = gameweeksToFetch.slice(i, i + 3);
+        const batchResults = await Promise.all(batch.map(async (gw) => {
+          try {
+            const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+            if (liveResponse.ok) {
+              const liveData = await liveResponse.json();
+              return { gw, data: liveData };
+            }
+          } catch (err) {
+            console.error(`Error fetching GW${gw} live data for team xG:`, err);
           }
-        } catch (err) {
-          console.error(`Error fetching GW${gw} live data for team xG:`, err);
-        }
-        return null;
-      });
-      
-      const liveResults = await Promise.all(liveDataPromises);
+          return null;
+        }));
+        liveResults.push(...batchResults);
+      }
       
       // Process all fetched gameweek data - aggregate player xG by team
       for (const result of liveResults) {
@@ -7516,21 +7519,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameweeksToFetch.push(gw);
       }
       
-      // Fetch all gameweeks in PARALLEL for speed
-      const liveDataPromises = gameweeksToFetch.map(async (gw) => {
-        try {
-          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
-          if (liveResponse.ok) {
-            const liveData = await liveResponse.json();
-            return { gw, data: liveData };
+      // Fetch gameweeks in batches of 3 to avoid OOM from simultaneous large responses
+      const liveResults: ({ gw: number; data: any } | null)[] = [];
+      for (let i = 0; i < gameweeksToFetch.length; i += 3) {
+        const batch = gameweeksToFetch.slice(i, i + 3);
+        const batchResults = await Promise.all(batch.map(async (gw) => {
+          try {
+            const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+            if (liveResponse.ok) {
+              const liveData = await liveResponse.json();
+              return { gw, data: liveData };
+            }
+          } catch (err) {
+            console.error(`Error fetching GW${gw} live data for xG:`, err);
           }
-        } catch (err) {
-          console.error(`Error fetching GW${gw} live data for xG:`, err);
-        }
-        return null;
-      });
-      
-      const liveResults = await Promise.all(liveDataPromises);
+          return null;
+        }));
+        liveResults.push(...batchResults);
+      }
       
       const playerXgMap = new Map();
       
@@ -7673,21 +7679,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameweeksToFetch.push(gw);
       }
       
-      // Fetch all gameweeks in PARALLEL for speed
-      const liveDataPromises = gameweeksToFetch.map(async (gw) => {
-        try {
-          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
-          if (liveResponse.ok) {
-            const liveData = await liveResponse.json();
-            return { gw, data: liveData };
+      // Fetch gameweeks in batches of 3 to avoid OOM from simultaneous large responses
+      const liveResults: ({ gw: number; data: any } | null)[] = [];
+      for (let i = 0; i < gameweeksToFetch.length; i += 3) {
+        const batch = gameweeksToFetch.slice(i, i + 3);
+        const batchResults = await Promise.all(batch.map(async (gw) => {
+          try {
+            const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+            if (liveResponse.ok) {
+              const liveData = await liveResponse.json();
+              return { gw, data: liveData };
+            }
+          } catch (err) {
+            console.error(`Error fetching GW${gw} live data for xA:`, err);
           }
-        } catch (err) {
-          console.error(`Error fetching GW${gw} live data for xA:`, err);
-        }
-        return null;
-      });
-      
-      const liveResults = await Promise.all(liveDataPromises);
+          return null;
+        }));
+        liveResults.push(...batchResults);
+      }
       
       const playerXaMap = new Map();
       
@@ -7912,21 +7921,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gameweeksToFetch.push(gw);
       }
       
-      // Fetch all gameweeks in PARALLEL for speed
-      const liveDataPromises = gameweeksToFetch.map(async (gw) => {
-        try {
-          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
-          if (liveResponse.ok) {
-            const liveData = await liveResponse.json();
-            return { gw, data: liveData };
+      // Fetch gameweeks in batches of 3 to avoid OOM from simultaneous large responses
+      const liveResults: ({ gw: number; data: any } | null)[] = [];
+      for (let i = 0; i < gameweeksToFetch.length; i += 3) {
+        const batch = gameweeksToFetch.slice(i, i + 3);
+        const batchResults = await Promise.all(batch.map(async (gw) => {
+          try {
+            const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+            if (liveResponse.ok) {
+              const liveData = await liveResponse.json();
+              return { gw, data: liveData };
+            }
+          } catch (err) {
+            console.error(`Error fetching GW${gw} live data:`, err);
           }
-        } catch (err) {
-          console.error(`Error fetching GW${gw} live data:`, err);
-        }
-        return null;
-      });
-      
-      const liveResults = await Promise.all(liveDataPromises);
+          return null;
+        }));
+        liveResults.push(...batchResults);
+      }
       
       const playerPointsMap = new Map();
       
@@ -10517,12 +10529,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enhanced Current Standings cache (60 minutes - completed match data doesn't change often)
-  const currentStandingsCache = new Map<string, { data: any; timestamp: number }>();
+  // Enhanced Current Standings cache (60 minutes - stores pre-serialized JSON Buffer)
+  const currentStandingsCache = new Map<string, { serialized: Buffer; timestamp: number }>();
   const CURRENT_STANDINGS_CACHE_DURATION = 60 * 60 * 1000; // 60 minutes
   
   // In-flight request de-duplication to prevent thundering herd
   const currentStandingsInFlight = new Map<string, Promise<any>>();
+
+  // Player Minutes Projections: in-flight dedup + 5-min result cache
+  // Prevents N concurrent requests each fetching 515 player histories (550+ FPL API calls each)
+  const playerMinutesCache = new Map<string, { data: any[]; timestamp: number }>();
+  const PLAYER_MINUTES_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const playerMinutesInFlight = new Map<string, Promise<any[]>>();
+
+  // Player Saves Projections: in-flight dedup + 5-min result cache
+  const playerSavesCache = new Map<string, { data: any[]; timestamp: number }>();
+  const PLAYER_SAVES_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const playerSavesInFlight = new Map<string, Promise<any[]>>();
+
+  // Cache for xGF live data (expensive: 27 GW fetches). Refreshes once per hour.
+  let xgfLiveDataCache: { liveDataMap: Map<number, any>; timestamp: number } | null = null;
+  const XGF_CACHE_DURATION = 60 * 60 * 1000; // 60 minutes
+  let xgfInFlight: Promise<Map<number, any>> | null = null;
+
+  async function getXgfLiveData(completedGameweeks: Set<number>): Promise<Map<number, any>> {
+    const now = Date.now();
+    // Return cached data if still fresh
+    if (xgfLiveDataCache && (now - xgfLiveDataCache.timestamp) < XGF_CACHE_DURATION) {
+      return xgfLiveDataCache.liveDataMap;
+    }
+    // Deduplicate concurrent calls
+    if (xgfInFlight) {
+      return xgfInFlight;
+    }
+    xgfInFlight = (async () => {
+      try {
+        const gameweekList = Array.from(completedGameweeks);
+        const liveDataMap = new Map<number, any>();
+        const BATCH_SIZE = 3;
+        for (let i = 0; i < gameweekList.length; i += BATCH_SIZE) {
+          const batch = gameweekList.slice(i, i + BATCH_SIZE);
+          const batchResults = await Promise.all(batch.map(async (gameweek) => {
+            try {
+              const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
+              if (liveResponse.ok) {
+                const liveData = await liveResponse.json();
+                return { gameweek, data: liveData };
+              }
+            } catch (error) {
+              console.warn(`Failed to fetch xGF live data for GW${gameweek}:`, error);
+            }
+            return null;
+          }));
+          for (const result of batchResults) {
+            if (result) liveDataMap.set(result.gameweek, result.data);
+          }
+        }
+        xgfLiveDataCache = { liveDataMap, timestamp: Date.now() };
+        return liveDataMap;
+      } finally {
+        xgfInFlight = null;
+      }
+    })();
+    return xgfInFlight;
+  }
 
   // Function to compute standings (extracted for cache warming)
   async function computeCurrentStandings(venue: string): Promise<any> {
@@ -10556,31 +10626,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
-    console.log(`DEBUG: Fetching live data for ${completedGameweeks.size} completed gameweeks`);
-    
-    // Fetch live data for each completed gameweek to calculate per-gameweek Expected Goals
-    console.log(`DEBUG: Fetching live data for ${completedGameweeks.size} completed gameweeks for per-gameweek xG calculation`);
-    
-    const liveDataPromises = Array.from(completedGameweeks).map(async (gameweek) => {
-      try {
-        const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
-        if (liveResponse.ok) {
-          const liveData = await liveResponse.json();
-          return { gameweek, data: liveData };
-        }
-      } catch (error) {
-        console.warn(`Failed to fetch live data for gameweek ${gameweek}:`, error);
-      }
-      return null;
-    });
-    
-    const liveDataResults = await Promise.all(liveDataPromises);
-    const liveDataMap = new Map<number, any>();
-    liveDataResults.forEach((result) => {
-      if (result) {
-        liveDataMap.set(result.gameweek, result.data);
-      }
-    });
+    // Use shared cached xGF live data — fetched once per hour, not on every request
+    const liveDataMap = await getXgfLiveData(completedGameweeks);
     
     // Initialize enhanced team standings
     const teamStandings = new Map();
@@ -10785,7 +10832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Current Standings endpoint - calculates actual Premier League table with detailed statistics from completed matches only
   app.get("/api/current-standings", 
-    requireReadiness(['bootstrap-data', 'current-standings'], 'current-standings'),
+    requireReadiness(['bootstrap-data'], 'current-standings'),
     async (req, res) => {
     try {
       const venue = (req.query.venue as string) || 'all';
@@ -10797,45 +10844,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const cacheKey = `detailed_standings_${venue}`;
       const now = Date.now();
       
-      // Check cache first (with venue-specific cache key)
+      // Check cache first (with venue-specific cache key) — serves pre-serialized JSON
       const cached = currentStandingsCache.get(cacheKey);
       if (cached && (now - cached.timestamp) < CURRENT_STANDINGS_CACHE_DURATION) {
-        console.log(`DEBUG: Serving detailed current standings from cache (venue: ${venue})`);
-        return res.json(cached.data);
+        res.setHeader('Content-Type', 'application/json');
+        return res.send(cached.serialized);
       }
       
       // Check if there's already an in-flight request for this venue
+      // All concurrent callers share the same Promise and receive the pre-serialized result
       const inFlight = currentStandingsInFlight.get(cacheKey);
       if (inFlight) {
-        console.log(`DEBUG: Waiting for in-flight standings calculation (venue: ${venue})`);
         try {
-          const result = await inFlight;
-          return res.json(result);
+          const serialized = await inFlight;
+          res.setHeader('Content-Type', 'application/json');
+          return res.send(serialized);
         } catch (error) {
-          // In-flight request failed, we'll try to compute ourselves
+          // In-flight request failed, fall through to compute
         }
       }
       
       console.log(`DEBUG: Computing current standings (venue: ${venue})`);
       
-      // Create and store the in-flight promise
-      const computePromise = computeCurrentStandings(venue);
-      currentStandingsInFlight.set(cacheKey, computePromise);
+      // Create and store the in-flight promise — resolves to a pre-serialized JSON string
+      // so all 200+ waiting callers share a single Buffer instead of each calling JSON.stringify
+      const computePromise: Promise<Buffer> = (async () => {
+        const enhancedStandings = await computeCurrentStandings(venue);
+        const serialized = Buffer.from(JSON.stringify(enhancedStandings));
+        currentStandingsCache.set(cacheKey, { serialized, timestamp: Date.now() });
+        console.log(`DEBUG: Enhanced current standings calculated for ${enhancedStandings.length} teams`);
+        return serialized;
+      })().finally(() => {
+        currentStandingsInFlight.delete(cacheKey);
+      });
+      currentStandingsInFlight.set(cacheKey, computePromise as any);
       
       try {
-        const enhancedStandings = await computePromise;
-        
-        // Cache the result
-        currentStandingsCache.set(cacheKey, {
-          data: enhancedStandings,
-          timestamp: Date.now()
-        });
-        
-        console.log(`DEBUG: Enhanced current standings calculated for ${enhancedStandings.length} teams`);
-        res.json(enhancedStandings);
-      } finally {
-        // Always remove in-flight promise when done
-        currentStandingsInFlight.delete(cacheKey);
+        const serialized = await computePromise;
+        res.setHeader('Content-Type', 'application/json');
+        res.send(serialized);
+      } catch {
+        throw new Error('Standings computation failed');
       }
     } catch (error) {
       console.error('Error generating enhanced current standings:', error);
@@ -10846,17 +10895,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Now fetches actual game-by-game history for accurate 60-minute threshold calculations
   app.get("/api/player-minutes-projections", async (req, res) => {
     try {
+      // Normalize cache key: empty params (internal calls) share the same key as "default range"
+      // This ensures player-cleansheet-points and player-goals-conceded (which call without params)
+      // share the in-flight promise with the aggregator (which calls with startGameweek=28&endGameweek=38)
+      const startGwParam = req.query.startGameweek as string || '';
+      const endGwParam = req.query.endGameweek as string || '';
+      const cacheKey = 'default';  // Single shared key — minutes data is full-range by nature
+
+      // Serve from short-lived cache if fresh
+      const cached = playerMinutesCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < PLAYER_MINUTES_CACHE_DURATION) {
+        return res.json(cached.data);
+      }
+
+      // If already computing, await the in-flight promise (deduplication)
+      const inFlight = playerMinutesInFlight.get(cacheKey);
+      if (inFlight) {
+        try {
+          const data = await inFlight;
+          return res.json(data);
+        } catch {
+          // Fall through to compute
+        }
+      }
+
       console.log("🚀 API-FIRST: Attempting live calculation for player minutes projections with 60-min threshold");
 
+      // Wrap computation in a promise stored in in-flight map
+      const computePromise: Promise<any[]> = (async () => {
       // TRY LIVE CALCULATION FIRST
       try {
-        // Fetch FPL bootstrap data
-        const response = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
-        if (!response.ok) {
+        // Fetch FPL bootstrap data — use cached internal endpoint to avoid redundant FPL API calls
+        const bootstrapResp = await internalFetch("api/bootstrap-static");
+        if (!bootstrapResp.ok) {
           throw new Error("Failed to fetch FPL bootstrap data");
         }
         
-        const bootstrapData = await response.json();
+        const bootstrapData = await bootstrapResp.json();
         const players = bootstrapData.elements;
         const teams = bootstrapData.teams;
         const positions = bootstrapData.element_types;
@@ -10982,10 +11057,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playerMinutesProjections.sort((a: any, b: any) => b.pointsFromMinutes - a.pointsFromMinutes);
         
         console.log(`✅ LIVE SUCCESS: Generated minutes projections with 60-min threshold for ${playerMinutesProjections.length} players`);
-        return res.json(playerMinutesProjections);
+        return playerMinutesProjections;
 
       } catch (liveError) {
-        console.warn(`⚠️ LIVE CALCULATION FAILED for player minutes projections: ${liveError.message}`);
+        console.warn(`⚠️ LIVE CALCULATION FAILED for player minutes projections: ${(liveError as Error).message}`);
         
         // FALLBACK TO CACHE
         console.log("🔄 CACHE FALLBACK: Trying cached player minutes projections...");
@@ -10994,14 +11069,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (cacheResponse.ok) {
             const cachedData = await cacheResponse.json();
             console.log(`✅ CACHE SUCCESS: Serving ${cachedData.length} cached player minutes projections`);
-            return res.json(cachedData);
+            return cachedData;
           } else {
             throw new Error("Cache endpoint failed");
           }
         } catch (cacheError) {
-          console.error("❌ CACHE ALSO FAILED:", cacheError.message);
+          console.error("❌ CACHE ALSO FAILED:", (cacheError as Error).message);
           throw new Error("Both live calculation and cache failed");
         }
+      }
+      })().finally(() => {
+        playerMinutesInFlight.delete(cacheKey);
+      });
+
+      playerMinutesInFlight.set(cacheKey, computePromise);
+
+      try {
+        const data = await computePromise;
+        playerMinutesCache.set(cacheKey, { data, timestamp: Date.now() });
+        return res.json(data);
+      } catch (error) {
+        console.error("❌ COMPLETE FAILURE in player minutes projections:", error);
+        res.status(500).json({ error: "Failed to generate player minutes projections - both live and cache failed" });
       }
     } catch (error) {
       console.error("❌ COMPLETE FAILURE in player minutes projections:", error);
@@ -11019,9 +11108,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Simplified: Fetch only required data for projections
       console.log(`DEBUG: Fetching data for clean sheet points projections`);
       const [bootstrapResponse, teamCSResponse, playerMinutesResponse] = await Promise.all([
-        fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("http://localhost:5000/api/team-cs-projections"),
-        fetch("http://localhost:5000/api/player-minutes-projections")
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/team-cs-projections"),
+        internalFetch("api/player-minutes-projections")
       ]);
       
       if (!bootstrapResponse.ok || !teamCSResponse.ok || !playerMinutesResponse.ok) {
@@ -14944,8 +15033,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Saves Projections - API-first with cache fallback
   app.get("/api/player-saves-projections", async (req, res) => {
     try {
+      const savesCacheKey = 'default';  // Single shared key — saves data is full-range by nature
+
+      // Serve from short-lived cache if fresh
+      const cachedSaves = playerSavesCache.get(savesCacheKey);
+      if (cachedSaves && Date.now() - cachedSaves.timestamp < PLAYER_SAVES_CACHE_DURATION) {
+        return res.json(cachedSaves.data);
+      }
+
+      // If already computing, await the in-flight promise
+      const savesInFlight = playerSavesInFlight.get(savesCacheKey);
+      if (savesInFlight) {
+        try {
+          const data = await savesInFlight;
+          return res.json(data);
+        } catch {
+          // Fall through to compute
+        }
+      }
+
       console.log("🚀 API-FIRST: Attempting live calculation for player saves projections");
 
+      const savesComputePromise: Promise<any[]> = (async () => {
       // TRY LIVE CALCULATION FIRST
       try {
         console.log("DEBUG: Player Saves Projections API called - using formula: Average saves/game × AGR of opponent/1.25 where AGR = 0.5 × (GF + XGF) per game");
@@ -15002,20 +15111,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Fetch live data for completed gameweeks to get XGF
-      const liveDataPromises = Array.from(completedGameweeks).map(async (gameweek) => {
-        try {
-          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
-          if (liveResponse.ok) {
-            const liveData = await liveResponse.json();
-            return { gameweek, data: liveData };
+      // Batched 3 at a time to prevent OOM from firing all 27+ requests simultaneously
+      const completedGWArray = Array.from(completedGameweeks);
+      const liveDataResults: Array<{ gameweek: number; data: any } | null> = [];
+      const BATCH_SIZE = 3;
+      for (let i = 0; i < completedGWArray.length; i += BATCH_SIZE) {
+        const batch = completedGWArray.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(batch.map(async (gameweek) => {
+          try {
+            const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
+            if (liveResponse.ok) {
+              const liveData = await liveResponse.json();
+              return { gameweek, data: liveData };
+            }
+          } catch (error) {
+            console.warn(`Failed to fetch live data for gameweek ${gameweek}:`, error);
           }
-        } catch (error) {
-          console.warn(`Failed to fetch live data for gameweek ${gameweek}:`, error);
-        }
-        return null;
-      });
-      
-      const liveDataResults = await Promise.all(liveDataPromises);
+          return null;
+        }));
+        liveDataResults.push(...batchResults);
+      }
       
       // Process live data to calculate XGF for each team
       const playerToTeamMap = new Map<number, number>();
@@ -15184,10 +15299,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
         console.log(`✅ LIVE SUCCESS: Generated saves projections for ${savesProjections.length} goalkeepers using formula: Average saves/game × AGR of opponent/1.35`);
-        return res.json(savesProjections);
+        return savesProjections;
 
       } catch (liveError) {
-        console.warn(`⚠️ LIVE CALCULATION FAILED for player saves projections: ${liveError.message}`);
+        console.warn(`⚠️ LIVE CALCULATION FAILED for player saves projections: ${(liveError as Error).message}`);
         
         // FALLBACK TO CACHE
         console.log("🔄 CACHE FALLBACK: Trying cached player saves projections...");
@@ -15196,14 +15311,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (cacheResponse.ok) {
             const cachedData = await cacheResponse.json();
             console.log(`✅ CACHE SUCCESS: Serving ${cachedData.length} cached player saves projections`);
-            return res.json(cachedData);
+            return cachedData;
           } else {
             throw new Error("Cache endpoint failed");
           }
         } catch (cacheError) {
-          console.error("❌ CACHE ALSO FAILED:", cacheError.message);
+          console.error("❌ CACHE ALSO FAILED:", (cacheError as Error).message);
           throw new Error("Both live calculation and cache failed");
         }
+      }
+      })().finally(() => {
+        playerSavesInFlight.delete(savesCacheKey);
+      });
+
+      playerSavesInFlight.set(savesCacheKey, savesComputePromise);
+
+      try {
+        const data = await savesComputePromise;
+        playerSavesCache.set(savesCacheKey, { data, timestamp: Date.now() });
+        return res.json(data);
+      } catch (error) {
+        console.error("❌ COMPLETE FAILURE in player saves projections:", error);
+        res.status(500).json({ error: "Failed to get player saves projections - both live and cache failed" });
       }
     } catch (error) {
       console.error("❌ COMPLETE FAILURE in player saves projections:", error);
@@ -19719,17 +19848,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`Projection Validation: Fetching live data for GW1-${lastFinishedGW} (${lastFinishedGW} gameweeks)...`);
 
-      const liveDataPromises = finishedGWs.map(async (gw: number) => {
-        try {
-          const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
-          if (liveResponse.ok) return { gw, data: await liveResponse.json() };
-        } catch (err) {
-          console.error(`Error fetching GW${gw} live data:`, err);
-        }
-        return null;
-      });
-
-      const liveResults = await Promise.all(liveDataPromises);
+      // Fetch in batches of 3 to avoid OOM from simultaneous large responses
+      const liveResults: ({ gw: number; data: any } | null)[] = [];
+      for (let i = 0; i < finishedGWs.length; i += 3) {
+        const batch = finishedGWs.slice(i, i + 3);
+        const batchResults = await Promise.all(batch.map(async (gw: number) => {
+          try {
+            const liveResponse = await fetch(`https://fantasy.premierleague.com/api/event/${gw}/live/`);
+            if (liveResponse.ok) return { gw, data: await liveResponse.json() };
+          } catch (err) {
+            console.error(`Error fetching GW${gw} live data:`, err);
+          }
+          return null;
+        }));
+        liveResults.push(...batchResults);
+      }
 
       const identifierMap: Record<string, string> = {
         minutes: 'minutes', goals_scored: 'goals', assists: 'assists',

@@ -161,24 +161,6 @@ export class ProductionCacheInitializer {
       timeout: 60000 // 60 seconds for network calls
     });
 
-    // Job 1.5: Current standings data initialization
-    orchestrator.registerJob({
-      id: 'current-standings',
-      name: 'Current Standings Data',
-      dependencies: ['bootstrap-data'],
-      executor: async () => {
-        console.log("📊 Initializing current standings data...");
-        // Pre-warm the current standings cache by making an internal call
-        const response = await fetch('http://localhost:5000/api/current-standings');
-        if (response.ok) {
-          console.log("✅ Current standings data initialized successfully");
-        } else {
-          console.log("⚠️ Current standings initialization completed (may cache on first request)");
-        }
-      },
-      timeout: 45000 // 45 seconds
-    });
-
     // Job 2: Team projections (depend on bootstrap data)
     if (cacheStatus.goalsEmpty) {
       orchestrator.registerJob({

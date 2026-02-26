@@ -37,6 +37,9 @@ let teamGoalsInFlight: Map<string, Promise<TeamGoalProjection[]>> = new Map();
 let currentStandingsCache: { data: any[], timestamp: number } | null = null;
 const STANDINGS_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
+// In-flight deduplication for current standings — prevents thundering herd on startup
+let currentStandingsInFlight: Promise<any[]> | null = null;
+
 export class TeamGoalsService {
   /**
    * Defensive numeric coercion helper - ensures valid numbers with fallbacks
@@ -302,26 +305,27 @@ export class TeamGoalsService {
     if (currentStandingsCache && Date.now() - currentStandingsCache.timestamp < STANDINGS_CACHE_DURATION) {
       return currentStandingsCache.data;
     }
-    
-    try {
-      const response = await fetch('http://localhost:5000/api/current-standings');
-      if (!response.ok) {
-        throw new Error(`Failed to fetch current standings: ${response.status}`);
-      }
-      
-      const standingsData = await response.json();
-      
-      // Cache the results
-      currentStandingsCache = {
-        data: standingsData,
-        timestamp: Date.now()
-      };
-      
-      return standingsData;
-    } catch (error) {
-      console.error('Failed to fetch current standings:', error);
-      throw error;
+    // Deduplicate concurrent calls — all callers wait on the same in-flight promise
+    if (currentStandingsInFlight) {
+      return currentStandingsInFlight;
     }
+    currentStandingsInFlight = (async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/current-standings');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch current standings: ${response.status}`);
+        }
+        const standingsData = await response.json();
+        currentStandingsCache = { data: standingsData, timestamp: Date.now() };
+        return standingsData;
+      } catch (error) {
+        console.error('Failed to fetch current standings:', error);
+        throw error;
+      } finally {
+        currentStandingsInFlight = null;
+      }
+    })();
+    return currentStandingsInFlight;
   }
 
   /**
