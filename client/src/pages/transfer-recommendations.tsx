@@ -118,11 +118,11 @@ export default function TransferRecommendations() {
   const recNextGW = recCurrentGW + 1;
   const recMaxGW = Math.min(38, recNextGW + 11);
   const { data: playerProjections } = useQuery<any[]>({
-    queryKey: ["/api/player-total-points/full-range", recNextGW, recMaxGW],
+    queryKey: ["/api/cached/player-total-points"],
     enabled: !!bootstrapData,
     staleTime: 30 * 60 * 1000,
     queryFn: async () => {
-      const response = await fetch(`/api/player-total-points?startGameweek=${recNextGW}&endGameweek=${recMaxGW}`);
+      const response = await fetch(`/api/cached/player-total-points`);
       if (!response.ok) {
         throw new Error(`Failed to fetch projections: ${response.statusText}`);
       }

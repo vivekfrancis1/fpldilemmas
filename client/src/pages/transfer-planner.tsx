@@ -224,9 +224,9 @@ function AllPlayersProjectionsTab({ selectedGameweek, transferredOutPlayers, onT
   const tabMaxGW = Math.min(38, tabNextGW + 11);
 
   const { data: allPlayersData, isLoading } = useQuery<PlayerProjectionData[]>({
-    queryKey: ["/api/player-total-points/full-range", tabNextGW, tabMaxGW],
+    queryKey: ["/api/cached/player-total-points"],
     queryFn: async () => {
-      const res = await fetch(`/api/player-total-points?startGameweek=${tabNextGW}&endGameweek=${tabMaxGW}`);
+      const res = await fetch(`/api/cached/player-total-points`);
       if (!res.ok) throw new Error('Failed to fetch projections');
       return res.json();
     },
@@ -1246,13 +1246,13 @@ export default function TransferPlanner() {
   const plannerNextGW = plannerCurrentGW + 1;
   const plannerMaxGW = Math.min(38, plannerNextGW + 11);
 
-  // Fetch player projections from live endpoint (contains all 12 gameweeks)
+  // Fetch player projections from cached endpoint (contains all future GWs, pre-computed at startup)
   // Stable query key — does NOT include user's selected GW so TanStack caches once
   // This allows instant gameweek switching without refetching
   const { data: cachedPlayerProjections, isLoading: projectionsLoading, error: projectionsError } = useQuery<any[]>({
-    queryKey: ["/api/player-total-points/full-range", plannerNextGW, plannerMaxGW],
+    queryKey: ["/api/cached/player-total-points"],
     queryFn: async () => {
-      const res = await fetch(`/api/player-total-points?startGameweek=${plannerNextGW}&endGameweek=${plannerMaxGW}`);
+      const res = await fetch(`/api/cached/player-total-points`);
       if (!res.ok) throw new Error('Failed to fetch projections');
       return res.json();
     },

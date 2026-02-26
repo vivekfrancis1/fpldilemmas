@@ -126,14 +126,14 @@ export default function BestWildcardTeam() {
   // Full 12-GW range for the query — horizon filter applied client-side via liveData
   const fullMaxGW = Math.min(38, startGameweek + 11);
 
-  // Fetch live player projection data for the full 12-GW range
-  // Stable query key (not dependent on gameweekHorizon) — horizon filter applied client-side
+  // Fetch player projection data from cached endpoint (pre-computed at startup, all future GWs)
+  // Stable query key — horizon filter applied client-side, no refetch on GW change
   const { data: allCachedData, isLoading, error, refetch: refetchProjections } = useQuery({
-    queryKey: ["/api/player-total-points/full-range", startGameweek, fullMaxGW],
+    queryKey: ["/api/cached/player-total-points"],
     enabled: !!bootstrapData && startGameweek > 0,
     staleTime: 30 * 60 * 1000,
     queryFn: async () => {
-      const response = await fetch(`/api/player-total-points?startGameweek=${startGameweek}&endGameweek=${fullMaxGW}`);
+      const response = await fetch(`/api/cached/player-total-points`);
       if (!response.ok) throw new Error('Failed to fetch player total points');
       return response.json();
     },

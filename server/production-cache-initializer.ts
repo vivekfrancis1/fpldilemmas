@@ -9,6 +9,7 @@ import { playerGoalsProjections, playerAssistProjections, playerMinutesProjectio
 import { internalFetch } from "./config";
 import { sql } from "drizzle-orm";
 import { InitializationOrchestrator, JobDefinition } from "./initialization-orchestrator";
+import { prefetchAllPlayerHistories } from "./player-history-service";
 
 export class ProductionCacheInitializer {
   private readonly INITIALIZATION_TIMEOUT = 5 * 60 * 1000; // 5 minutes max
@@ -192,8 +193,25 @@ export class ProductionCacheInitializer {
       });
     }
 
-    // Job 3: Player total points aggregation (depends on all team projections)
-    const teamDependencies: string[] = [];
+    // Job 3: Player history prefetch (depends on bootstrap data, runs in parallel with team jobs)
+    orchestrator.registerJob({
+      id: 'player-histories',
+      name: 'Player History Prefetch',
+      dependencies: ['bootstrap-data'],
+      executor: async () => {
+        console.log("📚 Prefetching player histories to DB cache...");
+        const response = await internalFetch("api/bootstrap-static");
+        const bootstrapData = await response.json();
+        const playerIds: number[] = bootstrapData.elements
+          .filter((p: any) => (p.minutes || 0) >= 1)
+          .map((p: any) => p.id);
+        await prefetchAllPlayerHistories(playerIds);
+      },
+      timeout: 300000 // 5 minutes max for 515 players at batch=10/100ms
+    });
+
+    // Job 4: Player total points aggregation (depends on all team projections)
+    const teamDependencies: string[] = ['player-histories'];
     if (cacheStatus.goalsEmpty) teamDependencies.push('team-goals');
     if (cacheStatus.assistsEmpty) teamDependencies.push('team-assists');
     if (cacheStatus.minutesEmpty) teamDependencies.push('team-minutes');

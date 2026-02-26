@@ -1667,3 +1667,9 @@ export const userActivityLogs = pgTable("user_activity_logs", {
   index("idx_activity_created_at").on(table.createdAt),
   index("idx_activity_manager_id").on(table.managerId),
 ]);
+
+export const playerHistoryCache = pgTable("player_history_cache", {
+  playerId: integer("player_id").primaryKey(),
+  historyJson: jsonb("history_json").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

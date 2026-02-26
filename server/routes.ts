@@ -10547,6 +10547,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const PLAYER_SAVES_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
   const playerSavesInFlight = new Map<string, Promise<any[]>>();
 
+  // Remaining 5 scoring components: in-flight dedup + 5-min result cache
+  const SCORING_COMPONENT_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const cleansheetCache = new Map<string, { data: any[]; timestamp: number }>();
+  const cleansheetInFlight = new Map<string, Promise<any[]>>();
+  const goalsConcededCache = new Map<string, { data: any[]; timestamp: number }>();
+  const goalsConcededInFlight = new Map<string, Promise<any[]>>();
+  const yellowCardsCache = new Map<string, { data: any[]; timestamp: number }>();
+  const yellowCardsInFlight = new Map<string, Promise<any[]>>();
+  const redCardsCache = new Map<string, { data: any[]; timestamp: number }>();
+  const redCardsInFlight = new Map<string, Promise<any[]>>();
+  const bonusPointsCache = new Map<string, { data: any[]; timestamp: number }>();
+  const bonusPointsInFlight = new Map<string, Promise<any[]>>();
+
   // Cache for xGF live data (expensive: 27 GW fetches). Refreshes once per hour.
   let xgfLiveDataCache: { liveDataMap: Map<number, any>; timestamp: number } | null = null;
   const XGF_CACHE_DURATION = 60 * 60 * 1000; // 60 minutes
@@ -10970,6 +10983,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const playersWithMinutes = players.filter((p: any) => (p.minutes || 0) >= 1);
         console.log(`DEBUG: Processing ${playersWithMinutes.length} players with minutes for 60-min threshold calculation`);
         
+        // Bulk-load player histories from DB cache (set at startup; avoids 515 external API calls)
+        const { getBulkPlayerHistories } = await import('./player-history-service');
+        const allPlayerIds = playersWithMinutes.map((p: any) => p.id);
+        const dbHistories = await getBulkPlayerHistories(allPlayerIds);
+        const dbCacheHits = dbHistories.size;
+        console.log(`📦 DB history cache: ${dbCacheHits}/${allPlayerIds.length} players served from DB`);
+        
         // Fetch player history in batches to get actual game-by-game minutes
         const BATCH_SIZE = 50;
         const playerMinutesProjections: any[] = [];
@@ -10991,11 +11011,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               let avgMinutesPerGame = Math.min(90, totalMinutes / Math.max(1, appearances));
               
               try {
-                // Fetch actual game-by-game history
-                const historyResponse = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
-                if (historyResponse.ok) {
-                  const historyData = await historyResponse.json();
-                  const gamesWithMinutes = historyData.history.filter((gw: any) => gw.minutes > 0);
+                // Use DB-cached history (pre-fetched at startup) — falls back to live fetch if missing
+                const cachedHistory = dbHistories.get(player.id);
+                const historyArr = cachedHistory !== undefined ? cachedHistory
+                  : await (async () => {
+                      const r = await fetch(`https://fantasy.premierleague.com/api/element-summary/${player.id}/`);
+                      return r.ok ? (await r.json()).history : [];
+                    })();
+                if (historyArr.length >= 0) {
+                  const gamesWithMinutes = historyArr.filter((gw: any) => gw.minutes > 0);
                   
                   if (gamesWithMinutes.length > 0) {
                     appearances = gamesWithMinutes.length;
@@ -11126,6 +11150,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Clean Sheet Points endpoint - API-first with cache fallback
   app.get("/api/player-cleansheet-points", async (req, res) => {
     try {
+      const csCacheKey = 'default';
+      const csHit = cleansheetCache.get(csCacheKey);
+      if (csHit && Date.now() - csHit.timestamp < SCORING_COMPONENT_CACHE_DURATION) {
+        return res.json(csHit.data);
+      }
+      const csInflight = cleansheetInFlight.get(csCacheKey);
+      if (csInflight) {
+        try { return res.json(await csInflight); } catch { /* fall through */ }
+      }
+      const csPromise: Promise<any[]> = (async (): Promise<any[]> => {
       console.log("🚀 API-FIRST: Attempting live calculation for player clean sheet points");
 
       // TRY LIVE CALCULATION FIRST
@@ -11272,14 +11306,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       playerCleanSheetProjections.sort((a, b) => b.totalExpectedPoints - a.totalExpectedPoints);
       
         console.log(`✅ LIVE SUCCESS: Generated simplified clean sheet projections for ${playerCleanSheetProjections.length} players for GW${startGameweek}-${endGameweek}`);
-        return res.json(playerCleanSheetProjections);
+        return playerCleanSheetProjections;
 
       } catch (liveError) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player clean sheet points: ${liveError.message}`);
-        
-        // FALLBACK TO CACHE (no specific cache endpoint available, so this will fail gracefully)
-        console.log("🔄 CACHE FALLBACK: No cached clean sheet points available, failing gracefully...");
         throw new Error("Live calculation failed and no cache available");
+      }
+      })();
+      cleansheetInFlight.set(csCacheKey, csPromise);
+      csPromise.finally(() => cleansheetInFlight.delete(csCacheKey));
+
+      try {
+        const data = await csPromise;
+        cleansheetCache.set(csCacheKey, { data, timestamp: Date.now() });
+        return res.json(data);
+      } catch (error) {
+        console.error("❌ COMPLETE FAILURE in player clean sheet points:", error);
+        res.status(500).json({ error: "Failed to generate player clean sheet points - live calculation failed" });
       }
     } catch (error) {
       console.error("❌ COMPLETE FAILURE in player clean sheet points:", error);
@@ -15616,6 +15659,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Goals Conceded Projections - API-first with cache fallback
   app.get("/api/player-goals-conceded-projections", async (req, res) => {
     try {
+      const gcCacheKey = 'default';
+      const gcHit = goalsConcededCache.get(gcCacheKey);
+      if (gcHit && Date.now() - gcHit.timestamp < SCORING_COMPONENT_CACHE_DURATION) {
+        return res.json(gcHit.data);
+      }
+      const gcInflight = goalsConcededInFlight.get(gcCacheKey);
+      if (gcInflight) {
+        try { return res.json(await gcInflight); } catch { /* fall through */ }
+      }
+      const gcPromise: Promise<any[]> = (async (): Promise<any[]> => {
       console.log("🚀 API-FIRST: Attempting live calculation for player goals conceded projections");
 
       // TRY LIVE CALCULATION FIRST
@@ -15719,26 +15772,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log(`✅ LIVE SUCCESS: Generated pure goals conceded projections for ${goalsConcededProjections.length} players (GKP/DEF) for future gameweeks only`);
-        return res.json(goalsConcededProjections);
+        return goalsConcededProjections;
 
       } catch (liveError) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player goals conceded projections: ${liveError.message}`);
-        
-        // FALLBACK TO CACHE
-        console.log("🔄 CACHE FALLBACK: Trying cached player goals conceded projections...");
-        try {
-          const cacheResponse = await internalFetch("api/cached/player-goals-conceded-projections");
-          if (cacheResponse.ok) {
-            const cachedData = await cacheResponse.json();
-            console.log(`✅ CACHE SUCCESS: Serving ${cachedData.length} cached player goals conceded projections`);
-            return res.json(cachedData);
-          } else {
-            throw new Error("Cache endpoint failed");
-          }
-        } catch (cacheError) {
-          console.error("❌ CACHE ALSO FAILED:", cacheError.message);
-          throw new Error("Both live calculation and cache failed");
-        }
+        const cacheResponse = await internalFetch("api/cached/player-goals-conceded-projections");
+        if (cacheResponse.ok) return cacheResponse.json();
+        throw new Error("Both live calculation and cache failed");
+      }
+      })();
+      goalsConcededInFlight.set(gcCacheKey, gcPromise);
+      gcPromise.finally(() => goalsConcededInFlight.delete(gcCacheKey));
+
+      try {
+        const data = await gcPromise;
+        goalsConcededCache.set(gcCacheKey, { data, timestamp: Date.now() });
+        return res.json(data);
+      } catch (error) {
+        console.error("❌ COMPLETE FAILURE in player goals conceded projections:", error);
+        res.status(500).json({ error: "Failed to get player goals conceded projections - both live and cache failed" });
       }
     } catch (error) {
       console.error("❌ COMPLETE FAILURE in player goals conceded projections:", error);
@@ -15749,6 +15801,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Yellow Cards Projections - API-first with cache fallback
   app.get("/api/player-yellow-cards-projections", async (req, res) => {
     try {
+      const ycCacheKey = 'default';
+      const ycHit = yellowCardsCache.get(ycCacheKey);
+      if (ycHit && Date.now() - ycHit.timestamp < SCORING_COMPONENT_CACHE_DURATION) {
+        return res.json(ycHit.data);
+      }
+      const ycInflight = yellowCardsInFlight.get(ycCacheKey);
+      if (ycInflight) {
+        try { return res.json(await ycInflight); } catch { /* fall through */ }
+      }
+      const ycPromise: Promise<any[]> = (async (): Promise<any[]> => {
       console.log("🚀 API-FIRST: Attempting live calculation for player yellow cards projections");
 
       // TRY LIVE CALCULATION FIRST
@@ -15864,26 +15926,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log(`✅ LIVE SUCCESS: Generated pure yellow card projections for ${yellowCardProjections.length} players for future gameweeks only`);
-        return res.json(yellowCardProjections);
+        return yellowCardProjections;
 
       } catch (liveError) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player yellow cards projections: ${liveError.message}`);
-        
-        // FALLBACK TO CACHE
-        console.log("🔄 CACHE FALLBACK: Trying cached player yellow cards projections...");
-        try {
-          const cacheResponse = await internalFetch("api/cached/player-yellow-cards-projections");
-          if (cacheResponse.ok) {
-            const cachedData = await cacheResponse.json();
-            console.log(`✅ CACHE SUCCESS: Serving ${cachedData.length} cached player yellow cards projections`);
-            return res.json(cachedData);
-          } else {
-            throw new Error("Cache endpoint failed");
-          }
-        } catch (cacheError) {
-          console.error("❌ CACHE ALSO FAILED:", cacheError.message);
-          throw new Error("Both live calculation and cache failed");
-        }
+        const cacheResponse = await internalFetch("api/cached/player-yellow-cards-projections");
+        if (cacheResponse.ok) return cacheResponse.json();
+        throw new Error("Both live calculation and cache failed");
+      }
+      })();
+      yellowCardsInFlight.set(ycCacheKey, ycPromise);
+      ycPromise.finally(() => yellowCardsInFlight.delete(ycCacheKey));
+
+      try {
+        const data = await ycPromise;
+        yellowCardsCache.set(ycCacheKey, { data, timestamp: Date.now() });
+        return res.json(data);
+      } catch (error) {
+        console.error("❌ COMPLETE FAILURE in player yellow cards projections:", error);
+        res.status(500).json({ error: "Failed to get player yellow cards projections - both live and cache failed" });
       }
     } catch (error) {
       console.error("❌ COMPLETE FAILURE in player yellow cards projections:", error);
@@ -15894,6 +15955,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Red Cards Projections - API-first with cache fallback
   app.get("/api/player-red-cards-projections", async (req, res) => {
     try {
+      const rcCacheKey = 'default';
+      const rcHit = redCardsCache.get(rcCacheKey);
+      if (rcHit && Date.now() - rcHit.timestamp < SCORING_COMPONENT_CACHE_DURATION) {
+        return res.json(rcHit.data);
+      }
+      const rcInflight = redCardsInFlight.get(rcCacheKey);
+      if (rcInflight) {
+        try { return res.json(await rcInflight); } catch { /* fall through */ }
+      }
+      const rcPromise: Promise<any[]> = (async (): Promise<any[]> => {
       console.log("🚀 API-FIRST: Attempting live calculation for player red cards projections");
 
       // TRY LIVE CALCULATION FIRST
@@ -16008,26 +16079,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log(`✅ LIVE SUCCESS: Generated red card projections for ${redCardProjections.length} players using historical data for next 6 gameweeks`);
-        return res.json(redCardProjections);
+        return redCardProjections;
 
       } catch (liveError) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player red cards projections: ${liveError.message}`);
-        
-        // FALLBACK TO CACHE
-        console.log("🔄 CACHE FALLBACK: Trying cached player red cards projections...");
-        try {
-          const cacheResponse = await internalFetch("api/cached/player-red-cards-projections");
-          if (cacheResponse.ok) {
-            const cachedData = await cacheResponse.json();
-            console.log(`✅ CACHE SUCCESS: Serving ${cachedData.length} cached player red cards projections`);
-            return res.json(cachedData);
-          } else {
-            throw new Error("Cache endpoint failed");
-          }
-        } catch (cacheError) {
-          console.error("❌ CACHE ALSO FAILED:", cacheError.message);
-          throw new Error("Both live calculation and cache failed");
-        }
+        const cacheResponse = await internalFetch("api/cached/player-red-cards-projections");
+        if (cacheResponse.ok) return cacheResponse.json();
+        throw new Error("Both live calculation and cache failed");
+      }
+      })();
+      redCardsInFlight.set(rcCacheKey, rcPromise);
+      rcPromise.finally(() => redCardsInFlight.delete(rcCacheKey));
+
+      try {
+        const data = await rcPromise;
+        redCardsCache.set(rcCacheKey, { data, timestamp: Date.now() });
+        return res.json(data);
+      } catch (error) {
+        console.error("❌ COMPLETE FAILURE in player red cards projections:", error);
+        res.status(500).json({ error: "Failed to get player red cards projections - both live and cache failed" });
       }
     } catch (error) {
       console.error("❌ COMPLETE FAILURE in player red cards projections:", error);
@@ -16301,6 +16371,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Bonus Points Projections - API-first with cache fallback
   app.get("/api/player-bonus-points-projections", async (req, res) => {
     try {
+      const bpCacheKey = 'default';
+      const bpHit = bonusPointsCache.get(bpCacheKey);
+      if (bpHit && Date.now() - bpHit.timestamp < SCORING_COMPONENT_CACHE_DURATION) {
+        return res.json(bpHit.data);
+      }
+      const bpInflight = bonusPointsInFlight.get(bpCacheKey);
+      if (bpInflight) {
+        try { return res.json(await bpInflight); } catch { /* fall through */ }
+      }
+      const bpPromise: Promise<any[]> = (async (): Promise<any[]> => {
       console.log("🚀 API-FIRST: Attempting live calculation for player bonus points projections");
 
       // TRY LIVE CALCULATION FIRST
@@ -16308,7 +16388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log("DEBUG: Player Bonus Points Projections API called - simplified calculation for future gameweeks only");
         
         // Get FPL bootstrap data for current gameweek info and players
-        const fplResponse = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/");
+        const fplResponse = await internalFetch("api/bootstrap-static");
         const fplData = await fplResponse.json();
         
         // Use dynamic gameweek calculation for next 12 gameweeks
@@ -16318,7 +16398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const endGameweek = gameweekRange.end;
         
         // Get fixtures for the gameweek range
-        const fixturesResponse = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+        const fixturesResponse = await internalFetch("api/fixtures");
         const allFixtures = await fixturesResponse.json();
         
         // Filter only players with 1+ minutes for meaningful projections
@@ -16429,26 +16509,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         console.log(`✅ LIVE SUCCESS: Generated historical bonus-per-appearance projections for ${bonusPointsProjections.length} players`);
-        return res.json(bonusPointsProjections);
+        return bonusPointsProjections;
 
       } catch (liveError) {
         console.warn(`⚠️ LIVE CALCULATION FAILED for player bonus points projections: ${liveError.message}`);
-        
-        // FALLBACK TO CACHE
-        console.log("🔄 CACHE FALLBACK: Trying cached player bonus points projections...");
-        try {
-          const cacheResponse = await internalFetch("api/cached/player-bonus-points-projections");
-          if (cacheResponse.ok) {
-            const cachedData = await cacheResponse.json();
-            console.log(`✅ CACHE SUCCESS: Serving ${cachedData.length} cached player bonus points projections`);
-            return res.json(cachedData);
-          } else {
-            throw new Error("Cache endpoint failed");
-          }
-        } catch (cacheError) {
-          console.error("❌ CACHE ALSO FAILED:", cacheError.message);
-          throw new Error("Both live calculation and cache failed");
-        }
+        const cacheResponse = await internalFetch("api/cached/player-bonus-points-projections");
+        if (cacheResponse.ok) return cacheResponse.json();
+        throw new Error("Both live calculation and cache failed");
+      }
+      })();
+      bonusPointsInFlight.set(bpCacheKey, bpPromise);
+      bpPromise.finally(() => bonusPointsInFlight.delete(bpCacheKey));
+
+      try {
+        const data = await bpPromise;
+        bonusPointsCache.set(bpCacheKey, { data, timestamp: Date.now() });
+        return res.json(data);
+      } catch (error) {
+        console.error("❌ COMPLETE FAILURE in player bonus points projections:", error);
+        res.status(500).json({ error: "Failed to get player bonus points projections - both live and cache failed" });
       }
     } catch (error) {
       console.error("❌ COMPLETE FAILURE in player bonus points projections:", error);
