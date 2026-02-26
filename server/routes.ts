@@ -3275,7 +3275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`DEBUG: Cached manager ${managerId} data`);
         
         return data;
-      })();
+      })().catch(() => {});
       
       managerInFlight.set(cacheKey, fetchPromise);
       
@@ -3351,7 +3351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`DEBUG: Cached manager ${managerId} history`);
         
         return data;
-      })();
+      })().catch(() => {});
       
       managerHistoryInFlight.set(cacheKey, fetchPromise);
       
@@ -4606,7 +4606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`DEBUG: Cached manager ${managerId} leagues`);
         
         return leagues;
-      })();
+      })().catch(() => {});
       
       managerLeaguesInFlight.set(cacheKey, fetchPromise);
       
@@ -4707,7 +4707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`DEBUG: Cached manager ${managerId} transfers data`);
         
         return filteredTransfers;
-      })();
+      })().catch(() => {});
       
       managerTransfersInFlight.set(cacheKey, fetchPromise);
       
@@ -10923,7 +10923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return serialized;
       })().finally(() => {
         currentStandingsInFlight.delete(cacheKey);
-      });
+      }).catch(() => {});
       currentStandingsInFlight.set(cacheKey, computePromise as any);
       
       try {
@@ -11138,7 +11138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       })().finally(() => {
         playerMinutesInFlight.delete(cacheKey);
-      });
+      }).catch(() => {});
 
       playerMinutesInFlight.set(cacheKey, computePromise);
 
@@ -11323,7 +11323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       })();
       cleansheetInFlight.set(csCacheKey, csPromise);
-      csPromise.finally(() => cleansheetInFlight.delete(csCacheKey));
+      csPromise.finally(() => cleansheetInFlight.delete(csCacheKey)).catch(() => {});
 
       try {
         const data = await csPromise;
@@ -15403,7 +15403,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       })().finally(() => {
         playerSavesInFlight.delete(savesCacheKey);
-      });
+      }).catch(() => {});
 
       playerSavesInFlight.set(savesCacheKey, savesComputePromise);
 
@@ -15795,7 +15795,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       })();
       goalsConcededInFlight.set(gcCacheKey, gcPromise);
-      gcPromise.finally(() => goalsConcededInFlight.delete(gcCacheKey));
+      gcPromise.finally(() => goalsConcededInFlight.delete(gcCacheKey)).catch(() => {});
 
       try {
         const data = await gcPromise;
@@ -15949,7 +15949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       })();
       yellowCardsInFlight.set(ycCacheKey, ycPromise);
-      ycPromise.finally(() => yellowCardsInFlight.delete(ycCacheKey));
+      ycPromise.finally(() => yellowCardsInFlight.delete(ycCacheKey)).catch(() => {});
 
       try {
         const data = await ycPromise;
@@ -16102,7 +16102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       })();
       redCardsInFlight.set(rcCacheKey, rcPromise);
-      rcPromise.finally(() => redCardsInFlight.delete(rcCacheKey));
+      rcPromise.finally(() => redCardsInFlight.delete(rcCacheKey)).catch(() => {});
 
       try {
         const data = await rcPromise;
@@ -16532,7 +16532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       })();
       bonusPointsInFlight.set(bpCacheKey, bpPromise);
-      bpPromise.finally(() => bonusPointsInFlight.delete(bpCacheKey));
+      bpPromise.finally(() => bonusPointsInFlight.delete(bpCacheKey)).catch(() => {});
 
       try {
         const data = await bpPromise;

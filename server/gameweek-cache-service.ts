@@ -140,7 +140,7 @@ class GameweekCacheService {
       }
 
       // Fetch bootstrap data to get all players
-      const bootstrapResponse = await fetch(`${this.FPL_API_BASE}/bootstrap-static/`);
+      const bootstrapResponse = await internalFetch('api/bootstrap-static');
       if (!bootstrapResponse.ok) {
         throw new Error(`Bootstrap API error: ${bootstrapResponse.status}`);
       }
@@ -417,7 +417,7 @@ class GameweekCacheService {
    */
   async isGameweekFinished(gameweek: number): Promise<boolean> {
     try {
-      const response = await fetch(`${this.FPL_API_BASE}/bootstrap-static/`);
+      const response = await internalFetch('api/bootstrap-static');
       if (!response.ok) return false;
 
       const data = await response.json();

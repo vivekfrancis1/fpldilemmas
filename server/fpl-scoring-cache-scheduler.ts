@@ -1,4 +1,4 @@
-import { fplScoringCacheService } from "./fpl-scoring-cache-service";
+import { fplScoringCacheService, FPLScoringCacheService } from "./fpl-scoring-cache-service";
 
 class FPLScoringCacheScheduler {
   private schedulerInterval: NodeJS.Timeout | null = null;
@@ -37,6 +37,12 @@ class FPLScoringCacheScheduler {
    */
   private async performCacheUpdate(): Promise<void> {
     try {
+      const lastRun = FPLScoringCacheService.lastRunAt;
+      if (lastRun && (Date.now() - lastRun.getTime()) < 30 * 60 * 1000) {
+        const minutesAgo = Math.round((Date.now() - lastRun.getTime()) / 60000);
+        console.log(`⏭️ Scoring cache is fresh (updated ${minutesAgo}m ago), skipping scheduled update`);
+        return;
+      }
       const startTime = Date.now();
       console.log("🚀 Starting scheduled FPL scoring cache update...");
       

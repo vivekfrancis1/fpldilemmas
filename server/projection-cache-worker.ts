@@ -379,10 +379,13 @@ class ProjectionCacheWorker {
       // POSITION-BASED CAPPING: Apply position caps to prevent unrealistic assist shares
       console.log(`🔄 Applying position-based capping to assist shares...`);
       
+      // Build O(1) lookup map to avoid O(n²) Array.find() inside nested loops
+      const elementMap = new Map<number, any>(bootstrapData.elements.map((e: any) => [e.id, e]));
+      
       // Group records by team-gameweek for position capping
       const assistTeamGameweekGroups = new Map<string, typeof records>();
       for (const record of records) {
-        const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+        const player = elementMap.get(record.playerId);
         if (!player) continue;
         
         const key = `${player.team}-${record.gameweek}`;
@@ -502,7 +505,7 @@ class ProjectionCacheWorker {
       console.log(`📊 Caching team clean sheet projections...`);
       
       // Use Team CS Projections API directly - get current gameweek dynamically
-      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      const bootstrapResponse = await internalFetch('api/bootstrap-static');
       if (!bootstrapResponse.ok) {
         throw new Error(`Bootstrap API returned ${bootstrapResponse.status}`);
       }
@@ -568,7 +571,7 @@ class ProjectionCacheWorker {
       console.log(`📊 Caching minutes projections...`);
       
       // Get bootstrap data for player list
-      const response = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      const response = await internalFetch('api/bootstrap-static');
       if (!response.ok) {
         throw new Error(`Bootstrap API returned ${response.status}`);
       }

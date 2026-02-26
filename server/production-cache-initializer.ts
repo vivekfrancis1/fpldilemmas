@@ -5,7 +5,7 @@
  */
 
 import { db } from "./db";
-import { playerGoalsProjections, playerAssistProjections, playerMinutesProjections } from "@shared/schema";
+import { playerGoalsProjections, playerAssistProjections, playerMinutesProjections, gameweekProjectionSnapshots } from "@shared/schema";
 import { internalFetch } from "./config";
 import { sql } from "drizzle-orm";
 import { InitializationOrchestrator, JobDefinition } from "./initialization-orchestrator";
@@ -64,25 +64,33 @@ export class ProductionCacheInitializer {
   
   private async checkCacheStatus(): Promise<{
     needsInitialization: boolean;
+    hasRecentSnapshots: boolean;
     goalsEmpty: boolean;
     assistsEmpty: boolean;
     minutesEmpty: boolean;
   }> {
     try {
-      const [goalsCount, assistsCount, minutesCount] = await Promise.all([
+      const [goalsCount, assistsCount, minutesCount, snapshotCount] = await Promise.all([
         db.select({ count: sql<number>`count(*)` }).from(playerGoalsProjections),
         db.select({ count: sql<number>`count(*)` }).from(playerAssistProjections),
-        db.select({ count: sql<number>`count(*)` }).from(playerMinutesProjections)
+        db.select({ count: sql<number>`count(*)` }).from(playerMinutesProjections),
+        db.select({ count: sql<number>`count(*)` }).from(gameweekProjectionSnapshots)
       ]);
       
       const goalsEmpty = (goalsCount[0]?.count || 0) < 100;
       const assistsEmpty = (assistsCount[0]?.count || 0) < 100;
       const minutesEmpty = (minutesCount[0]?.count || 0) < 100;
+      const hasRecentSnapshots = (snapshotCount[0]?.count || 0) > 0;
       
-      console.log(`📊 Cache status - Goals: ${goalsCount[0]?.count || 0}, Assists: ${assistsCount[0]?.count || 0}, Minutes: ${minutesCount[0]?.count || 0}`);
+      console.log(`📊 Cache status - Goals: ${goalsCount[0]?.count || 0}, Assists: ${assistsCount[0]?.count || 0}, Minutes: ${minutesCount[0]?.count || 0}, Snapshots: ${snapshotCount[0]?.count || 0}`);
+      
+      if (hasRecentSnapshots) {
+        console.log("📦 DB has recent projection snapshots - lightweight startup (bootstrap + histories only)");
+      }
       
       return {
-        needsInitialization: goalsEmpty || assistsEmpty || minutesEmpty,
+        needsInitialization: true, // Always run at least the lightweight bootstrap + history jobs
+        hasRecentSnapshots,
         goalsEmpty,
         assistsEmpty,
         minutesEmpty
@@ -91,6 +99,7 @@ export class ProductionCacheInitializer {
       console.error("Error checking cache status:", error);
       return {
         needsInitialization: true,
+        hasRecentSnapshots: false,
         goalsEmpty: true,
         assistsEmpty: true,
         minutesEmpty: true
@@ -144,56 +153,24 @@ export class ProductionCacheInitializer {
    * Register cache population jobs with proper dependencies
    */
   private registerCacheJobs(orchestrator: InitializationOrchestrator, cacheStatus: any): void {
-    // Job 1: Bootstrap data (no dependencies) - Enhanced with actual bootstrap loading
+    // Job 1: Bootstrap data (no dependencies) — uses internal endpoint to warm the shared cache
     orchestrator.registerJob({
       id: 'bootstrap-data',
       name: 'Bootstrap FPL Data',
       dependencies: [],
       executor: async () => {
-        // Actually load bootstrap data to ensure it's available for dependent endpoints
         console.log("📡 Loading bootstrap data from FPL API...");
-        const response = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+        const response = await internalFetch("api/bootstrap-static");
         if (!response.ok) {
           throw new Error(`Failed to load bootstrap data: ${response.status}`);
         }
-        await response.json(); // Ensure the data is fetched and cached
+        await response.json(); // Parse to ensure data is fully cached
         console.log("✅ Bootstrap data loaded and cached successfully");
       },
       timeout: 60000 // 60 seconds for network calls
     });
 
-    // Job 2: Team projections (depend on bootstrap data)
-    if (cacheStatus.goalsEmpty) {
-      orchestrator.registerJob({
-        id: 'team-goals',
-        name: 'Team Goal Projections',
-        dependencies: ['bootstrap-data'],
-        executor: () => this.populateGoalsCache(),
-        timeout: 120000 // 2 minutes
-      });
-    }
-
-    if (cacheStatus.assistsEmpty) {
-      orchestrator.registerJob({
-        id: 'team-assists',
-        name: 'Team Assist Projections', 
-        dependencies: ['bootstrap-data'],
-        executor: () => this.populateAssistsCache(),
-        timeout: 120000 // 2 minutes
-      });
-    }
-
-    if (cacheStatus.minutesEmpty) {
-      orchestrator.registerJob({
-        id: 'team-minutes',
-        name: 'Team Minutes Projections',
-        dependencies: ['bootstrap-data'], 
-        executor: () => this.populateMinutesCache(),
-        timeout: 120000 // 2 minutes
-      });
-    }
-
-    // Job 3: Player history prefetch (depends on bootstrap data, runs in parallel with team jobs)
+    // Job 2: Player history prefetch (depends on bootstrap, always runs — quick DB verification)
     orchestrator.registerJob({
       id: 'player-histories',
       name: 'Player History Prefetch',
@@ -210,21 +187,66 @@ export class ProductionCacheInitializer {
       timeout: 300000 // 5 minutes max for 515 players at batch=10/100ms
     });
 
-    // Job 4: Player total points aggregation (depends on all team projections)
-    const teamDependencies: string[] = ['player-histories'];
-    if (cacheStatus.goalsEmpty) teamDependencies.push('team-goals');
-    if (cacheStatus.assistsEmpty) teamDependencies.push('team-assists');
-    if (cacheStatus.minutesEmpty) teamDependencies.push('team-minutes');
+    // Heavy jobs: only run when DB has no recent snapshot data (first-ever startup)
+    // On normal restarts, DB already has fresh snapshots — skip the 3-second 15MB aggregation
+    if (!cacheStatus.hasRecentSnapshots) {
+      console.log("🆕 No snapshots found — registering full aggregation jobs for first-time startup");
 
-    // Only add player aggregation job if there are team dependencies
-    // (if no team data needs updating, player aggregation isn't needed)
-    if (teamDependencies.length > 0) {
+      if (cacheStatus.goalsEmpty) {
+        orchestrator.registerJob({
+          id: 'team-goals',
+          name: 'Team Goal Projections',
+          dependencies: ['bootstrap-data'],
+          executor: () => this.populateGoalsCache(),
+          timeout: 120000
+        });
+      }
+
+      if (cacheStatus.assistsEmpty) {
+        orchestrator.registerJob({
+          id: 'team-assists',
+          name: 'Team Assist Projections',
+          dependencies: ['bootstrap-data'],
+          executor: () => this.populateAssistsCache(),
+          timeout: 120000
+        });
+      }
+
+      if (cacheStatus.minutesEmpty) {
+        orchestrator.registerJob({
+          id: 'team-minutes',
+          name: 'Team Minutes Projections',
+          dependencies: ['bootstrap-data'],
+          executor: () => this.populateMinutesCache(),
+          timeout: 120000
+        });
+      }
+
+      const teamDependencies: string[] = ['player-histories'];
+      if (cacheStatus.goalsEmpty) teamDependencies.push('team-goals');
+      if (cacheStatus.assistsEmpty) teamDependencies.push('team-assists');
+      if (cacheStatus.minutesEmpty) teamDependencies.push('team-minutes');
+
       orchestrator.registerJob({
         id: 'player-total-points',
         name: 'Player Total Points Aggregation',
         dependencies: teamDependencies,
         executor: () => this.populatePlayerTotalPointsCache(),
-        timeout: 180000 // 3 minutes
+        timeout: 180000
+      });
+    } else {
+      // Snapshots exist in DB — mark scoring cache as recently run to prevent
+      // the T+25 min scheduler from triggering an unnecessary aggregation cycle
+      orchestrator.registerJob({
+        id: 'mark-scoring-cache-fresh',
+        name: 'Mark Scoring Cache Fresh',
+        dependencies: ['player-histories'],
+        executor: async () => {
+          const { FPLScoringCacheService } = await import('./fpl-scoring-cache-service');
+          FPLScoringCacheService.lastRunAt = new Date();
+          console.log("✅ Scoring cache marked fresh — startup aggregation skipped (DB has recent snapshots)");
+        },
+        timeout: 5000
       });
     }
   }

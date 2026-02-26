@@ -13,6 +13,16 @@ import { seedAdminUser } from "./seed-admin-user";
 import { productionCacheInitializer } from "./production-cache-initializer";
 import { initializeGlobalOrchestrator } from "./routes";
 
+// SIGHUP is sent by the Replit environment at ~T+30s — ignore it to prevent silent process termination.
+// Without this handler Node.js's default SIGHUP behaviour exits the process with no error log.
+process.on('SIGHUP', () => {
+  console.log(`[server] SIGHUP received (uptime=${Math.round(process.uptime())}s) — continuing`);
+});
+
+// Surface unhandled async errors so crashes are never silent
+process.on('uncaughtException',  (err)    => { console.error('[server] uncaughtException:', err);    process.exit(1); });
+process.on('unhandledRejection', (reason) => { console.error('[server] unhandledRejection:', reason); process.exit(1); });
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

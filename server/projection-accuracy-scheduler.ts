@@ -493,7 +493,7 @@ class ProjectionAccuracyScheduler {
 
   async manualCaptureDeadline(gameweek: number): Promise<{ success: boolean; message: string }> {
     try {
-      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      const bootstrapResponse = await internalFetch('api/bootstrap-static');
       if (!bootstrapResponse.ok) {
         return { success: false, message: 'Failed to fetch FPL data' };
       }
@@ -508,7 +508,7 @@ class ProjectionAccuracyScheduler {
 
   async manualCaptureActuals(gameweek: number): Promise<{ success: boolean; message: string }> {
     try {
-      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      const bootstrapResponse = await internalFetch('api/bootstrap-static');
       if (!bootstrapResponse.ok) {
         return { success: false, message: 'Failed to fetch FPL data' };
       }
