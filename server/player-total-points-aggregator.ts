@@ -89,6 +89,65 @@ export class PlayerTotalPointsAggregator {
 
       console.log(`📊 All 9 components fetched sequentially — peak memory reduced vs concurrent fetch`);
 
+      // BLANK GAMEWEEK ZEROING: Zero out all components for GWs where a player's team has no fixture.
+      // This mirrors the blank-GW guard in the live /api/player-total-points route handler and
+      // prevents minutes points (and other components) from leaking into blank GWs.
+      try {
+        const [bootstrapResp, fixturesResp] = await Promise.all([
+          internalFetch('api/bootstrap-static'),
+          internalFetch('api/fixtures')
+        ]);
+
+        if (bootstrapResp.ok && fixturesResp.ok) {
+          const bootstrapData = await bootstrapResp.json();
+          const allFixtures: any[] = await fixturesResp.json();
+
+          // Map: playerId → teamId
+          const playerTeamMap = new Map<number, number>();
+          for (const element of (bootstrapData.elements || [])) {
+            playerTeamMap.set(element.id, element.team);
+          }
+
+          // Set of "teamId-gwNum" strings for every fixture in the GW range
+          const teamsWithFixture = new Set<string>();
+          for (const fixture of allFixtures) {
+            const gw = fixture.event;
+            if (gw === null || gw === undefined) continue;
+            if (gw < startGameweek || gw > endGameweek) continue;
+            teamsWithFixture.add(`${fixture.team_h}-${gw}`);
+            teamsWithFixture.add(`${fixture.team_a}-${gw}`);
+          }
+
+          let blankGWsZeroed = 0;
+          for (const [playerId, player] of playerMap.entries()) {
+            const teamId = playerTeamMap.get(playerId);
+            if (teamId === undefined) continue;
+            for (const [gwKey, breakdown] of Object.entries(player.gameweekBreakdown)) {
+              const gwNum = parseInt(gwKey);
+              if (isNaN(gwNum)) continue;
+              if (!teamsWithFixture.has(`${teamId}-${gwNum}`)) {
+                breakdown.goals = 0;
+                breakdown.assists = 0;
+                breakdown.cleanSheets = 0;
+                breakdown.minutes = 0;
+                breakdown.goalsConceded = 0;
+                breakdown.yellowCards = 0;
+                breakdown.redCards = 0;
+                breakdown.bonus = 0;
+                breakdown.saves = 0;
+                breakdown.points = 0;
+                blankGWsZeroed++;
+              }
+            }
+          }
+          console.log(`🚫 Blank GW zeroing: cleared ${blankGWsZeroed} player-GW entries with no fixture`);
+        } else {
+          console.warn(`⚠️ Blank GW zeroing skipped: bootstrap=${bootstrapResp.status}, fixtures=${fixturesResp.status}`);
+        }
+      } catch (blankGWError) {
+        console.warn(`⚠️ Blank GW zeroing failed (non-fatal):`, (blankGWError as Error).message);
+      }
+
       // Recompute per-GW totals from components
       for (const player of playerMap.values()) {
         let runningTotal = 0;
@@ -296,13 +355,13 @@ export class PlayerTotalPointsAggregator {
 
   private async fetchGoalsPointsData(startGameweek: number, endGameweek: number) {
     try {
-      const response = await internalFetch(`api/cached/player-goals-projections`);
+      const response = await internalFetch(`api/player-goals-scored-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) throw new Error(`Failed to fetch goals data: ${response.statusText}`);
       const goalsData = await response.json();
       return goalsData.map((player: any) => ({
         playerId: player.playerId,
         playerName: player.playerName,
-        teamName: player.teamName,
+        teamName: player.teamShort || player.team || player.teamName,
         position: player.position,
         pointsData: this.convertGoalsToPoints(player.gameweekProjections, player.position, startGameweek, endGameweek),
         totalPoints: 0
@@ -315,13 +374,13 @@ export class PlayerTotalPointsAggregator {
 
   private async fetchAssistsPointsData(startGameweek: number, endGameweek: number) {
     try {
-      const response = await internalFetch(`api/cached/player-assists-projections`);
+      const response = await internalFetch(`api/player-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       if (!response.ok) throw new Error(`Failed to fetch assists data: ${response.statusText}`);
       const assistsData = await response.json();
       return assistsData.map((player: any) => ({
         playerId: player.playerId,
         playerName: player.playerName,
-        teamName: player.teamName,
+        teamName: player.teamShort || player.team || player.teamName,
         position: player.position,
         pointsData: this.convertAssistsToPoints(player.gameweekProjections, startGameweek, endGameweek),
         totalPoints: 0
