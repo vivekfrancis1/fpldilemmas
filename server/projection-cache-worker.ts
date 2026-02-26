@@ -83,41 +83,36 @@ class ProjectionCacheWorker {
    */
   async cacheAllProjections(): Promise<void> {
     const startTime = Date.now();
-    console.log(`🔄 Starting projection cache update...`);
-    
-    try {
-      // Cache all projection types in parallel for efficiency
-      const results = await Promise.allSettled([
-        this.cacheGoalsProjections(),
-        this.cacheAssistProjections(), 
-        this.cacheCleanSheetProjections(),
-        this.cacheMinutesProjections(),
-        this.cacheDefensiveProjections(),
-        this.cacheTeamProjections(),
-        this.cacheGoalAssistShareData(),
-        this.cacheFPLScoringComponents()
-      ]);
-      
-      // Log results
-      const successful = results.filter(r => r.status === 'fulfilled').length;
-      const failed = results.filter(r => r.status === 'rejected').length;
-      
-      const duration = Date.now() - startTime;
-      console.log(`✅ Projection cache update completed: ${successful} successful, ${failed} failed (${duration}ms)`);
-      
-      if (failed > 0) {
-        results.forEach((result, index) => {
-          if (result.status === 'rejected') {
-            const types = ['Goals', 'Assists', 'Clean Sheets', 'Minutes', 'Defensive', 'Team Projections', 'Goal/Assist Share', 'FPL Scoring Components'];
-            console.error(`❌ Failed to cache ${types[index]} projections:`, result.reason);
-          }
-        });
+    console.log(`🔄 Starting projection cache update (sequential to reduce memory pressure)...`);
+
+    const tasks: Array<{ name: string; fn: () => Promise<void> }> = [
+      { name: 'Team Projections',     fn: () => this.cacheTeamProjections() },
+      { name: 'Goal/Assist Share',    fn: () => this.cacheGoalAssistShareData() },
+      { name: 'Goals',                fn: () => this.cacheGoalsProjections() },
+      { name: 'Assists',              fn: () => this.cacheAssistProjections() },
+      { name: 'Clean Sheets',         fn: () => this.cacheCleanSheetProjections() },
+      { name: 'Minutes',              fn: () => this.cacheMinutesProjections() },
+      { name: 'Defensive',            fn: () => this.cacheDefensiveProjections() },
+      { name: 'FPL Scoring',          fn: () => this.cacheFPLScoringComponents() },
+    ];
+
+    let successful = 0;
+    let failed = 0;
+
+    for (const task of tasks) {
+      try {
+        console.log(`⏳ Caching ${task.name}...`);
+        await task.fn();
+        successful++;
+        console.log(`✅ Completed job: ${task.name} (${Math.round((Date.now() - startTime) / 1000)}s elapsed)`);
+      } catch (err) {
+        failed++;
+        console.error(`❌ Failed to cache ${task.name} projections:`, err);
       }
-      
-    } catch (error) {
-      console.error(`❌ Projection cache worker failed:`, error);
-      throw error;
     }
+
+    const duration = Date.now() - startTime;
+    console.log(`✅ Projection cache update completed: ${successful} successful, ${failed} failed (${duration}ms)`);
   }
   
   /**

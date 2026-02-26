@@ -45,6 +45,7 @@ integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.
 [userenv]
 
 [userenv.shared]
+NODE_OPTIONS = "--max-old-space-size=2048"
 
 [userenv.development]
 GOOGLE_CALLBACK_URL = "http://localhost:5000/api/auth/google/callback"

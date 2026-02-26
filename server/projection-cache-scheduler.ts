@@ -17,17 +17,21 @@ class ProjectionCacheScheduler {
   start(): void {
     console.log('🔄 Starting projection cache scheduler...');
     
-    // Run immediately on startup to ensure we have cached data
-    this.runCacheUpdate().catch(error => {
-      console.error('❌ Initial cache update failed:', error);
-    });
+    // Delay the initial run by 3 minutes so the production cache initializer's
+    // memory can be GC'd first, preventing concurrent memory spikes at startup
+    setTimeout(() => {
+      console.log('⏰ Running delayed initial projection cache update...');
+      this.runCacheUpdate().catch(error => {
+        console.error('❌ Initial cache update failed:', error);
+      });
+    }, 3 * 60 * 1000);
     
     // Schedule to run every hour for faster data freshness
     this.intervalId = setInterval(() => {
       this.runHourlyUpdate();
     }, this.HOURLY_UPDATE_INTERVAL);
     
-    console.log('✅ Projection cache scheduler started (runs every hour)');
+    console.log('✅ Projection cache scheduler started (first run in 3 minutes, then hourly)');
   }
   
   /**

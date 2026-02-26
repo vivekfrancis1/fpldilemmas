@@ -12451,27 +12451,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Fetch data from all individual projection APIs
-      const [
-        goalsResponse,
-        assistsResponse,
-        minutesResponse,
-        cleansheetResponse,
-        goalsConcededResponse,
-        yellowCardsResponse,
-        redCardsResponse,
-        bonusPointsResponse,
-        savesResponse,
-        defensiveContributionsResponse
-      ] = await Promise.all([
+      // Fetch data from all individual projection APIs in two sequential batches to reduce peak memory
+      // Batch 1: lightweight/fast endpoints
+      const [goalsResponse, assistsResponse, yellowCardsResponse, redCardsResponse, bonusPointsResponse] = await Promise.all([
         internalFetch(`api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
-        internalFetch(`api/player-minutes-projections`), // No gameweek data available
-        internalFetch(`api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`),
-        internalFetch(`api/player-goals-conceded-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-yellow-cards-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-red-cards-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-bonus-points-projections?startGameweek=${start}&endGameweek=${end}`),
+      ]);
+      // Batch 2: heavier endpoints that do more computation
+      const [minutesResponse, cleansheetResponse, goalsConcededResponse, savesResponse, defensiveContributionsResponse] = await Promise.all([
+        internalFetch(`api/player-minutes-projections`), // No gameweek data available
+        internalFetch(`api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`),
+        internalFetch(`api/player-goals-conceded-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-saves-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-defensive-contributions-projections?startGameweek=${start}&endGameweek=${end}`)
       ]);

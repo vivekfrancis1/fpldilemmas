@@ -122,8 +122,12 @@ app.use((req, res, next) => {
       console.log("✓ Projection cache scheduler started");
       
       // Start FPL scoring cache scheduler (runs twice daily)
-      fplScoringCacheScheduler.start();
-      console.log("✓ FPL scoring cache scheduler started");
+      // Delayed by 10 minutes to avoid concurrent memory spikes with projection cache (which runs at T+3min)
+      setTimeout(() => {
+        fplScoringCacheScheduler.start();
+        console.log("✓ FPL scoring cache scheduler started (delayed)");
+      }, 10 * 60 * 1000);
+      console.log("✓ FPL scoring cache scheduler queued (starts in 10 minutes)");
       
       // Start Twitter scheduler (posts price changes at 7 AM IST daily)
       twitterScheduler.start();
