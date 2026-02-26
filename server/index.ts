@@ -126,8 +126,8 @@ app.use((req, res, next) => {
       setTimeout(() => {
         fplScoringCacheScheduler.start();
         console.log("✓ FPL scoring cache scheduler started (delayed)");
-      }, 10 * 60 * 1000);
-      console.log("✓ FPL scoring cache scheduler queued (starts in 10 minutes)");
+      }, 25 * 60 * 1000);
+      console.log("✓ FPL scoring cache scheduler queued (starts in 25 minutes)");
       
       // Start Twitter scheduler (posts price changes at 7 AM IST daily)
       twitterScheduler.start();

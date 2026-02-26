@@ -1,6 +1,7 @@
 import { db } from './db';
 import { sql } from 'drizzle-orm';
 import { playerTotalPointsSnapshots, playerTotalPointsWindows } from '@shared/schema';
+import { internalFetch } from './config';
 
 interface PlayerProjectionRecord {
   player_id: number;
@@ -61,7 +62,7 @@ class ProjectionAccuracyScheduler {
     this.isRunning = true;
 
     try {
-      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      const bootstrapResponse = await internalFetch('api/bootstrap-static');
       if (!bootstrapResponse.ok) {
         console.error('❌ Failed to fetch FPL bootstrap data');
         return;

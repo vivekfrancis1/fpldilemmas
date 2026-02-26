@@ -56,41 +56,38 @@ export class PlayerTotalPointsAggregator {
     console.log(`🔧 Starting Player Total Points aggregation for GW${startGameweek}-${endGameweek}...`);
     
     try {
-      const [
-        savesData,
-        goalsConcededData,
-        yellowCardsData,
-        redCardsData,
-        bonusPointsData,
-        minutesPointsData,
-        goalsPointsData,
-        assistsPointsData,
-        cleanSheetPointsData
-      ] = await Promise.all([
-        this.fetchSavesData(startGameweek, endGameweek),
-        this.fetchGoalsConcededData(startGameweek, endGameweek),
-        this.fetchYellowCardsData(startGameweek, endGameweek),
-        this.fetchRedCardsData(startGameweek, endGameweek),
-        this.fetchBonusPointsData(startGameweek, endGameweek),
-        this.fetchMinutesPointsData(startGameweek, endGameweek),
-        this.fetchGoalsPointsData(startGameweek, endGameweek),
-        this.fetchAssistsPointsData(startGameweek, endGameweek),
-        this.fetchCleanSheetPointsData(startGameweek, endGameweek)
-      ]);
-
-      console.log(`📊 Component data fetched - Saves: ${savesData.length}, Goals Conceded: ${goalsConcededData.length}, Cards: ${yellowCardsData.length + redCardsData.length}, Bonus: ${bonusPointsData.length}, Minutes: ${minutesPointsData.length}, Goals: ${goalsPointsData.length}, Assists: ${assistsPointsData.length}, CleanSheets: ${cleanSheetPointsData.length}`);
-
+      // Sequential fetching: process one component at a time so only one large
+      // response array is held in memory at once (reduces peak memory by ~9×).
       const playerMap = new Map<number, PlayerPointsData>();
 
-      this.addComponentPoints(playerMap, savesData, "saves");
-      this.addComponentPoints(playerMap, goalsConcededData, "goalsConceded");
-      this.addComponentPoints(playerMap, yellowCardsData, "yellowCards");
-      this.addComponentPoints(playerMap, redCardsData, "redCards");
-      this.addComponentPoints(playerMap, bonusPointsData, "bonus");
-      this.addMinutesPoints(playerMap, minutesPointsData, startGameweek, endGameweek);
-      this.addComponentPoints(playerMap, goalsPointsData, "goals");
-      this.addComponentPoints(playerMap, assistsPointsData, "assists");
-      this.addComponentPoints(playerMap, cleanSheetPointsData, "cleanSheets");
+      console.log(`📊 Fetching component 1/9: saves...`);
+      this.addComponentPoints(playerMap, await this.fetchSavesData(startGameweek, endGameweek), "saves");
+
+      console.log(`📊 Fetching component 2/9: goals conceded...`);
+      this.addComponentPoints(playerMap, await this.fetchGoalsConcededData(startGameweek, endGameweek), "goalsConceded");
+
+      console.log(`📊 Fetching component 3/9: yellow cards...`);
+      this.addComponentPoints(playerMap, await this.fetchYellowCardsData(startGameweek, endGameweek), "yellowCards");
+
+      console.log(`📊 Fetching component 4/9: red cards...`);
+      this.addComponentPoints(playerMap, await this.fetchRedCardsData(startGameweek, endGameweek), "redCards");
+
+      console.log(`📊 Fetching component 5/9: bonus points...`);
+      this.addComponentPoints(playerMap, await this.fetchBonusPointsData(startGameweek, endGameweek), "bonus");
+
+      console.log(`📊 Fetching component 6/9: minutes...`);
+      this.addMinutesPoints(playerMap, await this.fetchMinutesPointsData(startGameweek, endGameweek), startGameweek, endGameweek);
+
+      console.log(`📊 Fetching component 7/9: goals scored...`);
+      this.addComponentPoints(playerMap, await this.fetchGoalsPointsData(startGameweek, endGameweek), "goals");
+
+      console.log(`📊 Fetching component 8/9: assists...`);
+      this.addComponentPoints(playerMap, await this.fetchAssistsPointsData(startGameweek, endGameweek), "assists");
+
+      console.log(`📊 Fetching component 9/9: clean sheets...`);
+      this.addComponentPoints(playerMap, await this.fetchCleanSheetPointsData(startGameweek, endGameweek), "cleanSheets");
+
+      console.log(`📊 All 9 components fetched sequentially — peak memory reduced vs concurrent fetch`);
 
       // Recompute per-GW totals from components
       for (const player of playerMap.values()) {

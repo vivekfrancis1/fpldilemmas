@@ -10,7 +10,7 @@ import {
 } from "../shared/schema";
 import { eq, and } from "drizzle-orm";
 import { internalFetch } from "./config";
-import { fplScoringCacheService } from "./fpl-scoring-cache-service";
+import { fplScoringCacheService, FPLScoringCacheService } from "./fpl-scoring-cache-service";
 import { 
   applyGoalAdjustments, 
   applyAssistAdjustments,
@@ -82,6 +82,12 @@ class ProjectionCacheWorker {
    * Main worker function to cache all projection data
    */
   async cacheAllProjections(): Promise<void> {
+    const lastRun = FPLScoringCacheService.lastRunAt;
+    if (lastRun && (Date.now() - lastRun.getTime()) < 60 * 60 * 1000) {
+      const minutesAgo = Math.round((Date.now() - lastRun.getTime()) / 60000);
+      console.log(`⏭️ Projection cache fresh (scoring updated ${minutesAgo}m ago), skipping all tasks`);
+      return;
+    }
     const startTime = Date.now();
     console.log(`🔄 Starting projection cache update (sequential to reduce memory pressure)...`);
 
@@ -127,7 +133,7 @@ class ProjectionCacheWorker {
       // This avoids calling the optimized endpoint which uses cache-first approach
       const [projResponse, bootstrapResponse] = await Promise.all([
         internalFetch('api/player-goals-scored-projections-full-calculation'),
-        fetch('https://fantasy.premierleague.com/api/bootstrap-static/')
+        internalFetch('api/bootstrap-static')
       ]);
       
       if (!projResponse.ok) {
@@ -164,6 +170,9 @@ class ProjectionCacheWorker {
       
       const gameweeks = Array.from(gameweekRange).sort((a, b) => a - b);
       console.log(`📅 Dynamic gameweek range detected: GW${gameweeks[0]}-${gameweeks[gameweeks.length - 1]} (${gameweeks.length} gameweeks)`);
+      
+      // Build O(1) lookup map to avoid O(n²) Array.find() inside nested loops
+      const elementMap = new Map<number, any>(bootstrapData.elements.map((e: any) => [e.id, e]));
       
       for (const player of data) {
         if (player.gameweekProjections) {
@@ -217,7 +226,7 @@ class ProjectionCacheWorker {
       // Group records by team-gameweek for position capping
       const teamGameweekGroups = new Map<string, typeof records>();
       for (const record of records) {
-        const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+        const player = elementMap.get(record.playerId);
         if (!player) continue;
         
         const key = `${player.team}-${record.gameweek}`;
@@ -238,7 +247,7 @@ class ProjectionCacheWorker {
         
         // Build TeamPlayerShare objects
         const teamPlayerShares: TeamPlayerShare[] = teamRecords.map(record => {
-          const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+          const player = elementMap.get(record.playerId);
           if (!player) return null;
           
           const goalShare = (record.goals / teamTotal) * 100;
@@ -296,7 +305,7 @@ class ProjectionCacheWorker {
       console.log(`📊 Caching assist projections with set piece adjustments...`);
       
       // First fetch bootstrap data to determine current gameweek
-      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      const bootstrapResponse = await internalFetch('api/bootstrap-static');
       if (!bootstrapResponse.ok) {
         throw new Error(`Bootstrap API returned ${bootstrapResponse.status}`);
       }
@@ -396,7 +405,7 @@ class ProjectionCacheWorker {
         // Store method reference to avoid context issues
         const getPositionName = this.getPositionName.bind(this);
         const teamPlayerShares: TeamPlayerShare[] = teamRecords.map(record => {
-          const player = bootstrapData.elements.find((p: any) => p.id === record.playerId);
+          const player = elementMap.get(record.playerId);
           if (!player) return null;
           
           const assistShare = (record.assists / teamTotal) * 100;
@@ -1091,10 +1100,16 @@ class ProjectionCacheWorker {
    */
   private async cacheFPLScoringComponents(): Promise<void> {
     try {
+      const lastRun = FPLScoringCacheService.lastRunAt;
+      if (lastRun && (Date.now() - lastRun.getTime()) < 30 * 60 * 1000) {
+        const minutesAgo = Math.round((Date.now() - lastRun.getTime()) / 60000);
+        console.log(`⏭️ Scoring cache is fresh (updated ${minutesAgo}m ago), skipping redundant aggregation`);
+        return;
+      }
       console.log(`📊 Caching FPL scoring components...`);
       
       // Get dynamic gameweek range (same logic as Player Total Points endpoint)
-      const bootstrapResponse = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/');
+      const bootstrapResponse = await internalFetch('api/bootstrap-static');
       const bootstrap = await bootstrapResponse.json();
       const currentEvent = bootstrap.events.find((event: any) => event.is_current);
       const currentGameweek = currentEvent ? currentEvent.id : 5; // Use actual current gameweek ID

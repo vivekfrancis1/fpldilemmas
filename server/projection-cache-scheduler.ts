@@ -17,21 +17,23 @@ class ProjectionCacheScheduler {
   start(): void {
     console.log('🔄 Starting projection cache scheduler...');
     
-    // Delay the initial run by 3 minutes so the production cache initializer's
-    // memory can be GC'd first, preventing concurrent memory spikes at startup
+    // Delay the initial run by 35 minutes so startup memory (GW data, 9-component
+    // aggregation, DB writes) has been fully GC'd before we do any heavy work.
+    // The top-level freshness guard in cacheAllProjections() will also skip if
+    // the scoring cache was updated within the last hour.
     setTimeout(() => {
       console.log('⏰ Running delayed initial projection cache update...');
       this.runCacheUpdate().catch(error => {
         console.error('❌ Initial cache update failed:', error);
       });
-    }, 3 * 60 * 1000);
+    }, 35 * 60 * 1000);
     
     // Schedule to run every hour for faster data freshness
     this.intervalId = setInterval(() => {
       this.runHourlyUpdate();
     }, this.HOURLY_UPDATE_INTERVAL);
     
-    console.log('✅ Projection cache scheduler started (first run in 3 minutes, then hourly)');
+    console.log('✅ Projection cache scheduler started (first run in 35 minutes, then hourly)');
   }
   
   /**

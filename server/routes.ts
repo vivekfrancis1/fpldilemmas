@@ -38,6 +38,11 @@ import { calculateAvailabilityProbability, BootstrapEvent } from './availability
 import { setupAuth, isAuthenticated } from './replitAuth';
 import { totalPointsCache } from './total-points-cache';
 
+// Module-level caches for team-level projection endpoints (60-minute TTL)
+let teamGoalsAgainstCache: { data: any[]; timestamp: number } | null = null;
+let teamCSCache: { data: any[]; timestamp: number } | null = null;
+const TEAM_PROJECTION_CACHE_DURATION = 60 * 60 * 1000; // 60 minutes
+
 // Helper function for FPL API requests with retry logic
 const fetchWithRetry = async (url: string, retries = 3, delay = 1000) => {
   for (let i = 0; i < retries; i++) {
@@ -8087,6 +8092,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Team Clean Sheet Projections endpoint with caching
   app.get("/api/team-cs-projections", async (req, res) => {
     try {
+      if (teamCSCache && (Date.now() - teamCSCache.timestamp) < TEAM_PROJECTION_CACHE_DURATION) {
+        return res.json(teamCSCache.data);
+      }
       console.log(`DEBUG: Team CS Projections API called - generating next 12 gameweeks`);
       
       // Use internal cached endpoints for better performance
@@ -8252,6 +8260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         team.position = index + 1;
       });
       
+      teamCSCache = { data: teamProjections, timestamp: Date.now() };
       res.json(teamProjections);
     } catch (error) {
       console.error("Error generating team clean sheet projections:", error);
@@ -10539,16 +10548,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Player Minutes Projections: in-flight dedup + 5-min result cache
   // Prevents N concurrent requests each fetching 515 player histories (550+ FPL API calls each)
   const playerMinutesCache = new Map<string, { data: any[]; timestamp: number }>();
-  const PLAYER_MINUTES_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const PLAYER_MINUTES_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
   const playerMinutesInFlight = new Map<string, Promise<any[]>>();
 
   // Player Saves Projections: in-flight dedup + 5-min result cache
   const playerSavesCache = new Map<string, { data: any[]; timestamp: number }>();
-  const PLAYER_SAVES_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const PLAYER_SAVES_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
   const playerSavesInFlight = new Map<string, Promise<any[]>>();
 
   // Remaining 5 scoring components: in-flight dedup + 5-min result cache
-  const SCORING_COMPONENT_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const SCORING_COMPONENT_CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
   const cleansheetCache = new Map<string, { data: any[]; timestamp: number }>();
   const cleansheetInFlight = new Map<string, Promise<any[]>>();
   const goalsConcededCache = new Map<string, { data: any[]; timestamp: number }>();
@@ -11455,6 +11464,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     requireReadiness(['bootstrap-data', 'team-goals'], 'team-goals-against-projections'),
     async (req, res) => {
     try {
+      if (teamGoalsAgainstCache && (Date.now() - teamGoalsAgainstCache.timestamp) < TEAM_PROJECTION_CACHE_DURATION) {
+        return res.json(teamGoalsAgainstCache.data);
+      }
       console.log(`DEBUG: Creating PERFECT MIRROR IMAGE - Direct fixture-based mapping`);
       
       // Fetch Team Goal projections to create perfect mirror
@@ -11625,6 +11637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           position: index + 1
         }));
 
+      teamGoalsAgainstCache = { data: finalProjections, timestamp: Date.now() };
       res.json(finalProjections);
     } catch (error) {
       console.error("Error generating team goals against projections:", error);

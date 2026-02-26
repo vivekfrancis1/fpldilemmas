@@ -4,6 +4,7 @@ import { totalPointsCache } from "./total-points-cache";
 
 export class FPLScoringCacheService {
   private static updateLock = false;
+  static lastRunAt: Date | null = null;
   
   async updateAllScoringData(startGameweek?: number, endGameweek?: number): Promise<void> {
     if (FPLScoringCacheService.updateLock) {
@@ -38,6 +39,7 @@ export class FPLScoringCacheService {
       await aggregator.aggregatePlayerTotalPoints(resolvedStart, resolvedEnd);
       // Clear memory cache so the next request reads the freshly aggregated DB data
       totalPointsCache.clear();
+      FPLScoringCacheService.lastRunAt = new Date();
       console.log("✅ FPL scoring component cache update completed successfully — memory cache cleared");
     } catch (error) {
       console.error("❌ FPL scoring component cache update failed:", error);

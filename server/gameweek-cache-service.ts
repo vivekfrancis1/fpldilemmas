@@ -1,4 +1,5 @@
 import { db, pool } from "./db";
+import { internalFetch } from "./config";
 
 // Direct database queries since these are new tables
 const gameweekPlayerDataTable = "gameweek_player_data";
@@ -436,7 +437,7 @@ class GameweekCacheService {
     try {
       console.log("🔍 Checking for completed gameweeks to cache...");
       
-      const response = await fetch(`${this.FPL_API_BASE}/bootstrap-static/`);
+      const response = await internalFetch('api/bootstrap-static');
       if (!response.ok) {
         console.error("Failed to fetch bootstrap data");
         return;

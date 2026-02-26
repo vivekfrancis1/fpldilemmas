@@ -1,4 +1,5 @@
 import { twitterService } from './twitterService';
+import { internalFetch } from '../config';
 
 interface FixtureState {
   fixtureId: number;
@@ -100,7 +101,9 @@ export class LiveGoalMonitor {
     console.log(`📋 Tracking: goals, assists, red cards, DC, bonus points`);
     console.log(`📋 Bonus points monitored for ${this.BONUS_MONITOR_HOURS} hours after match ends`);
 
-    this.poll();
+    // Delay first poll by 2 minutes so startup memory (aggregation, DB writes, caches)
+    // has time to be GC'd before the live monitor begins its 60-second polling cycle.
+    setTimeout(() => this.poll(), 2 * 60 * 1000);
     this.pollInterval = setInterval(() => this.poll(), this.POLL_INTERVAL_MS);
   }
 
@@ -119,9 +122,7 @@ export class LiveGoalMonitor {
     try {
       await this.refreshBootstrapIfNeeded();
 
-      const fixturesRes = await fetch('https://fantasy.premierleague.com/api/fixtures/', {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FPL-Analytics/1.0)', Accept: 'application/json' }
-      });
+      const fixturesRes = await internalFetch('api/fixtures');
       if (!fixturesRes.ok) return;
       const fixtures: any[] = await fixturesRes.json();
 
@@ -646,9 +647,7 @@ export class LiveGoalMonitor {
     if (now - this.lastBootstrapRefresh < this.BOOTSTRAP_REFRESH_MS && this.bootstrapPlayers.size > 0) return;
 
     try {
-      const res = await fetch('https://fantasy.premierleague.com/api/bootstrap-static/', {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; FPL-Analytics/1.0)', Accept: 'application/json' }
-      });
+      const res = await internalFetch('api/bootstrap-static');
       if (!res.ok) return;
       const data: any = await res.json();
 
