@@ -2879,10 +2879,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playerTeams.set(player.id, player.team);
       }
       
-      // Fetch projected points for players from projection-accuracy endpoint (uses snapshots for past GWs, live data for future)
+      // Fetch projected points for players — when the current GW is finished, use the NEXT GW for projections
+      // (the projection-accuracy endpoint returns null projected_points for finished GWs, only future GWs have projections)
+      const projectionGW = isGameweekFinished
+        ? (bootstrapData.events.find((e: any) => e.is_next)?.id || currentGameweek + 1)
+        : currentGameweek;
       let playerProjectionsMap = new Map<number, number>();
       try {
-        const projectionsResponse = await internalFetch(`/api/projection-accuracy/gameweek/${currentGameweek}`);
+        const projectionsResponse = await internalFetch(`/api/projection-accuracy/gameweek/${projectionGW}`);
         if (projectionsResponse && projectionsResponse.ok) {
           const projectionsData = await projectionsResponse.json();
           if (projectionsData.players && Array.isArray(projectionsData.players)) {
@@ -3121,6 +3125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           results: sortedStandings
         },
         current_gameweek: currentGameweek,
+        projection_gameweek: projectionGW,
         is_gameweek_finished: isGameweekFinished,
         has_live_fixtures: hasLiveFixtures,
         has_provisional_bonus: hasProvisionalBonus || hasLiveFixtures,

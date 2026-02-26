@@ -43,6 +43,7 @@ interface LiveLeagueStandings {
     results: LiveLeagueEntry[];
   };
   current_gameweek: number;
+  projection_gameweek?: number;
   is_gameweek_finished: boolean;
   has_live_fixtures: boolean;
   has_provisional_bonus: boolean;
@@ -486,7 +487,7 @@ export default function LeagueAnalysisPage() {
 
     const xPtsCol: ResponsiveTableColumn<EnrichedLeagueEntry> = {
       key: 'projected_points',
-      header: <span className="text-center">GW{currentGameweek}<br/>xPts</span>,
+      header: <span className="text-center">GW{liveStandingsData?.projection_gameweek || upcomingGameweek}<br/>xPts</span>,
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'xPts',
@@ -640,7 +641,7 @@ export default function LeagueAnalysisPage() {
 
     const xPtsCol: ResponsiveTableColumn<EnrichedLiveEntry> = {
       key: 'projected_points',
-      header: <span className="text-center">GW{liveStandingsData?.current_gameweek || currentGameweek}<br/>xPts</span>,
+      header: <span className="text-center">GW{liveStandingsData?.projection_gameweek || upcomingGameweek}<br/>xPts</span>,
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'xPts',
