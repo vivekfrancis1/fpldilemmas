@@ -43,8 +43,9 @@ class ProjectionAccuracyScheduler {
       this.checkAndProcess();
     }, this.CHECK_INTERVAL);
     
-    this.checkAndProcess();
-    console.log('✅ Projection Accuracy Scheduler started (checks every 5 minutes)');
+    // Delay first run by 5 minutes so it doesn't compete with startup initialisation
+    setTimeout(() => this.checkAndProcess(), 5 * 60 * 1000);
+    console.log('✅ Projection Accuracy Scheduler started (first check in 5 minutes, then every 5 minutes)');
   }
 
   stop(): void {

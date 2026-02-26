@@ -10574,7 +10574,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const liveResponse = await fetchWithRetry(`https://fantasy.premierleague.com/api/event/${gameweek}/live/`);
               if (liveResponse.ok) {
                 const liveData = await liveResponse.json();
-                return { gameweek, data: liveData };
+                // Extract only the fields actually used by computeCurrentStandings.
+                // The full response contains large `explain` arrays per player that are
+                // never read — discarding them keeps memory proportional to player count,
+                // not gameweek count × fixture-explain depth.
+                const leanData = {
+                  elements: (liveData.elements || []).map((el: any) => ({
+                    id: el.id,
+                    stats: {
+                      expected_goals: el.stats?.expected_goals,
+                      xg: el.stats?.xg,
+                      yellow_cards: el.stats?.yellow_cards,
+                      red_cards: el.stats?.red_cards,
+                      saves: el.stats?.saves,
+                      own_goals: el.stats?.own_goals,
+                      penalties_saved: el.stats?.penalties_saved,
+                      penalties_missed: el.stats?.penalties_missed,
+                      tackles: el.stats?.tackles,
+                      blocks: el.stats?.blocks,
+                      interceptions: el.stats?.interceptions,
+                      clearances: el.stats?.clearances,
+                      recoveries: el.stats?.recoveries,
+                      clearances_blocks_interceptions: el.stats?.clearances_blocks_interceptions,
+                    }
+                  }))
+                };
+                return { gameweek, data: leanData };
               }
             } catch (error) {
               console.warn(`Failed to fetch xGF live data for GW${gameweek}:`, error);

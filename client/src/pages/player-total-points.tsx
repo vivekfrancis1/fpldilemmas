@@ -1028,17 +1028,17 @@ export default function PlayerTotalPoints() {
   // Check if max compare reached
   const maxCompareReached = compareList.length >= 5;
 
-  // Fetch the full available GW range once — query key excludes user-selected Start/End GW
-  // so TanStack Query does NOT refetch when the user changes the filter (instant client-side filtering)
+  // Fetch from the DB-backed cached endpoint — populated at startup, no heavy pipeline on page load.
+  // TanStack Query does NOT refetch when the user changes the GW filter (instant client-side filtering).
   const { data: fullRangeData, isLoading: fullRangeLoading, error: fullRangeError, refetch: refetchFullRange } = useQuery<PlayerTotalPointsData[]>({
-    queryKey: ["/api/player-total-points/full-range", nextGameweek, maxAvailableGW],
+    queryKey: ["/api/cached/player-total-points"],
     queryFn: async () => {
-      const res = await fetch(`/api/player-total-points?startGameweek=${nextGameweek}&endGameweek=${maxAvailableGW}`);
+      const res = await fetch(`/api/cached/player-total-points`);
       if (!res.ok) throw new Error('Failed to fetch player total points');
       return res.json();
     },
     staleTime: 30 * 60 * 1000, // 30 min — matches server-side in-memory cache TTL
-    enabled: viewMode === "future" && nextGameweek > 0 && maxAvailableGW > 0,
+    enabled: viewMode === "future",
   });
 
   // History query for past gameweeks
