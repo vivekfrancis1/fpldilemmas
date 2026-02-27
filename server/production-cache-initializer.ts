@@ -187,21 +187,31 @@ export class ProductionCacheInitializer {
       timeout: 60000
     });
 
-    // Job 2: Player history prefetch (depends on bootstrap, always runs — quick DB verification)
+    // Job 2: Player history prefetch (depends on bootstrap)
+    // On normal restarts (DB has snapshots): fire-and-forget so startup is not blocked.
+    // On first-time startup: await so the aggregation job has data to work with.
+    const hasSnapshots = cacheStatus.hasRecentSnapshots;
     orchestrator.registerJob({
       id: 'player-histories',
       name: 'Player History Prefetch',
       dependencies: ['bootstrap-data'],
       executor: async () => {
-        console.log("📚 Prefetching player histories to DB cache...");
         const response = await internalFetch("api/bootstrap-static");
         const bootstrapData = await response.json();
         const playerIds: number[] = bootstrapData.elements
           .filter((p: any) => (p.minutes || 0) >= 1)
           .map((p: any) => p.id);
-        await prefetchAllPlayerHistories(playerIds);
+        if (hasSnapshots) {
+          console.log("📚 Player history prefetch starting in background (non-blocking)...");
+          prefetchAllPlayerHistories(playerIds).catch(e =>
+            console.warn("⚠️ Background player history prefetch error:", e)
+          );
+        } else {
+          console.log("📚 Prefetching player histories to DB cache (first-time setup)...");
+          await prefetchAllPlayerHistories(playerIds);
+        }
       },
-      timeout: 300000 // 5 minutes max for 515 players at batch=10/100ms
+      timeout: hasSnapshots ? 10000 : 300000
     });
 
     // Heavy jobs: only run when DB has no recent snapshot data (first-ever startup)

@@ -5,7 +5,7 @@ import { eq, sql, count } from "drizzle-orm";
 const FPL_ELEMENT_SUMMARY_URL = "https://fantasy.premierleague.com/api/element-summary";
 const PREFETCH_BATCH_SIZE = 10;
 const PREFETCH_BATCH_DELAY_MS = 100;
-const CACHE_MAX_AGE_HOURS = 6; // Refresh if older than 6 hours
+const CACHE_MAX_AGE_HOURS = 24; // Refresh if older than 24 hours
 
 let prefetchRunning = false;
 
