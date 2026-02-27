@@ -14,7 +14,7 @@ interface TweetData {
   fallers: PriceChange[];
 }
 
-const TEAM_ABBREVIATIONS: Record<string, string> = {
+export const TEAM_ABBREVIATIONS: Record<string, string> = {
   'Arsenal': 'ARS',
   'Aston Villa': 'AVL',
   'Bournemouth': 'BOU',

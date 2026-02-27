@@ -6,6 +6,7 @@ import { priceSplitWorker } from "./price-split-worker";
 import { projectionCacheScheduler } from "./projection-cache-scheduler";
 import { fplScoringCacheScheduler } from "./fpl-scoring-cache-scheduler";
 import { twitterScheduler } from "./twitter-scheduler";
+import { deadlineTweetScheduler } from "./deadline-tweet-scheduler";
 import { projectionAccuracyScheduler } from "./projection-accuracy-scheduler";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedContentCreators } from "./seed-database";
@@ -142,6 +143,10 @@ app.use((req, res, next) => {
       // Start Twitter scheduler (posts price changes at 7 AM IST daily)
       twitterScheduler.start();
       console.log("✓ Twitter scheduler started");
+
+      // Start deadline tweet scheduler (posts Top 5 by position 2h before each GW deadline)
+      deadlineTweetScheduler.start();
+      console.log("✓ Deadline tweet scheduler started");
       
       // Start live goal monitor (tweets goal updates during live matches)
       import('./services/liveGoalMonitor').then(({ liveGoalMonitor }) => {

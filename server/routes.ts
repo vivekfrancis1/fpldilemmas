@@ -19140,6 +19140,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual trigger for deadline tweets (for testing without waiting for real deadline)
+  app.post("/api/admin/twitter/trigger-deadline-tweets", async (req, res) => {
+    try {
+      const { deadlineTweetScheduler } = await import('./deadline-tweet-scheduler');
+      const { internalFetch } = await import('./config');
+
+      // Resolve GW: use ?gw=N query param, or auto-detect from bootstrap
+      let gwNumber: number;
+      if (req.query.gw) {
+        gwNumber = parseInt(req.query.gw as string, 10);
+      } else {
+        const bootstrapResp = await internalFetch('api/bootstrap-static');
+        const bootstrap = await bootstrapResp.json();
+        const nextEvent = (bootstrap.events as any[]).find((e: any) => e.is_next) ||
+          (bootstrap.events as any[]).find((e: any) => new Date(e.deadline_time).getTime() > Date.now());
+        gwNumber = nextEvent?.id ?? 28;
+      }
+
+      console.log(`🐦 Manual trigger: posting deadline tweets for GW${gwNumber}...`);
+      await deadlineTweetScheduler.postDeadlineTweets(gwNumber);
+
+      res.json({ success: true, message: `Deadline tweets posted for GW${gwNumber}`, gw: gwNumber });
+    } catch (error) {
+      console.error('❌ Manual deadline tweet trigger failed:', error);
+      res.status(500).json({
+        error: 'Failed to post deadline tweets',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Twitter connection test endpoint
   app.get("/api/admin/twitter/status", async (req, res) => {
     try {

@@ -39,7 +39,7 @@ Test-Driven Development (TDD): TDD is applied to backend logic, API contracts, a
 - **Player & Team Projections**: AI-powered models for various player statistics and advanced team-level forecasting using statistical modeling.
 - **Captain Selector**: Enhanced with historical data and a 6-factor scoring algorithm.
 - **Transfer Planner**: Comprehensive tool for gameweek selection, chip planning, draft management (Base + A-E drafts), Team Evolution visualization, and Projected Points analysis. It fully supports FPL 2024/25 rule changes including new free transfer rules. All user actions are persistently saved to the database.
-- **Automated Social Media**: Integrations for automated daily price change tweets and live goal monitoring, including red cards and defensive contribution points for players with significant ownership.
+- **Automated Social Media**: Integrations for automated daily price change tweets and live goal monitoring, including red cards and defensive contribution points for players with significant ownership. Also sends 4 pre-deadline tweets (Top 5 GKP/DEF/MID/FWD by xPts for the upcoming gameweek) 2 hours before every FPL deadline via `server/deadline-tweet-scheduler.ts`.
 - **Results Projections & Fixtures**: Match prediction tool and a comprehensive match schedule with live indicators and player stats.
 - **Historical Data**: Player statistics from 2016/17 season onwards.
 - **Availability Tracking**: Uses only official FPL API data for player availability.
