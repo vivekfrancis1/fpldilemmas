@@ -9162,20 +9162,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-        }
-      }
-      
-      console.log(`DEBUG: Generated pure projections for ${playerProjections.length} players for future gameweeks only`);
-      
-      // Sort by total projected goals descending
-      playerProjections.sort((a, b) => b.totalProjectedGoals - a.totalProjectedGoals);
-      
-      res.json(playerProjections);
-    } catch (error) {
-      console.error("Error generating player goals scored projections:", error);
-      res.status(500).json({ error: "Failed to generate player goals scored projections" });
-    }
-  });
 
   // Helper function to convert database response format to teamSeasonTotals format
   function convertResponseToTeamSeasonTotals(response: any[]): any {
@@ -9467,22 +9453,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-            }
-          }
-        }
-      }
-      
-      // Sort by total projected assists (highest first)
-      allPlayerProjections.sort((a, b) => b.totalProjectedAssists - a.totalProjectedAssists);
-      
-      console.log(`DEBUG: Generated pure assist projections for ${allPlayerProjections.length} players for future gameweeks only`);
-      res.json(allPlayerProjections);
-    } catch (error) {
-      console.error("Error generating player assist projections:", error);
-      res.status(500).json({ error: "Failed to generate player assist projections" });
-    }
-  });
-
   // Assist share endpoint - uses ONLY full season data from FPL API (assists + xA)
   // No filtering by last X gameweeks - simplified to avoid estimations
   app.get("/api/assist-share-season", async (req, res) => {
