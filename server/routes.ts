@@ -19171,6 +19171,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manual trigger for post-deadline transfer tweets
+  app.post("/api/admin/twitter/trigger-transfer-tweets", async (req, res) => {
+    try {
+      const { deadlineTweetScheduler } = await import('./deadline-tweet-scheduler');
+      const { internalFetch } = await import('./config');
+
+      let gwNumber: number;
+      if (req.query.gw) {
+        gwNumber = parseInt(req.query.gw as string, 10);
+      } else {
+        const bootstrapResp = await internalFetch('api/bootstrap-static');
+        const bootstrap = await bootstrapResp.json();
+        const currentEvent = (bootstrap.events as any[]).find((e: any) => e.is_current) ||
+          (bootstrap.events as any[]).find((e: any) => e.is_next);
+        gwNumber = currentEvent?.id ?? 28;
+      }
+
+      console.log(`🔄 Manual trigger: posting transfer tweets for GW${gwNumber}...`);
+      await deadlineTweetScheduler.postTransferTweets(gwNumber);
+
+      res.json({ success: true, message: `Transfer tweets posted for GW${gwNumber}`, gw: gwNumber });
+    } catch (error) {
+      console.error('❌ Manual transfer tweet trigger failed:', error);
+      res.status(500).json({
+        error: 'Failed to post transfer tweets',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Twitter connection test endpoint
   app.get("/api/admin/twitter/status", async (req, res) => {
     try {
