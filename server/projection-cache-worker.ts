@@ -129,10 +129,8 @@ class ProjectionCacheWorker {
     try {
       console.log(`📊 Caching goals projections with set piece adjustments...`);
       
-      // CIRCULAR DEPENDENCY FIX: Use full-calculation endpoint for cache population
-      // This avoids calling the optimized endpoint which uses cache-first approach
       const [projResponse, bootstrapResponse] = await Promise.all([
-        internalFetch('api/player-goals-scored-projections-full-calculation'),
+        internalFetch('api/player-goals-scored-projections'),
         internalFetch('api/bootstrap-static')
       ]);
       
@@ -318,9 +316,7 @@ class ProjectionCacheWorker {
       
       console.log(`📊 Dynamically fetching assist projections for GW${startGameweek}-${endGameweek} (next 6 gameweeks)`);
       
-      // CIRCULAR DEPENDENCY FIX: Use full-calculation endpoint for cache population
-      // This avoids calling the optimized endpoint which uses cache-first approach
-      const projResponse = await internalFetch(`api/player-assist-projections-full-calculation?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      const projResponse = await internalFetch(`api/player-assist-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
       
       if (!projResponse.ok) {
         throw new Error(`Assists API returned ${projResponse.status}`);
