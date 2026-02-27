@@ -20,6 +20,7 @@ interface GWBreakdown {
   redCards: number;
   bonus: number;
   saves: number;
+  defensiveContributions: number;
   points: number;
 }
 
@@ -33,7 +34,7 @@ interface PlayerPointsData {
 }
 
 function emptyGW(): GWBreakdown {
-  return { goals: 0, assists: 0, cleanSheets: 0, minutes: 0, goalsConceded: 0, yellowCards: 0, redCards: 0, bonus: 0, saves: 0, points: 0 };
+  return { goals: 0, assists: 0, cleanSheets: 0, minutes: 0, goalsConceded: 0, yellowCards: 0, redCards: 0, bonus: 0, saves: 0, defensiveContributions: 0, points: 0 };
 }
 
 export class PlayerTotalPointsAggregator {
@@ -41,7 +42,7 @@ export class PlayerTotalPointsAggregator {
   /**
    * Aggregate individual component caches into comprehensive Total Points cache.
    * 
-   * FPL Scoring Components (9 total):
+   * FPL Scoring Components (10 total):
    * 1. Minutes (1-2 pts based on minutes played)
    * 2. Goals (4-6 pts based on position)
    * 3. Assists (3 pts)
@@ -51,6 +52,7 @@ export class PlayerTotalPointsAggregator {
    * 7. Red Cards (-3 pts)
    * 8. Bonus (1-3 pts)
    * 9. Saves (1 pt per 3 saves for GK)
+   * 10. Defensive Contributions (2 pts when threshold met)
    */
   async aggregatePlayerTotalPoints(startGameweek: number = 28, endGameweek: number = 38): Promise<void> {
     console.log(`🔧 Starting Player Total Points aggregation for GW${startGameweek}-${endGameweek}...`);
@@ -58,9 +60,9 @@ export class PlayerTotalPointsAggregator {
     try {
       const playerMap = new Map<number, PlayerPointsData>();
 
-      // Fetch all 9 components in parallel — each writes to independent keys in GWBreakdown, no conflicts
-      console.log(`📊 Fetching all 9 components in parallel...`);
-      const [savesData, gcData, ycData, rcData, bonusData, minsData, goalsData, assistsData, csData] =
+      // Fetch all 10 components in parallel — each writes to independent keys in GWBreakdown, no conflicts
+      console.log(`📊 Fetching all 10 components in parallel...`);
+      const [savesData, gcData, ycData, rcData, bonusData, minsData, goalsData, assistsData, csData, dcData] =
         await Promise.all([
           this.fetchSavesData(startGameweek, endGameweek),
           this.fetchGoalsConcededData(startGameweek, endGameweek),
@@ -71,8 +73,9 @@ export class PlayerTotalPointsAggregator {
           this.fetchGoalsPointsData(startGameweek, endGameweek),
           this.fetchAssistsPointsData(startGameweek, endGameweek),
           this.fetchCleanSheetPointsData(startGameweek, endGameweek),
+          this.fetchDefensiveContributionsData(startGameweek, endGameweek),
         ]);
-      console.log(`📊 All 9 components fetched — applying to player map...`);
+      console.log(`📊 All 10 components fetched — applying to player map...`);
 
       this.addComponentPoints(playerMap, savesData, "saves");
       this.addComponentPoints(playerMap, gcData, "goalsConceded");
@@ -83,6 +86,7 @@ export class PlayerTotalPointsAggregator {
       this.addComponentPoints(playerMap, goalsData, "goals");
       this.addComponentPoints(playerMap, assistsData, "assists");
       this.addComponentPoints(playerMap, csData, "cleanSheets");
+      this.addComponentPoints(playerMap, dcData, "defensiveContributions");
 
       // BLANK GAMEWEEK ZEROING: Zero out all components for GWs where a player's team has no fixture.
       // This mirrors the blank-GW guard in the live /api/player-total-points route handler and
@@ -130,6 +134,7 @@ export class PlayerTotalPointsAggregator {
                 breakdown.redCards = 0;
                 breakdown.bonus = 0;
                 breakdown.saves = 0;
+                breakdown.defensiveContributions = 0;
                 breakdown.points = 0;
                 blankGWsZeroed++;
               }
@@ -147,7 +152,7 @@ export class PlayerTotalPointsAggregator {
       for (const player of playerMap.values()) {
         let runningTotal = 0;
         for (const gw of Object.values(player.gameweekBreakdown)) {
-          gw.points = gw.goals + gw.assists + gw.cleanSheets + gw.minutes + gw.goalsConceded + gw.yellowCards + gw.redCards + gw.bonus + gw.saves;
+          gw.points = gw.goals + gw.assists + gw.cleanSheets + gw.minutes + gw.goalsConceded + gw.yellowCards + gw.redCards + gw.bonus + gw.saves + gw.defensiveContributions;
           runningTotal += gw.points;
         }
         player.totalPoints = runningTotal;
@@ -401,6 +406,25 @@ export class PlayerTotalPointsAggregator {
       }));
     } catch (error) {
       console.warn("⚠️ Failed to fetch clean sheet points data:", error);
+      return [];
+    }
+  }
+
+  private async fetchDefensiveContributionsData(startGameweek: number, endGameweek: number) {
+    try {
+      const response = await internalFetch(`api/player-defensive-contributions-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+      if (!response.ok) throw new Error(`Failed to fetch DC data: ${response.statusText}`);
+      const dcData = await response.json();
+      return dcData.map((player: any) => ({
+        playerId: player.playerId,
+        playerName: player.playerName,
+        teamName: player.teamName || player.team,
+        position: player.position,
+        pointsData: player.pointsFromDefensiveContributions || {},
+        totalPoints: player.totalPoints || 0
+      }));
+    } catch (error) {
+      console.warn("⚠️ Failed to fetch defensive contributions data:", error);
       return [];
     }
   }

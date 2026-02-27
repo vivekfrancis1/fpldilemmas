@@ -17071,7 +17071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   pointsFromRedCards[gwNum] = gwData.redCards || 0;
                   pointsFromBonus[gwNum] = gwData.bonus || 0;
                   pointsFromSaves[gwNum] = gwData.saves || 0;
-                  pointsFromDefensiveContributions[gwNum] = gwData.defensive || 0;
+                  pointsFromDefensiveContributions[gwNum] = gwData.defensiveContributions || 0;
                 }
               }
 
@@ -17174,7 +17174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   pointsFromRedCards[gwNum] = gwData.redCards || 0;
                   pointsFromBonus[gwNum] = gwData.bonus || 0;
                   pointsFromSaves[gwNum] = gwData.saves || 0;
-                  pointsFromDefensiveContributions[gwNum] = gwData.defensive || 0;
+                  pointsFromDefensiveContributions[gwNum] = gwData.defensiveContributions || 0;
                 }
               }
 
