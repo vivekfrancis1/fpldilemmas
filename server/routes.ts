@@ -10914,6 +10914,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const dbHistories = await getBulkPlayerHistories(allPlayerIds);
         const dbCacheHits = dbHistories.size;
         console.log(`📦 DB history cache: ${dbCacheHits}/${allPlayerIds.length} players served from DB`);
+
+        // Build fixture→team map and blend map for recentP60 correction.
+        // Blend-eligible players (AFCON/injury/transfer returnees) have AFCON 0-min entries
+        // in their last 8 completed games, which drags recentP60 down unfairly.
+        // For these players, we compute recentP60 using only current-club games.
+        const minutesFixtureTeamMap = new Map<number, { home: number; away: number }>();
+        let minutesBlendMap = new Map<number, { blendWeight: number; activeGames: number; teamGames: number }>();
+        try {
+          const fixturesRes = await internalFetch("api/fixtures");
+          if (fixturesRes.ok) {
+            const allFixtures: any[] = await fixturesRes.json();
+            allFixtures.filter((f: any) => f.finished).forEach((f: any) => {
+              minutesFixtureTeamMap.set(f.id, { home: f.team_h, away: f.team_a });
+            });
+            const { computeBlendMap: computeMinutesBlendMap } = await import('./blend-eligible-service');
+            minutesBlendMap = computeMinutesBlendMap(
+              bootstrapData.elements,
+              allFixtures.filter((f: any) => f.finished),
+              dbHistories
+            );
+            console.log(`🔀 Minutes blend map computed: ${minutesBlendMap.size} blend-eligible players`);
+          }
+        } catch (e) {
+          console.warn("⚠️ Could not build minutes blend map, using full-season recentP60 for all players");
+        }
         
         // Fetch player history in batches to get actual game-by-game minutes
         const BATCH_SIZE = 50;
@@ -10948,12 +10973,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   if (gamesWithMinutes.length > 0) {
                     appearances = gamesWithMinutes.length;
-                    // recentP60: unconditional P(60+ mins) from last 8 completed games.
-                    // Filters unplayed fixtures (team_h_score === null) before slicing,
-                    // so GW28 (null score) is excluded and doesn't count as a 0-min game.
-                    // 0-min entries from completed GWs (benched) ARE included — these
-                    // correctly represent non-selection. No startingRate needed.
-                    const { recentP60: rP60 } = computeRecentMetrics(historyArr, 8);
+                    // recentP60: P(60+ mins) from recent completed games.
+                    // For blend-eligible players (AFCON/injury/transfer returnees), filter to
+                    // current-club games only so AFCON 0-min entries don't drag down the probability.
+                    // For all others, use the standard last-8-completed-games window.
+                    let rP60: number;
+                    const blendInfo = minutesBlendMap.get(player.id);
+                    if (blendInfo && minutesFixtureTeamMap.size > 0) {
+                      const clubHistory = historyArr.filter((g: any) => {
+                        const fix = minutesFixtureTeamMap.get(g.fixture);
+                        return fix && (fix.home === player.team || fix.away === player.team);
+                      });
+                      ({ recentP60: rP60 } = computeRecentMetrics(clubHistory, 8));
+                    } else {
+                      ({ recentP60: rP60 } = computeRecentMetrics(historyArr, 8));
+                    }
                     gamesHit60Plus = rP60 * appearances;
                     gamesBelow60 = (1 - rP60) * appearances;
                     const totalHistoryMinutes = gamesWithMinutes.reduce((sum: number, gw: any) => sum + gw.minutes, 0);
