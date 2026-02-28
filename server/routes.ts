@@ -12952,7 +12952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/cache/refresh-all", requireAdmin, async (req, res) => {
     try {
       const { projectionCacheWorker } = await import('./projection-cache-worker');
-      await projectionCacheWorker.cacheAllProjections();
+      await projectionCacheWorker.cacheAllProjections(true);
       res.json({ success: true, message: "All projection caches refreshed successfully" });
     } catch (error) {
       console.error("Error refreshing all caches:", error);

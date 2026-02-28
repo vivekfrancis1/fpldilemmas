@@ -81,12 +81,14 @@ class ProjectionCacheWorker {
   /**
    * Main worker function to cache all projection data
    */
-  async cacheAllProjections(): Promise<void> {
-    const lastRun = FPLScoringCacheService.lastRunAt;
-    if (lastRun && (Date.now() - lastRun.getTime()) < 60 * 60 * 1000) {
-      const minutesAgo = Math.round((Date.now() - lastRun.getTime()) / 60000);
-      console.log(`⏭️ Projection cache fresh (scoring updated ${minutesAgo}m ago), skipping all tasks`);
-      return;
+  async cacheAllProjections(force = false): Promise<void> {
+    if (!force) {
+      const lastRun = FPLScoringCacheService.lastRunAt;
+      if (lastRun && (Date.now() - lastRun.getTime()) < 60 * 60 * 1000) {
+        const minutesAgo = Math.round((Date.now() - lastRun.getTime()) / 60000);
+        console.log(`⏭️ Projection cache fresh (scoring updated ${minutesAgo}m ago), skipping all tasks`);
+        return;
+      }
     }
     const startTime = Date.now();
     console.log(`🔄 Starting projection cache update (sequential to reduce memory pressure)...`);
@@ -690,8 +692,20 @@ class ProjectionCacheWorker {
       
       // Prepare records for batch insert - create individual gameweek records
       const records = [];
-      const gameweekRange = [6, 7, 8, 9, 10, 11]; // Current projection range
-      
+
+      // Dynamically extract the gameweek range from the actual data instead of hardcoding
+      const gwSet = new Set<number>();
+      for (const player of data) {
+        if (player.gameweekProjections && typeof player.gameweekProjections === 'object') {
+          Object.keys(player.gameweekProjections).forEach(key => {
+            const gw = parseInt(key);
+            if (!isNaN(gw) && gw >= 1 && gw <= 38) gwSet.add(gw);
+          });
+        }
+      }
+      const gameweekRange = Array.from(gwSet).sort((a, b) => a - b);
+      console.log(`📅 Defensive projections: dynamic GW range detected: GW${gameweekRange[0]}-${gameweekRange[gameweekRange.length - 1]} (${gameweekRange.length} gameweeks)`);
+
       for (const player of data) {
         if (player.gameweekProjections && typeof player.gameweekProjections === 'object') {
           // Extract gameweek data if available
