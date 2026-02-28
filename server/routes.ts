@@ -11001,10 +11001,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create player clean sheet points projections
       const playerCleanSheetProjections: any[] = [];
 
-      const { getBulkPlayerHistories: getBulkCS, computeRecentMetrics: computeCS } = await import('./player-history-service');
-      const allPlayerIdsCS = players.map((p: any) => p.id);
-      const dbHistoriesCS = await getBulkCS(allPlayerIdsCS);
-
       for (const player of players) {
         const team = teams.find((t: any) => t.id === player.team);
         const position = positions.find((p: any) => p.id === player.element_type);
@@ -11028,13 +11024,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pct60Plus = playerMinutes.pct60Plus || 0;
         const pctBelow60 = playerMinutes.pctBelow60 || 0;
 
-        // recentP60: single unconditional P(60+ mins) from last 8 completed games.
-        // Replaces the old pct60Plus × startingRate double-count — both metrics were
-        // conditioned on "appeared in squad", so multiplying them over-penalised rotation
-        // players who are now established starters (e.g. Hill: 56.3% → 75% corrected).
-        const playerHistoryCS = dbHistoriesCS.get(player.id) || [];
-        const { recentP60: csRecentP60 } = computeCS(playerHistoryCS, 8);
-        const adjustedPct60Plus = csRecentP60 * 100;
+        // pct60Plus from the minutes endpoint IS already recentP60×100 (computed from
+        // last 8 completed games via computeRecentMetrics). No need to re-fetch history here.
+        const adjustedPct60Plus = pct60Plus;
 
         const cleanSheetPoints = (position.singular_name === 'Midfielder') ? 1 : 4;
 
