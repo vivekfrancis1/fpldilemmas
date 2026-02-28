@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Separator } from "@/components/ui/separator";
-import { Settings, RotateCcw, Save, AlertTriangle, Shield, Calculator, TrendingDown } from "lucide-react";
+import { Settings, RotateCcw, Save, AlertTriangle, Shield, Calculator } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import ProtectedRoute from "@/components/protected-route";
 
@@ -103,24 +103,6 @@ export default function AdminCleanSheetConfig() {
       });
     }
   };
-
-  // Calculate example clean sheet probabilities
-  const calculateExample = (xGA: number) => {
-    const current = Math.exp(-xGA * (settings?.cleanSheetExponent || DEFAULT_VALUES.cleanSheetExponent)) * (settings?.cleanSheetMultiplier || DEFAULT_VALUES.cleanSheetMultiplier) / 100;
-    const proposed = Math.exp(-xGA * formData.cleanSheetExponent) * formData.cleanSheetMultiplier / 100;
-    return {
-      current: Math.round(current * 100),
-      proposed: Math.round(proposed * 100),
-      change: Math.round((proposed - current) * 100)
-    };
-  };
-
-  const exampleTeams = [
-    { name: "Arsenal (Elite)", xGA: 0.8 },
-    { name: "Liverpool (Strong)", xGA: 1.0 },
-    { name: "Brighton (Average)", xGA: 1.3 },
-    { name: "Burnley (Weak)", xGA: 1.6 }
-  ];
 
   if (isLoading) {
     return (
@@ -277,48 +259,6 @@ export default function AdminCleanSheetConfig() {
                   })}
                 </tbody>
               </table>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Impact Preview */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingDown className="h-5 w-5" />
-              Impact Preview
-            </CardTitle>
-            <CardDescription>
-              See how your changes will affect clean sheet probabilities for different team strengths
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {exampleTeams.map((team) => {
-                const example = calculateExample(team.xGA);
-                return (
-                  <div key={team.name} className="p-4 border rounded-lg">
-                    <h4 className="font-medium text-sm mb-2">{team.name}</h4>
-                    <div className="text-xs text-muted-foreground mb-2">xGA: {team.xGA}</div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
-                        <span>Current:</span>
-                        <span className="font-mono">{example.current}%</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Proposed:</span>
-                        <span className="font-mono">{example.proposed}%</span>
-                      </div>
-                      <div className="flex justify-between text-sm font-medium">
-                        <span>Change:</span>
-                        <span className={`font-mono ${example.change < 0 ? 'text-red-600' : example.change > 0 ? 'text-green-600' : ''}`}>
-                          {example.change > 0 ? '+' : ''}{example.change}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </CardContent>
         </Card>
