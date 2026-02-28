@@ -1669,7 +1669,7 @@ export default function PlayerTotalPoints() {
                 placeholder="Search players..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
+                className="w-full h-11 text-base px-4"
               />
             </div>
               </div>
