@@ -9075,23 +9075,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fplPlayerMap.set(el.id, el);
           });
           
-          // Position-average goals per 90 for goal-threat multiplier.
-          // Goals/90 is a direct measure of goal threat, unlike FPL form which bundles
-          // CS points, saves and bonus — causing DEFs in form due to clean sheets to
-          // incorrectly receive the same goal multiplier as prolific attackers.
-          const positionAvgGoalsPer90 = new Map<string, number>();
-          for (const pos of ['GKP', 'DEF', 'MID', 'FWD']) {
-            const posPlayers = bootstrapData.elements.filter(
-              (p: any) => ['', 'GKP', 'DEF', 'MID', 'FWD'][p.element_type] === pos && (p.minutes || 0) >= 90
-            );
-            const avg = posPlayers.length
-              ? posPlayers.reduce((s: number, p: any) => {
-                  return s + (p.goals_scored || 0) / ((p.minutes || 90) / 90);
-                }, 0) / posPlayers.length
-              : 0.05;
-            positionAvgGoalsPer90.set(pos, Math.max(0.01, avg));
-          }
-
           // Create lookup map for team projections by teamId (include fixtureDetails for DGW)
           const teamProjectionsMap: { [teamId: number]: any } = {};
           teamProjectionsData.forEach((team: any) => {
@@ -9109,17 +9092,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const goalShare = player.goalShare || 0;
                 const fplPlayer = fplPlayerMap.get(player.playerId);
                 
-                // Goal-rate multiplier: player's goals/90 vs position average.
-                // Range 0.875–1.25 (25% weight). Saliba (0 goals) gets 0.875, Haaland gets 1.25.
-                // Avoids the old FPL-form approach where Saliba and Gabriel scored the same multiplier
-                // (1.175) because both had above-average total FPL points.
-                const playerGoalsPer90 = fplPlayer && (fplPlayer.minutes || 0) >= 90
-                  ? (fplPlayer.goals_scored || 0) / ((fplPlayer.minutes || 90) / 90)
-                  : 0;
-                const posAvgG90 = positionAvgGoalsPer90.get(player.position) || 0.05;
-                const goalFormFactor = Math.max(0.5, Math.min(2.0, playerGoalsPer90 / Math.max(posAvgG90, 0.01)));
-                const formMultiplier = 0.75 + 0.25 * goalFormFactor;
-
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; goals: number }> } = {};
                 
@@ -9132,8 +9104,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   // NOTE: Do NOT apply recentP60 or startingRate here.
                   // goalShare already encodes selection frequency — a rotation player scores fewer goals
-                  // per season → lower goalShare. Adding a further startingRate multiplier double-counts.
-                  gameweekProjections[gameweek] = (goalShare / 100) * (teamGoals as number) * availability * formMultiplier;
+                  // per season → lower goalShare. Adding a further playing-time multiplier double-counts.
+                  gameweekProjections[gameweek] = (goalShare / 100) * (teamGoals as number) * availability;
                   
                   // Build fixtureDetails for DGW support (individual fixture breakdown)
                   const teamFixtures = teamProjections.fixtureDetails?.[gameweek] || [];
@@ -9141,7 +9113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     fixtureDetails[gameweek] = teamFixtures.map((f: any) => ({
                       opponent: f.opponent,
                       isHome: f.isHome,
-                      goals: (goalShare / 100) * (f.goals || 0) * availability * formMultiplier
+                      goals: (goalShare / 100) * (f.goals || 0) * availability
                     }));
                   }
                 });
