@@ -1659,7 +1659,7 @@ export default function PlayerTotalPoints() {
               </Select>
             </div>
 
-            <div className="space-y-2 sm:col-span-2 lg:col-span-1">
+            <div className="space-y-2 sm:col-span-2 lg:col-span-2 xl:col-span-3">
               <Label htmlFor="search" className="text-sm font-medium text-gray-700 flex items-center gap-2">
                 <Search className="h-4 w-4 text-gray-500" />
                 Search
