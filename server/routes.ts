@@ -6706,6 +6706,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     marketCeilingMultiplier: 2.0,
     absoluteMinGoals: 0.3,
     absoluteMaxGoals: 4.2,
+    // Clean sheet Poisson formula: P(CS) = exp(-xGA * exponent) * multiplier
+    // Calibrated against GW28 Pinnacle market data (implied avg multiplier: 99.8, range 97.8–102.3)
+    cleanSheetExponent: 1.0,
+    cleanSheetMultiplier: 100,
     lastUpdated: new Date().toISOString(),
     updatedBy: "admin"
   };
