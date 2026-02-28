@@ -272,10 +272,12 @@ export class TeamGoalsService {
       // Calculate base expected goals using season data only
       let baseExpectedGoals = (teamAvgGoalsSeason + teamAvgXGSeason + opponentAvgGCSeason + opponentAvgXGCSeason) * 0.25;
       
-      // Apply Venue Multiplier (Home = 1.15, Away = 0.87)
-      const venueMultiplier = isHome ? 
-        TeamGoalsService.num(adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier, 1.15) :
-        TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.87);
+      // Per-team venue multiplier: derived from this team's actual home/away scoring split
+      // this season. Updates automatically as each GW's scores are confirmed (30-min cache).
+      // Falls back to global 1.15/0.87 when fewer than 5 games in either venue.
+      const globalHome = TeamGoalsService.num(adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier, 1.15);
+      const globalAway = TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.87);
+      const venueMultiplier = TeamGoalsService.getTeamVenueMultiplier(team.id, isHome, fixturesData, globalHome, globalAway);
       
       baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, venueMultiplier, 1.0);
       
@@ -399,6 +401,47 @@ export class TeamGoalsService {
     }
   }
   
+  /**
+   * Compute a per-team venue multiplier from this season's completed fixture scores.
+   * homeMultiplier = homeGoalsPerGame / overallGoalsPerGame  (clamped 0.75–1.50)
+   * awayMultiplier = awayGoalsPerGame / overallGoalsPerGame  (clamped 0.50–1.20)
+   * Falls back to global defaults when fewer than 5 games exist for either venue.
+   * Recalculates automatically after each GW as new scores arrive from the FPL API.
+   */
+  private static getTeamVenueMultiplier(
+    teamId: number,
+    isHome: boolean,
+    fixturesData: any[],
+    globalHome: number,
+    globalAway: number
+  ): number {
+    const completed = fixturesData.filter(
+      (f: any) => f.finished && f.team_h_score !== null && f.team_a_score !== null
+    );
+
+    const homeGames = completed.filter((f: any) => f.team_h === teamId);
+    const awayGames = completed.filter((f: any) => f.team_a === teamId);
+
+    if (homeGames.length < 5 || awayGames.length < 5) {
+      return isHome ? globalHome : globalAway;
+    }
+
+    const homeGoals = homeGames.reduce((s: number, f: any) => s + (f.team_h_score || 0), 0);
+    const awayGoals = awayGames.reduce((s: number, f: any) => s + (f.team_a_score || 0), 0);
+    const totalGames = homeGames.length + awayGames.length;
+    const overallPerGame = (homeGoals + awayGoals) / totalGames;
+
+    if (overallPerGame === 0) return isHome ? globalHome : globalAway;
+
+    if (isHome) {
+      const homePerGame = homeGoals / homeGames.length;
+      return Math.max(0.75, Math.min(1.50, homePerGame / overallPerGame));
+    } else {
+      const awayPerGame = awayGoals / awayGames.length;
+      return Math.max(0.50, Math.min(1.20, awayPerGame / overallPerGame));
+    }
+  }
+
   /**
    * Clear cache - useful for testing or when admin settings change
    */
