@@ -9578,16 +9578,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const playerTotal = assists + expectedAssists;
           
           if (playerTotal > 0 && teamData.total > 0) {
-            // Base assist share: blend 40% recent actual assists + 60% full-season (assists+xA)
-            // Lighter recent weight than goals because assists are noisier over 8 games
-            const fullSeasonShare = (playerTotal / teamData.total) * 100;
+            // Additive pool: (season assists + season xA + last 8 actual assists) / team equivalent.
+            // Season (~28 games) naturally dominates; recent 8 games add proportional signal
+            // without the double-share distortion of blending two separate percentages.
             const playerRecent = recentAssistsMap.get(player.id);
             let assistShare: number;
             if (teamRecentAssistTotal > 0 && playerRecent && playerRecent.poolSize >= 4) {
-              const recentShare = (playerRecent.assists / teamRecentAssistTotal) * 100;
-              assistShare = 0.4 * recentShare + 0.6 * fullSeasonShare;
+              const playerCombined = playerTotal + playerRecent.assists;
+              const teamCombined = teamData.total + teamRecentAssistTotal;
+              assistShare = teamCombined > 0 ? (playerCombined / teamCombined) * 100 : 0;
             } else {
-              assistShare = fullSeasonShare;
+              assistShare = teamData.total > 0 ? (playerTotal / teamData.total) * 100 : 0;
             }
             
             // Apply set piece taker bonus (no normalization - just boost individuals)
