@@ -33,14 +33,9 @@ export default function AdminCacheManagement() {
     { key: 'clean-sheets', name: 'Clean Sheets', description: 'Team clean sheet probabilities' },
     { key: 'defensive', name: 'Defensive', description: 'Defensive contribution projections' },
     { key: 'team', name: 'Team Projections', description: 'Team-level goal and assist projections' },
-    { key: 'goal-share', name: 'Goal Share', description: 'Player share of team goals' },
-    { key: 'assist-share', name: 'Assist Share', description: 'Player share of team assists' },
-    { key: 'total-points', name: 'Player Total Points', description: 'Complete FPL points projections' },
-    { key: 'saves', name: 'Player Saves', description: 'Goalkeeper save projections' },
-    { key: 'goals-conceded', name: 'Goals Conceded', description: 'Player goals conceded projections' },
-    { key: 'yellow-cards', name: 'Yellow Cards', description: 'Player yellow card projections' },
-    { key: 'red-cards', name: 'Red Cards', description: 'Player red card projections' },
-    { key: 'bonus-points', name: 'Bonus Points', description: 'Player bonus point projections' }
+    { key: 'goal-share', name: 'Goal & Assist Share', description: 'Player share of team goals and assists — both are refreshed together' },
+    { key: 'total-points', name: 'Player Total Points', description: 'Complete FPL points projections (dynamic GW range)' },
+    { key: 'scoring-components', name: 'Scoring Components', description: 'Saves, goals conceded, yellow/red cards, bonus points — runs full scoring aggregation' }
   ];
 
   const bulkOperations = [
@@ -171,13 +166,8 @@ export default function AdminCacheManagement() {
       'defensive': 'Defensive',
       'team': 'Team Projections',
       'goal-share': 'Goal Share',
-      'assist-share': 'Assist Share',
       'total-points': 'Player Total Points',
-      'saves': 'Player Saves',
-      'goals-conceded': 'Goals Conceded',
-      'yellow-cards': 'Yellow Cards', 
-      'red-cards': 'Red Cards',
-      'bonus-points': 'Bonus Points'
+      'scoring-components': 'Player Total Points'
     };
     return typeMap[key] || key;
   };

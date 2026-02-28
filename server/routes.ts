@@ -13003,28 +13003,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await projectionCacheWorker.cacheTeamProjections();
           break;
         case 'goal-share':
-          await projectionCacheWorker.cacheGoalAssistShareData(); // Uses same data source but for goal share
-          break;
         case 'assist-share':
-          await projectionCacheWorker.cacheGoalAssistShareData(); // Uses same data source but for assist share
+          // Goal share and assist share are computed together from the same data source
+          await projectionCacheWorker.cacheGoalAssistShareData();
           break;
         case 'total-points':
-          await projectionService.refreshProjections(4, 9); // Use imported instance
-          break;
-        case 'saves':
-          await projectionCacheWorker.cachePlayerSaves();
-          break;
-        case 'goals-conceded':
-          await projectionCacheWorker.cachePlayerGoalsConceded();
-          break;
-        case 'yellow-cards':
-          await projectionCacheWorker.cachePlayerYellowCards();
-          break;
-        case 'red-cards':
-          await projectionCacheWorker.cachePlayerRedCards();
-          break;
-        case 'bonus-points':
-          await projectionCacheWorker.cachePlayerBonusPoints();
+        case 'scoring-components':
+          // Dynamically determines current GW range from bootstrap, runs full scoring aggregation
+          await fplScoringCacheService.updateAllScoringData();
           break;
         case 'cbit-points':
           await fplScoringCacheService.cachePlayerCbitPoints();
@@ -13035,7 +13021,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         default:
           return res.status(400).json({ 
             success: false, 
-            message: `Unknown cache type: ${type}. Available types: goals, assists, minutes, clean-sheets, defensive, team, goal-share, assist-share, total-points, saves, goals-conceded, yellow-cards, red-cards, bonus-points, cbit-points, minutes-points` 
+            message: `Unknown cache type: ${type}. Available types: goals, assists, minutes, clean-sheets, defensive, team, goal-share, assist-share, total-points, scoring-components, cbit-points, minutes-points` 
           });
       }
       
