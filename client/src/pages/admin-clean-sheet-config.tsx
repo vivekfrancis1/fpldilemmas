@@ -19,8 +19,8 @@ interface CleanSheetSettings {
 }
 
 const DEFAULT_VALUES = {
-  cleanSheetExponent: 1.15,
-  cleanSheetMultiplier: 85,
+  cleanSheetExponent: 1.0,
+  cleanSheetMultiplier: 100,
 };
 
 export default function AdminCleanSheetConfig() {
@@ -327,12 +327,11 @@ export default function AdminCleanSheetConfig() {
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            <strong>Recommendations for Conservative Clean Sheets:</strong>
+            <strong>Calibration guidance (Pinnacle market-derived):</strong>
             <ul className="mt-2 ml-4 list-disc space-y-1">
-              <li>Increase <strong>Clean Sheet Exponent</strong> from 1.0 to 1.2-1.3 for 20-30% reduction</li>
-              <li>Decrease <strong>Clean Sheet Multiplier</strong> from 100 to 85-90 for overall 10-15% reduction</li>
-              <li>Both changes will significantly reduce goalkeeper projected points</li>
-              <li>Arsenal's CS% will drop from ~45% to ~25-30% with conservative settings</li>
+              <li><strong>Exponent 1.0</strong> is the pure Poisson model — the statistically correct baseline. Only raise it if you want to systematically suppress CS probabilities for high-xGA fixtures.</li>
+              <li><strong>Multiplier 100</strong> is calibrated against GW28 Pinnacle market data across all 20 teams (implied average: 99.8, range 97.8–102.3). Do not change unless new market evidence suggests otherwise.</li>
+              <li>If projected CS pts still look low vs historical actuals, the likely cause is <strong>xGA inputs</strong> from the team goals model being too high — not the formula itself.</li>
             </ul>
           </AlertDescription>
         </Alert>
