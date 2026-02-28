@@ -16251,16 +16251,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const { recentBonusPerGame } = computeBonus(playerHistoryBonus, 8);
           const bonusPerFixture = recentBonusPerGame;
           
-          // T004: Form-based goal contribution multiplier — hot players earn more bonus per game
-          const playerFormVal = parseFloat(player.form || "0");
-          const positionEls = activePlayers.filter((p: any) => p.element_type === player.element_type);
-          const posAvgBonusForm = positionEls.length > 0
-            ? positionEls.reduce((s: number, p: any) => s + parseFloat(p.form || "0"), 0) / positionEls.length
-            : 3.0;
-          const formBonusMultiplier = Math.max(0.85, Math.min(1.20,
-            1 + (playerFormVal - posAvgBonusForm) / Math.max(posAvgBonusForm, 0.1) * 0.30
-          ));
-
           const bonusEvents: BootstrapEvent[] = fplData.events || [];
           const currentGW = fplData.events.find((e: any) => e.is_current)?.id || 1;
           
@@ -16291,7 +16281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const difficultyFactor = 1 + (avgStrength - opponentStrength) / avgStrength * 0.5;
               const clampedFactor = Math.max(0.85, Math.min(1.15, difficultyFactor));
               
-              const fixtureBonus = bonusPerFixture * clampedFactor * availabilityProb * formBonusMultiplier;
+              const fixtureBonus = bonusPerFixture * clampedFactor * availabilityProb;
               gwBonusPoints += fixtureBonus;
               
               gwFixtureDetails.push({
