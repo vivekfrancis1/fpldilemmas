@@ -43,6 +43,7 @@ Test-Driven Development (TDD): TDD is applied to backend logic, API contracts, a
 - **Results Projections & Fixtures**: Match prediction tool and a comprehensive match schedule with live indicators and player stats.
 - **Historical Data**: Player statistics from 2016/17 season onwards.
 - **Availability Tracking**: Uses only official FPL API data for player availability.
+- **Time-Weighted Blend for goalShare/assistShare**: Players who missed a block of games (AFCON, injury, mid-season transfer) but are now regularly playing get a blend of their raw season total and an extrapolated per-game rate. Four-condition gate: activeGames≥3, maxConsecDNP≥4, startRate≥70%, played last 4 fixtures. Qualifying players (~50) stored in `blend_eligible_players` DB table, refreshed on every goalShare/assistShare cache miss. Admin endpoint: `GET /api/admin/blend-eligible-players`.
 - **FPL Content Creators Admin**: Streamlined admin interface for managing content creators with CRUD functionality.
 - **Loading Experience**: Enhanced loading screens with shared components for a consistent user experience on slow-loading pages.
 

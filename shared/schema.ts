@@ -1673,3 +1673,14 @@ export const playerHistoryCache = pgTable("player_history_cache", {
   historyJson: jsonb("history_json").notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const blendEligiblePlayers = pgTable("blend_eligible_players", {
+  playerId: integer("player_id").primaryKey(),
+  teamId: integer("team_id").notNull(),
+  activeClubGames: integer("active_club_games").notNull(),
+  startedClubGames: integer("started_club_games").notNull(),
+  teamTotalGames: integer("team_total_games").notNull(),
+  maxConsecDnp: integer("max_consec_dnp").notNull(),
+  blendWeight: real("blend_weight").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

@@ -18,7 +18,8 @@ import {
   gameweekPlayerDataTable,
   playerTotalPointsWindows,
   playerTotalPointsSnapshots,
-  userActivityLogs
+  userActivityLogs,
+  blendEligiblePlayers
 } from "@shared/schema";
 import { db, pool } from "./db";
 import { eq, desc, sql, and, gte, lte, or, inArray, asc } from "drizzle-orm";
@@ -6870,6 +6871,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== BLEND ELIGIBLE ADMIN ENDPOINT ====================
+
+  app.get("/api/admin/blend-eligible-players", async (_req, res) => {
+    try {
+      const rows = await db.select().from(blendEligiblePlayers).orderBy(blendEligiblePlayers.blendWeight);
+      res.json(rows);
+    } catch (error) {
+      console.error("Error fetching blend-eligible players:", error);
+      res.status(500).json({ error: "Failed to fetch blend-eligible players" });
+    }
+  });
+
   // ==================== CLEAN SHEET ADMIN ENDPOINTS ====================
 
   // GET clean sheet admin settings endpoint
@@ -8542,16 +8555,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch fixtures to build a team-fixture lookup — needed to filter transferred players' stats
       const fixturesResGS = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const allFixturesGS: any[] = fixturesResGS.ok ? await fixturesResGS.json() : [];
-      // Map fixture ID → {home teamId, away teamId} for finished fixtures only
-      const fixtureTeamMapGS = new Map<number, { home: number; away: number }>();
-      allFixturesGS.filter((f: any) => f.finished).forEach((f: any) => {
-        fixtureTeamMapGS.set(f.id, { home: f.team_h, away: f.team_a });
+      const finishedFixturesGS = allFixturesGS.filter((f: any) => f.finished);
+      // Map fixture ID → {home teamId, away teamId, round} for finished fixtures only
+      const fixtureTeamMapGS = new Map<number, { home: number; away: number; round: number }>();
+      finishedFixturesGS.forEach((f: any) => {
+        fixtureTeamMapGS.set(f.id, { home: f.team_h, away: f.team_a, round: f.event || 0 });
+      });
+
+      // Count finished fixtures per team (used for blend weight denominator)
+      const teamTotalGamesMapGS = new Map<number, number>();
+      bootstrapData.teams.forEach((team: any) => {
+        let count = 0;
+        fixtureTeamMapGS.forEach(fix => { if (fix.home === team.id || fix.away === team.id) count++; });
+        teamTotalGamesMapGS.set(team.id, Math.max(1, count));
       });
 
       // Fetch player DB histories for current-club filtering
       const { getBulkPlayerHistories: getGoalHistories, computeRecentMetrics: computeGoalMetrics } = await import('./player-history-service');
       const allGoalPlayerIds = bootstrapData.elements.map((p: any) => p.id);
       const dbGoalHistories = await getGoalHistories(allGoalPlayerIds);
+
+      // Compute time-weighted blend map for AFCON/injury/transfer players
+      const { computeBlendMap: computeGoalBlendMap, persistBlendMap } = await import('./blend-eligible-service');
+      const goalBlendMap = computeGoalBlendMap(bootstrapData.elements, finishedFixturesGS, dbGoalHistories);
+      persistBlendMap(goalBlendMap, bootstrapData.elements).catch(console.error);
 
       // For each player, compute goals/xG scored ONLY in fixtures for their current club.
       // This prevents transferred players' pre-transfer goals inflating the new club's pool.
@@ -8604,7 +8631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamRecentGoalsMap.set(team.id, total);
       });
       
-      const finalResponse = buildGoalShareResponse(bootstrapData, teamTotals, recentGoalsMap, teamRecentGoalsMap, currentClubGoalsMap);
+      const finalResponse = buildGoalShareResponse(bootstrapData, teamTotals, recentGoalsMap, teamRecentGoalsMap, currentClubGoalsMap, goalBlendMap);
       
       goalShareCache = {
         data: finalResponse,
@@ -8634,7 +8661,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } },
     recentGoalsMap: Map<number, { goals: number, poolSize: number }>,
     teamRecentGoalsMap: Map<number, number>,
-    currentClubGoalsMap?: Map<number, { goals: number; xG: number }>
+    currentClubGoalsMap?: Map<number, { goals: number; xG: number }>,
+    blendMap?: Map<number, { blendWeight: number; activeGames: number; teamGames: number }>
   ) {
     const finalResponse: any[] = [];
     
@@ -8652,14 +8680,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const playerTotals: { [playerId: number]: number } = {};
       
       teamPlayersList.forEach((player: any) => {
-        let playerTotal: number;
+        let rawTotal: number;
         if (currentClubGoalsMap) {
           const filtered = currentClubGoalsMap.get(player.id) || { goals: 0, xG: 0 };
-          playerTotal = filtered.goals + filtered.xG;
+          rawTotal = filtered.goals + filtered.xG;
         } else {
-          const goalsScored = parseInt(player.goals_scored || 0);
-          const expectedGoals = parseFloat(player.expected_goals || 0);
-          playerTotal = goalsScored + expectedGoals;
+          rawTotal = parseInt(player.goals_scored || 0) + parseFloat(player.expected_goals || 0);
+        }
+        // Apply time-weighted blend for AFCON/injury/transfer players
+        let playerTotal = rawTotal;
+        const blendInfo = blendMap?.get(player.id);
+        if (blendInfo && rawTotal > 0) {
+          const ratePerGame = rawTotal / blendInfo.activeGames;
+          const rateNormalized = ratePerGame * blendInfo.teamGames;
+          playerTotal = rawTotal * blendInfo.blendWeight + rateNormalized * (1 - blendInfo.blendWeight);
         }
         playerTotals[player.id] = playerTotal;
         teamTotal += playerTotal;
@@ -9504,15 +9538,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch fixtures to build a team-fixture lookup — needed to filter transferred players' stats
       const fixturesResAS = await fetch("https://fantasy.premierleague.com/api/fixtures/");
       const allFixturesAS: any[] = fixturesResAS.ok ? await fixturesResAS.json() : [];
-      const fixtureTeamMapAS = new Map<number, { home: number; away: number }>();
-      allFixturesAS.filter((f: any) => f.finished).forEach((f: any) => {
-        fixtureTeamMapAS.set(f.id, { home: f.team_h, away: f.team_a });
+      const finishedFixturesAS = allFixturesAS.filter((f: any) => f.finished);
+      const fixtureTeamMapAS = new Map<number, { home: number; away: number; round: number }>();
+      finishedFixturesAS.forEach((f: any) => {
+        fixtureTeamMapAS.set(f.id, { home: f.team_h, away: f.team_a, round: f.event || 0 });
       });
 
       // Fetch player DB histories for current-club filtering
       const { getBulkPlayerHistories: getAssistHistories, computeRecentMetrics: computeAssistMetrics } = await import('./player-history-service');
       const allAssistPlayerIds = bootstrapData.elements.map((p: any) => p.id);
       const dbAssistHistories = await getAssistHistories(allAssistPlayerIds);
+
+      // Compute time-weighted blend map for AFCON/injury/transfer players
+      const { computeBlendMap: computeAssistBlendMap } = await import('./blend-eligible-service');
+      const assistBlendMap = computeAssistBlendMap(bootstrapData.elements, finishedFixturesAS, dbAssistHistories);
 
       // For each player, compute assists/xA scored ONLY in fixtures for their current club.
       // This prevents transferred players' pre-transfer assists inflating the new club's pool.
@@ -9536,15 +9575,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Calculate team totals using current-club-only filtered stats
+      // Calculate team totals using current-club-only filtered stats + blend adjustment
       const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
       bootstrapData.teams.forEach((team: any) => {
         teamTotals[team.id] = { total: 0, name: team.name, short_name: team.short_name };
       });
       bootstrapData.elements.forEach((player: any) => {
         const filtered = currentClubAssistsMap.get(player.id) || { assists: 0, xA: 0 };
+        const rawTotal = filtered.assists + filtered.xA;
+        const blendInfo = assistBlendMap.get(player.id);
+        let adjustedTotal = rawTotal;
+        if (blendInfo && rawTotal > 0) {
+          const ratePerGame = rawTotal / blendInfo.activeGames;
+          adjustedTotal = rawTotal * blendInfo.blendWeight + ratePerGame * blendInfo.teamGames * (1 - blendInfo.blendWeight);
+        }
         if (teamTotals[player.team]) {
-          teamTotals[player.team].total += filtered.assists + filtered.xA;
+          teamTotals[player.team].total += adjustedTotal;
         }
       });
 
@@ -9583,8 +9629,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamPlayersList.forEach((player: any) => {
           // Use current-club filtered totals for share computation (transfer fix)
           const filteredCC = currentClubAssistsMap.get(player.id) || { assists: 0, xA: 0 };
-          const playerTotal = filteredCC.assists + filteredCC.xA;
+          const rawTotal = filteredCC.assists + filteredCC.xA;
           const assists = filteredCC.assists; // for set piece bonus calc
+          // Apply time-weighted blend for AFCON/injury/transfer players
+          let playerTotal = rawTotal;
+          const blendInfoA = assistBlendMap.get(player.id);
+          if (blendInfoA && rawTotal > 0) {
+            const ratePerGame = rawTotal / blendInfoA.activeGames;
+            playerTotal = rawTotal * blendInfoA.blendWeight + ratePerGame * blendInfoA.teamGames * (1 - blendInfoA.blendWeight);
+          }
           
           if (playerTotal > 0 && teamData.total > 0) {
             // Additive pool: (season assists + season xA + last 8 actual assists) / team equivalent.
