@@ -6761,8 +6761,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     homeMaxGoals: 4.0,
     awayMinGoals: 0.3,
     awayMaxGoals: 3.5,
-    cleanSheetExponent: 1.1,
-    cleanSheetMultiplier: 90,
+    cleanSheetExponent: 1.0,
+    cleanSheetMultiplier: 100,
     derbyMatchMultiplier: 0.92,
     topSixMatchMultiplier: 1.08,
     relegationBattleMultiplier: 0.88,
@@ -6900,8 +6900,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Extract only clean sheet parameters from adminGoalSettings
       const cleanSheetSettings = {
-        cleanSheetExponent: adminGoalSettings.cleanSheetExponent || 1.1,
-        cleanSheetMultiplier: adminGoalSettings.cleanSheetMultiplier || 90,
+        cleanSheetExponent: adminGoalSettings.cleanSheetExponent || 1.0,
+        cleanSheetMultiplier: adminGoalSettings.cleanSheetMultiplier || 100,
         lastUpdated: adminGoalSettings.lastUpdated,
         updatedBy: adminGoalSettings.updatedBy
       };
@@ -6977,8 +6977,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reset only clean sheet parameters to default values
       adminGoalSettings = {
         ...adminGoalSettings,
-        cleanSheetExponent: 1.1,
-        cleanSheetMultiplier: 90,
+        cleanSheetExponent: 1.0,
+        cleanSheetMultiplier: 100,
         lastUpdated: new Date().toISOString(),
         updatedBy: "admin"
       };
