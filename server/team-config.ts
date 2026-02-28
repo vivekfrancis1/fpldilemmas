@@ -14,12 +14,6 @@ export const MASTER_TEAM_DEFAULTS = {
   // REMOVED: All tier-based assignments and multipliers
   // Now using dynamic performance-based calculations only
   
-  // Context Multipliers
-  derbyGoalsMultiplier: 0.87,
-  topSixGoalsMultiplier: 1.12,
-  relegationBattleGoalsMultiplier: 0.83,
-  earlyKickoffGoalsMultiplier: 0.94,
-  lateKickoffGoalsMultiplier: 1.07,
 };
 
 // Admin goal settings - will be set by routes module to avoid circular dependency

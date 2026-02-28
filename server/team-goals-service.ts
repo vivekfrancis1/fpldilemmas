@@ -279,11 +279,6 @@ export class TeamGoalsService {
       
       baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, venueMultiplier, 1.0);
       
-      // Apply Context Multipliers (fixture congestion, rest days, etc.)
-      baseExpectedGoals = TeamGoalsService.applyContextMultipliers(
-        baseExpectedGoals, team, opponent, fixture, isHome, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
-      );
-      
       // Final Bounds and Validation (min 0.0, max 7.0)
       const absoluteMin = TeamGoalsService.num(adminGoalSettings.absoluteMinGoals, 0.0);
       const absoluteMax = TeamGoalsService.num(adminGoalSettings.absoluteMaxGoals, 7.0);
@@ -403,110 +398,6 @@ export class TeamGoalsService {
       throw error;
     }
   }
-  
-  private static applyContextMultipliers(
-    baseExpectedGoals: number,
-    team: any,
-    opponent: any,
-    fixture: any,
-    isHome: boolean,
-    fixturesData: any[],
-    adminGoalSettings: any,
-    MASTER_TEAM_DEFAULTS: any
-  ): number {
-    let adjustedGoals = baseExpectedGoals;
-    
-    // Team form calculation (with safe multiplication)
-    const teamFormMultiplier = TeamGoalsService.calculateTeamForm(team.id, fixture.event, fixturesData, adminGoalSettings);
-    adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, teamFormMultiplier, 1.0);
-    
-    // Match context factors
-    // Team IDs: 1=Arsenal, 7=Chelsea, 12=Liverpool, 13=Man City, 14=Man Utd, 15=Newcastle, 18=Spurs
-    // 9=Everton (Merseyside Derby partner for Liverpool, NOT Crystal Palace which is ID 8)
-    const isEliteClash = [1, 7, 12, 13].includes(team.id) && [1, 7, 12, 13].includes(opponent.id);
-    const isTopSixBattle = [1, 7, 12, 13, 14, 15, 18].includes(team.id) && [1, 7, 12, 13, 14, 15, 18].includes(opponent.id);
-    const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) ||
-                          (team.id === 12 && opponent.id === 9) || (team.id === 9 && opponent.id === 12) ||
-                          (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13);
-    const isRelegationBattle = [17, 20, 19, 4, 5].includes(team.id) && [17, 20, 19, 4, 5].includes(opponent.id);
-    
-    if (isRivalryMatch) {
-      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.derbyGoalsMultiplier, 0.87);
-    } else if (isTopSixBattle) {
-      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.topSixGoalsMultiplier, 1.12);
-    } else if (isRelegationBattle) {
-      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.relegationBattleGoalsMultiplier, 0.83);
-    }
-    
-    // Apply all other context multipliers (timing, weather, referee, etc.)
-    adjustedGoals = TeamGoalsService.applyTimingAndContextFactors(
-      adjustedGoals, team, opponent, fixture, isHome, fixturesData, adminGoalSettings, MASTER_TEAM_DEFAULTS
-    );
-    
-    return adjustedGoals;
-  }
-  
-  private static calculateTeamForm(teamId: number, currentGameweek: number, fixturesData: any[], adminGoalSettings: any): number {
-    const recentGames = fixturesData
-      .filter((f: any) => 
-        f.finished && 
-        f.event < currentGameweek && 
-        (f.team_h === teamId || f.team_a === teamId)
-      )
-      .sort((a: any, b: any) => b.event - a.event)
-      .slice(0, 5);
-      
-    if (recentGames.length === 0) return 1.00;
-    
-    let wins = 0;
-    recentGames.forEach((game: any) => {
-      const isHome = game.team_h === teamId;
-      const teamScore = isHome ? game.team_h_score : game.team_a_score;
-      const opponentScore = isHome ? game.team_a_score : game.team_h_score;
-      
-      if (teamScore > opponentScore) wins++;
-    });
-    
-    if (wins >= 3) {
-      return adminGoalSettings.teamFormMultiplier || 1.06;
-    } else if (wins <= 1) {
-      return (2 - (adminGoalSettings.teamFormMultiplier || 1.06));
-    } else {
-      return 1.00;
-    }
-  }
-  
-  private static applyTimingAndContextFactors(
-    baseExpectedGoals: number,
-    team: any,
-    opponent: any,
-    fixture: any,
-    isHome: boolean,
-    fixturesData: any[],
-    adminGoalSettings: any,
-    MASTER_TEAM_DEFAULTS: any
-  ): number {
-    let adjustedGoals = baseExpectedGoals;
-    
-    // Timing factors (using real FPL API data only - synthetic formulas removed)
-    // Note: Real kickoff time analysis would need to be implemented using fixture.kickoff_time from FPL API
-    // For now, using simplified season context only
-    const isSeasonFinale = fixture.event >= 37;
-    
-    if (isSeasonFinale) {
-      adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, adminGoalSettings.seasonFinaleGoalsMultiplier, 1.05);
-    }
-    
-    // All other context multipliers removed - not available from FPL official APIs:
-    // - Weather conditions (no weather data in FPL API)
-    // - Travel distance fatigue (no geographic data in FPL API) 
-    // - Post-international break (synthetic timing, not FPL data)
-    // - New manager bounce (synthetic calculation, not real manager changes)
-    // - Early/Late kickoff (synthetic calculation - would need real kickoff_time parsing)
-    
-    return adjustedGoals;
-  }
-  
   
   /**
    * Clear cache - useful for testing or when admin settings change

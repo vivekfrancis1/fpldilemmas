@@ -6691,16 +6691,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     averageDefenseTeams: MASTER_TEAM_DEFAULTS.averageDefenseTeams,
     weakDefenseTeams: MASTER_TEAM_DEFAULTS.weakDefenseTeams,
     promotedDefenseTeams: MASTER_TEAM_DEFAULTS.promotedDefenseTeams,
-    // Context Multipliers - Only FPL API-based multipliers (synthetic ones removed)
-    derbyGoalsMultiplier: MASTER_TEAM_DEFAULTS.derbyGoalsMultiplier,
-    topSixGoalsMultiplier: MASTER_TEAM_DEFAULTS.topSixGoalsMultiplier,
-    relegationBattleGoalsMultiplier: MASTER_TEAM_DEFAULTS.relegationBattleGoalsMultiplier,
-    seasonFinaleGoalsMultiplier: 1.05, // Based on gameweek number from FPL API
-    
-    // Removed multipliers not available from FPL official APIs (set to 1.0 - neutral):
-    earlyKickoffGoalsMultiplier: 1.0,
-    lateKickoffGoalsMultiplier: 1.0,
-    
     // Market Bounds - simplified
     marketFloorMultiplier: 0.4,
     marketCeilingMultiplier: 2.0,
@@ -6854,16 +6844,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         averageDefenseTeams: MASTER_TEAM_DEFAULTS.averageDefenseTeams,
         weakDefenseTeams: MASTER_TEAM_DEFAULTS.weakDefenseTeams,
         promotedDefenseTeams: MASTER_TEAM_DEFAULTS.promotedDefenseTeams,
-        
-        // Context Multipliers - Only FPL API-based multipliers (synthetic ones removed)
-        derbyGoalsMultiplier: MASTER_TEAM_DEFAULTS.derbyGoalsMultiplier,
-        topSixGoalsMultiplier: MASTER_TEAM_DEFAULTS.topSixGoalsMultiplier,
-        relegationBattleGoalsMultiplier: MASTER_TEAM_DEFAULTS.relegationBattleGoalsMultiplier,
-        seasonFinaleGoalsMultiplier: 1.05, // Based on gameweek number from FPL API
-        
-        // Removed multipliers not available from FPL official APIs (set to 1.0 - neutral):
-        earlyKickoffGoalsMultiplier: 1.0,
-        lateKickoffGoalsMultiplier: 1.0,
         
         // Bounds - simplified
         marketFloorMultiplier: 0.4,
@@ -7088,23 +7068,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weakDefenseMultiplier: 1.35,
         promotedDefenseMultiplier: 1.60,
       
-        topSixGoalsMultiplier: 1.12,
-        relegationBattleGoalsMultiplier: 0.83,
-        earlyKickoffGoalsMultiplier: 0.94,
-        lateKickoffGoalsMultiplier: 1.07,
-      
-        midweekFixtureGoalsMultiplier: 0.91,
-        seasonFinaleGoalsMultiplier: 1.05,
-        newManagerBounceGoalsMultiplier: 1.08,
-        teamFormMultiplier: 1.06,
-        fixtureCongestionMultiplier: 0.89,
-        injuryCrisisMultiplier: 0.92,
-        europeanQualificationPushMultiplier: 1.08,
-        nothingToPlayForMultiplier: 0.94,
-        revengeFactorMultiplier: 1.05,
-        pressureMatchMultiplier: 0.91,
-        homeCrowdBoostMultiplier: 1.04,
-        weatherConditionsGoalsMultiplier: 0.96,
         marketFloorMultiplier: 0.4,
         marketCeilingMultiplier: 2.0,
         absoluteMinGoals: 0.3,
