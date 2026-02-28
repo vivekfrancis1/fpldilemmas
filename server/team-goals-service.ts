@@ -245,7 +245,8 @@ export class TeamGoalsService {
   
   /**
    * Calculate expected goals for a single fixture using season data only
-   * Formula: (Team Goals/Game + Team xG/Game + Opponent GC/Game + Opponent xGC/Game) × 0.25 × venue multiplier
+   * Formula: (Team Goals/Game + Team xG/Game) × 0.325 + (Opponent GC/Game + Opponent xGC/Game) × 0.175 × venue multiplier
+   * Weights own attack 65% vs opponent defence 35% — own attacking quality is the primary predictor.
    * Uses verified data from current standings API - no estimations
    */
   private static async calculateFixtureGoals(
@@ -261,7 +262,9 @@ export class TeamGoalsService {
   ): Promise<number> {
     try {
       // SEASON DATA ONLY: Uses verified data from current standings API
-      // Formula: (Team Goals/Game + Team xG/Game + Opponent GC/Game + Opponent xGC/Game) × 0.25 × venue multiplier
+      // Formula: (Team Goals/Game + Team xG/Game) × 0.325 + (Opponent GC/Game + Opponent xGC/Game) × 0.175
+      // 65% own attack / 35% opponent defence — own quality is the primary predictor of goals scored.
+      // Pure 50/50 over-rewards weak attackers with easy fixtures and under-projects elite attackers.
       
       // SEASON AVERAGES (from current standings - full season data)
       const teamAvgGoalsSeason = await TeamGoalsService.getTeamAverageGoals(team.id);
@@ -270,7 +273,7 @@ export class TeamGoalsService {
       const opponentAvgXGCSeason = await TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
       
       // Calculate base expected goals using season data only
-      let baseExpectedGoals = (teamAvgGoalsSeason + teamAvgXGSeason + opponentAvgGCSeason + opponentAvgXGCSeason) * 0.25;
+      let baseExpectedGoals = (teamAvgGoalsSeason + teamAvgXGSeason) * 0.325 + (opponentAvgGCSeason + opponentAvgXGCSeason) * 0.175;
       
       // Per-team venue multiplier: derived from this team's actual home/away scoring split
       // this season. Updates automatically as each GW's scores are confirmed (30-min cache).
