@@ -5,6 +5,8 @@ export interface BlendInfo {
   blendWeight: number;
   activeGames: number;
   teamGames: number;
+  startedGames: number;
+  maxConsecDnp: number;
 }
 
 /**
@@ -85,7 +87,7 @@ export function computeBlendMap(
       activeGames < teamGames
     ) {
       const blendWeight = activeGames / teamGames;
-      blendMap.set(player.id, { blendWeight, activeGames, teamGames });
+      blendMap.set(player.id, { blendWeight, activeGames, teamGames, startedGames, maxConsecDnp: maxConsecDNP });
     }
   }
 
@@ -122,9 +124,9 @@ export async function persistBlendMap(
       playerId,
       teamId: playerTeamMap.get(playerId)!,
       activeClubGames: info.activeGames,
-      startedClubGames: 0,
+      startedClubGames: info.startedGames,
       teamTotalGames: info.teamGames,
-      maxConsecDnp: 0,
+      maxConsecDnp: info.maxConsecDnp,
       blendWeight: info.blendWeight,
       updatedAt: new Date(),
     }));
@@ -140,7 +142,9 @@ export async function persistBlendMap(
         set: {
           teamId: blendEligiblePlayers.teamId,
           activeClubGames: blendEligiblePlayers.activeClubGames,
+          startedClubGames: blendEligiblePlayers.startedClubGames,
           teamTotalGames: blendEligiblePlayers.teamTotalGames,
+          maxConsecDnp: blendEligiblePlayers.maxConsecDnp,
           blendWeight: blendEligiblePlayers.blendWeight,
           updatedAt: new Date(),
         },

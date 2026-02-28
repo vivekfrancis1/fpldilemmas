@@ -11005,10 +11005,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Expected minutes per game (from actual history)
               const expectedMinutesPerGame = Math.min(90, avgMinutesPerGame);
               
-              // Apply minimum appearances threshold for confidence scaling
-              // Players with < 10 appearances get scaled down proportionally
+              // Apply minimum appearances threshold for confidence scaling.
+              // For blend-eligible players (AFCON/injury/transfer returnees), use teamGames
+              // instead of appearances — their low active count is structural, not a data-quality issue.
               const MIN_APPEARANCES_THRESHOLD = 10;
-              const confidenceFactor = Math.min(1, appearances / MIN_APPEARANCES_THRESHOLD);
+              const blendInfoForConf = minutesBlendMap.get(player.id);
+              const effectiveAppearances = blendInfoForConf ? blendInfoForConf.teamGames : appearances;
+              const confidenceFactor = Math.min(1, effectiveAppearances / MIN_APPEARANCES_THRESHOLD);
               
               // Calculate points from minutes using probability-based formula
               // Formula: (2 × % chance of 60+ mins) + (1 × % chance of 0-60 mins) × confidence
