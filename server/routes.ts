@@ -8537,9 +8537,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(goalShareCache.data);
       }
       
-      console.log(`DEBUG: Goal share using full season data only`);
+      console.log(`DEBUG: Goal share using blended full-season + recent 8-game actual goals`);
       
-      // Calculate team totals: goals_scored + expected_goals
+      // Calculate team totals: goals_scored + expected_goals (full season anchor)
       const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
       
       // Initialize team totals
@@ -8561,8 +8561,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamTotals[player.team].total += playerTotal;
         }
       });
+
+      // Fetch recent history to compute per-player actual goals in last 8 completed games
+      const { getBulkPlayerHistories: getGoalHistories, computeRecentMetrics: computeGoalMetrics } = await import('./player-history-service');
+      const allGoalPlayerIds = bootstrapData.elements.map((p: any) => p.id);
+      const dbGoalHistories = await getGoalHistories(allGoalPlayerIds);
+
+      // Build per-player recent goals map and per-team recent goals total
+      const recentGoalsMap = new Map<number, { goals: number, poolSize: number }>();
+      bootstrapData.elements.forEach((player: any) => {
+        const history = dbGoalHistories.get(player.id) || [];
+        const metrics = computeGoalMetrics(history, 8);
+        recentGoalsMap.set(player.id, { goals: metrics.recentGoals, poolSize: metrics.poolSize });
+      });
+
+      const teamRecentGoalsMap = new Map<number, number>();
+      bootstrapData.teams.forEach((team: any) => {
+        const total = bootstrapData.elements
+          .filter((p: any) => p.team === team.id)
+          .reduce((sum: number, p: any) => sum + (recentGoalsMap.get(p.id)?.goals || 0), 0);
+        teamRecentGoalsMap.set(team.id, total);
+      });
       
-      const finalResponse = buildGoalShareResponse(bootstrapData, teamTotals);
+      const finalResponse = buildGoalShareResponse(bootstrapData, teamTotals, recentGoalsMap, teamRecentGoalsMap);
       
       goalShareCache = {
         data: finalResponse,
@@ -8586,7 +8607,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Helper function to build goal share response for full season
   // With penalty taker and direct freekick taker bonuses (no normalization)
-  function buildGoalShareResponse(bootstrapData: any, teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } }) {
+  function buildGoalShareResponse(
+    bootstrapData: any,
+    teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } },
+    recentGoalsMap: Map<number, { goals: number, poolSize: number }>,
+    teamRecentGoalsMap: Map<number, number>
+  ) {
     const finalResponse: any[] = [];
     
     Object.keys(teamTotals).forEach(teamIdStr => {
@@ -8598,7 +8624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamPlayers: any[] = [];
       const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
       
-      // Calculate raw totals for base share calculation
+      // Full-season totals (goals + xG)
       let teamTotal = 0;
       const playerTotals: { [playerId: number]: number } = {};
       
@@ -8610,6 +8636,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playerTotals[player.id] = playerTotal;
         teamTotal += playerTotal;
       });
+
+      // Recent context for blend
+      const teamRecentTotal = teamRecentGoalsMap.get(teamId) || 0;
       
       // Calculate shares with set piece bonuses (no normalization - just boost individuals)
       teamPlayersList.forEach((player: any) => {
@@ -8617,8 +8646,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const goalsScored = parseInt(player.goals_scored || 0);
         
         if (playerTotal > 0 && teamTotal > 0) {
-          // Base goal share from raw data
-          let goalShare = (playerTotal / teamTotal) * 100;
+          // Base goal share: blend 50% recent actual goals + 50% full-season (goals+xG)
+          const fullSeasonShare = (playerTotal / teamTotal) * 100;
+          const playerRecent = recentGoalsMap.get(player.id);
+          let goalShare: number;
+          if (teamRecentTotal > 0 && playerRecent && playerRecent.poolSize >= 4) {
+            const recentShare = (playerRecent.goals / teamRecentTotal) * 100;
+            goalShare = 0.5 * recentShare + 0.5 * fullSeasonShare;
+          } else {
+            goalShare = fullSeasonShare;
+          }
           
           // Apply penalty taker bonus (no normalization)
           const penaltyOrder = player.penalties_order || 99;
@@ -9472,9 +9509,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(assistShareCache.data);
       }
       
-      console.log(`DEBUG: Assist share using full season data only`);
+      console.log(`DEBUG: Assist share using blended full-season + recent 8-game actual assists`);
       
-      // Calculate team totals: assists + expected_assists
+      // Calculate team totals: assists + expected_assists (full season anchor)
       const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
       
       bootstrapData.teams.forEach((team: any) => {
@@ -9495,6 +9532,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           teamTotals[player.team].total += playerTotal;
         }
       });
+
+      // Fetch recent history for per-player actual assists in last 8 completed games
+      const { getBulkPlayerHistories: getAssistHistories, computeRecentMetrics: computeAssistMetrics } = await import('./player-history-service');
+      const allAssistPlayerIds = bootstrapData.elements.map((p: any) => p.id);
+      const dbAssistHistories = await getAssistHistories(allAssistPlayerIds);
+
+      // Build per-player recent assists map
+      const recentAssistsMap = new Map<number, { assists: number, poolSize: number }>();
+      bootstrapData.elements.forEach((player: any) => {
+        const history = dbAssistHistories.get(player.id) || [];
+        const metrics = computeAssistMetrics(history, 8);
+        recentAssistsMap.set(player.id, { assists: metrics.recentAssists, poolSize: metrics.poolSize });
+      });
+
+      // Per-team recent assists total (sum of all players on team)
+      const teamRecentAssistsMap = new Map<number, number>();
+      bootstrapData.teams.forEach((team: any) => {
+        const total = bootstrapData.elements
+          .filter((p: any) => p.team === team.id)
+          .reduce((sum: number, p: any) => sum + (recentAssistsMap.get(p.id)?.assists || 0), 0);
+        teamRecentAssistsMap.set(team.id, total);
+      });
       
       // Build response
       const finalResponse: any[] = [];
@@ -9507,6 +9566,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const teamPlayers: any[] = [];
         const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
+
+        // Recent context for this team
+        const teamRecentAssistTotal = teamRecentAssistsMap.get(teamId) || 0;
         
         teamPlayersList.forEach((player: any) => {
           const assists = parseInt(player.assists || 0);
@@ -9514,8 +9576,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const playerTotal = assists + expectedAssists;
           
           if (playerTotal > 0 && teamData.total > 0) {
-            // Base assist share from raw data
-            let assistShare = (playerTotal / teamData.total) * 100;
+            // Base assist share: blend 40% recent actual assists + 60% full-season (assists+xA)
+            // Lighter recent weight than goals because assists are noisier over 8 games
+            const fullSeasonShare = (playerTotal / teamData.total) * 100;
+            const playerRecent = recentAssistsMap.get(player.id);
+            let assistShare: number;
+            if (teamRecentAssistTotal > 0 && playerRecent && playerRecent.poolSize >= 4) {
+              const recentShare = (playerRecent.assists / teamRecentAssistTotal) * 100;
+              assistShare = 0.4 * recentShare + 0.6 * fullSeasonShare;
+            } else {
+              assistShare = fullSeasonShare;
+            }
             
             // Apply set piece taker bonus (no normalization - just boost individuals)
             const cornerOrder = player.corners_and_indirect_freekicks_order || 99;

@@ -17,6 +17,9 @@ export function computeRecentMetrics(historyArr: any[], n = 8): {
   recentP60: number;
   recentP_any: number;
   recentBonusPerGame: number;
+  recentGoals: number;
+  recentAssists: number;
+  poolSize: number;
 } {
   // Only consider completed fixtures (exclude unplayed GWs where score is null)
   const playedEntries = historyArr.filter(g => g.team_h_score !== null);
@@ -30,7 +33,9 @@ export function computeRecentMetrics(historyArr: any[], n = 8): {
   const recentBonusPerGame = pool.length > 0
     ? pool.reduce((s, g) => s + (g.bonus || 0), 0) / pool.length
     : 0;
-  return { recentP60, recentP_any, recentBonusPerGame };
+  const recentGoals = pool.reduce((s, g) => s + (g.goals_scored || 0), 0);
+  const recentAssists = pool.reduce((s, g) => s + (g.assists || 0), 0);
+  return { recentP60, recentP_any, recentBonusPerGame, recentGoals, recentAssists, poolSize: pool.length };
 }
 
 export async function getBulkPlayerHistories(playerIds: number[]): Promise<Map<number, any[]>> {
