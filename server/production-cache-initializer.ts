@@ -262,16 +262,16 @@ export class ProductionCacheInitializer {
         timeout: 180000
       });
     } else {
-      // Snapshots exist in DB — log the state but do NOT set lastRunAt.
-      // Leaving lastRunAt unset allows the T+25 scheduler run to execute and
-      // refresh snapshots with the current code's calculations. This ensures
-      // that any fixes deployed since the last snapshot are reflected quickly.
+      // Snapshots exist in DB — mark scoring cache as recently run to prevent
+      // the T+25 min scheduler from triggering an unnecessary aggregation cycle
       orchestrator.registerJob({
         id: 'mark-scoring-cache-fresh',
         name: 'Mark Scoring Cache Fresh',
         dependencies: ['player-histories'],
         executor: async () => {
-          console.log("✅ DB has recent projection snapshots — T+25 scheduler will refresh with current calculations");
+          const { FPLScoringCacheService } = await import('./fpl-scoring-cache-service');
+          FPLScoringCacheService.lastRunAt = new Date();
+          console.log("✅ Scoring cache marked fresh — startup aggregation skipped (DB has recent snapshots)");
         },
         timeout: 5000
       });
