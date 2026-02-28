@@ -6932,6 +6932,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Clear cached data to force recalculation with new settings
       totalPointsCache.clear();
+      teamCSCache = null;       // Clear upstream team CS in-memory cache
+      cleansheetCache.clear();  // Clear upstream player cleansheet in-memory cache
       
       // Immediately repopulate Player Total Points cache after clearing
       setTimeout(async () => {
@@ -8196,8 +8198,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const matchingFixture = gwFixtureDetails.find((fd: any) => fd.opponent === opponent.short_name);
           const perGameGoalsAgainst = matchingFixture ? matchingFixture.goalsAgainst : 1.5; // Default if not found
           
-          // POISSON DISTRIBUTION FORMULA: P(Clean Sheet) = e^(-λ) where λ is expected goals conceded for THIS SPECIFIC FIXTURE
-          let cleanSheetProbability = Math.exp(-perGameGoalsAgainst) * 100; // Convert to percentage
+          // POISSON DISTRIBUTION FORMULA: P(Clean Sheet) = e^(-λ * exponent) * multiplier
+          // Uses admin-configurable cleanSheetExponent and cleanSheetMultiplier settings
+          let cleanSheetProbability = Math.exp(-perGameGoalsAgainst * adminGoalSettings.cleanSheetExponent) * adminGoalSettings.cleanSheetMultiplier;
           
           // Ensure realistic bounds (0-100%)
           cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
