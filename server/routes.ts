@@ -9058,16 +9058,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fplPlayerMap.set(el.id, el);
           });
           
-          // Compute position-average FPL form for form multiplier
-          const positionAvgFormGoals = new Map<string, number>();
+          // Position-average goals per 90 for goal-threat multiplier.
+          // Goals/90 is a direct measure of goal threat, unlike FPL form which bundles
+          // CS points, saves and bonus — causing DEFs in form due to clean sheets to
+          // incorrectly receive the same goal multiplier as prolific attackers.
+          const positionAvgGoalsPer90 = new Map<string, number>();
           for (const pos of ['GKP', 'DEF', 'MID', 'FWD']) {
             const posPlayers = bootstrapData.elements.filter(
-              (p: any) => ['', 'GKP', 'DEF', 'MID', 'FWD'][p.element_type] === pos && (p.minutes || 0) > 0
+              (p: any) => ['', 'GKP', 'DEF', 'MID', 'FWD'][p.element_type] === pos && (p.minutes || 0) >= 90
             );
             const avg = posPlayers.length
-              ? posPlayers.reduce((s: number, p: any) => s + parseFloat(p.form || '0'), 0) / posPlayers.length
-              : 5.0;
-            positionAvgFormGoals.set(pos, avg);
+              ? posPlayers.reduce((s: number, p: any) => {
+                  return s + (p.goals_scored || 0) / ((p.minutes || 90) / 90);
+                }, 0) / posPlayers.length
+              : 0.05;
+            positionAvgGoalsPer90.set(pos, Math.max(0.01, avg));
           }
 
           // Create lookup map for team projections by teamId (include fixtureDetails for DGW)
@@ -9087,11 +9092,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const goalShare = player.goalShare || 0;
                 const fplPlayer = fplPlayerMap.get(player.playerId);
                 
-                // Form multiplier: 65% base + 35% form-adjusted; effective range 0.825–1.175 (35% spread)
-                const playerForm = parseFloat(fplPlayer?.form || '0');
-                const posAvgGoals = positionAvgFormGoals.get(player.position) || 5.0;
-                const formFactor = Math.max(0.5, Math.min(1.5, playerForm / Math.max(posAvgGoals, 0.1)));
-                const formMultiplier = 0.65 + 0.35 * formFactor;
+                // Goal-rate multiplier: player's goals/90 vs position average.
+                // Range 0.875–1.25 (25% weight). Saliba (0 goals) gets 0.875, Haaland gets 1.25.
+                // Avoids the old FPL-form approach where Saliba and Gabriel scored the same multiplier
+                // (1.175) because both had above-average total FPL points.
+                const playerGoalsPer90 = fplPlayer && (fplPlayer.minutes || 0) >= 90
+                  ? (fplPlayer.goals_scored || 0) / ((fplPlayer.minutes || 90) / 90)
+                  : 0;
+                const posAvgG90 = positionAvgGoalsPer90.get(player.position) || 0.05;
+                const goalFormFactor = Math.max(0.5, Math.min(2.0, playerGoalsPer90 / Math.max(posAvgG90, 0.01)));
+                const formMultiplier = 0.75 + 0.25 * goalFormFactor;
 
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; goals: number }> } = {};
@@ -11038,6 +11048,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pct60Plus = playerMinutes.pct60Plus || 0;
         const pctBelow60 = playerMinutes.pctBelow60 || 0;
 
+        // startingRate: converts pct60Plus from a conditional rate ("when appearing, how often 60+")
+        // to a rate that accounts for rotation (players not always selected even when fit).
+        // Uses player.starts (bootstrap) / playerAppearances (minutes endpoint).
+        // For regular starters (Gabriel 21 starts / 22 apps = 95.5%) this barely moves.
+        // For rotation players (15 starts / 20 apps = 75%) this correctly reduces CS contribution.
+        const playerStarts = player.starts || 0;
+        const playerAppearances = playerMinutes.playerAppearances || 1;
+        const startingRate = Math.min(1.0, playerStarts / Math.max(playerAppearances, 1));
+        const adjustedPct60Plus = pct60Plus * startingRate;
+
         const cleanSheetPoints = (position.singular_name === 'Midfielder') ? 1 : 4;
 
         const events: BootstrapEvent[] = bootstrapData.events || [];
@@ -11055,7 +11075,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const absenceFactor = defensiveAbsenceMap.get(player.team) ?? 1.0;
             if (teamFixtureDetails.length > 0) {
               teamFixtureDetails.forEach((fd: any) => {
-                const fixtureCSPoints = availabilityProb * (fd.cleanSheetOdds / 100) * absenceFactor * (pct60Plus / 100) * cleanSheetPoints;
+                const fixtureCSPoints = availabilityProb * (fd.cleanSheetOdds / 100) * absenceFactor * (adjustedPct60Plus / 100) * cleanSheetPoints;
                 cleanSheetPointsForGW += fixtureCSPoints;
                 gwFixtureDetails.push({
                   opponent: fd.opponent,
@@ -11064,7 +11084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 });
               });
             } else {
-              cleanSheetPointsForGW = availabilityProb * (teamCleanSheetPercent / 100) * absenceFactor * (pct60Plus / 100) * cleanSheetPoints;
+              cleanSheetPointsForGW = availabilityProb * (teamCleanSheetPercent / 100) * absenceFactor * (adjustedPct60Plus / 100) * cleanSheetPoints;
               gwFixtureDetails.push({
                 opponent: 'OPP',
                 isHome: true,

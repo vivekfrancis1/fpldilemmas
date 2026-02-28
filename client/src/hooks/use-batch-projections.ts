@@ -177,7 +177,7 @@ export function useBatchGoalsProjections(
           setUsedBatch(false);
           
           // Fallback to existing individual API
-          const response = await fetch(`/api/player-goals-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+          const response = await fetch(`/api/player-goals-scored-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
           if (!response.ok) {
             throw new Error(`Fallback API request failed: ${response.statusText}`);
           }
@@ -186,7 +186,7 @@ export function useBatchGoalsProjections(
       } else {
         // Batch optimization disabled, use individual API
         console.log("📊 CLIENT: Batch optimization disabled, using individual API");
-        const response = await fetch(`/api/player-goals-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
+        const response = await fetch(`/api/player-goals-scored-projections?startGameweek=${startGameweek}&endGameweek=${endGameweek}`);
         if (!response.ok) {
           throw new Error(`Individual API request failed: ${response.statusText}`);
         }
