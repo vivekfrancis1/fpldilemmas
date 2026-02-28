@@ -49,11 +49,12 @@ class ProjectionService {
    */
   private async getPlayerProjectionsFromDB(startGameweek: number, endGameweek: number): Promise<any[]> {
     try {
-      // Query the playerTotalPointsSnapshots table 
+      // Query the playerTotalPointsSnapshots table joined with windows for gameweek filtering
       const projections = await db.execute(sql`
-        SELECT * FROM player_total_points_snapshots 
-        WHERE start_gameweek = ${startGameweek} AND end_gameweek = ${endGameweek}
-        ORDER BY total_projected_points DESC
+        SELECT s.* FROM player_total_points_snapshots s
+        JOIN player_total_points_windows w ON s.window_id = w.window_id
+        WHERE w.start_gameweek = ${startGameweek} AND w.end_gameweek = ${endGameweek}
+        ORDER BY s.total_projected_points DESC
         LIMIT 800
       `);
 

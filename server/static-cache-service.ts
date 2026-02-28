@@ -204,7 +204,9 @@ export class StaticCacheService {
       const batches = [];
       
       for (let i = 0; i < projections.length; i += batchSize) {
-        const batch = projections.slice(i, i + batchSize).map((proj: any) => ({
+        const batch = projections.slice(i, i + batchSize)
+          .filter((proj: any) => proj.playerName)
+          .map((proj: any) => ({
           rangeId,
           playerId: proj.playerId,
           playerName: proj.playerName,
@@ -223,6 +225,7 @@ export class StaticCacheService {
 
       let totalInserted = 0;
       for (const batch of batches) {
+        if (batch.length === 0) continue;
         await db.insert(staticPlayerProjections).values(batch);
         totalInserted += batch.length;
         console.log(`📊 Cached batch: ${totalInserted}/${projections.length} projections`);
