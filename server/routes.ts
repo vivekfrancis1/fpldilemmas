@@ -9351,18 +9351,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fplPlayerMap.set(el.id, el);
           });
 
-          // Compute position-average FPL form for form multiplier
-          const positionAvgFormAssists = new Map<string, number>();
-          for (const pos of ['GKP', 'DEF', 'MID', 'FWD']) {
-            const posPlayers = bootstrapData.elements.filter(
-              (p: any) => ['', 'GKP', 'DEF', 'MID', 'FWD'][p.element_type] === pos && (p.minutes || 0) > 0
-            );
-            const avg = posPlayers.length
-              ? posPlayers.reduce((s: number, p: any) => s + parseFloat(p.form || '0'), 0) / posPlayers.length
-              : 5.0;
-            positionAvgFormAssists.set(pos, avg);
-          }
-          
           // Create lookup map for team projections by teamId (include fixtureDetails for DGW)
           const teamProjectionsMap: { [teamId: number]: any } = {};
           teamProjectionsData.forEach((team: any) => {
@@ -9380,12 +9368,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const assistShare = player.assistShare || 0;
                 const fplPlayer = fplPlayerMap.get(player.playerId);
 
-                // Form multiplier: 65% base + 35% form-adjusted; effective range 0.825–1.175 (35% spread)
-                const playerForm = parseFloat(fplPlayer?.form || '0');
-                const posAvgAssists = positionAvgFormAssists.get(player.position) || 5.0;
-                const formFactor = Math.max(0.5, Math.min(1.5, playerForm / Math.max(posAvgAssists, 0.1)));
-                const formMultiplier = 0.65 + 0.35 * formFactor;
-                
                 const gameweekProjections: { [gameweek: string]: number } = {};
                 const fixtureDetails: { [gameweek: string]: Array<{ opponent: string; isHome: boolean; assists: number }> } = {};
                 
@@ -9396,7 +9378,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     ? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, assistsEvents)
                     : 1.0;
                   
-                  gameweekProjections[gameweek] = (assistShare / 100) * (teamAssists as number) * availability * formMultiplier;
+                  // NOTE: Do NOT apply recentP60 or a form multiplier here.
+                  // assistShare already encodes selection frequency and recent assist form through
+                  // the additive pool formula. Adding a further multiplier double-counts.
+                  gameweekProjections[gameweek] = (assistShare / 100) * (teamAssists as number) * availability;
                   
                   // Build fixtureDetails for DGW support (individual fixture breakdown)
                   const teamFixtures = teamProjections.fixtureDetails?.[gameweek] || [];
@@ -9404,7 +9389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     fixtureDetails[gameweek] = teamFixtures.map((f: any) => ({
                       opponent: f.opponent,
                       isHome: f.isHome,
-                      assists: (assistShare / 100) * (f.assists || 0) * availability * formMultiplier
+                      assists: (assistShare / 100) * (f.assists || 0) * availability
                     }));
                   }
                 });
