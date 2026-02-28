@@ -10996,11 +10996,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teamEls = bootstrapData.elements.filter((el: any) => el.team === t.id);
         const unavailGKP = teamEls.filter((el: any) =>
           el.element_type === 1 &&
+          el.now_cost >= 45 &&
           el.chance_of_playing_next_round !== null &&
           el.chance_of_playing_next_round < 75
         ).length;
         const unavailDEF = teamEls.filter((el: any) =>
           el.element_type === 2 &&
+          el.now_cost >= 50 &&
           el.chance_of_playing_next_round !== null &&
           el.chance_of_playing_next_round < 75
         ).length;

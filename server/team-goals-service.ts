@@ -421,10 +421,12 @@ export class TeamGoalsService {
     adjustedGoals = TeamGoalsService.safeMul(adjustedGoals, teamFormMultiplier, 1.0);
     
     // Match context factors
-    const isEliteClash = [1, 6, 12, 13].includes(team.id) && [1, 6, 12, 13].includes(opponent.id);
-    const isTopSixBattle = [1, 6, 12, 13, 14, 18].includes(team.id) && [1, 6, 12, 13, 14, 18].includes(opponent.id);
+    // Team IDs: 1=Arsenal, 7=Chelsea, 12=Liverpool, 13=Man City, 14=Man Utd, 15=Newcastle, 18=Spurs
+    // 9=Everton (Merseyside Derby partner for Liverpool, NOT Crystal Palace which is ID 8)
+    const isEliteClash = [1, 7, 12, 13].includes(team.id) && [1, 7, 12, 13].includes(opponent.id);
+    const isTopSixBattle = [1, 7, 12, 13, 14, 15, 18].includes(team.id) && [1, 7, 12, 13, 14, 15, 18].includes(opponent.id);
     const isRivalryMatch = (team.id === 1 && opponent.id === 18) || (team.id === 18 && opponent.id === 1) ||
-                          (team.id === 12 && opponent.id === 8) || (team.id === 8 && opponent.id === 12) ||
+                          (team.id === 12 && opponent.id === 9) || (team.id === 9 && opponent.id === 12) ||
                           (team.id === 13 && opponent.id === 14) || (team.id === 14 && opponent.id === 13);
     const isRelegationBattle = [17, 20, 19, 4, 5].includes(team.id) && [17, 20, 19, 4, 5].includes(opponent.id);
     
