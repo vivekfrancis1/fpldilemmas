@@ -33,12 +33,12 @@ class ProjectionAccuracyScheduler {
   private intervalId: NodeJS.Timeout | null = null;
   private isRunning = false;
   private readonly CHECK_INTERVAL = 5 * 60 * 1000; // Check every 5 minutes
-  private readonly SEASON = '2024/25';
-  private readonly START_GAMEWEEK = 25;
+  private readonly SEASON = '2025/26';
+  private readonly START_GAMEWEEK = 29;
   private readonly END_GAMEWEEK = 38;
 
   start(): void {
-    console.log('📊 Starting Projection Accuracy Scheduler (GW25-38 tracking)...');
+    console.log('📊 Starting Projection Accuracy Scheduler (GW29-38 tracking)...');
     
     this.intervalId = setInterval(() => {
       this.checkAndProcess();

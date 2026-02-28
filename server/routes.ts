@@ -19270,7 +19270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/projection-accuracy/gameweek/:gw", async (req, res) => {
     try {
       const gameweek = parseInt(req.params.gw);
-      const season = req.query.season || '2024/25';
+      const season = req.query.season || '2025/26';
       
       // Check if snapshot exists (deadline has passed)
       const snapshot = await db.execute(sql`

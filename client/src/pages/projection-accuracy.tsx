@@ -148,7 +148,7 @@ const normalizeTeamName = (teamName: string): string => {
 };
 
 export default function ProjectionAccuracy() {
-  const [selectedGameweek, setSelectedGameweek] = useState<number>(25);
+  const [selectedGameweek, setSelectedGameweek] = useState<number>(29);
   const [activeTab, setActiveTab] = useState<string>("players");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [sortField, setSortField] = useState<SortField>('projected');
@@ -156,7 +156,7 @@ export default function ProjectionAccuracy() {
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [positionFilter, setPositionFilter] = useState<string>("all");
 
-  const availableGameweeks = Array.from({ length: 38 }, (_, i) => i + 1);
+  const availableGameweeks = Array.from({ length: 10 }, (_, i) => i + 29);
 
   const { data: accuracyData, isLoading, error } = useQuery<GameweekAccuracyData>({
     queryKey: ['/api/projection-accuracy/gameweek', selectedGameweek],
@@ -402,7 +402,7 @@ export default function ProjectionAccuracy() {
                 <CardTitle className="text-lg sm:text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                   Projection Accuracy
                 </CardTitle>
-                <p className="text-sm text-gray-500">Compare projected vs actual results (GW25-38)</p>
+                <p className="text-sm text-gray-500">Compare projected vs actual results (GW29-38)</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -706,7 +706,7 @@ export default function ProjectionAccuracy() {
               )}
             </TabsContent>
 
-            {/* Aggregate Player Projections - Total Points across all GW25-38 */}
+            {/* Aggregate Player Projections - Total Points across all GW29-38 */}
             <TabsContent value="aggregate-players" className="mt-0">
               {aggregateLoading ? (
                 <LoadingExperience variant="analysis" message="Loading aggregate projections..." />
@@ -772,7 +772,7 @@ export default function ProjectionAccuracy() {
               )}
             </TabsContent>
 
-            {/* Aggregate Team Projections - Total Goals across all GW25-38 */}
+            {/* Aggregate Team Projections - Total Goals across all GW29-38 */}
             <TabsContent value="aggregate-teams" className="mt-0">
               {aggregateLoading ? (
                 <LoadingExperience variant="analysis" message="Loading aggregate projections..." />
