@@ -355,7 +355,7 @@ class ProjectionService {
 
               // Difficulty multiplier: normalised against league average AGR
               // Higher opponent AGR = harder fixture = less output, clamped to sensible range
-              const homeBonus = isHome ? 1.16 : 0.84;
+              const homeBonus = isHome ? 1.15 : 0.87;
               const difficultyMultiplier = Math.max(0.6, Math.min(1.5, (homeBonus * leagueAvgAGR) / opponentAGR));
 
               // 2. GOALS — B2 form weighting already in adjustedForm; F1 teamFormMultiplier applied

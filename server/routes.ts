@@ -1601,8 +1601,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gameweek = fixture.event;
       
       // Simple team strength calculation (fast version)
-      const homeStrength = 1.16; // Home advantage
-      const awayStrength = 0.84;  // Away disadvantage
+      const homeStrength = 1.15; // Home advantage
+      const awayStrength = 0.87;  // Away disadvantage
       
       const homeGoals = 1.4 * homeStrength; // Premier League average ~1.4 goals
       const awayGoals = 1.2 * awayStrength;
@@ -6663,9 +6663,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     defaultExpectedGoalsPerGame: MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame,
     globalTierMultiplier: MASTER_TEAM_DEFAULTS.globalTierMultiplier,
     
-    // Venue Multipliers - Updated values
-  
-    awayFactorGoalsMultiplier: 0.84,
+    // Venue Multipliers
+    homeAdvantageGoalsMultiplier: MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier,
+    awayFactorGoalsMultiplier: MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier,
     
     // Attack Multipliers - Using team-config.ts centralized configuration
     eliteAttackMultiplier: MASTER_TEAM_DEFAULTS.eliteAttackMultiplier,
@@ -6835,8 +6835,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         defaultTeamVariance: MASTER_TEAM_DEFAULTS.defaultTeamVariance,
         defaultExpectedGoalsPerGame: MASTER_TEAM_DEFAULTS.defaultExpectedGoalsPerGame,
         globalTierMultiplier: MASTER_TEAM_DEFAULTS.globalTierMultiplier,
-      
-        awayFactorGoalsMultiplier: 0.84,
+        homeAdvantageGoalsMultiplier: MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier,
+        awayFactorGoalsMultiplier: MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier,
         
         // REMOVED: All attack tier multipliers and team assignments
         // Now using dynamic performance-based calculations only
@@ -7077,8 +7077,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       adminGoalSettings = {
         globalTierMultiplier: 1.25,
         // Venue Multipliers
-      
-        awayFactorGoalsMultiplier: 0.84,
+        homeAdvantageGoalsMultiplier: MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier,
+        awayFactorGoalsMultiplier: MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier,
         // REMOVED: All attacking tier multipliers and team assignments
         // Now using dynamic performance-based calculations only
         // Defensive Tier Multipliers

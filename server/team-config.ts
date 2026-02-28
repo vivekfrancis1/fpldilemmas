@@ -8,8 +8,8 @@ export const MASTER_TEAM_DEFAULTS = {
   defaultTeamVariance: 0.45,
   defaultExpectedGoalsPerGame: 1.3,
   globalTierMultiplier: 1.25,
-  homeAdvantageGoalsMultiplier: 1.16,
-  awayFactorGoalsMultiplier: 0.84,
+  homeAdvantageGoalsMultiplier: 1.15,
+  awayFactorGoalsMultiplier: 0.87,
   
   // REMOVED: All tier-based assignments and multipliers
   // Now using dynamic performance-based calculations only

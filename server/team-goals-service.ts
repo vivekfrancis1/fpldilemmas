@@ -272,10 +272,10 @@ export class TeamGoalsService {
       // Calculate base expected goals using season data only
       let baseExpectedGoals = (teamAvgGoalsSeason + teamAvgXGSeason + opponentAvgGCSeason + opponentAvgXGCSeason) * 0.25;
       
-      // Apply Venue Multiplier (Home = 1.16, Away = 0.84)
+      // Apply Venue Multiplier (Home = 1.15, Away = 0.87)
       const venueMultiplier = isHome ? 
-        TeamGoalsService.num(adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier, 1.16) :
-        TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.84);
+        TeamGoalsService.num(adminGoalSettings.homeAdvantageGoalsMultiplier || MASTER_TEAM_DEFAULTS.homeAdvantageGoalsMultiplier, 1.15) :
+        TeamGoalsService.num(adminGoalSettings.awayFactorGoalsMultiplier || MASTER_TEAM_DEFAULTS.awayFactorGoalsMultiplier, 0.87);
       
       baseExpectedGoals = TeamGoalsService.safeMul(baseExpectedGoals, venueMultiplier, 1.0);
       
