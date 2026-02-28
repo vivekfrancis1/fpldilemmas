@@ -8646,15 +8646,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const goalsScored = parseInt(player.goals_scored || 0);
         
         if (playerTotal > 0 && teamTotal > 0) {
-          // Base goal share: blend 50% recent actual goals + 50% full-season (goals+xG)
-          const fullSeasonShare = (playerTotal / teamTotal) * 100;
+          // Additive pool: (season goals + season xG + last 8 actual goals) / team equivalent.
+          // Season (~28 games) naturally dominates; recent 8 games add proportional signal
+          // without the double-share distortion of blending two separate percentages.
           const playerRecent = recentGoalsMap.get(player.id);
           let goalShare: number;
           if (teamRecentTotal > 0 && playerRecent && playerRecent.poolSize >= 4) {
-            const recentShare = (playerRecent.goals / teamRecentTotal) * 100;
-            goalShare = 0.5 * recentShare + 0.5 * fullSeasonShare;
+            const playerCombined = playerTotal + playerRecent.goals;
+            const teamCombined = teamTotal + teamRecentTotal;
+            goalShare = teamCombined > 0 ? (playerCombined / teamCombined) * 100 : 0;
           } else {
-            goalShare = fullSeasonShare;
+            goalShare = teamTotal > 0 ? (playerTotal / teamTotal) * 100 : 0;
           }
           
           // Apply penalty taker bonus (no normalization)
