@@ -8537,42 +8537,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(goalShareCache.data);
       }
       
-      console.log(`DEBUG: Goal share using blended full-season + recent 8-game actual goals`);
+      console.log(`DEBUG: Goal share using current-club-only filtered stats (transfer fix applied)`);
       
-      // Calculate team totals: goals_scored + expected_goals (full season anchor)
-      const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
-      
-      // Initialize team totals
-      bootstrapData.teams.forEach((team: any) => {
-        teamTotals[team.id] = {
-          total: 0,
-          name: team.name,
-          short_name: team.short_name
-        };
-      });
-      
-      // Sum up goals + xG for each team
-      bootstrapData.elements.forEach((player: any) => {
-        const goalsScored = parseInt(player.goals_scored || 0);
-        const expectedGoals = parseFloat(player.expected_goals || 0);
-        const playerTotal = goalsScored + expectedGoals;
-        
-        if (teamTotals[player.team]) {
-          teamTotals[player.team].total += playerTotal;
-        }
+      // Fetch fixtures to build a team-fixture lookup — needed to filter transferred players' stats
+      const fixturesResGS = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+      const allFixturesGS: any[] = fixturesResGS.ok ? await fixturesResGS.json() : [];
+      // Map fixture ID → {home teamId, away teamId} for finished fixtures only
+      const fixtureTeamMapGS = new Map<number, { home: number; away: number }>();
+      allFixturesGS.filter((f: any) => f.finished).forEach((f: any) => {
+        fixtureTeamMapGS.set(f.id, { home: f.team_h, away: f.team_a });
       });
 
-      // Fetch recent history to compute per-player actual goals in last 8 completed games
+      // Fetch player DB histories for current-club filtering
       const { getBulkPlayerHistories: getGoalHistories, computeRecentMetrics: computeGoalMetrics } = await import('./player-history-service');
       const allGoalPlayerIds = bootstrapData.elements.map((p: any) => p.id);
       const dbGoalHistories = await getGoalHistories(allGoalPlayerIds);
 
-      // Build per-player recent goals map and per-team recent goals total
+      // For each player, compute goals/xG scored ONLY in fixtures for their current club.
+      // This prevents transferred players' pre-transfer goals inflating the new club's pool.
+      // Falls back to full-season stats if no current-club history exists (brand-new signing).
+      const currentClubGoalsMap = new Map<number, { goals: number; xG: number }>();
+      bootstrapData.elements.forEach((player: any) => {
+        const history = dbGoalHistories.get(player.id) || [];
+        const currentClubGames = history.filter((g: any) => {
+          const fix = fixtureTeamMapGS.get(g.fixture);
+          return fix && (fix.home === player.team || fix.away === player.team);
+        });
+        if (currentClubGames.length >= 1) {
+          const goals = currentClubGames.reduce((s: number, g: any) => s + (g.goals_scored || 0), 0);
+          const xG = currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_goals || 0), 0);
+          currentClubGoalsMap.set(player.id, { goals, xG });
+        } else {
+          // No DB history for current club — fall back to full-season bootstrap stats
+          currentClubGoalsMap.set(player.id, {
+            goals: parseInt(player.goals_scored || 0),
+            xG: parseFloat(player.expected_goals || 0)
+          });
+        }
+      });
+
+      // Build per-player recent goals map (still used for additive pool signal)
       const recentGoalsMap = new Map<number, { goals: number, poolSize: number }>();
       bootstrapData.elements.forEach((player: any) => {
         const history = dbGoalHistories.get(player.id) || [];
         const metrics = computeGoalMetrics(history, 8);
         recentGoalsMap.set(player.id, { goals: metrics.recentGoals, poolSize: metrics.poolSize });
+      });
+
+      // Calculate team totals using current-club-only filtered stats
+      const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
+      bootstrapData.teams.forEach((team: any) => {
+        teamTotals[team.id] = { total: 0, name: team.name, short_name: team.short_name };
+      });
+      bootstrapData.elements.forEach((player: any) => {
+        const filtered = currentClubGoalsMap.get(player.id) || { goals: 0, xG: 0 };
+        if (teamTotals[player.team]) {
+          teamTotals[player.team].total += filtered.goals + filtered.xG;
+        }
       });
 
       const teamRecentGoalsMap = new Map<number, number>();
@@ -8583,7 +8604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamRecentGoalsMap.set(team.id, total);
       });
       
-      const finalResponse = buildGoalShareResponse(bootstrapData, teamTotals, recentGoalsMap, teamRecentGoalsMap);
+      const finalResponse = buildGoalShareResponse(bootstrapData, teamTotals, recentGoalsMap, teamRecentGoalsMap, currentClubGoalsMap);
       
       goalShareCache = {
         data: finalResponse,
@@ -8607,11 +8628,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Helper function to build goal share response for full season
   // With penalty taker and direct freekick taker bonuses (no normalization)
+  // currentClubGoalsMap: per-player goals/xG filtered to current-club fixtures only (transfer fix)
   function buildGoalShareResponse(
     bootstrapData: any,
     teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } },
     recentGoalsMap: Map<number, { goals: number, poolSize: number }>,
-    teamRecentGoalsMap: Map<number, number>
+    teamRecentGoalsMap: Map<number, number>,
+    currentClubGoalsMap?: Map<number, { goals: number; xG: number }>
   ) {
     const finalResponse: any[] = [];
     
@@ -8624,15 +8647,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamPlayers: any[] = [];
       const teamPlayersList = bootstrapData.elements.filter((p: any) => p.team === teamId);
       
-      // Full-season totals (goals + xG)
+      // Use current-club-only filtered totals if available (transfer fix), else full-season
       let teamTotal = 0;
       const playerTotals: { [playerId: number]: number } = {};
       
       teamPlayersList.forEach((player: any) => {
-        const goalsScored = parseInt(player.goals_scored || 0);
-        const expectedGoals = parseFloat(player.expected_goals || 0);
-        const playerTotal = goalsScored + expectedGoals;
-        
+        let playerTotal: number;
+        if (currentClubGoalsMap) {
+          const filtered = currentClubGoalsMap.get(player.id) || { goals: 0, xG: 0 };
+          playerTotal = filtered.goals + filtered.xG;
+        } else {
+          const goalsScored = parseInt(player.goals_scored || 0);
+          const expectedGoals = parseFloat(player.expected_goals || 0);
+          playerTotal = goalsScored + expectedGoals;
+        }
         playerTotals[player.id] = playerTotal;
         teamTotal += playerTotal;
       });
@@ -8643,7 +8671,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate shares with set piece bonuses (no normalization - just boost individuals)
       teamPlayersList.forEach((player: any) => {
         const playerTotal = playerTotals[player.id] || 0;
-        const goalsScored = parseInt(player.goals_scored || 0);
+        // For set piece bonus calculation, use current-club goals if available
+        const goalsScored = currentClubGoalsMap
+          ? (currentClubGoalsMap.get(player.id)?.goals || 0)
+          : parseInt(player.goals_scored || 0);
         
         if (playerTotal > 0 && teamTotal > 0) {
           // Additive pool: (season goals + season xG + last 8 actual goals) / team equivalent.
@@ -9468,36 +9499,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(assistShareCache.data);
       }
       
-      console.log(`DEBUG: Assist share using blended full-season + recent 8-game actual assists`);
-      
-      // Calculate team totals: assists + expected_assists (full season anchor)
-      const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
-      
-      bootstrapData.teams.forEach((team: any) => {
-        teamTotals[team.id] = {
-          total: 0,
-          name: team.name,
-          short_name: team.short_name
-        };
-      });
-      
-      bootstrapData.elements.forEach((player: any) => {
-        const assists = parseInt(player.assists || 0);
-        const expectedAssists = parseFloat(player.expected_assists || 0);
-        const playerTotal = assists + expectedAssists;
-        
-        // Raw team totals - no set piece bonus for base share calculation
-        if (teamTotals[player.team]) {
-          teamTotals[player.team].total += playerTotal;
-        }
+      console.log(`DEBUG: Assist share using current-club-only filtered stats (transfer fix applied)`);
+
+      // Fetch fixtures to build a team-fixture lookup — needed to filter transferred players' stats
+      const fixturesResAS = await fetch("https://fantasy.premierleague.com/api/fixtures/");
+      const allFixturesAS: any[] = fixturesResAS.ok ? await fixturesResAS.json() : [];
+      const fixtureTeamMapAS = new Map<number, { home: number; away: number }>();
+      allFixturesAS.filter((f: any) => f.finished).forEach((f: any) => {
+        fixtureTeamMapAS.set(f.id, { home: f.team_h, away: f.team_a });
       });
 
-      // Fetch recent history for per-player actual assists in last 8 completed games
+      // Fetch player DB histories for current-club filtering
       const { getBulkPlayerHistories: getAssistHistories, computeRecentMetrics: computeAssistMetrics } = await import('./player-history-service');
       const allAssistPlayerIds = bootstrapData.elements.map((p: any) => p.id);
       const dbAssistHistories = await getAssistHistories(allAssistPlayerIds);
 
-      // Build per-player recent assists map
+      // For each player, compute assists/xA scored ONLY in fixtures for their current club.
+      // This prevents transferred players' pre-transfer assists inflating the new club's pool.
+      const currentClubAssistsMap = new Map<number, { assists: number; xA: number }>();
+      bootstrapData.elements.forEach((player: any) => {
+        const history = dbAssistHistories.get(player.id) || [];
+        const currentClubGames = history.filter((g: any) => {
+          const fix = fixtureTeamMapAS.get(g.fixture);
+          return fix && (fix.home === player.team || fix.away === player.team);
+        });
+        if (currentClubGames.length >= 1) {
+          const assists = currentClubGames.reduce((s: number, g: any) => s + (g.assists || 0), 0);
+          const xA = currentClubGames.reduce((s: number, g: any) => s + parseFloat(g.expected_assists || 0), 0);
+          currentClubAssistsMap.set(player.id, { assists, xA });
+        } else {
+          // No DB history for current club — fall back to full-season bootstrap stats
+          currentClubAssistsMap.set(player.id, {
+            assists: parseInt(player.assists || 0),
+            xA: parseFloat(player.expected_assists || 0)
+          });
+        }
+      });
+
+      // Calculate team totals using current-club-only filtered stats
+      const teamTotals: { [teamId: number]: { total: number, name: string, short_name: string } } = {};
+      bootstrapData.teams.forEach((team: any) => {
+        teamTotals[team.id] = { total: 0, name: team.name, short_name: team.short_name };
+      });
+      bootstrapData.elements.forEach((player: any) => {
+        const filtered = currentClubAssistsMap.get(player.id) || { assists: 0, xA: 0 };
+        if (teamTotals[player.team]) {
+          teamTotals[player.team].total += filtered.assists + filtered.xA;
+        }
+      });
+
+      // Build per-player recent assists map (still used for additive pool signal)
       const recentAssistsMap = new Map<number, { assists: number, poolSize: number }>();
       bootstrapData.elements.forEach((player: any) => {
         const history = dbAssistHistories.get(player.id) || [];
@@ -9530,9 +9581,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const teamRecentAssistTotal = teamRecentAssistsMap.get(teamId) || 0;
         
         teamPlayersList.forEach((player: any) => {
-          const assists = parseInt(player.assists || 0);
-          const expectedAssists = parseFloat(player.expected_assists || 0);
-          const playerTotal = assists + expectedAssists;
+          // Use current-club filtered totals for share computation (transfer fix)
+          const filteredCC = currentClubAssistsMap.get(player.id) || { assists: 0, xA: 0 };
+          const playerTotal = filteredCC.assists + filteredCC.xA;
+          const assists = filteredCC.assists; // for set piece bonus calc
           
           if (playerTotal > 0 && teamData.total > 0) {
             // Additive pool: (season assists + season xA + last 8 actual assists) / team equivalent.
@@ -16226,15 +16278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
         
-        // Bulk-load player histories for recency-weighted bonus calculation
-        const { getBulkPlayerHistories: getBulkBonus, computeRecentMetrics: computeBonus } = await import('./player-history-service');
-        const allBonusPlayerIds = activePlayers.map((p: any) => p.id);
-        const dbHistoriesBonus = await getBulkBonus(allBonusPlayerIds);
-
-        // Historical bonus-per-appearance approach:
-        // bonus_per_fixture = recentBonusPerGame (last 8 completed games) — more responsive
-        // to current role than full-season player.bonus / playerStarts.
-        // Then apply mild fixture difficulty adjustment for future games.
+        // Bonus per fixture uses season average (player.bonus / player.starts) — see inside player loop.
         const bonusPointsProjections = activePlayers.map((player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
@@ -16244,12 +16288,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalBonusPoints = 0;
           let totalPoints = 0;
           
-          // recentBonusPerGame: average bonus per completed game in last 8.
-          // Replaces full-season player.bonus / playerStarts — more responsive to current role.
-          // 0-min completed games (benched) are included so rotation players aren't inflated.
-          const playerHistoryBonus = dbHistoriesBonus.get(player.id) || [];
-          const { recentBonusPerGame } = computeBonus(playerHistoryBonus, 8);
-          const bonusPerFixture = recentBonusPerGame;
+          // Bonus per fixture = season average (total bonus / starts).
+          // Season average is the most stable predictor — avoids last-8 injury/poor-run dips
+          // collapsing projections for established bonus contributors like Haaland, Gabriel.
+          const bonusPerFixture = (player.bonus || 0) / Math.max(1, player.starts || 1);
           
           const bonusEvents: BootstrapEvent[] = fplData.events || [];
           const currentGW = fplData.events.find((e: any) => e.is_current)?.id || 1;
