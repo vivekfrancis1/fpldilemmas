@@ -951,6 +951,12 @@ export default function PlayerTotalPoints() {
     return map;
   }, [bootstrapData?.teams]);
 
+  // Normalize any team name variant (full or short) to its canonical short name
+  const normalizeTeam = (name: string): string => {
+    if (!name) return name;
+    return teamNameToShortName.get(name) || name;
+  };
+
   // Create player ID to web_name mapping
   const playerIdToWebName = useMemo(() => {
     if (!bootstrapData?.elements) return new Map<number, string>();
@@ -1305,13 +1311,13 @@ export default function PlayerTotalPoints() {
     return fullGameweekRange.filter(gw => !excludedGameweeks.has(gw));
   }, [fullGameweekRange, excludedGameweeks]);
 
-  // Get unique teams and positions for filters
+  // Get unique teams and positions for filters — normalize to short names to avoid duplicates
   const teams = useMemo(() => {
     if (!displayData) return [];
-    return Array.from(new Set(displayData.map(p => p.team)))
+    return Array.from(new Set(displayData.map(p => normalizeTeam(p.team))))
       .filter(Boolean)
       .sort();
-  }, [displayData]);
+  }, [displayData, teamNameToShortName]);
 
   const positions = useMemo(() => {
     // Always show all 4 FPL positions regardless of what's in the data
@@ -1340,7 +1346,7 @@ export default function PlayerTotalPoints() {
         const matches = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
         if (!matches) return false;
       }
-      if (selectedTeams.size > 0 && !selectedTeams.has(player.team)) return false;
+      if (selectedTeams.has(normalizeTeam(player.team))) return false;
       if (searchTerm && !player.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
           !player.team.toLowerCase().includes(searchTerm.toLowerCase())) return false;
       
@@ -1809,7 +1815,7 @@ export default function PlayerTotalPoints() {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => setSelectedTeams(new Set(['_none_']))}
+                      onClick={() => setSelectedTeams(new Set(teams))}
                       className="text-xs sm:text-sm bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 sm:px-3 py-1.5"
                       data-testid="button-exclude-all-teams"
                     >
@@ -1819,7 +1825,7 @@ export default function PlayerTotalPoints() {
                 </div>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {teams.map(team => {
-                    const isSelected = selectedTeams.size === 0 || selectedTeams.has(team);
+                    const isSelected = !selectedTeams.has(team);
                     const shortName = teamNameToShortName.get(team) || team;
                     return (
                       <Button
