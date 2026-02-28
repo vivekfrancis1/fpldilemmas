@@ -699,6 +699,50 @@ export default function ProjectionAccuracy() {
                       ))
                     )}
                   </tbody>
+                  {filteredTeams.length > 0 && (() => {
+                    const n = filteredTeams.length;
+                    const totalProj = filteredTeams.reduce((s, t) =>
+                      s + (t.projected_goals_scored && t.projected_goals_scored !== '0' ? parseFloat(t.projected_goals_scored) : 0), 0);
+                    const teamsWithActuals = filteredTeams.filter(t => t.actual_goals_scored !== null);
+                    const totalActual = teamsWithActuals.reduce((s, t) => s + (t.actual_goals_scored as number), 0);
+                    const teamsWithDiff = filteredTeams.filter(t => t.goals_scored_difference !== null);
+                    const totalDiff = teamsWithDiff.reduce((s, t) => s + parseFloat(t.goals_scored_difference as string), 0);
+                    const avgProj = totalProj / n;
+                    const avgActual = teamsWithActuals.length > 0 ? totalActual / teamsWithActuals.length : null;
+                    const avgDiff = teamsWithDiff.length > 0 ? totalDiff / teamsWithDiff.length : null;
+                    return (
+                      <tfoot>
+                        <tr className="bg-gray-50 border-t-2 border-gray-300 font-bold">
+                          <td className="p-3 text-gray-700">Total ({n} teams)</td>
+                          <td className="text-center p-3 text-purple-600">{totalProj.toFixed(2)}</td>
+                          <td className="text-center p-3">
+                            {teamsWithActuals.length > 0
+                              ? <span className="text-green-600">{totalActual}</span>
+                              : <span className="text-gray-400">-</span>}
+                          </td>
+                          <td className={`text-center p-3 ${getDifferenceColor(teamsWithDiff.length > 0 ? totalDiff.toFixed(2) : null)}`}>
+                            {teamsWithDiff.length > 0
+                              ? <div className="flex items-center justify-center gap-1">{getDifferenceIcon(totalDiff.toFixed(2))}{totalDiff.toFixed(2)}</div>
+                              : <span className="text-gray-400">-</span>}
+                          </td>
+                        </tr>
+                        <tr className="bg-gray-50 border-t border-gray-200 font-semibold text-gray-500">
+                          <td className="p-3">Avg per team</td>
+                          <td className="text-center p-3 text-purple-500">{avgProj.toFixed(2)}</td>
+                          <td className="text-center p-3">
+                            {avgActual !== null
+                              ? <span className="text-green-500">{avgActual.toFixed(2)}</span>
+                              : <span className="text-gray-400">-</span>}
+                          </td>
+                          <td className={`text-center p-3 ${getDifferenceColor(avgDiff !== null ? avgDiff.toFixed(2) : null)}`}>
+                            {avgDiff !== null
+                              ? <div className="flex items-center justify-center gap-1">{getDifferenceIcon(avgDiff.toFixed(2))}{avgDiff.toFixed(2)}</div>
+                              : <span className="text-gray-400">-</span>}
+                          </td>
+                        </tr>
+                      </tfoot>
+                    );
+                  })()}
                 </table>
               </div>
               {filteredTeams.length > 0 && (
