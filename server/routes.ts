@@ -9091,6 +9091,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     ? calculateAvailabilityProbability(fplPlayer, gwNum, currentGW, goalsEvents)
                     : 1.0;
                   
+                  // NOTE: Do NOT apply recentP60 or startingRate here.
+                  // goalShare already encodes selection frequency — a rotation player scores fewer goals
+                  // per season → lower goalShare. Adding a further startingRate multiplier double-counts.
                   gameweekProjections[gameweek] = (goalShare / 100) * (teamGoals as number) * availability * formMultiplier;
                   
                   // Build fixtureDetails for DGW support (individual fixture breakdown)
@@ -10770,7 +10773,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`DEBUG: Processing ${playersWithMinutes.length} players with minutes for 60-min threshold calculation`);
         
         // Bulk-load player histories from DB cache (set at startup; avoids 515 external API calls)
-        const { getBulkPlayerHistories } = await import('./player-history-service');
+        const { getBulkPlayerHistories, computeRecentMetrics } = await import('./player-history-service');
         const allPlayerIds = playersWithMinutes.map((p: any) => p.id);
         const dbHistories = await getBulkPlayerHistories(allPlayerIds);
         const dbCacheHits = dbHistories.size;
@@ -10809,19 +10812,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   if (gamesWithMinutes.length > 0) {
                     appearances = gamesWithMinutes.length;
-                    // T002: Recency-weighted pct60Plus — last 5 games count 2×, older games 1×
-                    const RECENT_N = 5;
-                    const recentGames = gamesWithMinutes.slice(-RECENT_N);
-                    const olderGames  = gamesWithMinutes.slice(0, -RECENT_N);
-                    const RECENT_WEIGHT = 2, OLDER_WEIGHT = 1;
-                    const recentHit = recentGames.filter((g: any) => g.minutes >= 60).length;
-                    const olderHit  = olderGames.filter((g: any)  => g.minutes >= 60).length;
-                    const weightedHit   = recentHit * RECENT_WEIGHT + olderHit * OLDER_WEIGHT;
-                    const weightedTotal = recentGames.length * RECENT_WEIGHT + olderGames.length * OLDER_WEIGHT;
-                    gamesHit60Plus = weightedTotal > 0
-                      ? (weightedHit / weightedTotal) * appearances
-                      : gamesWithMinutes.filter((gw: any) => gw.minutes >= 60).length;
-                    gamesBelow60 = appearances - gamesHit60Plus;
+                    // recentP60: unconditional P(60+ mins) from last 8 completed games.
+                    // Filters unplayed fixtures (team_h_score === null) before slicing,
+                    // so GW28 (null score) is excluded and doesn't count as a 0-min game.
+                    // 0-min entries from completed GWs (benched) ARE included — these
+                    // correctly represent non-selection. No startingRate needed.
+                    const { recentP60: rP60 } = computeRecentMetrics(historyArr, 8);
+                    gamesHit60Plus = rP60 * appearances;
+                    gamesBelow60 = (1 - rP60) * appearances;
                     const totalHistoryMinutes = gamesWithMinutes.reduce((sum: number, gw: any) => sum + gw.minutes, 0);
                     avgMinutesPerGame = totalHistoryMinutes / appearances;
                   }
@@ -11002,7 +11000,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create player clean sheet points projections
       const playerCleanSheetProjections: any[] = [];
-      
+
+      const { getBulkPlayerHistories: getBulkCS, computeRecentMetrics: computeCS } = await import('./player-history-service');
+      const allPlayerIdsCS = players.map((p: any) => p.id);
+      const dbHistoriesCS = await getBulkCS(allPlayerIdsCS);
+
       for (const player of players) {
         const team = teams.find((t: any) => t.id === player.team);
         const position = positions.find((p: any) => p.id === player.element_type);
@@ -11026,15 +11028,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const pct60Plus = playerMinutes.pct60Plus || 0;
         const pctBelow60 = playerMinutes.pctBelow60 || 0;
 
-        // startingRate: converts pct60Plus from a conditional rate ("when appearing, how often 60+")
-        // to a rate that accounts for rotation (players not always selected even when fit).
-        // Uses player.starts (bootstrap) / playerAppearances (minutes endpoint).
-        // For regular starters (Gabriel 21 starts / 22 apps = 95.5%) this barely moves.
-        // For rotation players (15 starts / 20 apps = 75%) this correctly reduces CS contribution.
-        const playerStarts = player.starts || 0;
-        const playerAppearances = playerMinutes.playerAppearances || 1;
-        const startingRate = Math.min(1.0, playerStarts / Math.max(playerAppearances, 1));
-        const adjustedPct60Plus = pct60Plus * startingRate;
+        // recentP60: single unconditional P(60+ mins) from last 8 completed games.
+        // Replaces the old pct60Plus × startingRate double-count — both metrics were
+        // conditioned on "appeared in squad", so multiplying them over-penalised rotation
+        // players who are now established starters (e.g. Hill: 56.3% → 75% corrected).
+        const playerHistoryCS = dbHistoriesCS.get(player.id) || [];
+        const { recentP60: csRecentP60 } = computeCS(playerHistoryCS, 8);
+        const adjustedPct60Plus = csRecentP60 * 100;
 
         const cleanSheetPoints = (position.singular_name === 'Midfielder') ? 1 : 4;
 
@@ -16217,10 +16217,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
         
+        // Bulk-load player histories for recency-weighted bonus calculation
+        const { getBulkPlayerHistories: getBulkBonus, computeRecentMetrics: computeBonus } = await import('./player-history-service');
+        const allBonusPlayerIds = activePlayers.map((p: any) => p.id);
+        const dbHistoriesBonus = await getBulkBonus(allBonusPlayerIds);
+
         // Historical bonus-per-appearance approach:
-        // bonus_per_fixture = player.bonus / team_fixtures_played
-        // This naturally incorporates both appearance rate AND bonus earning rate
-        // Then apply mild fixture difficulty adjustment for future games
+        // bonus_per_fixture = recentBonusPerGame (last 8 completed games) — more responsive
+        // to current role than full-season player.bonus / playerStarts.
+        // Then apply mild fixture difficulty adjustment for future games.
         const bonusPointsProjections = activePlayers.map((player: any) => {
           const team = fplData.teams.find((t: any) => t.id === player.team);
           const position = ['', 'GKP', 'DEF', 'MID', 'FWD'][player.element_type] || 'MID';
@@ -16230,13 +16235,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let totalBonusPoints = 0;
           let totalPoints = 0;
           
-          const playerBonus = player.bonus || 0;
-          const teamFixtures = teamFixturesPlayed.get(player.team) || finishedGWs;
-          // E1: Use per-start rate for accuracy — rotation players' bonus rate is better expressed per appearance
-          const playerStarts = player.starts || 0;
-          const bonusPerFixture = playerStarts > 0
-            ? playerBonus / playerStarts
-            : (teamFixtures > 0 ? playerBonus / teamFixtures : 0);
+          // recentBonusPerGame: average bonus per completed game in last 8.
+          // Replaces full-season player.bonus / playerStarts — more responsive to current role.
+          // 0-min completed games (benched) are included so rotation players aren't inflated.
+          const playerHistoryBonus = dbHistoriesBonus.get(player.id) || [];
+          const { recentBonusPerGame } = computeBonus(playerHistoryBonus, 8);
+          const bonusPerFixture = recentBonusPerGame;
           
           // T004: Form-based goal contribution multiplier — hot players earn more bonus per game
           const playerFormVal = parseFloat(player.form || "0");

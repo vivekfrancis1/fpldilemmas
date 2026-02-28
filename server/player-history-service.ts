@@ -13,6 +13,26 @@ async function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+export function computeRecentMetrics(historyArr: any[], n = 8): {
+  recentP60: number;
+  recentP_any: number;
+  recentBonusPerGame: number;
+} {
+  // Only consider completed fixtures (exclude unplayed GWs where score is null)
+  const playedEntries = historyArr.filter(g => g.team_h_score !== null);
+  // Take last n completed games (0-min entries = benched/not selected = valid non-selection data)
+  const recent = playedEntries.slice(-n);
+  // Fall back to all played entries if fewer than 4 recent completed games exist
+  const pool = recent.length >= 4 ? recent : playedEntries;
+
+  const recentP60 = pool.length > 0 ? pool.filter(g => g.minutes >= 60).length / pool.length : 0.5;
+  const recentP_any = pool.length > 0 ? pool.filter(g => g.minutes > 0).length / pool.length : 0.5;
+  const recentBonusPerGame = pool.length > 0
+    ? pool.reduce((s, g) => s + (g.bonus || 0), 0) / pool.length
+    : 0;
+  return { recentP60, recentP_any, recentBonusPerGame };
+}
+
 export async function getBulkPlayerHistories(playerIds: number[]): Promise<Map<number, any[]>> {
   const result = new Map<number, any[]>();
   if (playerIds.length === 0) return result;
