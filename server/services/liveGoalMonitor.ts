@@ -373,9 +373,9 @@ export class LiveGoalMonitor {
 
   private async processLiveFixture(fixture: any, liveData: any) {
     const fixtureId = fixture.id;
-    const homeScore = fixture.team_h_score ?? 0;
-    const awayScore = fixture.team_a_score ?? 0;
-    const minute = fixture.minutes ?? '?';
+    // Note: fixture.team_h_score / team_a_score come from our 30-min cached /api/fixtures
+    // endpoint and are unreliable during live matches. We derive the live score from our
+    // prevState (tracked per-poll) + newly detected goals to ensure the tweet score is correct.
 
     const currentPlayerGoals = new Map<number, number>();
     const currentPlayerAssists = new Map<number, number>();
@@ -411,12 +411,13 @@ export class LiveGoalMonitor {
     const prevState = this.fixtureStates.get(fixtureId);
 
     if (!prevState) {
+      // First time seeing this fixture — initialise from fixture data (match just started, score reliable)
       this.fixtureStates.set(fixtureId, {
         fixtureId,
         homeTeamId: fixture.team_h,
         awayTeamId: fixture.team_a,
-        homeScore,
-        awayScore,
+        homeScore: fixture.team_h_score ?? 0,
+        awayScore: fixture.team_a_score ?? 0,
         playerGoals: currentPlayerGoals,
         playerAssists: currentPlayerAssists,
         playerRedCards: currentPlayerRedCards,
@@ -426,14 +427,13 @@ export class LiveGoalMonitor {
       return;
     }
 
-    const matchCtx: MatchContext = {
-      homeTeamName: this.bootstrapTeams.get(fixture.team_h)?.name || 'Home',
-      awayTeamName: this.bootstrapTeams.get(fixture.team_a)?.name || 'Away',
-      homeScore,
-      awayScore,
-      minute,
-      fixtureId,
-    };
+    // Derive live score from our tracked prevState, then increment per new goal.
+    // This avoids the stale 30-min cached fixture score being used in tweets.
+    let liveHomeScore = prevState.homeScore;
+    let liveAwayScore = prevState.awayScore;
+
+    const homeTeamName = this.bootstrapTeams.get(fixture.team_h)?.name || 'Home';
+    const awayTeamName = this.bootstrapTeams.get(fixture.team_a)?.name || 'Away';
 
     const newGoalScorers = this.findNewEntries(prevState.playerGoals, currentPlayerGoals);
     const newAssistProviders = this.findNewEntries(prevState.playerAssists, currentPlayerAssists);
@@ -445,6 +445,13 @@ export class LiveGoalMonitor {
         const scorer = this.bootstrapPlayers.get(scorerId);
         if (!scorer) continue;
 
+        // Increment the live score for this goal before building the tweet context
+        if (scorer.team === fixture.team_h) {
+          liveHomeScore++;
+        } else {
+          liveAwayScore++;
+        }
+
         let assistProvider: BootstrapPlayer | undefined;
         if (safeAssistAttribution && newAssistProviders.length > 0) {
           assistProvider = this.bootstrapPlayers.get(newAssistProviders.shift()!);
@@ -454,10 +461,18 @@ export class LiveGoalMonitor {
         const assistOwnership = assistProvider ? parseFloat(assistProvider.selected_by_percent) : 0;
 
         if (scorerOwnership > this.OWNERSHIP_THRESHOLD || assistOwnership > this.OWNERSHIP_THRESHOLD) {
+          const goalCtx: MatchContext = {
+            homeTeamName,
+            awayTeamName,
+            homeScore: liveHomeScore,
+            awayScore: liveAwayScore,
+            minute: fixture.minutes ?? '?',
+            fixtureId,
+          };
           await this.postEventTweet(this.formatGoalTweet(
             scorer.web_name, scorerOwnership,
             assistProvider?.web_name, assistProvider ? assistOwnership : undefined,
-            matchCtx
+            goalCtx
           ));
         } else {
           console.log(`⚽ Goal by ${scorer.web_name} (${scorerOwnership}%) skipped - below threshold`);
@@ -471,12 +486,21 @@ export class LiveGoalMonitor {
       if (!player) continue;
       const ownership = parseFloat(player.selected_by_percent);
       if (ownership > this.OWNERSHIP_THRESHOLD) {
-        await this.postEventTweet(this.formatRedCardTweet(player.web_name, ownership, matchCtx));
+        const redCardCtx: MatchContext = {
+          homeTeamName,
+          awayTeamName,
+          homeScore: liveHomeScore,
+          awayScore: liveAwayScore,
+          minute: fixture.minutes ?? '?',
+          fixtureId,
+        };
+        await this.postEventTweet(this.formatRedCardTweet(player.web_name, ownership, redCardCtx));
       }
     }
 
-    prevState.homeScore = homeScore;
-    prevState.awayScore = awayScore;
+    // Update tracked state with our computed live scores (not stale fixture cache scores)
+    prevState.homeScore = liveHomeScore;
+    prevState.awayScore = liveAwayScore;
     prevState.playerGoals = currentPlayerGoals;
     prevState.playerAssists = currentPlayerAssists;
     prevState.playerRedCards = currentPlayerRedCards;
@@ -514,7 +538,7 @@ export class LiveGoalMonitor {
     assistName: string | undefined, assistOwnership: number | undefined,
     ctx: MatchContext
   ): string {
-    let tweet = `⚽ GOAL! ${scorerName} (${ctx.minute}') [${scorerOwnership.toFixed(1)}% owned]`;
+    let tweet = `⚽ GOAL! ${scorerName} [${scorerOwnership.toFixed(1)}% owned]`;
     if (assistName) {
       tweet += `\n🅰️ Assist: ${assistName}`;
       if (assistOwnership !== undefined) {
@@ -527,7 +551,7 @@ export class LiveGoalMonitor {
   }
 
   private formatRedCardTweet(playerName: string, ownership: number, ctx: MatchContext): string {
-    let tweet = `🟥 Red Card! ${playerName} (${ctx.minute}') [${ownership.toFixed(1)}% owned]`;
+    let tweet = `🟥 Red Card! ${playerName} [${ownership.toFixed(1)}% owned]`;
     tweet += `\n\n${this.matchLine(ctx)}`;
     tweet += this.footer(ctx);
     return tweet;

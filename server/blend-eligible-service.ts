@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { db } from "./db";
 import { blendEligiblePlayers } from "@shared/schema";
 
@@ -140,12 +141,12 @@ export async function persistBlendMap(
       .onConflictDoUpdate({
         target: blendEligiblePlayers.playerId,
         set: {
-          teamId: blendEligiblePlayers.teamId,
-          activeClubGames: blendEligiblePlayers.activeClubGames,
-          startedClubGames: blendEligiblePlayers.startedClubGames,
-          teamTotalGames: blendEligiblePlayers.teamTotalGames,
-          maxConsecDnp: blendEligiblePlayers.maxConsecDnp,
-          blendWeight: blendEligiblePlayers.blendWeight,
+          teamId: sql`excluded.team_id`,
+          activeClubGames: sql`excluded.active_club_games`,
+          startedClubGames: sql`excluded.started_club_games`,
+          teamTotalGames: sql`excluded.team_total_games`,
+          maxConsecDnp: sql`excluded.max_consec_dnp`,
+          blendWeight: sql`excluded.blend_weight`,
           updatedAt: new Date(),
         },
       });
