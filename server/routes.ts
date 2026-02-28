@@ -8088,7 +8088,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get team goal projections directly — no HTTP round-trip, no readiness gate dependency
       const { TeamGoalsService: TeamGoalsServiceCS } = await import('./team-goals-service');
       const teamGoalProjectionsCS = await TeamGoalsServiceCS.getTeamGoalProjections(startGWforCS, endGameweek);
-      
+
+      // Build actual season CS rate map for 50:50 blend with Poisson formula
+      const standingsResponse = await internalFetch("api/current-standings");
+      const standingsData = standingsResponse.ok ? await standingsResponse.json() : [];
+      const standingsTeams: any[] = standingsData.standings || standingsData || [];
+      let totalCS = 0, totalPlayed = 0;
+      standingsTeams.forEach((t: any) => { totalCS += t.cleanSheets || 0; totalPlayed += t.played || 0; });
+      const leagueAvgCSRate = totalPlayed > 0 ? totalCS / totalPlayed : 0.257;
+      const actualCSRateMap = new Map<number, number>();
+      standingsTeams.forEach((t: any) => {
+        actualCSRateMap.set(t.id, (t.played || 0) >= 5 ? (t.cleanSheets || 0) / t.played : leagueAvgCSRate);
+      });
+
       // Build goals-against maps by mirroring: home concedes what away scores and vice versa
       const teamGoalsAgainstMap = new Map();
       const teamGoalsAgainstDetailsMap = new Map();
@@ -8165,10 +8177,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const matchingFixture = gwFixtureDetails.find((fd: any) => fd.opponent === opponent.short_name);
           const perGameGoalsAgainst = matchingFixture ? matchingFixture.goalsAgainst : 1.5; // Default if not found
           
-          // POISSON DISTRIBUTION FORMULA: P(Clean Sheet) = e^(-λ * exponent) * multiplier
-          // Uses admin-configurable cleanSheetExponent and cleanSheetMultiplier settings
-          let cleanSheetProbability = Math.exp(-perGameGoalsAgainst * adminGoalSettings.cleanSheetExponent) * adminGoalSettings.cleanSheetMultiplier;
-          
+          // POISSON DISTRIBUTION FORMULA blended 50:50 with team's actual season CS rate.
+          // formulaCS captures fixture difficulty (opponent attack strength).
+          // teamActualCSPct anchors the prediction to the defending team's real defensive quality.
+          const formulaCS = Math.exp(-perGameGoalsAgainst * adminGoalSettings.cleanSheetExponent) * adminGoalSettings.cleanSheetMultiplier;
+          const teamActualCSPct = (actualCSRateMap.get(team.id) ?? leagueAvgCSRate) * 100;
+          let cleanSheetProbability = 0.5 * formulaCS + 0.5 * teamActualCSPct;
+
           // Ensure realistic bounds (0-100%)
           cleanSheetProbability = Math.max(0, Math.min(100, cleanSheetProbability));
           
