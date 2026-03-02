@@ -1342,11 +1342,11 @@ export default function PlayerTotalPoints() {
     if (!displayData) return [];
     
     let filtered = displayData.filter(player => {
-      // Position filter - normalize both sides for comparison
+      // Position filter - normalize both sides for comparison (exclude semantics: set contains excluded positions)
       if (selectedPositions.size > 0) {
         const normalizedPos = normalizePosition(player.position);
-        const matches = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
-        if (!matches) return false;
+        const excluded = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
+        if (excluded) return false;
       }
       if (selectedTeams.has(normalizeTeam(player.team))) return false;
       if (searchTerm && !player.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
@@ -1766,7 +1766,7 @@ export default function PlayerTotalPoints() {
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => setSelectedPositions(new Set(['_none_']))}
+                      onClick={() => setSelectedPositions(new Set(positions))}
                       className="text-xs sm:text-sm bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 sm:px-3 py-1.5"
                       data-testid="button-exclude-all-positions"
                     >
@@ -1776,7 +1776,7 @@ export default function PlayerTotalPoints() {
                 </div>
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {positions.map(position => {
-                    const isSelected = selectedPositions.size === 0 || selectedPositions.has(position);
+                    const isSelected = !selectedPositions.has(position);
                     const shortForm = position === 'Goalkeeper' ? 'GKP' : position === 'Defender' ? 'DEF' : position === 'Midfielder' ? 'MID' : position === 'Forward' ? 'FWD' : position;
                     return (
                       <Button
