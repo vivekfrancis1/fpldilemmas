@@ -769,7 +769,8 @@ export default function ProjectionDocumentation() {
                     </ul>
                     <div><strong>FPL Points:</strong></div>
                     <ul className="list-disc ml-5 text-xs">
-                      <li>GKP / DEF: 6 points per goal</li>
+                      <li>GKP: 10 points per goal</li>
+                      <li>DEF: 6 points per goal</li>
                       <li>MID: 5 points per goal</li>
                       <li>FWD: 4 points per goal</li>
                     </ul>
@@ -1055,7 +1056,7 @@ export default function ProjectionDocumentation() {
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
                     {[
-                      ["Goals", "GKP/DEF 6 | MID 5 | FWD 4"],
+                      ["Goals", "GKP 10 | DEF 6 | MID 5 | FWD 4"],
                       ["Assists", "All positions: 3"],
                       ["Clean Sheet", "GKP/DEF 4 | MID 1 | FWD 0"],
                       ["Minutes", "60+ min: 2 | 1–59: 1 | DNP: 0"],
