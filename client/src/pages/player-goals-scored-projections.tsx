@@ -344,11 +344,11 @@ export default function PlayerGoalsScoredProjections() {
 
     return displayData
       .filter(player => {
-        // Position filter - normalize both sides for comparison
+        // Position filter - exclude semantics (set contains excluded positions)
         if (selectedPositions.size > 0) {
           const normalizedPos = normalizePosition(player.position);
-          const matches = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
-          if (!matches) return false;
+          const excluded = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
+          if (excluded) return false;
         }
         if (selectedTeams.size > 0 && !selectedTeams.has(player.teamShort)) return false;
         if (searchQuery && player.playerName && !player.playerName.toLowerCase().includes(searchQuery.toLowerCase())) return false;
@@ -792,13 +792,13 @@ export default function PlayerGoalsScoredProjections() {
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set())}
                     className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 border-green-300">All</Button>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set(['_none_']))}
+                  <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set(positions.map(p => p.name)))}
                     className="text-xs px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 border-red-300">None</Button>
                 </div>
               </div>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {positions.map(pos => {
-                  const isSelected = selectedPositions.size === 0 || selectedPositions.has(pos.name);
+                  const isSelected = !selectedPositions.has(pos.name);
                   const shortForm = pos.name === 'Goalkeeper' ? 'GKP' : pos.name === 'Defender' ? 'DEF' : pos.name === 'Midfielder' ? 'MID' : pos.name === 'Forward' ? 'FWD' : pos.name;
                   return (
                     <Button key={pos.id} variant="outline" size="sm" onClick={() => togglePositionSelection(pos.name)}

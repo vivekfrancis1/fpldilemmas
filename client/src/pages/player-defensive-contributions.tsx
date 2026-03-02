@@ -438,14 +438,12 @@ export default function PlayerDefensiveContributions() {
       );
     }
 
-    // Position filter - normalize both sides for comparison
-    if (selectedPositions.size > 0 && !selectedPositions.has('_none_')) {
+    // Position filter - exclude semantics (set contains excluded positions)
+    if (selectedPositions.size > 0) {
       filtered = filtered.filter(p => {
         const normalizedPos = normalizePosition(p.position);
-        return Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
+        return !Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
       });
-    } else if (selectedPositions.has('_none_')) {
-      filtered = [];
     }
 
     // Team filter
@@ -851,13 +849,13 @@ export default function PlayerDefensiveContributions() {
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set())}
                   className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 border-green-300">All</Button>
-                <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set(['_none_']))}
+                <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set(['Defender', 'Midfielder', 'Forward']))}
                   className="text-xs px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 border-red-300">None</Button>
               </div>
             </div>
             <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {['Defender', 'Midfielder', 'Forward'].map(pos => {
-                const isSelected = selectedPositions.size === 0 || selectedPositions.has(pos);
+                const isSelected = !selectedPositions.has(pos);
                 const shortForm = pos === 'Defender' ? 'DEF' : pos === 'Midfielder' ? 'MID' : 'FWD';
                 return (
                   <Button key={pos} variant="outline" size="sm" onClick={() => togglePositionSelection(pos)}

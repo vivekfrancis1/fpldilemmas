@@ -213,11 +213,11 @@ export default function PlayerBonusPoints() {
         projection.playerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         projection.teamName.toLowerCase().includes(searchTerm.toLowerCase());
       
-      // Position filter - normalize both sides for comparison
+      // Position filter - exclude semantics (set contains excluded positions)
       if (selectedPositions.size > 0) {
         const normalizedPos = normalizePosition(projection.position);
-        const matches = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
-        if (!matches) return false;
+        const excluded = Array.from(selectedPositions).some(sel => normalizePosition(sel) === normalizedPos);
+        if (excluded) return false;
       }
       if (selectedTeams.size > 0 && !selectedTeams.has(projection.teamName)) return false;
       
@@ -448,13 +448,13 @@ export default function PlayerBonusPoints() {
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set())}
                     className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 border-green-300">All</Button>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set(['_none_']))}
+                  <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set(['GKP', 'DEF', 'MID', 'FWD']))}
                     className="text-xs px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 border-red-300">None</Button>
                 </div>
               </div>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {['GKP', 'DEF', 'MID', 'FWD'].map(pos => {
-                  const isSelected = selectedPositions.size === 0 || selectedPositions.has(pos);
+                  const isSelected = !selectedPositions.has(pos);
                   return (
                     <Button key={pos} variant="outline" size="sm" onClick={() => togglePositionSelection(pos)}
                       className={`text-xs px-2 py-1 ${isSelected ? 'bg-teal-100 text-teal-700 hover:bg-teal-200 border border-teal-300' : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'}`}
