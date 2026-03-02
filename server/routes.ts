@@ -3059,26 +3059,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
               livePoints += benchPoints;
             }
             
-            // Calculate projected points for this manager's team
+            // Calculate projected points using optimised lineup (same logic as my-dashboard)
+            // This picks the best starting 11 by formation + optimal captain, not the actual picks
             let projectedPoints = 0;
             let projectedBenchPoints = 0;
-            
-            // Process starting 11 projected points
-            for (const pick of starting11) {
-              const playerProjected = playerProjectionsMap.get(pick.element) || 0;
-              const multiplier = pick.multiplier || 1; // Captain = 2, Triple Captain = 3
-              projectedPoints += playerProjected * multiplier;
-            }
-            
-            // Process bench projected points
-            for (const pick of bench) {
-              const playerProjected = playerProjectionsMap.get(pick.element) || 0;
-              projectedBenchPoints += playerProjected;
-            }
-            
-            // If bench boost is active, add bench projected points
+
             if (activeChip === 'bboost') {
-              projectedPoints += projectedBenchPoints;
+              // Bench boost: sum all 15 players (no optimisation needed)
+              for (const pick of picks) {
+                projectedPoints += playerProjectionsMap.get(pick.element) || 0;
+              }
+            } else {
+              // Build position groups sorted by projected points (descending)
+              interface ProjPick { element: number; proj: number; elementType: number }
+              const allProj: ProjPick[] = picks.map((pick: any) => ({
+                element: pick.element,
+                proj: playerProjectionsMap.get(pick.element) || 0,
+                elementType: playerTypes.get(pick.element) || 0,
+              }));
+              const gkps = allProj.filter(p => p.elementType === 1).sort((a, b) => b.proj - a.proj);
+              const defs = allProj.filter(p => p.elementType === 2).sort((a, b) => b.proj - a.proj);
+              const mids = allProj.filter(p => p.elementType === 3).sort((a, b) => b.proj - a.proj);
+              const fwds = allProj.filter(p => p.elementType === 4).sort((a, b) => b.proj - a.proj);
+
+              // Try all valid formations (1 GKP + 10 outfield)
+              let bestStarting: ProjPick[] = [];
+              let bestTotal = -1;
+              for (let numDef = 3; numDef <= 5; numDef++) {
+                for (let numMid = 2; numMid <= 5; numMid++) {
+                  for (let numFwd = 1; numFwd <= 3; numFwd++) {
+                    if (numDef + numMid + numFwd !== 10) continue;
+                    if (numDef > defs.length || numMid > mids.length || numFwd > fwds.length || !gkps.length) continue;
+                    const candidate = [gkps[0], ...defs.slice(0, numDef), ...mids.slice(0, numMid), ...fwds.slice(0, numFwd)];
+                    const total = candidate.reduce((s, p) => s + p.proj, 0);
+                    if (total > bestTotal) { bestTotal = total; bestStarting = candidate; }
+                  }
+                }
+              }
+              // Fallback: use actual starting 11 if optimisation produced nothing
+              if (!bestStarting.length) {
+                bestStarting = starting11.map((pick: any) => ({
+                  element: pick.element,
+                  proj: playerProjectionsMap.get(pick.element) || 0,
+                  elementType: playerTypes.get(pick.element) || 0,
+                }));
+                bestTotal = bestStarting.reduce((s: number, p: ProjPick) => s + p.proj, 0);
+              }
+
+              // Captain = highest projected player in optimised starting 11
+              const captainProj = [...bestStarting].sort((a, b) => b.proj - a.proj)[0]?.proj || 0;
+              // Total = sum of optimised 11 + extra point for captain (captain counted twice)
+              projectedPoints = bestTotal + captainProj;
+
+              // Bench = remaining players not in optimised starting 11
+              const startingSet = new Set(bestStarting.map(p => p.element));
+              for (const pick of picks) {
+                if (!startingSet.has(pick.element)) {
+                  projectedBenchPoints += playerProjectionsMap.get(pick.element) || 0;
+                }
+              }
             }
             
             return {
@@ -3499,6 +3538,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.warn("Could not fetch player projections for batch projected points:", err);
       }
 
+      // Build player element-type map once for all managers
+      const batchPlayerTypes = new Map<number, number>();
+      for (const player of bootstrapData.elements) {
+        batchPlayerTypes.set(player.id, player.element_type);
+      }
+
       const results = await Promise.all(
         idsToFetch.map(async (managerId: number) => {
           try {
@@ -3512,21 +3557,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const picks = picksData.picks || [];
             const activeChip = picksData.active_chip || null;
 
-            const starting11 = picks.filter((p: any) => p.position <= 11);
-            const bench = picks.filter((p: any) => p.position > 11);
-
             let projectedPoints = 0;
             let projectedBenchPoints = 0;
 
-            for (const pick of starting11) {
-              const playerProjected = playerProjectionsMap.get(pick.element) || 0;
-              projectedPoints += playerProjected * (pick.multiplier || 1);
-            }
-            for (const pick of bench) {
-              projectedBenchPoints += playerProjectionsMap.get(pick.element) || 0;
-            }
             if (activeChip === 'bboost') {
-              projectedPoints += projectedBenchPoints;
+              for (const pick of picks) {
+                projectedPoints += playerProjectionsMap.get(pick.element) || 0;
+              }
+            } else {
+              // Optimise lineup: best formation + highest-projected captain
+              interface BProjPick { element: number; proj: number; elementType: number }
+              const allProj: BProjPick[] = picks.map((pick: any) => ({
+                element: pick.element,
+                proj: playerProjectionsMap.get(pick.element) || 0,
+                elementType: batchPlayerTypes.get(pick.element) || 0,
+              }));
+              const bgkps = allProj.filter(p => p.elementType === 1).sort((a, b) => b.proj - a.proj);
+              const bdefs = allProj.filter(p => p.elementType === 2).sort((a, b) => b.proj - a.proj);
+              const bmids = allProj.filter(p => p.elementType === 3).sort((a, b) => b.proj - a.proj);
+              const bfwds = allProj.filter(p => p.elementType === 4).sort((a, b) => b.proj - a.proj);
+
+              let bBestStarting: BProjPick[] = [];
+              let bBestTotal = -1;
+              for (let nd = 3; nd <= 5; nd++) {
+                for (let nm = 2; nm <= 5; nm++) {
+                  for (let nf = 1; nf <= 3; nf++) {
+                    if (nd + nm + nf !== 10) continue;
+                    if (nd > bdefs.length || nm > bmids.length || nf > bfwds.length || !bgkps.length) continue;
+                    const cand = [bgkps[0], ...bdefs.slice(0, nd), ...bmids.slice(0, nm), ...bfwds.slice(0, nf)];
+                    const tot = cand.reduce((s, p) => s + p.proj, 0);
+                    if (tot > bBestTotal) { bBestTotal = tot; bBestStarting = cand; }
+                  }
+                }
+              }
+              if (!bBestStarting.length) {
+                // Fallback: actual starting 11
+                bBestStarting = picks.filter((p: any) => p.position <= 11).map((pick: any) => ({
+                  element: pick.element,
+                  proj: playerProjectionsMap.get(pick.element) || 0,
+                  elementType: batchPlayerTypes.get(pick.element) || 0,
+                }));
+                bBestTotal = bBestStarting.reduce((s: number, p: BProjPick) => s + p.proj, 0);
+              }
+              const captainProj = [...bBestStarting].sort((a, b) => b.proj - a.proj)[0]?.proj || 0;
+              projectedPoints = bBestTotal + captainProj;
+
+              const startingSet = new Set(bBestStarting.map(p => p.element));
+              for (const pick of picks) {
+                if (!startingSet.has(pick.element)) {
+                  projectedBenchPoints += playerProjectionsMap.get(pick.element) || 0;
+                }
+              }
             }
 
             return {
