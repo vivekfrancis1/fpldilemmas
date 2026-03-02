@@ -1108,6 +1108,7 @@ export default function PlayerTotalPoints() {
       const gwProjections = (player.gameweekProjections || {}) as { [key: string]: number };
 
       for (let gw = startGameweek; gw <= endGameweek; gw++) {
+        if (excludedGameweeks.has(gw)) continue;
         const key = gw.toString();
         if (key in gwProjections) {
           filtered[key] = gwProjections[key];
@@ -1124,6 +1125,7 @@ export default function PlayerTotalPoints() {
         if (!gwMap) continue;
         const filteredComp: { [key: string]: number } = {};
         for (let gw = startGameweek; gw <= endGameweek; gw++) {
+          if (excludedGameweeks.has(gw)) continue;
           const key = gw.toString();
           if (key in gwMap) filteredComp[key] = gwMap[key];
         }
@@ -1143,7 +1145,7 @@ export default function PlayerTotalPoints() {
         averageValue: playerPrice > 0 ? newTotal / playerPrice : 0,
       };
     });
-  }, [fullRangeData, startGameweek, endGameweek]);
+  }, [fullRangeData, startGameweek, endGameweek, excludedGameweeks]);
 
   // Recalculate player data based on excluded point components
   const adjustedPlayerData = useMemo((): PlayerTotalPointsData[] | null => {
