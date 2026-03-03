@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Star, Search, ArrowUpDown, Users, Loader2, X, Filter, ChevronDown, ChevronUp } from "lucide-react";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, PROJECTION_DEFAULT_WEEKS } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -42,6 +43,7 @@ type SortField = 'name' | 'team' | 'totalBonusPoints' | string;
 type SortDirection = 'asc' | 'desc';
 
 export default function PlayerBonusPoints() {
+  const { defaultWeeks } = useProjectionSettings();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPositions, setSelectedPositions] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
@@ -72,7 +74,7 @@ export default function PlayerBonusPoints() {
   useEffect(() => {
     if (!bootstrapData || initialized) return;
     
-    const range = getDefaultGameweekRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS); 
+    const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks); 
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
     

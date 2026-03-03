@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, History, Calendar } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, PROJECTION_DEFAULT_WEEKS } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
+import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,7 @@ interface TeamGoalsAgainstProjection {
 }
 
 export default function TeamGoalsAgainstProjections() {
+  const { defaultWeeks } = useProjectionSettings();
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
@@ -78,7 +80,7 @@ export default function TeamGoalsAgainstProjections() {
       return { startGameweek: "6", endGameweek: "11" }; // Fallback
     }
     debugGameweekCalculation(bootstrapData.events);
-    return getDefaultGameweekRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS);
+    return getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
   }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
@@ -181,7 +183,7 @@ export default function TeamGoalsAgainstProjections() {
       setEndGameweek(String(lastFinished));
       setExcludedGameweeks(new Set());
     } else if (viewMode === "future" && bootstrapData?.events) {
-      const newRange = getDefaultGameweekRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS);
+      const newRange = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       setStartGameweek(newRange.startGameweek);
       setEndGameweek(newRange.endGameweek);
       setExcludedGameweeks(new Set());

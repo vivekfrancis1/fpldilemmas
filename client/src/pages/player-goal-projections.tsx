@@ -7,7 +7,8 @@ import { useState, useMemo, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 import { Target, Search, Filter, Trophy, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, PROJECTION_DEFAULT_WEEKS } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { useProjectionSettings } from "@/hooks/use-projection-settings";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean }>;
@@ -108,6 +109,7 @@ function createGoalProjectionsColumns(): TableColumn<PlayerProjection>[] {
 }
 
 export default function PlayerGoalProjections() {
+  const { defaultWeeks } = useProjectionSettings();
   // Fetch bootstrap data to get current gameweek
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -134,7 +136,7 @@ export default function PlayerGoalProjections() {
   useEffect(() => {
     if (!bootstrapData?.events || initialized) return;
     
-    const range = getDefaultGameweekRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS);
+    const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
     

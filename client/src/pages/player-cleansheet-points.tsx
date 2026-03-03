@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ProtectedRoute from "@/components/protected-route";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { computeNextRange, PROJECTION_DEFAULT_WEEKS } from "@shared/gameweek-utils";
+import { computeNextRange } from "@shared/gameweek-utils";
+import { useProjectionSettings } from "@/hooks/use-projection-settings";
 
 interface FixtureDetail {
   opponent: string;
@@ -33,6 +34,7 @@ interface PlayerCleanSheetData {
 type SortField = 'playerName' | 'position' | 'team' | 'totalExpectedPoints';
 
 export default function PlayerCleanSheetPoints() {
+  const { defaultWeeks } = useProjectionSettings();
   const [startGameweek, setStartGameweek] = useState(6);
   const [endGameweek, setEndGameweek] = useState(11); // Default 6 gameweeks
   const [selectedPosition, setSelectedPosition] = useState<string>("all");
@@ -59,7 +61,7 @@ export default function PlayerCleanSheetPoints() {
   // Update gameweek range when bootstrap data is available
   useEffect(() => {
     if (bootstrapData?.events) {
-      const nextRange = computeNextRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS);
+      const nextRange = computeNextRange(bootstrapData.events, defaultWeeks);
       if (nextRange.list.length > 0) {
         setStartGameweek(nextRange.start);
         setEndGameweek(nextRange.end);

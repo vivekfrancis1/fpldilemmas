@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { computeNextRange, getDefaultGameweekRange, getNextGameweeksForDropdown, PROJECTION_DEFAULT_WEEKS } from "@shared/gameweek-utils";
+import { computeNextRange, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { useProjectionSettings } from "@/hooks/use-projection-settings";
 
 interface Fixture {
   id: number;
@@ -30,6 +31,7 @@ interface CustomFDR {
 }
 
 export default function Fixtures() {
+  const { defaultWeeks } = useProjectionSettings();
   const [, setLocation] = useLocation();
   // Dynamic gameweek range based on current gameweek
   const [gameweekRange, setGameweekRange] = useState<{ start: number; end: number } | null>(null);
@@ -180,7 +182,7 @@ export default function Fixtures() {
     if (!bootstrapData?.events) {
       return { startGameweek: "10", endGameweek: "15" }; // Fallback
     }
-    return getDefaultGameweekRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS);
+    return getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
   }, [bootstrapData?.events]);
 
   // Extract next gameweek for highlighting purposes
@@ -200,7 +202,7 @@ export default function Fixtures() {
   // Update gameweek range when bootstrap data changes (default next 6 gameweeks)
   useEffect(() => {
     if (bootstrapData?.events) {
-      const range = getDefaultGameweekRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS);
+      const range = getDefaultGameweekRange(bootstrapData.events, defaultWeeks);
       setGameweekRange({
         start: parseInt(range.startGameweek),
         end: parseInt(range.endGameweek)

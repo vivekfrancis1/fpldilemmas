@@ -3983,7 +3983,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Transfer recommendations always start from the NEXT gameweek (current + 1)
       // We can't make transfers for the current gameweek since it's already active/being played
       const planningStart = Math.min(currentGameweek + 1, 38);
-      const planningEnd = Math.min(planningStart + 11, 38); // 12 gameweeks for projection calculations
+      const planningEnd = Math.min(planningStart + projectionWindowSettings.totalWeeks - 1, 38); // 12 gameweeks for projection calculations
       
       // Only show recommendations for next 6 gameweeks, but calculate points gain based on all 12
       const recommendationEnd = Math.min(planningStart + 5, 38); // 6 gameweeks for recommendations display
@@ -6847,6 +6847,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   };
 
 
+  // ==================== PROJECTION WINDOW SETTINGS ====================
+  // Runtime-configurable: default view weeks shown to users + total calculation horizon
+  // Edit shared/gameweek-utils.ts to change the compile-time fallbacks (PROJECTION_DEFAULT_WEEKS / PROJECTION_TOTAL_WEEKS)
+  let projectionWindowSettings = {
+    defaultWeeks: 10,  // mirrors PROJECTION_DEFAULT_WEEKS in shared/gameweek-utils.ts
+    totalWeeks: 12,    // mirrors PROJECTION_TOTAL_WEEKS in shared/gameweek-utils.ts
+    lastUpdated: null as string | null,
+    updatedBy: null as string | null,
+  };
+
   // ==================== GOALS SCORED ADMIN ENDPOINTS ====================
 
   // GET goals scored admin settings endpoint
@@ -6961,6 +6971,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching blend-eligible players:", error);
       res.status(500).json({ error: "Failed to fetch blend-eligible players" });
+    }
+  });
+
+  // ==================== PROJECTION WINDOW ADMIN ENDPOINTS ====================
+
+  // GET projection window settings — public read (no auth required)
+  app.get("/api/admin/projection-window-settings", async (req, res) => {
+    try {
+      res.set({ 'Cache-Control': 'no-cache, no-store, must-revalidate', 'Pragma': 'no-cache', 'Expires': '0' });
+      res.json({
+        defaultWeeks: projectionWindowSettings.defaultWeeks,
+        totalWeeks: projectionWindowSettings.totalWeeks,
+        lastUpdated: projectionWindowSettings.lastUpdated,
+        updatedBy: projectionWindowSettings.updatedBy,
+        defaults: { defaultWeeks: 10, totalWeeks: 12 }
+      });
+    } catch (error) {
+      console.error("Error fetching projection window settings:", error);
+      res.status(500).json({ error: "Failed to fetch projection window settings" });
+    }
+  });
+
+  // PUT projection window settings — admin only
+  app.put("/api/admin/projection-window-settings", requireAdmin, async (req: any, res) => {
+    try {
+      const { defaultWeeks, totalWeeks } = req.body;
+      const dw = Number(defaultWeeks);
+      const tw = Number(totalWeeks);
+
+      if (!Number.isInteger(dw) || !Number.isInteger(tw)) {
+        return res.status(400).json({ error: "Both values must be whole numbers" });
+      }
+      if (dw < 1 || tw < 1 || dw > 38 || tw > 38) {
+        return res.status(400).json({ error: "Values must be between 1 and 38" });
+      }
+      if (dw > tw) {
+        return res.status(400).json({ error: "Default view weeks cannot exceed total projection weeks" });
+      }
+
+      projectionWindowSettings = {
+        defaultWeeks: dw,
+        totalWeeks: tw,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: req.user?.email ?? "admin",
+      };
+
+      console.log(`Projection window settings updated: defaultWeeks=${dw}, totalWeeks=${tw}`);
+      res.json({ success: true, message: "Projection window settings updated", settings: projectionWindowSettings });
+    } catch (error) {
+      console.error("Error updating projection window settings:", error);
+      res.status(500).json({ error: "Failed to update projection window settings" });
+    }
+  });
+
+  // POST reset projection window settings — admin only
+  app.post("/api/admin/projection-window-settings/reset", requireAdmin, async (_req, res) => {
+    try {
+      projectionWindowSettings = {
+        defaultWeeks: 10,
+        totalWeeks: 12,
+        lastUpdated: new Date().toISOString(),
+        updatedBy: "admin",
+      };
+      console.log("Projection window settings reset to defaults");
+      res.json({ success: true, message: "Projection window settings reset to defaults", settings: projectionWindowSettings });
+    } catch (error) {
+      console.error("Error resetting projection window settings:", error);
+      res.status(500).json({ error: "Failed to reset projection window settings" });
     }
   });
 
@@ -7203,7 +7281,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Process next 12 gameweeks
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + 12, 38);
+      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
       console.log(`DEBUG: Processing next 12 gameweeks (GW${startGameweek}-${endGameweek}) for team goal projections, current GW: ${currentGameweek}`);
       
       // Use centralized TeamGoalsService with built-in caching and in-flight de-duplication
@@ -8092,7 +8170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Process next 12 gameweeks
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + 12, 38);
+      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
       console.log(`DEBUG: Team Assist Projections - Limiting to next 12 gameweeks: GW${startGameweek}-${endGameweek}`);
       
       // Use TeamGoalsService directly (not HTTP call) as architect specified
@@ -8174,7 +8252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const teams = bootstrapData.teams;
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 2;
-      const endGameweek = Math.min(currentGameweek + 12, 38);
+      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
       const startGWforCS = currentGameweek + 1;
       
       console.log(`DEBUG: Processing next 12 gameweeks for clean sheets (GW${startGWforCS} to GW${endGameweek}), current GW: ${currentGameweek}`);
@@ -10399,7 +10477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Accept endGameweek parameter from query, with bounds checking (up to 12 gameweeks ahead)
       const requestedEndGameweek = parseInt(req.query.endGameweek as string) || Math.min(currentGameweek + 6, 38);
-      const maxAllowedEndGameweek = Math.min(currentGameweek + 12, 38);
+      const maxAllowedEndGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
       const endGameweek = Math.min(Math.max(requestedEndGameweek, currentGameweek + 1), maxAllowedEndGameweek);
       
       console.log(`DEBUG: Processing final standings for gameweeks 1 to GW${endGameweek} (user requested: ${requestedEndGameweek}), current GW: ${currentGameweek}`);
@@ -11103,7 +11181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Build per-GW minutes points using availability probability
               const events: BootstrapEvent[] = bootstrapData.events || [];
               const { computeNextRange } = await import("../shared/gameweek-utils");
-              const gameweekRange = computeNextRange(bootstrapData.events);
+              const gameweekRange = computeNextRange(bootstrapData.events, projectionWindowSettings.totalWeeks);
               const gwStart = gameweekRange.start;
               const gwEnd = gameweekRange.end;
               
@@ -11397,7 +11475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const bootstrapData = await bootstrapResponse.json();
       const currentGameweek = bootstrapData.events.find((event: any) => event.is_current)?.id || 5;
       const nextStartGameweek = currentGameweek + 1;
-      const nextEndGameweek = Math.min(currentGameweek + 12, 38);
+      const nextEndGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
 
       // Filter match projections to next 12 gameweeks
       const filteredMatchProjections = matchProjections.filter((match: any) => 
@@ -11522,7 +11600,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Initialize goals against with zeros for all teams - LIMIT TO NEXT 12 GAMEWEEKS
       const teamsGoalsAgainst = new Map();
       const startGameweek = currentGameweek + 1;
-      const endGameweek = Math.min(currentGameweek + 12, 38);
+      const endGameweek = Math.min(currentGameweek + projectionWindowSettings.totalWeeks, 38);
       
       // Call TeamGoalsService directly — has its own 30-min cache + in-flight dedup, no HTTP round-trip
       const { TeamGoalsService } = await import('./team-goals-service');
@@ -12641,7 +12719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (currentEvent) {
           currentGameweek = currentEvent.id;
           dynamicStart = currentGameweek + 1;
-          dynamicEnd = Math.min(dynamicStart + 11, 38); // Next 12 gameweeks
+          dynamicEnd = Math.min(dynamicStart + projectionWindowSettings.totalWeeks - 1, 38); // Next 12 gameweeks
         }
       } catch (error) {
         console.log("Could not fetch current gameweek, using fallback:", currentGameweek);
@@ -15173,7 +15251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
-        const gameweekRange = computeNextRange(fplData.events);
+        const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
         const startGameweek = parseInt(req.query.startGameweek as string) || gameweekRange.start;
         const endGameweek = parseInt(req.query.endGameweek as string) || gameweekRange.end;
         
@@ -15858,7 +15936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
-        const gameweekRange = computeNextRange(fplData.events);
+        const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
         const startGameweek = gameweekRange.start;
         const endGameweek = gameweekRange.end;
         
@@ -16427,7 +16505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
-        const gameweekRange = computeNextRange(fplData.events);
+        const gameweekRange = computeNextRange(fplData.events, projectionWindowSettings.totalWeeks);
         const startGameweek = gameweekRange.start;
         const endGameweek = gameweekRange.end;
         

@@ -5,7 +5,8 @@ import { BootstrapData } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, PROJECTION_DEFAULT_WEEKS } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -31,13 +32,14 @@ interface TeamAssistProjection {
 }
 
 export default function TeamAssistProjections() {
+  const { defaultWeeks } = useProjectionSettings();
   const { data: bootstrapData, isLoading } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
   });
 
   // Calculate dynamic gameweek ranges based on current gameweek
   const { defaultStart, defaultEnd } = useMemo(() => {
-    const range = getDefaultGameweekRange(bootstrapData?.events || [], PROJECTION_DEFAULT_WEEKS);
+    const range = getDefaultGameweekRange(bootstrapData?.events || [], defaultWeeks);
     return {
       defaultStart: range.startGameweek || "6",
       defaultEnd: range.endGameweek || "11"
