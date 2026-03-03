@@ -115,6 +115,7 @@ interface FixtureDetail {
 
 // Availability Adjustment Note — shown inside tooltips when a GW projection was scaled
 function AvailabilityAdjustmentNote({ availAdj }: { availAdj: { original: number; adjusted: number; reason: string } }) {
+  const isZeroed = availAdj.original === 0 && availAdj.adjusted === 0;
   return (
     <div className="mt-3 border-t border-amber-200 pt-3">
       <div className="rounded-md bg-amber-50 border border-amber-300 px-3 py-2 space-y-1">
@@ -123,12 +124,16 @@ function AvailabilityAdjustmentNote({ availAdj }: { availAdj: { original: number
           <span>Availability adjustment applied</span>
         </div>
         <div className="grid grid-cols-2 gap-x-3 text-xs text-amber-900">
-          <span className="text-gray-600">Full-fit projection:</span>
-          <span className="font-medium text-right">{availAdj.original.toFixed(2)} pts</span>
           <span className="text-gray-600">Reason:</span>
           <span className="font-medium text-right">{availAdj.reason}</span>
-          <span className="text-gray-600">Adjusted to:</span>
-          <span className="font-semibold text-amber-700 text-right">{availAdj.adjusted.toFixed(2)} pts</span>
+          {!isZeroed && (
+            <>
+              <span className="text-gray-600">Full-fit projection:</span>
+              <span className="font-medium text-right">{availAdj.original.toFixed(2)} pts</span>
+              <span className="text-gray-600">Adjusted to:</span>
+              <span className="font-semibold text-amber-700 text-right">{availAdj.adjusted.toFixed(2)} pts</span>
+            </>
+          )}
         </div>
       </div>
     </div>
