@@ -13149,25 +13149,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 reason
               };
             }
-            // Return-GW indicator: if player has a known return date beyond next GW,
-            // flag the return GW to show it was scaled at 50% (injured) or 75% (suspended)
-            const returnDate = parseReturnDate(bootstrapPlayer.news || '');
-            if (returnDate) {
-              const returnGW = getGameweekFromDate(returnDate, bpEvents);
-              if (returnGW && returnGW > nextGW) {
-                const returnGWKey = returnGW.toString();
-                const returnAdj = gameweekProjections[returnGWKey];
-                if (returnAdj !== undefined && returnAdj > 0) {
-                  const prob = bpStatus === 's' ? 0.75 : 0.5;
-                  const returnOriginal = Math.round((returnAdj / prob) * 100) / 100;
-                  const reasonLabel = bpStatus === 's'
-                    ? 'Returning from suspension (75% availability)'
-                    : 'Returning from injury (50% availability)';
-                  availabilityAdjustments[returnGWKey] = {
-                    original: returnOriginal,
-                    adjusted: Math.round(returnAdj * 100) / 100,
-                    reason: reasonLabel
-                  };
+            // Return-GW indicator: only for injured players (50% availability on return).
+            // Suspended players return at 100% — no indicator needed.
+            if (bpStatus !== 's') {
+              const returnDate = parseReturnDate(bootstrapPlayer.news || '');
+              if (returnDate) {
+                const returnGW = getGameweekFromDate(returnDate, bpEvents);
+                if (returnGW && returnGW > nextGW) {
+                  const returnGWKey = returnGW.toString();
+                  const returnAdj = gameweekProjections[returnGWKey];
+                  if (returnAdj !== undefined && returnAdj > 0) {
+                    const returnOriginal = Math.round((returnAdj / 0.5) * 100) / 100;
+                    availabilityAdjustments[returnGWKey] = {
+                      original: returnOriginal,
+                      adjusted: Math.round(returnAdj * 100) / 100,
+                      reason: 'Returning from injury (50% availability)'
+                    };
+                  }
                 }
               }
             }
@@ -17152,24 +17150,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 ) {
                   const reason = bpStatus === 's' ? 'Suspended' : bpStatus === 'i' ? 'Injured' : 'Unavailable';
                   availabilityAdjustments[nextGWKey] = { original: 0, adjusted: 0, reason };
-                  // Return-GW indicator: flag the return GW at 50% (injured) or 75% (suspended)
-                  const returnDate = parseReturnDate(bootstrapPlayer.news || '');
-                  if (returnDate) {
-                    const returnGW = getGameweekFromDate(returnDate, bpEvents);
-                    if (returnGW && returnGW > nextGW) {
-                      const returnGWKey = returnGW.toString();
-                      const returnAdj = player.gameweekProjections?.[returnGWKey];
-                      if (returnAdj !== undefined && returnAdj > 0) {
-                        const prob = bpStatus === 's' ? 0.75 : 0.5;
-                        const returnOriginal = Math.round((returnAdj / prob) * 100) / 100;
-                        const reasonLabel = bpStatus === 's'
-                          ? 'Returning from suspension (75% availability)'
-                          : 'Returning from injury (50% availability)';
-                        availabilityAdjustments[returnGWKey] = {
-                          original: returnOriginal,
-                          adjusted: Math.round(returnAdj * 100) / 100,
-                          reason: reasonLabel
-                        };
+                  // Return-GW indicator: only for injured players (50% availability on return).
+                  // Suspended players return at 100% — no indicator needed.
+                  if (bpStatus !== 's') {
+                    const returnDate = parseReturnDate(bootstrapPlayer.news || '');
+                    if (returnDate) {
+                      const returnGW = getGameweekFromDate(returnDate, bpEvents);
+                      if (returnGW && returnGW > nextGW) {
+                        const returnGWKey = returnGW.toString();
+                        const returnAdj = player.gameweekProjections?.[returnGWKey];
+                        if (returnAdj !== undefined && returnAdj > 0) {
+                          const returnOriginal = Math.round((returnAdj / 0.5) * 100) / 100;
+                          availabilityAdjustments[returnGWKey] = {
+                            original: returnOriginal,
+                            adjusted: Math.round(returnAdj * 100) / 100,
+                            reason: 'Returning from injury (50% availability)'
+                          };
+                        }
                       }
                     }
                   }

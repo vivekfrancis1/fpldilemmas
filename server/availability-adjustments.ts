@@ -133,7 +133,6 @@ export function calculateAvailabilityProbability(
       const returnGW = getGameweekFromDate(returnDate, events);
       if (returnGW) {
         if (gameweek < returnGW) return 0.0;
-        if (gameweek === returnGW) return 0.75;
         return 1.0;
       }
     }
