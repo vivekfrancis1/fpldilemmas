@@ -248,9 +248,9 @@ export class TeamGoalsService {
   
   /**
    * Calculate expected goals for a single fixture using season data only
-   * Formula: GF×0.4225 + xGF×0.2275 + GC×0.2275 + xGC×0.1225 (then × venue multiplier)
-   * Overall: 65% attack + 35% defence. Within attack: 65% GF + 35% xGF. Within defence: 65% GC + 35% xGC.
-   * GF: 0.65×0.65=0.4225, xGF: 0.65×0.35=0.2275, GC: 0.35×0.65=0.2275, xGC: 0.35×0.35=0.1225 (sum=1.0)
+   * Formula: GF×0.36 + xGF×0.24 + GC×0.24 + xGC×0.16 (then × venue multiplier)
+   * Overall: 60% attack + 40% defence. Within attack: 60% GF + 40% xGF. Within defence: 60% GC + 40% xGC.
+   * GF: 0.60×0.60=0.36, xGF: 0.60×0.40=0.24, GC: 0.40×0.60=0.24, xGC: 0.40×0.40=0.16 (sum=1.0)
    * Uses verified data from current standings API - no estimations
    */
   private static async calculateFixtureGoals(
@@ -266,8 +266,8 @@ export class TeamGoalsService {
   ): Promise<number> {
     try {
       // SEASON DATA ONLY: Uses verified data from current standings API
-      // Formula: GF×0.4225 + xGF×0.2275 + GC×0.2275 + xGC×0.1225
-      // 65% attack (65% GF + 35% xGF) + 35% defence (65% GC + 35% xGC). Weights sum to 1.0.
+      // Formula: GF×0.36 + xGF×0.24 + GC×0.24 + xGC×0.16
+      // 60% attack (60% GF + 40% xGF) + 40% defence (60% GC + 40% xGC). Weights sum to 1.0.
       
       // SEASON AVERAGES (from current standings - full season data)
       const teamAvgGoalsSeason = await TeamGoalsService.getTeamAverageGoals(team.id);
@@ -276,9 +276,9 @@ export class TeamGoalsService {
       const opponentAvgXGCSeason = await TeamGoalsService.getTeamAverageXGC(opponent.id, adminGoalSettings, MASTER_TEAM_DEFAULTS);
       
       // Calculate base expected goals using season data only
-      // GF: 0.65×0.65=0.4225, xGF: 0.65×0.35=0.2275, GC: 0.35×0.65=0.2275, xGC: 0.35×0.35=0.1225
-      let baseExpectedGoals = teamAvgGoalsSeason * 0.4225 + teamAvgXGSeason * 0.2275
-        + opponentAvgGCSeason * 0.2275 + opponentAvgXGCSeason * 0.1225;
+      // GF: 0.60×0.60=0.36, xGF: 0.60×0.40=0.24, GC: 0.40×0.60=0.24, xGC: 0.40×0.40=0.16
+      let baseExpectedGoals = teamAvgGoalsSeason * 0.36 + teamAvgXGSeason * 0.24
+        + opponentAvgGCSeason * 0.24 + opponentAvgXGCSeason * 0.16;
       
       // Per-team venue multiplier: derived from this team's actual home/away scoring split
       // this season. Updates automatically as each GW's scores are confirmed (30-min cache).

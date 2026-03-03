@@ -77,10 +77,10 @@ export default function ProjectionDocumentation() {
                     </div>
                     <p className="text-sm text-blue-700 mb-2">Weighted 4-component formula</p>
                     <div className="space-y-1 text-xs text-blue-600">
-                      <div>✓ GF × 0.4225</div>
-                      <div>✓ xGF × 0.2275</div>
-                      <div>✓ Opp GC × 0.2275</div>
-                      <div>✓ Opp xGC × 0.1225</div>
+                      <div>✓ GF × 0.36</div>
+                      <div>✓ xGF × 0.24</div>
+                      <div>✓ Opp GC × 0.24</div>
+                      <div>✓ Opp xGC × 0.16</div>
                       <div>✓ Dynamic venue multiplier</div>
                     </div>
                   </div>
@@ -344,17 +344,17 @@ export default function ProjectionDocumentation() {
                     </div>
                     <div className="bg-green-50 p-4 rounded space-y-3">
                       <div className="bg-white p-3 rounded border font-mono text-sm">
-                        teamGoals = GF×0.4225 + xGF×0.2275 + oppGC×0.2275 + oppxGC×0.1225<br/>
+                        teamGoals = GF×0.36 + xGF×0.24 + oppGC×0.24 + oppxGC×0.16<br/>
                         finalGoals = teamGoals × venueMultiplier
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
                           <strong>Inputs (all per-game season averages):</strong>
                           <ul className="list-disc ml-5 mt-1">
-                            <li>GF — team's actual goals per game (0.4225 weight)</li>
-                            <li>xGF — team's expected goals per game (0.2275 weight)</li>
-                            <li>oppGC — opponent goals conceded per game (0.2275 weight)</li>
-                            <li>oppxGC — opponent xGA per game (0.1225 weight)</li>
+                            <li>GF — team's actual goals per game (0.36 weight)</li>
+                            <li>xGF — team's expected goals per game (0.24 weight)</li>
+                            <li>oppGC — opponent goals conceded per game (0.24 weight)</li>
+                            <li>oppxGC — opponent xGA per game (0.16 weight)</li>
                           </ul>
                         </div>
                         <div>
@@ -379,7 +379,7 @@ export default function ProjectionDocumentation() {
                     <div className="bg-red-50 p-4 rounded space-y-3">
                       <div className="bg-white p-3 rounded border font-mono text-sm">
                         teamGC = same formula as Step 2, applied from opponent's perspective<br/>
-                        (oppGF×0.4225 + oppxGF×0.2275 + teamGC×0.2275 + teamxGC×0.1225) × venueMultiplier
+                        (oppGF×0.36 + oppxGF×0.24 + teamGC×0.24 + teamxGC×0.16) × venueMultiplier
                       </div>
                       <p className="text-sm text-red-800">
                         A team's projected goals conceded equals the opponent's projected goals scored. The venue multiplier is inverted (opponent is at home = they get the home boost). Used for clean sheet probability and GC penalty calculations.
@@ -585,19 +585,19 @@ export default function ProjectionDocumentation() {
                   <div className="bg-green-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-green-900 mb-3">The formula (server/team-goals-service.ts)</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm space-y-1">
-                      <div>teamGoals = GF × <strong>0.4225</strong></div>
-                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ xGF × <strong>0.2275</strong></div>
-                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ oppGC × <strong>0.2275</strong></div>
-                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ oppxGC × <strong>0.1225</strong></div>
+                      <div>teamGoals = GF × <strong>0.36</strong></div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ xGF × <strong>0.24</strong></div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ oppGC × <strong>0.24</strong></div>
+                      <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ oppxGC × <strong>0.16</strong></div>
                       <div className="mt-2 text-gray-500">// weights sum to 1.0</div>
                     </div>
                     <div className="mt-3 text-sm text-green-800">
-                      <strong>Weight derivation:</strong> 65% weight to the attacking team's performance, 35% to the opponent's defensive concession record. Within each side, 65% actual results / 35% expected goals:
+                      <strong>Weight derivation:</strong> 60% weight to the attacking team's performance, 40% to the opponent's defensive concession record. Within each side, 60% actual results / 40% expected goals:
                       <ul className="list-disc ml-5 mt-1">
-                        <li>GF = 0.65 (attack) × 0.65 (actual) = 0.4225</li>
-                        <li>xGF = 0.65 (attack) × 0.35 (expected) = 0.2275</li>
-                        <li>oppGC = 0.35 (defence) × 0.65 (actual) = 0.2275</li>
-                        <li>oppxGC = 0.35 (defence) × 0.35 (expected) = 0.1225</li>
+                        <li>GF = 0.60 (attack) × 0.60 (actual) = 0.36</li>
+                        <li>xGF = 0.60 (attack) × 0.40 (expected) = 0.24</li>
+                        <li>oppGC = 0.40 (defence) × 0.60 (actual) = 0.24</li>
+                        <li>oppxGC = 0.40 (defence) × 0.40 (expected) = 0.16</li>
                       </ul>
                     </div>
                   </div>
@@ -1102,10 +1102,10 @@ export default function ProjectionDocumentation() {
                   <div className="bg-green-50 p-4 rounded-lg">
                     <h4 className="font-semibold text-green-900 mb-2">Weighted 4-Component Formula (server/team-goals-service.ts)</h4>
                     <div className="bg-white p-3 rounded border font-mono text-sm mb-3 space-y-1">
-                      <div>teamGoals = GF×0.4225 + xGF×0.2275 + oppGC×0.2275 + oppxGC×0.1225</div>
+                      <div>teamGoals = GF×0.36 + xGF×0.24 + oppGC×0.24 + oppxGC×0.16</div>
                       <div>finalGoals = teamGoals × venueMultiplier</div>
                     </div>
-                    <p className="text-sm text-green-800">65% weight to attacking team's performance, 35% to opponent's defensive record. Within each, 65% actual / 35% expected. All inputs are season averages per game played.</p>
+                    <p className="text-sm text-green-800">60% weight to attacking team's performance, 40% to opponent's defensive record. Within each, 60% actual / 40% expected. All inputs are season averages per game played.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-blue-50 p-3 rounded">
