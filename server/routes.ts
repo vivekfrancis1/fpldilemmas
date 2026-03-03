@@ -35,7 +35,7 @@ import { normalizeGameweekKeys, normalizeGameweekKey } from './gameweek-key-util
 import { syncProjectionService } from './sync-projection-service';
 import { FPLScoringCacheService } from './fpl-scoring-cache-service';
 import { InitializationOrchestrator } from './initialization-orchestrator';
-import { calculateAvailabilityProbability, BootstrapEvent } from './availability-adjustments';
+import { calculateAvailabilityProbability, parseReturnDate, getGameweekFromDate, BootstrapEvent } from './availability-adjustments';
 import { setupAuth, isAuthenticated } from './replitAuth';
 import { totalPointsCache } from './total-points-cache';
 
@@ -13018,9 +13018,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Don't divide - defensive actions are earned independently in each match
               const fixtureDefensiveContributionsPts = defensiveContributionsPts;
               
-              const fixtureTotalPoints = fixtureGoalsPts + fixtureAssistsPts + fixtureCleansheetPts + 
-                                         fixtureMinutesPts + fixtureGoalsConcededPts + fixtureYellowCardsPts + 
-                                         fixtureRedCardsPts + fixtureBonusPts + fixtureSavesPts + fixtureDefensiveContributionsPts;
+              const positiveFixturePts = fixtureGoalsPts + fixtureAssistsPts + fixtureCleansheetPts +
+                                         fixtureMinutesPts + fixtureBonusPts + fixtureSavesPts + fixtureDefensiveContributionsPts;
+              // If the player is not expected to play (all positive components ≈ 0), clamp negative
+              // components (RC/YC baseline bleed-through) to 0 so the tooltip shows clean zeros.
+              const playerInactive = positiveFixturePts < 0.001 && fixtureGoalsConcededPts >= 0;
+              const clampedYCPts = playerInactive ? 0 : fixtureYellowCardsPts;
+              const clampedRCPts = playerInactive ? 0 : fixtureRedCardsPts;
+              const clampedGCPts = playerInactive ? 0 : fixtureGoalsConcededPts;
+              const fixtureTotalPoints = fixtureGoalsPts + fixtureAssistsPts + fixtureCleansheetPts +
+                                         fixtureMinutesPts + clampedGCPts + clampedYCPts +
+                                         clampedRCPts + fixtureBonusPts + fixtureSavesPts + fixtureDefensiveContributionsPts;
               
               if (opponent) { // Only add if we have valid fixture info
                 fixtureDetails[gwKey].push({
@@ -13030,13 +13038,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   pointsFromAssists: Math.round(fixtureAssistsPts * 100) / 100,
                   pointsFromCleanSheets: Math.round(fixtureCleansheetPts * 100) / 100,
                   pointsFromMinutes: Math.round(fixtureMinutesPts * 100) / 100,
-                  pointsFromGoalsConceded: Math.round(fixtureGoalsConcededPts * 100) / 100,
-                  pointsFromYellowCards: Math.round(fixtureYellowCardsPts * 100) / 100,
-                  pointsFromRedCards: Math.round(fixtureRedCardsPts * 100) / 100,
+                  pointsFromGoalsConceded: Math.round(clampedGCPts * 100) / 100,
+                  pointsFromYellowCards: Math.round(clampedYCPts * 100) / 100,
+                  pointsFromRedCards: Math.round(clampedRCPts * 100) / 100,
                   pointsFromBonus: Math.round(fixtureBonusPts * 100) / 100,
                   pointsFromSaves: Math.round(fixtureSavesPts * 100) / 100,
                   pointsFromDefensiveContributions: Math.round(fixtureDefensiveContributionsPts * 100) / 100,
-                  totalPoints: Math.round(fixtureTotalPoints * 100) / 100
+                  totalPoints: Math.max(0, Math.round(fixtureTotalPoints * 100) / 100)
                 });
               }
             }
@@ -13068,8 +13076,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                      goalsConcededPts + yellowCardsPts + redCardsPts + bonusPts + savesPts + defensiveContributionsPts;
           }
           
-          gameweekProjections[gwKey] = Math.round(gwTotal * 100) / 100;
-          totalExpectedPoints += gwTotal;
+          gameweekProjections[gwKey] = Math.max(0, Math.round(gwTotal * 100) / 100);
+          totalExpectedPoints += Math.max(0, gwTotal);
         }
 
         // Get price and ownership from bootstrap data
@@ -13106,12 +13114,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Compute availabilityAdjustments metadata for the frontend indicator
         // Mirrors the same logic as calculateAvailabilityProbability:
         //   25/50/75% chance → next GW only scaled by that factor; other GWs untouched
+        //   0%/injured/suspended with return date → return GW scaled at 0.5 (injured) or 0.75 (suspended)
         const availabilityAdjustments: { [gw: string]: { original: number; adjusted: number; reason: string } } = {};
         if (bootstrapPlayer) {
           const chanceNextRound = bootstrapPlayer.chance_of_playing_next_round;
           const bpStatus = bootstrapPlayer.status || 'a';
           const nextGW = currentGameweek + 1;
           const nextGWKey = nextGW.toString();
+          const bpEvents: BootstrapEvent[] = bootstrapData?.events || [];
           if (
             (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75) &&
             gameweekProjections[nextGWKey] !== undefined &&
@@ -13138,6 +13148,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 adjusted: 0,
                 reason
               };
+            }
+            // Return-GW indicator: if player has a known return date beyond next GW,
+            // flag the return GW to show it was scaled at 50% (injured) or 75% (suspended)
+            const returnDate = parseReturnDate(bootstrapPlayer.news || '');
+            if (returnDate) {
+              const returnGW = getGameweekFromDate(returnDate, bpEvents);
+              if (returnGW && returnGW > nextGW) {
+                const returnGWKey = returnGW.toString();
+                const returnAdj = gameweekProjections[returnGWKey];
+                if (returnAdj !== undefined && returnAdj > 0) {
+                  const prob = bpStatus === 's' ? 0.75 : 0.5;
+                  const returnOriginal = Math.round((returnAdj / prob) * 100) / 100;
+                  const reasonLabel = bpStatus === 's'
+                    ? 'Returning from suspension (75% availability)'
+                    : 'Returning from injury (50% availability)';
+                  availabilityAdjustments[returnGWKey] = {
+                    original: returnOriginal,
+                    adjusted: Math.round(returnAdj * 100) / 100,
+                    reason: reasonLabel
+                  };
+                }
+              }
             }
           }
         }
@@ -17100,6 +17132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const nextGWKey = nextGW.toString();
               const availabilityAdjustments: { [gw: string]: { original: number; adjusted: number; reason: string } } = {};
               if (bootstrapPlayer) {
+                const bpEvents: BootstrapEvent[] = bootstrapData?.events || [];
                 if (
                   (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75) &&
                   player.gameweekProjections?.[nextGWKey] !== undefined &&
@@ -17119,6 +17152,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 ) {
                   const reason = bpStatus === 's' ? 'Suspended' : bpStatus === 'i' ? 'Injured' : 'Unavailable';
                   availabilityAdjustments[nextGWKey] = { original: 0, adjusted: 0, reason };
+                  // Return-GW indicator: flag the return GW at 50% (injured) or 75% (suspended)
+                  const returnDate = parseReturnDate(bootstrapPlayer.news || '');
+                  if (returnDate) {
+                    const returnGW = getGameweekFromDate(returnDate, bpEvents);
+                    if (returnGW && returnGW > nextGW) {
+                      const returnGWKey = returnGW.toString();
+                      const returnAdj = player.gameweekProjections?.[returnGWKey];
+                      if (returnAdj !== undefined && returnAdj > 0) {
+                        const prob = bpStatus === 's' ? 0.75 : 0.5;
+                        const returnOriginal = Math.round((returnAdj / prob) * 100) / 100;
+                        const reasonLabel = bpStatus === 's'
+                          ? 'Returning from suspension (75% availability)'
+                          : 'Returning from injury (50% availability)';
+                        availabilityAdjustments[returnGWKey] = {
+                          original: returnOriginal,
+                          adjusted: Math.round(returnAdj * 100) / 100,
+                          reason: reasonLabel
+                        };
+                      }
+                    }
+                  }
                 }
               }
               return {
