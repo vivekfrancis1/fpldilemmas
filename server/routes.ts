@@ -13111,63 +13111,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const avgPointsPerGameweek = calculatedTotal / nonBlankGameweeks;
         const averageValue = price > 0 ? calculatedTotal / price : 0;
 
-        // Compute availabilityAdjustments metadata for the frontend indicator
-        // Mirrors the same logic as calculateAvailabilityProbability:
-        //   25/50/75% chance → next GW only scaled by that factor; other GWs untouched
-        //   0%/injured/suspended with return date → return GW scaled at 0.5 (injured) or 0.75 (suspended)
+        // Compute availabilityAdjustments for every GW where the player's projection was scaled.
+        // Uses calculateAvailabilityProbability (same function as individual projection APIs) so
+        // the indicators exactly mirror the scaling that was applied to each GW's numbers.
         const availabilityAdjustments: { [gw: string]: { original: number; adjusted: number; reason: string } } = {};
         if (bootstrapPlayer) {
           const chanceNextRound = bootstrapPlayer.chance_of_playing_next_round;
           const bpStatus = bootstrapPlayer.status || 'a';
           const nextGW = currentGameweek + 1;
-          const nextGWKey = nextGW.toString();
           const bpEvents: BootstrapEvent[] = bootstrapData?.events || [];
-          if (
-            (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75) &&
-            gameweekProjections[nextGWKey] !== undefined &&
-            gameweekProjections[nextGWKey] > 0
-          ) {
-            const multiplier = chanceNextRound / 100;
-            const adjusted = gameweekProjections[nextGWKey];
-            const original = Math.round((adjusted / multiplier) * 100) / 100;
-            availabilityAdjustments[nextGWKey] = {
-              original,
-              adjusted: Math.round(adjusted * 100) / 100,
-              reason: `${chanceNextRound}% chance of playing`
-            };
-          } else if (
-            (chanceNextRound === 0 || bpStatus === 'i' || bpStatus === 's' || bpStatus === 'u') &&
-            gameweekProjections[nextGWKey] !== undefined
-          ) {
-            const adjusted = gameweekProjections[nextGWKey];
-            // Only flag if points are actually 0 (fully ruled out)
-            if (adjusted === 0) {
+          for (const gwKey of Object.keys(gameweekProjections)) {
+            const gw = parseInt(gwKey);
+            const prob = calculateAvailabilityProbability(bootstrapPlayer, gw, currentGameweek, bpEvents);
+            if (prob >= 1.0) continue;
+            const adjusted = gameweekProjections[gwKey] ?? 0;
+            if (prob === 0) {
               const reason = bpStatus === 's' ? 'Suspended' : bpStatus === 'i' ? 'Injured' : 'Unavailable';
-              availabilityAdjustments[nextGWKey] = {
-                original: 0,
-                adjusted: 0,
-                reason
-              };
-            }
-            // Return-GW indicator: only for injured players (50% availability on return).
-            // Suspended players return at 100% — no indicator needed.
-            if (bpStatus !== 's') {
-              const returnDate = parseReturnDate(bootstrapPlayer.news || '');
-              if (returnDate) {
-                const returnGW = getGameweekFromDate(returnDate, bpEvents);
-                if (returnGW && returnGW > nextGW) {
-                  const returnGWKey = returnGW.toString();
-                  const returnAdj = gameweekProjections[returnGWKey];
-                  if (returnAdj !== undefined && returnAdj > 0) {
-                    const returnOriginal = Math.round((returnAdj / 0.5) * 100) / 100;
-                    availabilityAdjustments[returnGWKey] = {
-                      original: returnOriginal,
-                      adjusted: Math.round(returnAdj * 100) / 100,
-                      reason: 'Returning from injury (50% availability)'
-                    };
-                  }
-                }
+              availabilityAdjustments[gwKey] = { original: 0, adjusted: 0, reason };
+            } else if (adjusted > 0) {
+              const original = Math.round((adjusted / prob) * 100) / 100;
+              let reason: string;
+              if (gw === nextGW && (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75)) {
+                reason = `${chanceNextRound}% chance of playing`;
+              } else {
+                reason = `Returning from injury – ${Math.round(prob * 100)}% availability`;
               }
+              availabilityAdjustments[gwKey] = { original, adjusted: Math.round(adjusted * 100) / 100, reason };
             }
           }
         }
@@ -17131,44 +17100,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const availabilityAdjustments: { [gw: string]: { original: number; adjusted: number; reason: string } } = {};
               if (bootstrapPlayer) {
                 const bpEvents: BootstrapEvent[] = bootstrapData?.events || [];
-                if (
-                  (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75) &&
-                  player.gameweekProjections?.[nextGWKey] !== undefined &&
-                  player.gameweekProjections[nextGWKey] > 0
-                ) {
-                  const multiplier = chanceNextRound / 100;
-                  const adjusted = player.gameweekProjections[nextGWKey];
-                  const original = Math.round((adjusted / multiplier) * 100) / 100;
-                  availabilityAdjustments[nextGWKey] = {
-                    original,
-                    adjusted: Math.round(adjusted * 100) / 100,
-                    reason: `${chanceNextRound}% chance of playing`
-                  };
-                } else if (
-                  (chanceNextRound === 0 || bpStatus === 'i' || bpStatus === 's' || bpStatus === 'u') &&
-                  player.gameweekProjections?.[nextGWKey] === 0
-                ) {
-                  const reason = bpStatus === 's' ? 'Suspended' : bpStatus === 'i' ? 'Injured' : 'Unavailable';
-                  availabilityAdjustments[nextGWKey] = { original: 0, adjusted: 0, reason };
-                  // Return-GW indicator: only for injured players (50% availability on return).
-                  // Suspended players return at 100% — no indicator needed.
-                  if (bpStatus !== 's') {
-                    const returnDate = parseReturnDate(bootstrapPlayer.news || '');
-                    if (returnDate) {
-                      const returnGW = getGameweekFromDate(returnDate, bpEvents);
-                      if (returnGW && returnGW > nextGW) {
-                        const returnGWKey = returnGW.toString();
-                        const returnAdj = player.gameweekProjections?.[returnGWKey];
-                        if (returnAdj !== undefined && returnAdj > 0) {
-                          const returnOriginal = Math.round((returnAdj / 0.5) * 100) / 100;
-                          availabilityAdjustments[returnGWKey] = {
-                            original: returnOriginal,
-                            adjusted: Math.round(returnAdj * 100) / 100,
-                            reason: 'Returning from injury (50% availability)'
-                          };
-                        }
-                      }
+                for (const gwKey of Object.keys(player.gameweekProjections || {})) {
+                  const gw = parseInt(gwKey);
+                  const prob = calculateAvailabilityProbability(bootstrapPlayer, gw, currentGameweek, bpEvents);
+                  if (prob >= 1.0) continue;
+                  const adjusted = player.gameweekProjections[gwKey] ?? 0;
+                  if (prob === 0) {
+                    const reason = bpStatus === 's' ? 'Suspended' : bpStatus === 'i' ? 'Injured' : 'Unavailable';
+                    availabilityAdjustments[gwKey] = { original: 0, adjusted: 0, reason };
+                  } else if (adjusted > 0) {
+                    const original = Math.round((adjusted / prob) * 100) / 100;
+                    let reason: string;
+                    if (gw === nextGW && (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75)) {
+                      reason = `${chanceNextRound}% chance of playing`;
+                    } else {
+                      reason = `Returning from injury – ${Math.round(prob * 100)}% availability`;
                     }
+                    availabilityAdjustments[gwKey] = { original, adjusted: Math.round(adjusted * 100) / 100, reason };
                   }
                 }
               }
