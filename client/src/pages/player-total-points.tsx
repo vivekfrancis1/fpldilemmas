@@ -113,11 +113,34 @@ interface FixtureDetail {
   totalPoints: number;
 }
 
+// Availability Adjustment Note — shown inside tooltips when a GW projection was scaled
+function AvailabilityAdjustmentNote({ availAdj }: { availAdj: { original: number; adjusted: number; reason: string } }) {
+  return (
+    <div className="mt-3 border-t border-amber-200 pt-3">
+      <div className="rounded-md bg-amber-50 border border-amber-300 px-3 py-2 space-y-1">
+        <div className="flex items-center gap-1.5 text-amber-800 font-semibold text-xs">
+          <span>⚠️</span>
+          <span>Availability adjustment applied</span>
+        </div>
+        <div className="grid grid-cols-2 gap-x-3 text-xs text-amber-900">
+          <span className="text-gray-600">Full-fit projection:</span>
+          <span className="font-medium text-right">{availAdj.original.toFixed(2)} pts</span>
+          <span className="text-gray-600">Reason:</span>
+          <span className="font-medium text-right">{availAdj.reason}</span>
+          <span className="text-gray-600">Adjusted to:</span>
+          <span className="font-semibold text-amber-700 text-right">{availAdj.adjusted.toFixed(2)} pts</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Gameweek Point Breakdown Tooltip Component
 function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = new Set() }: { player: PlayerTotalPointsData, gameweek: number, excludedComponents?: Set<string> }) {
   const hasBreakdownData = player.pointsFromGoals !== undefined;
   const gwKey = gameweek.toString(); // Use numeric string key format to match API data
   const gwPoints = player.gameweekProjections?.[gwKey];
+  const availAdj = (player as any).availabilityAdjustments?.[gwKey] as { original: number; adjusted: number; reason: string } | undefined;
   
   // Check for fixtureDetails (DGW support)
   const fixtures = ((player as any).fixtureDetails?.[gwKey] || []) as FixtureDetail[];
@@ -138,6 +161,26 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
   ];
   
   if (!hasBreakdownData || !gwPoints) {
+    if (availAdj) {
+      return (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="cursor-pointer hover:opacity-80 transition-colors bg-transparent border-0 p-0 relative">
+              <ValueCell 
+                value={gwPoints || 0} 
+                format="points" 
+                decimals={2} 
+                colorScheme="points"
+                fontWeight="medium"
+              />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="top" className="max-w-xs p-4 bg-white shadow-xl border border-amber-200 z-50">
+            <AvailabilityAdjustmentNote availAdj={availAdj} />
+          </PopoverContent>
+        </Popover>
+      );
+    }
     return (
       <ValueCell 
         value={gwPoints || 0} 
@@ -258,6 +301,7 @@ function GameweekPointBreakdownTooltip({ player, gameweek, excludedComponents = 
               />
             </div>
           </div>
+          {availAdj && <AvailabilityAdjustmentNote availAdj={availAdj} />}
         </div>
       </PopoverContent>
     </Popover>
@@ -642,13 +686,17 @@ function createPlayerTotalPointsColumns(
         render: (_: any, player: PlayerTotalPointsData) => {
           const playerPoints = player.gameweekProjections?.[numericGwKey] || 0;
           const isMaxForGameweek = playerPoints > 0 && playerPoints === maxPointsForGw;
+          const availAdj = !isPastMode && (player as any).availabilityAdjustments?.[numericGwKey];
           
           // Get opponent info for this player's team and gameweek
           const teamShort = (teamNameToShortName && teamNameToShortName.get(player.teamName || player.team)) || player.teamShort || '';
           const opponentInfo = opponentMap?.get(`${teamShort}-${gw}`);
           
           return (
-            <div className={`${isMaxForGameweek ? 'bg-gradient-to-br from-green-100 to-emerald-100 rounded-md p-1' : ''}`}>
+            <div className={`relative ${isMaxForGameweek ? 'bg-gradient-to-br from-green-100 to-emerald-100 rounded-md p-1' : ''} ${availAdj ? 'ring-1 ring-amber-400 bg-amber-50 rounded' : ''}`}>
+              {availAdj && (
+                <span className="absolute top-0 right-0 w-1.5 h-1.5 rounded-full bg-amber-400 -translate-y-0.5 translate-x-0.5" />
+              )}
               {isPastMode ? (
                 <PastGameweekBreakdownTooltip player={player} gameweek={gw} />
               ) : (

@@ -13103,6 +13103,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const avgPointsPerGameweek = calculatedTotal / nonBlankGameweeks;
         const averageValue = price > 0 ? calculatedTotal / price : 0;
 
+        // Compute availabilityAdjustments metadata for the frontend indicator
+        // Mirrors the same logic as calculateAvailabilityProbability:
+        //   25/50/75% chance → next GW only scaled by that factor; other GWs untouched
+        const availabilityAdjustments: { [gw: string]: { original: number; adjusted: number; reason: string } } = {};
+        if (bootstrapPlayer) {
+          const chanceNextRound = bootstrapPlayer.chance_of_playing_next_round;
+          const bpStatus = bootstrapPlayer.status || 'a';
+          const nextGW = currentGameweek + 1;
+          const nextGWKey = nextGW.toString();
+          if (
+            (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75) &&
+            gameweekProjections[nextGWKey] !== undefined &&
+            gameweekProjections[nextGWKey] > 0
+          ) {
+            const multiplier = chanceNextRound / 100;
+            const adjusted = gameweekProjections[nextGWKey];
+            const original = Math.round((adjusted / multiplier) * 100) / 100;
+            availabilityAdjustments[nextGWKey] = {
+              original,
+              adjusted: Math.round(adjusted * 100) / 100,
+              reason: `${chanceNextRound}% chance of playing`
+            };
+          } else if (
+            (chanceNextRound === 0 || bpStatus === 'i' || bpStatus === 's' || bpStatus === 'u') &&
+            gameweekProjections[nextGWKey] !== undefined
+          ) {
+            const adjusted = gameweekProjections[nextGWKey];
+            // Only flag if points are actually 0 (fully ruled out)
+            if (adjusted === 0) {
+              const reason = bpStatus === 's' ? 'Suspended' : bpStatus === 'i' ? 'Injured' : 'Unavailable';
+              availabilityAdjustments[nextGWKey] = {
+                original: 0,
+                adjusted: 0,
+                reason
+              };
+            }
+          }
+        }
+
         return {
           playerId: playerId,
           playerName: basePlayer.playerName || basePlayer.name,
@@ -13122,6 +13161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
           status: bootstrapPlayer?.status || 'a',
           news: bootstrapPlayer?.news || '',
+          availabilityAdjustments,
           pointsFromGoals,
           pointsFromAssists,
           pointsFromCleanSheets,
@@ -17054,11 +17094,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Enrich cached data with latest availability info from bootstrap data
             const enrichedData = cachedData.data.map((player: any) => {
               const bootstrapPlayer = bootstrapData?.elements?.find((p: any) => p.id === player.playerId);
+              const chanceNextRound = bootstrapPlayer?.chance_of_playing_next_round ?? 100;
+              const bpStatus = bootstrapPlayer?.status || 'a';
+              const nextGW = currentGameweek + 1;
+              const nextGWKey = nextGW.toString();
+              const availabilityAdjustments: { [gw: string]: { original: number; adjusted: number; reason: string } } = {};
+              if (bootstrapPlayer) {
+                if (
+                  (chanceNextRound === 25 || chanceNextRound === 50 || chanceNextRound === 75) &&
+                  player.gameweekProjections?.[nextGWKey] !== undefined &&
+                  player.gameweekProjections[nextGWKey] > 0
+                ) {
+                  const multiplier = chanceNextRound / 100;
+                  const adjusted = player.gameweekProjections[nextGWKey];
+                  const original = Math.round((adjusted / multiplier) * 100) / 100;
+                  availabilityAdjustments[nextGWKey] = {
+                    original,
+                    adjusted: Math.round(adjusted * 100) / 100,
+                    reason: `${chanceNextRound}% chance of playing`
+                  };
+                } else if (
+                  (chanceNextRound === 0 || bpStatus === 'i' || bpStatus === 's' || bpStatus === 'u') &&
+                  player.gameweekProjections?.[nextGWKey] === 0
+                ) {
+                  const reason = bpStatus === 's' ? 'Suspended' : bpStatus === 'i' ? 'Injured' : 'Unavailable';
+                  availabilityAdjustments[nextGWKey] = { original: 0, adjusted: 0, reason };
+                }
+              }
               return {
                 ...player,
-                chanceOfPlayingNextRound: bootstrapPlayer?.chance_of_playing_next_round ?? 100,
-                status: bootstrapPlayer?.status || 'a',
-                news: bootstrapPlayer?.news || ''
+                chanceOfPlayingNextRound: chanceNextRound,
+                status: bpStatus,
+                news: bootstrapPlayer?.news || '',
+                availabilityAdjustments
               };
             });
             
