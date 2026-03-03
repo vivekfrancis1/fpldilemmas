@@ -1366,8 +1366,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Forward to the standard endpoint's logic, but pass the authenticated team picks
       // This ensures recommendations are based on current squad including pending transfers
-      const internalUrl = `http://localhost:5000/api/manager/${managerId}/recommended-transfers`;
-      const internalResponse = await fetch(internalUrl, {
+      const internalUrl = `api/manager/${managerId}/recommended-transfers`;
+      const internalResponse = await internalFetch(internalUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -7194,7 +7194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Team Goal Projections API called - generating next 12 gameweeks`);
       
       // Use internal cached bootstrap endpoint
-      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
@@ -7223,8 +7223,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Team Goals History API called - fetching actual past gameweek data`);
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
-        fetch("http://localhost:5000/api/bootstrap-static"),
-        fetch("http://localhost:5000/api/fixtures")
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
       ]);
       
       if (!bootstrapResponse.ok || !fixturesResponse.ok) {
@@ -7305,7 +7305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Team xG History API called (GW${startGw || 1}-${endGw || 'last'})`);
       
-      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
@@ -7421,8 +7421,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Team Goals Against History API called - fetching actual past gameweek data`);
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
-        fetch("http://localhost:5000/api/bootstrap-static"),
-        fetch("http://localhost:5000/api/fixtures")
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
       ]);
       
       if (!bootstrapResponse.ok || !fixturesResponse.ok) {
@@ -7494,8 +7494,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Player Goals History API called`);
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
-        fetch("http://localhost:5000/api/bootstrap-static"),
-        fetch("http://localhost:5000/api/fixtures")
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
       ]);
       
       if (!bootstrapResponse.ok || !fixturesResponse.ok) {
@@ -7563,7 +7563,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Player xG History API called (GW${startGw || 1}-${endGw || 'last'})`);
       
-      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
@@ -7656,8 +7656,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Player Assists History API called`);
       
       const [bootstrapResponse, fixturesResponse] = await Promise.all([
-        fetch("http://localhost:5000/api/bootstrap-static"),
-        fetch("http://localhost:5000/api/fixtures")
+        internalFetch("api/bootstrap-static"),
+        internalFetch("api/fixtures")
       ]);
       
       if (!bootstrapResponse.ok || !fixturesResponse.ok) {
@@ -7723,7 +7723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Player xA History API called (GW${startGw || 1}-${endGw || 'last'})`);
       
-      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
@@ -7815,7 +7815,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log(`DEBUG: Player Saves History API called`);
       
-      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
@@ -7876,7 +7876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log(`DEBUG: Player Defensive History API called`);
       
-      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
@@ -7965,7 +7965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`DEBUG: Player Total Points History API called (GW${startGw || 1}-${endGw || 'last'})`);
       
-      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
@@ -8083,7 +8083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Team Assist Projections API called - generating next 12 gameweeks`);
       
       // Get current gameweek from internal cached bootstrap endpoint
-      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch bootstrap data");
       }
@@ -9362,7 +9362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!savedGoalShareData) {
         console.log(`DEBUG: No saved goal share data found, triggering Goal Share calculation first`);
         // Trigger goal share calculation first
-        const goalShareResponse = await fetch("http://localhost:5000/api/goal-share-season");
+        const goalShareResponse = await internalFetch("api/goal-share-season");
         if (!goalShareResponse.ok) {
           throw new Error("Failed to fetch goal share data");
         }
@@ -9598,7 +9598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/assist-share-season", async (req, res) => {
     try {
       // Fetch bootstrap data (using cached endpoint)
-      const bootstrapResponse = await fetch("http://localhost:5000/api/bootstrap-static");
+      const bootstrapResponse = await internalFetch("api/bootstrap-static");
       if (!bootstrapResponse.ok) {
         throw new Error("Failed to fetch FPL bootstrap data");
       }
@@ -10430,7 +10430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Fetch predicted scores for all matches
-      const predictedScoresResponse = await fetch(`http://localhost:5000/api/predicted-scores`);
+      const predictedScoresResponse = await internalFetch(`api/predicted-scores`);
       if (!predictedScoresResponse.ok) {
         throw new Error("Failed to fetch predicted scores data");
       }
@@ -11378,7 +11378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/predicted-scores", async (req, res) => {
     try {
       // Fetch match projections data from projected-goals-cs
-      const matchProjectionsResponse = await fetch(`http://localhost:5000/api/projected-goals-cs`);
+      const matchProjectionsResponse = await internalFetch(`api/projected-goals-cs`);
       if (!matchProjectionsResponse.ok) {
         throw new Error("Failed to fetch match projections data");
       }
@@ -11688,8 +11688,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Fetch data ONLY from Team Goal and CS projection endpoints
       const [goalProjectionsResponse, csProjectionsResponse, fixturesResponse] = await Promise.all([
-        fetch(`http://localhost:5000/api/team-goal-projections`),
-        fetch(`http://localhost:5000/api/team-cs-projections`),
+        internalFetch(`api/team-goal-projections`),
+        internalFetch(`api/team-cs-projections`),
         fetch("https://fantasy.premierleague.com/api/fixtures/")
       ]);
       
@@ -12019,7 +12019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Step 1: Get 2024-25 historical data and current bootstrap data
       const [bootstrapResponse, historical2024Response] = await Promise.all([
         fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-        fetch("http://localhost:5000/api/goal-share-historical/2024%2F25")
+        internalFetch("api/goal-share-historical/2024%2F25")
       ]);
       
       if (!bootstrapResponse.ok || !historical2024Response.ok) {
@@ -14679,7 +14679,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("DEBUG: No recent cached data, falling back to live API call");
       
       // Fallback to live API call
-      const liveResponse = await fetch("http://localhost:5000/api/player-goals-scored-projections");
+      const liveResponse = await internalFetch("api/player-goals-scored-projections");
       if (!liveResponse.ok) {
         throw new Error("Failed to fetch live goals projections");
       }
@@ -14800,7 +14800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("DEBUG: No recent cached data, falling back to live API call");
       
       // Fallback to live API
-      const liveResponse = await fetch("http://localhost:5000/api/player-assist-projections");
+      const liveResponse = await internalFetch("api/player-assist-projections");
       if (!liveResponse.ok) {
         throw new Error("Failed to fetch live assist projections");
       }
@@ -14902,7 +14902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("DEBUG: No recent cached data, falling back to live API call");
       
       // Fallback to live API
-      const liveResponse = await fetch("http://localhost:5000/api/player-minutes-projections");
+      const liveResponse = await internalFetch("api/player-minutes-projections");
       if (!liveResponse.ok) {
         throw new Error("Failed to fetch live minutes projections");
       }
@@ -15002,7 +15002,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("DEBUG: No recent cached data, falling back to live API call");
       
       // Fallback to live API
-      const liveResponse = await fetch("http://localhost:5000/api/team-cs-projections");
+      const liveResponse = await internalFetch("api/team-cs-projections");
       if (!liveResponse.ok) {
         throw new Error("Failed to fetch live clean sheet projections");
       }
@@ -15269,7 +15269,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       // Get player minutes projections
-      const minutesResponse = await fetch("http://localhost:5000/api/player-minutes-projections");
+      const minutesResponse = await internalFetch("api/player-minutes-projections");
       const minutesData = await minutesResponse.json();
       
       // Count actual completed fixtures for each team instead of assuming all teams played same number of games
@@ -15482,7 +15482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Loaded DCC per game for ${teamDCCPerGame.size} teams from current standings`);
       
       // Get player minutes projections
-      const minutesResponse = await fetch("http://localhost:5000/api/player-minutes-projections");
+      const minutesResponse = await internalFetch("api/player-minutes-projections");
       const minutesData = await minutesResponse.json();
       
       // CRITICAL FIX: Use current season data from FPL bootstrap API with proper DC calculation
@@ -19834,7 +19834,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playerInfoMap.set(el.id, el);
       }
 
-      const cachedRes = await fetch("http://localhost:5000/api/cached/player-total-points");
+      const cachedRes = await internalFetch("api/cached/player-total-points");
       if (!cachedRes.ok) throw new Error("Failed to fetch cached projections");
       const cachedPlayers = await cachedRes.json() as any[];
       const cachedMap = new Map<number, any>();

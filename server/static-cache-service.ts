@@ -1,6 +1,7 @@
 import { db } from "./db";
 import { eq, and, sql } from "drizzle-orm";
 import { staticProjectionRanges, staticPlayerProjections, type InsertStaticProjectionRange, type InsertStaticPlayerProjection } from "@shared/schema";
+import { internalFetch } from "./config";
 
 interface StaticRange {
   name: string;
@@ -13,7 +14,7 @@ export class StaticCacheService {
   private async getCurrentGameweek(): Promise<number> {
     try {
       // Import bootstrap data to get current gameweek
-      const response = await fetch('http://localhost:5000/api/bootstrap-static');
+      const response = await internalFetch('api/bootstrap-static');
       const data = await response.json();
       
       // Find current or next gameweek

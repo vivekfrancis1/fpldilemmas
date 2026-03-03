@@ -8,7 +8,7 @@ import { getNextGameweeksList, debugGameweekCalculation, type GameweekEvent } fr
  * Runs daily at 3 AM to pre-calculate data for ultra-fast API responses
  */
 
-const INTERNAL_API_BASE = 'http://localhost:5000';
+const INTERNAL_API_BASE = `http://localhost:${process.env.PORT || 5000}`;
 
 export class DailyProjectionsService {
   

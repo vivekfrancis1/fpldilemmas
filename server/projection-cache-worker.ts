@@ -977,7 +977,7 @@ class ProjectionCacheWorker {
       
       // Test if the Player Goals API is working by calling it
       const startTime = Date.now();
-      const response = await fetch("http://localhost:5000/api/player-goals-scored-projections?startGameweek=4&endGameweek=9");
+      const response = await internalFetch("api/player-goals-scored-projections?startGameweek=4&endGameweek=9");
       const duration = Date.now() - startTime;
       
       if (response.ok) {
@@ -1022,7 +1022,7 @@ class ProjectionCacheWorker {
       
       // Test if the Player Assists API is working by calling it
       const startTime = Date.now();
-      const response = await fetch("http://localhost:5000/api/player-assist-projections?startGameweek=4&endGameweek=9");
+      const response = await internalFetch("api/player-assist-projections?startGameweek=4&endGameweek=9");
       const duration = Date.now() - startTime;
       
       if (response.ok) {

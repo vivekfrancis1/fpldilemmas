@@ -263,7 +263,10 @@ export class ProductionCacheInitializer {
       });
     } else {
       // Snapshots exist in DB — mark scoring cache as recently run to prevent
-      // the T+25 min scheduler from triggering an unnecessary aggregation cycle
+      // the T+25 min scheduler from triggering an unnecessary aggregation cycle.
+      // Also kick off a background re-aggregation asynchronously so that any
+      // stale or 0-value snapshots (e.g. from the old public-URL bug) are
+      // corrected within ~2 minutes without blocking server startup.
       orchestrator.registerJob({
         id: 'mark-scoring-cache-fresh',
         name: 'Mark Scoring Cache Fresh',
@@ -272,6 +275,19 @@ export class ProductionCacheInitializer {
           const { FPLScoringCacheService } = await import('./fpl-scoring-cache-service');
           FPLScoringCacheService.lastRunAt = new Date();
           console.log("✅ Scoring cache marked fresh — startup aggregation skipped (DB has recent snapshots)");
+
+          // Fire-and-forget background refresh so stale/0-value snapshots get corrected
+          console.log("🔄 Scheduling background scoring cache refresh to correct any stale values...");
+          setTimeout(async () => {
+            try {
+              console.log("🚀 Background scoring cache refresh starting...");
+              const { fplScoringCacheService } = await import('./fpl-scoring-cache-service');
+              await fplScoringCacheService.updateAllScoringData();
+              console.log("✅ Background scoring cache refresh completed successfully");
+            } catch (err) {
+              console.warn("⚠️ Background scoring cache refresh failed (non-fatal):", err);
+            }
+          }, 30000); // 30s delay — lets all startup warmup jobs finish first
         },
         timeout: 5000
       });

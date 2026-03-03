@@ -17,8 +17,9 @@ export const getApiBaseUrl = (): string => {
       return productionUrl;
     }
     
-    // Production domain for fpldilemmas.com
-    return 'https://fpldilemmas.com';
+    // Use localhost so internal calls stay within the process and never go out to the public internet.
+    // Going via the public hostname adds ~5s per hop and causes 90–125s chain timeouts in the aggregator.
+    return `http://localhost:${process.env.PORT || 5000}`;
   }
   
   // Development environment - use localhost

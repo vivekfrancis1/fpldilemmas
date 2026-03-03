@@ -30,6 +30,9 @@ interface TeamGoalsServiceCache {
 let teamGoalsCache: TeamGoalsServiceCache | null = null;
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
+// Internal base URL — always localhost so calls never go out to the public internet
+const INTERNAL_BASE = `http://localhost:${process.env.PORT || 5000}`;
+
 // In-flight request de-duplication
 let teamGoalsInFlight: Map<string, Promise<TeamGoalProjection[]>> = new Map();
 
@@ -107,8 +110,8 @@ export class TeamGoalsService {
     
     // Fetch required data using internal cached endpoints for better performance
     const [bootstrapResponse, fixturesResponse] = await Promise.all([
-      fetch("http://localhost:5000/api/bootstrap-static"),
-      fetch("http://localhost:5000/api/fixtures")
+      fetch(`${INTERNAL_BASE}/api/bootstrap-static`),
+      fetch(`${INTERNAL_BASE}/api/fixtures`)
     ]);
     
     if (!bootstrapResponse.ok || !fixturesResponse.ok) {
@@ -313,7 +316,7 @@ export class TeamGoalsService {
     }
     currentStandingsInFlight = (async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/current-standings');
+        const response = await fetch(`${INTERNAL_BASE}/api/current-standings`);
         if (!response.ok) {
           throw new Error(`Failed to fetch current standings: ${response.status}`);
         }
