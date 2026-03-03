@@ -12662,18 +12662,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      // Fetch data from all individual projection APIs in two sequential batches to reduce peak memory
-      // Batch 1: lightweight/fast endpoints
-      const [goalsResponse, assistsResponse, yellowCardsResponse, redCardsResponse, bonusPointsResponse] = await Promise.all([
+      // Fetch data from all 10 component APIs in a single parallel Promise.all — all are independent
+      const [
+        goalsResponse, assistsResponse, yellowCardsResponse, redCardsResponse, bonusPointsResponse,
+        minutesResponse, cleansheetResponse, goalsConcededResponse, savesResponse, defensiveContributionsResponse
+      ] = await Promise.all([
         internalFetch(`api/player-goals-scored-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-assist-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-yellow-cards-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-red-cards-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-bonus-points-projections?startGameweek=${start}&endGameweek=${end}`),
-      ]);
-      // Batch 2: heavier endpoints that do more computation
-      const [minutesResponse, cleansheetResponse, goalsConcededResponse, savesResponse, defensiveContributionsResponse] = await Promise.all([
-        internalFetch(`api/player-minutes-projections`), // No gameweek data available
+        internalFetch(`api/player-minutes-projections`), // No gameweek params available
         internalFetch(`api/player-cleansheet-points?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-goals-conceded-projections?startGameweek=${start}&endGameweek=${end}`),
         internalFetch(`api/player-saves-projections?startGameweek=${start}&endGameweek=${end}`),
@@ -17919,14 +17918,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("📊 Serving cached player goals conceded data");
       const cachedData = await fplScoringCacheService.getCachedPlayerGoalsConceded();
       if (!cachedData || cachedData.length === 0) {
-        console.log("⚠️ Cached player goals conceded empty, falling back to live endpoint");
-        return res.redirect(307, "/api/player-goals-conceded-projections");
+        console.warn("⚠️ Cached player goals conceded empty — returning [] to prevent redirect loop");
+        return res.json([]);
       }
       res.json(cachedData);
     } catch (error) {
       console.error("Error fetching cached player goals conceded:", error);
-      // Fallback to real-time data if cache fails
-      res.redirect(307, "/api/player-goals-conceded-projections");
+      // Return empty array rather than redirecting to avoid a loop with the live endpoint's fallback
+      res.json([]);
     }
   });
 

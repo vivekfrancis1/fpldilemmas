@@ -267,7 +267,7 @@ export default function ProjectionDocumentation() {
                     <div className="text-xs text-cyan-500 mt-1">AFCON / injury returnees</div>
                   </div>
                   <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 p-4 rounded-lg text-center">
-                    <div className="text-3xl font-bold text-indigo-700">30 min</div>
+                    <div className="text-3xl font-bold text-indigo-700">15 min</div>
                     <div className="text-sm text-indigo-600 mt-1">Total Points Cache</div>
                     <div className="text-xs text-indigo-500 mt-1">In-memory TTL</div>
                   </div>
@@ -1295,7 +1295,7 @@ export default function ProjectionDocumentation() {
                   <div className="bg-blue-50 p-3 rounded">
                     <h4 className="font-semibold text-blue-900 mb-2">API Details</h4>
                     <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• Cache: 10 minutes (in-memory)</li>
+                      <li>• Cache: 30 minutes (in-memory)</li>
                       <li>• ~515 active players</li>
                       <li>• 20 team records</li>
                       <li>• 38 event/gameweek records</li>
@@ -1461,12 +1461,12 @@ export default function ProjectionDocumentation() {
                       <li>• /api/player-assist-share</li>
                       <li>• /api/player-minutes-projections</li>
                       <li>• /api/player-cleansheet-points</li>
+                      <li>• /api/cached/player-total-points</li>
                     </ul>
                   </div>
                   <div className="bg-purple-50 p-3 rounded">
                     <h4 className="font-semibold text-purple-900 mb-2">30-Minute Caches</h4>
                     <ul className="text-sm text-purple-700 space-y-1">
-                      <li>• /api/cached/player-total-points</li>
                       <li>• /api/team-goal-projections</li>
                       <li>• /api/fixtures (raw FPL)</li>
                     </ul>
