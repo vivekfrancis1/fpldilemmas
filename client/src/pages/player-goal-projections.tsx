@@ -7,7 +7,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
 import { Target, Search, Filter, Trophy, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, PROJECTION_DEFAULT_WEEKS } from "@shared/gameweek-utils";
 
 interface BootstrapData {
   events: Array<{ id: number; is_current: boolean; finished: boolean }>;
@@ -134,7 +134,7 @@ export default function PlayerGoalProjections() {
   useEffect(() => {
     if (!bootstrapData?.events || initialized) return;
     
-    const range = getDefaultGameweekRange(bootstrapData.events, 6);
+    const range = getDefaultGameweekRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS);
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
     

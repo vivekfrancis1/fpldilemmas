@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ProtectedRoute from "@/components/protected-route";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { computeNextRange } from "@shared/gameweek-utils";
+import { computeNextRange, PROJECTION_DEFAULT_WEEKS } from "@shared/gameweek-utils";
 
 interface FixtureDetail {
   opponent: string;
@@ -59,7 +59,7 @@ export default function PlayerCleanSheetPoints() {
   // Update gameweek range when bootstrap data is available
   useEffect(() => {
     if (bootstrapData?.events) {
-      const nextRange = computeNextRange(bootstrapData.events, 6);
+      const nextRange = computeNextRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS);
       if (nextRange.list.length > 0) {
         setStartGameweek(nextRange.start);
         setEndGameweek(nextRange.end);

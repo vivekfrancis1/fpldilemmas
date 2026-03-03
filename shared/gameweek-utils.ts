@@ -6,6 +6,17 @@
  * to the current FPL season state.
  */
 
+/**
+ * Shared projection window settings — change these two numbers to update the
+ * default view and full calculation horizon across every projection tool at once.
+ */
+
+/** How many gameweeks are shown by default when a projection page loads (e.g. GW29–38) */
+export const PROJECTION_DEFAULT_WEEKS = 10;
+
+/** Full calculation horizon — how many gameweeks APIs compute and serve (e.g. GW29–38+2 buffer) */
+export const PROJECTION_TOTAL_WEEKS = 12;
+
 export interface GameweekEvent {
   id: number;
   name?: string;
@@ -74,7 +85,7 @@ export function computeCurrentGameweek(events: GameweekEvent[]): number {
  * Calculates the next N gameweeks from current position
  * Handles edge cases for pre-season, mid-season, and season end
  */
-export function computeNextRange(events: GameweekEvent[], count: number = 12): GameweekRange {
+export function computeNextRange(events: GameweekEvent[], count: number = PROJECTION_TOTAL_WEEKS): GameweekRange {
   if (!events || events.length === 0) {
     // Fallback: return default range if no events data
     return {
@@ -140,7 +151,7 @@ export function computeNextRange(events: GameweekEvent[], count: number = 12): G
  * Gets default gameweek range strings for frontend components
  * Returns start and end as strings for compatibility with Select components
  */
-export function getDefaultGameweekRange(events: GameweekEvent[], count: number = 6): {
+export function getDefaultGameweekRange(events: GameweekEvent[], count: number = PROJECTION_DEFAULT_WEEKS): {
   startGameweek: string;
   endGameweek: string;
 } {

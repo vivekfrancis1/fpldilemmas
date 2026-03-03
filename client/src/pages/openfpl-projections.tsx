@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { computeNextRange } from "@shared/gameweek-utils";
+import { computeNextRange, PROJECTION_DEFAULT_WEEKS } from "@shared/gameweek-utils";
 
 interface BootstrapData {
   elements: any[];
@@ -63,7 +63,7 @@ export default function OpenFPLProjections() {
   useEffect(() => {
     if (bootstrapData?.events) {
       // Calculate next 6 gameweeks dynamically
-      const nextRange = computeNextRange(bootstrapData.events, 6);
+      const nextRange = computeNextRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS);
       setStartGameweek(nextRange.start);
       setEndGameweek(nextRange.end);
     }

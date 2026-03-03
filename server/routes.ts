@@ -11103,7 +11103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Build per-GW minutes points using availability probability
               const events: BootstrapEvent[] = bootstrapData.events || [];
               const { computeNextRange } = await import("../shared/gameweek-utils");
-              const gameweekRange = computeNextRange(bootstrapData.events, 12);
+              const gameweekRange = computeNextRange(bootstrapData.events);
               const gwStart = gameweekRange.start;
               const gwEnd = gameweekRange.end;
               
@@ -15173,7 +15173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
-        const gameweekRange = computeNextRange(fplData.events, 12);
+        const gameweekRange = computeNextRange(fplData.events);
         const startGameweek = parseInt(req.query.startGameweek as string) || gameweekRange.start;
         const endGameweek = parseInt(req.query.endGameweek as string) || gameweekRange.end;
         
@@ -15858,7 +15858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
-        const gameweekRange = computeNextRange(fplData.events, 12);
+        const gameweekRange = computeNextRange(fplData.events);
         const startGameweek = gameweekRange.start;
         const endGameweek = gameweekRange.end;
         
@@ -16427,7 +16427,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Use dynamic gameweek calculation for next 12 gameweeks
         const { computeNextRange } = await import("../shared/gameweek-utils");
-        const gameweekRange = computeNextRange(fplData.events, 12);
+        const gameweekRange = computeNextRange(fplData.events);
         const startGameweek = gameweekRange.start;
         const endGameweek = gameweekRange.end;
         

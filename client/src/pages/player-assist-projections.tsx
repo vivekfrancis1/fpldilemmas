@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 
-import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
+import { computeCurrentGameweek, getDefaultGameweekRange, getNextGameweeksForDropdown, PROJECTION_DEFAULT_WEEKS } from "@shared/gameweek-utils";
 import { BootstrapData } from "@shared/schema";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBatchAssistsProjections } from "@/hooks/use-batch-projections";
@@ -176,7 +176,7 @@ export default function PlayerAssistProjections() {
   useEffect(() => {
     if (!bootstrapData || initialized) return;
     
-    const range = getDefaultGameweekRange(bootstrapData.events, 6); // Default to 6 gameweeks
+    const range = getDefaultGameweekRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS); 
     const start = parseInt(range.startGameweek);
     const end = parseInt(range.endGameweek);
     
@@ -197,7 +197,7 @@ export default function PlayerAssistProjections() {
       setEndGameweek(lastFinished);
       setExcludedGameweeks(new Set());
     } else if (viewMode === "future" && bootstrapData?.events) {
-      const newRange = getDefaultGameweekRange(bootstrapData.events, 6);
+      const newRange = getDefaultGameweekRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS);
       setStartGameweek(parseInt(newRange.startGameweek));
       setEndGameweek(parseInt(newRange.endGameweek));
       setExcludedGameweeks(new Set());

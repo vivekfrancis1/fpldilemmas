@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Shield, TrendingUp, Filter, BarChart3, Trophy, Loader2, X, ChevronDown, ChevronUp, History, Calendar } from "lucide-react";
 import { BootstrapData } from "@shared/schema";
-import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation } from "@shared/gameweek-utils";
+import { getDefaultGameweekRange, getNextGameweeksForDropdown, debugGameweekCalculation, PROJECTION_DEFAULT_WEEKS } from "@shared/gameweek-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -78,7 +78,7 @@ export default function TeamGoalsAgainstProjections() {
       return { startGameweek: "6", endGameweek: "11" }; // Fallback
     }
     debugGameweekCalculation(bootstrapData.events);
-    return getDefaultGameweekRange(bootstrapData.events, 6);
+    return getDefaultGameweekRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS);
   }, [bootstrapData?.events, viewMode, historyData?.lastFinishedGW]);
 
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
@@ -181,7 +181,7 @@ export default function TeamGoalsAgainstProjections() {
       setEndGameweek(String(lastFinished));
       setExcludedGameweeks(new Set());
     } else if (viewMode === "future" && bootstrapData?.events) {
-      const newRange = getDefaultGameweekRange(bootstrapData.events, 6);
+      const newRange = getDefaultGameweekRange(bootstrapData.events, PROJECTION_DEFAULT_WEEKS);
       setStartGameweek(newRange.startGameweek);
       setEndGameweek(newRange.endGameweek);
       setExcludedGameweeks(new Set());
