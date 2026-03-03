@@ -12954,6 +12954,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // BLANK GAMEWEEK: If no fixtures, set all component values to 0 and skip
           // This is necessary because minutes/DC components don't have per-gameweek breakdown
           if (numFixtures === 0) {
+            fixtureDetails[gwKey] = []; // explicitly mark as blank GW for frontend indicators
             pointsFromGoals[gwKey] = 0;
             pointsFromAssists[gwKey] = 0;
             pointsFromCleanSheets[gwKey] = 0;
