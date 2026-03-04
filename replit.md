@@ -7,6 +7,7 @@ FPL Dilemmas is an analytics application designed for Fantasy Premier League (FP
 Preferred communication style: Simple, everyday language.
 Development Protocol: Always ask permission before making any changes to logic, calculations, or functionality. No unauthorized modifications are permitted.
 Test-Driven Development (TDD): TDD is applied to backend logic, API contracts, and calculation functions — not UI/styling. Scope: (1) API endpoint behavior — correct data shapes, edge cases, query param handling, (2) Calculation/projection logic — scoring formulas, transfer costs, availability adjustments, (3) Data consistency — cached vs live data, cross-endpoint consistency. Workflow: Write test cases first (red), implement to pass (green), refactor while green. A backend feature is only complete when all its test cases pass. Tests live in `tests/` directory using Vitest. Existing test file: `tests/projection-consistency.test.ts`. UI/styling changes do not require tests.
+Plan Storage: Never overwrite or delete old plans. Each plan is saved as a separate numbered file in `.local/plans/` (e.g. `plan-001-description.md`, `plan-002-description.md`). `.local/session_plan.md` serves as an index. Plans must include a plan name and number to avoid confusion with older plans.
 
 ## System Architecture
 
