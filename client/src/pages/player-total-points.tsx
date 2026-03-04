@@ -1788,23 +1788,22 @@ export default function PlayerTotalPoints() {
               <Tabs defaultValue="gws" className="w-full">
                 <TabsList className="w-full grid grid-cols-4 mb-2 h-auto p-1 bg-white shadow-sm border border-gray-100">
                   <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                    GWs{excludedGameweeks.size > 0 && ` (${excludedGameweeks.size})`}
+                    <span className="sm:hidden">GWs</span><span className="hidden sm:inline">Gameweek</span>{excludedGameweeks.size > 0 && ` (${excludedGameweeks.size})`}
                   </TabsTrigger>
                   <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                    Pos{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
+                    <span className="sm:hidden">Pos</span><span className="hidden sm:inline">Position</span>{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
                   </TabsTrigger>
                   <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
                     Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
                   </TabsTrigger>
                   <TabsTrigger value="pts" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                    Pts{excludedComponents.size > 0 && ` (${excludedComponents.size})`}
+                    <span className="sm:hidden">Pts</span><span className="hidden sm:inline">Scoring</span>{excludedComponents.size > 0 && ` (${excludedComponents.size})`}
                   </TabsTrigger>
                 </TabsList>
 
                 {/* GWs tab */}
                 <TabsContent value="gws" className="mt-0">
-                  <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-                    <span className="text-[10px] sm:text-xs text-gray-500">Tap to exclude/include:</span>
+                  <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => setShowOpponent(!showOpponent)}
@@ -1845,12 +1844,9 @@ export default function PlayerTotalPoints() {
 
                 {/* Position tab */}
                 <TabsContent value="pos" className="mt-0">
-                  <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-                    <span className="text-[10px] sm:text-xs text-gray-500">Tap to exclude:</span>
-                    <div className="flex gap-1">
-                      <button onClick={() => setSelectedPositions(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-positions">All</button>
-                      <button onClick={() => setSelectedPositions(new Set(positions))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-positions">None</button>
-                    </div>
+                  <div className="flex justify-end gap-1 mb-1">
+                    <button onClick={() => setSelectedPositions(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-positions">All</button>
+                    <button onClick={() => setSelectedPositions(new Set(positions))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-positions">None</button>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
                     {positions.map(position => {
@@ -1872,12 +1868,9 @@ export default function PlayerTotalPoints() {
 
                 {/* Teams tab */}
                 <TabsContent value="teams" className="mt-0">
-                  <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-                    <span className="text-[10px] sm:text-xs text-gray-500">Tap to exclude:</span>
-                    <div className="flex gap-1">
-                      <button onClick={() => setSelectedTeams(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-teams">All</button>
-                      <button onClick={() => setSelectedTeams(new Set(teams))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-teams">None</button>
-                    </div>
+                  <div className="flex justify-end gap-1 mb-1">
+                    <button onClick={() => setSelectedTeams(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-teams">All</button>
+                    <button onClick={() => setSelectedTeams(new Set(teams))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-teams">None</button>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
                     {teams.map(team => {
@@ -1899,12 +1892,9 @@ export default function PlayerTotalPoints() {
 
                 {/* Point components tab */}
                 <TabsContent value="pts" className="mt-0">
-                  <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
-                    <span className="text-[10px] sm:text-xs text-gray-500">Tap to exclude:</span>
-                    <div className="flex gap-1">
-                      <button onClick={includeAllComponents} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-components">All</button>
-                      <button onClick={excludeAllComponents} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-components">None</button>
-                    </div>
+                  <div className="flex justify-end gap-1 mb-1">
+                    <button onClick={includeAllComponents} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-components">All</button>
+                    <button onClick={excludeAllComponents} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-components">None</button>
                   </div>
                   <div className="flex flex-wrap gap-0.5 sm:gap-1">
                     {POINT_COMPONENTS.map(component => {
