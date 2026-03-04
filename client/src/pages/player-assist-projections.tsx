@@ -622,9 +622,6 @@ export default function PlayerAssistProjections() {
                     <CardTitle className="text-base sm:text-lg">Filters & Controls</CardTitle>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 md:hidden">
-                      {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
-                    </span>
                     {isFiltersOpen ? (
                       <ChevronUp className="h-5 w-5 text-gray-500" />
                     ) : (
@@ -690,35 +687,27 @@ export default function PlayerAssistProjections() {
             {/* Gameweek Toggle Section */}
             <div className="mt-4 pt-4 border-t">
               <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4 mb-3">
-                <label className="text-xs sm:text-sm font-medium text-gray-700">
-                  Toggle Gameweeks (click to exclude/include):
-                </label>
                 <div className="flex flex-wrap items-center gap-2">
                   {excludedGameweeks.size > 0 && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <button 
                       onClick={clearExclusions}
-                      className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 h-auto"
+                      className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700"
                       data-testid="button-clear-exclusions"
                     >
                       <X className="h-3 w-3 mr-1" />
-                      Clear exclusions
-                    </Button>
+                      Clear
+                    </button>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
+                  <button
                     onClick={() => setApplyAvailability(!applyAvailability)}
-                    className={`flex items-center gap-1.5 text-xs px-2 sm:px-3 py-1 h-auto ${
-                      applyAvailability 
-                        ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
-                    }`}
+                    className={applyAvailability 
+                        ? `inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors bg-purple-100 text-purple-700 border-purple-300` 
+                        : `inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors bg-gray-100 text-gray-500 border-gray-300`
+                    }
                     data-testid="button-toggle-availability"
                   >
-                    {applyAvailability ? 'Availability Adjustment: ON' : 'Availability Adjustment: OFF'}
-                  </Button>
+                    {applyAvailability ? 'Avail: ON' : 'Avail: OFF'}
+                  </button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -734,33 +723,25 @@ export default function PlayerAssistProjections() {
                   </Button>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+              <div className="flex flex-wrap gap-0.5 sm:gap-1">
                 {Array.from({ length: endGameweek - startGameweek + 1 }, (_, i) => {
                   const gwNumber = startGameweek + i;
                   const isExcluded = excludedGameweeks.has(gwNumber);
                   return (
-                    <Button
+                    <button
                       key={gwNumber}
-                      variant="outline"
-                      size="sm"
                       onClick={() => toggleGameweekExclusion(gwNumber)}
-                      className={`min-w-[50px] sm:min-w-[60px] text-xs sm:text-sm px-2 sm:px-3 py-1 h-auto ${
-                        isExcluded 
-                          ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' 
-                          : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'
-                      }`}
+                      className={isExcluded 
+                          ? `rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors bg-gray-100 text-gray-400 line-through border-gray-300` 
+                          : `rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors bg-orange-100 text-orange-700 border-orange-300`
+                      }
                       data-testid={`button-toggle-gw-${gwNumber}`}
                     >
                       GW{gwNumber}
-                    </Button>
+                    </button>
                   );
                 })}
               </div>
-              {excludedGameweeks.size > 0 && (
-                <p className="text-xs text-gray-500 mt-2">
-                  Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
-                </p>
-              )}
             </div>
 
             {/* Position Toggle Section */}

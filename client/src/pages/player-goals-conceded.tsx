@@ -171,9 +171,6 @@ export default function PlayerGoalsConceded() {
                   <h3 className="text-sm font-semibold">Filters & Controls</h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 md:hidden">
-                    {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
-                  </span>
                   {isFiltersOpen ? (
                     <ChevronUp className="h-4 w-4 text-gray-500" />
                   ) : (
@@ -184,7 +181,7 @@ export default function PlayerGoalsConceded() {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="px-4 pb-4">
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
                   <div className="relative">
                     <label className="text-xs font-medium text-gray-600 mb-1 block">Search</label>
                     <div className="relative">
@@ -198,39 +195,50 @@ export default function PlayerGoalsConceded() {
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-600 mb-1 block">Position</label>
-                    <Select value={positionFilter} onValueChange={setPositionFilter}>
-                      <SelectTrigger className="h-8 text-xs" data-testid="select-position">
-                        <SelectValue placeholder="All" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        {positions.map(position => (
-                          <SelectItem key={position.id} value={position.id}>
-                            {position.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-medium text-gray-600 mb-1 block">Team</label>
-                    <Select value={teamFilter} onValueChange={setTeamFilter}>
-                      <SelectTrigger className="h-8 text-xs" data-testid="select-team">
-                        <SelectValue placeholder="All" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        {teams.map(team => (
-                          <SelectItem key={team.id} value={team.name}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
                 </div>
+
+                <Tabs defaultValue="pos" className="w-full">
+                  <TabsList className="w-full grid grid-cols-2 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
+                    <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
+                      Pos{positionFilter !== "all" && " (1)"}
+                    </TabsTrigger>
+                    <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
+                      Teams{teamFilter !== "all" && " (1)"}
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="pos" className="mt-0">
+                    <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                      {['All', 'GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+                        const value = pos === 'All' ? 'all' : pos;
+                        const isActive = (positionFilter === value) || (pos === 'All' && positionFilter === 'all');
+                        return (
+                          <button key={pos}
+                            onClick={() => setPositionFilter(positionFilter === value && value !== 'all' ? 'all' : value)}
+                            className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                            {pos}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="teams" className="mt-0">
+                    <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                      <button onClick={() => setTeamFilter('all')}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${teamFilter === 'all' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                        All
+                      </button>
+                      {Array.from(new Set((goalsConcededProjections || []).map((p: any) => p.teamName))).sort().map(team => (
+                        <button key={team}
+                          onClick={() => setTeamFilter(teamFilter === team ? 'all' : team)}
+                          className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${teamFilter === team ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                          {team}
+                        </button>
+                      ))}
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
             </CollapsibleContent>
           </div>

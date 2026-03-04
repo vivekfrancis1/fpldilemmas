@@ -285,9 +285,6 @@ export default function PlayerMinutes() {
                     <CardTitle className="text-base sm:text-lg">Filters & Controls</CardTitle>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 md:hidden">
-                      {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
-                    </span>
                     {isFiltersOpen ? (
                       <ChevronUp className="h-5 w-5 text-gray-500" />
                     ) : (
@@ -299,58 +296,25 @@ export default function PlayerMinutes() {
             </CollapsibleTrigger>
             <CollapsibleContent>
           <CardContent className="p-6 pt-0">
-            <div className="flex flex-wrap gap-4 items-end">
-              <div className="flex items-center gap-3">
-                <Search className="h-5 w-5 text-blue-600" />
-                <label className="text-xs font-semibold text-gray-600">Search:</label>
-                <div className="relative w-64">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
+              <div className="">
+                <label className="text-xs font-semibold text-gray-600 mb-1 block">Search:</label>
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                   <Input
                     data-testid="input-player-search"
-                    placeholder="Search by player or team name..."
+                    placeholder="Search..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-8 text-xs border-2 border-gray-200 hover:border-blue-400 transition-colors"
+                    className="h-8 text-xs pl-8 border-2 border-gray-200 hover:border-blue-400 transition-colors"
                   />
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
-                <Users className="h-5 w-5 text-blue-600" />
-                <label className="text-xs font-semibold text-gray-600">Position:</label>
-                <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                  <SelectTrigger className="h-8 text-xs w-32 border-2 border-gray-200 hover:border-blue-400 transition-colors">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {positions.map(position => (
-                      <SelectItem key={position} value={position}>{position}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Calendar className="h-5 w-5 text-blue-600" />
-                <label className="text-xs font-semibold text-gray-600">Team:</label>
-                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                  <SelectTrigger className="h-8 text-xs w-32 border-2 border-gray-200 hover:border-blue-400 transition-colors">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {teams.map(team => (
-                      <SelectItem key={team} value={team}>{team}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Filter className="h-5 w-5 text-blue-600" />
-                <label className="text-xs font-semibold text-gray-600">Min Minutes:</label>
+              <div className="">
+                <label className="text-xs font-semibold text-gray-600 mb-1 block">Min Minutes:</label>
                 <Select value={minMinutes} onValueChange={setMinMinutes}>
-                  <SelectTrigger className="h-8 text-xs w-24 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                  <SelectTrigger className="h-8 text-xs w-full border-2 border-gray-200 hover:border-blue-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -363,13 +327,56 @@ export default function PlayerMinutes() {
                 </Select>
               </div>
 
-
-
-              <div className="ml-auto flex items-center gap-2 text-sm text-gray-600">
-                <TrendingUp className="h-4 w-4" />
-                <span>{filteredAndSortedData.length} players</span>
+              <div className="flex items-end">
+                <div className="w-full flex items-center justify-center gap-2 bg-blue-50 text-blue-700 h-8 rounded-md text-xs font-medium border border-blue-100">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  <span>{filteredAndSortedData.length} players</span>
+                </div>
               </div>
             </div>
+
+            <Tabs defaultValue="pos" className="w-full">
+              <TabsList className="w-full grid grid-cols-2 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
+                <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
+                  Pos{selectedPosition !== "all" && " (1)"}
+                </TabsTrigger>
+                <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
+                  Teams{selectedTeam !== "all" && " (1)"}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="pos" className="mt-0">
+                <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                  {['All', 'GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+                    const value = pos === 'All' ? 'all' : pos;
+                    const isActive = (selectedPosition === value) || (pos === 'All' && selectedPosition === 'all');
+                    return (
+                      <button key={pos}
+                        onClick={() => setSelectedPosition(selectedPosition === value && value !== 'all' ? 'all' : value)}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                        {pos}
+                      </button>
+                    );
+                  })}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="teams" className="mt-0">
+                <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                  <button onClick={() => setSelectedTeam('all')}
+                    className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeam === 'all' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                    All
+                  </button>
+                  {teams.map(team => (
+                    <button key={team}
+                      onClick={() => setSelectedTeam(selectedTeam === team ? 'all' : team)}
+                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeam === team ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                      {team}
+                    </button>
+                  ))}
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
             </CollapsibleContent>
           </Card>

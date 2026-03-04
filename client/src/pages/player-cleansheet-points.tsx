@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProtectedRoute from "@/components/protected-route";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { computeNextRange } from "@shared/gameweek-utils";
@@ -211,9 +212,6 @@ export default function PlayerCleanSheetPoints() {
                   <h3 className="text-base sm:text-lg font-semibold">Filters & Controls</h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 md:hidden">
-                    {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
-                  </span>
                   {isFiltersOpen ? (
                     <ChevronUp className="h-5 w-5 text-gray-500" />
                   ) : (
@@ -224,9 +222,9 @@ export default function PlayerCleanSheetPoints() {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="px-6 pb-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {/* Gameweek Range */}
-            <div className="space-y-2">
+            <div className="">
               <Label htmlFor="start-gameweek" className="text-xs font-medium text-gray-600 mb-1 block">Start GW</Label>
               <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
                 <SelectTrigger className="h-8 text-xs">
@@ -240,7 +238,7 @@ export default function PlayerCleanSheetPoints() {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="">
               <Label htmlFor="end-gameweek" className="text-xs font-medium text-gray-600 mb-1 block">End GW</Label>
               <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
                 <SelectTrigger className="h-8 text-xs">
@@ -255,7 +253,7 @@ export default function PlayerCleanSheetPoints() {
             </div>
 
             {/* Search */}
-            <div className="space-y-2">
+            <div className="">
               <Label htmlFor="search" className="text-xs font-medium text-gray-600 mb-1 block">Search</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -269,46 +267,59 @@ export default function PlayerCleanSheetPoints() {
               </div>
             </div>
 
-            {/* Position Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="position-filter" className="text-xs font-medium text-gray-600 mb-1 block">Position</Label>
-              <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Positions</SelectItem>
-                  {positions.map(position => (
-                    <SelectItem key={position} value={position}>{position}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Team Filter */}
-            <div className="space-y-2">
-              <Label htmlFor="team-filter" className="text-xs font-medium text-gray-600 mb-1 block">Team</Label>
-              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger className="h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {teams.map(team => (
-                    <SelectItem key={team} value={team}>{team}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Stats Display */}
-            <div className="space-y-2">
+            <div className="">
               <Label className="text-xs font-medium text-gray-600 mb-1 block">Players</Label>
               <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-2 rounded-lg text-center">
                 <span className="font-bold">{filteredAndSortedData.length}</span>
               </div>
             </div>
           </div>
+
+          <Tabs defaultValue="pos" className="w-full mt-2">
+            <TabsList className="w-full grid grid-cols-2 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
+              <TabsTrigger value="pos" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
+                Pos{selectedPosition !== "all" && " (1)"}
+              </TabsTrigger>
+              <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
+                Teams{selectedTeam !== "all" && " (1)"}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Pos tab */}
+            <TabsContent value="pos" className="mt-0">
+              <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                {['All', 'GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+                  const value = pos === 'All' ? 'all' : pos;
+                  const isActive = (selectedPosition === value) || (pos === 'All' && selectedPosition === 'all');
+                  return (
+                    <button key={pos}
+                      onClick={() => setSelectedPosition(selectedPosition === value && value !== 'all' ? 'all' : value)}
+                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                      {pos}
+                    </button>
+                  );
+                })}
+              </div>
+            </TabsContent>
+
+            {/* Teams tab */}
+            <TabsContent value="teams" className="mt-0">
+              <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                <button onClick={() => setSelectedTeam('all')}
+                  className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeam === 'all' ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                  All
+                </button>
+                {teams.map(team => (
+                  <button key={team}
+                    onClick={() => setSelectedTeam(selectedTeam === team ? 'all' : team)}
+                    className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeam === team ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                    {team}
+                  </button>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
               </div>
             </CollapsibleContent>
           </div>

@@ -302,9 +302,6 @@ export default function PlayerGoalProjections() {
                 <h3 className="text-sm font-semibold">Filters & Controls</h3>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 md:hidden">
-                  {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
-                </span>
                 {isFiltersOpen ? (
                   <ChevronUp className="h-4 w-4 text-gray-500" />
                 ) : (
@@ -345,20 +342,22 @@ export default function PlayerGoalProjections() {
                 </div>
                 
                 <div>
-                  <Label htmlFor="position" className="text-xs font-medium text-gray-600 mb-1 block">Position</Label>
-                  <Select value={positionFilter} onValueChange={setPositionFilter}>
-                    <SelectTrigger className="h-8 text-xs" data-testid="select-position-filter">
-                      <SelectValue placeholder="All" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {positions.map(position => (
-                        <SelectItem key={position} value={position}>{position}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Position</label>
+                  <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                    {['All', 'GKP', 'DEF', 'MID', 'FWD'].map(pos => {
+                      const value = pos === 'All' ? 'all' : pos;
+                      const isActive = positionFilter === value;
+                      return (
+                        <button key={pos}
+                          onClick={() => setPositionFilter(positionFilter === value && value !== 'all' ? 'all' : value)}
+                          className={`rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isActive ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                          {pos}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="team" className="text-xs font-medium text-gray-600 mb-1 block">Team</Label>
                   <Select value={teamFilter} onValueChange={setTeamFilter}>

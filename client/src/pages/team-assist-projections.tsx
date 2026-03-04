@@ -185,9 +185,6 @@ export default function TeamAssistProjections() {
                   <div className="flex items-center gap-2">
                     <Filter className="h-4 w-4" />
                     <span>Filters & Options</span>
-                    <span className="text-xs text-gray-500 font-normal md:hidden">
-                      (Tap to {isFiltersOpen ? 'collapse' : 'expand'})
-                    </span>
                   </div>
                   {isFiltersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                 </CardTitle>
@@ -232,26 +229,22 @@ export default function TeamAssistProjections() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Team
-                    </label>
-                    <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                      <SelectTrigger className="h-8 text-xs" data-testid="select-team">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Teams</SelectItem>
-                        {bootstrapData?.teams && bootstrapData.teams
-                          .sort((a: any, b: any) => a.name.localeCompare(b.name))
-                          .map((team: any) => (
-                            <SelectItem key={team.id} value={team.short_name}>
-                              {team.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                <div className="mt-2">
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Team</label>
+                  <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                    <button onClick={() => setSelectedTeam("all")}
+                      className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeam === "all" ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                      All
+                    </button>
+                    {bootstrapData?.teams?.sort((a, b) => a.short_name.localeCompare(b.short_name)).map(team => (
+                      <button key={team.id}
+                        onClick={() => setSelectedTeam(selectedTeam === team.short_name ? "all" : team.short_name)}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeam === team.short_name ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                        {team.short_name}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </CardContent>

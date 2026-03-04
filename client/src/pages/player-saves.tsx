@@ -5,6 +5,7 @@ import { LoadingExperience } from "@/components/loading-experience";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -515,9 +516,6 @@ export default function PlayerSaves() {
                     <CardTitle className="text-base sm:text-lg">Filters & Controls</CardTitle>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-500 md:hidden">
-                      {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
-                    </span>
                     {isFiltersOpen ? (
                       <ChevronUp className="h-5 w-5 text-gray-500" />
                     ) : (
@@ -529,7 +527,7 @@ export default function PlayerSaves() {
             </CollapsibleTrigger>
             <CollapsibleContent>
           <CardContent className="p-4 sm:p-6 pt-0">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-4">
               <div className="space-y-2">
                 <label className="text-xs font-medium text-gray-600">From GW</label>
                 <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
@@ -578,105 +576,73 @@ export default function PlayerSaves() {
               </div>
             </div>
 
-            {/* Gameweek Toggle Section */}
-            <div className="mt-4 pt-4 border-t">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-4 mb-3">
-                <label className="text-xs sm:text-sm font-medium text-gray-700">
-                  Toggle Gameweeks:
-                </label>
-                {excludedGameweeks.size > 0 && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={clearExclusions}
-                    className="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 h-auto"
-                    data-testid="button-clear-exclusions"
-                  >
-                    <X className="h-3 w-3 mr-1" />
-                    Clear
-                  </Button>
-                )}
-                <div className="ml-auto flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setApplyAvailability(!applyAvailability)}
-                    className={`text-xs sm:text-sm px-2 sm:px-3 py-1 h-auto ${
-                      applyAvailability 
-                        ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
-                    }`}
-                    data-testid="button-toggle-availability"
-                  >
-                    {applyAvailability ? "Availability Adjustment: ON" : "Availability Adjustment: OFF"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowOpponent(!showOpponent)}
-                    className={`text-xs sm:text-sm px-2 sm:px-3 py-1 h-auto ${
-                      showOpponent 
-                        ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300' 
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
-                    }`}
-                    data-testid="button-toggle-opponent"
-                  >
-                    {showOpponent ? "Hide Opponent" : "Show Opponent"}
-                  </Button>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {Array.from({ length: endGameweek - startGameweek + 1 }, (_, i) => {
-                  const gwNumber = startGameweek + i;
-                  const isExcluded = excludedGameweeks.has(gwNumber);
-                  return (
-                    <Button
-                      key={gwNumber}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleGameweekExclusion(gwNumber)}
-                      className={`min-w-[50px] sm:min-w-[60px] text-xs sm:text-sm px-2 sm:px-3 py-1 h-auto ${
-                        isExcluded 
-                          ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' 
-                          : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'
-                      }`}
-                      data-testid={`button-toggle-gw-${gwNumber}`}
-                    >
-                      GW{gwNumber}
-                    </Button>
-                  );
-                })}
-              </div>
-              {excludedGameweeks.size > 0 && (
-                <p className="text-xs text-gray-500 mt-2">
-                  Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
-                </p>
-              )}
-            </div>
+            <Tabs defaultValue="gws" className="w-full">
+              <TabsList className="w-full grid grid-cols-2 mb-1 h-auto p-0.5 bg-white shadow-sm border border-gray-100">
+                <TabsTrigger value="gws" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
+                  GWs{excludedGameweeks.size > 0 && ` (${excludedGameweeks.size})`}
+                </TabsTrigger>
+                <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
+                  Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Team Toggle Section */}
-            <div className="mt-4 pt-4 border-t">
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                <label className="text-xs sm:text-sm font-medium text-gray-700">Teams:</label>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setSelectedTeams(new Set())}
-                    className="text-xs px-2 py-1 bg-green-50 text-green-700 hover:bg-green-100 border-green-300">All</Button>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedTeams(new Set(['_none_']))}
-                    className="text-xs px-2 py-1 bg-red-50 text-red-700 hover:bg-red-100 border-red-300">None</Button>
+              <TabsContent value="gws" className="mt-0">
+                <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
+                  <button
+                    onClick={() => setApplyAvailability(!applyAvailability)}
+                    className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${applyAvailability ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                  >
+                    Avail: {applyAvailability ? 'ON' : 'OFF'}
+                  </button>
+                  <button
+                    onClick={() => setShowOpponent(!showOpponent)}
+                    className={`inline-flex items-center gap-1 rounded-full border text-[10px] sm:text-xs font-medium px-2 sm:px-3 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${showOpponent ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
+                  >
+                    Opponent: {showOpponent ? 'ON' : 'OFF'}
+                  </button>
+                  {excludedGameweeks.size > 0 && (
+                    <button onClick={clearExclusions} className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700">
+                      <X className="h-2.5 w-2.5" />Clear
+                    </button>
+                  )}
                 </div>
-              </div>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {teams.map(team => {
-                  const isSelected = selectedTeams.size === 0 || selectedTeams.has(team);
-                  const shortName = teamNameToShort?.get(team) || team;
-                  return (
-                    <Button key={team} variant="outline" size="sm" onClick={() => toggleTeamSelection(team)}
-                      className={`text-xs px-2 py-1 ${isSelected ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300' : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'}`}
-                      data-testid={`button-toggle-team-${team}`}>{shortName}</Button>
-                  );
-                })}
-              </div>
+                <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                  {Array.from({ length: endGameweek - startGameweek + 1 }, (_, i) => {
+                    const gw = startGameweek + i;
+                    const isExcluded = excludedGameweeks.has(gw);
+                    return (
+                      <button key={gw} onClick={() => toggleGameweekExclusion(gw)}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-orange-100 text-orange-700 border-orange-300'}`}
+                      >GW{gw}</button>
+                    );
+                  })}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="teams" className="mt-0">
+                <div className="flex justify-end gap-1 mb-1">
+                  <button onClick={() => setSelectedTeams(new Set())} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-green-50 text-green-700 border-green-300">All</button>
+                  <button onClick={() => setSelectedTeams(new Set(teams))} className="rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer bg-red-50 text-red-700 border-red-300">None</button>
+                </div>
+                <div className="flex flex-wrap gap-0.5 sm:gap-1">
+                  {teams.map(team => {
+                    const isIncluded = selectedTeams.size === 0 || selectedTeams.has(team);
+                    const shortName = teamNameToShort?.get(team) || team;
+                    return (
+                      <button key={team} onClick={() => toggleTeamSelection(team)}
+                        className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${isIncluded ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 line-through border-gray-300'}`}
+                      >{shortName}</button>
+                    );
+                  })}
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <div className="flex items-center gap-2 text-sm text-gray-600 mt-4">
+              <Users className="h-4 w-4" />
+              <span>{filteredAndSortedData.length} goalkeepers</span>
             </div>
+          </CardContent>
           </CardContent>
             </CollapsibleContent>
           </Card>
