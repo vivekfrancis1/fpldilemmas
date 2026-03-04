@@ -107,7 +107,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       priority: 'important',
       align: 'right',
       mobileLabel: 'Rank',
-      cardOrder: 2,
+      cardOrder: 10,
       sortable: true,
       render: (_, item: T) => {
         const rank = item.latestTracking?.overallRank;
@@ -124,7 +124,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       priority: 'important',
       align: 'right',
       mobileLabel: 'Gain',
-      cardOrder: 3,
+      cardOrder: 20,
       sortable: true,
       render: (_, item: T) => renderRankChange(item.rankChange)
     },
@@ -134,7 +134,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       priority: 'important',
       align: 'right',
       mobileLabel: 'Points',
-      cardOrder: 4,
+      cardOrder: 30,
       sortable: true,
       className: 'font-mono',
       render: (_, item: T) => {
@@ -148,7 +148,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       priority: 'secondary',
       align: 'right',
       mobileLabel: currentGameweek ? `GW${currentGameweek}` : 'GW Pts',
-      cardOrder: 5,
+      cardOrder: 40,
       sortable: true,
       render: (_, item: T) => {
         const gwPoints = item.latestTracking?.gameweekPoints;
@@ -165,7 +165,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'Squad',
-      cardOrder: 6,
+      cardOrder: 90,
       sortable: true,
       className: 'font-mono',
       render: (_, item: T) => {
@@ -183,7 +183,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       priority: 'optional',
       align: 'right',
       mobileLabel: 'Bank',
-      cardOrder: 7,
+      cardOrder: 120,
       sortable: true,
       className: 'font-mono',
       render: (_, item: T) => {
@@ -198,7 +198,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       priority: 'optional',
       align: 'right',
       mobileLabel: 'TV',
-      cardOrder: 8,
+      cardOrder: 130,
       sortable: true,
       className: 'font-mono',
       render: (_, item: T) => {
@@ -213,7 +213,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       priority: 'secondary',
       align: 'left',
       mobileLabel: currentGameweek ? `GW${currentGameweek}` : 'GW TM',
-      cardOrder: 9,
+      cardOrder: 80,
       sortable: true,
       width: '220px',
       render: (_, item: T) => {
@@ -256,7 +256,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       priority: 'optional',
       align: 'right',
       mobileLabel: 'Total TF',
-      cardOrder: 10,
+      cardOrder: 100,
       sortable: true,
       className: 'font-mono',
       render: (_, item: T) => {
@@ -277,7 +277,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       priority: 'optional',
       align: 'right',
       mobileLabel: `FT GW${ftGameweek}`,
-      cardOrder: 11,
+      cardOrder: 110,
       sortable: true,
       className: 'font-mono',
       render: (_, item: T) => {
@@ -293,7 +293,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       priority: 'optional',
       align: 'right',
       mobileLabel: `Chips GW${ftGameweek}`,
-      cardOrder: 12,
+      cardOrder: 115,
       sortable: true,
       className: 'font-mono',
       render: (_, item: T) => {

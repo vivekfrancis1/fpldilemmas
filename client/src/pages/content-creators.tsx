@@ -260,8 +260,7 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     priority: 'essential',
     align: 'left',
     mobileLabel: 'Creator',
-    cardOrder: 1,
-    width: '300px',
+    hideOnMobile: true,
     render: (value, creator) => (
       <div className="flex items-center gap-3">
         <div>
@@ -305,7 +304,7 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     priority: 'secondary',
     align: 'right',
     mobileLabel: xPtsGW ? `xPts GW${xPtsGW}` : 'xPts',
-    cardOrder: 2,
+    cardOrder: 50,
     sortable: true,
     className: 'font-mono',
     render: (value, creator) => (
@@ -321,7 +320,7 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     priority: 'secondary',
     align: 'center',
     mobileLabel: xPtsGW ? `Chip GW${xPtsGW}` : 'Chip',
-    cardOrder: 3,
+    cardOrder: 60,
     render: (value, creator) => (
       <div className="text-center">
         {creator.active_chip && getChipLabel(creator.active_chip) ? (

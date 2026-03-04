@@ -96,7 +96,7 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     priority: 'essential',
     align: 'center',
     mobileLabel: 'Rank',
-    cardOrder: 1,
+    cardOrder: 5,
     sortable: true,
     render: (value, manager) => (
       <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto">
@@ -111,7 +111,7 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     priority: 'essential',
     align: 'left',
     mobileLabel: 'Manager',
-    cardOrder: 2,
+    cardOrder: 10,
     sortable: true,
     render: (value, manager) => (
       <div className="font-medium">{manager.name}</div>
@@ -124,7 +124,7 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     priority: 'secondary',
     align: 'right',
     mobileLabel: xPtsGW ? `xPts GW${xPtsGW}` : 'xPts',
-    cardOrder: 3,
+    cardOrder: 50,
     sortable: true,
     className: 'font-mono',
     render: (value, manager) => (
@@ -140,7 +140,7 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
     priority: 'secondary',
     align: 'center',
     mobileLabel: xPtsGW ? `Chip GW${xPtsGW}` : 'Chip',
-    cardOrder: 4,
+    cardOrder: 60,
     render: (value, manager) => (
       <div className="text-center">
         {manager.active_chip && getChipLabel(manager.active_chip) ? (
