@@ -2887,7 +2887,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Fetch projected points for players — when the current GW is finished, use the NEXT GW for projections
       // (the projection-accuracy endpoint returns null projected_points for finished GWs, only future GWs have projections)
-      const projectionGW = isGameweekFinished
+      let projectionGW = isGameweekFinished
         ? (bootstrapData.events.find((e: any) => e.is_next)?.id || currentGameweek + 1)
         : currentGameweek;
       let playerProjectionsMap = new Map<number, number>();
@@ -2904,6 +2904,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (err) {
         console.warn("Could not fetch player projections for league standings:", err);
+      }
+
+      // Fallback: if the target GW returned no data (e.g. dev cache rebuilt after GW started),
+      // pull the next GW projections from cached player-total-points
+      if (playerProjectionsMap.size === 0) {
+        try {
+          const fallbackGW = projectionGW + 1;
+          const cachedResponse = await internalFetch(`/api/cached/player-total-points`);
+          if (cachedResponse && cachedResponse.ok) {
+            const cachedPlayers = await cachedResponse.json();
+            const playerArray = Array.isArray(cachedPlayers) ? cachedPlayers : Object.values(cachedPlayers);
+            for (const player of playerArray as any[]) {
+              const pts = player.gameweekProjections?.[fallbackGW.toString()];
+              if (pts != null && pts > 0) {
+                playerProjectionsMap.set(player.playerId, parseFloat(pts));
+              }
+            }
+          }
+          if (playerProjectionsMap.size > 0) {
+            projectionGW = fallbackGW;
+            console.log(`league-standings: GW${projectionGW - 1} had no data, fell back to GW${projectionGW} (${playerProjectionsMap.size} players)`);
+          }
+        } catch (err) {
+          console.warn("Could not fetch fallback projections for league standings:", err);
+        }
       }
       
       // Fetch league standings
@@ -3523,6 +3548,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const currentGW = bootstrapData.events.find((event: any) => event.is_current);
       const currentGameweek = currentGW?.id || 1;
 
+      let projectionGW = currentGameweek;
       let playerProjectionsMap = new Map<number, number>();
       try {
         const projectionsResponse = await internalFetch(`/api/projection-accuracy/gameweek/${currentGameweek}`);
@@ -3536,6 +3562,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } catch (err) {
         console.warn("Could not fetch player projections for batch projected points:", err);
+      }
+
+      // Fallback: if current GW has no projection data (e.g. dev cache rebuilt after GW started),
+      // use next GW projections from the cached player-total-points endpoint
+      if (playerProjectionsMap.size === 0) {
+        try {
+          const nextGW = currentGameweek + 1;
+          const cachedResponse = await internalFetch(`/api/cached/player-total-points`);
+          if (cachedResponse && cachedResponse.ok) {
+            const cachedPlayers = await cachedResponse.json();
+            const playerArray = Array.isArray(cachedPlayers) ? cachedPlayers : Object.values(cachedPlayers);
+            for (const player of playerArray as any[]) {
+              const pts = player.gameweekProjections?.[nextGW.toString()];
+              if (pts != null && pts > 0) {
+                playerProjectionsMap.set(player.playerId, parseFloat(pts));
+              }
+            }
+          }
+          if (playerProjectionsMap.size > 0) {
+            projectionGW = nextGW;
+            console.log(`batch-projected-points: GW${currentGameweek} had no data, fell back to GW${nextGW} (${playerProjectionsMap.size} players)`);
+          }
+        } catch (err) {
+          console.warn("Could not fetch fallback projections for batch projected points:", err);
+        }
       }
 
       // Build player element-type map once for all managers
@@ -3622,7 +3673,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
 
-      res.json({ managers: results, gameweek: currentGameweek });
+      res.json({ managers: results, gameweek: projectionGW });
     } catch (error) {
       console.error("Error in batch projected points:", error);
       res.status(500).json({ error: "Failed to fetch batch projected points" });

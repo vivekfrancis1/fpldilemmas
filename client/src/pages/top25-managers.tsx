@@ -88,7 +88,8 @@ const TOP_25_MANAGERS: Top25Manager[] = [
   { rank: 25, name: "Jovan Popović", managerId: 226819 },
 ];
 
-const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, GWTransferDetail[]>, upcomingGameweek?: number): ResponsiveTableColumn<Top25Manager>[] => {
+const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, GWTransferDetail[]>, upcomingGameweek?: number, projectionGW?: number): ResponsiveTableColumn<Top25Manager>[] => {
+  const xPtsGW = projectionGW ?? upcomingGameweek;
   const allTimeRankCol: ResponsiveTableColumn<Top25Manager> = {
     key: 'rank',
     header: 'Rank',
@@ -119,10 +120,10 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
 
   const xPtsCol: ResponsiveTableColumn<Top25Manager> = {
     key: 'projected_points',
-    header: 'xPts',
+    header: xPtsGW ? `xPts GW${xPtsGW}` : 'xPts',
     priority: 'secondary',
     align: 'right',
-    mobileLabel: 'xPts',
+    mobileLabel: xPtsGW ? `xPts GW${xPtsGW}` : 'xPts',
     cardOrder: 3,
     sortable: true,
     className: 'font-mono',
@@ -135,10 +136,10 @@ const getTop25ManagerColumns = (currentGameweek?: number, gwTransfersMap?: Recor
 
   const chipCol: ResponsiveTableColumn<Top25Manager> = {
     key: 'active_chip',
-    header: 'Chip',
+    header: xPtsGW ? `Chip GW${xPtsGW}` : 'Chip',
     priority: 'secondary',
     align: 'center',
-    mobileLabel: 'Chip',
+    mobileLabel: xPtsGW ? `Chip GW${xPtsGW}` : 'Chip',
     cardOrder: 4,
     render: (value, manager) => (
       <div className="text-center">
@@ -489,7 +490,7 @@ export default function Top25Managers() {
               <CardContent className="p-0">
                 <ResponsiveTable
                   data={sortedManagersData}
-                  columns={getTop25ManagerColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek)}
+                  columns={getTop25ManagerColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
                   enableMobileCards={true}
                   mobileCardTitle={(manager) => manager.name}
                   loading={isRefreshing}

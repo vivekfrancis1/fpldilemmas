@@ -252,7 +252,8 @@ function getRankBadgeVariant(rank?: number): "default" | "secondary" | "destruct
 }
 
 
-const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, SharedGWTransferDetail[]>, upcomingGameweek?: number): ResponsiveTableColumn<CreatorWithLatestData>[] => {
+const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Record<number, SharedGWTransferDetail[]>, upcomingGameweek?: number, projectionGW?: number): ResponsiveTableColumn<CreatorWithLatestData>[] => {
+  const xPtsGW = projectionGW ?? upcomingGameweek;
   const nameColumn: ResponsiveTableColumn<CreatorWithLatestData> = {
     key: 'name',
     header: 'Creator',
@@ -300,10 +301,10 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
 
   const xPtsCol: ResponsiveTableColumn<CreatorWithLatestData> = {
     key: 'projected_points',
-    header: upcomingGameweek ? `xPts GW${upcomingGameweek}` : 'xPts',
+    header: xPtsGW ? `xPts GW${xPtsGW}` : 'xPts',
     priority: 'secondary',
     align: 'right',
-    mobileLabel: upcomingGameweek ? `xPts GW${upcomingGameweek}` : 'xPts',
+    mobileLabel: xPtsGW ? `xPts GW${xPtsGW}` : 'xPts',
     cardOrder: 2,
     sortable: true,
     className: 'font-mono',
@@ -316,10 +317,10 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
 
   const chipCol: ResponsiveTableColumn<CreatorWithLatestData> = {
     key: 'active_chip',
-    header: upcomingGameweek ? `Chip GW${upcomingGameweek}` : 'Chip',
+    header: xPtsGW ? `Chip GW${xPtsGW}` : 'Chip',
     priority: 'secondary',
     align: 'center',
-    mobileLabel: upcomingGameweek ? `Chip GW${upcomingGameweek}` : 'Chip',
+    mobileLabel: xPtsGW ? `Chip GW${xPtsGW}` : 'Chip',
     cardOrder: 3,
     render: (value, creator) => (
       <div className="text-center">
@@ -909,7 +910,7 @@ export default function ContentCreators() {
             <div className="fpl-table-container">
               <ResponsiveTable
                 data={sortedCreators || []}
-                columns={getContentCreatorColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek)}
+                columns={getContentCreatorColumns(currentGameweek, gwTransfersData?.transfers, upcomingGameweek, projectedData?.gameweek ?? currentGameweek)}
                 enableMobileCards={true}
                 mobileCardTitle={(creator) => creator.name}
                 loading={isLoading}
