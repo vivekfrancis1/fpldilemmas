@@ -300,10 +300,10 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
 
   const xPtsCol: ResponsiveTableColumn<CreatorWithLatestData> = {
     key: 'projected_points',
-    header: 'xPts',
+    header: upcomingGameweek ? `xPts GW${upcomingGameweek}` : 'xPts',
     priority: 'secondary',
     align: 'right',
-    mobileLabel: 'xPts',
+    mobileLabel: upcomingGameweek ? `xPts GW${upcomingGameweek}` : 'xPts',
     cardOrder: 2,
     sortable: true,
     className: 'font-mono',
@@ -316,10 +316,10 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
 
   const chipCol: ResponsiveTableColumn<CreatorWithLatestData> = {
     key: 'active_chip',
-    header: 'Chip',
+    header: upcomingGameweek ? `Chip GW${upcomingGameweek}` : 'Chip',
     priority: 'secondary',
     align: 'center',
-    mobileLabel: 'Chip',
+    mobileLabel: upcomingGameweek ? `Chip GW${upcomingGameweek}` : 'Chip',
     cardOrder: 3,
     render: (value, creator) => (
       <div className="text-center">
