@@ -1716,302 +1716,247 @@ export default function PlayerTotalPoints() {
               </div>
             </CollapsibleTrigger>
             <CollapsibleContent>
-            <div className="fpl-card-content">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start-gameweek" className="text-sm font-medium text-gray-700">From GW</Label>
-              <Select value={startGameweek?.toString() || ''} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableGameweeks.map(gw => (
-                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="end-gameweek" className="text-sm font-medium text-gray-700">To GW</Label>
-              <Select value={endGameweek?.toString() || ''} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableGameweeks.filter(gw => !startGameweek || gw >= startGameweek).map(gw => (
-                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="availability-filter" className="text-sm font-medium text-gray-700">Availability</Label>
-              <Select value={selectedAvailability} onValueChange={setSelectedAvailability}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem key="availability-all" value="all">All</SelectItem>
-                  <SelectItem key="availability-available" value="available">Available</SelectItem>
-                  <SelectItem key="availability-partial" value="partial">Partial</SelectItem>
-                  <SelectItem key="availability-unavailable" value="unavailable">Unavailable</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="load-group-filter" className="text-sm font-medium text-gray-700">Group</Label>
-              <Select value={selectedLoadGroup} onValueChange={setSelectedLoadGroup}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem key="load-group-all" value="all">All</SelectItem>
-                  <SelectItem key="load-group-my-team" value="My Team">My Team</SelectItem>
-                  <SelectItem key="load-group-top-50" value="Top 50">Top 50</SelectItem>
-                  <SelectItem key="load-group-value-50" value="Value 50">Value 50</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2 sm:col-span-2 lg:col-span-2 xl:col-span-3">
-              <Label htmlFor="search" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <Search className="h-4 w-4 text-gray-500" />
-                Search
-              </Label>
-              <Input
-                id="search"
-                placeholder="Search players..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-11 text-base px-4"
-              />
-            </div>
-              </div>
-              
-              {/* Gameweek Toggle Section with Opponent Toggle */}
-              <div className="mt-4 pt-4 border-t">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <Label className="text-xs sm:text-sm font-medium text-gray-700">
-                    Toggle Gameweeks (click to exclude/include):
-                  </Label>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowOpponent(!showOpponent)}
-                      className={`flex items-center gap-1.5 text-xs px-2 py-1 ${
-                        showOpponent 
-                          ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-300' 
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 border border-gray-300'
-                      }`}
-                      data-testid="button-toggle-opponent"
-                    >
-                      <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                      <span className="hidden sm:inline">{showOpponent ? 'Hide Opponent' : 'Show Opponent'}</span>
-                      <span className="sm:hidden">{showOpponent ? 'Hide' : 'Show'}</span>
-                    </Button>
-                    {excludedGameweeks.size > 0 && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={clearExclusions}
-                        className="text-xs text-gray-500 hover:text-gray-700 px-2 sm:px-3"
-                        data-testid="button-clear-exclusions"
-                      >
-                        <X className="h-3 w-3 mr-1" />
-                        <span className="hidden sm:inline">Clear exclusions</span>
-                        <span className="sm:hidden">Clear</span>
-                      </Button>
-                    )}
-                  </div>
+            <div className="fpl-card-content p-3">
+              {/* Compact selects — 2-col on mobile, 4-col on sm+ */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                <div>
+                  <Label className="text-xs font-medium text-gray-600 mb-1 block">From GW</Label>
+                  <Select value={startGameweek?.toString() || ''} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.map(gw => (
+                        <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {fullGameweekRange.map(gw => {
-                    const isExcluded = excludedGameweeks.has(gw);
-                    return (
+                <div>
+                  <Label className="text-xs font-medium text-gray-600 mb-1 block">To GW</Label>
+                  <Select value={endGameweek?.toString() || ''} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.filter(gw => !startGameweek || gw >= startGameweek).map(gw => (
+                        <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-gray-600 mb-1 block">Availability</Label>
+                  <Select value={selectedAvailability} onValueChange={setSelectedAvailability}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="partial">Partial</SelectItem>
+                      <SelectItem value="unavailable">Unavailable</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-xs font-medium text-gray-600 mb-1 block">Group</Label>
+                  <Select value={selectedLoadGroup} onValueChange={setSelectedLoadGroup}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="My Team">My Team</SelectItem>
+                      <SelectItem value="Top 50">Top 50</SelectItem>
+                      <SelectItem value="Value 50">Value 50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Search */}
+              <div className="relative mb-3">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                <Input
+                  placeholder="Search players or teams..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="h-8 text-xs pl-8"
+                />
+              </div>
+
+              {/* Tabbed toggle sections */}
+              <Tabs defaultValue="gws" className="w-full">
+                <TabsList className="h-7 w-full grid grid-cols-4 mb-2">
+                  <TabsTrigger value="gws" className="text-xs py-0.5">
+                    GWs{excludedGameweeks.size > 0 && <span className="ml-1 text-[10px] bg-orange-200 text-orange-800 rounded px-1">{excludedGameweeks.size}</span>}
+                  </TabsTrigger>
+                  <TabsTrigger value="pos" className="text-xs py-0.5">
+                    Pos{selectedPositions.size > 0 && <span className="ml-1 text-[10px] bg-gray-200 text-gray-700 rounded px-1">{selectedPositions.size}</span>}
+                  </TabsTrigger>
+                  <TabsTrigger value="teams" className="text-xs py-0.5">
+                    Teams{selectedTeams.size > 0 && <span className="ml-1 text-[10px] bg-gray-200 text-gray-700 rounded px-1">{selectedTeams.size}</span>}
+                  </TabsTrigger>
+                  <TabsTrigger value="pts" className="text-xs py-0.5">
+                    Pts{excludedComponents.size > 0 && <span className="ml-1 text-[10px] bg-gray-200 text-gray-700 rounded px-1">{excludedComponents.size}</span>}
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* GWs tab */}
+                <TabsContent value="gws" className="mt-0">
+                  <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
+                    <span className="text-xs text-gray-500">Tap to exclude/include:</span>
+                    <div className="flex items-center gap-1">
                       <Button
-                        key={gw}
                         variant="outline"
                         size="sm"
-                        onClick={() => toggleGameweekExclusion(gw)}
-                        className={`min-w-[50px] sm:min-w-[60px] text-xs px-2 py-1 ${
-                          isExcluded 
-                            ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' 
-                            : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300'
+                        onClick={() => setShowOpponent(!showOpponent)}
+                        className={`h-6 text-xs px-2 py-0 flex items-center gap-1 ${
+                          showOpponent
+                            ? 'bg-purple-100 text-purple-700 border-purple-300'
+                            : 'bg-gray-100 text-gray-500 border-gray-300'
                         }`}
-                        data-testid={`button-toggle-gw-${gw}`}
+                        data-testid="button-toggle-opponent"
                       >
-                        GW{gw}
+                        <Users className="h-3 w-3" />
+                        {showOpponent ? 'Hide Opp' : 'Show Opp'}
                       </Button>
-                    );
-                  })}
-                </div>
-                {excludedGameweeks.size > 0 && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Excluded: {Array.from(excludedGameweeks).sort((a, b) => a - b).map(gw => `GW${gw}`).join(', ')}
-                  </p>
-                )}
-              </div>
-              
-              {/* Position Toggle Section */}
-              <div className="mt-4 pt-4 border-t">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <Label className="text-xs sm:text-sm font-medium text-gray-700">
-                    Positions:
-                  </Label>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setSelectedPositions(new Set())}
-                      className="text-xs sm:text-sm bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 sm:px-3 py-1.5"
-                      data-testid="button-include-all-positions"
-                    >
-                      All
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setSelectedPositions(new Set(positions))}
-                      className="text-xs sm:text-sm bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 sm:px-3 py-1.5"
-                      data-testid="button-exclude-all-positions"
-                    >
-                      None
-                    </Button>
+                      {excludedGameweeks.size > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={clearExclusions}
+                          className="h-6 text-xs px-2 py-0 text-gray-500"
+                          data-testid="button-clear-exclusions"
+                        >
+                          <X className="h-3 w-3 mr-0.5" />
+                          Clear
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {positions.map(position => {
-                    const isSelected = !selectedPositions.has(position);
-                    const shortForm = position === 'Goalkeeper' ? 'GKP' : position === 'Defender' ? 'DEF' : position === 'Midfielder' ? 'MID' : position === 'Forward' ? 'FWD' : position;
-                    return (
-                      <Button
-                        key={position}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => togglePositionSelection(position)}
-                        className={`text-xs px-2 py-1 ${
-                          isSelected 
-                            ? 'bg-teal-100 text-teal-700 hover:bg-teal-200 border border-teal-300' 
-                            : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'
-                        }`}
-                        data-testid={`button-toggle-position-${position}`}
-                      >
-                        {shortForm}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-              
-              {/* Team Toggle Section */}
-              <div className="mt-4 pt-4 border-t">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <Label className="text-xs sm:text-sm font-medium text-gray-700">
-                    Teams:
-                  </Label>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setSelectedTeams(new Set())}
-                      className="text-xs sm:text-sm bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 sm:px-3 py-1.5"
-                      data-testid="button-include-all-teams"
-                    >
-                      All
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setSelectedTeams(new Set(teams))}
-                      className="text-xs sm:text-sm bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 sm:px-3 py-1.5"
-                      data-testid="button-exclude-all-teams"
-                    >
-                      None
-                    </Button>
+                  <div className="flex flex-wrap gap-1">
+                    {fullGameweekRange.map(gw => {
+                      const isExcluded = excludedGameweeks.has(gw);
+                      return (
+                        <Button
+                          key={gw}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleGameweekExclusion(gw)}
+                          className={`h-6 min-w-[38px] text-xs px-1.5 py-0 ${
+                            isExcluded
+                              ? 'bg-gray-100 text-gray-400 line-through border-gray-300'
+                              : 'bg-orange-100 text-orange-700 border-orange-300'
+                          }`}
+                          data-testid={`button-toggle-gw-${gw}`}
+                        >
+                          GW{gw}
+                        </Button>
+                      );
+                    })}
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {teams.map(team => {
-                    const isSelected = !selectedTeams.has(team);
-                    const shortName = teamNameToShortName.get(team) || team;
-                    return (
-                      <Button
-                        key={team}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleTeamSelection(team)}
-                        className={`text-xs px-2 py-1 ${
-                          isSelected 
-                            ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-300' 
-                            : 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300'
-                        }`}
-                        data-testid={`button-toggle-team-${team}`}
-                      >
-                        {shortName}
-                      </Button>
-                    );
-                  })}
-                </div>
-              </div>
-              
-              {/* Point Component Toggle Section */}
-              <div className="mt-4 pt-4 border-t">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <Label className="text-xs sm:text-sm font-medium text-gray-700">
-                    Toggle Point Components (click to exclude/include):
-                  </Label>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={includeAllComponents}
-                      className="text-xs sm:text-sm bg-green-50 text-green-700 hover:bg-green-100 border-green-300 px-2 sm:px-3 py-1.5"
-                      data-testid="button-include-all-components"
-                    >
-                      All
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={excludeAllComponents}
-                      className="text-xs sm:text-sm bg-red-50 text-red-700 hover:bg-red-100 border-red-300 px-2 sm:px-3 py-1.5"
-                      data-testid="button-exclude-all-components"
-                    >
-                      None
-                    </Button>
+                </TabsContent>
+
+                {/* Position tab */}
+                <TabsContent value="pos" className="mt-0">
+                  <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
+                    <span className="text-xs text-gray-500">Tap to exclude:</span>
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set())} className="h-6 text-xs px-2 py-0 bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-positions">All</Button>
+                      <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set(positions))} className="h-6 text-xs px-2 py-0 bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-positions">None</Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {POINT_COMPONENTS.map(component => {
-                    const isExcluded = excludedComponents.has(component.key);
-                    return (
-                      <Button
-                        key={component.key}
-                        variant="outline"
-                        size="sm"
-                        onClick={() => toggleComponentExclusion(component.key)}
-                        className={`text-xs px-2 py-1 ${
-                          isExcluded 
-                            ? 'bg-gray-100 text-gray-400 line-through hover:bg-gray-200 border border-gray-300' 
-                            : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300'
-                        }`}
-                        data-testid={`button-toggle-component-${component.key}`}
-                      >
-                        {component.label}
-                      </Button>
-                    );
-                  })}
-                </div>
-                {excludedComponents.size > 0 && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Excluded: {POINT_COMPONENTS.filter(c => excludedComponents.has(c.key)).map(c => c.label).join(', ')}
-                  </p>
-                )}
-              </div>
+                  <div className="flex flex-wrap gap-1">
+                    {positions.map(position => {
+                      const isIncluded = !selectedPositions.has(position);
+                      const shortForm = position === 'Goalkeeper' ? 'GKP' : position === 'Defender' ? 'DEF' : position === 'Midfielder' ? 'MID' : 'FWD';
+                      return (
+                        <Button
+                          key={position}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => togglePositionSelection(position)}
+                          className={`h-6 text-xs px-3 py-0 ${
+                            isIncluded
+                              ? 'bg-teal-100 text-teal-700 border-teal-300'
+                              : 'bg-gray-100 text-gray-400 line-through border-gray-300'
+                          }`}
+                          data-testid={`button-toggle-position-${position}`}
+                        >
+                          {shortForm}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </TabsContent>
+
+                {/* Teams tab */}
+                <TabsContent value="teams" className="mt-0">
+                  <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
+                    <span className="text-xs text-gray-500">Tap to exclude:</span>
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" onClick={() => setSelectedTeams(new Set())} className="h-6 text-xs px-2 py-0 bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-teams">All</Button>
+                      <Button variant="outline" size="sm" onClick={() => setSelectedTeams(new Set(teams))} className="h-6 text-xs px-2 py-0 bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-teams">None</Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {teams.map(team => {
+                      const isIncluded = !selectedTeams.has(team);
+                      const shortName = teamNameToShortName.get(team) || team;
+                      return (
+                        <Button
+                          key={team}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleTeamSelection(team)}
+                          className={`h-6 text-xs px-2 py-0 ${
+                            isIncluded
+                              ? 'bg-indigo-100 text-indigo-700 border-indigo-300'
+                              : 'bg-gray-100 text-gray-400 line-through border-gray-300'
+                          }`}
+                          data-testid={`button-toggle-team-${team}`}
+                        >
+                          {shortName}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </TabsContent>
+
+                {/* Point components tab */}
+                <TabsContent value="pts" className="mt-0">
+                  <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
+                    <span className="text-xs text-gray-500">Tap to exclude:</span>
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="sm" onClick={includeAllComponents} className="h-6 text-xs px-2 py-0 bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-components">All</Button>
+                      <Button variant="outline" size="sm" onClick={excludeAllComponents} className="h-6 text-xs px-2 py-0 bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-components">None</Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {POINT_COMPONENTS.map(component => {
+                      const isExcluded = excludedComponents.has(component.key);
+                      return (
+                        <Button
+                          key={component.key}
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleComponentExclusion(component.key)}
+                          className={`h-6 text-xs px-2 py-0 ${
+                            isExcluded
+                              ? 'bg-gray-100 text-gray-400 line-through border-gray-300'
+                              : 'bg-blue-100 text-blue-700 border-blue-300'
+                          }`}
+                          data-testid={`button-toggle-component-${component.key}`}
+                        >
+                          {component.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
             </CollapsibleContent>
           </Collapsible>
