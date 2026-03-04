@@ -55,7 +55,7 @@ export default function TeamAssistProjections() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("total");
   // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
   // Update state when defaults change
   useMemo(() => {
@@ -195,14 +195,14 @@ export default function TeamAssistProjections() {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <CardContent className="pt-0 pb-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
                       From GW
                     </label>
                     <Select value={startGameweek} onValueChange={setStartGameweek}>
-                      <SelectTrigger data-testid="select-start-gameweek">
+                      <SelectTrigger className="h-8 text-xs" data-testid="select-start-gameweek">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -216,11 +216,11 @@ export default function TeamAssistProjections() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
                       To GW
                     </label>
                     <Select value={endGameweek} onValueChange={setEndGameweek}>
-                      <SelectTrigger data-testid="select-end-gameweek">
+                      <SelectTrigger className="h-8 text-xs" data-testid="select-end-gameweek">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -234,11 +234,11 @@ export default function TeamAssistProjections() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
                       Team
                     </label>
                     <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                      <SelectTrigger data-testid="select-team">
+                      <SelectTrigger className="h-8 text-xs" data-testid="select-team">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

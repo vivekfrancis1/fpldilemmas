@@ -69,7 +69,7 @@ export default function PlayerSaves() {
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
   // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
   // View mode: "future" for projections, "past" for historical data
   const [viewMode, setViewMode] = useState<"future" | "past">("future");
 
@@ -529,11 +529,11 @@ export default function PlayerSaves() {
             </CollapsibleTrigger>
             <CollapsibleContent>
           <CardContent className="p-4 sm:p-6 pt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">From GW</label>
+                <label className="text-xs font-medium text-gray-600">From GW</label>
                 <Select value={String(startGameweek)} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -545,9 +545,9 @@ export default function PlayerSaves() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">To GW</label>
+                <label className="text-xs font-medium text-gray-600">To GW</label>
                 <Select value={String(endGameweek)} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -559,7 +559,7 @@ export default function PlayerSaves() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-600 flex items-center gap-2">
                   <Search className="h-4 w-4 text-gray-500" />
                   Search
                 </label>
@@ -567,7 +567,7 @@ export default function PlayerSaves() {
                   placeholder="Search goalkeepers..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full"
+                  className="h-8 text-xs"
                   data-testid="input-search"
                 />
               </div>

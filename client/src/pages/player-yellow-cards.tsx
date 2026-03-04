@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Search, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { AlertTriangle, Search, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import ProtectedRoute from "@/components/protected-route";
@@ -39,6 +40,7 @@ export default function PlayerYellowCards() {
   const [teamFilter, setTeamFilter] = useState("all");
   const [sortBy, setSortBy] = useState<"totalYellowCards" | "totalPoints">("totalYellowCards");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
   const { data: bootstrapData, isLoading: isLoadingBootstrap } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -137,54 +139,79 @@ export default function PlayerYellowCards() {
 
       <div className="fpl-section-spacing">
         {/* Filters */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5 text-blue-600" />
-              Search & Filter
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search players..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                  data-testid="input-search"
-                />
+        <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
+          <div className="bg-white rounded-xl shadow-lg border border-gray-200">
+            <CollapsibleTrigger asChild>
+              <div className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-indigo-600" />
+                  <h3 className="text-sm font-semibold">Filters & Controls</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500 md:hidden">
+                    {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
+                  </span>
+                  {isFiltersOpen ? (
+                    <ChevronUp className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-500" />
+                  )}
+                </div>
               </div>
-              <Select value={positionFilter} onValueChange={setPositionFilter}>
-                <SelectTrigger data-testid="select-position">
-                  <SelectValue placeholder="All Positions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Positions</SelectItem>
-                  {positions.map(position => (
-                    <SelectItem key={position.id} value={position.id}>
-                      {position.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger data-testid="select-team">
-                  <SelectValue placeholder="All Teams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {teams.map(team => (
-                    <SelectItem key={team.id} value={team.name}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-4 pb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                  <div className="relative">
+                    <label className="text-xs font-medium text-gray-600 mb-1 block">Search</label>
+                    <div className="relative">
+                      <Search className="absolute left-2 top-2.5 h-3 w-3 text-gray-400" />
+                      <Input
+                        placeholder="Search..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="h-8 text-xs pl-8"
+                        data-testid="input-search"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-1 block">Position</label>
+                    <Select value={positionFilter} onValueChange={setPositionFilter}>
+                      <SelectTrigger className="h-8 text-xs" data-testid="select-position">
+                        <SelectValue placeholder="All" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {positions.map(position => (
+                          <SelectItem key={position.id} value={position.id}>
+                            {position.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-600 mb-1 block">Team</label>
+                    <Select value={teamFilter} onValueChange={setTeamFilter}>
+                      <SelectTrigger className="h-8 text-xs" data-testid="select-team">
+                        <SelectValue placeholder="All" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {teams.map(team => (
+                          <SelectItem key={team.id} value={team.name}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
 
         {/* Results */}
         <Tabs defaultValue="cards" className="w-full">

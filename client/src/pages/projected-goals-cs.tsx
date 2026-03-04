@@ -71,7 +71,7 @@ export default function ProjectedGoalsCS() {
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
   // Get available gameweeks for dropdown options based on view mode
   const availableGameweeks = useMemo(() => {

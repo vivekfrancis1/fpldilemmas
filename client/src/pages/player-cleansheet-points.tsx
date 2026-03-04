@@ -43,7 +43,7 @@ export default function PlayerCleanSheetPoints() {
   const [sortField, setSortField] = useState<SortField>('totalExpectedPoints');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
   // Fetch bootstrap data to get events for dynamic gameweek calculation
   const { data: bootstrapData } = useQuery({
@@ -224,12 +224,12 @@ export default function PlayerCleanSheetPoints() {
             </CollapsibleTrigger>
             <CollapsibleContent>
               <div className="px-6 pb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             {/* Gameweek Range */}
             <div className="space-y-2">
-              <Label htmlFor="start-gameweek" className="text-sm font-medium">Start GW</Label>
+              <Label htmlFor="start-gameweek" className="text-xs font-medium text-gray-600 mb-1 block">Start GW</Label>
               <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                <SelectTrigger>
+                <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -241,9 +241,9 @@ export default function PlayerCleanSheetPoints() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="end-gameweek" className="text-sm font-medium">End GW</Label>
+              <Label htmlFor="end-gameweek" className="text-xs font-medium text-gray-600 mb-1 block">End GW</Label>
               <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                <SelectTrigger>
+                <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -256,7 +256,7 @@ export default function PlayerCleanSheetPoints() {
 
             {/* Search */}
             <div className="space-y-2">
-              <Label htmlFor="search" className="text-sm font-medium">Search</Label>
+              <Label htmlFor="search" className="text-xs font-medium text-gray-600 mb-1 block">Search</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
@@ -264,16 +264,16 @@ export default function PlayerCleanSheetPoints() {
                   placeholder="Player or team..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="h-8 text-xs pl-9"
                 />
               </div>
             </div>
 
             {/* Position Filter */}
             <div className="space-y-2">
-              <Label htmlFor="position-filter" className="text-sm font-medium">Position</Label>
+              <Label htmlFor="position-filter" className="text-xs font-medium text-gray-600 mb-1 block">Position</Label>
               <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                <SelectTrigger>
+                <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -287,9 +287,9 @@ export default function PlayerCleanSheetPoints() {
 
             {/* Team Filter */}
             <div className="space-y-2">
-              <Label htmlFor="team-filter" className="text-sm font-medium">Team</Label>
+              <Label htmlFor="team-filter" className="text-xs font-medium text-gray-600 mb-1 block">Team</Label>
               <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger>
+                <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -303,7 +303,7 @@ export default function PlayerCleanSheetPoints() {
 
             {/* Stats Display */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Players</Label>
+              <Label className="text-xs font-medium text-gray-600 mb-1 block">Players</Label>
               <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-2 rounded-lg text-center">
                 <span className="font-bold">{filteredAndSortedData.length}</span>
               </div>

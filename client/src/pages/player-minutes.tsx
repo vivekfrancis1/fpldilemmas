@@ -35,7 +35,7 @@ export default function PlayerMinutes() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [minMinutes, setMinMinutes] = useState<string>("30"); // Minimum minutes filter
   // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
 
   // Fetch player minutes projections data
@@ -302,23 +302,23 @@ export default function PlayerMinutes() {
             <div className="flex flex-wrap gap-4 items-end">
               <div className="flex items-center gap-3">
                 <Search className="h-5 w-5 text-blue-600" />
-                <label className="text-sm font-semibold text-gray-700">Search:</label>
+                <label className="text-xs font-semibold text-gray-600">Search:</label>
                 <div className="relative w-64">
                   <Input
                     data-testid="input-player-search"
                     placeholder="Search by player or team name..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="border-2 border-gray-200 hover:border-blue-400 transition-colors"
+                    className="h-8 text-xs border-2 border-gray-200 hover:border-blue-400 transition-colors"
                   />
                 </div>
               </div>
               
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-blue-600" />
-                <label className="text-sm font-semibold text-gray-700">Position:</label>
+                <label className="text-xs font-semibold text-gray-600">Position:</label>
                 <Select value={selectedPosition} onValueChange={setSelectedPosition}>
-                  <SelectTrigger className="w-32 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                  <SelectTrigger className="h-8 text-xs w-32 border-2 border-gray-200 hover:border-blue-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -332,9 +332,9 @@ export default function PlayerMinutes() {
 
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-blue-600" />
-                <label className="text-sm font-semibold text-gray-700">Team:</label>
+                <label className="text-xs font-semibold text-gray-600">Team:</label>
                 <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                  <SelectTrigger className="w-32 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                  <SelectTrigger className="h-8 text-xs w-32 border-2 border-gray-200 hover:border-blue-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -348,9 +348,9 @@ export default function PlayerMinutes() {
 
               <div className="flex items-center gap-3">
                 <Filter className="h-5 w-5 text-blue-600" />
-                <label className="text-sm font-semibold text-gray-700">Min Minutes:</label>
+                <label className="text-xs font-semibold text-gray-600">Min Minutes:</label>
                 <Select value={minMinutes} onValueChange={setMinMinutes}>
-                  <SelectTrigger className="w-24 border-2 border-gray-200 hover:border-blue-400 transition-colors">
+                  <SelectTrigger className="h-8 text-xs w-24 border-2 border-gray-200 hover:border-blue-400 transition-colors">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

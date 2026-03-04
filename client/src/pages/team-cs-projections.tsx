@@ -54,7 +54,7 @@ export default function TeamCSProjections() {
   const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("average");
   // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
   const activeGameweeks = useMemo(() => {
     const startGW = parseInt(startGameweek);
@@ -257,9 +257,9 @@ export default function TeamCSProjections() {
                   <div className="flex flex-wrap gap-4 items-end">
 
                     <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium text-gray-700">Start GW:</label>
+                      <label className="text-xs font-medium text-gray-600">Start GW:</label>
                       <Select value={startGameweek} onValueChange={setStartGameweek}>
-                        <SelectTrigger className="w-20">
+                        <SelectTrigger className="h-8 text-xs w-20">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -273,9 +273,9 @@ export default function TeamCSProjections() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium text-gray-700">End GW:</label>
+                      <label className="text-xs font-medium text-gray-600">End GW:</label>
                       <Select value={endGameweek} onValueChange={setEndGameweek}>
-                        <SelectTrigger className="w-20">
+                        <SelectTrigger className="h-8 text-xs w-20">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -291,7 +291,7 @@ export default function TeamCSProjections() {
                     <div className="flex items-center gap-2">
                       <label className="text-xs sm:text-sm font-medium text-gray-700">Team:</label>
                       <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                        <SelectTrigger className="w-28 sm:w-32">
+                        <SelectTrigger className="h-8 text-xs w-28 sm:w-32">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>

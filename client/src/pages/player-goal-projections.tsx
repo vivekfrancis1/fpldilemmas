@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useMemo, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { EnhancedTable, PlayerNameCell, TeamBadge, PositionBadge, ValueCell, type TableColumn } from "@/components/enhanced-table";
-import { Target, Search, Filter, Trophy, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { Target, Search, Filter, Trophy, ArrowUpDown, ArrowUp, ArrowDown, Loader2, ChevronDown, ChevronUp } from "lucide-react";
 import { getDefaultGameweekRange, getNextGameweeksForDropdown } from "@shared/gameweek-utils";
 import { useProjectionSettings } from "@/hooks/use-projection-settings";
 
@@ -130,7 +131,7 @@ export default function PlayerGoalProjections() {
   const [startGameweek, setStartGameweek] = useState<number>(0);
   const [endGameweek, setEndGameweek] = useState<number>(0);
   const [initialized, setInitialized] = useState(false);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
   // Initialize gameweeks when bootstrap data loads
   useEffect(() => {
@@ -292,94 +293,116 @@ export default function PlayerGoalProjections() {
       </div>
 
       {/* Filters */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-lg">Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-            <div>
-              <Label htmlFor="start-gameweek" className="text-sm font-medium text-gray-700">From GW</Label>
-              <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableGameweeks.map(gw => (
-                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="end-gameweek" className="text-sm font-medium text-gray-700">To GW</Label>
-              <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableGameweeks.filter(gw => gw >= startGameweek).map(gw => (
-                    <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="position" className="text-sm font-medium text-gray-700">Position</Label>
-              <Select value={positionFilter} onValueChange={setPositionFilter}>
-                <SelectTrigger className="mt-1" data-testid="select-position-filter">
-                  <SelectValue placeholder="All" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {positions.map(position => (
-                    <SelectItem key={position} value={position}>{position}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="team" className="text-sm font-medium text-gray-700">Team</Label>
-              <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger className="mt-1" data-testid="select-team-filter">
-                  <SelectValue placeholder="All teams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All teams</SelectItem>
-                  {teams.map(team => (
-                    <SelectItem key={team} value={team}>{team}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="sm:col-span-2 lg:col-span-1">
-              <Label htmlFor="search" className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                <Search className="h-4 w-4 text-gray-500" />
-                Search
-              </Label>
-              <Input
-                id="search"
-                placeholder="Search players..."
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                className="mt-1"
-                data-testid="input-search-player"
-              />
-            </div>
-
-            <div className="flex items-end sm:col-span-2 lg:col-span-3 xl:col-span-1">
-              <div className="text-sm text-gray-600">
-                <p className="font-medium">{sortedPlayers.length} players</p>
-                <p className="text-xs">{sortedPlayers.reduce((sum, p) => sum + p.projectedGoals, 0).toFixed(1)} goals</p>
+      <Collapsible open={isFiltersOpen} onOpenChange={setIsFiltersOpen} className="mb-6">
+        <div className="bg-white rounded-xl shadow-lg border border-gray-200">
+          <CollapsibleTrigger asChild>
+            <div className="cursor-pointer hover:bg-gray-50 transition-colors py-3 px-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-indigo-600" />
+                <h3 className="text-sm font-semibold">Filters & Controls</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 md:hidden">
+                  {isFiltersOpen ? 'Tap to collapse' : 'Tap to expand'}
+                </span>
+                {isFiltersOpen ? (
+                  <ChevronUp className="h-4 w-4 text-gray-500" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                )}
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-4 pb-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+                <div>
+                  <Label htmlFor="start-gameweek" className="text-xs font-medium text-gray-600 mb-1 block">From GW</Label>
+                  <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.map(gw => (
+                        <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="end-gameweek" className="text-xs font-medium text-gray-600 mb-1 block">To GW</Label>
+                  <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableGameweeks.filter(gw => gw >= startGameweek).map(gw => (
+                        <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="position" className="text-xs font-medium text-gray-600 mb-1 block">Position</Label>
+                  <Select value={positionFilter} onValueChange={setPositionFilter}>
+                    <SelectTrigger className="h-8 text-xs" data-testid="select-position-filter">
+                      <SelectValue placeholder="All" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      {positions.map(position => (
+                        <SelectItem key={position} value={position}>{position}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label htmlFor="team" className="text-xs font-medium text-gray-600 mb-1 block">Team</Label>
+                  <Select value={teamFilter} onValueChange={setTeamFilter}>
+                    <SelectTrigger className="h-8 text-xs" data-testid="select-team-filter">
+                      <SelectValue placeholder="All teams" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All teams</SelectItem>
+                      {teams.map(team => (
+                        <SelectItem key={team} value={team}>{team}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="relative">
+                  <Label htmlFor="search" className="text-xs font-medium text-gray-600 mb-1 block flex items-center gap-2">
+                    <Search className="h-3 w-3 text-gray-500" />
+                    Search
+                  </Label>
+                  <div className="relative">
+                    <Search className="absolute left-2 top-2.5 h-3 w-3 text-gray-400" />
+                    <Input
+                      id="search"
+                      placeholder="Search..."
+                      value={searchFilter}
+                      onChange={(e) => setSearchFilter(e.target.value)}
+                      className="h-8 text-xs pl-8"
+                      data-testid="input-search-player"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col justify-end pb-1">
+                  <div className="text-[10px] text-gray-500 leading-tight">
+                    <p className="font-medium">{sortedPlayers.length} players</p>
+                    <p>{sortedPlayers.reduce((sum, p) => sum + p.projectedGoals, 0).toFixed(1)} goals</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CollapsibleContent>
+        </div>
+      </Collapsible>
 
       {/* Results Table */}
       <div className="fpl-card">

@@ -119,7 +119,7 @@ export default function PlayerDefensiveContributions() {
   const [applyAvailability, setApplyAvailability] = useState(true);
   
   // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
 
   // Dynamic gameweek range state - only set once bootstrap data is loaded
   const [gameweekRange, setGameweekRange] = useState<{ start: number; end: number }>({ start: 0, end: 0 });
@@ -720,11 +720,11 @@ export default function PlayerDefensiveContributions() {
           </CollapsibleTrigger>
           <CollapsibleContent>
           <CardContent className="p-4 sm:p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">From GW</label>
+              <label className="text-xs font-medium text-gray-600">From GW</label>
               <Select value={startGameweek.toString()} onValueChange={(value) => setStartGameweek(parseInt(value))}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -736,9 +736,9 @@ export default function PlayerDefensiveContributions() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">To GW</label>
+              <label className="text-xs font-medium text-gray-600">To GW</label>
               <Select value={endGameweek.toString()} onValueChange={(value) => setEndGameweek(parseInt(value))}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -751,7 +751,7 @@ export default function PlayerDefensiveContributions() {
             
 
             <div className="space-y-2 sm:col-span-2 lg:col-span-1">
-              <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <label className="text-xs font-medium text-gray-600 flex items-center gap-2">
                 <Search className="h-4 w-4 text-gray-500" />
                 Search
               </label>
@@ -760,7 +760,7 @@ export default function PlayerDefensiveContributions() {
                 placeholder="Search players..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
+                className="h-8 text-xs"
               />
             </div>
 
@@ -769,7 +769,7 @@ export default function PlayerDefensiveContributions() {
           {/* Gameweek Toggle Section */}
           <div className="mt-4 pt-4 border-t">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-xs font-medium text-gray-600">
                 Toggle Gameweeks (click to exclude/include):
               </label>
               {excludedGameweeks.size > 0 && (
