@@ -2879,12 +2879,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasLiveFixtures = fixturesData.some((f: any) => f.started && !f.finished);
       const hasProvisionalBonus = fixturesData.some((f: any) => f.finished_provisional && !f.finished);
       
-      // Create a map of player ID -> team ID
+      // Create a map of player ID -> team ID and element type
       const playerTeams = new Map<number, number>();
+      const playerElementTypes = new Map<number, number>();
       for (const player of bootstrapData.elements) {
         playerTeams.set(player.id, player.team);
+        playerElementTypes.set(player.id, player.element_type);
       }
-      
+
+      // ── Compute provisional bonus and CS maps once per request ────────────
+      // These are applied to every manager's starting 11 (after auto-subs)
+      const provisionalBonusMap = new Map<number, number>();
+      const provisionalCsMap = new Map<number, number>();
+
+      const startedFixtures = fixturesData.filter((f: any) => f.started);
+      for (const fixture of startedFixtures) {
+        const homeTeam: number = fixture.team_h;
+        const awayTeam: number = fixture.team_a;
+        const homeScore: number | null = fixture.team_h_score ?? null;
+        const awayScore: number | null = fixture.team_a_score ?? null;
+
+        // Collect all elements in this fixture
+        const fixtureElements: { id: number; stats: any }[] = [];
+        for (const [id, stats] of livePlayerStats.entries()) {
+          const team = playerTeams.get(id);
+          if (team === homeTeam || team === awayTeam) {
+            fixtureElements.push({ id, stats });
+          }
+        }
+
+        // Provisional Bonus: only when FPL hasn't finalized bonus for this fixture
+        const anyBonusAssigned = fixtureElements.some(e => (e.stats.bonus || 0) > 0);
+        if (!anyBonusAssigned) {
+          const played = fixtureElements
+            .filter(e => (e.stats.minutes || 0) > 0 && (e.stats.bps || 0) > 0)
+            .sort((a, b) => (b.stats.bps || 0) - (a.stats.bps || 0));
+          const bonusLevels = [3, 2, 1];
+          let i = 0, levelIdx = 0;
+          while (i < played.length && levelIdx < bonusLevels.length) {
+            const currentBps = played[i].stats.bps || 0;
+            let j = i;
+            while (j < played.length && (played[j].stats.bps || 0) === currentBps) j++;
+            const pts = bonusLevels[levelIdx];
+            for (let k = i; k < j; k++) provisionalBonusMap.set(played[k].id, pts);
+            levelIdx += (j - i);
+            i = j;
+          }
+        }
+
+        // Provisional Clean Sheet: only when we have a valid score
+        if (homeScore !== null && awayScore !== null) {
+          for (const e of fixtureElements) {
+            const team = playerTeams.get(e.id);
+            const mins = e.stats.minutes || 0;
+            const alreadyHasCS = (e.stats.clean_sheets || 0) > 0;
+            if (mins >= 60 && !alreadyHasCS) {
+              const elType = playerElementTypes.get(e.id) || 4;
+              const isHome = team === homeTeam;
+              const opponentScore = isHome ? awayScore : homeScore;
+              if (opponentScore === 0) {
+                const csPoints = elType <= 2 ? 6 : elType === 3 ? 1 : 0;
+                if (csPoints > 0) provisionalCsMap.set(e.id, csPoints);
+              }
+            }
+          }
+        }
+      }
+      // ──────────────────────────────────────────────────────────────────────
+
       // Fetch projected points for players — when the current GW is finished, use the NEXT GW for projections
       // (the projection-accuracy endpoint returns null projected_points for finished GWs, only future GWs have projections)
       let projectionGW = isGameweekFinished
@@ -2968,120 +3030,151 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const picksData = await picksResponse.json();
             const picks = picksData.picks || [];
             const activeChip = picksData.active_chip;
-            
+            const fplAutoSubs: Array<{ element_in: number; element_out: number }> =
+              (picksData.automatic_subs || []).map((s: any) => ({ element_in: s.element_in, element_out: s.element_out }));
+
             let livePoints = 0;
             let benchPoints = 0;
             let bonusPoints = 0;
             let captainPoints = 0;
             let playersPlayed = 0;
             let autoSubPoints = 0;
-            
-            // Separate starting 11 and bench
+
+            // Separate starting 11 and bench (by position)
             const starting11 = picks.filter((p: any) => p.position <= 11);
             const bench = picks.filter((p: any) => p.position > 11).sort((a: any, b: any) => a.position - b.position);
-            
-            // Track which positions need auto-subs
-            interface StartingPlayer {
-              pick: any;
-              stats: any;
-              elementType: number;
-            }
-            const startingPlayersWithStats: StartingPlayer[] = [];
-            const benchPlayersWithStats: { pick: any; stats: any; elementType: number }[] = [];
-            
-            // Get element types for players
-            const playerTypes = new Map<number, number>();
-            for (const player of bootstrapData.elements) {
-              playerTypes.set(player.id, player.element_type);
-            }
-            
-            // Process starting 11
-            for (const pick of starting11) {
-              const stats = livePlayerStats.get(pick.element);
-              const elementType = playerTypes.get(pick.element) || 0;
-              startingPlayersWithStats.push({ pick, stats, elementType });
-              
+
+            interface PickWithStats { pick: any; stats: any; elementType: number }
+            const startingWithStats: PickWithStats[] = starting11.map((pick: any) => ({
+              pick, stats: livePlayerStats.get(pick.element), elementType: playerElementTypes.get(pick.element) || 0,
+            }));
+            const benchWithStats: PickWithStats[] = bench.map((pick: any) => ({
+              pick, stats: livePlayerStats.get(pick.element), elementType: playerElementTypes.get(pick.element) || 0,
+            }));
+
+            // Process starting 11 base points
+            for (const { pick, stats } of startingWithStats) {
               if (stats) {
-                const playerPoints = stats.total_points || 0;
-                const multiplier = pick.multiplier || 1;
-                
-                livePoints += playerPoints * multiplier;
-                bonusPoints += (stats.bonus || 0) * multiplier;
-                
-                if (pick.is_captain) {
-                  captainPoints = playerPoints * multiplier;
-                }
-                
-                if (stats.minutes > 0) {
-                  playersPlayed++;
-                }
+                const pts = (stats.total_points || 0) * (pick.multiplier || 1);
+                livePoints += pts;
+                bonusPoints += (stats.bonus || 0) * (pick.multiplier || 1);
+                if (pick.is_captain) captainPoints = pts;
+                if (stats.minutes > 0) playersPlayed++;
               }
             }
-            
-            // Process bench
-            for (const pick of bench) {
-              const stats = livePlayerStats.get(pick.element);
-              const elementType = playerTypes.get(pick.element) || 0;
-              benchPlayersWithStats.push({ pick, stats, elementType });
-              
-              if (stats) {
-                benchPoints += stats.total_points || 0;
-              }
+
+            // Process bench base points
+            for (const { stats } of benchWithStats) {
+              if (stats) benchPoints += stats.total_points || 0;
             }
-            
-            // Calculate auto-subs (only if not using bench boost)
+
+            // Auto-subs + provisional points (skip for bench boost)
             if (activeChip !== 'bboost') {
-              // Find players who didn't play (0 minutes) AND whose match has FINISHED
-              // Don't count players whose match hasn't started yet
-              const playersNotPlayed = startingPlayersWithStats.filter(p => {
-                if (!p.stats || p.stats.minutes !== 0) return false;
-                
-                // Check if this player's team's match has finished
-                const teamId = playerTeams.get(p.pick.element);
-                const fixtureStatus = teamId ? teamFixtureStatus.get(teamId) : null;
-                
-                // Only count as "not played" if the match has FINISHED and they played 0 minutes
-                return fixtureStatus?.finished === true;
-              });
-              
-              // Available bench players (who have played AND whose match has started)
-              const availableBench = benchPlayersWithStats.filter(p => {
-                if (!p.stats || p.stats.minutes <= 0) return false;
-                
-                // Check if this player's match has started
-                const teamId = playerTeams.get(p.pick.element);
-                const fixtureStatus = teamId ? teamFixtureStatus.get(teamId) : null;
-                
-                return fixtureStatus?.started === true;
-              });
-              
-              // Simple auto-sub logic (FPL rules are complex, this is a simplified version)
-              let subsUsed = 0;
-              const maxSubs = 3;
-              
-              for (const notPlayed of playersNotPlayed) {
-                if (subsUsed >= maxSubs) break;
-                
-                // Find a valid bench player (must maintain valid formation)
-                for (const benchPlayer of availableBench) {
-                  // Check if this bench player can substitute
-                  // Simplified: same position type or flexible positions
-                  const canSub = benchPlayer.elementType === notPlayed.elementType ||
-                    (benchPlayer.elementType >= 2 && notPlayed.elementType >= 2); // Outfield players
-                  
-                  if (canSub && !benchPlayer.pick.used) {
-                    autoSubPoints += benchPlayer.stats.total_points || 0;
-                    benchPlayer.pick.used = true;
-                    subsUsed++;
-                    break;
+              // Build effective starting 11 element set, tracking who subbed in/out and their multipliers
+              interface EffectivePlayer { element: number; elementType: number; multiplier: number; isCaptain: boolean }
+              let effectivePitch: EffectivePlayer[] = startingWithStats.map(p => ({
+                element: p.pick.element,
+                elementType: p.elementType,
+                multiplier: p.pick.multiplier || 1,
+                isCaptain: p.pick.is_captain || false,
+              }));
+
+              // ── FPL official auto-subs (highest priority) ──────────────────────
+              if (fplAutoSubs.length > 0) {
+                for (const sub of fplAutoSubs) {
+                  const outIdx = effectivePitch.findIndex(p => p.element === sub.element_out);
+                  if (outIdx !== -1) {
+                    const benchIn = benchWithStats.find(b => b.pick.element === sub.element_in);
+                    if (benchIn) {
+                      const outPts = (livePlayerStats.get(sub.element_out)?.total_points || 0) * effectivePitch[outIdx].multiplier;
+                      const inPts = (benchIn.stats?.total_points || 0) * effectivePitch[outIdx].multiplier;
+                      livePoints = livePoints - outPts + inPts;
+                      autoSubPoints += inPts - outPts;
+                      effectivePitch[outIdx] = {
+                        element: sub.element_in,
+                        elementType: benchIn.elementType,
+                        multiplier: effectivePitch[outIdx].multiplier,
+                        isCaptain: effectivePitch[outIdx].isCaptain,
+                      };
+                    }
+                  }
+                }
+              } else {
+                // ── Derive auto-subs when FPL hasn't finalized ─────────────────
+                const isDNP = (element: number): boolean => {
+                  const teamId = playerTeams.get(element);
+                  const fs = teamId ? teamFixtureStatus.get(teamId) : null;
+                  const mins = livePlayerStats.get(element)?.minutes ?? -1;
+                  return (fs?.started === true || fs?.finished === true) && mins === 0;
+                };
+                const hasPlayed = (element: number): boolean => {
+                  const teamId = playerTeams.get(element);
+                  const fs = teamId ? teamFixtureStatus.get(teamId) : null;
+                  return fs?.started === true && (livePlayerStats.get(element)?.minutes ?? 0) > 0;
+                };
+                const usedBench = new Set<number>();
+
+                // GK rule
+                const gkOut = effectivePitch.find(p => p.elementType === 1 && isDNP(p.element));
+                if (gkOut) {
+                  const gkIn = benchWithStats.find(b => b.elementType === 1 && hasPlayed(b.pick.element));
+                  if (gkIn) {
+                    const outPts = (livePlayerStats.get(gkOut.element)?.total_points || 0) * gkOut.multiplier;
+                    const inPts = (gkIn.stats?.total_points || 0) * gkOut.multiplier;
+                    livePoints = livePoints - outPts + inPts;
+                    autoSubPoints += inPts - outPts;
+                    usedBench.add(gkIn.pick.element);
+                    const idx = effectivePitch.findIndex(p => p.element === gkOut.element);
+                    effectivePitch[idx] = { element: gkIn.pick.element, elementType: 1, multiplier: gkOut.multiplier, isCaptain: gkOut.isCaptain };
+                  }
+                }
+
+                // Outfield substitutions (respect formation: ≥3 DEF, ≥1 FWD)
+                const outfieldDNP = effectivePitch.filter(p => p.elementType !== 1 && isDNP(p.element));
+                for (const dnp of outfieldDNP) {
+                  for (const bench of benchWithStats.filter(b => b.elementType !== 1)) {
+                    if (usedBench.has(bench.pick.element) || !hasPlayed(bench.pick.element)) continue;
+                    // Test if formation is valid after this swap
+                    const testPitch = effectivePitch
+                      .filter(p => p.element !== dnp.element)
+                      .concat({ element: bench.pick.element, elementType: bench.elementType, multiplier: dnp.multiplier, isCaptain: dnp.isCaptain });
+                    const defs = testPitch.filter(p => p.elementType === 2).length;
+                    const fwds = testPitch.filter(p => p.elementType === 4).length;
+                    if (defs >= 3 && fwds >= 1) {
+                      const outPts = (livePlayerStats.get(dnp.element)?.total_points || 0) * dnp.multiplier;
+                      const inPts = (bench.stats?.total_points || 0) * dnp.multiplier;
+                      livePoints = livePoints - outPts + inPts;
+                      autoSubPoints += inPts - outPts;
+                      usedBench.add(bench.pick.element);
+                      const idx = effectivePitch.findIndex(p => p.element === dnp.element);
+                      effectivePitch[idx] = { element: bench.pick.element, elementType: bench.elementType, multiplier: dnp.multiplier, isCaptain: dnp.isCaptain };
+                      break;
+                    }
                   }
                 }
               }
+
+              // ── Add provisional bonus + CS for effective starting 11 ──────────
+              let provisionalBonusTotal = 0;
+              let provisionalCsTotal = 0;
+              for (const p of effectivePitch) {
+                const mult = p.multiplier;
+                provisionalBonusTotal += (provisionalBonusMap.get(p.element) || 0) * mult;
+                provisionalCsTotal += (provisionalCsMap.get(p.element) || 0) * mult;
+              }
+              livePoints += provisionalBonusTotal + provisionalCsTotal;
             }
-            
-            // If bench boost is active, add all bench points
+
+            // If bench boost is active, add all bench points + provisional
             if (activeChip === 'bboost') {
               livePoints += benchPoints;
+              // Add provisional for all 15 players
+              let provisionalAll = 0;
+              for (const pick of picks) {
+                provisionalAll += (provisionalBonusMap.get(pick.element) || 0) * (pick.multiplier || 1);
+                provisionalAll += (provisionalCsMap.get(pick.element) || 0) * (pick.multiplier || 1);
+              }
+              livePoints += provisionalAll;
             }
             
             // Calculate projected points using optimised lineup (same logic as my-dashboard)
@@ -3100,7 +3193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const allProj: ProjPick[] = picks.map((pick: any) => ({
                 element: pick.element,
                 proj: playerProjectionsMap.get(pick.element) || 0,
-                elementType: playerTypes.get(pick.element) || 0,
+                elementType: playerElementTypes.get(pick.element) || 0,
               }));
               const gkps = allProj.filter(p => p.elementType === 1).sort((a, b) => b.proj - a.proj);
               const defs = allProj.filter(p => p.elementType === 2).sort((a, b) => b.proj - a.proj);
@@ -3126,7 +3219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 bestStarting = starting11.map((pick: any) => ({
                   element: pick.element,
                   proj: playerProjectionsMap.get(pick.element) || 0,
-                  elementType: playerTypes.get(pick.element) || 0,
+                  elementType: playerElementTypes.get(pick.element) || 0,
                 }));
                 bestTotal = bestStarting.reduce((s: number, p: ProjPick) => s + p.proj, 0);
               }
@@ -3147,8 +3240,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
             return {
               ...entry,
-              live_points: livePoints + autoSubPoints,
-              live_total: (entry.total - (entry.event_total || 0)) + livePoints + autoSubPoints,
+              live_points: livePoints,
+              live_total: (entry.total - (entry.event_total || 0)) + livePoints,
               auto_sub_points: autoSubPoints,
               bonus_points: bonusPoints,
               players_played: playersPlayed,
