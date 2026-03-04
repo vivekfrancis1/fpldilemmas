@@ -208,33 +208,12 @@ export function getSharedColumns<T extends ManagerStandingsData>(
       }
     },
     {
-      key: 'transfersMade',
-      header: 'Transfers',
-      priority: 'optional',
-      align: 'right',
-      mobileLabel: 'TM',
-      cardOrder: 9,
-      sortable: true,
-      className: 'font-mono',
-      render: (_, item: T) => {
-        const history = item.historyData?.current;
-        const chips = item.historyData?.chips || [];
-        if (!history || history.length === 0) return "N/A";
-        const chipGWs = new Set(
-          chips.filter(c => c.name === 'freehit' || c.name === 'wildcard').map(c => c.event)
-        );
-        return history
-          .filter(gw => !chipGWs.has(gw.event))
-          .reduce((sum, gw) => sum + (gw.event_transfers || 0), 0);
-      }
-    },
-    {
       key: 'gwTransfers',
-      header: currentGameweek ? <span className="leading-tight">GW{currentGameweek}<br/>Transfers</span> : 'GW Transfers',
+      header: currentGameweek ? <span className="leading-tight">Transfers<br/>GW{currentGameweek}</span> : 'GW Transfers',
       priority: 'secondary',
       align: 'left',
       mobileLabel: currentGameweek ? `GW${currentGameweek}` : 'GW TM',
-      cardOrder: 10,
+      cardOrder: 9,
       sortable: true,
       width: '220px',
       render: (_, item: T) => {
@@ -269,6 +248,27 @@ export function getSharedColumns<T extends ManagerStandingsData>(
             )}
           </div>
         );
+      }
+    },
+    {
+      key: 'transfersMade',
+      header: <span className="leading-tight">Total<br/>Transfers</span>,
+      priority: 'optional',
+      align: 'right',
+      mobileLabel: 'Total TF',
+      cardOrder: 10,
+      sortable: true,
+      className: 'font-mono',
+      render: (_, item: T) => {
+        const history = item.historyData?.current;
+        const chips = item.historyData?.chips || [];
+        if (!history || history.length === 0) return "N/A";
+        const chipGWs = new Set(
+          chips.filter(c => c.name === 'freehit' || c.name === 'wildcard').map(c => c.event)
+        );
+        return history
+          .filter(gw => !chipGWs.has(gw.event))
+          .reduce((sum, gw) => sum + (gw.event_transfers || 0), 0);
       }
     },
     {
