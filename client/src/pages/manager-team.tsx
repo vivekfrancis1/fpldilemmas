@@ -42,7 +42,8 @@ import {
   Calendar,
   BarChart3,
   ArrowLeftRight,
-  Wallet
+  Wallet,
+  Zap
 } from "lucide-react";
 import { PitchView, type PitchPlayer } from "@/components/pitch-view";
 import { ListView, type ListPlayer } from "@/components/list-view";
@@ -80,6 +81,7 @@ type TeamData = {
     points_on_bench: number;
   };
   picks?: TeamPick[];
+  automatic_subs?: { element_in: number; element_out: number; event: number; entry: number }[];
   gameweek?: number;
   manager?: string;
   general_info?: any;
@@ -240,6 +242,8 @@ export default function ManagerTeam() {
 
   // State for view toggle (pitch or list)
   const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
+  // Live Points toggle — applies auto-subs and shows GW score
+  const [showLivePoints, setShowLivePoints] = useState(false);
   
   // Player points breakdown modal state
   const [selectedPlayerForBreakdown, setSelectedPlayerForBreakdown] = useState<any | null>(null);
@@ -667,6 +671,87 @@ export default function ManagerTeam() {
     };
   });
 
+  // Compute effective pitch when Live Points toggle is ON (apply auto-subs)
+  const autoSubs = teamData?.automatic_subs || [];
+
+  const effectivePitchPlayers: PitchPlayer[] = showLivePoints && autoSubs.length > 0
+    ? pitchPlayers.map(player => {
+        const sub = autoSubs.find(s => s.element_out === player.element);
+        if (!sub) return player;
+        const subInPick = enrichedPicks.find(p => p.element === sub.element_in);
+        if (!subInPick) return player;
+        const pd = getPlayerData(subInPick.element);
+        const td = bootstrapData?.teams?.find((t: any) => t.id === pd?.team);
+        const fs = getPlayerFixtureStatus(pd?.team || 0);
+        return {
+          element: subInPick.element,
+          element_type: subInPick.element_type,
+          position: player.position,
+          is_captain: player.is_captain,
+          is_vice_captain: player.is_vice_captain,
+          multiplier: player.multiplier,
+          player_name: pd ? `${pd.first_name} ${pd.second_name}` : subInPick.player_name,
+          web_name: pd?.web_name || subInPick.player_name?.split(' ').pop() || `Player ${subInPick.element}`,
+          team_name: subInPick.team_name,
+          team_short_name: td?.short_name,
+          team_id: pd?.team,
+          team_code: td?.code,
+          event_points: subInPick.event_points,
+          live_minutes: subInPick.live_minutes,
+          in_dreamteam: pd?.in_dreamteam || false,
+          fixture_started: fs.started,
+          fixture_finished: fs.finished,
+          fixture_opponent: fs.opponent,
+          fixture_is_home: fs.isHome,
+          status: pd?.status,
+          chance_of_playing: pd?.chance_of_playing_next_round,
+          news: pd?.news,
+          is_subbed_in: true,
+        } as PitchPlayer;
+      })
+    : pitchPlayers;
+
+  const effectiveBenchPlayers: PitchPlayer[] = showLivePoints && autoSubs.length > 0
+    ? benchPlayers.map(player => {
+        const sub = autoSubs.find(s => s.element_in === player.element);
+        if (!sub) return player;
+        const subbedOutPick = enrichedPicks.find(p => p.element === sub.element_out);
+        if (!subbedOutPick) return player;
+        const pd = getPlayerData(subbedOutPick.element);
+        const td = bootstrapData?.teams?.find((t: any) => t.id === pd?.team);
+        const fs = getPlayerFixtureStatus(pd?.team || 0);
+        return {
+          element: subbedOutPick.element,
+          element_type: subbedOutPick.element_type,
+          position: player.position,
+          is_captain: false,
+          is_vice_captain: false,
+          multiplier: 1,
+          player_name: pd ? `${pd.first_name} ${pd.second_name}` : subbedOutPick.player_name,
+          web_name: pd?.web_name || subbedOutPick.player_name?.split(' ').pop() || `Player ${subbedOutPick.element}`,
+          team_name: subbedOutPick.team_name,
+          team_short_name: td?.short_name,
+          team_id: pd?.team,
+          team_code: td?.code,
+          event_points: subbedOutPick.event_points,
+          live_minutes: subbedOutPick.live_minutes,
+          in_dreamteam: false,
+          fixture_started: fs.started,
+          fixture_finished: fs.finished,
+          fixture_opponent: fs.opponent,
+          fixture_is_home: fs.isHome,
+          status: pd?.status,
+          chance_of_playing: pd?.chance_of_playing_next_round,
+          news: pd?.news,
+          is_subbed_out: true,
+        } as PitchPlayer;
+      })
+    : benchPlayers;
+
+  const totalLivePoints = showLivePoints
+    ? effectivePitchPlayers.reduce((sum, p) => sum + (p.event_points || 0) * (p.multiplier || 1), 0)
+    : null;
+
   // Get manager name from manager info
   const managerName = managerInfo ? 
     `${managerInfo.player_first_name} ${managerInfo.player_last_name}` :
@@ -870,15 +955,41 @@ export default function ManagerTeam() {
           ) : teamData.picks && teamData.picks.length > 0 && bootstrapData?.elements && (
             <>
               <div>
-                <h2 className="text-xl font-semibold mb-4">Team Squad</h2>
-                
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">Team Squad</h2>
+                  <Button
+                    variant={showLivePoints ? "default" : "outline"}
+                    size="sm"
+                    className={showLivePoints ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                    onClick={() => setShowLivePoints(v => !v)}
+                  >
+                    <Zap className="h-4 w-4 mr-1.5" />
+                    Live Points
+                  </Button>
+                </div>
+
+                {showLivePoints && totalLivePoints !== null && (
+                  <div className="mb-3 flex items-center gap-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                    <Zap className="h-4 w-4 text-green-600 shrink-0" />
+                    <span className="text-sm font-medium text-green-800">
+                      Live GW Score:
+                    </span>
+                    <span className="text-lg font-bold text-green-700">{totalLivePoints} pts</span>
+                    {autoSubs.length > 0 && (
+                      <span className="text-xs text-green-600 ml-1">
+                        ({autoSubs.length} auto-sub{autoSubs.length > 1 ? 's' : ''} applied)
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Pitch View */}
                   <div className="-mx-2 sm:mx-0">
                     <Card className="bg-white shadow-none sm:shadow-lg border-0 sm:border border-gray-200 overflow-hidden">
                       <CardContent className="p-2 sm:p-6">
                         <PitchView 
-                          players={pitchPlayers}
-                          benchPlayers={benchPlayers}
+                          players={showLivePoints ? effectivePitchPlayers : pitchPlayers}
+                          benchPlayers={showLivePoints ? effectiveBenchPlayers : benchPlayers}
                           getNextFixtures={getNextFixtures}
                           showFixtures={false}
                           activeChip={teamData?.active_chip}

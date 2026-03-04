@@ -41,6 +41,8 @@ export interface PitchPlayer {
   is_transferred_in?: boolean;
   is_selected?: boolean;
   is_empty_slot?: boolean;
+  is_subbed_in?: boolean;
+  is_subbed_out?: boolean;
 }
 
 export interface PitchFixture {
@@ -213,12 +215,22 @@ function PlayerCard({
             <span className="text-[7px] sm:text-[9px] font-bold text-blue-800">VC</span>
           </div>
         )}
-        {player.in_dreamteam && !player.is_transferred_in && (
+        {player.is_subbed_in && (
+          <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center border border-white shadow-md">
+            <span className="text-[8px] sm:text-[10px] font-bold text-white">↑</span>
+          </div>
+        )}
+        {player.is_subbed_out && (
+          <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 rounded-full flex items-center justify-center border border-white shadow-md">
+            <span className="text-[8px] sm:text-[10px] font-bold text-white">↓</span>
+          </div>
+        )}
+        {!player.is_subbed_in && !player.is_subbed_out && player.in_dreamteam && !player.is_transferred_in && (
           <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-full flex items-center justify-center border border-white shadow-md">
             <span className="text-[8px] sm:text-[10px] text-white">★</span>
           </div>
         )}
-        {player.is_transferred_in && (
+        {!player.is_subbed_in && !player.is_subbed_out && player.is_transferred_in && (
           <div className="absolute top-1 right-1 z-10 w-4 h-4 sm:w-5 sm:h-5 bg-green-500 rounded-full flex items-center justify-center border border-white shadow-md">
             <span className="text-[8px] sm:text-[10px] font-bold text-white">+</span>
           </div>
