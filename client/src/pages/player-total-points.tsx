@@ -66,8 +66,8 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className={`inline-flex items-center gap-0.5 sm:gap-1 px-1 sm:px-1.5 py-px sm:py-0.5 rounded text-[9px] sm:text-[11px] font-semibold cursor-pointer transition-colors hover:opacity-80 ${statusBg} ${statusBorder} border`}>
-          <StatusIcon className={`h-2 w-2 sm:h-2.5 sm:w-2.5 ${statusColor}`} />
+        <button className={`inline-flex items-center gap-0 sm:gap-0.5 px-0.5 sm:px-1 py-px rounded text-[9px] sm:text-[11px] font-semibold cursor-pointer transition-colors hover:opacity-80 ${statusBg} ${statusBorder} border`}>
+          <StatusIcon className={`h-1.5 w-1.5 sm:h-2 sm:w-2 ${statusColor}`} />
           <span className={statusColor}>{chanceOfPlaying}%</span>
         </button>
       </PopoverTrigger>
