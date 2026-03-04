@@ -98,7 +98,7 @@ export default function TeamGoalProjections() {
   const [startGameweek, setStartGameweek] = useState<string>(defaultGameweekRange.startGameweek);
   const [endGameweek, setEndGameweek] = useState<string>(defaultGameweekRange.endGameweek);
   const [excludedGameweeks, setExcludedGameweeks] = useState<Set<number>>(new Set());
-  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("total");
   // Filter section collapse state - collapsed by default on all devices
   const [isFiltersOpen, setIsFiltersOpen] = useState(true);
@@ -146,6 +146,15 @@ export default function TeamGoalProjections() {
   // Clear all exclusions
   const clearExclusions = () => {
     setExcludedGameweeks(new Set());
+  };
+
+  const toggleTeamSelection = (shortName: string) => {
+    setSelectedTeams(prev => {
+      const next = new Set(prev);
+      if (next.has(shortName)) next.delete(shortName);
+      else next.add(shortName);
+      return next;
+    });
   };
 
   // Get available gameweeks for dropdown options based on view mode
@@ -268,7 +277,7 @@ export default function TeamGoalProjections() {
     if (!displayData.length) return [];
     
     return displayData
-      .filter(team => selectedTeam === "all" || team.teamShort === selectedTeam)
+      .filter(team => selectedTeams.size === 0 || selectedTeams.has(team.teamShort))
       .sort((a, b) => {
         if (sortBy.startsWith('gw')) {
           const gwNumber = parseInt(sortBy.replace('gw', ''));
@@ -292,7 +301,7 @@ export default function TeamGoalProjections() {
           default: return b.totalProjectedGoals - a.totalProjectedGoals;
         }
       });
-  }, [displayData, selectedTeam, sortBy, activeGameweeks]);
+  }, [displayData, selectedTeams, sortBy, activeGameweeks]);
 
 
   const totalGoals = useMemo(() => {
@@ -506,7 +515,7 @@ export default function TeamGoalProjections() {
                         GWs{excludedGameweeks.size > 0 && ` (${excludedGameweeks.size})`}
                       </TabsTrigger>
                       <TabsTrigger value="teams" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-md py-1.5 font-medium transition-all duration-200 text-xs">
-                        Teams{selectedTeam !== "all" && " (1)"}
+                        Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
                       </TabsTrigger>
                     </TabsList>
 
@@ -538,15 +547,22 @@ export default function TeamGoalProjections() {
 
                     {/* Teams tab */}
                     <TabsContent value="teams" className="mt-0">
+                      <div className="flex flex-wrap items-center justify-end gap-1 mb-1">
+                        {selectedTeams.size > 0 && (
+                          <button onClick={() => setSelectedTeams(new Set())} className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-px leading-none cursor-pointer text-gray-500 hover:text-gray-700">
+                            <X className="h-2.5 w-2.5" />Clear
+                          </button>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-0.5 sm:gap-1">
-                        <button onClick={() => setSelectedTeam("all")}
-                          className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeam === "all" ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                        <button onClick={() => setSelectedTeams(new Set())}
+                          className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeams.size === 0 ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                           All
                         </button>
                         {bootstrapData?.teams?.sort((a, b) => a.short_name.localeCompare(b.short_name)).map(team => (
                           <button key={team.id}
-                            onClick={() => setSelectedTeam(selectedTeam === team.short_name ? "all" : team.short_name)}
-                            className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeam === team.short_name ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
+                            onClick={() => toggleTeamSelection(team.short_name)}
+                            className={`rounded-full border text-[10px] sm:text-xs font-medium px-1.5 sm:px-2.5 py-px sm:py-0.5 leading-none cursor-pointer transition-colors ${selectedTeams.has(team.short_name) ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}>
                             {team.short_name}
                           </button>
                         ))}
