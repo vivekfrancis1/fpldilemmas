@@ -940,8 +940,8 @@ export default function PlayerTotalPoints() {
   
   const [excludedComponents, setExcludedComponents] = useState<Set<string>>(new Set());
   
-  // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  // Filter section collapse state - open by default
+  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
   
   // Toggle point component exclusion
   const toggleComponentExclusion = (componentKey: string) => {
