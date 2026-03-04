@@ -64,6 +64,9 @@ type TeamPick = {
   live_assists?: number;
   live_bonus?: number;
   live_bps?: number;
+  live_clean_sheets?: number;
+  provisional_bonus?: number;
+  provisional_cs_points?: number;
 };
 
 type TeamData = {
@@ -636,6 +639,8 @@ export default function ManagerTeam() {
       status: playerData?.status,
       chance_of_playing: playerData?.chance_of_playing_next_round,
       news: playerData?.news,
+      provisional_bonus: pick.provisional_bonus || 0,
+      provisional_cs_points: pick.provisional_cs_points || 0,
     };
   });
 
@@ -668,6 +673,8 @@ export default function ManagerTeam() {
       status: playerData?.status,
       chance_of_playing: playerData?.chance_of_playing_next_round,
       news: playerData?.news,
+      provisional_bonus: pick.provisional_bonus || 0,
+      provisional_cs_points: pick.provisional_cs_points || 0,
     };
   });
 
@@ -805,9 +812,17 @@ export default function ManagerTeam() {
       })
     : benchPlayers;
 
-  const totalLivePoints = showLivePoints
-    ? effectivePitchPlayers.reduce((sum, p) => sum + (p.event_points || 0) * (p.multiplier || 1), 0)
-    : null;
+  const { totalLivePoints, hasProvisionalPoints } = (() => {
+    if (!showLivePoints) return { totalLivePoints: null, hasProvisionalPoints: false };
+    let base = 0;
+    let provisional = 0;
+    for (const p of effectivePitchPlayers) {
+      const mult = p.multiplier || 1;
+      base += (p.event_points || 0) * mult;
+      provisional += ((p.provisional_bonus || 0) + (p.provisional_cs_points || 0)) * mult;
+    }
+    return { totalLivePoints: base + provisional, hasProvisionalPoints: provisional > 0 };
+  })();
 
   // Get manager name from manager info
   const managerName = managerInfo ? 
@@ -1032,11 +1047,12 @@ export default function ManagerTeam() {
                       Live GW Score:
                     </span>
                     <span className="text-lg font-bold text-green-700">{totalLivePoints} pts</span>
-                    {autoSubs.length > 0 && (
-                      <span className="text-xs text-green-600 ml-1">
-                        ({autoSubs.length} auto-sub{autoSubs.length > 1 ? 's' : ''} applied)
-                      </span>
-                    )}
+                    <span className="text-xs text-green-600 ml-1">
+                      {[
+                        autoSubs.length > 0 && `${autoSubs.length} auto-sub${autoSubs.length > 1 ? 's' : ''} applied`,
+                        hasProvisionalPoints && 'inc. est. bonus & CS',
+                      ].filter(Boolean).join(' · ')}
+                    </span>
                   </div>
                 )}
 

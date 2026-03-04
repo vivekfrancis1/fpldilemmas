@@ -3894,10 +3894,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 live_assists: liveStats?.assists || 0,
                 live_bonus: liveStats?.bonus || 0,
                 live_bps: liveStats?.bps || 0,
+                live_clean_sheets: liveStats?.clean_sheets || 0,
               };
             });
           }
-          
+
+          // Compute provisional bonus and clean sheet points
+          try {
+            // Ensure bootstrap data is available for element→team and element_type maps
+            let bsData = bootstrapData;
+            if (!bsData) {
+              const bsResp = await internalFetch("api/bootstrap-static");
+              if (bsResp.ok) bsData = await bsResp.json();
+            }
+
+            // Fetch GW fixtures for scores
+            const fixtResp = await internalFetch("api/fixtures");
+            const allFixtures = fixtResp.ok ? await fixtResp.json() : [];
+            const gwFixtures = (allFixtures as any[]).filter(
+              (f: any) => f.event === currentGameweek && f.started
+            );
+
+            if (bsData && gwFixtures.length > 0) {
+              // Build element→team_id and element→element_type maps
+              const elementTeamMap = new Map<number, number>();
+              const elementTypeMap = new Map<number, number>();
+              for (const el of (bsData.elements || [])) {
+                elementTeamMap.set(el.id, el.team);
+                elementTypeMap.set(el.id, el.element_type);
+              }
+
+              const provisionalBonusMap = new Map<number, number>();
+              const provisionalCsMap = new Map<number, number>();
+
+              for (const fixture of gwFixtures) {
+                const homeTeam: number = fixture.team_h;
+                const awayTeam: number = fixture.team_a;
+                const homeScore: number | null = fixture.team_h_score ?? null;
+                const awayScore: number | null = fixture.team_a_score ?? null;
+
+                // Collect all elements in this fixture
+                const fixtureElements: { id: number; stats: any }[] = [];
+                for (const [id, stats] of livePlayerStats.entries()) {
+                  const team = elementTeamMap.get(id);
+                  if (team === homeTeam || team === awayTeam) {
+                    fixtureElements.push({ id, stats });
+                  }
+                }
+
+                // --- Provisional Bonus ---
+                // Only compute if FPL hasn't officially assigned bonus for this fixture yet
+                const anyBonusAssigned = fixtureElements.some(e => (e.stats.bonus || 0) > 0);
+                if (!anyBonusAssigned) {
+                  const played = fixtureElements
+                    .filter(e => (e.stats.minutes || 0) > 0 && (e.stats.bps || 0) > 0)
+                    .sort((a, b) => (b.stats.bps || 0) - (a.stats.bps || 0));
+
+                  const bonusLevels = [3, 2, 1];
+                  let i = 0;
+                  let levelIdx = 0;
+                  while (i < played.length && levelIdx < bonusLevels.length) {
+                    const currentBps = played[i].stats.bps || 0;
+                    // Find all players tied at this BPS score
+                    let j = i;
+                    while (j < played.length && (played[j].stats.bps || 0) === currentBps) j++;
+                    const pts = bonusLevels[levelIdx];
+                    for (let k = i; k < j; k++) provisionalBonusMap.set(played[k].id, pts);
+                    levelIdx += (j - i); // ties consume multiple rank slots
+                    i = j;
+                  }
+                }
+
+                // --- Provisional Clean Sheet ---
+                // Only applies when we have a valid score
+                if (homeScore !== null && awayScore !== null) {
+                  // Home team clean sheet: away team scored 0
+                  if (awayScore === 0) {
+                    for (const e of fixtureElements) {
+                      if (elementTeamMap.get(e.id) !== homeTeam) continue;
+                      const mins = e.stats.minutes || 0;
+                      const alreadyHasCS = (e.stats.clean_sheets || 0) > 0;
+                      if (mins >= 60 && !alreadyHasCS) {
+                        const elType = elementTypeMap.get(e.id) || 4;
+                        const csPoints = elType <= 2 ? 6 : elType === 3 ? 1 : 0;
+                        if (csPoints > 0) provisionalCsMap.set(e.id, csPoints);
+                      }
+                    }
+                  }
+                  // Away team clean sheet: home team scored 0
+                  if (homeScore === 0) {
+                    for (const e of fixtureElements) {
+                      if (elementTeamMap.get(e.id) !== awayTeam) continue;
+                      const mins = e.stats.minutes || 0;
+                      const alreadyHasCS = (e.stats.clean_sheets || 0) > 0;
+                      if (mins >= 60 && !alreadyHasCS) {
+                        const elType = elementTypeMap.get(e.id) || 4;
+                        const csPoints = elType <= 2 ? 6 : elType === 3 ? 1 : 0;
+                        if (csPoints > 0) provisionalCsMap.set(e.id, csPoints);
+                      }
+                    }
+                  }
+                }
+              }
+
+              // Apply provisional fields to picks
+              if (data.picks && Array.isArray(data.picks)) {
+                data.picks = data.picks.map((pick: any) => ({
+                  ...pick,
+                  provisional_bonus: provisionalBonusMap.get(pick.element) || 0,
+                  provisional_cs_points: provisionalCsMap.get(pick.element) || 0,
+                }));
+              }
+            }
+          } catch (provErr) {
+            console.log("DEBUG: Error computing provisional points:", provErr);
+          }
+
           console.log("DEBUG: Added live points to picks");
         } else {
           console.log("DEBUG: Could not fetch live data, using static points");

@@ -43,6 +43,8 @@ export interface PitchPlayer {
   is_empty_slot?: boolean;
   is_subbed_in?: boolean;
   is_subbed_out?: boolean;
+  provisional_bonus?: number;
+  provisional_cs_points?: number;
 }
 
 export interface PitchFixture {
