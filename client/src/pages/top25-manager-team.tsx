@@ -42,7 +42,8 @@ import {
   TrendingDown,
   Calendar,
   BarChart3,
-  ArrowLeftRight
+  ArrowLeftRight,
+  Zap
 } from "lucide-react";
 import { PitchView, type PitchPlayer, type PitchPlayerFixture } from "@/components/pitch-view";
 import { ListView, type ListPlayer } from "@/components/list-view";
@@ -56,10 +57,22 @@ type TeamPick = {
   element_type: number;
   player_name: string;
   team_name: string;
+  now_cost?: number;
+  event_points?: number;
+  live_points?: number;
+  live_minutes?: number;
+  provisional_bonus?: number;
+  provisional_cs_points?: number;
 };
 
 type TeamData = {
   active_chip?: string;
+  automatic_subs?: Array<{
+    entry: number;
+    element_in: number;
+    element_out: number;
+    event: number;
+  }>;
   entry_history?: {
     event: number;
     points: number;
@@ -223,6 +236,7 @@ function getRankChangeDisplay(rankChange: number) {
 export default function Top25ManagerTeam() {
   const { rank } = useParams<{ rank: string }>();
   const [teamView, setTeamView] = useState<"pitch" | "list">("pitch");
+  const [showLivePoints, setShowLivePoints] = useState(false);
   const [showPointsBreakdown, setShowPointsBreakdown] = useState(false);
   const [selectedPlayerForBreakdown, setSelectedPlayerForBreakdown] = useState<any>(null);
   
@@ -391,8 +405,8 @@ export default function Top25ManagerTeam() {
   // Map starting eleven to PitchPlayer format for pitch view
   const pitchPlayers: PitchPlayer[] = startingEleven.map(pick => {
     const playerData = getPlayerData(pick.element);
-    const teamData = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
-    const pts = pick.event_points || 0;
+    const teamDataLocal = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    const pts = pick.live_points ?? pick.event_points ?? 0;
     const mult = pick.multiplier || 1;
     
     return {
@@ -405,11 +419,14 @@ export default function Top25ManagerTeam() {
       player_name: pick.player_name,
       web_name: playerData?.web_name,
       team_name: pick.team_name,
-      team_short_name: teamData?.short_name,
+      team_short_name: teamDataLocal?.short_name,
       team_id: playerData?.team,
-      team_code: teamData?.code,
-      event_points: pick.event_points,
+      team_code: teamDataLocal?.code,
+      event_points: pts,
       points_display: (pts * mult).toString(),
+      live_minutes: pick.live_minutes ?? 0,
+      provisional_bonus: pick.provisional_bonus ?? 0,
+      provisional_cs_points: pick.provisional_cs_points ?? 0,
       in_dreamteam: playerData?.in_dreamteam || false,
       fixtures: getCurrentGWFixtures(playerData?.team),
       status: playerData?.status,
@@ -421,7 +438,8 @@ export default function Top25ManagerTeam() {
   // Map bench players to PitchPlayer format
   const benchPlayers: PitchPlayer[] = substitutes.map(pick => {
     const playerData = getPlayerData(pick.element);
-    const teamData = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    const teamDataLocal = bootstrapData?.teams?.find((t: any) => t.id === playerData?.team);
+    const pts = pick.live_points ?? pick.event_points ?? 0;
     
     return {
       element: pick.element,
@@ -433,10 +451,13 @@ export default function Top25ManagerTeam() {
       player_name: pick.player_name,
       web_name: playerData?.web_name,
       team_name: pick.team_name,
-      team_short_name: teamData?.short_name,
+      team_short_name: teamDataLocal?.short_name,
       team_id: playerData?.team,
-      team_code: teamData?.code,
-      event_points: pick.event_points,
+      team_code: teamDataLocal?.code,
+      event_points: pts,
+      live_minutes: pick.live_minutes ?? 0,
+      provisional_bonus: pick.provisional_bonus ?? 0,
+      provisional_cs_points: pick.provisional_cs_points ?? 0,
       in_dreamteam: playerData?.in_dreamteam || false,
       fixtures: getCurrentGWFixtures(playerData?.team),
       status: playerData?.status,
@@ -444,6 +465,84 @@ export default function Top25ManagerTeam() {
       news: playerData?.news,
     };
   });
+
+  // ── Live Points: auto-subs derivation ──────────────────────────────────────
+  const fplAutoSubs = (teamData?.automatic_subs || []).map((s: any) => ({
+    element_in: s.element_in,
+    element_out: s.element_out,
+  }));
+
+  const derivedAutoSubs: Array<{ element_in: number; element_out: number }> = (() => {
+    if (fplAutoSubs.length > 0 || !showLivePoints) return [];
+    const result: Array<{ element_in: number; element_out: number }> = [];
+    const getFS = (teamId: number) => {
+      const f = fixturesData && Array.isArray(fixturesData)
+        ? fixturesData.find((fx: any) => (fx.team_h === teamId || fx.team_a === teamId) && fx.event === currentGameweek)
+        : null;
+      return { started: f?.started || false, finished: f?.finished || false };
+    };
+    const isDNP = (p: PitchPlayer) => {
+      const s = getFS(p.team_id || 0);
+      return (s.started || s.finished) && ((p as any).live_minutes ?? -1) === 0;
+    };
+    const benchSorted = [...benchPlayers].sort((a, b) => a.position - b.position);
+    const gkStarter = pitchPlayers.find(p => p.element_type === 1);
+    if (gkStarter && isDNP(gkStarter)) {
+      const gkBench = benchSorted.find(p => p.element_type === 1 && ((p as any).live_minutes ?? 0) > 0);
+      if (gkBench) result.push({ element_in: gkBench.element, element_out: gkStarter.element });
+    }
+    const usedBench = new Set<number>();
+    let formation = pitchPlayers.filter(p => p.element_type !== 1);
+    for (const dnp of pitchPlayers.filter(p => p.element_type !== 1 && isDNP(p))) {
+      for (const bench of benchSorted.filter(p => p.element_type !== 1)) {
+        if (usedBench.has(bench.element) || ((bench as any).live_minutes ?? 0) === 0) continue;
+        const testF = formation.filter(p => p.element !== dnp.element).concat(bench);
+        if (testF.filter(p => p.element_type === 2).length >= 3 && testF.filter(p => p.element_type === 4).length >= 1) {
+          result.push({ element_in: bench.element, element_out: dnp.element });
+          usedBench.add(bench.element);
+          formation = testF;
+          break;
+        }
+      }
+    }
+    return result;
+  })();
+
+  const autoSubs = [...fplAutoSubs, ...derivedAutoSubs];
+
+  const effectivePitchPlayers: PitchPlayer[] = showLivePoints && autoSubs.length > 0
+    ? pitchPlayers.map(p => {
+        const sub = autoSubs.find(s => s.element_out === p.element);
+        if (sub) {
+          const subIn = benchPlayers.find(b => b.element === sub.element_in);
+          if (subIn) return { ...subIn, position: p.position, is_captain: p.is_captain, is_vice_captain: p.is_vice_captain, multiplier: p.multiplier, is_subbed_in: true } as PitchPlayer;
+        }
+        return p;
+      })
+    : pitchPlayers;
+
+  const effectiveBenchPlayers: PitchPlayer[] = showLivePoints && autoSubs.length > 0
+    ? benchPlayers.map(b => {
+        const sub = autoSubs.find(s => s.element_in === b.element);
+        if (sub) {
+          const subbedOut = pitchPlayers.find(p => p.element === sub.element_out);
+          if (subbedOut) return { ...subbedOut, position: b.position, is_subbed_out: true } as PitchPlayer;
+        }
+        return b;
+      })
+    : benchPlayers;
+
+  const { totalLivePoints, hasProvisionalPoints } = (() => {
+    if (!showLivePoints) return { totalLivePoints: null, hasProvisionalPoints: false };
+    let base = 0, provisional = 0;
+    for (const p of effectivePitchPlayers) {
+      const mult = p.multiplier || 1;
+      base += (p.event_points || 0) * mult;
+      provisional += ((p.provisional_bonus || 0) + (p.provisional_cs_points || 0)) * mult;
+    }
+    return { totalLivePoints: base + provisional, hasProvisionalPoints: provisional > 0 };
+  })();
+  // ────────────────────────────────────────────────────────────────────────────
 
   const getCurrentGameweekFixture = (teamId: number) => {
     if (!fixturesData || !Array.isArray(fixturesData)) return null;
@@ -787,15 +886,40 @@ export default function Top25ManagerTeam() {
           {teamData.picks && teamData.picks.length > 0 && (
             <>
               <div>
-                <h2 className="text-xl font-semibold mb-4">Team Squad</h2>
-                
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xl font-semibold">Team Squad</h2>
+                  <Button
+                    size="sm"
+                    variant={showLivePoints ? "default" : "outline"}
+                    className={showLivePoints ? "bg-green-600 hover:bg-green-700 text-white gap-1.5" : "gap-1.5"}
+                    onClick={() => setShowLivePoints(v => !v)}
+                  >
+                    <Zap className="h-3.5 w-3.5" />
+                    Live Points
+                  </Button>
+                </div>
+
+                {showLivePoints && totalLivePoints !== null && (
+                  <div className="mb-3 flex items-center gap-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                    <Zap className="h-4 w-4 text-green-600 shrink-0" />
+                    <span className="text-sm font-medium text-green-800">Live GW Score:</span>
+                    <span className="text-lg font-bold text-green-700">{totalLivePoints} pts</span>
+                    <span className="text-xs text-green-600 ml-1">
+                      {[
+                        autoSubs.length > 0 && `${autoSubs.length} auto-sub${autoSubs.length > 1 ? 's' : ''} applied`,
+                        hasProvisionalPoints && 'inc. est. bonus & CS',
+                      ].filter(Boolean).join(' · ')}
+                    </span>
+                  </div>
+                )}
+
                 {/* Pitch View */}
                   <div className="-mx-2 sm:mx-0">
                     <Card className="bg-white shadow-none sm:shadow-lg border-0 sm:border border-gray-200 overflow-hidden">
                       <CardContent className="p-2 sm:p-6">
                         <PitchView 
-                          players={pitchPlayers}
-                          benchPlayers={benchPlayers}
+                          players={showLivePoints ? effectivePitchPlayers : pitchPlayers}
+                          benchPlayers={showLivePoints ? effectiveBenchPlayers : benchPlayers}
                           getNextFixtures={getNextFixtures}
                           showFixtures={true}
                           activeChip={teamData?.active_chip}
