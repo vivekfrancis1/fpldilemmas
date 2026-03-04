@@ -3595,6 +3595,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         batchPlayerTypes.set(player.id, player.element_type);
       }
 
+      // If projectionGW === currentGameweek the GW is live and picks are locked —
+      // use actual picks/captain/chip. Otherwise project the upcoming GW with the optimised lineup.
+      const useActualPicks = projectionGW === currentGameweek;
+
       const results = await Promise.all(
         idsToFetch.map(async (managerId: number) => {
           try {
@@ -3611,52 +3615,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let projectedPoints = 0;
             let projectedBenchPoints = 0;
 
-            if (activeChip === 'bboost') {
-              for (const pick of picks) {
-                projectedPoints += playerProjectionsMap.get(pick.element) || 0;
-              }
-            } else {
-              // Optimise lineup: best formation + highest-projected captain
-              interface BProjPick { element: number; proj: number; elementType: number }
-              const allProj: BProjPick[] = picks.map((pick: any) => ({
-                element: pick.element,
-                proj: playerProjectionsMap.get(pick.element) || 0,
-                elementType: batchPlayerTypes.get(pick.element) || 0,
-              }));
-              const bgkps = allProj.filter(p => p.elementType === 1).sort((a, b) => b.proj - a.proj);
-              const bdefs = allProj.filter(p => p.elementType === 2).sort((a, b) => b.proj - a.proj);
-              const bmids = allProj.filter(p => p.elementType === 3).sort((a, b) => b.proj - a.proj);
-              const bfwds = allProj.filter(p => p.elementType === 4).sort((a, b) => b.proj - a.proj);
+            interface BProjPick { element: number; proj: number; elementType: number }
 
-              let bBestStarting: BProjPick[] = [];
-              let bBestTotal = -1;
-              for (let nd = 3; nd <= 5; nd++) {
-                for (let nm = 2; nm <= 5; nm++) {
-                  for (let nf = 1; nf <= 3; nf++) {
-                    if (nd + nm + nf !== 10) continue;
-                    if (nd > bdefs.length || nm > bmids.length || nf > bfwds.length || !bgkps.length) continue;
-                    const cand = [bgkps[0], ...bdefs.slice(0, nd), ...bmids.slice(0, nm), ...bfwds.slice(0, nf)];
-                    const tot = cand.reduce((s, p) => s + p.proj, 0);
-                    if (tot > bBestTotal) { bBestTotal = tot; bBestStarting = cand; }
+            if (useActualPicks) {
+              // GW is in progress — respect the manager's actual starting 11, captain and chip
+              const captainElement = picks.find((p: any) => p.is_captain)?.element;
+
+              if (activeChip === 'bboost') {
+                // All 15 players score; captain still doubles
+                for (const pick of picks) {
+                  const pts = playerProjectionsMap.get(pick.element) || 0;
+                  projectedPoints += pts;
+                  if (pick.element === captainElement) projectedPoints += pts;
+                }
+              } else if (activeChip === '3xc') {
+                // Starting 11 only; captain triples
+                const starters = picks.filter((p: any) => p.position <= 11);
+                for (const pick of starters) {
+                  const pts = playerProjectionsMap.get(pick.element) || 0;
+                  projectedPoints += pts;
+                  if (pick.element === captainElement) projectedPoints += pts * 2;
+                }
+                const starterSet = new Set(starters.map((p: any) => p.element));
+                for (const pick of picks) {
+                  if (!starterSet.has(pick.element)) {
+                    projectedBenchPoints += playerProjectionsMap.get(pick.element) || 0;
+                  }
+                }
+              } else {
+                // Standard / wildcard / freehit: starting 11 only; captain doubles
+                const starters = picks.filter((p: any) => p.position <= 11);
+                for (const pick of starters) {
+                  const pts = playerProjectionsMap.get(pick.element) || 0;
+                  projectedPoints += pts;
+                  if (pick.element === captainElement) projectedPoints += pts;
+                }
+                const starterSet = new Set(starters.map((p: any) => p.element));
+                for (const pick of picks) {
+                  if (!starterSet.has(pick.element)) {
+                    projectedBenchPoints += playerProjectionsMap.get(pick.element) || 0;
                   }
                 }
               }
-              if (!bBestStarting.length) {
-                // Fallback: actual starting 11
-                bBestStarting = picks.filter((p: any) => p.position <= 11).map((pick: any) => ({
+            } else {
+              // Upcoming GW — optimise lineup and pick best captain
+              if (activeChip === 'bboost') {
+                for (const pick of picks) {
+                  projectedPoints += playerProjectionsMap.get(pick.element) || 0;
+                }
+              } else {
+                // Optimise lineup: best formation + highest-projected captain
+                const allProj: BProjPick[] = picks.map((pick: any) => ({
                   element: pick.element,
                   proj: playerProjectionsMap.get(pick.element) || 0,
                   elementType: batchPlayerTypes.get(pick.element) || 0,
                 }));
-                bBestTotal = bBestStarting.reduce((s: number, p: BProjPick) => s + p.proj, 0);
-              }
-              const captainProj = [...bBestStarting].sort((a, b) => b.proj - a.proj)[0]?.proj || 0;
-              projectedPoints = bBestTotal + captainProj;
+                const bgkps = allProj.filter(p => p.elementType === 1).sort((a, b) => b.proj - a.proj);
+                const bdefs = allProj.filter(p => p.elementType === 2).sort((a, b) => b.proj - a.proj);
+                const bmids = allProj.filter(p => p.elementType === 3).sort((a, b) => b.proj - a.proj);
+                const bfwds = allProj.filter(p => p.elementType === 4).sort((a, b) => b.proj - a.proj);
 
-              const startingSet = new Set(bBestStarting.map(p => p.element));
-              for (const pick of picks) {
-                if (!startingSet.has(pick.element)) {
-                  projectedBenchPoints += playerProjectionsMap.get(pick.element) || 0;
+                let bBestStarting: BProjPick[] = [];
+                let bBestTotal = -1;
+                for (let nd = 3; nd <= 5; nd++) {
+                  for (let nm = 2; nm <= 5; nm++) {
+                    for (let nf = 1; nf <= 3; nf++) {
+                      if (nd + nm + nf !== 10) continue;
+                      if (nd > bdefs.length || nm > bmids.length || nf > bfwds.length || !bgkps.length) continue;
+                      const cand = [bgkps[0], ...bdefs.slice(0, nd), ...bmids.slice(0, nm), ...bfwds.slice(0, nf)];
+                      const tot = cand.reduce((s, p) => s + p.proj, 0);
+                      if (tot > bBestTotal) { bBestTotal = tot; bBestStarting = cand; }
+                    }
+                  }
+                }
+                if (!bBestStarting.length) {
+                  bBestStarting = picks.filter((p: any) => p.position <= 11).map((pick: any) => ({
+                    element: pick.element,
+                    proj: playerProjectionsMap.get(pick.element) || 0,
+                    elementType: batchPlayerTypes.get(pick.element) || 0,
+                  }));
+                  bBestTotal = bBestStarting.reduce((s: number, p: BProjPick) => s + p.proj, 0);
+                }
+                const captainProj = [...bBestStarting].sort((a, b) => b.proj - a.proj)[0]?.proj || 0;
+                projectedPoints = bBestTotal + captainProj;
+
+                const startingSet = new Set(bBestStarting.map(p => p.element));
+                for (const pick of picks) {
+                  if (!startingSet.has(pick.element)) {
+                    projectedBenchPoints += playerProjectionsMap.get(pick.element) || 0;
+                  }
                 }
               }
             }
