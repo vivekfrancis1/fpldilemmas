@@ -672,7 +672,64 @@ export default function ManagerTeam() {
   });
 
   // Compute effective pitch when Live Points toggle is ON (apply auto-subs)
-  const autoSubs = teamData?.automatic_subs || [];
+  const fplAutoSubs = teamData?.automatic_subs || [];
+
+  // During a live GW the FPL API returns automatic_subs: [] even when subs occurred.
+  // Derive subs from live minutes data when FPL hasn't processed them yet.
+  const derivedAutoSubs: { element_in: number; element_out: number }[] = (() => {
+    if (!showLivePoints || fplAutoSubs.length > 0) return [];
+
+    const usedBenchElements = new Set<number>();
+    const result: { element_in: number; element_out: number }[] = [];
+
+    // Bench players in priority order (position 12–15), outfield first for matching
+    const benchByPriority = [...benchPlayers].sort((a, b) => a.position - b.position);
+
+    // Work through each starting player to check if they need a sub
+    // We track the effective starters (may change as subs occur)
+    const effectiveStarters = [...pitchPlayers];
+
+    for (let i = 0; i < effectiveStarters.length; i++) {
+      const starter = effectiveStarters[i];
+      const isDNP = starter.fixture_finished && (starter.live_minutes ?? 0) === 0;
+      if (!isDNP) continue;
+
+      // GK: must be replaced by bench GK only
+      if (starter.element_type === 1) {
+        const benchGK = benchByPriority.find(
+          b => b.element_type === 1 && !usedBenchElements.has(b.element) && (b.live_minutes ?? 0) > 0
+        );
+        if (benchGK) {
+          result.push({ element_out: starter.element, element_in: benchGK.element });
+          usedBenchElements.add(benchGK.element);
+          effectiveStarters[i] = { ...benchGK, position: starter.position };
+        }
+        continue;
+      }
+
+      // Outfield: first eligible bench outfield player in priority order
+      for (const bench of benchByPriority) {
+        if (bench.element_type === 1) continue; // skip bench GK for outfield subs
+        if (usedBenchElements.has(bench.element)) continue;
+        if ((bench.live_minutes ?? 0) === 0) continue;
+
+        // Check formation constraints: after the sub, still need ≥3 DEF and ≥1 FWD
+        const prospectiveStarters = effectiveStarters.map((p, idx) => idx === i ? bench : p);
+        const defCount = prospectiveStarters.filter(p => p.element_type === 2).length;
+        const fwdCount = prospectiveStarters.filter(p => p.element_type === 4).length;
+        if (defCount < 3 || fwdCount < 1) continue;
+
+        result.push({ element_out: starter.element, element_in: bench.element });
+        usedBenchElements.add(bench.element);
+        effectiveStarters[i] = { ...bench, position: starter.position };
+        break;
+      }
+    }
+
+    return result;
+  })();
+
+  const autoSubs = fplAutoSubs.length > 0 ? fplAutoSubs : derivedAutoSubs;
 
   const effectivePitchPlayers: PitchPlayer[] = showLivePoints && autoSubs.length > 0
     ? pitchPlayers.map(player => {
