@@ -98,7 +98,7 @@ function getPointsDisplay(player: PitchPlayer): string {
       if (player.live_minutes && player.live_minutes > 0) {
         return '0';
       }
-      return '-';
+      return 'DNP';
     }
     return ((player.event_points || 0) * (player.multiplier || 1)).toString();
   }
@@ -106,15 +106,15 @@ function getPointsDisplay(player: PitchPlayer): string {
     return ((player.event_points || 0) * (player.multiplier || 1)).toString();
   }
   if (player.fixture_opponent) {
-    return 'TBC';
+    return '-';
   }
   const points = (player.event_points || 0) * (player.multiplier || 1);
   return points.toString();
 }
 
 function getBadgeBg(display: string, isBench: boolean): string {
-  if (display === 'TBC') return 'bg-slate-500';
-  if (display === '-') return 'bg-gray-600';
+  if (display === '-') return 'bg-slate-500';
+  if (display === 'DNP') return 'bg-gray-600';
   return isBench ? 'bg-purple-500' : 'bg-purple-600';
 }
 
