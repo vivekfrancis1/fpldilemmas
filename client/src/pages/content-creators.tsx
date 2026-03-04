@@ -301,7 +301,7 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
 
   const xPtsCol: ResponsiveTableColumn<CreatorWithLatestData> = {
     key: 'projected_points',
-    header: xPtsGW ? `xPts GW${xPtsGW}` : 'xPts',
+    header: xPtsGW ? <span className="leading-tight">xPts<br/>GW{xPtsGW}</span> : 'xPts',
     priority: 'secondary',
     align: 'right',
     mobileLabel: xPtsGW ? `xPts GW${xPtsGW}` : 'xPts',
@@ -317,7 +317,7 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
 
   const chipCol: ResponsiveTableColumn<CreatorWithLatestData> = {
     key: 'active_chip',
-    header: xPtsGW ? `Chip GW${xPtsGW}` : 'Chip',
+    header: xPtsGW ? <span className="leading-tight">Chip<br/>GW{xPtsGW}</span> : 'Chip',
     priority: 'secondary',
     align: 'center',
     mobileLabel: xPtsGW ? `Chip GW${xPtsGW}` : 'Chip',
@@ -341,7 +341,15 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     gwTransfersKeyField: 'id',
   });
 
-  return [nameColumn, xPtsCol, chipCol, ...sharedCols];
+  // Override GW Pts header to wrap in 2 lines for compactness
+  const patchedSharedCols = sharedCols.map((col, i) =>
+    i === 3 && currentGameweek
+      ? { ...col, header: <span className="leading-tight">Pts<br/>GW{currentGameweek}</span> }
+      : col
+  );
+
+  // Column order: Creator | Rank | Rank Gain | Total Pts | Pts (GW) | xPts (GW) | Chip (GW) | ...rest
+  return [nameColumn, ...patchedSharedCols.slice(0, 4), xPtsCol, chipCol, ...patchedSharedCols.slice(4)];
 };
 
 // Main Content Creators Component
