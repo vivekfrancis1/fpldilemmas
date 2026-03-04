@@ -1,18 +1,6 @@
 import { twitterService, TEAM_ABBREVIATIONS } from './services/twitterService';
 import { internalFetch } from './config';
 
-const POSITION_CONFIG: Array<{
-  key: string;
-  label: string;
-  emoji: string;
-  plural: string;
-}> = [
-  { key: 'GKP', label: 'Goalkeeper', emoji: '🧤', plural: 'Goalkeepers' },
-  { key: 'DEF', label: 'Defender',   emoji: '🛡️', plural: 'Defenders'   },
-  { key: 'MID', label: 'Midfielder', emoji: '🎯', plural: 'Midfielders' },
-  { key: 'FWD', label: 'Forward',    emoji: '⚽', plural: 'Forwards'    },
-];
-
 const RANK_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣'];
 const FULL_LIST_URL = 'https://fpldilemmas.com/player-total-points';
 const TRANSFER_TRACKER_URL = 'https://fpldilemmas.com/transfer-tracker';
@@ -113,6 +101,34 @@ export class DeadlineTweetScheduler {
     }
   }
 
+  private buildPositionSection(
+    players: any[],
+    gwNumber: number,
+    positionKey: string,
+    emoji: string,
+    label: string,
+    topN: number
+  ): { lines: string; count: number } {
+    const top = players
+      .filter(p => p.position === positionKey)
+      .map(p => ({
+        name: p.playerName || p.name,
+        team: p.teamName || p.team || '',
+        xPts: (p.gameweekProjections && p.gameweekProjections[gwNumber]) ?? 0,
+      }))
+      .filter(p => p.xPts > 0)
+      .sort((a, b) => b.xPts - a.xPts)
+      .slice(0, topN);
+
+    if (top.length === 0) return { lines: '', count: 0 };
+
+    const playerLines = top
+      .map((p, idx) => `${RANK_EMOJIS[idx]} ${p.name} (${getTeamAbbr(p.team)}) — ${p.xPts.toFixed(1)}`)
+      .join('\n');
+
+    return { lines: `${emoji} Top ${label}\n${playerLines}`, count: top.length };
+  }
+
   async postDeadlineTweets(gwNumber: number): Promise<void> {
     if (this.lastPostedGW === gwNumber) {
       console.log(`⏰ Deadline tweets for GW${gwNumber} already posted — skipping duplicate`);
@@ -131,52 +147,50 @@ export class DeadlineTweetScheduler {
       const players: any[] = await resp.json();
       console.log(`📊 Deadline tweets: loaded ${players.length} players`);
 
-      for (let i = 0; i < POSITION_CONFIG.length; i++) {
-        const pos = POSITION_CONFIG[i];
+      const footer = `\n\nFull list 👉 ${FULL_LIST_URL}\n#FPL #FantasyPremierLeague #FPLCommunity`;
+      let tweetsPosted = 0;
 
-        const top5 = players
-          .filter(p => p.position === pos.key)
-          .map(p => ({
-            name: p.playerName || p.name,
-            team: p.teamName || p.team || '',
-            xPts: (p.gameweekProjections && p.gameweekProjections[gwNumber]) ?? 0,
-          }))
-          .filter(p => p.xPts > 0)
-          .sort((a, b) => b.xPts - a.xPts)
-          .slice(0, 5);
+      // Tweet 1: Forwards + Midfielders (top 3 each)
+      const fwdSection = this.buildPositionSection(players, gwNumber, 'FWD', '⚽', 'Forwards', 3);
+      const midSection = this.buildPositionSection(players, gwNumber, 'MID', '🎯', 'Midfielders', 3);
 
-        if (top5.length === 0) {
-          console.warn(`⚠️ Deadline tweets: no ${pos.plural} data for GW${gwNumber}, skipping`);
-          continue;
-        }
-
-        const playerLines = top5
-          .map((p, idx) => `${RANK_EMOJIS[idx]} ${p.name} (${getTeamAbbr(p.team)}) — ${p.xPts.toFixed(1)}`)
-          .join('\n');
-
-        const tweet =
-          `⏰ GW${gwNumber} Deadline in 2hrs!\n\n` +
-          `${pos.emoji} Top ${pos.plural} by xPts\n\n` +
-          `${playerLines}\n\n` +
-          `Full list 👉 ${FULL_LIST_URL}\n` +
-          `#FPL #FantasyPremierLeague`;
-
+      if (fwdSection.count === 0 && midSection.count === 0) {
+        console.warn(`⚠️ Deadline tweets: no FWD or MID data for GW${gwNumber}, skipping tweet 1`);
+      } else {
+        const sections = [fwdSection.lines, midSection.lines].filter(s => s).join('\n\n');
+        const tweet1 = `⏰ GW${gwNumber} Deadline in 2hrs!\n\n${sections}${footer}`;
         try {
-          console.log(`📤 Posting ${pos.plural} tweet (${tweet.length} chars)...`);
-          await twitterService.postTweet(tweet);
-          console.log(`✅ GW${gwNumber} ${pos.plural} tweet posted`);
+          console.log(`📤 Posting FWD+MID tweet (${tweet1.length} chars)...`);
+          await twitterService.postTweet(tweet1);
+          console.log(`✅ GW${gwNumber} FWD+MID tweet posted`);
+          tweetsPosted++;
         } catch (err) {
-          console.error(`❌ Failed to post GW${gwNumber} ${pos.plural} tweet:`, err);
+          console.error(`❌ Failed to post GW${gwNumber} FWD+MID tweet:`, err);
         }
+        await sleep(3000);
+      }
 
-        // 3-second gap between tweets to avoid rate limits (except after last)
-        if (i < POSITION_CONFIG.length - 1) {
-          await sleep(3000);
+      // Tweet 2: Defenders + Goalkeepers (top 3 each)
+      const defSection = this.buildPositionSection(players, gwNumber, 'DEF', '🛡️', 'Defenders', 3);
+      const gkpSection = this.buildPositionSection(players, gwNumber, 'GKP', '🧤', 'Goalkeepers', 3);
+
+      if (defSection.count === 0 && gkpSection.count === 0) {
+        console.warn(`⚠️ Deadline tweets: no DEF or GKP data for GW${gwNumber}, skipping tweet 2`);
+      } else {
+        const sections = [defSection.lines, gkpSection.lines].filter(s => s).join('\n\n');
+        const tweet2 = `⏰ GW${gwNumber} Deadline in 2hrs!\n\n${sections}${footer}`;
+        try {
+          console.log(`📤 Posting DEF+GKP tweet (${tweet2.length} chars)...`);
+          await twitterService.postTweet(tweet2);
+          console.log(`✅ GW${gwNumber} DEF+GKP tweet posted`);
+          tweetsPosted++;
+        } catch (err) {
+          console.error(`❌ Failed to post GW${gwNumber} DEF+GKP tweet:`, err);
         }
       }
 
       this.lastPostedGW = gwNumber;
-      console.log(`✅ All deadline tweets posted for GW${gwNumber}`);
+      console.log(`✅ Posted ${tweetsPosted}/2 deadline tweets for GW${gwNumber}`);
 
     } catch (err) {
       console.error(`❌ Deadline tweet posting failed for GW${gwNumber}:`, err);
@@ -236,7 +250,7 @@ export class DeadlineTweetScheduler {
           `📈 Top Transfers In\n\n` +
           `${inLines}\n\n` +
           `Full list 👉 ${TRANSFER_TRACKER_URL}\n` +
-          `#FPL #FantasyPremierLeague`;
+          `#FPL #FantasyPremierLeague #FPLCommunity`;
 
         try {
           console.log(`📤 Posting transfers-in tweet (${tweetIn.length} chars)...`);
@@ -259,7 +273,7 @@ export class DeadlineTweetScheduler {
           `📉 GW${gwNumber} Top Transfers Out\n\n` +
           `${outLines}\n\n` +
           `Full list 👉 ${TRANSFER_TRACKER_URL}\n` +
-          `#FPL #FantasyPremierLeague`;
+          `#FPL #FantasyPremierLeague #FPLCommunity`;
 
         try {
           console.log(`📤 Posting transfers-out tweet (${tweetOut.length} chars)...`);

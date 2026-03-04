@@ -91,7 +91,7 @@ export class LiveGoalMonitor {
   private lastBootstrapRefresh = 0;
   private readonly POLL_INTERVAL_MS = 60_000;
   private readonly BOOTSTRAP_REFRESH_MS = 10 * 60_000;
-  private readonly OWNERSHIP_THRESHOLD = 10.0;
+  private readonly OWNERSHIP_THRESHOLD = 1.0;
   private readonly BONUS_MONITOR_HOURS = 12;
   private readonly SITE_URL = 'https://fpldilemmas.com';
 
@@ -530,7 +530,7 @@ export class LiveGoalMonitor {
   }
 
   private footer(ctx: MatchContext): string {
-    return `\n\n📊 Match Stats: ${this.SITE_URL}/match-stats/${ctx.fixtureId}\n#FPL #FantasyPremierLeague`;
+    return `\n\n📊 Match Stats: ${this.SITE_URL}/match-stats/${ctx.fixtureId}\n#FPL #FantasyPremierLeague #FPLCommunity`;
   }
 
   private formatGoalTweet(

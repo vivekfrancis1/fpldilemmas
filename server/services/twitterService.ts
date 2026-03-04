@@ -128,7 +128,7 @@ export class TwitterService {
       return `${change.player_name} (${teamAbbr}, ${posAbbr}): ${change.new_price.toFixed(1)}`;
     });
 
-    const footer = `\nFull list: https://fpldilemmas.com/recent-price-changes\n#FPL #FantasyPremierLeague`;
+    const footer = `\nFull list: https://fpldilemmas.com/recent-price-changes\n#FPL #FantasyPremierLeague #FPLCommunity`;
 
     let tweet = header;
     for (const line of playerLines) {
