@@ -93,14 +93,29 @@ function getPointsDisplay(player: PitchPlayer): string {
   if (player.custom_badge_text !== undefined) {
     return player.custom_badge_text;
   }
-  if (player.fixture_finished && (player.event_points || 0) === 0) {
-    if (player.live_minutes && player.live_minutes > 0) {
-      return '0';
+  if (player.fixture_finished) {
+    if ((player.event_points || 0) === 0) {
+      if (player.live_minutes && player.live_minutes > 0) {
+        return '0';
+      }
+      return '-';
     }
-    return '-';
+    return ((player.event_points || 0) * (player.multiplier || 1)).toString();
+  }
+  if (player.fixture_started) {
+    return ((player.event_points || 0) * (player.multiplier || 1)).toString();
+  }
+  if (player.fixture_opponent) {
+    return 'TBC';
   }
   const points = (player.event_points || 0) * (player.multiplier || 1);
   return points.toString();
+}
+
+function getBadgeBg(display: string, isBench: boolean): string {
+  if (display === 'TBC') return 'bg-slate-500';
+  if (display === '-') return 'bg-gray-600';
+  return isBench ? 'bg-purple-500' : 'bg-purple-600';
 }
 
 function getFixtureDisplay(player: PitchPlayer): string | null {
@@ -230,7 +245,7 @@ function PlayerCard({
               </div>
             </div>
             
-            <div className={`w-full px-2 py-0.5 ${isBench ? 'bg-purple-500' : 'bg-purple-600'} text-center`}>
+            <div className={`w-full px-2 py-0.5 ${getBadgeBg(getPointsDisplay(player), isBench)} text-center`}>
               <div className="text-[9px] sm:text-[11px] md:text-sm font-bold text-white truncate">
                 {getPointsDisplay(player)}
               </div>
