@@ -643,7 +643,6 @@ export default function PlayerSaves() {
               <span>{filteredAndSortedData.length} goalkeepers</span>
             </div>
           </CardContent>
-          </CardContent>
             </CollapsibleContent>
           </Card>
         </Collapsible>
