@@ -66,11 +66,9 @@ function PlayerAvailabilityBadge({ player }: { player: PlayerTotalPointsData }) 
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold cursor-pointer transition-colors hover:opacity-80 ${statusBg} ${statusBorder} border shadow-sm`}>
-          <StatusIcon className={`h-3 w-3 ${statusColor}`} />
-          <span className={statusColor}>
-            {chanceOfPlaying}%
-          </span>
+        <button className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold cursor-pointer transition-colors hover:opacity-80 ${statusBg} ${statusBorder} border`}>
+          <StatusIcon className={`h-2.5 w-2.5 ${statusColor}`} />
+          <span className={statusColor}>{chanceOfPlaying}%</span>
         </button>
       </PopoverTrigger>
       <PopoverContent side="top" className="max-w-xs p-3 bg-white shadow-xl border border-gray-200 z-50">
@@ -1806,33 +1804,25 @@ export default function PlayerTotalPoints() {
                 {/* GWs tab */}
                 <TabsContent value="gws" className="mt-0">
                   <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
-                    <span className="text-xs text-gray-500">Tap to exclude/include:</span>
+                    <span className="text-[11px] text-gray-500">Tap to exclude/include:</span>
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
+                      <button
                         onClick={() => setShowOpponent(!showOpponent)}
-                        className={`h-6 text-xs px-2 py-0 flex items-center gap-1 ${
-                          showOpponent
-                            ? 'bg-purple-100 text-purple-700 border-purple-300'
-                            : 'bg-gray-100 text-gray-500 border-gray-300'
-                        }`}
+                        className={`inline-flex items-center gap-1 rounded border text-[11px] font-medium px-1.5 py-0.5 leading-tight cursor-pointer transition-colors ${showOpponent ? 'bg-purple-100 text-purple-700 border-purple-300' : 'bg-gray-100 text-gray-500 border-gray-300'}`}
                         data-testid="button-toggle-opponent"
                       >
-                        <Users className="h-3 w-3" />
+                        <Users className="h-2.5 w-2.5" />
                         {showOpponent ? 'Hide Opp' : 'Show Opp'}
-                      </Button>
+                      </button>
                       {excludedGameweeks.size > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                        <button
                           onClick={clearExclusions}
-                          className="h-6 text-xs px-2 py-0 text-gray-500"
+                          className="inline-flex items-center gap-0.5 rounded text-[11px] font-medium px-1.5 py-0.5 leading-tight cursor-pointer text-gray-500 hover:text-gray-700"
                           data-testid="button-clear-exclusions"
                         >
-                          <X className="h-3 w-3 mr-0.5" />
+                          <X className="h-2.5 w-2.5" />
                           Clear
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </div>
@@ -1840,20 +1830,14 @@ export default function PlayerTotalPoints() {
                     {fullGameweekRange.map(gw => {
                       const isExcluded = excludedGameweeks.has(gw);
                       return (
-                        <Button
+                        <button
                           key={gw}
-                          variant="outline"
-                          size="sm"
                           onClick={() => toggleGameweekExclusion(gw)}
-                          className={`h-6 min-w-[38px] text-xs px-1.5 py-0 ${
-                            isExcluded
-                              ? 'bg-gray-100 text-gray-400 line-through border-gray-300'
-                              : 'bg-orange-100 text-orange-700 border-orange-300'
-                          }`}
+                          className={`rounded border text-[11px] font-medium px-1.5 py-0.5 leading-tight cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-orange-100 text-orange-700 border-orange-300'}`}
                           data-testid={`button-toggle-gw-${gw}`}
                         >
                           GW{gw}
-                        </Button>
+                        </button>
                       );
                     })}
                   </div>
@@ -1862,10 +1846,10 @@ export default function PlayerTotalPoints() {
                 {/* Position tab */}
                 <TabsContent value="pos" className="mt-0">
                   <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
-                    <span className="text-xs text-gray-500">Tap to exclude:</span>
+                    <span className="text-[11px] text-gray-500">Tap to exclude:</span>
                     <div className="flex gap-1">
-                      <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set())} className="h-6 text-xs px-2 py-0 bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-positions">All</Button>
-                      <Button variant="outline" size="sm" onClick={() => setSelectedPositions(new Set(positions))} className="h-6 text-xs px-2 py-0 bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-positions">None</Button>
+                      <button onClick={() => setSelectedPositions(new Set())} className="rounded border text-[11px] font-medium px-1.5 py-0.5 leading-tight cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-positions">All</button>
+                      <button onClick={() => setSelectedPositions(new Set(positions))} className="rounded border text-[11px] font-medium px-1.5 py-0.5 leading-tight cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-positions">None</button>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -1873,20 +1857,14 @@ export default function PlayerTotalPoints() {
                       const isIncluded = !selectedPositions.has(position);
                       const shortForm = position === 'Goalkeeper' ? 'GKP' : position === 'Defender' ? 'DEF' : position === 'Midfielder' ? 'MID' : 'FWD';
                       return (
-                        <Button
+                        <button
                           key={position}
-                          variant="outline"
-                          size="sm"
                           onClick={() => togglePositionSelection(position)}
-                          className={`h-6 text-xs px-3 py-0 ${
-                            isIncluded
-                              ? 'bg-teal-100 text-teal-700 border-teal-300'
-                              : 'bg-gray-100 text-gray-400 line-through border-gray-300'
-                          }`}
+                          className={`rounded border text-[11px] font-medium px-2 py-0.5 leading-tight cursor-pointer transition-colors ${isIncluded ? 'bg-teal-100 text-teal-700 border-teal-300' : 'bg-gray-100 text-gray-400 line-through border-gray-300'}`}
                           data-testid={`button-toggle-position-${position}`}
                         >
                           {shortForm}
-                        </Button>
+                        </button>
                       );
                     })}
                   </div>
@@ -1895,10 +1873,10 @@ export default function PlayerTotalPoints() {
                 {/* Teams tab */}
                 <TabsContent value="teams" className="mt-0">
                   <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
-                    <span className="text-xs text-gray-500">Tap to exclude:</span>
+                    <span className="text-[11px] text-gray-500">Tap to exclude:</span>
                     <div className="flex gap-1">
-                      <Button variant="outline" size="sm" onClick={() => setSelectedTeams(new Set())} className="h-6 text-xs px-2 py-0 bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-teams">All</Button>
-                      <Button variant="outline" size="sm" onClick={() => setSelectedTeams(new Set(teams))} className="h-6 text-xs px-2 py-0 bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-teams">None</Button>
+                      <button onClick={() => setSelectedTeams(new Set())} className="rounded border text-[11px] font-medium px-1.5 py-0.5 leading-tight cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-teams">All</button>
+                      <button onClick={() => setSelectedTeams(new Set(teams))} className="rounded border text-[11px] font-medium px-1.5 py-0.5 leading-tight cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-teams">None</button>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -1906,20 +1884,14 @@ export default function PlayerTotalPoints() {
                       const isIncluded = !selectedTeams.has(team);
                       const shortName = teamNameToShortName.get(team) || team;
                       return (
-                        <Button
+                        <button
                           key={team}
-                          variant="outline"
-                          size="sm"
                           onClick={() => toggleTeamSelection(team)}
-                          className={`h-6 text-xs px-2 py-0 ${
-                            isIncluded
-                              ? 'bg-indigo-100 text-indigo-700 border-indigo-300'
-                              : 'bg-gray-100 text-gray-400 line-through border-gray-300'
-                          }`}
+                          className={`rounded border text-[11px] font-medium px-1.5 py-0.5 leading-tight cursor-pointer transition-colors ${isIncluded ? 'bg-indigo-100 text-indigo-700 border-indigo-300' : 'bg-gray-100 text-gray-400 line-through border-gray-300'}`}
                           data-testid={`button-toggle-team-${team}`}
                         >
                           {shortName}
-                        </Button>
+                        </button>
                       );
                     })}
                   </div>
@@ -1928,30 +1900,24 @@ export default function PlayerTotalPoints() {
                 {/* Point components tab */}
                 <TabsContent value="pts" className="mt-0">
                   <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
-                    <span className="text-xs text-gray-500">Tap to exclude:</span>
+                    <span className="text-[11px] text-gray-500">Tap to exclude:</span>
                     <div className="flex gap-1">
-                      <Button variant="outline" size="sm" onClick={includeAllComponents} className="h-6 text-xs px-2 py-0 bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-components">All</Button>
-                      <Button variant="outline" size="sm" onClick={excludeAllComponents} className="h-6 text-xs px-2 py-0 bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-components">None</Button>
+                      <button onClick={includeAllComponents} className="rounded border text-[11px] font-medium px-1.5 py-0.5 leading-tight cursor-pointer bg-green-50 text-green-700 border-green-300" data-testid="button-include-all-components">All</button>
+                      <button onClick={excludeAllComponents} className="rounded border text-[11px] font-medium px-1.5 py-0.5 leading-tight cursor-pointer bg-red-50 text-red-700 border-red-300" data-testid="button-exclude-all-components">None</button>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {POINT_COMPONENTS.map(component => {
                       const isExcluded = excludedComponents.has(component.key);
                       return (
-                        <Button
+                        <button
                           key={component.key}
-                          variant="outline"
-                          size="sm"
                           onClick={() => toggleComponentExclusion(component.key)}
-                          className={`h-6 text-xs px-2 py-0 ${
-                            isExcluded
-                              ? 'bg-gray-100 text-gray-400 line-through border-gray-300'
-                              : 'bg-blue-100 text-blue-700 border-blue-300'
-                          }`}
+                          className={`rounded border text-[11px] font-medium px-1.5 py-0.5 leading-tight cursor-pointer transition-colors ${isExcluded ? 'bg-gray-100 text-gray-400 line-through border-gray-300' : 'bg-blue-100 text-blue-700 border-blue-300'}`}
                           data-testid={`button-toggle-component-${component.key}`}
                         >
                           {component.label}
-                        </Button>
+                        </button>
                       );
                     })}
                   </div>
