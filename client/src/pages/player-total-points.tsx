@@ -1716,7 +1716,7 @@ export default function PlayerTotalPoints() {
               </div>
             </CollapsibleTrigger>
             <CollapsibleContent>
-            <div className="fpl-card-content p-3">
+            <div className="p-3 sm:p-4">
               {/* Compact selects — 2-col on mobile, 4-col on sm+ */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
                 <div>
@@ -1725,9 +1725,9 @@ export default function PlayerTotalPoints() {
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="text-xs">
                       {availableGameweeks.map(gw => (
-                        <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                        <SelectItem key={gw} value={gw.toString()} className="text-xs">GW{gw}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -1738,24 +1738,24 @@ export default function PlayerTotalPoints() {
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="text-xs">
                       {availableGameweeks.filter(gw => !startGameweek || gw >= startGameweek).map(gw => (
-                        <SelectItem key={gw} value={gw.toString()}>GW{gw}</SelectItem>
+                        <SelectItem key={gw} value={gw.toString()} className="text-xs">GW{gw}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-xs font-medium text-gray-600 mb-1 block">Availability</Label>
+                  <Label className="text-xs font-medium text-gray-600 mb-1 block">Avail.</Label>
                   <Select value={selectedAvailability} onValueChange={setSelectedAvailability}>
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="available">Available</SelectItem>
-                      <SelectItem value="partial">Partial</SelectItem>
-                      <SelectItem value="unavailable">Unavailable</SelectItem>
+                    <SelectContent className="text-xs">
+                      <SelectItem value="all" className="text-xs">All</SelectItem>
+                      <SelectItem value="available" className="text-xs">Available</SelectItem>
+                      <SelectItem value="partial" className="text-xs">Partial</SelectItem>
+                      <SelectItem value="unavailable" className="text-xs">Unavailable</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1765,11 +1765,11 @@ export default function PlayerTotalPoints() {
                     <SelectTrigger className="h-8 text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="My Team">My Team</SelectItem>
-                      <SelectItem value="Top 50">Top 50</SelectItem>
-                      <SelectItem value="Value 50">Value 50</SelectItem>
+                    <SelectContent className="text-xs">
+                      <SelectItem value="all" className="text-xs">All</SelectItem>
+                      <SelectItem value="My Team" className="text-xs">My Team</SelectItem>
+                      <SelectItem value="Top 50" className="text-xs">Top 50</SelectItem>
+                      <SelectItem value="Value 50" className="text-xs">Value 50</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1788,18 +1788,18 @@ export default function PlayerTotalPoints() {
 
               {/* Tabbed toggle sections */}
               <Tabs defaultValue="gws" className="w-full">
-                <TabsList className="h-7 w-full grid grid-cols-4 mb-2">
-                  <TabsTrigger value="gws" className="text-xs py-0.5">
-                    GWs{excludedGameweeks.size > 0 && <span className="ml-1 text-[10px] bg-orange-200 text-orange-800 rounded px-1">{excludedGameweeks.size}</span>}
+                <TabsList className="w-full grid grid-cols-4 mb-2 h-8">
+                  <TabsTrigger value="gws" className="text-xs px-1">
+                    GWs{excludedGameweeks.size > 0 && ` (${excludedGameweeks.size})`}
                   </TabsTrigger>
-                  <TabsTrigger value="pos" className="text-xs py-0.5">
-                    Pos{selectedPositions.size > 0 && <span className="ml-1 text-[10px] bg-gray-200 text-gray-700 rounded px-1">{selectedPositions.size}</span>}
+                  <TabsTrigger value="pos" className="text-xs px-1">
+                    Pos{selectedPositions.size > 0 && ` (${selectedPositions.size})`}
                   </TabsTrigger>
-                  <TabsTrigger value="teams" className="text-xs py-0.5">
-                    Teams{selectedTeams.size > 0 && <span className="ml-1 text-[10px] bg-gray-200 text-gray-700 rounded px-1">{selectedTeams.size}</span>}
+                  <TabsTrigger value="teams" className="text-xs px-1">
+                    Teams{selectedTeams.size > 0 && ` (${selectedTeams.size})`}
                   </TabsTrigger>
-                  <TabsTrigger value="pts" className="text-xs py-0.5">
-                    Pts{excludedComponents.size > 0 && <span className="ml-1 text-[10px] bg-gray-200 text-gray-700 rounded px-1">{excludedComponents.size}</span>}
+                  <TabsTrigger value="pts" className="text-xs px-1">
+                    Pts{excludedComponents.size > 0 && ` (${excludedComponents.size})`}
                   </TabsTrigger>
                 </TabsList>
 
