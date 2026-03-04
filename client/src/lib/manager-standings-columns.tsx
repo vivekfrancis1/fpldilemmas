@@ -103,7 +103,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
   return [
     {
       key: 'latestTracking.overallRank',
-      header: 'Overall Rank',
+      header: <span className="leading-tight">Overall<br/>Rank</span>,
       priority: 'important',
       align: 'right',
       mobileLabel: 'Rank',
@@ -120,7 +120,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
     },
     {
       key: 'rankChange',
-      header: 'Rank Gain',
+      header: <span className="leading-tight">Rank<br/>Gain</span>,
       priority: 'important',
       align: 'right',
       mobileLabel: 'Gain',
@@ -130,7 +130,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
     },
     {
       key: 'latestTracking.overallPoints',
-      header: 'Total Pts',
+      header: <span className="leading-tight">Total<br/>Pts</span>,
       priority: 'important',
       align: 'right',
       mobileLabel: 'Points',
@@ -144,7 +144,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
     },
     {
       key: 'latestTracking.gameweekPoints',
-      header: currentGameweek ? `GW${currentGameweek} Pts` : 'GW Pts',
+      header: currentGameweek ? <span className="leading-tight">Pts<br/>GW{currentGameweek}</span> : 'GW Pts',
       priority: 'secondary',
       align: 'right',
       mobileLabel: currentGameweek ? `GW${currentGameweek}` : 'GW Pts',
@@ -161,7 +161,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
     },
     {
       key: 'latestTracking.squadValue',
-      header: 'Squad Value',
+      header: <span className="leading-tight">Squad<br/>Value</span>,
       priority: 'secondary',
       align: 'right',
       mobileLabel: 'Squad',
@@ -194,7 +194,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
     },
     {
       key: 'latestTracking.teamValue',
-      header: 'Team Value',
+      header: <span className="leading-tight">Team<br/>Value</span>,
       priority: 'optional',
       align: 'right',
       mobileLabel: 'TV',
@@ -230,7 +230,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
     },
     {
       key: 'gwTransfers',
-      header: currentGameweek ? `GW${currentGameweek} Transfers` : 'GW Transfers',
+      header: currentGameweek ? <span className="leading-tight">GW{currentGameweek}<br/>Transfers</span> : 'GW Transfers',
       priority: 'secondary',
       align: 'left',
       mobileLabel: currentGameweek ? `GW${currentGameweek}` : 'GW TM',
@@ -289,7 +289,7 @@ export function getSharedColumns<T extends ManagerStandingsData>(
     },
     {
       key: 'chipsAvailable',
-      header: 'Chips Available',
+      header: <span className="leading-tight">Chips<br/>Available</span>,
       priority: 'optional',
       align: 'right',
       mobileLabel: 'Chips',

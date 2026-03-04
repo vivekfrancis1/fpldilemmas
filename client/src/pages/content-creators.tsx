@@ -341,15 +341,8 @@ const getContentCreatorColumns = (currentGameweek?: number, gwTransfersMap?: Rec
     gwTransfersKeyField: 'id',
   });
 
-  // Override GW Pts header to wrap in 2 lines for compactness
-  const patchedSharedCols = sharedCols.map((col, i) =>
-    i === 3 && currentGameweek
-      ? { ...col, header: <span className="leading-tight">Pts<br/>GW{currentGameweek}</span> }
-      : col
-  );
-
-  // Column order: Creator | Rank | Rank Gain | Total Pts | Pts (GW) | xPts (GW) | Chip (GW) | ...rest
-  return [nameColumn, ...patchedSharedCols.slice(0, 4), xPtsCol, chipCol, ...patchedSharedCols.slice(4)];
+  // Column order: Creator | Overall Rank | Rank Gain | Total Pts | Pts (GW) | xPts (GW) | Chip (GW) | ...rest
+  return [nameColumn, ...sharedCols.slice(0, 4), xPtsCol, chipCol, ...sharedCols.slice(4)];
 };
 
 // Main Content Creators Component
