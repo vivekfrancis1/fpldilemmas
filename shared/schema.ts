@@ -1584,11 +1584,11 @@ export const playerProjectionRecords = pgTable("player_projection_records", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-  index("idx_player_projections_snapshot").on(table.snapshotId),
-  index("idx_player_projections_player").on(table.playerId),
-  index("idx_player_projections_gameweek").on(table.gameweek),
-  index("idx_player_projections_team").on(table.teamId),
-  uniqueIndex("idx_player_projections_unique").on(table.snapshotId, table.playerId),
+  index("idx_proj_records_snapshot").on(table.snapshotId),
+  index("idx_proj_records_player").on(table.playerId),
+  index("idx_proj_records_gameweek").on(table.gameweek),
+  index("idx_proj_records_team").on(table.teamId),
+  uniqueIndex("idx_proj_records_unique").on(table.snapshotId, table.playerId),
 ]);
 
 export type PlayerProjectionRecord = typeof playerProjectionRecords.$inferSelect;
@@ -1625,10 +1625,10 @@ export const teamProjectionRecords = pgTable("team_projection_records", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
-  index("idx_team_projections_snapshot").on(table.snapshotId),
-  index("idx_team_projections_team").on(table.teamId),
-  index("idx_team_projections_gameweek").on(table.gameweek),
-  uniqueIndex("idx_team_projections_unique").on(table.snapshotId, table.teamId),
+  index("idx_team_proj_records_snapshot").on(table.snapshotId),
+  index("idx_team_proj_records_team").on(table.teamId),
+  index("idx_team_proj_records_gameweek").on(table.gameweek),
+  uniqueIndex("idx_team_proj_records_unique").on(table.snapshotId, table.teamId),
 ]);
 
 export type TeamProjectionRecord = typeof teamProjectionRecords.$inferSelect;

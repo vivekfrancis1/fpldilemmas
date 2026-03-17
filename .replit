@@ -55,3 +55,7 @@ GOOGLE_CALLBACK_URL = "http://localhost:5000/api/auth/google/callback"
 
 [userenv.production]
 GOOGLE_CALLBACK_URL = "https://fpldilemmas.com/api/auth/google/callback"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
