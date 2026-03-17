@@ -364,7 +364,7 @@ export default function MyDashboard() {
     }
   }, []);
 
-  // Name search handler
+  // Name search handler — tries browser-side FPL API first, falls back to server proxy
   const handleNameSearch = async () => {
     const query = [nameSearchTeam.trim(), nameSearchManager.trim()].filter(Boolean).join(" ");
     if (query.length < 2) return;
@@ -372,9 +372,22 @@ export default function MyDashboard() {
     setNameSearchError("");
     setNameSearchResults([]);
     try {
-      const res = await fetch(`/api/managers/search?q=${encodeURIComponent(query)}`);
-      const data = await res.json();
-      if (data.managers && data.managers.length > 0) {
+      const fplUrl = `https://fantasy.premierleague.com/api/search/?search_type=manager&q=${encodeURIComponent(query)}`;
+      let data: { managers?: ManagerSearchResult[] } | null = null;
+      try {
+        const directRes = await fetch(fplUrl, { headers: { 'Accept': 'application/json' } });
+        if (directRes.ok) {
+          const contentType = directRes.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            data = await directRes.json();
+          }
+        }
+      } catch {}
+      if (!data || !data.managers) {
+        const proxyRes = await fetch(`/api/managers/search?q=${encodeURIComponent(query)}`);
+        data = await proxyRes.json();
+      }
+      if (data?.managers && data.managers.length > 0) {
         setNameSearchResults(data.managers);
       } else {
         setNameSearchError("no_results");
@@ -1388,12 +1401,12 @@ export default function MyDashboard() {
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
                     <p className="font-medium text-amber-800">No managers found</p>
                     <p className="text-amber-700 mt-1 text-xs">
-                      Name-based search depends on the FPL API and may not always be available.
+                      Name-based search isn't always supported by the FPL public API.
                       You can find your Manager ID by visiting{" "}
                       <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">
                         fantasy.premierleague.com
                       </a>{" "}
-                      → Points → check the number in your browser's URL bar after "entry/".
+                      → My Team → check the number in your browser's URL bar after "entry/".
                     </p>
                   </div>
                 )}
