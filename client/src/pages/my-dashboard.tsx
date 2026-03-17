@@ -297,15 +297,26 @@ interface Transfer {
   chipName?: string;
 }
 
+interface ManagerSearchResult {
+  id: number;
+  entry_name: string;
+  player_first_name: string;
+  player_last_name: string;
+  player_region_name: string;
+  summary_overall_rank: number | null;
+}
+
 export default function MyDashboard() {
   const [, setLocation] = useLocation();
   const { user } = useAuth();
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
   const [searchMode, setSearchMode] = useState<"id" | "name">("id");
-  const [nameQuery, setNameQuery] = useState("");
-  const [nameSearchDebounced, setNameSearchDebounced] = useState("");
-  const [showNameResults, setShowNameResults] = useState(false);
+  const [nameSearchTeam, setNameSearchTeam] = useState("");
+  const [nameSearchManager, setNameSearchManager] = useState("");
+  const [nameSearchResults, setNameSearchResults] = useState<ManagerSearchResult[]>([]);
+  const [isNameSearching, setIsNameSearching] = useState(false);
+  const [nameSearchError, setNameSearchError] = useState("");
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('tab') || 'overview';
@@ -353,25 +364,27 @@ export default function MyDashboard() {
     }
   }, []);
 
-  // Debounce name query for search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setNameSearchDebounced(nameQuery);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [nameQuery]);
-
-  // Close name search dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('[data-name-search]')) {
-        setShowNameResults(false);
+  // Name search handler
+  const handleNameSearch = async () => {
+    const query = [nameSearchTeam.trim(), nameSearchManager.trim()].filter(Boolean).join(" ");
+    if (query.length < 2) return;
+    setIsNameSearching(true);
+    setNameSearchError("");
+    setNameSearchResults([]);
+    try {
+      const res = await fetch(`/api/managers/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      if (data.managers && data.managers.length > 0) {
+        setNameSearchResults(data.managers);
+      } else {
+        setNameSearchError("no_results");
       }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    } catch {
+      setNameSearchError("no_results");
+    } finally {
+      setIsNameSearching(false);
+    }
+  };
 
   // Data queries
   const { data: bootstrapData } = useQuery<BootstrapData>({
@@ -387,26 +400,6 @@ export default function MyDashboard() {
   }>({
     queryKey: ["/api/fpl/status"],
     retry: false,
-  });
-
-  // Name/team search query
-  interface ManagerSearchResult {
-    id: number;
-    entry_name: string;
-    player_first_name: string;
-    player_last_name: string;
-    player_region_name: string;
-    summary_overall_rank: number | null;
-  }
-  const { data: nameSearchResults, isFetching: isSearchingByName } = useQuery<{ managers: ManagerSearchResult[] }>({
-    queryKey: ["/api/managers/search", nameSearchDebounced],
-    queryFn: async () => {
-      const res = await fetch(`/api/managers/search?q=${encodeURIComponent(nameSearchDebounced)}`);
-      if (!res.ok) throw new Error("Search failed");
-      return res.json();
-    },
-    enabled: nameSearchDebounced.trim().length >= 2 && searchMode === "name",
-    staleTime: 30000,
   });
 
   const { data: managerData, isLoading: isLoadingManager, error: managerError } = useQuery<ManagerData>({
@@ -1352,37 +1345,61 @@ export default function MyDashboard() {
                 </div>
               </div>
             ) : (
-              <div className="relative" data-name-search>
+              <div className="space-y-2">
                 <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-                  <div className="relative flex-1">
+                  <div className="flex-1 space-y-1">
+                    <label className="text-xs font-medium text-gray-500 pl-1">FPL Team Name</label>
                     <Input
                       type="text"
-                      placeholder="Search by manager name or team name..."
-                      value={nameQuery}
-                      onChange={(e) => {
-                        setNameQuery(e.target.value);
-                        setShowNameResults(true);
-                      }}
-                      onFocus={() => setShowNameResults(true)}
-                      className="h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500 pr-8"
+                      placeholder="e.g. Maverick FC"
+                      value={nameSearchTeam}
+                      onChange={(e) => setNameSearchTeam(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleNameSearch(); }}
+                      className="h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                      data-testid="input-team-name"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <label className="text-xs font-medium text-gray-500 pl-1">Manager Name <span className="text-gray-400">(optional)</span></label>
+                    <Input
+                      type="text"
+                      placeholder="e.g. John Smith"
+                      value={nameSearchManager}
+                      onChange={(e) => setNameSearchManager(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleNameSearch(); }}
+                      className="h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
                       data-testid="input-manager-name"
                     />
-                    {isSearchingByName && (
-                      <RefreshCw className="h-3 w-3 animate-spin absolute right-2 top-3 text-gray-400" />
-                    )}
                   </div>
-                  <FplConnectDialog />
+                  <div className="flex gap-2 sm:self-end">
+                    <Button
+                      onClick={handleNameSearch}
+                      disabled={(!nameSearchTeam.trim() && !nameSearchManager.trim()) || isNameSearching}
+                      className="flex-1 sm:flex-none h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
+                      data-testid="button-search-name"
+                    >
+                      {isNameSearching ? <RefreshCw className="h-4 w-4 animate-spin mr-1" /> : <Search className="h-4 w-4 mr-1" />}
+                      {isNameSearching ? "..." : "Search"}
+                    </Button>
+                    <FplConnectDialog />
+                  </div>
                 </div>
-                {/* Search results dropdown */}
-                {showNameResults && nameQuery.trim().length >= 2 && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
-                    {isSearchingByName && (
-                      <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
-                    )}
-                    {!isSearchingByName && nameSearchResults?.managers?.length === 0 && (
-                      <div className="px-4 py-3 text-sm text-gray-500">No managers found</div>
-                    )}
-                    {!isSearchingByName && nameSearchResults?.managers?.map((m) => (
+                {nameSearchError === "no_results" && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
+                    <p className="font-medium text-amber-800">No managers found</p>
+                    <p className="text-amber-700 mt-1 text-xs">
+                      Name-based search depends on the FPL API and may not always be available.
+                      You can find your Manager ID by visiting{" "}
+                      <a href="https://fantasy.premierleague.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">
+                        fantasy.premierleague.com
+                      </a>{" "}
+                      → Points → check the number in your browser's URL bar after "entry/".
+                    </p>
+                  </div>
+                )}
+                {nameSearchResults.length > 0 && (
+                  <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm max-h-64 overflow-y-auto">
+                    {nameSearchResults.map((m) => (
                       <button
                         key={m.id}
                         className="w-full text-left px-4 py-2.5 hover:bg-purple-50 border-b border-gray-100 last:border-0 transition-colors"
@@ -1391,8 +1408,8 @@ export default function MyDashboard() {
                           setManagerId(idStr);
                           setSearchedId(idStr);
                           saveManagerIdToCache(idStr);
-                          setNameQuery(`${m.player_first_name} ${m.player_last_name} — ${m.entry_name}`);
-                          setShowNameResults(false);
+                          setSearchMode("id");
+                          setNameSearchResults([]);
                         }}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -1405,7 +1422,7 @@ export default function MyDashboard() {
                           )}
                         </div>
                         {m.player_region_name && (
-                          <div className="text-xs text-gray-400 mt-0.5">{m.player_region_name}</div>
+                          <div className="text-xs text-gray-400 mt-0.5">{m.player_region_name} • ID: {m.id}</div>
                         )}
                       </button>
                     ))}

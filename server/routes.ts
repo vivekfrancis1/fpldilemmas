@@ -3377,27 +3377,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ managerId: null });
   });
 
-  // Search managers by name or team name via FPL API
+  // Search managers by name or team name via FPL API (no retry on 404)
   app.get("/api/managers/search", async (req, res) => {
     try {
       const { q } = req.query;
       if (!q || typeof q !== "string" || q.trim().length < 2) {
         return res.status(400).json({ message: "Query must be at least 2 characters" });
       }
-      const response = await fetchWithRetry(
-        `https://fantasy.premierleague.com/api/search/?search_type=manager&q=${encodeURIComponent(q.trim())}`
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(
+        `https://fantasy.premierleague.com/api/search/?search_type=manager&q=${encodeURIComponent(q.trim())}`,
+        {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'application/json',
+          },
+        }
       );
+      clearTimeout(timeoutId);
       if (!response.ok) {
-        throw new Error(`FPL API responded with status: ${response.status}`);
+        return res.json({ managers: [] });
       }
       const data = await response.json();
       res.json(data);
     } catch (error) {
       console.error("Error searching managers:", error);
-      res.status(500).json({
-        error: "Failed to search managers",
-        message: error instanceof Error ? error.message : "Unknown error",
-      });
+      res.json({ managers: [] });
     }
   });
 
