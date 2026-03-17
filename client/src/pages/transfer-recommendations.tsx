@@ -1141,6 +1141,12 @@ export default function TransferRecommendations() {
                                     const appliedOutIds = new Set(appliedInGW.map((t: any) => t.playerOut.id));
                                     const appliedInIds = new Set(appliedInGW.map((t: any) => t.playerIn.id));
 
+                                    // Individual recs for this GW (cascade-filtered, non-roll), sorted by gain descending
+                                    // Use a copy to avoid mutating the finalRecommendations array used by the cards below
+                                    const individualRecs = [...finalRecommendations]
+                                      .filter((r: any) => r.type !== 'roll')
+                                      .sort((a: any, b: any) => (b.fourGWPointsGain || 0) - (a.fourGWPointsGain || 0));
+
                                     // Build combo entries per size, largest first
                                     let comboEntries: Array<{ size: number; rawCombo: any[] }> = [];
                                     if (gwData.bestCombinations && Object.keys(gwData.bestCombinations).length > 0) {
@@ -1153,6 +1159,10 @@ export default function TransferRecommendations() {
                                     }
                                     if (comboEntries.length === 0) return null;
 
+                                    // Track which displayed transfer counts have been shown
+                                    // to prevent duplicate cards with the same label (e.g. two "Best 2-Transfer Combo")
+                                    const shownDisplayCounts = new Set<number>();
+
                                     return (
                                       <>
                                         {comboEntries.map(({ size, rawCombo }) => {
@@ -1162,9 +1172,26 @@ export default function TransferRecommendations() {
                                             if (!filterAppliedFromRecommendations([c], gw).length) return false;
                                             return true;
                                           });
-                                          if (validCombo.length < 2) return null;
-                                          const comboToShow = validCombo.slice(0, freeTransfersRemaining);
+
+                                          const targetCount = Math.min(freeTransfersRemaining, size);
+                                          let comboToShow: any[] = [];
+
+                                          if (validCombo.length >= targetCount) {
+                                            comboToShow = validCombo.slice(0, targetCount);
+                                          } else {
+                                            const fallback = individualRecs.slice(0, targetCount);
+                                            if (fallback.length >= 2) {
+                                              comboToShow = fallback;
+                                            } else if (validCombo.length >= 2) {
+                                              comboToShow = validCombo;
+                                            } else {
+                                              return null;
+                                            }
+                                          }
+
                                           if (comboToShow.length < 2) return null;
+                                          if (shownDisplayCounts.has(comboToShow.length)) return null;
+                                          shownDisplayCounts.add(comboToShow.length);
                                           const totalGain = comboToShow.reduce((s: number, c: any) => s + (c.fourGWPointsGain || 0), 0);
                                           return (
                                             <div key={`combo-size-${size}`} className="mb-4">
@@ -1173,7 +1200,7 @@ export default function TransferRecommendations() {
                                                   <div className="w-7 h-7 bg-purple-100 rounded-full flex items-center justify-center">
                                                     <Target className="h-4 w-4 text-purple-600" />
                                                   </div>
-                                                  <h3 className="text-base font-bold text-purple-800">Best {size}-Transfer Combo</h3>
+                                                  <h3 className="text-base font-bold text-purple-800">Best {comboToShow.length}-Transfer Combo</h3>
                                                   <Badge className="bg-purple-100 text-purple-800 border-purple-300 ml-auto">
                                                     +{totalGain.toFixed(1)} pts (4 GWs)
                                                   </Badge>
