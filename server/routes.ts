@@ -3377,37 +3377,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ managerId: null });
   });
 
-  // Search managers by name or team name via FPL API (no retry on 404)
-  app.get("/api/managers/search", async (req, res) => {
-    try {
-      const { q } = req.query;
-      if (!q || typeof q !== "string" || q.trim().length < 2) {
-        return res.status(400).json({ message: "Query must be at least 2 characters" });
-      }
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-      const response = await fetch(
-        `https://fantasy.premierleague.com/api/search/?search_type=manager&q=${encodeURIComponent(q.trim())}`,
-        {
-          signal: controller.signal,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'application/json',
-          },
-        }
-      );
-      clearTimeout(timeoutId);
-      if (!response.ok) {
-        return res.json({ managers: [] });
-      }
-      const data = await response.json();
-      res.json(data);
-    } catch (error) {
-      console.error("Error searching managers:", error);
-      res.json({ managers: [] });
-    }
-  });
-
   // Enhanced manager data cache with in-flight de-duplication (2 minutes TTL)
   const managerCache = new Map<string, { data: any; timestamp: number }>();
   const managerDataCache = new Map<string, { data: any; timestamp: number }>();

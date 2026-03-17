@@ -364,7 +364,7 @@ export default function MyDashboard() {
     }
   }, []);
 
-  // Name search handler — tries browser-side FPL API first, falls back to server proxy
+  // Name search handler — direct browser-side fetch to FPL API
   const handleNameSearch = async () => {
     const query = [nameSearchTeam.trim(), nameSearchManager.trim()].filter(Boolean).join(" ");
     if (query.length < 2) return;
@@ -373,25 +373,18 @@ export default function MyDashboard() {
     setNameSearchResults([]);
     try {
       const fplUrl = `https://fantasy.premierleague.com/api/search/?search_type=manager&q=${encodeURIComponent(query)}`;
-      let data: { managers?: ManagerSearchResult[] } | null = null;
-      try {
-        const directRes = await fetch(fplUrl, { headers: { 'Accept': 'application/json' } });
-        if (directRes.ok) {
-          const contentType = directRes.headers.get('content-type') || '';
-          if (contentType.includes('application/json')) {
-            data = await directRes.json();
+      const res = await fetch(fplUrl, { headers: { 'Accept': 'application/json' } });
+      if (res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data?.managers && data.managers.length > 0) {
+            setNameSearchResults(data.managers);
+            return;
           }
         }
-      } catch {}
-      if (!data || !data.managers) {
-        const proxyRes = await fetch(`/api/managers/search?q=${encodeURIComponent(query)}`);
-        data = await proxyRes.json();
       }
-      if (data?.managers && data.managers.length > 0) {
-        setNameSearchResults(data.managers);
-      } else {
-        setNameSearchError("no_results");
-      }
+      setNameSearchError("no_results");
     } catch {
       setNameSearchError("no_results");
     } finally {
@@ -1316,7 +1309,7 @@ export default function MyDashboard() {
             {/* Search mode toggle */}
             <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
               <button
-                onClick={() => { setSearchMode("id"); setShowNameResults(false); }}
+                onClick={() => { setSearchMode("id"); }}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${searchMode === "id" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
               >
                 Manager ID
@@ -1367,7 +1360,6 @@ export default function MyDashboard() {
                       placeholder="e.g. Maverick FC"
                       value={nameSearchTeam}
                       onChange={(e) => setNameSearchTeam(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleNameSearch(); }}
                       className="h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
                       data-testid="input-team-name"
                     />
@@ -1379,7 +1371,6 @@ export default function MyDashboard() {
                       placeholder="e.g. John Smith"
                       value={nameSearchManager}
                       onChange={(e) => setNameSearchManager(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleNameSearch(); }}
                       className="h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
                       data-testid="input-manager-name"
                     />
