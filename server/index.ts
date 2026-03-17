@@ -11,6 +11,7 @@ import { projectionAccuracyScheduler } from "./projection-accuracy-scheduler";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedContentCreators } from "./seed-database";
 import { seedAdminUser } from "./seed-admin-user";
+import { seedManagerProfiles } from "./seed-manager-profiles";
 import { productionCacheInitializer } from "./production-cache-initializer";
 import { initializeGlobalOrchestrator } from "./routes";
 
@@ -74,6 +75,7 @@ app.use((req, res, next) => {
     // Seed database with initial data
     await seedContentCreators();
     await seedAdminUser();
+    seedManagerProfiles().catch(err => console.warn("Manager profiles seed error:", err));
 
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;

@@ -1,4 +1,4 @@
-import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, type User, type UpsertUser, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts, users } from "@shared/schema";
+import { type BootstrapData, type PlayerSummary, type WatchlistEntry, type InsertWatchlistEntry, type PriceAlert, type InsertPriceAlert, type PlayerMapping, type InsertPlayerMapping, type FplContentCreator, type InsertFplContentCreator, type FplCreatorTracking, type InsertFplCreatorTracking, type FplTopManager, type InsertFplTopManager, type FplTopManagerTracking, type InsertFplTopManagerTracking, type PriceChange, type InsertPriceChange, type PlayerTotalPointsWindow, type InsertPlayerTotalPointsWindow, type PlayerTotalPointsSnapshot, type InsertPlayerTotalPointsSnapshot, type TransferPlannerDraft, type InsertTransferPlannerDraft, type User, type UpsertUser, type ManagerProfile, type InsertManagerProfile, fplContentCreators, fplCreatorTracking, fplTopManagers, fplTopManagerTracking, priceChanges, playerTotalPointsWindows, playerTotalPointsSnapshots, transferPlannerDrafts, users, managerProfiles } from "@shared/schema";
 import { type HistoricalPlayer, type InsertHistoricalPlayer, historicalPlayers } from "@shared/watchlist-schema";
 import { db } from "./db";
 import { eq, sql, inArray, desc, and } from "drizzle-orm";
@@ -126,6 +126,11 @@ export interface IStorage {
   updateTransferPlannerDraft(managerId: number, draftLetter: string, updates: Partial<Omit<InsertTransferPlannerDraft, 'id' | 'managerId' | 'draftLetter' | 'createdAt' | 'updatedAt'>>): Promise<TransferPlannerDraft>;
   deleteTransferPlannerDraft(managerId: number, draftLetter: string): Promise<boolean>;
   deleteAllTransferPlannerDrafts(managerId: number): Promise<number>;
+
+  // Manager profiles operations
+  upsertManagerProfile(profile: InsertManagerProfile): Promise<void>;
+  bulkUpsertManagerProfiles(profiles: InsertManagerProfile[]): Promise<void>;
+  searchManagerProfiles(query: string): Promise<ManagerProfile[]>;
   
 }
 
@@ -523,6 +528,16 @@ export class MemStorage implements IStorage {
 
   async deleteAllTransferPlannerDrafts(managerId: number): Promise<number> {
     return 0;
+  }
+
+  async upsertManagerProfile(profile: InsertManagerProfile): Promise<void> {
+  }
+
+  async bulkUpsertManagerProfiles(profiles: InsertManagerProfile[]): Promise<void> {
+  }
+
+  async searchManagerProfiles(query: string): Promise<ManagerProfile[]> {
+    return [];
   }
 
 }
@@ -1861,6 +1876,73 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error deleting all transfer planner drafts:", error);
       return 0;
+    }
+  }
+
+  // Manager profiles operations
+  async upsertManagerProfile(profile: InsertManagerProfile): Promise<void> {
+    try {
+      await db
+        .insert(managerProfiles)
+        .values({ ...profile, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: managerProfiles.managerId,
+          set: {
+            entryName: profile.entryName,
+            playerFirstName: profile.playerFirstName,
+            playerLastName: profile.playerLastName,
+            overallRank: profile.overallRank,
+            updatedAt: new Date(),
+          },
+        });
+    } catch (error) {
+      console.error("Error upserting manager profile:", error);
+    }
+  }
+
+  async bulkUpsertManagerProfiles(profiles: InsertManagerProfile[]): Promise<void> {
+    if (!profiles.length) return;
+    try {
+      const now = new Date();
+      const chunks: InsertManagerProfile[][] = [];
+      for (let i = 0; i < profiles.length; i += 100) {
+        chunks.push(profiles.slice(i, i + 100));
+      }
+      for (const chunk of chunks) {
+        await db
+          .insert(managerProfiles)
+          .values(chunk.map(p => ({ ...p, updatedAt: now })))
+          .onConflictDoUpdate({
+            target: managerProfiles.managerId,
+            set: {
+              entryName: sql`excluded.entry_name`,
+              playerFirstName: sql`excluded.player_first_name`,
+              playerLastName: sql`excluded.player_last_name`,
+              overallRank: sql`excluded.overall_rank`,
+              updatedAt: sql`excluded.updated_at`,
+            },
+          });
+      }
+    } catch (error) {
+      console.error("Error bulk upserting manager profiles:", error);
+    }
+  }
+
+  async searchManagerProfiles(query: string): Promise<ManagerProfile[]> {
+    try {
+      const q = `%${query}%`;
+      const results = await db
+        .select()
+        .from(managerProfiles)
+        .where(
+          sql`(${managerProfiles.entryName} ILIKE ${q} OR (COALESCE(${managerProfiles.playerFirstName}, '') || ' ' || COALESCE(${managerProfiles.playerLastName}, '')) ILIKE ${q})`
+        )
+        .orderBy(sql`${managerProfiles.overallRank} ASC NULLS LAST`)
+        .limit(20);
+      return results;
+    } catch (error) {
+      console.error("Error searching manager profiles:", error);
+      return [];
     }
   }
 

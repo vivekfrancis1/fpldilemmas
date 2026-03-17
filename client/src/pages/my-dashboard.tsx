@@ -364,7 +364,7 @@ export default function MyDashboard() {
     }
   }, []);
 
-  // Name search handler — direct browser-side fetch to FPL API
+  // Name search handler — queries local manager_profiles DB via backend
   const handleNameSearch = async () => {
     const query = [nameSearchTeam.trim(), nameSearchManager.trim()].filter(Boolean).join(" ");
     if (query.length < 2) return;
@@ -372,16 +372,19 @@ export default function MyDashboard() {
     setNameSearchError("");
     setNameSearchResults([]);
     try {
-      const fplUrl = `https://fantasy.premierleague.com/api/search/?search_type=manager&q=${encodeURIComponent(query)}`;
-      const res = await fetch(fplUrl, { headers: { 'Accept': 'application/json' } });
+      const res = await fetch(`/api/managers/search?q=${encodeURIComponent(query)}`);
       if (res.ok) {
-        const contentType = res.headers.get('content-type') || '';
-        if (contentType.includes('application/json')) {
-          const data = await res.json();
-          if (data?.managers && data.managers.length > 0) {
-            setNameSearchResults(data.managers);
-            return;
-          }
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setNameSearchResults(data.map((m: any) => ({
+            id: m.managerId,
+            entry_name: m.entryName || "",
+            player_first_name: m.playerFirstName || "",
+            player_last_name: m.playerLastName || "",
+            player_region_name: "",
+            summary_overall_rank: m.overallRank || null,
+          })));
+          return;
         }
       }
       setNameSearchError("no_results");

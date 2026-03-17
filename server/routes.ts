@@ -2665,7 +2665,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.warn(`Failed to fetch page 2 for league ${leagueId}:`, e);
         }
       }
-      
+
+      // Seed manager profiles from standings rows (fire-and-forget)
+      const standingRows: any[] = data.standings?.results || [];
+      if (standingRows.length > 0) {
+        const profiles = standingRows.map((row: any) => {
+          const parts: string[] = (row.player_name || "").split(" ");
+          const firstName = parts.slice(0, -1).join(" ") || null;
+          const lastName = parts[parts.length - 1] || null;
+          return {
+            managerId: row.entry,
+            entryName: row.entry_name || null,
+            playerFirstName: firstName,
+            playerLastName: lastName,
+            overallRank: row.rank || null,
+          };
+        }).filter((p: any) => p.managerId);
+        storage.bulkUpsertManagerProfiles(profiles).catch((err: any) =>
+          console.warn("standings profile seed failed:", err)
+        );
+      }
+
       res.json(data);
     } catch (error) {
       console.error(`Error fetching league standings for ID ${req.params.leagueId}:`, error);
@@ -3280,7 +3300,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       console.log(`DEBUG: Calculated live standings for ${sortedStandings.length} managers in league ${leagueId}`);
-      
+
+      // Seed manager profiles from live standings rows (fire-and-forget)
+      const liveStandingRows: any[] = standingsData.standings?.results || [];
+      if (liveStandingRows.length > 0) {
+        const liveProfiles = liveStandingRows.map((row: any) => {
+          const parts: string[] = (row.player_name || "").split(" ");
+          const firstName = parts.slice(0, -1).join(" ") || null;
+          const lastName = parts[parts.length - 1] || null;
+          return {
+            managerId: row.entry,
+            entryName: row.entry_name || null,
+            playerFirstName: firstName,
+            playerLastName: lastName,
+            overallRank: row.rank || null,
+          };
+        }).filter((p: any) => p.managerId);
+        storage.bulkUpsertManagerProfiles(liveProfiles).catch((err: any) =>
+          console.warn("live standings profile seed failed:", err)
+        );
+      }
+
       res.json({
         league: standingsData.league,
         standings: {
@@ -3368,6 +3408,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manager name/team search via local manager_profiles table
+  app.get("/api/managers/search", async (req, res) => {
+    try {
+      const q = (req.query.q as string || "").trim();
+      if (q.length < 2) {
+        return res.json([]);
+      }
+      const results = await storage.searchManagerProfiles(q);
+      res.json(results);
+    } catch (error) {
+      console.error("Error searching manager profiles:", error);
+      res.status(500).json({ error: "Search failed", message: error instanceof Error ? error.message : "Unknown error" });
+    }
+  });
+
   // Manager API routes for Live Rank, My Team, and My Leagues
   
   // Get cached manager ID (for convenience)
@@ -3431,7 +3486,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Cache the data
         managerCache.set(managerId, { data, timestamp: Date.now() });
         console.log(`DEBUG: Cached manager ${managerId} data`);
-        
+
+        // Upsert into manager_profiles for name/team search
+        storage.upsertManagerProfile({
+          managerId: Number(managerId),
+          entryName: data.name || null,
+          playerFirstName: data.player_first_name || null,
+          playerLastName: data.player_last_name || null,
+          overallRank: data.summary_overall_rank || null,
+        }).catch((err: any) => console.warn("manager profile upsert failed:", err));
+
         return data;
       })().catch(() => {});
       

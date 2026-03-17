@@ -938,6 +938,20 @@ export const insertFplTopManagerTrackingSchema = createInsertSchema(fplTopManage
 
 export type InsertUnifiedProjectionSettings = typeof unifiedProjectionSettings.$inferInsert;
 
+// Manager profiles — searchable local cache of FPL manager data
+export const managerProfiles = pgTable("manager_profiles", {
+  managerId: integer("manager_id").primaryKey(),
+  entryName: varchar("entry_name", { length: 150 }),
+  playerFirstName: varchar("player_first_name", { length: 100 }),
+  playerLastName: varchar("player_last_name", { length: 100 }),
+  overallRank: integer("overall_rank"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type ManagerProfile = typeof managerProfiles.$inferSelect;
+export type InsertManagerProfile = typeof managerProfiles.$inferInsert;
+export const insertManagerProfileSchema = createInsertSchema(managerProfiles).omit({ updatedAt: true });
+
 // Historical xG data cache - pre-calculated and never changes
 export const historicalXGCache = pgTable("historical_xg_cache", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
