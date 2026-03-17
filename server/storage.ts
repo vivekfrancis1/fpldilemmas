@@ -1918,7 +1918,7 @@ export class DatabaseStorage implements IStorage {
               entryName: sql`excluded.entry_name`,
               playerFirstName: sql`excluded.player_first_name`,
               playerLastName: sql`excluded.player_last_name`,
-              overallRank: sql`excluded.overall_rank`,
+              overallRank: sql`COALESCE(excluded.overall_rank, ${managerProfiles.overallRank})`,
               updatedAt: sql`excluded.updated_at`,
             },
           });

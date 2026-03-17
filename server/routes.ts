@@ -2678,7 +2678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             entryName: row.entry_name || null,
             playerFirstName: firstName,
             playerLastName: lastName,
-            overallRank: row.rank || null,
+            overallRank: null, // league standings only have league rank, not FPL overall rank
           };
         }).filter((p: any) => p.managerId);
         storage.bulkUpsertManagerProfiles(profiles).catch((err: any) =>
@@ -3313,7 +3313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             entryName: row.entry_name || null,
             playerFirstName: firstName,
             playerLastName: lastName,
-            overallRank: row.rank || null,
+            overallRank: null, // league standings only have league rank, not FPL overall rank
           };
         }).filter((p: any) => p.managerId);
         storage.bulkUpsertManagerProfiles(liveProfiles).catch((err: any) =>

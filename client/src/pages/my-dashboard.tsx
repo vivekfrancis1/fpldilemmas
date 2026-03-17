@@ -1425,12 +1425,12 @@ export default function MyDashboard() {
                             <span className="text-xs text-gray-500 ml-1">({m.entry_name})</span>
                           </div>
                           {m.summary_overall_rank && (
-                            <span className="text-xs text-purple-600 whitespace-nowrap">Rank #{m.summary_overall_rank.toLocaleString()}</span>
+                            <span className="text-xs text-purple-600 whitespace-nowrap">Overall Rank #{m.summary_overall_rank.toLocaleString()}</span>
                           )}
                         </div>
-                        {m.player_region_name && (
-                          <div className="text-xs text-gray-400 mt-0.5">{m.player_region_name} • ID: {m.id}</div>
-                        )}
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {m.player_region_name ? `${m.player_region_name} • ` : ""}ID: {m.id}
+                        </div>
                       </button>
                     ))}
                   </div>
