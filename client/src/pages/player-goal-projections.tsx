@@ -131,7 +131,7 @@ export default function PlayerGoalProjections() {
   const [startGameweek, setStartGameweek] = useState<number>(0);
   const [endGameweek, setEndGameweek] = useState<number>(0);
   const [initialized, setInitialized] = useState(false);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Initialize gameweeks when bootstrap data loads
   useEffect(() => {

@@ -91,7 +91,7 @@ export default function TeamGoalsAgainstProjections() {
   const [sortBy, setSortBy] = useState<string>("total");
   const [showOpponent, setShowOpponent] = useState<boolean>(false);
   // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Create mapping from team name to FPL short_name
   const teamNameToShort = useMemo(() => {

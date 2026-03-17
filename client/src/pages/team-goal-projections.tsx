@@ -101,7 +101,7 @@ export default function TeamGoalProjections() {
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("total");
   // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   // Fetch past team xG history (after startGameweek/endGameweek defined)
   const { data: xgHistoryData, isLoading: xgHistoryLoading } = useQuery<TeamXgHistory>({

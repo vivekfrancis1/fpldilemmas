@@ -70,7 +70,7 @@ export default function PlayerSaves() {
   const [showOpponent, setShowOpponent] = useState(false);
   const [applyAvailability, setApplyAvailability] = useState(true);
   // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   // View mode: "future" for projections, "past" for historical data
   const [viewMode, setViewMode] = useState<"future" | "past">("future");
 

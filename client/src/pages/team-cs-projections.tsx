@@ -55,7 +55,7 @@ export default function TeamCSProjections() {
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<string>("average");
   // Filter section collapse state - collapsed by default on all devices
-  const [isFiltersOpen, setIsFiltersOpen] = useState(true);
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
   const activeGameweeks = useMemo(() => {
     const startGW = parseInt(startGameweek);
