@@ -302,6 +302,10 @@ export default function MyDashboard() {
   const { user } = useAuth();
   const [managerId, setManagerId] = useState("");
   const [searchedId, setSearchedId] = useState("");
+  const [searchMode, setSearchMode] = useState<"id" | "name">("id");
+  const [nameQuery, setNameQuery] = useState("");
+  const [nameSearchDebounced, setNameSearchDebounced] = useState("");
+  const [showNameResults, setShowNameResults] = useState(false);
   const [activeTab, setActiveTab] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('tab') || 'overview';
@@ -349,6 +353,26 @@ export default function MyDashboard() {
     }
   }, []);
 
+  // Debounce name query for search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setNameSearchDebounced(nameQuery);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [nameQuery]);
+
+  // Close name search dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-name-search]')) {
+        setShowNameResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   // Data queries
   const { data: bootstrapData } = useQuery<BootstrapData>({
     queryKey: ["/api/bootstrap-static"],
@@ -363,6 +387,26 @@ export default function MyDashboard() {
   }>({
     queryKey: ["/api/fpl/status"],
     retry: false,
+  });
+
+  // Name/team search query
+  interface ManagerSearchResult {
+    id: number;
+    entry_name: string;
+    player_first_name: string;
+    player_last_name: string;
+    player_region_name: string;
+    summary_overall_rank: number | null;
+  }
+  const { data: nameSearchResults, isFetching: isSearchingByName } = useQuery<{ managers: ManagerSearchResult[] }>({
+    queryKey: ["/api/managers/search", nameSearchDebounced],
+    queryFn: async () => {
+      const res = await fetch(`/api/managers/search?q=${encodeURIComponent(nameSearchDebounced)}`);
+      if (!res.ok) throw new Error("Search failed");
+      return res.json();
+    },
+    enabled: nameSearchDebounced.trim().length >= 2 && searchMode === "name",
+    staleTime: 30000,
   });
 
   const { data: managerData, isLoading: isLoadingManager, error: managerError } = useQuery<ManagerData>({
@@ -1262,34 +1306,113 @@ export default function MyDashboard() {
 
         {/* Manager Search Section - Compact */}
         <Card className="mb-3 sm:mb-4 border-0 bg-white/80 backdrop-blur-sm shadow-md">
-          <CardContent className="p-2 sm:p-3">
-            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-              <Input
-                id="manager-id"
-                type="text"
-                placeholder="Enter Manager ID or FPL URL"
-                value={managerId}
-                onChange={(e) => {
-                  const extractedId = extractManagerId(e.target.value);
-                  setManagerId(extractedId);
-                }}
-                onKeyPress={handleKeyPress}
-                className="flex-1 h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
-                data-testid="input-manager-id"
-              />
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleSearch} 
-                  disabled={!managerId.trim() || isLoading}
-                  className="flex-1 sm:flex-none h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
-                  data-testid="button-search-manager"
-                >
-                  <Search className="h-4 w-4 mr-1" />
-                  {isLoading ? "..." : "Search"}
-                </Button>
-                <FplConnectDialog />
-              </div>
+          <CardContent className="p-2 sm:p-3 space-y-2">
+            {/* Search mode toggle */}
+            <div className="flex gap-1 p-1 bg-gray-100 rounded-lg w-fit">
+              <button
+                onClick={() => { setSearchMode("id"); setShowNameResults(false); }}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${searchMode === "id" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                Manager ID
+              </button>
+              <button
+                onClick={() => { setSearchMode("name"); }}
+                className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${searchMode === "name" ? "bg-white text-purple-700 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
+              >
+                Name / Team
+              </button>
             </div>
+
+            {searchMode === "id" ? (
+              <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                <Input
+                  id="manager-id"
+                  type="text"
+                  placeholder="Enter Manager ID or FPL URL"
+                  value={managerId}
+                  onChange={(e) => {
+                    const extractedId = extractManagerId(e.target.value);
+                    setManagerId(extractedId);
+                  }}
+                  onKeyPress={handleKeyPress}
+                  className="flex-1 h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                  data-testid="input-manager-id"
+                />
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleSearch} 
+                    disabled={!managerId.trim() || isLoading}
+                    className="flex-1 sm:flex-none h-9 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 text-sm"
+                    data-testid="button-search-manager"
+                  >
+                    <Search className="h-4 w-4 mr-1" />
+                    {isLoading ? "..." : "Search"}
+                  </Button>
+                  <FplConnectDialog />
+                </div>
+              </div>
+            ) : (
+              <div className="relative" data-name-search>
+                <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                  <div className="relative flex-1">
+                    <Input
+                      type="text"
+                      placeholder="Search by manager name or team name..."
+                      value={nameQuery}
+                      onChange={(e) => {
+                        setNameQuery(e.target.value);
+                        setShowNameResults(true);
+                      }}
+                      onFocus={() => setShowNameResults(true)}
+                      className="h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500 pr-8"
+                      data-testid="input-manager-name"
+                    />
+                    {isSearchingByName && (
+                      <RefreshCw className="h-3 w-3 animate-spin absolute right-2 top-3 text-gray-400" />
+                    )}
+                  </div>
+                  <FplConnectDialog />
+                </div>
+                {/* Search results dropdown */}
+                {showNameResults && nameQuery.trim().length >= 2 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                    {isSearchingByName && (
+                      <div className="px-4 py-3 text-sm text-gray-500">Searching...</div>
+                    )}
+                    {!isSearchingByName && nameSearchResults?.managers?.length === 0 && (
+                      <div className="px-4 py-3 text-sm text-gray-500">No managers found</div>
+                    )}
+                    {!isSearchingByName && nameSearchResults?.managers?.map((m) => (
+                      <button
+                        key={m.id}
+                        className="w-full text-left px-4 py-2.5 hover:bg-purple-50 border-b border-gray-100 last:border-0 transition-colors"
+                        onClick={() => {
+                          const idStr = String(m.id);
+                          setManagerId(idStr);
+                          setSearchedId(idStr);
+                          saveManagerIdToCache(idStr);
+                          setNameQuery(`${m.player_first_name} ${m.player_last_name} — ${m.entry_name}`);
+                          setShowNameResults(false);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div>
+                            <span className="font-medium text-sm text-gray-900">{m.player_first_name} {m.player_last_name}</span>
+                            <span className="text-xs text-gray-500 ml-1">({m.entry_name})</span>
+                          </div>
+                          {m.summary_overall_rank && (
+                            <span className="text-xs text-purple-600 whitespace-nowrap">Rank #{m.summary_overall_rank.toLocaleString()}</span>
+                          )}
+                        </div>
+                        {m.player_region_name && (
+                          <div className="text-xs text-gray-400 mt-0.5">{m.player_region_name}</div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

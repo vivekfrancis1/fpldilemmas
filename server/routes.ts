@@ -3377,6 +3377,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ managerId: null });
   });
 
+  // Search managers by name or team name via FPL API
+  app.get("/api/managers/search", async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q || typeof q !== "string" || q.trim().length < 2) {
+        return res.status(400).json({ message: "Query must be at least 2 characters" });
+      }
+      const response = await fetchWithRetry(
+        `https://fantasy.premierleague.com/api/search/?search_type=manager&q=${encodeURIComponent(q.trim())}`
+      );
+      if (!response.ok) {
+        throw new Error(`FPL API responded with status: ${response.status}`);
+      }
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error("Error searching managers:", error);
+      res.status(500).json({
+        error: "Failed to search managers",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Enhanced manager data cache with in-flight de-duplication (2 minutes TTL)
   const managerCache = new Map<string, { data: any; timestamp: number }>();
   const managerDataCache = new Map<string, { data: any; timestamp: number }>();
