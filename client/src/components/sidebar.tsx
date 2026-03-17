@@ -80,7 +80,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       items: [
         { path: "/team-goal-projections", label: "Goals Scored", icon: BarChart3, description: "Expected team goals", popular: false },
         { path: "/team-goals-against-projections", label: "Goals Conceded", icon: Shield, description: "Expected goals conceded", popular: false },
-        { path: "/team-cs-projections", label: "Clean Sheets", icon: Shield, description: "Clean sheet probabilities", popular: false }
+        { path: "/team-cs-projections", label: "Clean Sheet Odds", icon: Shield, description: "Clean sheet probabilities", popular: false }
       ]
     },
     {
