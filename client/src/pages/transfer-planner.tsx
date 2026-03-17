@@ -5562,7 +5562,7 @@ export default function TransferPlanner() {
         <Collapsible open={isChipsPlanningOpen} onOpenChange={setIsChipsPlanningOpen}>
           <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white dark:from-amber-950/20 dark:to-background">
             <CollapsibleTrigger asChild>
-              <CardHeader className="px-3 sm:px-6 pb-2 md:pb-4 cursor-pointer hover:bg-amber-100/50 dark:hover:bg-amber-900/20 transition-colors" data-testid="button-toggle-chips-planning">
+              <CardHeader className="px-3 sm:px-6 pb-2 md:pb-4 cursor-pointer hover:bg-muted/50 transition-colors" data-testid="button-toggle-chips-planning">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2" data-testid="text-chips-planning-title">
                     <Sparkles className="h-5 w-5 text-amber-600" />
@@ -5570,7 +5570,7 @@ export default function TransferPlanner() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <button className="inline-flex items-center" onClick={e => e.stopPropagation()}>
+                          <button className="inline-flex items-center">
                             <Info className="h-4 w-4 text-muted-foreground cursor-help" />
                           </button>
                         </TooltipTrigger>
