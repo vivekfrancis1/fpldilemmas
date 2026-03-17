@@ -4821,6 +4821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         let bestCombination: any[] | null = null;
+        let bestCombinations: Record<number, { combo: any[], totalGain: number }> = {};
         if (freeTransfersForGW >= 2 && comboTransferCandidates.length >= 2) {
           // Use the budget-relaxed combo pool so premium players can appear in combos
           // where a companion transfer offsets the extra cost. isValidCombo() validates
@@ -4866,17 +4867,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return combo.reduce((sum, t) => sum + t.fourGWPointsGain, 0);
           };
           
-          let bestGain = 0;
-          let bestCombo: typeof candidates = [];
+          // Track best combo independently per size so each can be shown as a separate card
+          const bestGainBySize = new Map<number, number>();
+          const bestComboBySize = new Map<number, typeof candidates>();
           
           const searchSize = (size: number, pool: typeof candidates) => {
+            let sizeBestGain = 0;
+            let sizeBestCombo: typeof candidates = [];
+            
             if (size === 2) {
               for (let i = 0; i < pool.length; i++) {
                 for (let j = i + 1; j < pool.length; j++) {
                   const combo = [pool[i], pool[j]];
                   if (isValidCombo(combo)) {
                     const gain = comboGain(combo);
-                    if (gain > bestGain) { bestGain = gain; bestCombo = combo; }
+                    if (gain > sizeBestGain) { sizeBestGain = gain; sizeBestCombo = combo; }
                   }
                 }
               }
@@ -4887,7 +4892,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     const combo = [pool[i], pool[j], pool[k]];
                     if (isValidCombo(combo)) {
                       const gain = comboGain(combo);
-                      if (gain > bestGain) { bestGain = gain; bestCombo = combo; }
+                      if (gain > sizeBestGain) { sizeBestGain = gain; sizeBestCombo = combo; }
                     }
                   }
                 }
@@ -4900,7 +4905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       const combo = [pool[i], pool[j], pool[k], pool[l]];
                       if (isValidCombo(combo)) {
                         const gain = comboGain(combo);
-                        if (gain > bestGain) { bestGain = gain; bestCombo = combo; }
+                        if (gain > sizeBestGain) { sizeBestGain = gain; sizeBestCombo = combo; }
                       }
                     }
                   }
@@ -4916,7 +4921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                         const combo = [p[i], p[j], p[k], p[l], p[m]];
                         if (isValidCombo(combo)) {
                           const gain = comboGain(combo);
-                          if (gain > bestGain) { bestGain = gain; bestCombo = combo; }
+                          if (gain > sizeBestGain) { sizeBestGain = gain; sizeBestCombo = combo; }
                         }
                       }
                     }
@@ -4924,27 +4929,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 }
               }
             }
+            
+            if (sizeBestCombo.length > 0) {
+              bestGainBySize.set(size, sizeBestGain);
+              bestComboBySize.set(size, sizeBestCombo);
+            }
           };
           
           for (let size = 2; size <= comboSize; size++) {
             searchSize(size, candidates);
           }
           
-          if (bestCombo.length > 0) {
+          // Build per-size bestCombinations and derive the overall best for backward compat
+          let overallBestGain = 0;
+          
+          for (const [size, combo] of bestComboBySize.entries()) {
             let comboBankBalance = runningBank;
-            bestCombination = bestCombo.map(t => {
+            const comboWithBudget = combo.map(t => {
               const netChange = t.playerOut.sellingPrice - t.playerIn.nowCost;
               comboBankBalance += netChange;
-              return {
-                ...t,
-                budgetAfter: comboBankBalance
-              };
+              return { ...t, budgetAfter: comboBankBalance };
             });
-            bestCombination.sort((a, b) => b.fourGWPointsGain - a.fourGWPointsGain);
-            console.log(`DEBUG GW${targetGW}: Best ${comboSize}-transfer combo: +${bestGain.toFixed(2)} pts 4GW`);
-            bestCombination.forEach((t: any, i: number) => {
+            comboWithBudget.sort((a: any, b: any) => b.fourGWPointsGain - a.fourGWPointsGain);
+            const totalGain = bestGainBySize.get(size) || 0;
+            bestCombinations[size] = { combo: comboWithBudget, totalGain };
+            console.log(`DEBUG GW${targetGW}: Best ${size}-transfer combo: +${totalGain.toFixed(2)} pts 4GW`);
+            comboWithBudget.forEach((t: any, i: number) => {
               console.log(`  Combo ${i + 1}: ${t.playerOut.webName} → ${t.playerIn.webName} (+${t.fourGWPointsGain.toFixed(2)})`);
             });
+            if (totalGain > overallBestGain) {
+              overallBestGain = totalGain;
+              bestCombination = comboWithBudget;
+            }
           }
         }
         
@@ -4954,7 +4970,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           freeTransfersAvailable: freeTransfersForGW,
           bankBefore: runningBank,
           recommendations: filteredRecommendations,
-          ...(bestCombination && bestCombination.length > 0 ? { bestCombination, bestCombinationTotalGain: bestCombination.reduce((sum: number, t: any) => sum + t.fourGWPointsGain, 0) } : {})
+          ...(bestCombination && bestCombination.length > 0 ? { bestCombination, bestCombinationTotalGain: bestCombination.reduce((sum: number, t: any) => sum + t.fourGWPointsGain, 0) } : {}),
+          ...(Object.keys(bestCombinations).length > 0 ? { bestCombinations } : {})
         };
         
         console.log(`DEBUG: GW${targetGW}: Found ${transferRecommendations.length} transfer opportunities, ${filteredRecommendations.length} after filtering conflicts`);
