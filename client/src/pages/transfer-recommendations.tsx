@@ -1173,7 +1173,7 @@ export default function TransferRecommendations() {
                                                   <div className="w-7 h-7 bg-purple-100 rounded-full flex items-center justify-center">
                                                     <Target className="h-4 w-4 text-purple-600" />
                                                   </div>
-                                                  <h3 className="text-base font-bold text-purple-800">Best {comboToShow.length}-Transfer Combo</h3>
+                                                  <h3 className="text-base font-bold text-purple-800">Best {size}-Transfer Combo</h3>
                                                   <Badge className="bg-purple-100 text-purple-800 border-purple-300 ml-auto">
                                                     +{totalGain.toFixed(1)} pts (4 GWs)
                                                   </Badge>
