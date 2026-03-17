@@ -1363,6 +1363,7 @@ export default function MyDashboard() {
                       placeholder="e.g. Maverick FC"
                       value={nameSearchTeam}
                       onChange={(e) => setNameSearchTeam(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && (nameSearchTeam.trim() || nameSearchManager.trim()) && !isNameSearching) handleNameSearch(); }}
                       className="h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
                       data-testid="input-team-name"
                     />
@@ -1374,6 +1375,7 @@ export default function MyDashboard() {
                       placeholder="e.g. John Smith"
                       value={nameSearchManager}
                       onChange={(e) => setNameSearchManager(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && (nameSearchTeam.trim() || nameSearchManager.trim()) && !isNameSearching) handleNameSearch(); }}
                       className="h-9 text-sm border-gray-300 focus:border-purple-500 focus:ring-purple-500"
                       data-testid="input-manager-name"
                     />
